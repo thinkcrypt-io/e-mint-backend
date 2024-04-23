@@ -40,7 +40,7 @@ type ConstructConfigParams = {
 	options?: { role?: string };
 };
 
-const constructConfig = ({ model, config, options }: ConstructConfigParams): Config => {
+const constructConfig = ({ model, config, options }: any): any => {
 	const { role = 'user' } = options || {};
 
 	const configKeys = Object.keys(config);
