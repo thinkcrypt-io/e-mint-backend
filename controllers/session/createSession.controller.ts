@@ -68,7 +68,7 @@ const createSession = async (req: Request, res: Response) => {
 			subject: `New Check In Alert: ${employee?.name}`,
 			body: `${employee?.name} has checked in today at ${checkInTime
 				.toString()
-				.padStart(2, '0')}}:${getMinutes.toString().padStart(2, '0')}`,
+				.padStart(2, '0')}:${getMinutes.toString().padStart(2, '0')}`,
 		});
 
 		return res.status(200).json(saved);

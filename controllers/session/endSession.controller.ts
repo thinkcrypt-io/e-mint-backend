@@ -72,7 +72,7 @@ const endSession = async (req: Request, res: Response) => {
 			subject: `New Check Out Alert: ${employee?.name}`,
 			body: `${employee?.name} has checked out today at ${checkOutTime
 				.toString()
-				.padStart(2, '0')}}:${getMinutes.toString().padStart(2, '0')}. Check In Time was: ${
+				.padStart(2, '0')}:${getMinutes.toString().padStart(2, '0')}. Check In Time was: ${
 				ifExist.start
 			} Total Hours Completed: ${totalHours.toFixed(2)}. Status: ${ifExist.status}`,
 		});
