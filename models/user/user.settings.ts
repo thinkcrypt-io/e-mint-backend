@@ -1,4 +1,4 @@
-//import Role from '../role/role.model.js';
+import Role from '../role/role.model.js';
 
 const settings = {
 	name: {
@@ -11,6 +11,12 @@ const settings = {
 		max: 50,
 		required: true,
 		trim: true,
+	},
+	employeeId: {
+		unique: true,
+		search: true,
+		title: 'Employee ID',
+		type: 'string',
 	},
 	email: {
 		unique: true,
@@ -31,17 +37,31 @@ const settings = {
 		edit: true,
 		title: 'User Role',
 		type: 'text',
-		// filter: {
-		// 	name: 'role',
-		// 	field: 'role_in',
-		// 	type: 'multi-select',
-		// 	label: 'Roles',
-		// 	title: 'Sort by role',
-		// 	options: [],
-		// 	category: 'model',
-		// 	model: Role,
-		// 	key: 'name',
-		// },
+		filter: {
+			name: 'role',
+			field: 'role_in',
+			type: 'multi-select',
+			label: 'Roles',
+			title: 'Sort by role',
+			options: [
+				{
+					label: 'Admin',
+					value: 'admin',
+				},
+				{
+					label: 'Employee',
+					value: 'employee',
+				},
+				{
+					label: 'User',
+					value: 'user',
+				},
+				{
+					label: 'Super Admin',
+					value: 'super-admin',
+				},
+			],
+		},
 	},
 
 	isActive: {

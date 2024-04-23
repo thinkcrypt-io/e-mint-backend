@@ -1,0 +1,72 @@
+import Joi from 'joi';
+import bcrypt from 'bcrypt';
+import User from '../../models/user/user.model.js';
+import { Request, Response } from 'express';
+
+// {
+//     "name": "John Doe",
+//     "email": "john.doe@example.com",
+//     "password": "password123",
+//     "confirm": "password123",
+//     "role": "user",
+//     "phone": "12345678901"
+// }
+
+type RequestType = Request & { body: any };
+
+const registerController = async (req: RequestType, res: Response): Promise<Response> => {
+	const { error } = validate(req.body);
+	if (error) return res.status(400).send({ message: error.details[0].message });
+
+	if (req.body.password != req.body.confirm)
+		return res.status(400).send({ message: 'Passwords do not match' });
+
+	try {
+		const { name, email, password, role, phone, employeeId } = req.body;
+		let user = await User.findOne({ email });
+
+		if (user)
+			return res.status(400).send({
+				status: 'error',
+				message: 'This email is already registered',
+			});
+
+		user = new User({ name, email, password, role: role, phone, employeeId, isActive: true });
+		const salt = await bcrypt.genSalt(10);
+		user.password = await bcrypt.hash(user.password, salt);
+
+		const saved = await user.save();
+		const token = user.generateAuthToken();
+
+		return res
+			.status(200)
+			.header('x-auth-token', token)
+			.json({ token: `Bearer ${token}`, userId: saved._id });
+	} catch (e: any) {
+		return res.status(500).send({ message: e.message });
+	}
+};
+
+function validate(data: any): Joi.ValidationResult {
+	const schema = Joi.object({
+		name: Joi.string().min(2).max(50),
+		email: Joi.string().max(255).required().email().messages({
+			'any.required': 'Email is required',
+			'string.email': 'Invalid Email, please enter a valid email address',
+		}),
+		password: Joi.string().min(6).max(255).required().messages({
+			'any.required': 'Password is required',
+			'string.min': 'Password must be 6 characters long',
+		}),
+		employeeId: Joi.string().min(2).max(255).required(),
+		confirm: Joi.ref('password'),
+		role: Joi.string().required().messages({
+			'any.required': 'Role is required',
+			'string.empty': 'Role cannot be empty',
+		}),
+		phone: Joi.string().min(11).allow(null, ''),
+	});
+	return schema.validate(data);
+}
+
+export default registerController;

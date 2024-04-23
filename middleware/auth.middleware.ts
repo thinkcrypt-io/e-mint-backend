@@ -24,21 +24,12 @@ export const protect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		if (!decoded.store) {
-			return res.status(401).json({ message: 'Not authorized, token failed' });
-		}
-
-		if (decoded.store != (req as any).store) {
-			return res.status(401).json({ message: 'Store ID Does not match user' });
-		}
-
 		req.user = await User.findById(decoded?._id).select('-password').populate('role');
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
 		}
 
-		(req as any).permissions = (req as any)?.user?.role?.permissions;
 		next();
 	} catch (e: any) {
 		console.error(e);
@@ -80,6 +71,37 @@ export const superAdmin = async (
 
 		// If the user exists on the request object and their role is SUPER_ADMIN
 		if ((req as any).user?.role == SUPER_ADMIN) {
+			next(); // Call the next middleware function
+		} else {
+			// If the user is not a super admin, return a 401 Unauthorized status code and a message
+			return res.status(401).json({ message: 'You need to be a superadmin to open stores' });
+		}
+	} catch (e: any) {
+		console.error(e);
+		return res.status(401).json({ message: 'Not authorized, token failed' });
+	}
+};
+
+export const admin = async (
+	req: RequestType, // The request object
+	res: Response, // The response object
+	next: NextFunction // The next middleware function in the stack
+): Promise<Response | void> => {
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		return res.status(401).json({ message: 'Not authorized, no token' });
+	}
+	try {
+		const token: string = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		) as any;
+
+		req.user = await User.findById(decoded?._id).select('-password');
+
+		// If the user exists on the request object and their role is SUPER_ADMIN
+		if ((req as any).user?.role == 'admin' || (req as any).user?.role == 'super-admin') {
 			next(); // Call the next middleware function
 		} else {
 			// If the user is not a super admin, return a 401 Unauthorized status code and a message

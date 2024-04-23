@@ -5,6 +5,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
+//import routes
+import authRoute from './routes/auth.route.js';
+import employeeRoute from './routes/employee.route.js';
+import codeRoute from './routes/code.route.js';
+import sessionRoute from './routes/sessions.route.js';
+
 const app: Application = express();
 
 dotenv.config();
@@ -43,6 +49,10 @@ app.use('/', (req, res, next) => {
 });
 
 //app.use('/api/orders', orderRoute);
+app.use('/api/auth', authRoute);
+app.use('/api/employees', employeeRoute);
+app.use('/api/codes', codeRoute);
+app.use('/api/attendances', sessionRoute);
 
 app.use((req, res, next) => {
 	return res

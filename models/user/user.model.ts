@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { required } from 'joi';
 
 const schema = new Schema<any>(
 	{
@@ -9,6 +10,12 @@ const schema = new Schema<any>(
 			required: [true, 'Name is required'],
 		},
 
+		employeeId: {
+			type: String,
+			trim: true,
+			unique: true,
+		},
+
 		email: {
 			type: String,
 			trim: true,
@@ -16,12 +23,12 @@ const schema = new Schema<any>(
 			unique: true,
 			toLowerCase: true,
 		},
+
 		phone: { type: String, trim: true },
 
 		role: {
-			type: Schema.Types.ObjectId,
-			ref: 'Role',
-			//required: [true, 'Role is required'],
+			type: String,
+			required: [true, 'Role is required'],
 		},
 
 		isActive: {
@@ -40,6 +47,11 @@ const schema = new Schema<any>(
 			type: String,
 			minlength: 8,
 			maxlength: 1024,
+		},
+		preferences: {
+			employees: [String],
+			attendances: [String],
+			code: [String],
 		},
 	},
 
