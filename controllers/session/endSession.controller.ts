@@ -53,7 +53,9 @@ const endSession = async (req: Request, res: Response) => {
 		ifExist.hours = totalHours.toFixed(2);
 		ifExist.isActive = false;
 
-		if (totalHours < 5) {
+		if (totalHours < 2) {
+			ifExist.status = 'incomplete';
+		} else if (totalHours < 5) {
 			ifExist.status = 'half-day';
 			ifExist.halfDay = true;
 		} else if (totalHours < 8) {
@@ -61,6 +63,7 @@ const endSession = async (req: Request, res: Response) => {
 			ifExist.earlyCheckOut = true;
 		} else if (totalHours >= 8) {
 			ifExist.status = 'completed';
+			ifExist.completed = true;
 		}
 
 		const saved = await ifExist.save();

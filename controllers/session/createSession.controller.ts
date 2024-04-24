@@ -56,7 +56,7 @@ const createSession = async (req: Request, res: Response) => {
 			return res.status(400).json({ message: 'Check In not allowed after 1PM' });
 		}
 
-		if (checkInTime >= 10 && checkInTime < 12) session.lateCheckIn = true;
+		if (checkInTime > 10 && checkInTime < 12) session.lateCheckIn = true;
 		if (checkInTime >= 12) session.halfDay = true;
 
 		const saved = await session.save();
