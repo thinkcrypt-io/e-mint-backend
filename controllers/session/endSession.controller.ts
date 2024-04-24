@@ -8,6 +8,12 @@ const endSession = async (req: Request, res: Response) => {
 	const { password, code, email } = req.body;
 
 	try {
+		const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+		if (ip != '45.248.149.63') {
+			return res.status(400).json({ message: 'You can not register from this ip address' });
+		}
+
 		const employee = await User.findOne({
 			$or: [{ email: email }, { id: email }, { phone: email }],
 		});
@@ -68,7 +74,7 @@ const endSession = async (req: Request, res: Response) => {
 		});
 
 		sendMail({
-			to: `asifistiaque.ai@gmail.com`,
+			to: `hr.thinkcrypt@gmail.com`,
 			subject: `New Check Out Alert: ${employee?.name}`,
 			body: `${employee?.name} has checked out today at ${checkOutTime
 				.toString()

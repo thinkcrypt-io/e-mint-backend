@@ -8,6 +8,12 @@ const createSession = async (req: Request, res: Response) => {
 	const { password, code, email } = req.body;
 
 	try {
+		const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+		if (ip != '45.248.149.63') {
+			return res.status(400).json({ message: 'You can not register from this ip address' });
+		}
+
 		const employee = await User.findOne({
 			$or: [{ email: email }, { id: email }, { phone: email }],
 		});
@@ -50,8 +56,8 @@ const createSession = async (req: Request, res: Response) => {
 			return res.status(400).json({ message: 'Check In not allowed after 1PM' });
 		}
 
-		if (checkInTime >= 10 && checkInTime < 11) session.lateCheckIn = true;
-		if (checkInTime >= 11) session.halfDay = true;
+		if (checkInTime >= 10 && checkInTime < 12) session.lateCheckIn = true;
+		if (checkInTime >= 12) session.halfDay = true;
 
 		const saved = await session.save();
 
@@ -64,7 +70,7 @@ const createSession = async (req: Request, res: Response) => {
 		});
 
 		sendMail({
-			to: `asifistiaque.ai@gmail.com`,
+			to: `hr.thinkcrypt@gmail.com`,
 			subject: `New Check In Alert: ${employee?.name}`,
 			body: `${employee?.name} has checked in today at ${checkInTime
 				.toString()
