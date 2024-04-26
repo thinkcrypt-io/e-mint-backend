@@ -31,18 +31,18 @@ const createAdmin = async () => {
 			console.log('Admin already exists');
 		} else {
 			const salt = await bcrypt.genSalt(10);
-			const password = await bcrypt.hash('11223344', salt);
+			const password = await bcrypt.hash('smirnoff', salt);
 
 			const adminUser = new User({
 				name: 'Admin',
-				email: 'asifistiaque.ai@gmail.com',
+				email: 'info@thinkcrypt.io',
 				role: 'super-admin',
 				password: password,
 				employeeId: '0',
 			});
 			const savedAdmin = await adminUser.save();
 			if (savedAdmin) {
-				console.log('Admin created, username: asifistiaque.ai@gmail.com, password: 11223344');
+				console.log('Admin created, username: info@thinkcrypt.io, password: smirnoff');
 			} else {
 				console.log('Error: Admin could not be created');
 			}

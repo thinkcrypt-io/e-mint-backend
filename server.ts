@@ -10,6 +10,7 @@ import authRoute from './routes/auth.route.js';
 import employeeRoute from './routes/employee.route.js';
 import codeRoute from './routes/code.route.js';
 import sessionRoute from './routes/sessions.route.js';
+import leaveRoute from './routes/leave.route.js';
 
 const app: Application = express();
 
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoute);
 app.use('/api/employees', employeeRoute);
 app.use('/api/codes', codeRoute);
 app.use('/api/attendances', sessionRoute);
+app.use('/api/leave', leaveRoute);
 
 app.use((req, res, next) => {
 	return res

@@ -52,6 +52,8 @@ const schema = new Schema<any>(
 			employees: [String],
 			attendances: [String],
 			code: [String],
+			leaves: [String],
+			leave: [String],
 		},
 	},
 

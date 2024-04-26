@@ -27,11 +27,17 @@ const settings = {
 
 	date: {
 		sort: true,
-		type: 'Date',
+		type: 'string',
+		title: 'Date',
+	},
+
+	createdAt: {
+		sort: true,
+		type: 'string',
 		title: 'Date',
 		filter: {
 			name: 'Date',
-			field: 'date',
+			field: 'createdAt',
 			type: 'date',
 			label: 'Session Date',
 			title: 'Sort by date',
