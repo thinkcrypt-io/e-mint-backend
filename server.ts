@@ -8,9 +8,7 @@ import morgan from 'morgan';
 //import routes
 import authRoute from './routes/auth.route.js';
 import categoryRoute from './routes/categories.route.js';
-import codeRoute from './routes/code.route.js';
-import sessionRoute from './routes/sessions.route.js';
-import leaveRoute from './routes/leave.route.js';
+
 import itemRoute from './routes/items.route.js';
 
 const app: Application = express();
@@ -53,9 +51,7 @@ app.use('/', (req, res, next) => {
 //app.use('/api/orders', orderRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/categories', categoryRoute);
-app.use('/api/codes', codeRoute);
-app.use('/api/attendances', sessionRoute);
-app.use('/api/leave', leaveRoute);
+
 app.use('/api/items', itemRoute);
 
 app.use((req, res, next) => {
