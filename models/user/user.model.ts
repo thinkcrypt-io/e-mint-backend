@@ -71,15 +71,15 @@ schema.methods.checkPassword = async function (password: string) {
 	return isMatch;
 };
 
-schema.pre<any>('save', async function (next) {
-	// if the password is not modified, skip this middleware
-	const salt = await bcrypt.genSalt(10);
-	if (!this.isModified('password')) return next();
-	// hash the password
-	const hashedPassword = await hash(this.password, salt);
-	this.password = hashedPassword;
-	next();
-});
+// schema.pre<any>('save', async function (next) {
+// 	// if the password is not modified, skip this middleware
+// 	const salt = await bcrypt.genSalt(10);
+// 	if (!this.isModified('password')) return next();
+// 	// hash the password
+// 	const hashedPassword = await hash(this.password, salt);
+// 	this.password = hashedPassword;
+// 	next();
+// });
 
 schema.methods.generateAuthToken = function (this: any): string {
 	const token = jwt.sign(
