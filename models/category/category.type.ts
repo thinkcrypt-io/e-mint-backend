@@ -12,6 +12,7 @@ export type CategoryType = Document & {
 	image?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
+	priority: number;
 };
 
 export type CategorySettings = {
@@ -22,4 +23,5 @@ export type CategorySettings = {
 	isDeleted?: SettingType;
 	image?: SettingType;
 	createdAt?: SettingType;
+	priority: SettingType;
 };

@@ -19,6 +19,20 @@ const settings: CategorySettings = {
 		title: 'Description',
 	},
 
+	priority: {
+		edit: true,
+		sort: true,
+		type: 'number',
+		title: 'Priority',
+		filter: {
+			name: 'priority',
+			field: 'priority',
+			type: 'range',
+			label: 'Priority',
+			title: 'Sort by priority',
+		},
+	},
+
 	restaurant: {
 		edit: true,
 		title: 'Restaurant',

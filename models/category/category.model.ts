@@ -20,6 +20,13 @@ const schema = new Schema<CategoryType>(
 			default: true,
 			required: true,
 		},
+
+		priority: {
+			type: Number,
+			default: 0,
+			required: true,
+		},
+
 		image: {
 			type: String,
 			trim: true,

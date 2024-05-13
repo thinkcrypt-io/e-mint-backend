@@ -20,6 +20,7 @@ const getMenu = async (req: any, res: any) => {
 						id: categoryId,
 						name: category.name,
 						description: category.description,
+						priority: category.priority,
 					},
 					items: [],
 				};
@@ -28,9 +29,15 @@ const getMenu = async (req: any, res: any) => {
 			return acc;
 		}, {});
 
-		const result = Object.values(categories);
+		// Convert the categories object to an array
+		const categoriesArray = Object.values(categories);
 
-		return res.status(200).json(result);
+		// Sort the categories array by the priority field in descending order
+		categoriesArray.sort((a: any, b: any) => b.category.priority - a.category.priority);
+
+		// const result = Object.values(categories);
+
+		return res.status(200).json(categoriesArray);
 	} catch (e: any) {
 		return res.status(500).json({ message: 'Internal Server Error' });
 	}
