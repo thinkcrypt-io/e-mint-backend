@@ -13,6 +13,7 @@ import getFilters from '../controllers/common/getFilters.controller.js';
 import deleteDocument from '../controllers/common/deleteDocument.controller.js';
 import constructConfig from '../lib/configurator/constructConfig.js';
 import { protect } from '../middleware/auth.middleware.js';
+import getCount from '../controllers/common/getCount.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -36,6 +37,7 @@ router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 router.delete('/:id', protect, deleteDocument(config.MODEL));
+router.get('/get/count', protect, getCount(config.MODEL));
 
 // Export the router
 export default router;

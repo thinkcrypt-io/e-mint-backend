@@ -2,7 +2,7 @@
 
 import { RestaurantSettings } from './restaurant.type.js';
 
-const settings: RestaurantSettings = {
+const settings: any = {
 	name: {
 		edit: true,
 		sort: true,
@@ -20,13 +20,20 @@ const settings: RestaurantSettings = {
 	},
 
 	logo: {
-		type: 'string',
+		type: 'uri',
 		title: 'Logo',
+		edit: true,
 	},
 
 	coverImage: {
 		type: 'string',
 		title: 'Cover Image',
+	},
+
+	image: {
+		type: 'uri',
+		title: 'Image',
+		edit: true,
 	},
 
 	location: {
@@ -47,6 +54,11 @@ const settings: RestaurantSettings = {
 		type: 'string',
 		title: 'Phone',
 	},
+
+	// template: {
+	// 	edit: true,
+	// 	title: 'Template',
+	// },
 
 	membership: {
 		edit: true,

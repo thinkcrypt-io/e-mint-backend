@@ -24,6 +24,11 @@ const schema = new Schema<RestaurantType>(
 			trim: true,
 		},
 
+		image: {
+			type: String,
+			trim: true,
+		},
+
 		coverImage: {
 			type: String,
 			trim: true,

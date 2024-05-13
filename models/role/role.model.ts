@@ -12,6 +12,10 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 		},
+		logo: {
+			type: String,
+			trim: true,
+		},
 
 		permissions: {
 			type: [String],

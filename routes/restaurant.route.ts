@@ -12,15 +12,14 @@ import getFilters from '../controllers/common/getFilters.controller.js';
 import deleteDocument from '../controllers/common/deleteDocument.controller.js';
 import constructConfig from '../lib/configurator/constructConfig.js';
 import { protect } from '../middleware/auth.middleware.js';
-import Item, { settings } from '../models/items/items.model.js';
-import getMenu from '../controllers/items/getMenu.controller.js';
+import Restaurant, { settings } from '../models/restaurant/restauant.model.js';
 import getCount from '../controllers/common/getCount.controller.js';
 
 // Initialize a new router
 const router = express.Router();
 
 const config = constructConfig({
-	model: Item,
+	model: Restaurant,
 	config: settings,
 });
 
@@ -39,8 +38,6 @@ router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 router.delete('/:id', protect, deleteDocument(config.MODEL));
 router.get('/get/count', protect, getCount(config.MODEL));
-
-router.get('/qr/:id', getMenu);
 
 // Export the router
 export default router;

@@ -1,4 +1,5 @@
 import Item from '../../models/items/items.model.js';
+import Scan from '../../models/scan/scan.model.js';
 
 const getMenu = async (req: any, res: any) => {
 	try {
@@ -10,6 +11,17 @@ const getMenu = async (req: any, res: any) => {
 			.populate('category restaurant')
 			.sort('category');
 		if (!items) return res.status(404).json({ message: 'Item not found' });
+
+		//const getScan = await Scan.findOne({ restaurant: req.params.id });
+
+		const scan = new Scan({
+			value: 1,
+			restaurant: req.params.id,
+			device: req.headers['user-agent'],
+			ip: req.ip,
+		});
+
+		await scan.save();
 
 		const categories = items.reduce((acc: any, item: any) => {
 			const category: any = item.category;
