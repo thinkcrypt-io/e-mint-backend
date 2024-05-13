@@ -33,7 +33,7 @@ router
 	.route('/')
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, createDocument(config.MODEL));
-router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
+router.get('/:id', getDocumentById(config.QUERY_OPTIONS));
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 router.delete('/:id', protect, deleteDocument(config.MODEL));
