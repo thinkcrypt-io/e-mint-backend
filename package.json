@@ -11,6 +11,9 @@
 		"tsc": "tsc -p tsconfig.json",
 		"dev": "tsc --watch & NODE_ENV=development nodemon dist/server.js"
 	},
+	"engines": {
+		"node": "20.x"
+	},
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
