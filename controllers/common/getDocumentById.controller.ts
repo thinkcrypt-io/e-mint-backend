@@ -13,7 +13,7 @@ const getDocumentById = ({ model, populate, select }: EndwareType) => {
 		try {
 			const { id } = req.params;
 			const queryHelper = (req as any).queryHelper || {};
-			queryHelper.store = (req as any).store;
+			// queryHelper.store = (req as any).store;
 			queryHelper._id = id;
 
 			let query = model.findOne(queryHelper);
