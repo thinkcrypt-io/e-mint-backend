@@ -13,6 +13,7 @@ export type ProductType = mongoose.Document & {
 	isFeatured: boolean;
 	isDeleted: boolean;
 	isVisible: boolean;
+	collection?: any;
 };
 
 export type ProductSettings = {
@@ -21,10 +22,13 @@ export type ProductSettings = {
 	restaurant: SettingType;
 	category: SettingType;
 	image?: SettingType;
-	images?: SettingType[];
+	images?: SettingType;
 	price: SettingType;
 	isActive: SettingType;
 	isFeatured: SettingType;
 	isDeleted: SettingType;
 	isVisible: SettingType;
+	collection?: SettingType;
+	isDiscount?: SettingType;
+	discountPrice?: SettingType;
 };

@@ -1,5 +1,6 @@
 import { ProductSettings } from './items.types.js';
 import Category from '../category/category.model.js';
+import Collection from '../collection/collection.model.js';
 
 const settings: ProductSettings = {
 	name: {
@@ -11,11 +12,34 @@ const settings: ProductSettings = {
 	description: {
 		type: 'string',
 		title: 'Description',
+		edit: true,
 	},
 	restaurant: {
 		type: 'object',
 
 		title: 'Restaurant',
+	},
+	collection: {
+		sort: true,
+		edit: true,
+		title: 'Collection',
+		type: 'array-string',
+		// populate: {
+		// 	path: 'collection',
+		// 	select: 'name',
+		// },
+
+		filter: {
+			name: 'collection',
+			field: 'collection_in',
+			type: 'multi-select',
+			label: 'Collection',
+			title: 'Sort by collection',
+			options: [],
+			category: 'model',
+			model: Collection,
+			key: 'name',
+		},
 	},
 	category: {
 		edit: true,
@@ -56,6 +80,19 @@ const settings: ProductSettings = {
 		type: 'boolean',
 		edit: true,
 		title: 'Active Status',
+		sort: true,
+	},
+	isDiscount: {
+		type: 'boolean',
+		edit: true,
+		title: 'Discount',
+		sort: true,
+	},
+	discountPrice: {
+		type: 'number',
+		title: 'Price',
+		required: true,
+		edit: true,
 		sort: true,
 	},
 	isFeatured: {

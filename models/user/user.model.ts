@@ -57,6 +57,7 @@ const schema = new Schema<any>(
 			categories: [String],
 			items: [String],
 			users: [String],
+			collections: [String],
 		},
 	},
 

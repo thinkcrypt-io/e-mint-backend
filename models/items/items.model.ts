@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import { ProductType } from './items.types.js';
 
-const schema = new Schema<ProductType>(
+const schema = new Schema<any>(
 	{
 		name: { type: String, required: true },
 		description: {
@@ -13,6 +13,7 @@ const schema = new Schema<ProductType>(
 			ref: 'Restaurant',
 			required: true,
 		},
+
 		image: {
 			type: String,
 		},
@@ -22,11 +23,15 @@ const schema = new Schema<ProductType>(
 			ref: 'Category',
 			required: true,
 		},
-		//collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
+		collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
 
 		isFeatured: { type: Boolean, default: false },
 		isDeleted: { type: Boolean, default: false },
 		price: { type: Number, required: true },
+		isDiscount: { type: Boolean, default: false },
+		discountPrice: {
+			type: Number,
+		},
 
 		isVisible: {
 			type: Boolean,
@@ -46,7 +51,7 @@ schema.virtual('inStock').get(function (this: any) {
 	return this.stock > 0;
 });
 
-const Item = mongoose.model<ProductType>('Item', schema);
+const Item = mongoose.model<any>('Item', schema);
 export default Item;
 
 export { default as settings } from './items.settings.js';

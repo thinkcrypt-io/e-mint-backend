@@ -13,6 +13,7 @@ import itemRoute from './routes/items.route.js';
 import scanRoute from './routes/scans.route.js';
 import restaurantRoute from './routes/restaurant.route.js';
 import uploadRoute from './routes/upload.route.js';
+import collectionRoute from './routes/collection.route.js';
 
 const app: Application = express();
 
@@ -57,6 +58,7 @@ app.use('/api/categories', categoryRoute);
 
 app.use('/api/items', itemRoute);
 app.use('/api/restaurant', restaurantRoute);
+app.use('/api/collections', collectionRoute);
 
 app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);
