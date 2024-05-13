@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { required } from 'joi';
+import bcrypt, { compare, hash } from 'bcrypt';
 
 const schema = new Schema<any>(
 	{
@@ -10,17 +10,22 @@ const schema = new Schema<any>(
 			required: [true, 'Name is required'],
 		},
 
-		employeeId: {
+		restaurant: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Restaurant',
+
+			required: [true, 'Restaurant is required'],
+		},
+
+		username: {
 			type: String,
 			trim: true,
-			unique: true,
 		},
 
 		email: {
 			type: String,
 			trim: true,
 			required: [true, 'Email is required'],
-			unique: true,
 			toLowerCase: true,
 		},
 
@@ -37,10 +42,10 @@ const schema = new Schema<any>(
 			required: true,
 		},
 
-		tags: [String],
-		note: {
-			type: String,
-			trim: true,
+		isDeleted: {
+			type: Boolean,
+			default: false,
+			required: true,
 		},
 
 		password: {
@@ -49,11 +54,9 @@ const schema = new Schema<any>(
 			maxlength: 1024,
 		},
 		preferences: {
-			employees: [String],
-			attendances: [String],
-			code: [String],
-			leaves: [String],
-			leave: [String],
+			categories: [String],
+			items: [String],
+			users: [String],
 		},
 	},
 
@@ -61,6 +64,22 @@ const schema = new Schema<any>(
 		timestamps: true,
 	}
 );
+
+schema.methods.checkPassword = async function (password: string) {
+	// is match comment
+	const isMatch = await compare(password, this.password);
+	return isMatch;
+};
+
+schema.pre<any>('save', async function (next) {
+	// if the password is not modified, skip this middleware
+	const salt = await bcrypt.genSalt(10);
+	if (!this.isModified('password')) return next();
+	// hash the password
+	const hashedPassword = await hash(this.password, salt);
+	this.password = hashedPassword;
+	next();
+});
 
 schema.methods.generateAuthToken = function (this: any): string {
 	const token = jwt.sign(
@@ -70,7 +89,7 @@ schema.methods.generateAuthToken = function (this: any): string {
 			email: this.email,
 			role: this.role,
 			phone: this.phone,
-			store: this.store,
+			restaurant: this.restaurant,
 		},
 		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 	);

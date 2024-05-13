@@ -25,12 +25,12 @@ type RequestType = ProtectedRequestType & {
 };
 
 const getAllDocuments = ({ model, populate, select = '' }: EndwareType) => {
-	return async (req: RequestType, res: Response): Promise<Response> => {
+	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { sort, limit = 10, skip = 0, fields }: Meta = req.meta;
 			let query: any = req?.queryHelper || {};
 
-			query.store = req.store;
+			query.restaurant = req.restaurant;
 
 			const listQuery = model
 				.find(query)

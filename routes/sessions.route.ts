@@ -9,7 +9,7 @@ import validate from '../middleware/validate.middleware.js';
 import ifExists from '../middleware/isExists.middleware.js';
 import createDocument from '../controllers/common/createDocument.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
-import Session, { settings } from '../models/session/session.model.js';
+import Session, { settings } from '../models/restaurant/restauant.model.js';
 import createSession from '../controllers/session/createSession.controller.js';
 import endSession from '../controllers/session/endSession.controller.js';
 

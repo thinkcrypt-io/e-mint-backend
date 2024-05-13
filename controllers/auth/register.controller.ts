@@ -2,6 +2,7 @@ import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import User from '../../models/user/user.model.js';
 import { Request, Response } from 'express';
+import Restaurant from '../../models/restaurant/restauant.model.js';
 
 // {
 //     "name": "John Doe",
@@ -22,16 +23,35 @@ const registerController = async (req: RequestType, res: Response): Promise<Resp
 		return res.status(400).send({ message: 'Passwords do not match' });
 
 	try {
-		const { name, email, password, role, phone, employeeId } = req.body;
+		const { name, email, password, confirm, restaurant } = req.body;
 		let user = await User.findOne({ email });
 
 		if (user)
-			return res.status(400).send({
+			return res.status(400).json({
 				status: 'error',
 				message: 'This email is already registered',
 			});
 
-		user = new User({ name, email, password, role: role, phone, employeeId, isActive: true });
+		if (password !== confirm) {
+			return res.status(400).json({ message: 'Passwords do not match' });
+		}
+
+		const createRestaurant = new Restaurant({
+			name: restaurant,
+			email: email,
+		});
+
+		const savedRestaurant = await createRestaurant.save();
+
+		user = new User({
+			name,
+			email,
+			restaurant: savedRestaurant._id,
+			password,
+			role: 'owner',
+			isActive: true,
+		});
+
 		const salt = await bcrypt.genSalt(10);
 		user.password = await bcrypt.hash(user.password, salt);
 
@@ -43,7 +63,7 @@ const registerController = async (req: RequestType, res: Response): Promise<Resp
 			.header('x-auth-token', token)
 			.json({ token: `Bearer ${token}`, userId: saved._id });
 	} catch (e: any) {
-		return res.status(500).send({ message: e.message });
+		return res.status(500).json({ message: e.message });
 	}
 };
 
@@ -58,12 +78,9 @@ function validate(data: any): Joi.ValidationResult {
 			'any.required': 'Password is required',
 			'string.min': 'Password must be 6 characters long',
 		}),
-		employeeId: Joi.string().min(2).max(255).required(),
+
+		restaurant: Joi.string().required(),
 		confirm: Joi.ref('password'),
-		role: Joi.string().required().messages({
-			'any.required': 'Role is required',
-			'string.empty': 'Role cannot be empty',
-		}),
 		phone: Joi.string().min(11).allow(null, ''),
 	});
 	return schema.validate(data);

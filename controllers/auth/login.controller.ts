@@ -15,16 +15,16 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 
 		let isAdmin = false;
 
-		if (user?.role == 'admin' || user?.role == 'super-admin') {
-			isAdmin = true;
-		}
+		// if (user?.role == 'admin' || user?.role == 'super-admin') {
+		// 	isAdmin = true;
+		// }
 
-		if (!isAdmin) {
-			return res.status(400).json({
-				status: 'error',
-				message: 'You are not authorized to login',
-			});
-		}
+		// if (!isAdmin) {
+		// 	return res.status(400).json({
+		// 		status: 'error',
+		// 		message: 'You are not authorized to login',
+		// 	});
+		// }
 
 		if (!user)
 			return res.status(400).json({

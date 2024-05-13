@@ -1,6 +1,6 @@
-import Role from '../role/role.model.js';
+import { UserSettings } from './user.types.js';
 
-const settings = {
+const settings: UserSettings = {
 	name: {
 		edit: true,
 		sort: true,
@@ -12,11 +12,17 @@ const settings = {
 		required: true,
 		trim: true,
 	},
-	employeeId: {
+	restaurant: {
+		edit: true,
+		title: 'Restaurant',
+		type: 'string',
+	},
+	username: {
 		unique: true,
 		search: true,
-		title: 'Employee ID',
-		type: 'string',
+		sort: true,
+		title: 'Username',
+		type: 'text',
 	},
 	email: {
 		unique: true,
@@ -37,31 +43,31 @@ const settings = {
 		edit: true,
 		title: 'User Role',
 		type: 'text',
-		filter: {
-			name: 'role',
-			field: 'role_in',
-			type: 'multi-select',
-			label: 'Roles',
-			title: 'Sort by role',
-			options: [
-				{
-					label: 'Admin',
-					value: 'admin',
-				},
-				{
-					label: 'Employee',
-					value: 'employee',
-				},
-				{
-					label: 'User',
-					value: 'user',
-				},
-				{
-					label: 'Super Admin',
-					value: 'super-admin',
-				},
-			],
-		},
+		// filter: {
+		// 	name: 'role',
+		// 	field: 'role_in',
+		// 	type: 'multi-select',
+		// 	label: 'Roles',
+		// 	title: 'Sort by role',
+		// 	options: [
+		// 		{
+		// 			label: 'Admin',
+		// 			value: 'admin',
+		// 		},
+		// 		{
+		// 			label: 'Employee',
+		// 			value: 'employee',
+		// 		},
+		// 		{
+		// 			label: 'User',
+		// 			value: 'user',
+		// 		},
+		// 		{
+		// 			label: 'Super Admin',
+		// 			value: 'super-admin',
+		// 		},
+		// 	],
+		// },
 	},
 
 	isActive: {
@@ -77,18 +83,17 @@ const settings = {
 			title: 'Sort by active status',
 		},
 	},
-
-	isRegisteredOnline: {
+	isDeleted: {
 		edit: true,
 		type: 'boolean',
-		title: 'User Registered Online',
+		title: 'Active Status',
 		sort: true,
 
 		filter: {
-			name: 'isRegisteredOnline',
+			name: 'isActive',
 			type: 'boolean',
-			label: 'Online/Offline',
-			title: 'Online/Offline customer',
+			label: 'Active',
+			title: 'Sort by active status',
 		},
 	},
 

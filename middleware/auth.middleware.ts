@@ -9,7 +9,7 @@ type RequestType = Request & {
 };
 
 export const protect = async (
-	req: RequestType,
+	req: any,
 	res: Response,
 	next: NextFunction
 ): Promise<Response | void> => {
@@ -24,7 +24,16 @@ export const protect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		req.user = await User.findById(decoded?._id).select('-password').populate('role');
+		if (!decoded.restaurant) {
+			return res.status(401).json({ message: 'Not authorized, token failed' });
+		}
+
+		req.user = await User.findById(decoded?._id).select('-password');
+		req.restaurant = decoded.restaurant;
+
+		if (decoded.restaurant != req.restaurant) {
+			return res.status(401).json({ message: 'Restaurant ID Does not match user' });
+		}
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });

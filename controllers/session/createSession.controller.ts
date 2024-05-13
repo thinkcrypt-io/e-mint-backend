@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Session from '../../models/session/session.model.js';
+import Session from '../../models/restaurant/restauant.model.js';
 import User from '../../models/user/user.model.js';
 import bcrypt from 'bcrypt';
 import sendMail from '../mail/sendMail.controller.js';

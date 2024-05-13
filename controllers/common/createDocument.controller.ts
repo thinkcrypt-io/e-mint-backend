@@ -7,9 +7,10 @@ type CustomRequest = Request & {
 };
 
 const createDocument = (model: mongoose.Model<any>) => {
-	return async (req: CustomRequest, res: Response): Promise<Response> => {
+	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const document = new model({ ...req.body, store: req.store });
+			console.log('req');
+			const document = new model({ ...req.body, restaurant: req.restaurant });
 			const saved = await document.save();
 
 			return res.status(201).json({

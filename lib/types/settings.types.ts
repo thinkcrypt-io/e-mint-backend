@@ -12,12 +12,14 @@ type Filter = {
 	model?: mongoose.Model<any>;
 	key?: string;
 	roles?: [string];
+	field?: string;
 };
 
 type SettingType = {
 	sort?: boolean;
 	search?: boolean;
 	title: string;
+	unique?: boolean;
 	type:
 		| 'string'
 		| 'email'
