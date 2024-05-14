@@ -21,6 +21,8 @@ const schema = new Schema<any>(
 			required: true,
 		},
 
+		tags: [String],
+
 		image: {
 			type: String,
 		},
@@ -31,6 +33,9 @@ const schema = new Schema<any>(
 			required: true,
 		},
 		collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
+		time: {
+			type: Number,
+		},
 
 		isFeatured: { type: Boolean, default: false },
 		isDeleted: { type: Boolean, default: false },

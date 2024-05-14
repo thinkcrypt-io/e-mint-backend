@@ -32,4 +32,6 @@ export type ProductSettings = {
 	isDiscount?: SettingType;
 	discountPrice?: SettingType;
 	longDescription?: SettingType;
+	tags: SettingType;
+	time: SettingType;
 };

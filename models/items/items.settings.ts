@@ -72,6 +72,13 @@ const settings: ProductSettings = {
 	image: {
 		type: 'uri',
 		title: 'Image',
+		edit: true,
+	},
+
+	tags: {
+		type: 'array-string',
+		title: 'Tags',
+		edit: true,
 	},
 
 	price: {
@@ -103,6 +110,12 @@ const settings: ProductSettings = {
 		type: 'boolean',
 
 		title: 'Featured',
+	},
+	time: {
+		type: 'number',
+		title: 'Cooking Time',
+		edit: true,
+		sort: true,
 	},
 	isDeleted: {
 		type: 'boolean',
