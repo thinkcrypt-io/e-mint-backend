@@ -14,6 +14,7 @@ import scanRoute from './routes/scans.route.js';
 import restaurantRoute from './routes/restaurant.route.js';
 import uploadRoute from './routes/upload.route.js';
 import collectionRoute from './routes/collection.route.js';
+import feedbackRoute from './routes/feedback.route.js';
 
 const app: Application = express();
 
@@ -62,6 +63,7 @@ app.use('/api/collections', collectionRoute);
 
 app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);
+app.use('/api/feedbacks', feedbackRoute);
 
 app.use((req, res, next) => {
 	return res

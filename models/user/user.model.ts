@@ -58,6 +58,7 @@ const schema = new Schema<any>(
 			items: [String],
 			users: [String],
 			collections: [String],
+			feedbacks: [String],
 		},
 	},
 
