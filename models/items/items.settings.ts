@@ -14,6 +14,11 @@ const settings: ProductSettings = {
 		title: 'Description',
 		edit: true,
 	},
+	longDescription: {
+		type: 'string',
+		title: 'Long Description',
+		edit: true,
+	},
 	restaurant: {
 		type: 'object',
 
@@ -90,8 +95,7 @@ const settings: ProductSettings = {
 	},
 	discountPrice: {
 		type: 'number',
-		title: 'Price',
-		required: true,
+		title: 'Discounted Price',
 		edit: true,
 		sort: true,
 	},

@@ -7,6 +7,13 @@ const schema = new Schema<any>(
 		description: {
 			type: String,
 		},
+		longDescription: {
+			type: String,
+		},
+		calorie: {
+			type: Number,
+		},
+
 		isActive: { type: Boolean, required: true, default: true },
 		restaurant: {
 			type: Schema.Types.ObjectId,

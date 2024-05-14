@@ -31,4 +31,5 @@ export type ProductSettings = {
 	collection?: SettingType;
 	isDiscount?: SettingType;
 	discountPrice?: SettingType;
+	longDescription?: SettingType;
 };
