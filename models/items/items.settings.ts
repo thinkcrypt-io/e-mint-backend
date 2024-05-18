@@ -50,7 +50,6 @@ const settings: ProductSettings = {
 	},
 	restaurant: {
 		type: 'object',
-
 		title: 'Restaurant',
 	},
 	collection: {
@@ -187,6 +186,18 @@ const settings: ProductSettings = {
 	isVisible: {
 		type: 'boolean',
 		title: 'Visible',
+	},
+	createdAt: {
+		type: 'string',
+		title: 'Created At',
+		sort: true,
+		filter: {
+			name: 'Created At',
+			field: 'createdAt',
+			type: 'date',
+			label: 'Created At',
+			title: 'Sort by created at',
+		},
 	},
 };
 
