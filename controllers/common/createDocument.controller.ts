@@ -1,15 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import mongoose from 'mongoose';
-
-type CustomRequest = Request & {
-	body: mongoose.Document;
-	store?: string;
-};
 
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			console.log('req');
 			const document = new model({ ...req.body, restaurant: req.restaurant });
 			const saved = await document.save();
 
