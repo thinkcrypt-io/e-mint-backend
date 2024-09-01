@@ -8,10 +8,10 @@ const schema = new Schema<any>(
 			default: 0,
 		},
 
-		restaurant: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Restaurant',
-		},
+		// restaurant: {
+		// 	type: mongoose.Schema.Types.ObjectId,
+		// 	ref: 'Restaurant',
+		// },
 		device: {
 			type: String,
 		},

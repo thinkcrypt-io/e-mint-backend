@@ -1,5 +1,4 @@
 import mongoose, { Schema } from 'mongoose';
-import { ProductType } from './items.types.js';
 
 const schema = new Schema<any>(
 	{
@@ -15,15 +14,18 @@ const schema = new Schema<any>(
 		},
 
 		isActive: { type: Boolean, required: true, default: true },
-		restaurant: {
-			type: Schema.Types.ObjectId,
-			ref: 'Restaurant',
-			required: true,
-		},
+		// restaurant: {
+		// 	type: Schema.Types.ObjectId,
+		// 	ref: 'Restaurant',
+		// 	required: true,
+		// },
 
 		tags: [String],
 
 		image: {
+			type: String,
+		},
+		coverImage: {
 			type: String,
 		},
 		images: [String],
@@ -32,6 +34,24 @@ const schema = new Schema<any>(
 			ref: 'Category',
 			required: true,
 		},
+		customAttributes: [
+			{
+				label: { type: String },
+				value: { type: String },
+			},
+		],
+		customSections: [
+			{
+				title: { type: String },
+				description: { type: String },
+			},
+		],
+		faq: [
+			{
+				title: { type: String },
+				description: { type: String },
+			},
+		],
 		collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
 		time: {
 			type: Number,

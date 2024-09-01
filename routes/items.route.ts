@@ -15,6 +15,10 @@ import { protect } from '../middleware/auth.middleware.js';
 import Item, { settings } from '../models/items/items.model.js';
 import getMenu from '../controllers/items/getMenu.controller.js';
 import getCount from '../controllers/common/getCount.controller.js';
+import exportDocument from '../controllers/common/exportDocument.controller.js';
+import updateManyDocuments from '../controllers/common/updateManyDocuments.controller.js';
+import duplicateDocument from '../controllers/common/duplicateDocument.controller.js';
+import getDocumentToEditById from '../controllers/common/getDocumentToEditById.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -35,12 +39,18 @@ router
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, createDocument(config.MODEL));
 router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
+router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
+
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 router.delete('/:id', protect, deleteDocument(config.MODEL));
 router.get('/get/count', protect, getCount(config.MODEL));
 
 router.get('/qr/:id', getMenu);
+router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
+
+router.put('/update/many', protect, updateManyDocuments(config.EDITS));
+router.put('/copy/:id', protect, duplicateDocument({ model: config.MODEL }));
 
 // Export the router
 export default router;

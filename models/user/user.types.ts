@@ -3,7 +3,7 @@ import SettingType from '../../lib/types/settings.types';
 
 export type UserType = Document & {
 	name: string;
-	restaurant: string;
+	// restaurant: string;
 	username: string;
 	email: string;
 	phone: string;
@@ -19,7 +19,7 @@ export type UserType = Document & {
 };
 export type UserSettings = {
 	name: SettingType;
-	restaurant: SettingType;
+	// restaurant: SettingType;
 	username: SettingType;
 	email: SettingType;
 	phone: SettingType;

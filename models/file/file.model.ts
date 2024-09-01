@@ -10,10 +10,10 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 		},
-		restaurant: {
-			type: Types.ObjectId,
-			ref: 'Restaurant',
-		},
+		// restaurant: {
+		// 	type: Types.ObjectId,
+		// 	ref: 'Restaurant',
+		// },
 		isActive: {
 			type: Boolean,
 			default: true,

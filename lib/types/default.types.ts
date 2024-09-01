@@ -48,6 +48,7 @@ export type ConfigItem = {
 	required?: boolean;
 	insertOnly?: boolean;
 	trim?: boolean;
+	allowNull?: boolean;
 };
 
 export type Config = {

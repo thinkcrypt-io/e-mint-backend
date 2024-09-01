@@ -16,11 +16,7 @@ const schema = new Schema<CollectionType>(
 			type: String,
 			trim: true,
 		},
-		restaurant: {
-			type: Types.ObjectId,
-			ref: 'Restaurant',
-			required: true,
-		},
+
 		priority: {
 			type: Number,
 			defailt: 0,
@@ -34,11 +30,40 @@ const schema = new Schema<CollectionType>(
 			type: String,
 			trim: true,
 		},
+		images: [
+			{
+				type: String,
+				trim: true,
+			},
+		],
+
+		displayInHome: {
+			type: Boolean,
+			default: false,
+		},
+
+		displayInMenu: {
+			type: Boolean,
+			default: false,
+		},
 
 		isFeatured: {
 			type: Boolean,
 			default: false,
 			required: true,
+		},
+		meta: {
+			title: {
+				type: String,
+				trim: true,
+			},
+			keywords: {
+				type: [String],
+			},
+			description: {
+				type: String,
+				trim: true,
+			},
 		},
 	},
 

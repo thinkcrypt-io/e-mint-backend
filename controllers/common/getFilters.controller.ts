@@ -14,7 +14,7 @@ const getFilters = ({
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			let query: any = (req as any).queryHelper || {};
-			query.store = (req as any).store;
+			// query.store = (req as any).store;
 
 			let filtersToSend: FilterResponse[] = [];
 
@@ -28,7 +28,7 @@ const getFilters = ({
 
 				if (filter?.category === 'model') {
 					const myModel = filter?.model || baseModel;
-					const modelData = await myModel.find(query);
+					const modelData = await myModel.find(query).sort('name');
 					newFilter.options = modelData.map((item: any) => ({
 						value: item._id,
 						label: item[filter.key],

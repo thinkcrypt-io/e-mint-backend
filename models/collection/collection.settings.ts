@@ -63,6 +63,12 @@ const settings = {
 		type: 'uri',
 	},
 
+	images: {
+		type: 'array-string',
+		title: 'Image',
+		edit: true,
+	},
+
 	isFeatured: {
 		edit: true,
 		sort: true,
@@ -75,6 +81,37 @@ const settings = {
 			label: 'Active',
 			title: 'Sort by featured',
 		},
+	},
+	displayInHome: {
+		edit: true,
+		type: 'boolean',
+		title: 'Display In Home Page',
+		sort: true,
+
+		filter: {
+			name: 'displayInHome',
+			type: 'boolean',
+			label: 'Display In Home Page',
+			title: 'Display In Home Page',
+		},
+	},
+	displayInMenu: {
+		edit: true,
+		type: 'boolean',
+		title: 'Display In Menu',
+		sort: true,
+
+		filter: {
+			name: 'displayInMenu',
+			type: 'boolean',
+			label: 'Display In Menu',
+			title: 'Display In Menu',
+		},
+	},
+	meta: {
+		edit: true,
+		title: 'Meta',
+		type: 'object',
 	},
 };
 

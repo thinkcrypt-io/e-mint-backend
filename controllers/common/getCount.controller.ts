@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const getCount = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
 		try {
-			const doc = await model.countDocuments({ restaurant: req.restaurant });
+			const doc = await model.countDocuments({});
 			return res.status(200).json(doc);
 		} catch (e: any) {
 			console.error(e.message);

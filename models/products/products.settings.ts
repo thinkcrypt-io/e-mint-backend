@@ -1,4 +1,4 @@
-import { ProductSettings } from './items.types.js';
+import { ProductSettings } from './products.types.js';
 import Category from '../category/category.model.js';
 import Collection from '../collection/collection.model.js';
 
@@ -38,21 +38,19 @@ const settings: ProductSettings = {
 		title: 'Name',
 		edit: true,
 		search: true,
+		unique: true,
 	},
 	description: {
 		type: 'string',
-		title: 'Description',
+		title: 'Long Descripion',
 		edit: true,
 	},
-	longDescription: {
+	shortDescription: {
 		type: 'string',
-		title: 'Long Description',
+		title: 'Short Description',
 		edit: true,
 	},
-	// restaurant: {
-	// 	type: 'object',
-	// 	title: 'Restaurant',
-	// },
+
 	collection: {
 		sort: true,
 		edit: true,
@@ -95,11 +93,6 @@ const settings: ProductSettings = {
 		},
 	},
 	image: {
-		type: 'uri',
-		title: 'Image',
-		edit: true,
-	},
-	coverImage: {
 		type: 'uri',
 		title: 'Image',
 		edit: true,
@@ -173,22 +166,24 @@ const settings: ProductSettings = {
 			title: 'Sort by discount',
 		},
 	},
-	discountPrice: {
+	discount: {
 		type: 'number',
 		title: 'Discounted Price',
 		edit: true,
 		sort: true,
 		filter: {
-			name: 'Discounted Price',
-			field: 'discountPrice',
-			type: 'range',
-			label: 'Discounted Price',
-			title: 'Sort by discount price',
+			name: 'Discount',
+			field: 'discount',
+			type: 'boolean',
+			label: 'Discount',
+			title: 'Sort by discount',
 		},
 	},
 	isFeatured: {
 		type: 'boolean',
 		title: 'Featured',
+		edit: true,
+		sort: true,
 		filter: {
 			name: 'Featured',
 			field: 'isFeatured',
@@ -197,12 +192,45 @@ const settings: ProductSettings = {
 			title: 'Sort by featured',
 		},
 	},
-	time: {
-		type: 'number',
-		title: 'Cooking Time',
+	sku: {
+		type: 'string',
+		title: 'SKU',
 		edit: true,
+		search: true,
 		sort: true,
 	},
+	barcode: {
+		type: 'string',
+		title: 'Barcode',
+		edit: true,
+		search: true,
+	},
+	slug: {
+		type: 'string',
+		title: 'Slug',
+		edit: true,
+		unique: true,
+		search: true,
+	},
+
+	unit: {
+		type: 'string',
+		title: 'Unit',
+		edit: true,
+	},
+
+	unitValue: {
+		type: 'number',
+		title: 'Unit Value',
+		edit: true,
+	},
+
+	vat: {
+		type: 'number',
+		title: 'VAT',
+		edit: true,
+	},
+
 	isDeleted: {
 		type: 'boolean',
 		title: 'Deleted',

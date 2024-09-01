@@ -1,0 +1,52 @@
+import { Response } from 'express';
+import Order from '../../models/order/order.model.js';
+
+const addOrder = async (req: any, res: Response): Promise<Response> => {
+	const {
+		cart,
+		isPaid,
+		address,
+		paymentMethod,
+		customer,
+		orderDate,
+		paymentAmount,
+		paidAmount,
+		status,
+		note,
+	} = req.body;
+
+	try {
+		const order = new Order({
+			// store: (req as any).store,
+			user: (req as any).user._id,
+			items: cart.items,
+			total: cart.total,
+			vat: cart.vat,
+			subTotal: cart.subTotal,
+			coupon: cart.couponId,
+			isPaid: isPaid || cart?.total == paymentAmount ? true : false,
+			address,
+			status: status || 'pending',
+			paymentMethod,
+			customer: customer == 'guest' ? null : customer ? customer : (req as any).user._id,
+			orderDate,
+			paymentAmount,
+			note,
+			paidAmount,
+			shippingCharge: cart.shipping,
+			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
+			discount: cart.discount,
+		});
+
+		const saved = (await order.save()) as any;
+
+		return res
+			.status(201)
+			.json({ message: `Order id: ${saved._id} added successfully`, order: saved });
+	} catch (e: any) {
+		console.error(e);
+		return res.status(500).json({ message: e.message });
+	}
+};
+
+export default addOrder;

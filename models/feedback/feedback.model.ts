@@ -41,11 +41,6 @@ const schema = new Schema<any>(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Customer',
 		},
-
-		restaurant: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Restaurant',
-		},
 	},
 
 	{

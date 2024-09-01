@@ -10,6 +10,9 @@ import validate from '../middleware/validate.middleware.js';
 import ifExists from '../middleware/isExists.middleware.js';
 import createDocument from '../controllers/common/createDocument.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
+import updateDocument from '../controllers/common/updateDocument.controller.js';
+import updateManyDocuments from '../controllers/common/updateManyDocuments.controller.js';
+import getDocumentToEditById from '../controllers/common/getDocumentToEditById.controller.js';
 
 const router = express.Router();
 
@@ -25,5 +28,8 @@ router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS)
 router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
 router.post('/', ...postMiddleware, createDocument(config.MODEL));
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
+router.put('/:id', protect, updateDocument(config.EDITS));
+router.put('/update/many', protect, updateManyDocuments(config.EDITS));
+router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
 
 export default router;

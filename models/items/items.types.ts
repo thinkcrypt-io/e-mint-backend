@@ -4,7 +4,7 @@ import SettingType from '../../lib/types/settings.types';
 type BaseProductType = {
 	name: string;
 	description?: string;
-	restaurant: Types.ObjectId;
+	// restaurant: Types.ObjectId;
 	category: Types.ObjectId;
 	image?: string;
 	images?: string[];
@@ -20,6 +20,10 @@ type BaseProductType = {
 	tags: string[];
 	time: number;
 	createdAt?: Date;
+	coverImage?: string;
+	customAttributes?: { label: string; value: string }[];
+	customSections?: { title: string; description: string }[];
+	faq?: { question: string; answer: string }[];
 };
 
 export type ProductType = mongoose.Document & BaseProductType;

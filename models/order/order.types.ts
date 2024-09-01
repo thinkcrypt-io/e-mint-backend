@@ -1,0 +1,42 @@
+import { Document, Schema } from 'mongoose';
+
+type DocumentBaseType = Document & {
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+export type OrderItemType = {
+	name: string;
+	image?: string;
+	_id: Schema.Types.ObjectId;
+	qty: number;
+	unitPrice: number;
+	totalPrice: number;
+	vat: number;
+};
+
+export type OrderType = DocumentBaseType & {
+	// store: Schema.Types.ObjectId;
+	user?: Schema.Types.ObjectId;
+	items: OrderItemType[];
+	total: number;
+	vat: number;
+	subTotal: number;
+	coupon?: Schema.Types.ObjectId;
+	isPaid?: boolean;
+	address: any;
+	shippingCharge: number;
+	// delivery?: Schema.Types.ObjectId;
+	paymentMethod?: string;
+	status?: string;
+	paidAmount?: number;
+	dueAmount?: number;
+	// transactions?: any[];
+	customer?: Schema.Types.ObjectId;
+	orderDate: Date;
+	isCancelled?: boolean;
+	discount?: number;
+	note?: string;
+};
+
+export default OrderType;

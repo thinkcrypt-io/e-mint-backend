@@ -1,6 +1,7 @@
 //
 
 import { CategorySettings } from './category.type.js';
+//import Category from './category.model.js';
 
 const settings: CategorySettings = {
 	name: {
@@ -13,10 +14,56 @@ const settings: CategorySettings = {
 		trim: true,
 	},
 
+	image: {
+		edit: true,
+		type: 'uri',
+		title: 'Image',
+	},
+
+	// parent: {
+	// 	edit: true,
+	// 	sort: true,
+	// 	title: 'Parent Category',
+	// 	type: 'string',
+	// 	required: true,
+	// 	populate: {
+	// 		path: 'category',
+	// 		select: 'name',
+	// 	},
+
+	// 	filter: {
+	// 		name: 'parent',
+	// 		field: 'category_in',
+	// 		type: 'multi-select',
+	// 		label: 'Category',
+	// 		title: 'Sort by category',
+	// 		options: [],
+	// 		category: 'model',
+	// 		model: Category,
+	// 		key: 'name',
+	// 	},
+	// },
+
 	description: {
 		edit: true,
 		type: 'string',
 		title: 'Description',
+	},
+
+	shortDescription: {
+		edit: true,
+		type: 'string',
+		title: 'Short Description',
+	},
+
+	slug: {
+		edit: true,
+		type: 'string',
+		title: 'Slug',
+		required: true,
+		trim: true,
+		search: true,
+		unique: true,
 	},
 
 	priority: {
@@ -33,26 +80,20 @@ const settings: CategorySettings = {
 		},
 	},
 
-	restaurant: {
-		edit: true,
-		title: 'Restaurant',
-		type: 'string',
-	},
-
 	createdAt: {
 		sort: true,
 		type: 'string',
 		title: 'Date',
-		filter: {
-			name: 'Date',
-			field: 'createdAt',
-			type: 'date',
-			label: 'Session Date',
-			title: 'Sort by date',
-		},
 	},
 
 	isDeleted: {
+		edit: true,
+		type: 'boolean',
+		title: 'Active Status',
+		sort: true,
+	},
+
+	isActive: {
 		edit: true,
 		type: 'boolean',
 		title: 'Active Status',
@@ -66,16 +107,66 @@ const settings: CategorySettings = {
 		},
 	},
 
-	isActive: {
+	displayInMenu: {
 		edit: true,
 		type: 'boolean',
-		title: 'Active Status',
+		title: 'Display In Menu',
+		sort: true,
+
+		filter: {
+			name: 'displayInMenu',
+			type: 'boolean',
+			label: 'Display In Menu',
+			title: 'Display In Menu',
+		},
+	},
+
+	displayInHomePage: {
+		edit: true,
+		type: 'boolean',
+		title: 'Display In Home Page',
+		sort: true,
+
+		filter: {
+			name: 'displayInHomePage',
+			type: 'boolean',
+			label: 'Display In Home Page',
+			title: 'Display In Home Page',
+		},
+	},
+
+	tags: {
+		edit: true,
+		sort: true,
+		title: 'Tags',
+		type: 'array-string',
+		filter: {
+			name: 'tags',
+			field: 'tags_in',
+			type: 'multi-select',
+			label: 'Tag',
+			title: 'Sort by Tag',
+			category: 'distinct',
+			key: 'tags',
+		},
+	},
+
+	meta: {
+		edit: true,
+		title: 'Meta',
+		type: 'object',
+	},
+
+	isFeatured: {
+		edit: true,
+		type: 'boolean',
+		title: 'Featured Status',
 		sort: true,
 
 		filter: {
 			name: 'isActive',
 			type: 'boolean',
-			label: 'Active',
+			label: 'Featured',
 			title: 'Sort by active status',
 		},
 	},

@@ -10,6 +10,9 @@ import authRoute from './routes/auth.route.js';
 import categoryRoute from './routes/categories.route.js';
 
 import itemRoute from './routes/items.route.js';
+import productRoute from './routes/products.route.js';
+import customerRoute from './routes/customers.route.js';
+import orderRoute from './routes/order.route.js';
 import scanRoute from './routes/scans.route.js';
 import restaurantRoute from './routes/restaurant.route.js';
 import uploadRoute from './routes/upload.route.js';
@@ -59,8 +62,12 @@ app.use('/api/auth', authRoute);
 app.use('/api/categories', categoryRoute);
 
 app.use('/api/items', itemRoute);
+app.use('/api/products', productRoute);
+app.use('/api/customers', customerRoute);
+
 app.use('/api/restaurant', restaurantRoute);
 app.use('/api/collections', collectionRoute);
+app.use('/api/orders', orderRoute);
 
 app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);

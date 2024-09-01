@@ -12,11 +12,11 @@ const settings: UserSettings = {
 		required: true,
 		trim: true,
 	},
-	restaurant: {
-		edit: true,
-		title: 'Restaurant',
-		type: 'string',
-	},
+	// restaurant: {
+	// 	edit: true,
+	// 	title: 'Restaurant',
+	// 	type: 'string',
+	// },
 	username: {
 		unique: true,
 		search: true,

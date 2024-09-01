@@ -3,10 +3,10 @@ import mongoose, { Schema, Types } from 'mongoose';
 
 const schema = new Schema<any>(
 	{
-		restaurant: {
-			type: mongoose.Schema.Types.ObjectId,
-			required: [true, 'Restaurant is required'],
-		},
+		// restaurant: {
+		// 	type: mongoose.Schema.Types.ObjectId,
+		// 	required: [true, 'Restaurant is required'],
+		// },
 		table: {
 			type: mongoose.Schema.Types.ObjectId,
 		},

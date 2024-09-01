@@ -6,6 +6,7 @@ export type CategoryType = Document & {
 	_id?: string;
 	name: string;
 	description?: string;
+	shortDescription?: string;
 	restaurant: Types.ObjectId;
 	isActive: boolean;
 	isDeleted?: boolean;
@@ -18,10 +19,17 @@ export type CategoryType = Document & {
 export type CategorySettings = {
 	name: SettingType;
 	description: SettingType;
-	restaurant: SettingType;
+	shortDescription?: SettingType;
 	isActive: SettingType;
 	isDeleted?: SettingType;
-	image?: SettingType;
+	isFeatured: SettingType;
+	image: SettingType;
 	createdAt?: SettingType;
 	priority: SettingType;
+	parent?: SettingType;
+	slug: SettingType;
+	tags: SettingType;
+	displayInMenu: SettingType;
+	displayInHomePage: SettingType;
+	meta: SettingType;
 };

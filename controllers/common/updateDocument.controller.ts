@@ -12,7 +12,7 @@ const updateDocument = ({ model, allowEdits }: EndwareType) => {
 		try {
 			const { id } = req.params;
 
-			let data: any = await model.findOne({ _id: id, store: req.store });
+			let data: any = await model.findOne({ _id: id });
 
 			if (!data) {
 				return res.status(404).json({ message: 'Document Not Found' });

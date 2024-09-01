@@ -30,7 +30,8 @@ type SettingType = {
 		| 'text'
 		| 'object'
 		| 'array-number'
-		| 'array';
+		| 'array'
+		| 'array-object';
 	required?: boolean;
 	filter?: Filter;
 	edit?: boolean;

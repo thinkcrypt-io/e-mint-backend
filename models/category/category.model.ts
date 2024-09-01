@@ -1,23 +1,70 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { CategoryType } from './category.type.js';
 
+const keys = [
+	'name',
+	'shortDescription',
+	'description',
+	'parent',
+	'displayInHomePage',
+	'dispayInMenu',
+	'meta',
+	'slug',
+	'isActive',
+	'isFeatured',
+	'priority',
+	'image',
+	'isDeleted',
+	'timestamps',
+	'tags',
+];
+
 const schema = new Schema<CategoryType>(
 	{
 		name: {
 			type: String,
 			trim: true,
 		},
+		image: {
+			type: String,
+			trim: true,
+		},
+		shortDescription: {
+			type: String,
+		},
 		description: {
 			type: String,
 			trim: true,
 		},
-		restaurant: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Restaurant',
+		slug: {
+			type: String,
+			required: true,
+			trim: true,
 		},
+		parent: {
+			type: Types.ObjectId,
+			ref: 'Category',
+		},
+
+		displayInHomePage: {
+			type: Boolean,
+			default: false,
+		},
+		displayInMenu: {
+			type: Boolean,
+			default: false,
+		},
+		tags: [String],
+
 		isActive: {
 			type: Boolean,
 			default: true,
+			required: true,
+		},
+
+		isFeatured: {
+			type: Boolean,
+			default: false,
 			required: true,
 		},
 
@@ -27,15 +74,19 @@ const schema = new Schema<CategoryType>(
 			required: true,
 		},
 
-		image: {
-			type: String,
-			trim: true,
-		},
-
 		isDeleted: {
 			type: Boolean,
 			default: false,
 			required: true,
+		},
+		meta: {
+			title: {
+				type: String,
+			},
+			description: {
+				type: String,
+			},
+			keywords: [String],
 		},
 	},
 

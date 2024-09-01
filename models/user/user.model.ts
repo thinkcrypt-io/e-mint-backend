@@ -10,12 +10,12 @@ const schema = new Schema<any>(
 			required: [true, 'Name is required'],
 		},
 
-		restaurant: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Restaurant',
+		// restaurant: {
+		// 	type: mongoose.Schema.Types.ObjectId,
+		// 	ref: 'Restaurant',
 
-			required: [true, 'Restaurant is required'],
-		},
+		// 	required: [true, 'Restaurant is required'],
+		// },
 
 		username: {
 			type: String,
@@ -59,6 +59,9 @@ const schema = new Schema<any>(
 			users: [String],
 			collections: [String],
 			feedbacks: [String],
+			products: [String],
+			customers: [String],
+			orders: [String],
 		},
 	},
 

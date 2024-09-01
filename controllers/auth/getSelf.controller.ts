@@ -4,7 +4,7 @@ import { Response } from 'express';
 const getSelf = async (req: any, res: Response): Promise<Response> => {
 	try {
 		const id: string = req.user._id;
-		const data = await User.findById(id).select('-password').populate('restaurant');
+		const data = await User.findById(id).select('-password');
 
 		if (!data) {
 			return res.status(404).json({ message: 'User Not Found' });

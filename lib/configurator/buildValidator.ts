@@ -7,7 +7,7 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 	const update: Record<string, Schema> = {};
 
 	Object.entries(config).forEach(([key, item]) => {
-		const { min, max, type = 'string', title, required, edit, trim } = item;
+		const { min, max, type = 'string', title, required, edit, trim, allowNull } = item;
 		let base: any;
 
 		switch (type) {
@@ -29,6 +29,9 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 			case 'array-number':
 				base = Joi.array().items(Joi.number());
 				break;
+			case 'array-object':
+				base = Joi.array().items(Joi.object());
+				break;
 			case 'array':
 				base = Joi.array();
 				break;
@@ -46,6 +49,7 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 		if (min) base = base.min(min);
 		if (max) base = base.max(max);
 		if (trim) base = base.trim();
+		if (allowNull) base = base.allow('');
 
 		insert[key] = base.messages(error(title || ''));
 		if (required) insert[key] = insert[key].required();

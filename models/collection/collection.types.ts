@@ -8,10 +8,17 @@ type DocumentBaseType = Document & {
 export type CollectionType = DocumentBaseType & {
 	name: string;
 	description?: string;
+	displayInHome: boolean;
+	displayInMenu: boolean;
 	isActive: boolean;
-	restaurant: Schema.Types.ObjectId;
 	image?: string;
 	isFeatured: boolean;
 	priority: number;
-	dataKey: string;
+	dataKey?: string;
+	images?: string[];
+	meta?: {
+		title: string;
+		description: string;
+		keywords: string[];
+	};
 };

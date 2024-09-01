@@ -60,6 +60,10 @@ const constructConfig = ({ model, config, options }: any): any => {
 			model: model,
 			fields: configKeys.filter(key => config[key].unique).join(' ') || '',
 		},
+		DUPLICATE_OPTIONS: {
+			model: model,
+			unique: configKeys.filter(key => config[key].unique).join(' ') || '',
+		},
 		QUERY_OPTIONS: {
 			model: model,
 			populate:
