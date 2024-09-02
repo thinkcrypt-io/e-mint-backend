@@ -26,3 +26,5 @@ export { default as paginate } from './pagination.middleware.js';
 export { default as sort } from './pagination.middleware.js';
 
 export { default as validate } from './validate.middleware.js';
+export { default as ifExistOnUpdate } from './ifExistOnUpdate.middleware.js';
+export { default as hasPermission } from './hasPermission.middleware.js';

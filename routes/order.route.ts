@@ -2,11 +2,10 @@
 import express from 'express';
 import constructConfig from '../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, ifExists, validate } from '../middleware/index.js';
+import { protect, sort, query, validate } from '../middleware/index.js';
 import {
 	deleteDocument,
 	getFilters,
-	createDocument,
 	updateDocument,
 	getAllDocuments,
 	getDocumentById,

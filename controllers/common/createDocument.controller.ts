@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const document = new model({ ...req.body, restaurant: req.restaurant });
+			const document = new model({ ...req.body, store: req.store });
 			const saved = await document.save();
 
 			return res.status(201).json({

@@ -20,6 +20,7 @@ type SettingType = {
 	search?: boolean;
 	title: string;
 	unique?: boolean;
+	exclude?: boolean;
 	type:
 		| 'string'
 		| 'email'

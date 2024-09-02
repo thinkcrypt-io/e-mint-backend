@@ -32,7 +32,8 @@ const schema = new Schema<any>(
 		phone: { type: String, trim: true },
 
 		role: {
-			type: String,
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Role',
 			required: [true, 'Role is required'],
 		},
 
@@ -62,6 +63,7 @@ const schema = new Schema<any>(
 			products: [String],
 			customers: [String],
 			orders: [String],
+			roles: [String],
 		},
 	},
 
@@ -76,15 +78,15 @@ schema.methods.checkPassword = async function (password: string) {
 	return isMatch;
 };
 
-// schema.pre<any>('save', async function (next) {
-// 	// if the password is not modified, skip this middleware
-// 	const salt = await bcrypt.genSalt(10);
-// 	if (!this.isModified('password')) return next();
-// 	// hash the password
-// 	const hashedPassword = await hash(this.password, salt);
-// 	this.password = hashedPassword;
-// 	next();
-// });
+schema.pre<any>('save', async function (next) {
+	// if the password is not modified, skip this middleware
+	const salt = await bcrypt.genSalt(10);
+	if (!this.isModified('password')) return next();
+	// hash the password
+	const hashedPassword = await hash(this.password, salt);
+	this.password = hashedPassword;
+	next();
+});
 
 schema.methods.generateAuthToken = function (this: any): string {
 	const token = jwt.sign(
@@ -94,7 +96,7 @@ schema.methods.generateAuthToken = function (this: any): string {
 			email: this.email,
 			role: this.role,
 			phone: this.phone,
-			restaurant: this.restaurant,
+			// restaurant: this.restaurant,
 		},
 		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 	);

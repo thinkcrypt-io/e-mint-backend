@@ -1,3 +1,4 @@
+import Role from '../role/role.model.js';
 import { UserSettings } from './user.types.js';
 
 const settings: UserSettings = {
@@ -18,8 +19,7 @@ const settings: UserSettings = {
 	// 	type: 'string',
 	// },
 	username: {
-		unique: true,
-		search: true,
+		// search: true,
 		sort: true,
 		title: 'Username',
 		type: 'text',
@@ -28,6 +28,7 @@ const settings: UserSettings = {
 		unique: true,
 		search: true,
 		sort: true,
+		edit: true,
 		title: 'Email',
 		type: 'email',
 		required: true,
@@ -41,33 +42,23 @@ const settings: UserSettings = {
 
 	role: {
 		edit: true,
+		sort: true,
 		title: 'User Role',
 		type: 'text',
-		// filter: {
-		// 	name: 'role',
-		// 	field: 'role_in',
-		// 	type: 'multi-select',
-		// 	label: 'Roles',
-		// 	title: 'Sort by role',
-		// 	options: [
-		// 		{
-		// 			label: 'Admin',
-		// 			value: 'admin',
-		// 		},
-		// 		{
-		// 			label: 'Employee',
-		// 			value: 'employee',
-		// 		},
-		// 		{
-		// 			label: 'User',
-		// 			value: 'user',
-		// 		},
-		// 		{
-		// 			label: 'Super Admin',
-		// 			value: 'super-admin',
-		// 		},
-		// 	],
-		// },
+		populate: {
+			path: 'role',
+			select: 'name',
+		},
+		filter: {
+			name: 'role',
+			field: 'role_in',
+			type: 'multi-select',
+			label: 'Roles',
+			title: 'Sort by role',
+			category: 'model',
+			model: Role,
+			key: 'name',
+		},
 	},
 
 	isActive: {
@@ -101,6 +92,7 @@ const settings: UserSettings = {
 		type: 'text',
 		title: 'Password',
 		min: 8,
+		exclude: true,
 	},
 };
 

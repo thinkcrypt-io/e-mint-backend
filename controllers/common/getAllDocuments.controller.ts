@@ -24,7 +24,12 @@ type RequestType = ProtectedRequestType & {
 	meta?: any;
 };
 
-const getAllDocuments = ({ model, populate, select = '' }: EndwareType) => {
+const getAllDocuments = ({
+	model,
+	populate,
+	select = '',
+	exclude,
+}: EndwareType & { exclude?: any }) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { sort, limit = 10, skip = 0, fields }: Meta = req.meta;
@@ -35,7 +40,7 @@ const getAllDocuments = ({ model, populate, select = '' }: EndwareType) => {
 			const listQuery = model
 				.find(query)
 				.populate(populate || '')
-				.select(select || fields)
+				.select(select || (fields && `${fields} ${exclude && exclude}`) || (exclude && exclude))
 				.sort(sort)
 				.limit(limit)
 				.skip(skip);

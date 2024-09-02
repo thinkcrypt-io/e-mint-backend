@@ -2,11 +2,10 @@
 import express from 'express';
 import constructConfig from '../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, ifExists, validate } from '../middleware/index.js';
+import { protect, sort, query, validate, ifExists, hasPermission } from '../middleware/index.js';
 import {
 	deleteDocument,
 	getFilters,
-	createDocument,
 	updateDocument,
 	getAllDocuments,
 	getDocumentById,
@@ -15,28 +14,29 @@ import {
 	updateManyDocuments,
 	exportDocument,
 	getCount,
+	createDocument,
 } from '../controllers/common/index.js';
 
-import Product, { settings } from '../models/products/products.model.js';
-import addOrder from '../controllers/order/addOrder.controller.js';
-import cancelOrder from '../controllers/order/cancelOrder.controller.js';
+import Role, { settings } from '../models/role/role.model.js';
+import getOrderTotal from '../controllers/order/getOrderTotal.js';
 
 // Initialize a new router
 const router = express.Router();
 
 const config = constructConfig({
-	model: Product,
+	model: Role,
 	config: settings,
 });
 
 // Define common middleware
-const commonMiddleware = [protect, sort, query(config.FILTER_OPTIONS)];
-const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
-const updateMiddleware = [
+const commonMiddleware = [
 	protect,
-	ifExists(config.EXIST_OPTIONS),
-	validate(config.VALIDATORS.UPDATE),
+	// hasPermission(['view_category']),
+	sort,
+	query(config.FILTER_OPTIONS),
 ];
+const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
+const updateMiddleware = [protect, validate(config.VALIDATORS.UPDATE)];
 
 // Define the routes for the product store
 router
@@ -57,8 +57,6 @@ router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
 router.put('/update/many', protect, updateManyDocuments(config.EDITS));
 router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
-
-router.put('/:id/cancel', protect, cancelOrder);
 
 // Export the router
 export default router;

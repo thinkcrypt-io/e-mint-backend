@@ -1,5 +1,7 @@
 //
 
+import permissions from './permissions.js';
+
 const settings = {
 	name: {
 		edit: true,
@@ -11,6 +13,7 @@ const settings = {
 		max: 50,
 		required: true,
 		trim: true,
+		unique: true,
 	},
 	description: {
 		edit: true,
@@ -23,6 +26,13 @@ const settings = {
 		edit: true,
 		title: 'Permissions',
 		type: 'array',
+		filter: {
+			name: 'permissions',
+			type: 'multi-select',
+			label: 'Permissions',
+			title: 'Filter by permissions',
+			options: permissions,
+		},
 	},
 
 	isActive: {
