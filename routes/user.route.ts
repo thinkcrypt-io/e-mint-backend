@@ -20,6 +20,7 @@ import getDocumentToEditById from '../controllers/common/getDocumentToEditById.c
 
 import Customer, { settings } from '../models/user/user.model.js';
 import ifExistOnUpdate from '../middleware/ifExistOnUpdate.middleware.js';
+import hasPermission from '../middleware/hasPermission.middleware.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -30,12 +31,23 @@ const config = constructConfig({
 });
 
 // Define common middleware
-const commonMiddleware = [protect, sort, query(config.FILTER_OPTIONS)];
-const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
+const commonMiddleware = [
+	protect,
+	sort,
+	query(config.FILTER_OPTIONS),
+	hasPermission(['view_user']),
+];
+const postMiddleware = [
+	protect,
+	ifExists(config.EXIST_OPTIONS),
+	validate(config.VALIDATORS.POST),
+	hasPermission(['add_user']),
+];
 const updateMiddleware = [
 	protect,
 	ifExistOnUpdate(config.EXIST_OPTIONS),
 	validate(config.VALIDATORS.UPDATE),
+	hasPermission(['edit_user']),
 ];
 
 // Define the routes for the product store
@@ -47,18 +59,23 @@ router
 	)
 	.post(...postMiddleware, createDocument(config.MODEL));
 
-router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
+router.get('/:id', protect, hasPermission(['view_user']), getDocumentById(config.QUERY_OPTIONS));
 
-router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
+router.get('/edit/:id', protect, hasPermission(['view_user']), getDocumentToEditById(config.MODEL));
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
-router.delete('/:id', protect, deleteDocument(config.MODEL));
-router.get('/get/count', protect, getCount(config.MODEL));
+router.delete('/:id', protect, hasPermission(['delete_user']), deleteDocument(config.MODEL));
+router.get('/get/count', protect, hasPermission(['view_user']), getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
-router.put('/update/many', protect, updateManyDocuments(config.EDITS));
+router.put(
+	'/update/many',
+	protect,
+	hasPermission(['edit_user']),
+	updateManyDocuments(config.EDITS)
+);
 router.put('/copy/:id', protect, duplicateDocument({ model: config.MODEL }));
 
 // Export the router

@@ -31,12 +31,21 @@ const config = constructConfig({
 // Define common middleware
 const commonMiddleware = [
 	protect,
-	// hasPermission(['view_category']),
+	hasPermission(['view_role']),
 	sort,
 	query(config.FILTER_OPTIONS),
 ];
-const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
-const updateMiddleware = [protect, validate(config.VALIDATORS.UPDATE)];
+const postMiddleware = [
+	protect,
+	ifExists(config.EXIST_OPTIONS),
+	validate(config.VALIDATORS.POST),
+	hasPermission(['add_role']),
+];
+const updateMiddleware = [
+	protect,
+	hasPermission(['edit_role']),
+	validate(config.VALIDATORS.UPDATE),
+];
 
 // Define the routes for the product store
 router
@@ -44,19 +53,29 @@ router
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, createDocument(config.MODEL));
 
-router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
+router.get('/:id', protect, hasPermission(['view_role']), getDocumentById(config.QUERY_OPTIONS));
 
-router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
+router.get('/edit/:id', protect, hasPermission(['view_role']), getDocumentToEditById(config.MODEL));
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
-router.delete('/:id', protect, deleteDocument(config.MODEL));
+router.delete('/:id', protect, hasPermission(['delete_role']), deleteDocument(config.MODEL));
 router.get('/get/count', protect, getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
-router.put('/update/many', protect, updateManyDocuments(config.EDITS));
-router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
+router.put(
+	'/update/many',
+	protect,
+	hasPermission(['edit_role']),
+	updateManyDocuments(config.EDITS)
+);
+router.put(
+	'/copy/:id',
+	protect,
+	hasPermission(['add_role']),
+	duplicateDocument(config.DUPLICATE_OPTIONS)
+);
 
 // Export the router
 export default router;

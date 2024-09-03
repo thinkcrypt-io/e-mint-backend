@@ -2,7 +2,7 @@
 import express from 'express';
 import constructConfig from '../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, ifExists, validate } from '../middleware/index.js';
+import { protect, sort, query, ifExists, validate, hasPermission } from '../middleware/index.js';
 import {
 	deleteDocument,
 	getFilters,
@@ -41,21 +41,31 @@ const updateMiddleware = [
 // Define the routes for the product store
 router
 	.route('/')
-	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
-	.post(...postMiddleware, createDocument(config.MODEL));
+	.get(...commonMiddleware, hasPermission(['view_product']), getAllDocuments(config.QUERY_OPTIONS))
+	.post(...postMiddleware, hasPermission(['add_product']), createDocument(config.MODEL));
 
-router.get('/:id', protect, getDocumentById(config.QUERY_OPTIONS));
+router.get('/:id', protect, hasPermission(['view_product']), getDocumentById(config.QUERY_OPTIONS));
 
-router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
+router.get(
+	'/edit/:id',
+	protect,
+	hasPermission(['view_product']),
+	getDocumentToEditById(config.MODEL)
+);
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
-router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
-router.delete('/:id', protect, deleteDocument(config.MODEL));
+router.put(
+	'/:id',
+	...updateMiddleware,
+	hasPermission(['edit_product']),
+	updateDocument(config.EDITS)
+);
+router.delete('/:id', protect, hasPermission(['delete_product']), deleteDocument(config.MODEL));
 router.get('/get/count', protect, getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
-router.put('/update/many', protect, updateManyDocuments(config.EDITS));
+router.put('/update/many', protect, hasPermission(['edit']), updateManyDocuments(config.EDITS));
 router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
 
 router.put('/:id/cancel', protect, cancelOrder);
