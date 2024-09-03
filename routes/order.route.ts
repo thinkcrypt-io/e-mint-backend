@@ -20,7 +20,6 @@ import Order, { settings } from '../models/order/order.model.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import getSum from '../controllers/common/getSum.controller.js';
-import { has } from 'lodash';
 
 // Initialize a new router
 const router = express.Router();
