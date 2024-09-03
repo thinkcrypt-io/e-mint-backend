@@ -3,12 +3,14 @@ import mongoose from 'mongoose';
 
 const getCount = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
+		let query: any = req?.queryHelper || {};
 		try {
-			const doc = await model.countDocuments({});
+			const doc: number = await model.countDocuments(query);
 			return res.status(200).json(doc);
 		} catch (e: any) {
 			console.error(e.message);
-			return res.status(500).json({ message: 'Internal Server Error' });
+			const msg = process.env.NODE_ENV === 'development' ? e.message : 'Internal Server Error';
+			return res.status(500).json({ message: msg });
 		}
 	};
 };

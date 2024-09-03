@@ -5,13 +5,13 @@ import User from '../user/user.model.js';
 ////import Category from './category.model.js';
 
 const orderStatus = [
-	{ key: 'Placed', label: 'placed' },
-	{ key: 'Pending', label: 'pending' },
-	{ key: 'Processing', label: 'processing' },
-	{ key: 'Completed', label: 'completed' },
-	{ key: 'Cancelled', label: 'cancelled' },
-	{ key: 'Refunded', label: 'refunded' },
-	{ key: 'Failed', label: 'failed' },
+	{ label: 'Placed', value: 'placed' },
+	{ label: 'Pending', value: 'pending' },
+	{ label: 'Processing', value: 'processing' },
+	{ label: 'Completed', value: 'completed' },
+	{ label: 'Cancelled', value: 'cancelled' },
+	{ label: 'Refunded', value: 'refunded' },
+	{ label: 'Failed', value: 'failed' },
 ];
 
 const settings: any = {
@@ -19,34 +19,34 @@ const settings: any = {
 		sort: true,
 		title: 'Seller',
 		type: 'string',
-		filter: {
-			name: 'user',
-			field: 'user_in',
-			type: 'multi-select',
-			label: 'Seller',
-			title: 'Sort by seller',
-			options: [],
-			category: 'model',
-			model: User,
-			key: 'name',
-		},
+		// filter: {
+		// 	name: 'user',
+		// 	field: 'user_in',
+		// 	type: 'multi-select',
+		// 	label: 'Seller',
+		// 	title: 'Sort by seller',
+		// 	options: [],
+		// 	category: 'model',
+		// 	model: User,
+		// 	key: 'name',
+		// },
 	},
 
 	items: {
 		type: 'uri',
 		title: 'Order Items',
 		sort: true,
-		filter: {
-			name: 'items',
-			field: 'items_in',
-			type: 'multi-select',
-			label: 'Product',
-			title: 'Sort by products',
-			options: [],
-			category: 'model',
-			model: Product,
-			key: 'name',
-		},
+		// filter: {
+		// 	name: 'items',
+		// 	field: 'items_in',
+		// 	type: 'multi-select',
+		// 	label: 'Product',
+		// 	title: 'Sort by products',
+		// 	options: [],
+		// 	category: 'model',
+		// 	model: Product,
+		// 	key: 'name',
+		// },
 	},
 
 	total: {
@@ -66,15 +66,14 @@ const settings: any = {
 	subTotal: {
 		type: 'number',
 		title: 'Sub Total',
-
 		sort: true,
-		filter: {
-			name: 'Total Price',
-			field: 'subTotal',
-			type: 'range',
-			label: 'Total',
-			title: 'Sort by total price',
-		},
+		// filter: {
+		// 	name: 'Total Price',
+		// 	field: 'subTotal',
+		// 	type: 'range',
+		// 	label: 'Total',
+		// 	title: 'Sort by total price',
+		// },
 	},
 
 	coupon: {
@@ -87,13 +86,13 @@ const settings: any = {
 		edit: true,
 		title: 'Payment Status',
 		sort: true,
-		filter: {
-			name: 'isPaid',
-			field: 'isPaid',
-			type: 'boolean',
-			label: 'Payment Status',
-			title: 'Sort by payment status',
-		},
+		// filter: {
+		// 	name: 'isPaid',
+		// 	field: 'isPaid',
+		// 	type: 'boolean',
+		// 	label: 'Payment Status',
+		// 	title: 'Sort by payment status',
+		// },
 	},
 
 	note: {
@@ -140,7 +139,7 @@ const settings: any = {
 		sort: true,
 		filter: {
 			name: 'Status',
-			field: 'status',
+			field: 'status_in',
 			type: 'multi-select',
 			label: 'Order Status',
 			title: 'Sort by order status',
@@ -178,25 +177,25 @@ const settings: any = {
 		type: 'boolean',
 		edit: true,
 		title: 'Cancel Status',
-		//sort: true,
+		sort: true,
+	},
+
+	createdAt: {
+		type: 'string',
+		title: 'Created At',
+		sort: true,
 		filter: {
-			name: 'isCancelled',
-			field: 'isCancelled',
-			type: 'boolean',
-			label: 'Cancel Status',
-			title: 'Sort by cancel status',
+			name: 'Order Data',
+			field: 'createdAt',
+			type: 'date',
+			label: 'Order Date',
+			title: 'Sort by order date',
 		},
 	},
 
 	discount: {
 		type: 'number',
 		title: 'Discount',
-	},
-
-	createdAt: {
-		sort: true,
-		type: 'string',
-		title: 'Date',
 	},
 };
 

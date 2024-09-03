@@ -19,6 +19,7 @@ import {
 import Order, { settings } from '../models/order/order.model.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
+import getSum from '../controllers/common/getSum.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -32,6 +33,7 @@ const config = constructConfig({
 const commonMiddleware = [protect, sort, query(config.FILTER_OPTIONS)];
 const postMiddleware = [protect, validate(config.VALIDATORS.POST)];
 const updateMiddleware = [protect, validate(config.VALIDATORS.UPDATE)];
+const countMiddleware = [protect, query(config.FILTER_OPTIONS)];
 
 // Define the routes for the product store
 router
@@ -46,7 +48,9 @@ router.get('/edit/:id', protect, getDocumentToEditById(config.MODEL));
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 router.delete('/:id', protect, deleteDocument(config.MODEL));
-router.get('/get/count', protect, getCount(config.MODEL));
+router.get('/get/count', ...countMiddleware, getCount(config.MODEL));
+
+router.get('/get/sum/:field', ...countMiddleware, getSum(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
