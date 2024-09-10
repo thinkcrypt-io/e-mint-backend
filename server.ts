@@ -54,9 +54,9 @@ process.on('uncaughtException', err => {
 });
 
 app.use('/', (req, res, next) => {
-	console.log('Request URL:', `${req.method}: ${req.originalUrl}`);
-	console.log('Request Time:', Date.now());
-	console.log('Request IP:', req.ip);
+	// console.log('Request URL:', `${req.method}: ${req.originalUrl}`);
+	// console.log('Request Time:', Date.now());
+	// console.log('Request IP:', req.ip);
 
 	next();
 });

@@ -126,6 +126,20 @@ const settings: ProductSettings = {
 		edit: true,
 	},
 
+	stock: {
+		type: 'number',
+		title: 'Stock',
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'Stock',
+			field: 'stock',
+			type: 'range',
+			label: 'Stock',
+			title: 'Sort by stock',
+		},
+	},
+
 	price: {
 		type: 'number',
 		title: 'Price',
