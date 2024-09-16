@@ -22,7 +22,15 @@ import restaurantRoute from './routes/restaurant.route.js';
 import uploadRoute from './routes/upload.route.js';
 import collectionRoute from './routes/collection.route.js';
 import feedbackRoute from './routes/feedback.route.js';
+import contentRoute from './routes/content.route.js';
+
 import qrRoute from './routes/qr.route.js';
+
+//User Routes
+import userStoreRoute from './user-routes/store.user.route.js';
+import userCategoryRoute from './user-routes/categories.user.route.js';
+import userCollectionRoute from './user-routes/collections.user.route.js';
+import userProductRoute from './user-routes/product.user.route.js';
 
 const app: Application = express();
 
@@ -64,6 +72,7 @@ app.use('/', (req, res, next) => {
 //app.use('/api/orders', orderRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/categories', categoryRoute);
+app.use('/api/contents', contentRoute);
 
 app.use('/api/items', itemRoute);
 app.use('/api/products', productRoute);
@@ -80,6 +89,12 @@ app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);
 app.use('/api/feedbacks', feedbackRoute);
 app.use('/api/qr', qrRoute);
+
+//user routes
+app.use('/user-api/store', userStoreRoute);
+app.use('/user-api/categories', userCategoryRoute);
+app.use('/user-api/collections', userCollectionRoute);
+app.use('/user-api/products', userProductRoute);
 
 app.use((req, res, next) => {
 	return res
