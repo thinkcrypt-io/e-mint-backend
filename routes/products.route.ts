@@ -65,7 +65,12 @@ router.get('/get/count', protect, getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 
-router.put('/update/many', protect, hasPermission(['edit']), updateManyDocuments(config.EDITS));
+router.put(
+	'/update/many',
+	protect,
+	hasPermission(['edit_product']),
+	updateManyDocuments(config.EDITS)
+);
 router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
 
 router.put('/:id/cancel', protect, cancelOrder);
