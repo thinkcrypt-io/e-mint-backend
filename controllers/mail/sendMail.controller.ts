@@ -19,7 +19,7 @@ const sendMail = async ({ to, subject, body }: SendMailProps) => {
 		});
 
 		var mailOptions: any = {
-			from: `TERP <${process.env.MAIL_ADDRESS}>`,
+			from: `MINT <${process.env.MAIL_ADDRESS}>`,
 			to: to,
 			subject: subject,
 			text: body,
