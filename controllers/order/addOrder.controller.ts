@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import Order from '../../models/order/order.model.js';
+import Product from '../../models/products/products.model.js';
 
 const addOrder = async (req: any, res: Response): Promise<Response> => {
 	const {
@@ -31,6 +32,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			customer: customer == 'guest' ? null : customer ? customer : (req as any).user._id,
 			orderDate,
 			paymentAmount,
+			origin: 'pos',
 			note,
 			paidAmount,
 			shippingCharge: cart.shipping,
@@ -39,6 +41,15 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 		});
 
 		const saved = (await order.save()) as any;
+
+		// Reduce stock of items
+		for (const item of cart.items) {
+			const product = await Product.findById(item._id);
+			if (product) {
+				product.stock = product.stock - item.qty;
+				await product.save();
+			}
+		}
 
 		return res
 			.status(201)

@@ -33,6 +33,7 @@ import userCollectionRoute from './user-routes/collections.user.route.js';
 import userProductRoute from './user-routes/product.user.route.js';
 import userAuthRoute from './user-routes/auth.user.route.js';
 import userOrder from './user-routes/order.user.route.js';
+// import userCategoryRoute from './user-routes/category.user.route.js';
 
 const app: Application = express();
 
@@ -99,6 +100,7 @@ app.use('/user-api/collections', userCollectionRoute);
 app.use('/user-api/products', userProductRoute);
 app.use('/user-api/auth', userAuthRoute);
 app.use('/user-api/orders', userOrder);
+// app.use('/user-api/categories', userCategoryRoute);
 
 app.use((req, res, next) => {
 	return res

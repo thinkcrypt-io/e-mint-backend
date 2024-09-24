@@ -63,6 +63,24 @@ const settings: any = {
 		title: 'Cart',
 	},
 
+	origin: {
+		type: 'string',
+		title: 'Order From',
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'origin',
+			field: 'origin_in',
+			type: 'multi-select',
+			label: 'Order From',
+			title: 'Sort by order from',
+			options: [
+				{ label: 'POS', value: 'pos' },
+				{ label: 'Website', value: 'website' },
+			],
+		},
+	},
+
 	subTotal: {
 		type: 'number',
 		title: 'Sub Total',

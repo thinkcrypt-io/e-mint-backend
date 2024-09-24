@@ -34,6 +34,11 @@ const schema: Schema = new Schema<OrderType>(
 		isCancelled: { type: Boolean, default: false, required: true },
 		discount: { type: Number, default: 0, required: true },
 		note: { type: String },
+		origin: {
+			type: String,
+			enum: ['pos', 'website'],
+			default: 'pos',
+		},
 	},
 	{
 		timestamps: true,

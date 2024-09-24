@@ -18,6 +18,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 			coupon: cart.couponId,
 			isPaid: false,
 			address,
+			origin: 'website',
 			status: status || 'pending',
 			paymentMethod,
 			customer: req.user._id,

@@ -37,6 +37,7 @@ export type OrderType = DocumentBaseType & {
 	isCancelled?: boolean;
 	discount?: number;
 	note?: string;
+	origin?: string;
 };
 
 export default OrderType;
