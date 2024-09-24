@@ -265,6 +265,11 @@ const settings: ProductSettings = {
 			title: 'Sort by created at',
 		},
 	},
+	meta: {
+		title: 'Meta',
+		type: 'object',
+		edit: true,
+	},
 };
 
 export default settings;
