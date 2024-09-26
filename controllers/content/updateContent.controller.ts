@@ -2,6 +2,7 @@ import { Response } from 'express';
 import Store from '../../models/store/store.model.js';
 
 const updateContent = async (req: any, res: any): Promise<Response> => {
+	const type: string = req?.query?.type || 'content';
 	const content = req.body;
 	try {
 		const data = await Store.findOne({});
@@ -12,13 +13,13 @@ const updateContent = async (req: any, res: any): Promise<Response> => {
 		// return res.status(200).json(Object.keys(content));
 		// Assuming data and content are already defined
 		Object.keys(content).forEach(key => {
-			if (key in data.content) {
+			if (key in data[type]) {
 				if (typeof content[key] === 'object' && content[key] !== null) {
 					Object.keys(content[key]).forEach(subKey => {
-						data.content[key][subKey] = content[key][subKey];
+						data[type][key][subKey] = content[key][subKey];
 					});
 				} else {
-					data.content[key] = content[key];
+					data[type][key] = content[key];
 				}
 			}
 		});

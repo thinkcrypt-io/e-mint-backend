@@ -2,9 +2,28 @@ import mongoose, { Schema } from 'mongoose';
 
 const schema = new Schema<any>(
 	{
-		name: { type: String, required: true, default: 'Mint Store' },
-		logo: {
-			type: String,
+		basic: {
+			name: { type: String, required: true, default: 'Mint Store' },
+			logo: {
+				type: String,
+			},
+			phone: {
+				type: String,
+				default: '+880 1828 398 225',
+			},
+			email: {
+				type: String,
+				default: 'asifistiaque.ai@gmail.com',
+			},
+		},
+
+		socials: {
+			facebook: String,
+			twitter: String,
+			instagram: String,
+			linkedin: String,
+			pinterest: String,
+			youtube: String,
 		},
 		content: {
 			hero: {
@@ -14,6 +33,26 @@ const schema = new Schema<any>(
 				btnText: String,
 				href: String,
 			},
+			featuredCollection: [
+				{
+					title: String,
+					// type: {
+					// 	type: String,
+					// 	enum: ['categories', 'collections', 'products'],
+					// 	required: true,
+					// },
+					// href: {
+					// 	type: String,
+					// 	required: true,
+					// },
+					subTitle: String,
+					image: String,
+					priority: {
+						type: Number,
+						default: 0,
+					},
+				},
+			],
 			collections: {
 				title: {
 					type: String,
