@@ -16,27 +16,34 @@ import {
 	getCount,
 } from '../controllers/common/index.js';
 
-import Product, { settings } from '../models/products/products.model.js';
-import addOrder from '../controllers/order/addOrder.controller.js';
 import cancelOrder from '../controllers/order/cancelOrder.controller.js';
-import { protect } from '../middleware/userAuth.middleware.js';
 import addUserOrder from '../controllers/order/addUserOrder.controller.js';
 import getUserCartTotal from '../controllers/order/getUserCartTotal.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
-import Order from '../models/order/order.model.js';
+import Order, { settings } from '../models/order/order.model.js';
+
+import { myData, userProtect as protect, sort, query } from '../middleware/index.js';
 
 // Initialize a new router
 const router = express.Router();
+
+const config = constructConfig({
+	model: Order,
+	config: settings,
+});
 
 router.post('/', protect, addUserOrder);
 router.get('/:id', protect, getDocumentById({ model: Order }));
 
 router.post('/cart-total', getOrderTotal);
-
-// const config = constructConfig({
-// 	model: Product,
-// 	config: settings,
-// });
+router.get(
+	'/',
+	protect,
+	myData({ field: 'customer' }),
+	sort,
+	query(config.FILTER_OPTIONS),
+	getAllDocuments(config.QUERY_OPTIONS)
+);
 
 // // Define common middleware
 // const commonMiddleware = [

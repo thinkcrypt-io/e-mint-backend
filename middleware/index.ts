@@ -28,3 +28,7 @@ export { default as sort } from './pagination.middleware.js';
 export { default as validate } from './validate.middleware.js';
 export { default as ifExistOnUpdate } from './ifExistOnUpdate.middleware.js';
 export { default as hasPermission } from './hasPermission.middleware.js';
+
+export { default as customQuery } from './customQuery.middleware.js';
+// export { default as myData } from './myData.middleware.js';
+export { protect as userProtect } from './userAuth.middleware.js';

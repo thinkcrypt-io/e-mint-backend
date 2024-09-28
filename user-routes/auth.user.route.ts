@@ -1,12 +1,12 @@
 import express from 'express';
 import { protect } from '../middleware/userAuth.middleware.js';
-import loginController from '../controllers/auth/login.controller.js';
-import registerController from '../controllers/auth/register.controller.js';
-import getSelf from '../controllers/auth/getSelf.controller.js';
+
 import updateSellerPreferences from '../controllers/auth/updatePreference.controller.js';
 import userLoginController from '../controllers/auth/userLogin.controller.js';
 import userRegisterController from '../controllers/auth/userRegister.controller.js';
 import userGetSelf from '../controllers/auth/userGetSelf.controller.js';
+import updateSelf from '../controllers/auth/updateSelf.controller.js';
+import changeUserPassword from '../controllers/auth/changeUserPassword.controller.js';
 
 const router = express.Router();
 
@@ -17,6 +17,8 @@ router
 	.get('/self', protect, userGetSelf);
 
 router.put('/update/preferences', protect, updateSellerPreferences);
+router.put('/self', protect, updateSelf);
+router.put('/update/password', protect, changeUserPassword);
 
 // router.post('/request-password-change', requestPasswordChange);
 // router.get('/verify-reset-token/:token', verifyToken);
