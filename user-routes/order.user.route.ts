@@ -33,7 +33,7 @@ const config = constructConfig({
 });
 
 router.post('/', protect, addUserOrder);
-router.get('/:id', protect, getDocumentById({ model: Order }));
+router.get('/:id', getDocumentById({ model: Order }));
 
 router.post('/cart-total', getOrderTotal);
 router.get(
