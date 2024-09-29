@@ -42,7 +42,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 
 		if (address?.phone) {
 			sendSMS({
-				receiver: req.user.phone,
+				receiver: address?.phone,
 				message: `Thank you for shopping at Nexa. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
 			});
 		}
