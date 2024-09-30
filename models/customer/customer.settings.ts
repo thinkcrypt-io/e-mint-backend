@@ -1,3 +1,5 @@
+import { sort } from '../../middleware';
+
 const settings: any = {
 	name: {
 		edit: true,
@@ -24,6 +26,23 @@ const settings: any = {
 		edit: true,
 		title: 'Phone',
 		type: 'text',
+	},
+
+	tags: {
+		search: true,
+		edit: true,
+		title: 'Tags',
+		type: 'array-string',
+		sort: true,
+		filter: {
+			name: 'tags',
+			field: 'tags_in',
+			type: 'multi-select',
+			label: 'Tag',
+			title: 'Sort by Tag',
+			category: 'distinct',
+			key: 'tags',
+		},
 	},
 
 	isActive: {
