@@ -20,6 +20,7 @@ import {
 import Product, { settings } from '../models/products/products.model.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import cancelOrder from '../controllers/order/cancelOrder.controller.js';
+import topSellingProductController from '../controllers/top/topSellingProduct.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -43,6 +44,14 @@ router
 	.route('/')
 	.get(...commonMiddleware, hasPermission(['view_product']), getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, hasPermission(['add_product']), createDocument(config.MODEL));
+
+router.get(
+	'/top-selling',
+	protect,
+	hasPermission(['view_product']),
+	sort,
+	topSellingProductController
+);
 
 router.get('/:id', protect, hasPermission(['view_product']), getDocumentById(config.QUERY_OPTIONS));
 

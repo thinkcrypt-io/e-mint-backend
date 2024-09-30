@@ -22,6 +22,7 @@ import Customer, { settings } from '../models/customer/customer.model.js';
 import hasPermission from '../middleware/hasPermission.middleware.js';
 import sendSMS from '../controllers/util/sendSms.controller.js';
 import buldSmsController from '../controllers/marketing/bulkSms.controller.js';
+import { getTopCustomers } from '../controllers/top/topCustomer.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -71,6 +72,7 @@ router.get(
 );
 
 router.post('/sms', protect, buldSmsController);
+router.get('/analytics/top-buying', protect, sort, getTopCustomers);
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));

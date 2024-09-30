@@ -51,8 +51,6 @@ const sendSMS = async ({ receiver, message }: SMSData): Promise<ReturnData> => {
 			return { success: false, data: responseData.error_message };
 		}
 
-		console.log('Successful', responseData);
-
 		return { success: true, data: responseData };
 	} catch (e: any) {
 		console.log('Error sending SMS:', e.message);
