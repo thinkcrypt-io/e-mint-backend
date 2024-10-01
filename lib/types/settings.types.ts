@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 type Options = { label: string; value: string };
 
-type Filter = {
+export type Filter = {
 	name: string;
 	type: 'multi-select' | 'range' | 'boolean' | 'date';
 	label: string;

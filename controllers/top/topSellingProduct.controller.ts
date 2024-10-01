@@ -5,9 +5,11 @@ import Product from '../../models/products/products.model.js'; // Assuming you h
 const topSellingProductController = async (req: any, res: Response) => {
 	try {
 		const { sort, limit = 10, fields, skip }: any = req.meta;
-		//const skip = req.query.page ? Number(req.query.page) : 0;
+
+		let query: any = req?.queryHelper || {};
 
 		const doc = await Order.aggregate([
+			{ $match: query },
 			{ $unwind: '$items' },
 			{
 				$group: {
@@ -16,7 +18,8 @@ const topSellingProductController = async (req: any, res: Response) => {
 				},
 			},
 			{ $sort: { totalQuantity: -1 } },
-			{ $limit: limit || 5 },
+			{ $skip: skip },
+			{ $limit: limit },
 
 			{
 				$lookup: {
@@ -27,6 +30,7 @@ const topSellingProductController = async (req: any, res: Response) => {
 				},
 			},
 			{ $unwind: '$product' },
+
 			{
 				$lookup: {
 					from: 'categories',
@@ -36,6 +40,10 @@ const topSellingProductController = async (req: any, res: Response) => {
 				},
 			},
 			{ $unwind: '$category' },
+			{ $sort: { totalQuantity: -1 } },
+			{ $skip: skip },
+			{ $limit: limit },
+
 			{
 				$project: {
 					_id: '$_id',
@@ -43,13 +51,27 @@ const topSellingProductController = async (req: any, res: Response) => {
 					name: '$product.name',
 					sku: '$product.sku',
 					category: '$category.name',
+					catId: '$category._id',
 					price: '$product.price',
 					totalQuantity: 1,
 				},
 			},
 		]);
 
-		const count: number = await Product.countDocuments();
+		const countPipeline = [
+			{ $match: query },
+			{ $unwind: '$items' },
+			{
+				$group: {
+					_id: '$items._id',
+				},
+			},
+		];
+
+		const countResult = await Order.aggregate(countPipeline);
+		const count = countResult.length;
+
+		//const count: number = await Product.countDocuments();
 
 		req.meta.docsInPage = doc.length;
 		req.meta.totalDocs = count;

@@ -21,6 +21,38 @@ import Product, { settings } from '../models/products/products.model.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import cancelOrder from '../controllers/order/cancelOrder.controller.js';
 import topSellingProductController from '../controllers/top/topSellingProduct.controller.js';
+import { Filter } from '../lib/types/settings.types.js';
+import Category from '../models/category/category.model.js';
+import constructFilters from '../lib/configurator/constructFilters.js';
+import Order from '../models/order/order.model.js';
+import { orderStatus } from '../models/order/order.settings.js';
+
+type TopProductsFilters = {
+	[key: string]: { filter: Filter; sort?: boolean };
+};
+
+const topProductsFilters: TopProductsFilters = {
+	createdAt: {
+		sort: true,
+		filter: {
+			name: 'createdAt',
+			type: 'date',
+			label: 'Date',
+			title: 'Filter by Date',
+		},
+	},
+	status: {
+		sort: true,
+		filter: {
+			name: 'Status',
+			field: 'status_in',
+			type: 'multi-select',
+			label: 'Order Status',
+			title: 'Sort by order status',
+			options: orderStatus,
+		},
+	},
+};
 
 // Initialize a new router
 const router = express.Router();
@@ -28,6 +60,11 @@ const router = express.Router();
 const config = constructConfig({
 	model: Product,
 	config: settings,
+});
+
+const topProductConfig = constructConfig({
+	model: Order,
+	config: topProductsFilters,
 });
 
 // Define common middleware
@@ -48,8 +85,9 @@ router
 router.get(
 	'/top-selling',
 	protect,
-	hasPermission(['view_product']),
 	sort,
+	query(topProductConfig.FILTER_OPTIONS),
+	hasPermission(['view_product']),
 	topSellingProductController
 );
 
@@ -63,6 +101,9 @@ router.get(
 );
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
+// router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
+router.get('/top-selling/get/filters', protect, getFilters(topProductConfig.FILTER_LIST));
+
 router.put(
 	'/:id',
 	...updateMiddleware,

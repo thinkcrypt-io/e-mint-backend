@@ -1,12 +1,14 @@
 import { Request, Response } from 'express';
 import Order from '../../models/order/order.model.js'; // Assuming you have an Order model
-import Customer from '../../models/customer/customer.model.js';
 
 export const getTopCustomers = async (req: any, res: Response) => {
 	try {
 		const { sort, limit = 10, fields, skip }: any = req.meta;
 
+		let query: any = req?.queryHelper || {};
+
 		const doc = await Order.aggregate([
+			{ $match: query },
 			{
 				$group: {
 					_id: '$customer',
@@ -31,6 +33,8 @@ export const getTopCustomers = async (req: any, res: Response) => {
 					customerId: '$_id',
 					_id: '$_id',
 					name: '$customer.name',
+					email: '$customer.email',
+					phone: '$customer.phone',
 					totalOrders: 1,
 					totalOrderValue: 1,
 					totalProductsBought: 1,
@@ -38,7 +42,19 @@ export const getTopCustomers = async (req: any, res: Response) => {
 			},
 		]);
 
-		const count: number = await Customer.countDocuments();
+		// Aggregation pipeline for counting documents
+		const countPipeline = [
+			{ $match: query },
+			{
+				$group: {
+					_id: '$customer',
+				},
+			},
+		];
+
+		// Execute the count aggregation pipeline
+		const countResult = await Order.aggregate(countPipeline);
+		const count = countResult.length;
 
 		req.meta.docsInPage = doc.length;
 		req.meta.totalDocs = count;

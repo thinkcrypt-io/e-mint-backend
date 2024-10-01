@@ -4,7 +4,7 @@ import User from '../user/user.model.js';
 
 ////import Category from './category.model.js';
 
-const orderStatus = [
+export const orderStatus = [
 	{ label: 'Placed', value: 'placed' },
 	{ label: 'Pending', value: 'pending' },
 	{ label: 'Processing', value: 'processing' },

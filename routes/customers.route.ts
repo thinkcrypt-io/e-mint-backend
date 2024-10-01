@@ -23,6 +23,36 @@ import hasPermission from '../middleware/hasPermission.middleware.js';
 import sendSMS from '../controllers/util/sendSms.controller.js';
 import buldSmsController from '../controllers/marketing/bulkSms.controller.js';
 import { getTopCustomers } from '../controllers/top/topCustomer.controller.js';
+import { Filter } from '../lib/types/settings.types.js';
+import { orderStatus } from '../models/order/order.settings.js';
+import Order from '../models/order/order.model.js';
+
+type TopProductsFilters = {
+	[key: string]: { filter: Filter; sort?: boolean };
+};
+
+const topCustomerFilters: TopProductsFilters = {
+	createdAt: {
+		sort: true,
+		filter: {
+			name: 'createdAt',
+			type: 'date',
+			label: 'Date',
+			title: 'Filter by Date',
+		},
+	},
+	status: {
+		sort: true,
+		filter: {
+			name: 'Status',
+			field: 'status_in',
+			type: 'multi-select',
+			label: 'Order Status',
+			title: 'Sort by order status',
+			options: orderStatus,
+		},
+	},
+};
 
 // Initialize a new router
 const router = express.Router();
@@ -30,6 +60,11 @@ const router = express.Router();
 const config = constructConfig({
 	model: Customer,
 	config: settings,
+});
+
+const filterConfig = constructConfig({
+	model: Order,
+	config: topCustomerFilters,
 });
 
 // Define common middleware
@@ -72,7 +107,15 @@ router.get(
 );
 
 router.post('/sms', protect, buldSmsController);
-router.get('/analytics/top-buying', protect, sort, getTopCustomers);
+
+router.get(
+	'/analytics/top-buying',
+	protect,
+	sort,
+	query(filterConfig.FILTER_OPTIONS),
+	getTopCustomers
+);
+router.get('/analytics/top-buying/get/filters', protect, getFilters(filterConfig.FILTER_LIST));
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
