@@ -126,6 +126,20 @@ const settings: ProductSettings = {
 		edit: true,
 	},
 
+	allowStock: {
+		type: 'boolean',
+		title: 'Allow Stock',
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'Allow Stock',
+			field: 'allowStock',
+			type: 'boolean',
+			label: 'Allow Stock',
+			title: 'Sort by allow stock',
+		},
+	},
+
 	stock: {
 		type: 'number',
 		title: 'Stock',
@@ -138,6 +152,13 @@ const settings: ProductSettings = {
 			label: 'Stock',
 			title: 'Sort by stock',
 		},
+	},
+
+	lowStockAlert: {
+		type: 'number',
+		title: 'Low Stock Alert',
+		edit: true,
+		sort: true,
 	},
 
 	price: {
@@ -178,6 +199,56 @@ const settings: ProductSettings = {
 			type: 'boolean',
 			label: 'Discount',
 			title: 'Sort by discount',
+		},
+	},
+	status: {
+		type: 'string',
+		title: 'Status',
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'Status',
+			field: 'status',
+			type: 'multi-select',
+			label: 'Status',
+			title: 'Sort by status',
+			options: [
+				{
+					label: 'Published',
+					value: 'published',
+				},
+				{
+					label: 'Draft',
+					value: 'draft',
+				},
+				{
+					label: 'Archived',
+					value: 'archived',
+				},
+			],
+		},
+	},
+	discountType: {
+		type: 'string',
+		title: 'Discount Type',
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'discountType',
+			field: 'discountType',
+			type: 'multi-select',
+			label: 'Discount Type',
+			title: 'Sort by discount type',
+			options: [
+				{
+					label: 'Percentage',
+					value: 'percentage',
+				},
+				{
+					label: 'Flat',
+					value: 'flat',
+				},
+			],
 		},
 	},
 	discount: {

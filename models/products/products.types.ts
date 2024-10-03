@@ -12,21 +12,30 @@ type BaseProductType = {
 	collection: any;
 	isFeatured: boolean;
 	price: number;
+
 	isDiscount: boolean;
 	discount?: number;
+	discountedPrice?: number;
+	discountType?: 'percentage' | 'flat';
+
 	sku?: string;
 	slug?: string;
 	weight?: number;
 	dimensions?: { length: number; width: number; height: number };
 	barcode?: string;
 	tags?: string[];
+	status?: 'draft' | 'published' | 'archived';
+
+	allowStock?: boolean;
 	stock?: number;
+	lowStockAlert?: number;
+
 	unit?: string;
 	unitValue?: number;
 	customAttributes?: { label: string; value: string }[];
 	customSections?: { title: string; description: string }[];
 	extraAttributes?: { key: string; value: string }[];
-	discountedPrice?: number;
+
 	vat?: number;
 	isVisible: boolean;
 	supplier?: string;

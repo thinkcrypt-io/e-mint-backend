@@ -70,11 +70,17 @@ const schema = new Schema<any>(
 		// },
 		isFeatured: { type: Boolean, default: false },
 		price: { type: Number, required: true },
+
 		isDiscount: { type: Boolean, default: false },
+		discountType: {
+			type: String,
+			enum: ['percentage', 'flat'],
+		},
 		discount: {
 			type: Number,
 			default: 0,
 		},
+
 		sku: {
 			type: String,
 			trim: true,
@@ -99,7 +105,16 @@ const schema = new Schema<any>(
 		},
 
 		tags: [String],
-		stock: { type: Number, required: true, default: 0 },
+
+		allowStock: { type: Boolean, default: true },
+		stock: { type: Number, default: 0 },
+		lowStockAlert: { type: Number, default: 0 },
+
+		status: {
+			type: String,
+			enum: ['draft', 'published', 'archived'],
+			default: 'draft',
+		},
 
 		customAttributes: [
 			{
@@ -136,7 +151,7 @@ const schema = new Schema<any>(
 			description: {
 				type: String,
 			},
-			keywords: [String],
+			keywords: String,
 		},
 		faq: [
 			{
