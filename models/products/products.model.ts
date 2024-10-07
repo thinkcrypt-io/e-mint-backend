@@ -151,7 +151,7 @@ const schema = new Schema<any>(
 			description: {
 				type: String,
 			},
-			keywords: String,
+			// keywords: [String],
 		},
 		faq: [
 			{

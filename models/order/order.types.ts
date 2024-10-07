@@ -36,8 +36,12 @@ export type OrderType = DocumentBaseType & {
 	orderDate: Date;
 	isCancelled?: boolean;
 	discount?: number;
+	isDelivered?: boolean;
 	note?: string;
 	origin?: string;
+	courier?: string;
+	trackingNumber?: string;
+	trackingUrl?: string;
 };
 
 export default OrderType;

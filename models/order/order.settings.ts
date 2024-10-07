@@ -165,6 +165,35 @@ const settings: any = {
 		},
 	},
 
+	courier: {
+		type: 'string',
+		title: 'Courier Name',
+		edit: true,
+	},
+	isDelivered: {
+		type: 'boolean',
+		edit: true,
+		title: 'Delivery Status',
+		sort: true,
+		filter: {
+			name: 'isDelivered',
+			field: 'isDelivered',
+			type: 'boolean',
+			label: 'Delivery Status',
+			title: 'Sort by delivery status',
+		},
+	},
+	trackingNumber: {
+		type: 'string',
+		title: 'Tracking Number',
+		edit: true,
+	},
+	trackingUrl: {
+		type: 'string',
+		title: 'Tracking URL',
+		edit: true,
+	},
+
 	customer: {
 		sort: true,
 		title: 'Customer',

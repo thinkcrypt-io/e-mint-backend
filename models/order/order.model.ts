@@ -33,7 +33,18 @@ const schema: Schema = new Schema<OrderType>(
 		orderDate: { type: Date, default: Date.now, required: true },
 		isCancelled: { type: Boolean, default: false, required: true },
 		discount: { type: Number, default: 0, required: true },
+		isDelivered: { type: Boolean, default: false, required: true },
 		note: { type: String },
+		courier: {
+			type: String,
+		},
+		trackingNumber: {
+			type: String,
+		},
+		trackingUrl: {
+			type: String,
+		},
+
 		origin: {
 			type: String,
 			enum: ['pos', 'website'],
