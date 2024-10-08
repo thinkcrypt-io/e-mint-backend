@@ -178,6 +178,16 @@ schema.virtual('inStock').get(function (this: any) {
 	return this.stock > 0;
 });
 
+// Define the virtual property
+schema.virtual('inventoryCostPrice').get(function (this: any) {
+	return this.price * this.stock;
+});
+
+// Define the virtual property
+schema.virtual('inventorySellPrice').get(function (this: any) {
+	return this.price * this.stock;
+});
+
 const Product = mongoose.model<any>('Product', schema);
 export default Product;
 

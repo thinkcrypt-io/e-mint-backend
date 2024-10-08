@@ -28,3 +28,5 @@ export { default as getPublicDocuments } from './getPublicDocuments.controller.j
 export { default as getOneDocument } from './getOneDocument.controller.js';
 //15
 export { default as getSum } from './getSum.controller.js';
+//16
+export { default as getInventoryCount } from './getInventoryCount.controller.js';

@@ -1,9 +1,16 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import constructConfig from '../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, ifExists, validate, hasPermission } from '../middleware/index.js';
+import Product, { settings } from '../models/products/products.model.js';
+import cancelOrder from '../controllers/order/cancelOrder.controller.js';
+import topSellingProductController from '../controllers/top/topSellingProduct.controller.js';
+import { Filter } from '../lib/types/settings.types.js';
+import Order from '../models/order/order.model.js';
+import { orderStatus } from '../models/order/order.settings.js';
 import {
+	getSum,
+	constructConfig,
+	getInventoryCount,
 	deleteDocument,
 	getFilters,
 	createDocument,
@@ -15,17 +22,13 @@ import {
 	updateManyDocuments,
 	exportDocument,
 	getCount,
-} from '../controllers/common/index.js';
-
-import Product, { settings } from '../models/products/products.model.js';
-import addOrder from '../controllers/order/addOrder.controller.js';
-import cancelOrder from '../controllers/order/cancelOrder.controller.js';
-import topSellingProductController from '../controllers/top/topSellingProduct.controller.js';
-import { Filter } from '../lib/types/settings.types.js';
-import Category from '../models/category/category.model.js';
-import constructFilters from '../lib/configurator/constructFilters.js';
-import Order from '../models/order/order.model.js';
-import { orderStatus } from '../models/order/order.settings.js';
+	protect,
+	sort,
+	query,
+	ifExists,
+	validate,
+	hasPermission,
+} from '../imports.js';
 
 type TopProductsFilters = {
 	[key: string]: { filter: Filter; sort?: boolean };
@@ -76,6 +79,8 @@ const updateMiddleware = [
 	validate(config.VALIDATORS.UPDATE),
 ];
 
+const countMiddleware = [protect, query(config.FILTER_OPTIONS)];
+
 // Define the routes for the product store
 router
 	.route('/')
@@ -124,6 +129,7 @@ router.put(
 router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
 
 router.put('/:id/cancel', protect, cancelOrder);
+router.get('/get/sum/:field', ...countMiddleware, getInventoryCount(config.MODEL));
 
 // Export the router
 export default router;
