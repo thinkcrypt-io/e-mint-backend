@@ -6,25 +6,27 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 
 //import routes
-import authRoute from './routes/auth.route.js';
-import categoryRoute from './routes/categories.route.js';
-
-import itemRoute from './routes/items.route.js';
-import productRoute from './routes/products.route.js';
-import customerRoute from './routes/customers.route.js';
-import orderRoute from './routes/order.route.js';
-import roleRoute from './routes/role.route.js';
-import permissionRoute from './routes/permission.route.js';
-import userRoute from './routes/user.route.js';
-
-import scanRoute from './routes/scans.route.js';
-import restaurantRoute from './routes/restaurant.route.js';
-import uploadRoute from './routes/upload.route.js';
-import collectionRoute from './routes/collection.route.js';
-import feedbackRoute from './routes/feedback.route.js';
-import contentRoute from './routes/content.route.js';
-
-import qrRoute from './routes/qr.route.js';
+import {
+	authRoute,
+	categoryRoute,
+	productRoute,
+	customerRoute,
+	orderRoute,
+	permissionRoute,
+	userRoute,
+	uploadRoute,
+	collectionRoute,
+	contentRoute,
+	feedbackRoute,
+	scanRoute,
+	qrRoute,
+	roleRoute,
+	restaurantRoute,
+	itemRoute,
+	expenseRoute,
+	expenseCategoryRoute,
+	brandRoute,
+} from './routes/index.js';
 
 //User Routes
 import userStoreRoute from './user-routes/store.user.route.js';
@@ -74,6 +76,7 @@ app.use('/', (req, res, next) => {
 
 //app.use('/api/orders', orderRoute);
 app.use('/api/auth', authRoute);
+app.use('/api/brands', brandRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/contents', contentRoute);
 
@@ -87,6 +90,9 @@ app.use('/api/orders', orderRoute);
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
 app.use('/api/users', userRoute);
+
+app.use('/api/expenses', expenseRoute);
+app.use('/api/expense-categories', expenseCategoryRoute);
 
 app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);

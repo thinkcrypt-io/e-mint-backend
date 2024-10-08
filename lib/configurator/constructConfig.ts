@@ -36,11 +36,23 @@ type Config = {
 
 type ConstructConfigParams = {
 	model: any;
-	config: Record<string, ConfigItem>;
+	config: any;
 	options?: { role?: string };
 };
 
-const constructConfig = ({ model, config, options }: any): any => {
+type ReturnType = {
+	MODEL: any;
+	VALIDATORS: any;
+	FILTER_OPTIONS: any;
+	EXIST_OPTIONS: any;
+	QUERY_OPTIONS: any;
+	EDITS: any;
+	DUPLICATE_OPTIONS: any;
+	FILTER_LIST: any;
+	POPULATE: any;
+};
+
+const constructConfig = ({ model, config, options }: ConstructConfigParams): ReturnType => {
 	const { role = 'user' } = options || {};
 
 	const configKeys = Object.keys(config);
@@ -78,6 +90,7 @@ const constructConfig = ({ model, config, options }: any): any => {
 			role: role,
 			baseModel: model,
 		},
+		POPULATE: '',
 	};
 };
 

@@ -64,6 +64,7 @@ const schema = new Schema<any>(
 			customers: [String],
 			orders: [String],
 			roles: [String],
+			expenses: [String],
 		},
 	},
 

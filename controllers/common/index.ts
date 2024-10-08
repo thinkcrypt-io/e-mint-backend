@@ -26,3 +26,5 @@ export { default as getDocumentToEditById } from './getDocumentToEditById.contro
 export { default as getPublicDocuments } from './getPublicDocuments.controller.js';
 //14
 export { default as getOneDocument } from './getOneDocument.controller.js';
+//15
+export { default as getSum } from './getSum.controller.js';

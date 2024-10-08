@@ -64,11 +64,16 @@ const schema = new Schema<any>(
 			required: true,
 		},
 		collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
-		// brand: {
-		// 	type: Schema.Types.ObjectId,
-		// 	ref: 'Brand',
-		// },
+		brand: {
+			type: Schema.Types.ObjectId,
+			ref: 'Brand',
+		},
 		isFeatured: { type: Boolean, default: false },
+		cost: {
+			type: Number,
+			default: 0,
+			required: true,
+		},
 		price: { type: Number, required: true },
 
 		isDiscount: { type: Boolean, default: false },

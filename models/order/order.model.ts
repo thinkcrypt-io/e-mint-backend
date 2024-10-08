@@ -22,6 +22,7 @@ const schema: Schema = new Schema<OrderType>(
 		coupon: { type: Schema.Types.ObjectId, ref: 'Coupon' },
 		isPaid: { type: Boolean, default: false },
 		paidAmount: { type: Number, default: 0 },
+		profit: { type: Number, default: 0, required: true },
 		dueAmount: { type: Number, default: 0 },
 		address: { type: Schema.Types.Mixed },
 		shippingCharge: { type: Number, required: true, default: 0 },

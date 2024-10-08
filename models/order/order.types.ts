@@ -42,6 +42,7 @@ export type OrderType = DocumentBaseType & {
 	courier?: string;
 	trackingNumber?: string;
 	trackingUrl?: string;
+	profit: number;
 };
 
 export default OrderType;

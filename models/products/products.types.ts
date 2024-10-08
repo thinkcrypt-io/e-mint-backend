@@ -12,6 +12,8 @@ type BaseProductType = {
 	collection: any;
 	isFeatured: boolean;
 	price: number;
+	cost: number;
+	brand?: Types.ObjectId;
 
 	isDiscount: boolean;
 	discount?: number;

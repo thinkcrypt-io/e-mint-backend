@@ -8,7 +8,7 @@ export type Filter = {
 	label: string;
 	title: string;
 	options?: Options[];
-	category?: string;
+	category?: 'model' | 'distinct';
 	model?: mongoose.Model<any>;
 	key?: string;
 	roles?: [string];
@@ -40,6 +40,10 @@ type SettingType = {
 	populate?: { path: string; select: string };
 	min?: number;
 	max?: number;
+};
+
+export type Settings = {
+	[key: string]: SettingType;
 };
 
 export default SettingType;

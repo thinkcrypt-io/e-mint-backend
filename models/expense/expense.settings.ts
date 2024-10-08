@@ -1,6 +1,8 @@
 //
 
+import { filters } from '../../imports.js';
 import SettingType from '../../lib/types/settings.types.js';
+import ExpenseCategory from './expenseCategory.model.js';
 
 //import Category from './category.model.js';
 
@@ -54,6 +56,29 @@ const settings: Settings = {
 		},
 	},
 
+	category: {
+		edit: true,
+		sort: true,
+		title: 'Category',
+		type: 'string',
+		required: true,
+		populate: {
+			path: 'category',
+			select: 'name',
+		},
+
+		filter: {
+			name: 'category',
+			field: 'category_in',
+			type: 'multi-select',
+			category: 'model',
+			model: ExpenseCategory,
+			label: 'Category',
+			title: 'Sort by Expense Category',
+			key: 'name',
+		},
+	},
+
 	createdAt: {
 		sort: true,
 		type: 'string',
@@ -65,15 +90,7 @@ const settings: Settings = {
 		sort: true,
 		title: 'Tags',
 		type: 'array-string',
-		filter: {
-			name: 'tags',
-			field: 'tags_in',
-			type: 'multi-select',
-			label: 'Tag',
-			title: 'Sort by Tag',
-			category: 'distinct',
-			key: 'tags',
-		},
+		filter: filters.tags,
 	},
 };
 

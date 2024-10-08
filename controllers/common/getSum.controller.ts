@@ -7,6 +7,7 @@ const getSum = (model: mongoose.Model<any>) => {
 
 		try {
 			let query: any = req?.queryHelper || {};
+
 			const result = await model.aggregate([
 				{
 					$match: query,

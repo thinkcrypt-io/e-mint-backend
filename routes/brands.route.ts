@@ -21,25 +21,25 @@ import {
 	duplicateDocument,
 	getDocumentToEditById,
 	constructPermissions,
-	getSum,
 } from '../imports.js';
-import Expense, { settings } from '../models/expense/expense.schema.js';
+import Model, { settings } from '../models/brand/brand.model.js';
 
 // Initialize a new router
 const router = express.Router();
 
 const config = constructConfig({
-	model: Expense,
+	model: Model,
 	config: settings,
 });
 
-const permissions = constructPermissions('expense');
+const permissions = constructPermissions('category');
 
 // Define common middleware
 const postMiddleware = [
 	protect,
 	validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
+	ifExists(config.EXIST_OPTIONS),
 ];
 
 const copyMiddleware = [protect, hasPermission([permissions.create])];
@@ -57,7 +57,7 @@ const updateMiddleware = [
 ];
 
 const exportMiddleware = [protect, hasPermission([permissions.read])];
-const countMiddleware = [protect, query(config.FILTER_OPTIONS)];
+const countMiddleware = [protect];
 const deleteMiddleware = [protect, hasPermission([permissions.delete])];
 const getByIdMiddleware = [protect, hasPermission([permissions.view])];
 
@@ -84,8 +84,6 @@ router.post(
 router.put('/update/many', ...updateMiddleware, updateManyDocuments(config.EDITS));
 router.put('/copy/:id', ...copyMiddleware, duplicateDocument({ model: config.MODEL }));
 router.get('/edit/:id', ...getByIdMiddleware, getDocumentToEditById(config.MODEL));
-
-router.get('/get/sum/:field', ...countMiddleware, getSum(config.MODEL));
 
 // Export the router
 export default router;

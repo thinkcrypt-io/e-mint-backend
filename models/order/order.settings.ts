@@ -54,6 +54,11 @@ const settings: any = {
 		title: 'Total Price',
 	},
 
+	profit: {
+		type: 'profit',
+		title: 'Profit',
+	},
+
 	vat: {
 		type: 'number',
 		title: 'VAT',
@@ -232,7 +237,7 @@ const settings: any = {
 		title: 'Created At',
 		sort: true,
 		filter: {
-			name: 'Order Data',
+			name: 'Order Date',
 			field: 'createdAt',
 			type: 'date',
 			label: 'Order Date',

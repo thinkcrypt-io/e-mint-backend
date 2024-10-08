@@ -1,6 +1,5 @@
 import { Response } from 'express';
-import Order from '../../models/order/order.model.js';
-import Product from '../../models/products/products.model.js';
+import { OrderType, Product, Order } from '../../imports.js';
 
 const addOrder = async (req: any, res: Response): Promise<Response> => {
 	const {
@@ -38,7 +37,8 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			shippingCharge: cart.shipping,
 			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
 			discount: cart.discount,
-		});
+			profit: cart.profit,
+		}) as OrderType;
 
 		const saved = (await order.save()) as any;
 

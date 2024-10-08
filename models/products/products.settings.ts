@@ -1,6 +1,7 @@
 import { ProductSettings } from './products.types.js';
 import Category from '../category/category.model.js';
 import Collection from '../collection/collection.model.js';
+import Brand from '../brand/brand.model.js';
 
 /**
  * settings file
@@ -92,6 +93,29 @@ const settings: ProductSettings = {
 			key: 'name',
 		},
 	},
+	brand: {
+		edit: true,
+		sort: true,
+		title: 'Brand',
+		type: 'string',
+		required: true,
+		populate: {
+			path: 'brand',
+			select: 'name',
+		},
+
+		filter: {
+			name: 'brand',
+			field: 'brand_in',
+			type: 'multi-select',
+			label: 'Brand',
+			title: 'Sort by Brand',
+			options: [],
+			category: 'model',
+			model: Brand,
+			key: 'name',
+		},
+	},
 	image: {
 		type: 'uri',
 		title: 'Image',
@@ -159,6 +183,20 @@ const settings: ProductSettings = {
 		title: 'Low Stock Alert',
 		edit: true,
 		sort: true,
+	},
+	cost: {
+		type: 'number',
+		title: 'Cost Price',
+		required: true,
+		edit: true,
+		sort: true,
+		filter: {
+			name: 'cost',
+			field: 'cost',
+			type: 'range',
+			label: 'Cost',
+			title: 'Sort by cost price',
+		},
 	},
 
 	price: {
