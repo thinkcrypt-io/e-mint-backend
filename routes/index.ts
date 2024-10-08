@@ -18,3 +18,4 @@ export { default as scanRoute } from './scans.route.js';
 export { default as uploadRoute } from './upload.route.js';
 export { default as userRoute } from './user.route.js';
 export { default as brandRoute } from './brands.route.js';
+export { default as adjustmentRoute } from './adjustments.route.js';

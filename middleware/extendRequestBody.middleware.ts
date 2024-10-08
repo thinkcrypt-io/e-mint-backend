@@ -6,10 +6,12 @@ type QueryType = {
 	allowSearch?: string[];
 };
 
-const customQuery = ({ query }: any) => {
+const extendRequestBody = ({ query }: any) => {
 	return (req: any, res: Response, next: NextFunction): any => {
 		try {
-			req.queryHelper = { ...(req.queryHelper || {}), ...query };
+			req.body = { ...(req.body || {}), ...query };
+
+			console.log(req.body);
 
 			next();
 		} catch (e: any) {
@@ -19,4 +21,4 @@ const customQuery = ({ query }: any) => {
 	};
 };
 
-export default customQuery;
+export default extendRequestBody;

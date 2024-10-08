@@ -26,6 +26,7 @@ import {
 	expenseRoute,
 	expenseCategoryRoute,
 	brandRoute,
+	adjustmentRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -79,6 +80,7 @@ app.use('/api/auth', authRoute);
 app.use('/api/brands', brandRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/contents', contentRoute);
+app.use('/api/adjustments', adjustmentRoute);
 
 app.use('/api/items', itemRoute);
 app.use('/api/products', productRoute);

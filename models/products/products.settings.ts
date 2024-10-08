@@ -178,6 +178,13 @@ const settings: ProductSettings = {
 		},
 	},
 
+	damage: {
+		type: 'number',
+		title: 'Damage',
+		edit: true,
+		sort: true,
+	},
+
 	lowStockAlert: {
 		type: 'number',
 		title: 'Low Stock Alert',

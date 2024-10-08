@@ -113,6 +113,7 @@ const schema = new Schema<any>(
 
 		allowStock: { type: Boolean, default: true },
 		stock: { type: Number, default: 0 },
+		damage: { type: Number, default: 0 },
 		lowStockAlert: { type: Number, default: 0 },
 
 		status: {
