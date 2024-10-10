@@ -5,8 +5,6 @@ const addPayment = async (req: any, res: any): Promise<Response> => {
 	try {
 		const { invoice, amount } = req.body;
 
-		console.log(req.body);
-
 		if (invoice) {
 			const getOrder: any = await Order.findById(invoice).populate('customer');
 
