@@ -27,6 +27,8 @@ import {
 	expenseCategoryRoute,
 	brandRoute,
 	adjustmentRoute,
+	paymentRoute,
+	invoiceRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -92,6 +94,7 @@ app.use('/api/orders', orderRoute);
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
 app.use('/api/users', userRoute);
+app.use('/api/payments', paymentRoute);
 
 app.use('/api/expenses', expenseRoute);
 app.use('/api/expense-categories', expenseCategoryRoute);
@@ -100,6 +103,7 @@ app.use('/api/scans', scanRoute);
 app.use('/api/upload', uploadRoute);
 app.use('/api/feedbacks', feedbackRoute);
 app.use('/api/qr', qrRoute);
+app.use('/api/invoices', invoiceRoute);
 
 //user routes
 app.use('/user-api/store', userStoreRoute);
@@ -108,6 +112,7 @@ app.use('/user-api/collections', userCollectionRoute);
 app.use('/user-api/products', userProductRoute);
 app.use('/user-api/auth', userAuthRoute);
 app.use('/user-api/orders', userOrder);
+
 // app.use('/user-api/categories', userCategoryRoute);
 
 app.use((req, res, next) => {

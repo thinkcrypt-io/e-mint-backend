@@ -4,7 +4,7 @@ type Options = { label: string; value: string };
 
 export type Filter = {
 	name: string;
-	type: 'multi-select' | 'range' | 'boolean' | 'date';
+	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text';
 	label: string;
 	title: string;
 	options?: Options[];
@@ -44,6 +44,10 @@ type SettingType = {
 
 export type Settings = {
 	[key: string]: SettingType;
+};
+
+export type SettingsType<T> = {
+	[K in keyof T]: SettingType;
 };
 
 export default SettingType;

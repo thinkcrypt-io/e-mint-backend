@@ -232,6 +232,20 @@ const settings: any = {
 		sort: true,
 	},
 
+	invoice: {
+		type: 'string',
+		title: 'Invoice',
+		sort: true,
+		// search: true,
+		filter: {
+			name: 'invoice',
+			field: 'invoice',
+			type: 'text',
+			label: 'Invoice Number',
+			title: 'Sort by invoice number',
+		},
+	},
+
 	createdAt: {
 		type: 'string',
 		title: 'Created At',

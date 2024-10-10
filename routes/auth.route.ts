@@ -1,19 +1,21 @@
 import express from 'express';
-import { protect } from '../middleware/auth.middleware.js';
-import loginController from '../controllers/auth/login.controller.js';
-import registerController from '../controllers/auth/register.controller.js';
-import getSelf from '../controllers/auth/getSelf.controller.js';
-import updateSellerPreferences from '../controllers/auth/updatePreference.controller.js';
+import { protect } from '../middleware/index.js';
+
+import {
+	updateSellerSelf,
+	updateSellerPreferences,
+	login,
+	register,
+	getSellerSelf,
+} from '../controllers/auth/index.js';
 
 const router = express.Router();
 
 //route for: /api/auth route
-router
-	.post('/login', loginController)
-	.post('/register', registerController)
-	.get('/self', protect, getSelf);
+router.post('/login', login).post('/register', register).get('/self', protect, getSellerSelf);
 
 router.put('/update/preferences', protect, updateSellerPreferences);
+router.put('/update/self', protect, updateSellerSelf);
 
 // router.post('/request-password-change', requestPasswordChange);
 // router.get('/verify-reset-token/:token', verifyToken);

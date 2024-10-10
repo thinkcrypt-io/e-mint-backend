@@ -11,6 +11,17 @@ export { default as OrderType } from './order/order.types.js';
 //Coupon
 export { default as Coupon } from './coupon/coupon.model.js';
 
+//User
+export { default as User } from './user/user.model.js';
+export { settings as userSettings } from './user/user.model.js';
+
 //Inventory Adjustment
 export { default as InventoryAdjustment } from './inventory-adjustment/inventoryAdjustment.model.js';
 export { settings as inventoryAdjustmentSettings } from './inventory-adjustment/inventoryAdjustment.model.js';
+
+//Counter
+export { default as Counter } from './counter/counter.model.js';
+
+//Payment
+export { default as Payment } from './payment/payment.model.js';
+export { paymentSettings } from './payment/payment.model.js';

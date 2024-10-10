@@ -1,10 +1,12 @@
 import mongoose, { Schema } from 'mongoose';
-import { OrderType, OrderItemType } from './order.types';
+import { OrderType, OrderItemType } from './order.types.js';
+import { Counter } from '../index.js';
 
 const schema: Schema = new Schema<OrderType>(
 	{
 		// store: { type: Schema.Types.ObjectId, required: true, ref: 'Store' },
 		user: { type: Schema.Types.ObjectId, ref: 'User' },
+		invoice: { type: String },
 		items: [
 			{
 				name: { type: String, required: true },
@@ -66,6 +68,41 @@ schema.virtual('totalItems').get(function () {
 	return this.items.reduce((total: number, item: OrderItemType): number => {
 		return total + (item.qty || 0);
 	}, 0);
+});
+
+// Create a virtual property 'name' that gets and sets the 'invoice' field
+schema
+	.virtual('name')
+	.get(function () {
+		return this.invoice;
+	})
+	.set(function (value) {
+		this.invoice = value;
+	});
+
+// Pre-save hook to auto-increment the invoice number
+schema.pre<OrderType>('save', async function (next) {
+	try {
+		if (this.isNew) {
+			// Find the counter document
+			let counter = await Counter.findOne();
+
+			// If no counter document exists, create one
+			if (!counter) {
+				counter = new Counter({ sequenceValue: 0 });
+			}
+
+			// Increment the sequence value
+			counter.sequenceValue += 1;
+			await counter.save();
+
+			// Set the invoice number as a string with at least 4 digits
+			this.invoice = counter.sequenceValue.toString().padStart(4, '0');
+		}
+		next();
+	} catch (error: any) {
+		next();
+	}
 });
 
 const Order = mongoose.model<OrderType>('Order', schema);

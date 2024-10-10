@@ -43,6 +43,7 @@ export type OrderType = DocumentBaseType & {
 	trackingNumber?: string;
 	trackingUrl?: string;
 	profit: number;
+	invoice: string;
 };
 
 export default OrderType;

@@ -28,6 +28,7 @@ import {
 	ifExists,
 	validate,
 	hasPermission,
+	exportPdf,
 } from '../imports.js';
 
 type TopProductsFilters = {
@@ -119,6 +120,7 @@ router.delete('/:id', protect, hasPermission(['delete_product']), deleteDocument
 router.get('/get/count', protect, getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
+router.post('/export/pdf', protect, exportPdf(config.QUERY_OPTIONS));
 
 router.put(
 	'/update/many',

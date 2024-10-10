@@ -30,3 +30,5 @@ export { default as getOneDocument } from './getOneDocument.controller.js';
 export { default as getSum } from './getSum.controller.js';
 //16
 export { default as getInventoryCount } from './getInventoryCount.controller.js';
+//17
+export { default as exportPdf } from './exportPdf.controller.js';

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { OrderType, Product, Order } from '../../imports.js';
+import { OrderType, Product, Order, Payment } from '../../imports.js';
 
 const addOrder = async (req: any, res: Response): Promise<Response> => {
 	const {
@@ -49,6 +49,23 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 				product.stock = product.stock - item.qty;
 				await product.save();
 			}
+		}
+		if (paidAmount > 0) {
+			const payment = new Payment({
+				invoice: saved.invoice,
+				amount: paymentAmount,
+				order: saved._id,
+				date: orderDate,
+				trnxId: 'POS',
+				reference: saved.invoice,
+				tags: ['order'],
+				note,
+				account: 'credit',
+				customer: saved?.customer,
+				paymentMethod,
+				currency: 'BDT',
+			});
+			const savePayment = await payment.save();
 		}
 
 		return res
