@@ -31,6 +31,7 @@ export type OrderType = DocumentBaseType & {
 	status?: string;
 	paidAmount?: number;
 	dueAmount?: number;
+	returnAmount?: number;
 	// transactions?: any[];
 	customer?: Schema.Types.ObjectId;
 	orderDate: Date;

@@ -149,6 +149,10 @@ const settings: any = {
 		type: 'number',
 		title: 'Due amount',
 	},
+	returnAmount: {
+		type: 'number',
+		title: 'Due amount',
+	},
 
 	paidAmount: {
 		type: 'number',

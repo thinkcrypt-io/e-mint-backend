@@ -1,6 +1,4 @@
-import { required } from 'joi';
 import mongoose, { Schema, Types } from 'mongoose';
-// import { CategoryType } from './category.type.js';
 import { SettingsType, filters } from '../../imports.js';
 
 const schema = new Schema<PaymentType>(
@@ -8,16 +6,40 @@ const schema = new Schema<PaymentType>(
 		invoice: {
 			type: String,
 			trim: true,
+			required: true,
 		},
-		currency: String,
-		attachments: [String],
+
 		status: {
 			type: String,
-			enum: ['pending', 'completed', 'failed', 'refunded'],
+			enum: ['pending', 'completed', 'failed', 'refunded', 'cancelled'],
 			default: 'pending',
 		},
-		// checkNo: String,
-		// walletNo: String,
+		items: [
+			{
+				name: { type: String, required: true },
+				image: { type: String },
+				_id: { type: Schema.Types.ObjectId, required: true, ref: 'Product', populate: 'Product' },
+				qty: { type: Number, required: true },
+				returnQty: { type: Number, required: true },
+				returnAmount: { type: Number, required: true },
+				unitPrice: { type: Number, required: true },
+				totalPrice: { type: Number },
+				vat: { type: Number, required: true },
+			} as Record<string, any>,
+		],
+		reason: {
+			type: String,
+
+			required: true,
+		},
+
+		otherReason: {
+			type: String,
+			trim: true,
+		},
+
+		reference: String,
+
 		amount: {
 			type: Number,
 			required: true,
@@ -30,30 +52,7 @@ const schema = new Schema<PaymentType>(
 			type: Schema.Types.ObjectId,
 			ref: 'Customer',
 		},
-		trnxId: String,
-		reference: String,
-		paymentMethod: {
-			type: String,
-			enum: [
-				'cash',
-				'cheque',
-				'card',
-				'bank',
-				'bkash',
-				'nagad',
-				'rocket',
-				'ssl',
-				'stripe',
-				'other',
-			],
-			required: true,
-		},
 
-		account: {
-			type: String,
-			enum: ['debit', 'credit'],
-			required: true,
-		},
 		date: {
 			type: Date,
 			required: true,
@@ -75,36 +74,20 @@ type PaymentType = {
 	invoice: string;
 	amount: number;
 	order: Types.ObjectId;
-	//category: string;
+	reason: string;
+	otherReason: string;
 	date: Date;
 	tags: string[];
 	note: string;
-	account: 'debit' | 'credit';
 	customer: Types.ObjectId;
-	trnxId: string;
-	paymentMethod:
-		| 'cash'
-		| 'cheque'
-		| 'card'
-		| 'bank'
-		| 'bkash'
-		| 'nagad'
-		| 'rocket'
-		| 'other'
-		| 'ssl'
-		| 'stripe';
 	reference: string;
-	currency: string;
 	status: 'pending' | 'completed' | 'failed' | 'refunded';
-	attachments: string[];
-	// checkNo: string;
-	// walletNo: string;
+	items: [];
 	createdAt: Date;
 };
 
-export const paymentSettings: SettingsType<PaymentType> = {
+export const returnSettings: SettingsType<PaymentType> = {
 	invoice: {
-		edit: true,
 		sort: true,
 		// search: true,
 		title: 'Invoice',
@@ -120,6 +103,32 @@ export const paymentSettings: SettingsType<PaymentType> = {
 		},
 	},
 
+	items: {
+		title: 'Items',
+		type: 'array-object',
+	},
+
+	reason: {
+		edit: true,
+		title: 'Reason',
+		type: 'string',
+		required: true,
+		filter: {
+			name: 'reason',
+			field: 'reason',
+			type: 'multi-select',
+			label: 'Reason',
+			category: 'distinct',
+			title: 'Sort by reason',
+		},
+	},
+
+	otherReason: {
+		edit: true,
+		title: 'Other Reason',
+		type: 'string',
+	},
+
 	status: {
 		edit: true,
 		title: 'Status',
@@ -130,25 +139,6 @@ export const paymentSettings: SettingsType<PaymentType> = {
 		edit: true,
 		title: 'Customer',
 		type: 'string',
-	},
-	attachments: {
-		edit: true,
-		title: 'Attachments',
-		type: 'array-string',
-	},
-
-	trnxId: {
-		edit: true,
-		title: 'Transaction Id',
-		type: 'string',
-
-		filter: {
-			name: 'trnxId',
-			field: 'trnxId',
-			type: 'text',
-			label: 'Tranx Id',
-			title: 'Sort by transaction id',
-		},
 	},
 
 	reference: {
@@ -206,46 +196,6 @@ export const paymentSettings: SettingsType<PaymentType> = {
 		},
 	},
 
-	paymentMethod: {
-		edit: true,
-		type: 'string',
-		title: 'Payment Method',
-		required: true,
-		filter: {
-			name: 'paymentMethod',
-			field: 'paymentMethod',
-			type: 'multi-select',
-			label: 'Payment Method',
-			title: 'Sort by payment method',
-			category: 'distinct',
-		},
-	},
-
-	currency: {
-		edit: true,
-		type: 'string',
-		title: 'Currency',
-	},
-
-	account: {
-		edit: true,
-		sort: true,
-		title: 'Account',
-		type: 'string',
-		required: true,
-		filter: {
-			name: 'account',
-			field: 'account',
-			type: 'multi-select',
-			label: 'Account',
-			title: 'Sort by account',
-			options: [
-				{ label: 'Debit', value: 'debit' },
-				{ label: 'Credit', value: 'credit' },
-			],
-		},
-	},
-
 	createdAt: {
 		sort: true,
 		type: 'string',
@@ -259,13 +209,8 @@ export const paymentSettings: SettingsType<PaymentType> = {
 		type: 'array-string',
 		filter: filters.tags,
 	},
-	// walletNo: {
-	// 	edit: true,
-	// 	title: 'Wallet No',
-	// 	type: 'string',
-	// },
 };
 
-const Payment = mongoose.model<PaymentType>('Payment', schema);
+const Return = mongoose.model<any>('Return', schema);
 
-export default Payment;
+export default Return;

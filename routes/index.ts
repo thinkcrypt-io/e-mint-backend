@@ -21,3 +21,4 @@ export { default as brandRoute } from './brands.route.js';
 export { default as adjustmentRoute } from './adjustments.route.js';
 export { default as paymentRoute } from './payment.route.js';
 export { default as invoiceRoute } from './invoice.route.js';
+export { default as returnRoute } from './return.route.js';

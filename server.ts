@@ -29,6 +29,7 @@ import {
 	adjustmentRoute,
 	paymentRoute,
 	invoiceRoute,
+	returnRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -104,6 +105,7 @@ app.use('/api/upload', uploadRoute);
 app.use('/api/feedbacks', feedbackRoute);
 app.use('/api/qr', qrRoute);
 app.use('/api/invoices', invoiceRoute);
+app.use('/api/returns', returnRoute);
 
 //user routes
 app.use('/user-api/store', userStoreRoute);

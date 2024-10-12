@@ -16,9 +16,15 @@ const schema: Schema = new Schema<OrderType>(
 				unitPrice: { type: Number, required: true },
 				totalPrice: { type: Number },
 				vat: { type: Number, required: true },
+				returnQty: {
+					type: Number,
+					default: 0,
+				},
 			} as Record<string, any>,
 		],
 		total: { type: Number, required: true, default: 0 },
+		returnAmount: { type: Number, default: 0, required: true },
+
 		vat: { type: Number, required: true, default: 0 },
 		subTotal: { type: Number, required: true, default: 0 },
 		coupon: { type: Schema.Types.ObjectId, ref: 'Coupon' },
