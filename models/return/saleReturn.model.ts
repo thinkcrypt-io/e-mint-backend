@@ -120,6 +120,7 @@ export const returnSettings: SettingsType<PaymentType> = {
 			label: 'Reason',
 			category: 'distinct',
 			title: 'Sort by reason',
+			key: 'reason',
 		},
 	},
 
@@ -146,13 +147,6 @@ export const returnSettings: SettingsType<PaymentType> = {
 		title: 'Reference',
 		type: 'string',
 		trim: true,
-		filter: {
-			name: 'reference',
-			field: 'reference',
-			type: 'text',
-			label: 'Ref',
-			title: 'Sort by reference Id',
-		},
 	},
 
 	amount: {

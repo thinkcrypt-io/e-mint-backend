@@ -15,7 +15,7 @@ const adjustReturn = async (req: any, res: any, next: any) => {
 		findOrder.items = findOrder.items.map((item: any) => {
 			const returnItem = items.find((i: any) => i._id == item._id);
 			if (returnItem) {
-				item.returnQty = Number(returnItem.returnQty);
+				item.returnQty = item.returnQty + Number(returnItem.returnQty);
 			}
 			return item;
 		}, []);

@@ -54,7 +54,7 @@ const getFilters = ({
 			return res.status(200).json(filtersToSend);
 		} catch (e: any) {
 			console.error(e.message);
-			return res.status(500).json({ message: 'Internal Server Error' });
+			return res.status(500).json({ message: e.message });
 		}
 	};
 };

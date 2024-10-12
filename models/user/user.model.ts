@@ -66,6 +66,7 @@ const schema = new Schema<any>(
 			roles: [String],
 			expenses: [String],
 			payments: [String],
+			returns: [String],
 		},
 	},
 
