@@ -1,7 +1,7 @@
-import { required } from 'joi';
 import mongoose, { Schema, Types } from 'mongoose';
 // import { CategoryType } from './category.type.js';
-import { SettingsType, filters } from '../../imports.js';
+import { Order, SettingsType, filters } from '../../imports.js';
+import Ledger from '../ledger/ledger.model.js';
 
 const schema = new Schema<PaymentType>(
 	{
@@ -71,11 +71,42 @@ const schema = new Schema<PaymentType>(
 	}
 );
 
+let isNewOrder = false;
+
+schema.pre<any>('save', function (next) {
+	isNewOrder = this.isNew;
+	next();
+});
+
+// Pre-save hook to auto-increment the invoice number
+schema.post<any>('save', async function (next) {
+	try {
+		if (isNewOrder) {
+			if (this.order) {
+				const getOrder: any = await Order.findById(this.order);
+				const ledger = new Ledger({
+					amount: this.amount,
+					account: this.account,
+					order: this.order,
+					type: 'customer',
+					amountReceived: this.account === 'credit' ? this.amount : 0,
+					amountSent: this.account === 'debit' ? this.amount : 0,
+					note: `Payment for ${getOrder?.invoice} with ${this.paymentMethod}`,
+					date: this.date,
+					customer: getOrder?.customer,
+				});
+				await ledger.save();
+			}
+		}
+	} catch (error: any) {
+		console.log('Error creating ledger entry:', error);
+	}
+});
+
 type PaymentType = {
 	invoice: string;
 	amount: number;
 	order: Types.ObjectId;
-	//category: string;
 	date: Date;
 	tags: string[];
 	note: string;
@@ -97,8 +128,6 @@ type PaymentType = {
 	currency: string;
 	status: 'pending' | 'completed' | 'failed' | 'refunded';
 	attachments: string[];
-	// checkNo: string;
-	// walletNo: string;
 	createdAt: Date;
 };
 

@@ -1,6 +1,8 @@
 import mongoose, { Schema } from 'mongoose';
 import { OrderType, OrderItemType } from './order.types.js';
 import { Counter } from '../index.js';
+import Ledger from '../ledger/ledger.model.js';
+import { date } from 'joi';
 
 const schema: Schema = new Schema<OrderType>(
 	{
@@ -112,6 +114,36 @@ schema.pre<OrderType>('save', async function (next) {
 		next();
 	} catch (error: any) {
 		next();
+	}
+});
+
+let isNewOrder = false;
+
+schema.pre<any>('save', function (next) {
+	isNewOrder = this.isNew;
+	next();
+});
+
+// Pre-save hook to auto-increment the invoice number
+schema.post<any>('save', async function (next) {
+	console.log('Order saved:', this, this.isNew);
+	try {
+		if (isNewOrder) {
+			const ledger = new Ledger({
+				amount: this.total,
+				account: 'debit',
+				order: this._id,
+				type: 'customer',
+				amountReceived: 0,
+				amountSent: this.total,
+				note: `Order placed for invoice ${this.invoice}`,
+				date: this.orderDate,
+				customer: this.customer,
+			});
+			await ledger.save();
+		}
+	} catch (error: any) {
+		console.log('Error creating ledger entry:', error);
 	}
 });
 

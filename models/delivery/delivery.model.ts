@@ -83,6 +83,7 @@ schema.post<any>('save', async function (next) {
 		order.delivery = this._id;
 		if (this.status == 'completed') {
 			order.status = 'delivered';
+			order.isDelivered = true;
 		}
 		await order.save();
 	} catch (error: any) {
