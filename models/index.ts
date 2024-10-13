@@ -25,3 +25,7 @@ export { default as Counter } from './counter/counter.model.js';
 //Payment
 export { default as Payment } from './payment/payment.model.js';
 export { paymentSettings } from './payment/payment.model.js';
+
+//Delivery
+export { default as Delivery } from './delivery/delivery.model.js';
+export { deliverySettings } from './delivery/delivery.model.js';

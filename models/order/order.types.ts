@@ -38,6 +38,7 @@ export type OrderType = DocumentBaseType & {
 	isCancelled?: boolean;
 	discount?: number;
 	isDelivered?: boolean;
+	delivery?: Schema.Types.ObjectId;
 	note?: string;
 	origin?: string;
 	courier?: string;

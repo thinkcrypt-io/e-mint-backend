@@ -53,6 +53,10 @@ const schema: Schema = new Schema<OrderType>(
 		trackingUrl: {
 			type: String,
 		},
+		delivery: {
+			type: Schema.Types.ObjectId,
+			ref: 'Delivery',
+		},
 
 		origin: {
 			type: String,

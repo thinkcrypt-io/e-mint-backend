@@ -30,6 +30,7 @@ import {
 	paymentRoute,
 	invoiceRoute,
 	returnRoute,
+	deliveryRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -88,6 +89,7 @@ app.use('/api/adjustments', adjustmentRoute);
 app.use('/api/items', itemRoute);
 app.use('/api/products', productRoute);
 app.use('/api/customers', customerRoute);
+app.use('/api/deliveries', deliveryRoute);
 
 app.use('/api/restaurant', restaurantRoute);
 app.use('/api/collections', collectionRoute);
