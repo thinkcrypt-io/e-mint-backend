@@ -29,3 +29,12 @@ export { paymentSettings } from './payment/payment.model.js';
 //Delivery
 export { default as Delivery } from './delivery/delivery.model.js';
 export { deliverySettings } from './delivery/delivery.model.js';
+
+//Ledger
+export { default as Ledger } from './ledger/ledger.model.js';
+export { ledgerSettings } from './ledger/ledger.model.js';
+
+//Contacts
+export { default as Supplier } from './customer/supplier.model.js';
+export { supplierSettings } from './customer/supplier.model.js';
+export { default as Customer } from './customer/customer.model.js';

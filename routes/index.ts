@@ -23,3 +23,5 @@ export { default as paymentRoute } from './payment.route.js';
 export { default as invoiceRoute } from './invoice.route.js';
 export { default as returnRoute } from './return.route.js';
 export { default as deliveryRoute } from './delivery.route.js';
+export { default as ledgerRoute } from './ledger.route.js';
+export { default as supplierRoute } from './suppliers.route.js';

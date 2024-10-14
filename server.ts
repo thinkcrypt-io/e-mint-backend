@@ -31,6 +31,8 @@ import {
 	invoiceRoute,
 	returnRoute,
 	deliveryRoute,
+	ledgerRoute,
+	supplierRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -108,6 +110,9 @@ app.use('/api/feedbacks', feedbackRoute);
 app.use('/api/qr', qrRoute);
 app.use('/api/invoices', invoiceRoute);
 app.use('/api/returns', returnRoute);
+
+app.use('/api/ledgers', ledgerRoute);
+app.use('/api/suppliers', supplierRoute);
 
 //user routes
 app.use('/user-api/store', userStoreRoute);

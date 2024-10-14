@@ -18,6 +18,7 @@ const schema = new Schema<Type>(
 		},
 		supplier: {
 			type: Schema.Types.ObjectId,
+			ref: 'Supplier',
 		},
 		amountReceived: {
 			type: Number,
@@ -97,9 +98,10 @@ export const ledgerSettings: SettingsType<Type> = {
 		type: 'string',
 		required: true,
 		trim: true,
+
 		filter: {
-			name: 'invoice',
-			field: 'invoice',
+			name: 'type',
+			field: 'type',
 			type: 'multi-select',
 			options: [
 				{
@@ -138,6 +140,10 @@ export const ledgerSettings: SettingsType<Type> = {
 		sort: true,
 		title: 'Customer',
 		type: 'string',
+		populate: {
+			path: 'customer',
+			select: 'name email phone',
+		},
 		filter: {
 			name: 'customer',
 			field: 'customer',
@@ -146,6 +152,27 @@ export const ledgerSettings: SettingsType<Type> = {
 			category: 'model',
 			model: Customer,
 			title: 'Sort by customer',
+			key: 'status',
+		},
+	},
+
+	supplier: {
+		edit: true,
+		sort: true,
+		title: 'Supplier',
+		type: 'string',
+		populate: {
+			path: 'supplier',
+			select: 'name email phone',
+		},
+		filter: {
+			name: 'supplier',
+			field: 'supplier',
+			type: 'multi-select',
+			label: 'Supplier',
+			category: 'model',
+			model: Customer,
+			title: 'Sort by supplier',
 			key: 'status',
 		},
 	},
