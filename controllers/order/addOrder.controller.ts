@@ -17,7 +17,6 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 
 	try {
 		const order = new Order({
-			// store: (req as any).store,
 			user: (req as any).user._id,
 			items: cart.items,
 			total: cart.total,
@@ -38,6 +37,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
 			discount: cart.discount,
 			profit: cart.profit,
+			shop: (req as any).shop,
 		}) as OrderType;
 
 		const saved = (await order.save()) as any;
@@ -52,6 +52,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 		}
 		if (paidAmount > 0) {
 			const payment = new Payment({
+				shop: (req as any).shop,
 				invoice: saved.invoice,
 				amount: paymentAmount,
 				order: saved._id,

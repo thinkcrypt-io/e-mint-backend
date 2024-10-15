@@ -14,14 +14,25 @@ const schema = new Schema<CustomerType>(
 			type: String,
 			trim: true,
 			required: [true, 'Email is required'],
-			unique: true,
 			toLowerCase: true,
 		},
 		phone: { type: String, trim: true },
+		group: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: 'Group',
+			},
+		],
 
 		isActive: {
 			type: Boolean,
 			default: true,
+			required: true,
+		},
+
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
 			required: true,
 		},
 
@@ -84,5 +95,6 @@ schema.methods.generateAuthToken = function (this: CustomerType): string {
 };
 
 const Customer = mongoose.model<any>('Customer', schema);
-export { default as settings } from './customer.settings.js';
 export default Customer;
+
+export { default as settings } from './customer.settings.js';

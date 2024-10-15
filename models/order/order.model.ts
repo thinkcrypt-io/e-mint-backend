@@ -45,6 +45,11 @@ const schema: Schema = new Schema<OrderType>(
 		isCancelled: { type: Boolean, default: false, required: true },
 		discount: { type: Number, default: 0, required: true },
 		isDelivered: { type: Boolean, default: false, required: true },
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		note: { type: String },
 		courier: {
 			type: String,
@@ -97,11 +102,11 @@ schema.pre<OrderType>('save', async function (next) {
 	try {
 		if (this.isNew) {
 			// Find the counter document
-			let counter = await Counter.findOne();
+			let counter = await Counter.findOne({ shop: this?.shop?.toString() });
 
 			// If no counter document exists, create one
 			if (!counter) {
-				counter = new Counter({ sequenceValue: 0 });
+				counter = new Counter({ sequenceValue: 0, shop: this?.shop?.toString() });
 			}
 
 			// Increment the sequence value
@@ -113,6 +118,7 @@ schema.pre<OrderType>('save', async function (next) {
 		}
 		next();
 	} catch (error: any) {
+		console.log(error);
 		next();
 	}
 });
@@ -139,6 +145,7 @@ schema.post<any>('save', async function (next) {
 				note: `Order placed for invoice ${this.invoice}`,
 				date: this.orderDate,
 				customer: this.customer,
+				shop: this.shop.toString(),
 			});
 			await ledger.save();
 		}

@@ -7,6 +7,7 @@ type BrandType = {
 	description: string;
 	isActive: boolean;
 	tags: string[];
+	shop: Schema.Types.ObjectId;
 };
 
 const schema = new Schema<BrandType>(
@@ -19,6 +20,11 @@ const schema = new Schema<BrandType>(
 		image: {
 			type: String,
 			trim: true,
+		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
 		},
 		description: {
 			type: String,

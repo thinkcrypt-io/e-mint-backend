@@ -16,10 +16,11 @@ const schema = new Schema<any>(
 			trim: true,
 			required: true,
 		},
-		// store: {
-		// 	type: Types.ObjectId,
-		// 	ref: 'Store',
-		// },
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		isActive: {
 			type: Boolean,
 			default: true,

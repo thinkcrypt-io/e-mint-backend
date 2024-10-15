@@ -29,12 +29,14 @@ const addPayment = async (req: any, res: any): Promise<Response> => {
 				order: getOrder?._id,
 				invoice: getOrder?.invoice,
 				customer: getOrder?.customer,
+				shop: req.shop,
 			});
 			const savedPayment = await payment.save();
 			return res.status(201).json({ message: 'Payment added successfully', savedPayment });
 		} else {
 			const payment = new Payment({
 				...req.body,
+				shop: req.shop,
 			});
 
 			const savedPayment = await payment.save();

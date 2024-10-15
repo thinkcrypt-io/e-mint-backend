@@ -64,6 +64,11 @@ const schema = new Schema<CollectionType>(
 				type: String,
 				trim: true,
 			},
+			shop: {
+				type: Schema.Types.ObjectId,
+				ref: 'Shop',
+				required: true,
+			},
 		},
 	},
 

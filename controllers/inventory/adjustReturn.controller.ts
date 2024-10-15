@@ -7,7 +7,6 @@ const adjustReturn = async (req: any, res: any, next: any) => {
 
 		const findOrder = await Order.findById(order);
 
-		console.log(findOrder);
 		if (!findOrder) {
 			return res.status(400).json({ message: 'Order not found' });
 		}

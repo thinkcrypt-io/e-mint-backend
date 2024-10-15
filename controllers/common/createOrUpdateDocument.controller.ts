@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 type CustomRequest = Request & {
 	body: mongoose.Document;
-	restaurant?: string;
+	shop?: string;
 };
 
 const createOrUpdateDocument = (model: mongoose.Model<any>) => {
@@ -11,18 +11,18 @@ const createOrUpdateDocument = (model: mongoose.Model<any>) => {
 		const documentData = req.body;
 
 		try {
-			let document = await model.findOne({ restaurant: req.restaurant });
+			let document = await model.findOne({ shop: req.shop });
 
 			if (document) {
 				// Update existing document
 				document = await model.findOneAndUpdate(
-					{ restaurant: req.restaurant },
+					{ shop: req.shop },
 					{ $set: documentData },
 					{ new: true }
 				);
 			} else {
 				// Create new document
-				document = new model({ restaurant: req.restaurant, ...documentData });
+				document = new model({ shop: req.shop, ...documentData });
 				await document.save();
 			}
 

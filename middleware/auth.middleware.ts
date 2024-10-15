@@ -24,20 +24,24 @@ export const protect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		// if (!decoded.restaurant) {
-		// 	return res.status(401).json({ message: 'Not authorized, token failed' });
-		// }
+		if (!decoded.shop) {
+			return res.status(401).json({ message: 'Not authorized, token failed' });
+		}
 
 		req.user = await User.findById(decoded?._id).select('-password');
-		// req.restaurant = decoded.restaurant;
+		req.shop = req?.user?.shop;
 
-		// if (decoded.restaurant != req.restaurant) {
-		// 	return res.status(401).json({ message: 'Restaurant ID Does not match user' });
-		// }
+		if (decoded.shop != req.shop) {
+			return res.status(401).json({ message: 'Shop ID Does not match user' });
+		}
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
 		}
+
+		let query: any = (req as any).queryHelper || {};
+		query.shop = req.shop;
+		req.queryHelper = query;
 
 		next();
 	} catch (e: any) {

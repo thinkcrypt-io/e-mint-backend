@@ -16,6 +16,11 @@ const schema = new Schema<PaymentType>(
 			enum: ['pending', 'completed', 'failed', 'refunded'],
 			default: 'pending',
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		// checkNo: String,
 		// walletNo: String,
 		amount: {
@@ -94,6 +99,7 @@ schema.post<any>('save', async function (next) {
 					note: `Payment for ${getOrder?.invoice} with ${this.paymentMethod}`,
 					date: this.date,
 					customer: getOrder?.customer,
+					shop: this.shop.toString(),
 				});
 				await ledger.save();
 			}
@@ -113,6 +119,7 @@ type PaymentType = {
 	account: 'debit' | 'credit';
 	customer: Types.ObjectId;
 	trnxId: string;
+	shop?: Types.ObjectId;
 	paymentMethod:
 		| 'cash'
 		| 'cheque'

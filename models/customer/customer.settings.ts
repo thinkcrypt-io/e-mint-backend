@@ -1,4 +1,4 @@
-import { sort } from '../../middleware';
+import { Group } from '../../imports.js';
 
 const settings: any = {
 	name: {
@@ -20,6 +20,24 @@ const settings: any = {
 		title: 'Email',
 		type: 'email',
 		required: true,
+	},
+	group: {
+		sort: true,
+		edit: true,
+		title: 'Collection',
+		type: 'array-string',
+
+		filter: {
+			name: 'group',
+			field: 'group_in',
+			type: 'multi-select',
+			label: 'Group',
+			title: 'Sort by customer group',
+			options: [],
+			category: 'model',
+			model: Group,
+			key: 'name',
+		},
 	},
 	phone: {
 		search: true,

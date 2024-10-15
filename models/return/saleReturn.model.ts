@@ -32,6 +32,11 @@ const schema = new Schema<PaymentType>(
 
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 
 		otherReason: {
 			type: String,
@@ -84,6 +89,7 @@ type PaymentType = {
 	status: 'pending' | 'completed' | 'failed' | 'refunded';
 	items: [];
 	createdAt: Date;
+	shop?: Types.ObjectId;
 };
 
 export const returnSettings: SettingsType<PaymentType> = {

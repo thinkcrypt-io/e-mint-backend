@@ -25,3 +25,4 @@ export { default as returnRoute } from './return.route.js';
 export { default as deliveryRoute } from './delivery.route.js';
 export { default as ledgerRoute } from './ledger.route.js';
 export { default as supplierRoute } from './suppliers.route.js';
+export { default as groupRoute } from './group.route.js';

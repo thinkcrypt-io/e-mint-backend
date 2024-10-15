@@ -12,7 +12,7 @@ const uploadFile = multer({ dest: 'from/' });
 
 router.get('/', protect, async (req: Request, res: Response) => {
 	try {
-		const files = await File.find({ restaurant: (req as any).restaurant }).sort('-createdAt');
+		const files = await File.find({ shop: (req as any).shop }).sort('-createdAt');
 
 		return res.status(200).json({ message: 'Files fetched successfully', doc: files });
 	} catch (e: any) {
@@ -82,7 +82,7 @@ router.post('/', protect, uploadFile.single('image'), async (req: any, res: Resp
 
 				const newFile = new File({
 					name: data.Key,
-					restaurant: req.restaurant,
+					shop: req.shop,
 					url: data.Location,
 					key: data.Key,
 					type: req?.file?.mimetype,

@@ -2,14 +2,14 @@ import { NextFunction, Request, Response } from 'express';
 import { IfExistType } from '../lib/types/default.types.js';
 
 const ifExists = ({ model, fields }: IfExistType) => {
-	return async (req: Request, res: Response, next: NextFunction) => {
+	return async (req: any, res: Response, next: NextFunction) => {
 		try {
 			const fieldArray = fields.split(' ');
 			const conditions = fieldArray.map(field => ({
 				[field]: req.body[field],
 			}));
 
-			const existingEntry = await model.findOne({ $or: conditions });
+			const existingEntry = await model.findOne({ $or: conditions, shop: req.shop });
 
 			if (existingEntry) {
 				const duplicateFields = fieldArray.filter(

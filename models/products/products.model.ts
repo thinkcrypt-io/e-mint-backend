@@ -63,6 +63,11 @@ const schema = new Schema<any>(
 			ref: 'Category',
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		collection: [{ type: Schema.Types.ObjectId, ref: 'Collection' }],
 		brand: {
 			type: Schema.Types.ObjectId,

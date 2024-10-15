@@ -1,3 +1,6 @@
+//Customer
+export { default as Customer } from './customer/customer.model.js';
+
 //Product
 export { ProductType } from './products/products.types.js';
 export { default as Product } from './products/products.model.js';
@@ -14,6 +17,10 @@ export { default as Coupon } from './coupon/coupon.model.js';
 //User
 export { default as User } from './user/user.model.js';
 export { settings as userSettings } from './user/user.model.js';
+
+//role
+export { default as Role } from './role/role.model.js';
+export { settings as roleSettings } from './role/role.model.js';
 
 //Inventory Adjustment
 export { default as InventoryAdjustment } from './inventory-adjustment/inventoryAdjustment.model.js';
@@ -37,4 +44,10 @@ export { ledgerSettings } from './ledger/ledger.model.js';
 //Contacts
 export { default as Supplier } from './customer/supplier.model.js';
 export { supplierSettings } from './customer/supplier.model.js';
-export { default as Customer } from './customer/customer.model.js';
+
+//Group
+export { default as Group } from './collection/group.model.js';
+export { groupSettings } from './collection/group.model.js';
+
+//Shop
+export { default as Shop } from './shop/shop.model.js';

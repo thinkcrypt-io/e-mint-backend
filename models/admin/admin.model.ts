@@ -24,11 +24,11 @@ const schema = new Schema<any>(
 
 		phone: { type: String, trim: true },
 
-		role: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Role',
-			required: [true, 'Role is required'],
-		},
+		// role: {
+		// 	type: mongoose.Schema.Types.ObjectId,
+		// 	ref: 'Role',
+		// 	required: [true, 'Role is required'],
+		// },
 
 		isActive: {
 			type: Boolean,
@@ -47,11 +47,6 @@ const schema = new Schema<any>(
 			minlength: 8,
 			maxlength: 1024,
 		},
-		shop: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Shop',
-			required: [true, 'Shop is required'],
-		},
 		preferences: {
 			categories: [String],
 			items: [String],
@@ -68,6 +63,7 @@ const schema = new Schema<any>(
 			deliveries: [String],
 			ledgers: [String],
 			suppliers: [String],
+			shop: [String],
 		},
 	},
 
@@ -100,7 +96,7 @@ schema.methods.generateAuthToken = function (this: any): string {
 			email: this.email,
 			role: this.role,
 			phone: this.phone,
-			shop: this.shop,
+			// restaurant: this.restaurant,
 		},
 		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 	);
@@ -108,6 +104,6 @@ schema.methods.generateAuthToken = function (this: any): string {
 	return token;
 };
 
-const User = mongoose.model<any>('User', schema);
-export { default as settings } from './user.settings.js';
-export default User;
+const Admin = mongoose.model<any>('Admin', schema);
+// export { default as settings } from './admin.settings.js';
+export default Admin;

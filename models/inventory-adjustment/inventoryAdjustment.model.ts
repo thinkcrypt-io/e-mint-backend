@@ -13,6 +13,11 @@ const schema = new Schema<InventoryAdjustmentType>(
 			type: Number,
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		value: {
 			type: Number,
 		},
@@ -97,5 +102,6 @@ type InventoryAdjustmentType = {
 	reason: string;
 	note: string;
 	value: number;
+	shop?: Types.ObjectId;
 	// adjustedBy: string;
 };

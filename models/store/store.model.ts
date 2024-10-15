@@ -16,6 +16,11 @@ const schema = new Schema<any>(
 				default: 'asifistiaque.ai@gmail.com',
 			},
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 
 		socials: {
 			facebook: String,

@@ -1,10 +1,11 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
+import { getErrorMessage } from '../../imports.js';
 
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const document = new model({ ...req.body, store: req.store });
+			const document = new model({ ...req.body, shop: req.shop });
 			const saved = await document.save();
 
 			return res.status(201).json({
@@ -13,7 +14,8 @@ const createDocument = (model: mongoose.Model<any>) => {
 			});
 		} catch (e: any) {
 			console.error(e);
-			return res.status(500).json({ message: 'Internal Server Error' });
+			const message = getErrorMessage(e);
+			return res.status(500).json({ message });
 		}
 	};
 };

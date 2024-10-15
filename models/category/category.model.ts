@@ -79,6 +79,11 @@ const schema = new Schema<CategoryType>(
 			default: false,
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		meta: {
 			title: {
 				type: String,

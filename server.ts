@@ -33,6 +33,7 @@ import {
 	deliveryRoute,
 	ledgerRoute,
 	supplierRoute,
+	groupRoute,
 } from './routes/index.js';
 
 //User Routes
@@ -113,6 +114,7 @@ app.use('/api/returns', returnRoute);
 
 app.use('/api/ledgers', ledgerRoute);
 app.use('/api/suppliers', supplierRoute);
+app.use('/api/groups', groupRoute);
 
 //user routes
 app.use('/user-api/store', userStoreRoute);

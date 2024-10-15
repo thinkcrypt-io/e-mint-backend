@@ -13,6 +13,7 @@ type CustomerType = DocumentBaseType & {
 	// role: Schema.Types.ObjectId;
 	isActive: boolean;
 	password: string;
+	group: Schema.Types.ObjectId;
 	isRegisteredOnline: boolean;
 	tags?: string[];
 	notes?: string[];
@@ -21,6 +22,7 @@ type CustomerType = DocumentBaseType & {
 	lastOnline?: Date;
 	isDeleted?: boolean;
 	generateAuthToken: () => string;
+	shop?: Schema.Types.ObjectId;
 };
 
 export default CustomerType;

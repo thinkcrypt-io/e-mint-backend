@@ -86,6 +86,7 @@ schema.post<any>('save', async function (next) {
 				note: `Opening payable balance for supplier ${this.name}`,
 				date: Date.now(),
 				supplier: this._id,
+				shop: this.shop.toString(),
 			});
 			await ledger.save();
 		}
@@ -98,6 +99,7 @@ schema.post<any>('save', async function (next) {
 				note: `Opening receivable balance for supplier ${this.name}`,
 				date: Date.now(),
 				supplier: this._id,
+				shop: this.shop.toString(),
 			});
 			await ledger.save();
 		}

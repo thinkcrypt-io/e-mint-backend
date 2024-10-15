@@ -10,6 +10,11 @@ const schema = new Schema<any>(
 		email: {
 			type: String,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 		phone: {
 			type: String,
 			trim: true,

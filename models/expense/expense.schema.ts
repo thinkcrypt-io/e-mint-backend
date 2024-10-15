@@ -13,6 +13,11 @@ const schema = new Schema<any>(
 			type: Number,
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 
 		category: {
 			type: Types.ObjectId,

@@ -11,6 +11,11 @@ const hasPermission = (permissions: string[]) => {
 				return res.status(400).json({ message: 'Role not found' });
 			}
 
+			// If getPermissions includes '*', immediately call next()
+			if (getPermissions.permissions.includes('*')) {
+				return next();
+			}
+
 			const hasAnyPermission = permissions.some(permission =>
 				getPermissions.permissions.includes(permission)
 			);

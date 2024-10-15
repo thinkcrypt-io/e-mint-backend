@@ -7,7 +7,8 @@ import {
 	login,
 	register,
 	getSellerSelf,
-} from '../controllers/auth/index.js';
+	shopRegister,
+} from '../controllers/index.js';
 
 const router = express.Router();
 
@@ -16,6 +17,8 @@ router.post('/login', login).post('/register', register).get('/self', protect, g
 
 router.put('/update/preferences', protect, updateSellerPreferences);
 router.put('/update/self', protect, updateSellerSelf);
+
+router.post('/shop/register', shopRegister);
 
 // router.post('/request-password-change', requestPasswordChange);
 // router.get('/verify-reset-token/:token', verifyToken);

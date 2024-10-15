@@ -146,7 +146,8 @@ const exportDocument = ({ model, populate }: { model: mongoose.Model<any>; popul
 			// Query the MongoDB database
 			const { ids, fields } = req.body;
 
-			const query = ids && Array.isArray(ids) && ids.length > 0 ? { _id: { $in: ids } } : {};
+			let query: any =
+				ids && Array.isArray(ids) && ids.length > 0 ? { _id: { $in: ids }, shop: req.shop } : {};
 
 			const info = await model
 				.find(query)

@@ -9,6 +9,11 @@ const schema = new Schema<any>(
 			trim: true,
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 	},
 
 	{

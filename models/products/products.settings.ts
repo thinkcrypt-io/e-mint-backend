@@ -98,7 +98,7 @@ const settings: ProductSettings = {
 		sort: true,
 		title: 'Brand',
 		type: 'string',
-		required: true,
+
 		populate: {
 			path: 'brand',
 			select: 'name',

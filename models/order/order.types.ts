@@ -35,6 +35,7 @@ export type OrderType = DocumentBaseType & {
 	// transactions?: any[];
 	customer?: Schema.Types.ObjectId;
 	orderDate: Date;
+	shop?: Schema.Types.ObjectId;
 	isCancelled?: boolean;
 	discount?: number;
 	isDelivered?: boolean;

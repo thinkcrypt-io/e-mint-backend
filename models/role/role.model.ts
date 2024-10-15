@@ -1,3 +1,4 @@
+import { required } from 'joi';
 import mongoose, { Schema, Types } from 'mongoose';
 
 const schema = new Schema<any>(
@@ -31,6 +32,11 @@ const schema = new Schema<any>(
 		image: {
 			type: String,
 			trim: true,
+		},
+		shop: {
+			type: Types.ObjectId,
+			ref: 'Shop',
+			required: [true, 'Shop is required'],
 		},
 	},
 

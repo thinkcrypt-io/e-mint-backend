@@ -1,4 +1,4 @@
-import Customer from '../customer/customer.model.js';
+import { Customer } from '../../imports.js';
 import Product from '../products/products.model.js';
 import User from '../user/user.model.js';
 
@@ -211,17 +211,17 @@ const settings: any = {
 			path: 'customer',
 			select: 'name email',
 		},
-		filter: {
-			name: 'customer',
-			field: 'customer_in',
-			type: 'multi-select',
-			label: 'Seller',
-			title: 'Sort by customer',
-			options: [],
-			category: 'model',
-			model: Customer,
-			key: 'name',
-		},
+		// filter: {
+		// 	name: 'customer',
+		// 	field: 'customer_in',
+		// 	type: 'multi-select',
+		// 	label: 'Seller',
+		// 	title: 'Sort by customer',
+		// 	options: [],
+		// 	category: 'model',
+		// 	model: Customer,
+		// 	key: 'name',
+		// },
 	},
 
 	orderDate: {

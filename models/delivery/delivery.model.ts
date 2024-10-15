@@ -8,6 +8,11 @@ const schema = new Schema<DeliveryType>(
 			trim: true,
 			required: true,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 
 		status: {
 			type: String,
@@ -104,6 +109,7 @@ type DeliveryType = {
 	tags: string[];
 	note: string;
 	createdAt: Date;
+	shop?: Types.ObjectId;
 };
 
 export const deliverySettings: SettingsType<DeliveryType> = {
