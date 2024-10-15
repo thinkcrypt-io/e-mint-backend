@@ -13,6 +13,7 @@ type SupplierType = {
 	payable: number;
 	receivable: number;
 	createdAt?: Date;
+	shop?: Schema.Types.ObjectId;
 };
 
 const schema = new Schema<SupplierType>(
@@ -21,6 +22,12 @@ const schema = new Schema<SupplierType>(
 			type: String,
 			trim: true,
 			required: [true, 'Name is required'],
+		},
+
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
 		},
 
 		email: {
