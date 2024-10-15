@@ -28,7 +28,7 @@ const schema = new Schema<SupplierType>(
 			trim: true,
 			toLowerCase: true,
 		},
-		phone: { type: String, trim: true, required: [true, 'Phone Number is required'], unique: true },
+		phone: { type: String, trim: true, required: [true, 'Phone Number is required'] },
 		address: {
 			type: String,
 			trim: true,
