@@ -80,6 +80,11 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 			model: model,
 			populate:
 				configKeys.filter(key => config[key].populate).map(key => config[key].populate) || '',
+			exclude:
+				configKeys
+					.filter(key => config[key].exclude)
+					.map(key => `-${key}`)
+					.join(' ') || '',
 		},
 		EDITS: {
 			model: model,

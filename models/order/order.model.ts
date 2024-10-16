@@ -2,11 +2,9 @@ import mongoose, { Schema } from 'mongoose';
 import { OrderType, OrderItemType } from './order.types.js';
 import { Counter } from '../index.js';
 import Ledger from '../ledger/ledger.model.js';
-import { date } from 'joi';
 
 const schema: Schema = new Schema<OrderType>(
 	{
-		// store: { type: Schema.Types.ObjectId, required: true, ref: 'Store' },
 		user: { type: Schema.Types.ObjectId, ref: 'User' },
 		invoice: { type: String },
 		items: [
@@ -18,6 +16,7 @@ const schema: Schema = new Schema<OrderType>(
 				unitPrice: { type: Number, required: true },
 				totalPrice: { type: Number },
 				vat: { type: Number, required: true },
+				unitVat: { type: Number },
 				returnQty: {
 					type: Number,
 					default: 0,
@@ -36,10 +35,8 @@ const schema: Schema = new Schema<OrderType>(
 		dueAmount: { type: Number, default: 0 },
 		address: { type: Schema.Types.Mixed },
 		shippingCharge: { type: Number, required: true, default: 0 },
-		// delivery: { type: Schema.Types.ObjectId, ref: 'Delivery' },
 		paymentMethod: { type: String },
 		status: { type: String, default: 'order-placed' },
-		// transactions: { type: Schema.Types.ObjectId, ref: 'Transaction' },
 		customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
 		orderDate: { type: Date, default: Date.now, required: true },
 		isCancelled: { type: Boolean, default: false, required: true },

@@ -1,8 +1,13 @@
-import mongoose, { Schema, Types } from 'mongoose';
-// import { RestaurantType } from './restaurant.type.js';
+import mongoose, { Schema } from 'mongoose';
+import { ShopType } from './index.js';
+import Counter from '../counter/counter.model.js';
 
-const schema = new Schema<any>(
+const schema = new Schema<ShopType>(
 	{
+		id: {
+			type: String,
+			unique: true,
+		},
 		name: {
 			type: String,
 			required: [true, 'Name is required'],
@@ -65,6 +70,11 @@ const schema = new Schema<any>(
 			trim: true,
 		},
 
+		owner: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'User',
+		},
+
 		package: {
 			type: mongoose.Schema.Types.Mixed,
 		},
@@ -87,6 +97,27 @@ const schema = new Schema<any>(
 	}
 );
 
-const Shop = mongoose.model<any>('Shop', schema);
-//export { default as settings } from './restaurant.settings.js';
+// Pre-save hook to auto-increment the invoice number
+schema.pre<any>('save', async function (next) {
+	try {
+		if (this.isNew) {
+			let counter = await Counter.findOne({ slug: 'shop' });
+			if (!counter) counter = new Counter({ sequenceValue: 9, slug: 'shop' });
+
+			counter.sequenceValue += 1;
+			await counter.save();
+
+			this.id = counter.sequenceValue.toString().padStart(4, '0');
+		}
+
+		next();
+	} catch (error: any) {
+		console.log(error);
+		next();
+	}
+});
+
+const Shop = mongoose.model<ShopType>('Shop', schema);
+export { ShopType as ModelType } from './index.js';
 export default Shop;
+export { shopSettings as settings } from './index.js';

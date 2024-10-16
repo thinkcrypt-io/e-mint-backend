@@ -36,6 +36,8 @@ import {
 	groupRoute,
 } from './routes/index.js';
 
+import adminRouter from './routes-admin/admin.router.js';
+
 //User Routes
 import userStoreRoute from './user-routes/store.user.route.js';
 import userCategoryRoute from './user-routes/categories.user.route.js';
@@ -81,6 +83,8 @@ app.use('/', (req, res, next) => {
 
 	next();
 });
+
+app.use('/admin/api', adminRouter);
 
 //app.use('/api/orders', orderRoute);
 app.use('/api/auth', authRoute);

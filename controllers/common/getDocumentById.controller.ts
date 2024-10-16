@@ -6,9 +6,10 @@ type EndwareType = {
 	model: mongoose.Model<any>;
 	populate?: any;
 	select?: string;
+	exclude?: string;
 };
 
-const getDocumentById = ({ model, populate, select }: EndwareType) => {
+const getDocumentById = ({ model, populate, select, exclude }: EndwareType) => {
 	return async (req: GetByIdRequestType, res: Response): Promise<Response> => {
 		try {
 			const { id } = req.params;
@@ -21,8 +22,8 @@ const getDocumentById = ({ model, populate, select }: EndwareType) => {
 			if (populate) {
 				query = query.populate(populate);
 			}
-			if (select) {
-				query = query.select(select);
+			if (exclude) {
+				query = query.select(exclude && exclude);
 			}
 
 			const data = await query.exec();

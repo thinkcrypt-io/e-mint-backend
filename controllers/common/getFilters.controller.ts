@@ -14,7 +14,6 @@ const getFilters = ({
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			let query: any = (req as any).queryHelper || {};
-			// query.store = (req as any).store;
 
 			let filtersToSend: FilterResponse[] = [];
 

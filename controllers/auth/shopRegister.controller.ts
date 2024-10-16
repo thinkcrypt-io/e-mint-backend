@@ -50,12 +50,15 @@ const shopRegisterController = async (req: RequestType, res: Response): Promise<
 			role: savedRole._id,
 		});
 
+		savedShop.owner = savedUser._id;
+		const updatedShop = await savedShop.save();
+
 		const token = savedUser.generateAuthToken();
 
 		return res
 			.status(200)
 			.header('x-auth-token', token)
-			.json({ token: `Bearer ${token}`, user: savedUser, role: savedRole, shop: savedShop });
+			.json({ token: `Bearer ${token}`, user: savedUser, role: savedRole, shop: updatedShop });
 	} catch (e: any) {
 		const message = getErrorMessage(e);
 		return res.status(500).json({ message });
@@ -99,7 +102,7 @@ async function createRole({
 	permissions,
 }: {
 	name: string;
-	shop: string;
+	shop: any;
 	permissions: string[];
 }) {
 	const role = new Role({
@@ -120,7 +123,7 @@ const createUser = async ({
 	name: string;
 	email: string;
 	password: string;
-	shop: string;
+	shop: any;
 	role: string;
 }) => {
 	const user = new User({

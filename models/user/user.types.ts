@@ -20,6 +20,7 @@ export type UserType = Document & {
 export type UserSettings = {
 	name: SettingType;
 	// restaurant: SettingType;
+	shop: SettingType;
 	username: SettingType;
 	email: SettingType;
 	phone: SettingType;

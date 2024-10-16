@@ -1,5 +1,8 @@
 import Role from '../role/role.model.js';
 import { UserSettings } from './user.types.js';
+import User from './user.model.js';
+
+import Shop from '../shop/shop.model.js';
 
 const settings: UserSettings = {
 	name: {
@@ -13,13 +16,27 @@ const settings: UserSettings = {
 		required: true,
 		trim: true,
 	},
-	// restaurant: {
-	// 	edit: true,
-	// 	title: 'Restaurant',
-	// 	type: 'string',
-	// },
+	shop: {
+		title: 'Shop',
+		type: 'string',
+		populate: {
+			path: 'shop',
+			select: 'name email',
+		},
+		sort: true,
+		filter: {
+			name: 'shop',
+			field: 'shop_in',
+			roles: ['admin'],
+			type: 'multi-select',
+			label: 'Shops',
+			title: 'Sort by shop',
+			category: 'model',
+			model: Shop,
+			key: 'name',
+		},
+	},
 	username: {
-		// search: true,
 		sort: true,
 		title: 'Username',
 		type: 'text',
@@ -56,6 +73,7 @@ const settings: UserSettings = {
 			label: 'Roles',
 			title: 'Sort by role',
 			category: 'model',
+			roles: ['seller'],
 			model: Role,
 			key: 'name',
 		},
@@ -79,13 +97,6 @@ const settings: UserSettings = {
 		type: 'boolean',
 		title: 'Active Status',
 		sort: true,
-
-		filter: {
-			name: 'isActive',
-			type: 'boolean',
-			label: 'Active',
-			title: 'Sort by active status',
-		},
 	},
 
 	password: {

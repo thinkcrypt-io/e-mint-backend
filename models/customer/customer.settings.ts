@@ -1,4 +1,4 @@
-import { Group } from '../../imports.js';
+import Group from '../collection/group.model.js';
 
 const settings: any = {
 	name: {

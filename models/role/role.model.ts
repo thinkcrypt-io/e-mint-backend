@@ -34,7 +34,7 @@ const schema = new Schema<any>(
 			trim: true,
 		},
 		shop: {
-			type: Types.ObjectId,
+			type: Schema.Types.ObjectId,
 			ref: 'Shop',
 			required: [true, 'Shop is required'],
 		},

@@ -33,3 +33,5 @@ export { default as customQuery } from './customQuery.middleware.js';
 // export { default as myData } from './myData.middleware.js';
 export { protect as userProtect } from './userAuth.middleware.js';
 export { default as extendRequestBody } from './extendRequestBody.middleware.js';
+
+export * from './admin/index.js';

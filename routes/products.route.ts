@@ -29,6 +29,8 @@ import {
 	validate,
 	hasPermission,
 	exportPdf,
+	customQuery,
+	constructPermissions,
 } from '../imports.js';
 
 type TopProductsFilters = {
@@ -58,6 +60,8 @@ const topProductsFilters: TopProductsFilters = {
 	},
 };
 
+const permissions = constructPermissions('expense');
+
 // Initialize a new router
 const router = express.Router();
 
@@ -72,7 +76,12 @@ const topProductConfig = constructConfig({
 });
 
 // Define common middleware
-const commonMiddleware = [protect, sort, query(config.FILTER_OPTIONS)];
+const commonMiddleware = [
+	protect,
+	sort,
+	query(config.FILTER_OPTIONS),
+	hasPermission([permissions.read]),
+];
 const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
 const updateMiddleware = [
 	protect,
@@ -80,31 +89,31 @@ const updateMiddleware = [
 	validate(config.VALIDATORS.UPDATE),
 ];
 
+const getByIdMiddleware = [protect, hasPermission([permissions.view])];
 const countMiddleware = [protect, query(config.FILTER_OPTIONS)];
+const deleteMiddleware = [protect, hasPermission([permissions.delete])];
 
 // Define the routes for the product store
 router
 	.route('/')
-	.get(...commonMiddleware, hasPermission(['view_product']), getAllDocuments(config.QUERY_OPTIONS))
-	.post(...postMiddleware, hasPermission(['add_product']), createDocument(config.MODEL));
+	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
+	.post(...postMiddleware, hasPermission([permissions.create]), createDocument(config.MODEL));
 
+router.get('/top-selling', ...commonMiddleware, topSellingProductController);
+
+// roduct.find({ $expr: { $gt: ['$lowStockAlert', '$stock'] } }
 router.get(
-	'/top-selling',
-	protect,
-	sort,
-	query(topProductConfig.FILTER_OPTIONS),
-	hasPermission(['view_product']),
-	topSellingProductController
+	'/low-stock',
+	...commonMiddleware,
+	customQuery({
+		query: { $expr: { $gte: ['$lowStockAlert', '$stock'] } },
+	}),
+	getAllDocuments(config.QUERY_OPTIONS)
 );
 
-router.get('/:id', protect, hasPermission(['view_product']), getDocumentById(config.QUERY_OPTIONS));
+router.get('/:id', ...getByIdMiddleware, getDocumentById(config.QUERY_OPTIONS));
 
-router.get(
-	'/edit/:id',
-	protect,
-	hasPermission(['view_product']),
-	getDocumentToEditById(config.MODEL)
-);
+router.get('/edit/:id', ...getByIdMiddleware, getDocumentToEditById(config.MODEL));
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 // router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
@@ -116,7 +125,7 @@ router.put(
 	hasPermission(['edit_product']),
 	updateDocument(config.EDITS)
 );
-router.delete('/:id', protect, hasPermission(['delete_product']), deleteDocument(config.MODEL));
+router.delete('/:id', ...deleteMiddleware, deleteDocument(config.MODEL));
 router.get('/get/count', protect, getCount(config.MODEL));
 
 router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));

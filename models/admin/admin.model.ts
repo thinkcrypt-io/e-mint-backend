@@ -2,7 +2,20 @@ import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt, { compare, hash } from 'bcrypt';
 
-const schema = new Schema<any>(
+export type AdminType = {
+	name: string;
+	username: string;
+	email: string;
+	phone?: string;
+	isActive?: boolean;
+	isDeleted?: boolean;
+	password: string;
+	preferences?: any;
+	role: Schema.Types.ObjectId;
+	generateAuthToken?: () => string;
+};
+
+const schema = new Schema<AdminType>(
 	{
 		name: {
 			type: String,
@@ -24,11 +37,11 @@ const schema = new Schema<any>(
 
 		phone: { type: String, trim: true },
 
-		// role: {
-		// 	type: mongoose.Schema.Types.ObjectId,
-		// 	ref: 'Role',
-		// 	required: [true, 'Role is required'],
-		// },
+		role: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'AdminRole',
+			required: [true, 'Role is required'],
+		},
 
 		isActive: {
 			type: Boolean,
@@ -63,7 +76,8 @@ const schema = new Schema<any>(
 			deliveries: [String],
 			ledgers: [String],
 			suppliers: [String],
-			shop: [String],
+			shops: [String],
+			sellers: [String],
 		},
 	},
 
@@ -96,7 +110,6 @@ schema.methods.generateAuthToken = function (this: any): string {
 			email: this.email,
 			role: this.role,
 			phone: this.phone,
-			// restaurant: this.restaurant,
 		},
 		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 	);
@@ -104,6 +117,6 @@ schema.methods.generateAuthToken = function (this: any): string {
 	return token;
 };
 
-const Admin = mongoose.model<any>('Admin', schema);
+const Admin = mongoose.model<AdminType>('Admin', schema);
 // export { default as settings } from './admin.settings.js';
 export default Admin;

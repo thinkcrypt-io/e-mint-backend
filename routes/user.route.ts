@@ -28,6 +28,9 @@ const router = express.Router();
 const config = constructConfig({
 	model: Customer,
 	config: settings,
+	options: {
+		role: 'seller',
+	},
 });
 
 // Define common middleware

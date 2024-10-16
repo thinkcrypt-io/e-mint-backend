@@ -10,10 +10,14 @@ const CounterSchema: Schema = new Schema({
 		type: Number,
 		required: true,
 	},
+	slug: {
+		type: String,
+		unique: true,
+		required: true,
+	},
 	shop: {
 		type: Schema.Types.ObjectId,
 		ref: 'Shop',
-		required: true,
 	},
 });
 

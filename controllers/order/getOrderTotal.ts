@@ -78,6 +78,7 @@ const getOrderTotal = async (req: any, res: Response): Promise<Response> => {
 				image: product.image,
 				totalPrice: product.price * item.qty,
 				vat: itemVat,
+				unitVat: itemVat / item.qty,
 				qty: item.qty,
 				unitPrice: item.price,
 				unitProfit,

@@ -1,5 +1,5 @@
 import Return from '../../models/return/saleReturn.model.js';
-import { Order, Product, ProductType } from '../../imports.js';
+import { getErrorMessage, Order, Product, ProductType } from '../../imports.js';
 
 const adjustReturn = async (req: any, res: any, next: any) => {
 	try {
@@ -11,32 +11,56 @@ const adjustReturn = async (req: any, res: any, next: any) => {
 			return res.status(400).json({ message: 'Order not found' });
 		}
 
+		let totalVat = 0;
+
+		// findOrder.items = findOrder.items.map((item: any) => {
+		// 	const returnItem = items.find((i: any) => i._id == item._id);
+		// 	if (returnItem) {
+		// 		item.returnQty = item.returnQty + Number(returnItem.returnQty);
+		// 		const itemReturnPrice = item.unitPrice * Number(returnItem.returnQty);
+		// 		item.totalPrice = item.totalPrice - itemReturnPrice;
+		// 	}
+		// 	return item;
+		// }, []);
+
 		findOrder.items = findOrder.items.map((item: any) => {
 			const returnItem = items.find((i: any) => i._id == item._id);
 			if (returnItem) {
-				item.returnQty = item.returnQty + Number(returnItem.returnQty);
+				const returnQty = Number(returnItem.returnQty);
+				if (!isNaN(returnQty) && returnQty > 0) {
+					item.returnQty = (item.returnQty || 0) + returnQty;
+					const itemReturnPrice = (item.unitPrice || 0) * returnQty;
+					item.totalPrice = (item.totalPrice || 0) - itemReturnPrice;
+					totalVat += (item.unitVat || 0) * returnQty;
+				}
 			}
 			return item;
-		}, []);
+		});
 
-		findOrder.returnAmount = Number(amount);
-		findOrder.total = findOrder.total - Number(amount);
-		findOrder.dueAmount = (findOrder.dueAmount || 0) - Number(amount);
+		findOrder.returnAmount = (findOrder?.returnAmount || 0) + Number(amount) + totalVat;
+		findOrder.total = findOrder.total - Number(amount) - totalVat;
+		findOrder.dueAmount = (findOrder.dueAmount || 0) - Number(amount) - totalVat;
 
 		if (findOrder.dueAmount <= 0) {
 			findOrder.isPaid = true;
 		}
 
-		await findOrder.save();
+		let decreaseProfit = 0;
 
 		for (const item of items) {
 			const { _id, qty, returnQty, returnAmount } = item;
 			const data = await Product.findById(_id);
 			if (data) {
-				data.stock += returnQty;
-				data.save();
+				data.stock += Number(returnQty);
+				const profit = data.price - data.cost;
+				decreaseProfit += profit * Number(returnQty);
+				await data.save();
 			}
 		}
+
+		findOrder.profit = findOrder.profit - Number(decreaseProfit);
+
+		await findOrder.save();
 
 		const newReturn = new Return({
 			invoice: findOrder?.invoice,
@@ -49,13 +73,15 @@ const adjustReturn = async (req: any, res: any, next: any) => {
 			order,
 			date,
 			note,
+			shop: findOrder?.shop,
 		});
 
 		const saved = await newReturn.save();
 
 		return res.status(200).json({ newReturn: saved });
 	} catch (e: any) {
-		return res.status(500).json({ message: e.message });
+		const message = getErrorMessage(e);
+		return res.status(500).json({ message });
 	}
 };
 

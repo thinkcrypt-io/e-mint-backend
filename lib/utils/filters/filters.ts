@@ -18,9 +18,27 @@ const tagsFilter: Filter = {
 	key: 'tags',
 };
 
+const isActive: Filter = {
+	name: 'isActive',
+	field: 'isActive',
+	type: 'boolean',
+	label: 'Is Active',
+	title: 'Sort by Active',
+};
+
+const isDeleted: Filter = {
+	name: 'isDeleted',
+	field: 'isDeleted',
+	type: 'boolean',
+	label: 'Is Deleted',
+	title: 'Sort by Deleted',
+};
+
 const filters = {
 	createdAt: createdAtFilter,
 	tags: tagsFilter,
+	isActive: isActive,
+	isDeleted: isDeleted,
 };
 
 export default filters;
