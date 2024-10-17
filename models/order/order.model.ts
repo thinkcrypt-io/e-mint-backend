@@ -103,7 +103,7 @@ schema.pre<OrderType>('save', async function (next) {
 
 			// If no counter document exists, create one
 			if (!counter) {
-				counter = new Counter({ sequenceValue: 0, shop: this?.shop?.toString(), slig: 'order' });
+				counter = new Counter({ sequenceValue: 0, shop: this?.shop?.toString(), slug: 'order' });
 			}
 
 			// Increment the sequence value
