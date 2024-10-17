@@ -99,11 +99,11 @@ schema.pre<OrderType>('save', async function (next) {
 	try {
 		if (this.isNew) {
 			// Find the counter document
-			let counter = await Counter.findOne({ shop: this?.shop?.toString() });
+			let counter = await Counter.findOne({ shop: this?.shop?.toString(), slug: 'order' });
 
 			// If no counter document exists, create one
 			if (!counter) {
-				counter = new Counter({ sequenceValue: 0, shop: this?.shop?.toString() });
+				counter = new Counter({ sequenceValue: 0, shop: this?.shop?.toString(), slig: 'order' });
 			}
 
 			// Increment the sequence value
