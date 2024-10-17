@@ -7,6 +7,7 @@ export type CategoryType = Document & {
 	name: string;
 	description?: string;
 	shortDescription?: string;
+	longDescription?: string;
 	restaurant: Types.ObjectId;
 	isActive: boolean;
 	isDeleted?: boolean;
@@ -28,6 +29,7 @@ export type CategorySettings = {
 	priority: SettingType;
 	parent?: SettingType;
 	slug: SettingType;
+	longDescription?: SettingType;
 	tags: SettingType;
 	displayInMenu: SettingType;
 	displayInHomePage: SettingType;

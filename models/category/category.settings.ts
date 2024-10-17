@@ -56,6 +56,12 @@ const settings: CategorySettings = {
 		title: 'Short Description',
 	},
 
+	longDescription: {
+		edit: true,
+		type: 'string',
+		title: 'Short Description',
+	},
+
 	slug: {
 		edit: true,
 		type: 'string',
