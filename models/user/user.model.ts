@@ -68,6 +68,7 @@ const schema = new Schema<any>(
 			deliveries: [String],
 			ledgers: [String],
 			suppliers: [String],
+			purchases: [String],
 		},
 	},
 

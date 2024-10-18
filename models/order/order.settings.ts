@@ -135,6 +135,12 @@ const settings: any = {
 		title: 'VAT',
 	},
 
+	shop: {
+		type: 'string',
+		title: 'Shop',
+		sort: true,
+	},
+
 	paymentMethod: {
 		type: 'string',
 		title: 'Payment method',

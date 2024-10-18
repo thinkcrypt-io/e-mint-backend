@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
+import { getErrorMessage } from '../../imports.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -34,8 +35,8 @@ const getDocumentById = ({ model, populate, select, exclude }: EndwareType) => {
 
 			return res.status(200).json(data);
 		} catch (e: any) {
-			console.error(e.message);
-			return res.status(500).json({ message: 'Internal Server Error' });
+			const message = getErrorMessage(e);
+			return res.status(500).json({ message });
 		}
 	};
 };

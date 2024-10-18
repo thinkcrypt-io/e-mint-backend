@@ -1,0 +1,29 @@
+import { Schema } from 'mongoose';
+export type PurchaseType = {
+	supplier: Schema.Types.ObjectId;
+	status: string;
+	shop: Schema.Types.ObjectId;
+	date: Date;
+	items: object;
+	createdAt: Date;
+	shippingCost: number;
+	subTotal: number;
+	discount: number;
+	// discountType: string;
+	// discountAmount: number;
+	total: number;
+	// deliveryNote: string;
+	isPaid: boolean;
+	paidAmount: number;
+	returnedAmount: number;
+	dueAmount: number;
+	note: string;
+	totalItems?: number;
+	isDelivered: boolean;
+	isCancelled: boolean;
+	invoice: string;
+	addedBy: Schema.Types.ObjectId;
+};
+
+export { default as Purchase } from './purchase.model.js';
+export { default as purchaseSettings } from './purchase.settings.js';

@@ -38,7 +38,6 @@ const schema = new Schema<CategoryType>(
 		},
 		slug: {
 			type: String,
-			required: true,
 			trim: true,
 		},
 		parent: {

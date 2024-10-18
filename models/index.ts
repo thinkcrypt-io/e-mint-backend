@@ -54,8 +54,7 @@ export { groupSettings } from './collection/group.model.js';
 export { default as Shop } from './shop/shop.model.js';
 
 //Purchase
-export { default as Purchase } from './purchase/purchase.model.js';
-export { purchaseSettings } from './purchase/purchase.model.js';
+export { purchaseSettings, Purchase } from './purchase/index.js';
 
 //Admin Role & User
 export { default as Admin } from './admin/admin.model.js';

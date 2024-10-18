@@ -9,6 +9,10 @@ const schema = new Schema<PaymentType>(
 			type: String,
 			trim: true,
 		},
+		paymentInvoice: {
+			type: String,
+			trim: true,
+		},
 		currency: String,
 		attachments: [String],
 		status: {
@@ -35,6 +39,14 @@ const schema = new Schema<PaymentType>(
 			type: Schema.Types.ObjectId,
 			ref: 'Customer',
 		},
+		supplier: {
+			type: Schema.Types.ObjectId,
+			ref: 'Supplier',
+		},
+		payment: {
+			type: Schema.Types.ObjectId,
+			ref: 'Payment',
+		},
 		trnxId: String,
 		reference: String,
 		paymentMethod: {
@@ -51,7 +63,7 @@ const schema = new Schema<PaymentType>(
 				'stripe',
 				'other',
 			],
-			required: true,
+			// required: true,
 		},
 
 		account: {
@@ -68,6 +80,10 @@ const schema = new Schema<PaymentType>(
 		note: {
 			type: String,
 			trim: true,
+		},
+		addedBy: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
 		},
 	},
 
@@ -118,8 +134,11 @@ type PaymentType = {
 	note: string;
 	account: 'debit' | 'credit';
 	customer: Types.ObjectId;
+	supplier: Types.ObjectId;
 	trnxId: string;
 	shop?: Types.ObjectId;
+	paymentInvoice?: string;
+	payment?: Types.ObjectId;
 	paymentMethod:
 		| 'cash'
 		| 'cheque'
@@ -136,6 +155,7 @@ type PaymentType = {
 	status: 'pending' | 'completed' | 'failed' | 'refunded';
 	attachments: string[];
 	createdAt: Date;
+	addedBy?: Types.ObjectId;
 };
 
 export const paymentSettings: SettingsType<PaymentType> = {
@@ -155,6 +175,22 @@ export const paymentSettings: SettingsType<PaymentType> = {
 			title: 'Sort by invoice',
 		},
 	},
+	paymentInvoice: {
+		edit: true,
+		sort: true,
+		// search: true,
+		title: 'Payment Invoice',
+		type: 'string',
+		required: true,
+		trim: true,
+		filter: {
+			name: 'paymentInvoice',
+			field: 'paymentInvoice',
+			type: 'text',
+			label: 'Payment Invoice',
+			title: 'Sort by payment invoice',
+		},
+	},
 
 	status: {
 		edit: true,
@@ -165,6 +201,11 @@ export const paymentSettings: SettingsType<PaymentType> = {
 	customer: {
 		edit: true,
 		title: 'Customer',
+		type: 'string',
+	},
+	supplier: {
+		edit: true,
+		title: 'Supplier',
 		type: 'string',
 	},
 	attachments: {

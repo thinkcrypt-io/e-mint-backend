@@ -1,37 +1,6 @@
-import { SettingsType } from '../../imports';
+import Product from '../products/products.model.js';
+import { PurchaseType } from './index.js';
 import mongoose, { Schema } from 'mongoose';
-
-type PurchaseType = {
-	supplier: Schema.Types.ObjectId;
-	status: string;
-	shop: Schema.Types.ObjectId;
-	date: Date;
-	items: object;
-	createdAt: Date;
-	shippingCost: number;
-	subTotal: number;
-	discount: number;
-	discountType: string;
-	discountAmount: number;
-	total: number;
-	paymentType: string;
-	paymentStatus: string;
-	paymentId: string;
-	paymentGateway: string;
-	paymentResponse: object;
-	paymentDate: Date;
-	deliveryDate: Date;
-	deliveryAddress: object;
-	deliveryNote: string;
-	isPaid: boolean;
-	paidAmount: number;
-	returnedAmount: number;
-	dueAmount: number;
-	note: string;
-	isDelivered: boolean;
-	isCancelled: boolean;
-	invoice: string;
-};
 
 const schema = new Schema<PurchaseType>({
 	invoice: { type: String },
@@ -40,11 +9,7 @@ const schema = new Schema<PurchaseType>({
 		ref: 'Supplier',
 		required: true,
 	},
-	status: {
-		type: String,
-		enum: ['pending', 'completed', 'partially-delivered', 'delivered', 'cancelled'],
-		default: 'pending',
-	},
+
 	shop: {
 		type: Schema.Types.ObjectId,
 		ref: 'Shop',
@@ -54,10 +19,17 @@ const schema = new Schema<PurchaseType>({
 		type: Date,
 		required: true,
 	},
+	addedBy: {
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		required: true,
+	},
 	items: [
 		{
+			name: { type: String, required: true },
 			price: { type: Number, required: true },
 			qty: { type: Number, required: true },
+			deliveredQty: { type: Number, default: 0 },
 			_id: {
 				type: mongoose.Schema.Types.ObjectId,
 				required: true,
@@ -105,11 +77,19 @@ const schema = new Schema<PurchaseType>({
 		default: 0,
 		required: true,
 	},
+	status: {
+		type: String,
+		enum: ['pending', 'completed', 'partially-delivered', 'delivered', 'cancelled'],
+		default: 'pending',
+	},
 
 	isCancelled: {
 		type: Boolean,
 		default: false,
 		required: true,
+	},
+	note: {
+		type: String,
 	},
 	isDelivered: {
 		type: Boolean,
@@ -127,115 +107,25 @@ schema.virtual('totalItems').get(function () {
 	}, 0);
 });
 
-export const purchaseSettings: SettingsType<any> = {
-	invoice: {
-		sort: true,
-		title: 'Invoice',
-		type: 'string',
-		required: true,
-		filter: {
-			name: 'invoice',
-			field: 'invoice',
-			type: 'text',
-			label: 'Invoice',
-			title: 'Search Invoice',
-		},
-	},
-	supplier: {
-		sort: true,
-		title: 'Supplier',
-		type: 'string',
-		required: true,
-		populate: {
-			path: 'Supplier',
-			select: 'name email',
-		},
-	},
-	dueAmount: {
-		sort: true,
-		title: 'Due Amount',
-		type: 'number',
-		required: true,
-	},
-	paidAmount: {
-		sort: true,
-		title: 'Paid Amount',
-		type: 'number',
-	},
-	subTotal: {
-		sort: true,
-		title: 'Sub Total',
-		type: 'number',
-	},
-	total: {
-		sort: true,
-		title: 'Total',
-		type: 'number',
-	},
-	discount: {
-		sort: true,
-		title: 'Discount',
-		type: 'number',
-	},
-	shippingCost: {
-		sort: true,
-		title: 'Shipping Cost',
-		type: 'number',
-	},
-	totalItems: {
-		sort: true,
-		title: 'Total Items',
-		type: 'number',
-	},
-	status: {
-		sort: true,
-		title: 'Status',
-		type: 'string',
-		required: true,
-		filter: {
-			name: 'status',
-			field: 'status_in',
-			type: 'multi-select',
-			label: 'Status',
-			title: 'Status',
-			options: [
-				{ label: 'Pending', value: 'pending' },
-				{ label: 'Completed', value: 'completed' },
-				{ label: 'Partially Delivered', value: 'partially-delivered' },
-				{ label: 'Delivered', value: 'delivered' },
-				{ label: 'Cancelled', value: 'cancelled' },
-			],
-		},
-	},
-	isCancelled: {
-		sort: true,
-		title: 'Is Cancelled',
-		type: 'boolean',
-		required: true,
-		edit: true,
-		filter: {
-			name: 'isCancelled',
-			field: 'isCancelled',
-			type: 'boolean',
-			label: 'Is Cancelled',
-			title: 'Is Cancelled',
-		},
-	},
-	isPaid: {
-		sort: true,
-		title: 'Is Paid',
-		type: 'boolean',
-		required: true,
-		edit: true,
-		filter: {
-			name: 'isPaid',
-			field: 'isPaid',
-			type: 'boolean',
-			label: 'Paid',
-			title: 'Is Paid',
-		},
-	},
-};
+// Pre-save hook to auto-increment the invoice number
+schema.pre<any>('save', async function (next) {
+	try {
+		if (this.isDelivered) {
+			this.items.forEach(async (item: any) => {
+				const product = await Product.findById(item._id);
+				if (product) {
+					if (item.deliveredQty < item.qty) {
+						product.stock += item.qty - item.deliveredQty;
+						item.deliveredQty = item.qty;
+						await product.save();
+					}
+				}
+			});
+		}
+	} catch (error: any) {
+		console.log('Error Updating item Qty:', error);
+	}
+});
 
 const Purchase = mongoose.model<PurchaseType>('Purchase', schema);
 export default Purchase;

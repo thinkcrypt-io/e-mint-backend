@@ -14,7 +14,11 @@ type SupplierType = {
 	receivable: number;
 	createdAt?: Date;
 	shop?: Schema.Types.ObjectId;
+	paymentTerms?: string;
+	creditLimit?: number;
 };
+
+const paymentTerms = ['net-30', 'net-60', 'prepaid', 'cod', 'others'];
 
 const schema = new Schema<SupplierType>(
 	{
@@ -28,6 +32,12 @@ const schema = new Schema<SupplierType>(
 			type: Schema.Types.ObjectId,
 			ref: 'Shop',
 			required: true,
+		},
+
+		creditLimit: {
+			type: Number,
+			min: 0,
+			default: 0,
 		},
 
 		email: {
@@ -50,6 +60,11 @@ const schema = new Schema<SupplierType>(
 		isDeleted: {
 			type: Boolean,
 			default: false,
+		},
+
+		paymentTerms: {
+			type: String,
+			enum: paymentTerms,
 		},
 
 		tags: [String],
@@ -123,6 +138,11 @@ export const supplierSettings: SettingsType<SupplierType> = {
 		edit: true,
 		search: true,
 	},
+	creditLimit: {
+		title: 'Credit Limit',
+		type: 'number',
+		edit: true,
+	},
 	phone: {
 		title: 'Phone',
 		type: 'string',
@@ -138,6 +158,11 @@ export const supplierSettings: SettingsType<SupplierType> = {
 			label: 'Phone',
 			title: 'Filter by phone',
 		},
+	},
+	paymentTerms: {
+		title: 'Payment Terms',
+		type: 'string',
+		edit: true,
 	},
 	email: {
 		title: 'Email',

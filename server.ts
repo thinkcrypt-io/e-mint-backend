@@ -34,6 +34,7 @@ import {
 	ledgerRoute,
 	supplierRoute,
 	groupRoute,
+	purchaseRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -119,6 +120,7 @@ app.use('/api/returns', returnRoute);
 app.use('/api/ledgers', ledgerRoute);
 app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
+app.use('/api/purchases', purchaseRoute);
 
 //user routes
 app.use('/user-api/store', userStoreRoute);

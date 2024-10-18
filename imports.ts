@@ -6,3 +6,5 @@ export * from './lib/types/index.types.js';
 export * from './lib/utils/index.js';
 export * from './models/index.js';
 export * from './lib/index.js';
+
+export type * from './models/types.js';
