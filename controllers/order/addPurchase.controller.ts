@@ -66,11 +66,7 @@ const addPurchase = async (req: any, res: Response): Promise<Response> => {
 			savedPayment = await payment.save();
 		}
 
-		return res.status(201).json({
-			message: `Purchase id: ${saved._id} added successfully`,
-			order: saved,
-			payment: savedPayment,
-		});
+		return res.status(201).json(saved);
 	} catch (e: any) {
 		console.error(e);
 		return res.status(500).json({ message: e.message });
