@@ -66,10 +66,8 @@ const settings: CategorySettings = {
 		edit: true,
 		type: 'string',
 		title: 'Slug',
-		required: true,
 		trim: true,
 		search: true,
-		unique: true,
 	},
 
 	priority: {

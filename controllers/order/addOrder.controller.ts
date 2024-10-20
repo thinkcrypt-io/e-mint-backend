@@ -69,9 +69,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			const savePayment = await payment.save();
 		}
 
-		return res
-			.status(201)
-			.json({ message: `Order id: ${saved._id} added successfully`, order: saved });
+		return res.status(201).json(saved);
 	} catch (e: any) {
 		console.error(e);
 		return res.status(500).json({ message: e.message });

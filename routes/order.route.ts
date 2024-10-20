@@ -20,6 +20,7 @@ import Order, { settings } from '../models/order/order.model.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import getSum from '../controllers/common/getSum.controller.js';
+import cancelOrder from '../controllers/order/cancelOrder.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -62,7 +63,7 @@ router.get(
 
 router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
-router.delete('/:id', protect, deleteDocument(config.MODEL));
+router.delete('/:id', protect, cancelOrder);
 router.get('/get/count', ...countMiddleware, getCount(config.MODEL));
 
 router.get('/get/sum/:field', ...countMiddleware, getSum(config.MODEL));

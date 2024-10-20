@@ -86,6 +86,12 @@ const purchaseSettings: SettingsType<PurchaseType> = {
 			title: 'Filter by date',
 		},
 	},
+	deliveryDate: {
+		sort: true,
+		title: 'Delivered At',
+		type: 'string',
+		edit: true,
+	},
 	items: {
 		sort: true,
 		required: true,
@@ -127,6 +133,7 @@ const purchaseSettings: SettingsType<PurchaseType> = {
 		sort: true,
 		title: 'Status',
 		type: 'string',
+		edit: true,
 
 		filter: {
 			name: 'status',

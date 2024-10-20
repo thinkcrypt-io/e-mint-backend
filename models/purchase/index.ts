@@ -23,6 +23,7 @@ export type PurchaseType = {
 	isCancelled: boolean;
 	invoice: string;
 	addedBy: Schema.Types.ObjectId;
+	deliveryDate: Date;
 };
 
 export { default as Purchase } from './purchase.model.js';

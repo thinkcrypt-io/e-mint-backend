@@ -1,37 +1,53 @@
-import { Response } from 'express';
-import Order from '../../models/order/order.model.js';
-//import { allowCancel } from '../../models/order/config.js';
+import { Request, Response } from 'express';
+import { Product, Order } from '../../imports.js';
 
-export const allowCancel = ['pending', 'processing', 'order-placed'];
+const updateProductStock = async (items: any[]) => {
+	for (const item of items) {
+		const product = await Product.findById(item._id);
+		if (product) {
+			product.stock += item.qty;
+			await product.save();
+		}
+	}
+};
 
-const cancelOrder = async (req: any, res: Response): Promise<Response> => {
+const resetOrderItems = (items: any[]) => {
+	return items.map((item: any) => ({
+		...item,
+		returnQty: item.qty,
+		totalPrice: 0,
+		totalVat: 0,
+	}));
+};
+
+const cancelOrder = async (req: Request, res: Response): Promise<Response> => {
+	const { id } = req.params;
 	try {
-		const { _id } = req.user;
-		const { id } = req.params;
+		const myOrder = (await Order.findById(id)) as any;
+		if (!myOrder) return res.status(404).json({ message: 'Order not found' });
 
-		const myOrder = (await Order.findOne({ user: _id, _id: id })) as any;
-
-		if (!myOrder) {
-			return res.status(404).json({ message: 'Order not found' });
-		}
-
-		if (myOrder.status === 'cancelled') {
-			return res.status(400).json({ message: 'Order already cancelled' });
-		}
-
-		if (!allowCancel.includes(myOrder.status)) {
-			return res
-				.status(400)
-				.json({ message: 'Order can not be cancelled now, please contact helpline' });
-		}
+		if (myOrder.isCancelled) return res.status(400).json({ message: 'Order already cancelled' });
+		if (myOrder.isDelivered) return res.status(400).json({ message: 'Order already delivered' });
 
 		myOrder.status = 'cancelled';
-		const saved = await myOrder.save();
+		myOrder.isCancelled = true;
 
-		return res.status(200).json({ doc: saved });
-	} catch (e: any) {
-		console.error(e.message);
-		return res.status(500).json({ message: e.message });
+		await updateProductStock(myOrder.items);
+
+		myOrder.items = resetOrderItems(myOrder.items);
+
+		myOrder.profit = 0;
+		myOrder.subTotal = 0;
+		myOrder.total = 0;
+		myOrder.vat = 0;
+		myOrder.dueAmount = myOrder.paidAmount * -1;
+
+		const savedOrder = await myOrder.save();
+
+		return res.status(200).json({ doc: savedOrder });
+	} catch (error: any) {
+		console.error(error.message);
+		return res.status(500).json({ message: error.message });
 	}
 };
 

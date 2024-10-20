@@ -19,6 +19,9 @@ const schema = new Schema<PurchaseType>({
 		type: Date,
 		required: true,
 	},
+	deliveryDate: {
+		type: Date,
+	},
 	addedBy: {
 		type: Schema.Types.ObjectId,
 		ref: 'User',
@@ -97,8 +100,7 @@ const schema = new Schema<PurchaseType>({
 		required: true,
 	},
 });
-
-schema.virtual('totalItems').get(function () {
+schema.virtual('totalItems').get(function (this: any) {
 	if (!Array.isArray(this.items)) {
 		return 0;
 	}
@@ -110,20 +112,28 @@ schema.virtual('totalItems').get(function () {
 // Pre-save hook to auto-increment the invoice number
 schema.pre<any>('save', async function (next) {
 	try {
-		if (this.isDelivered) {
-			this.items.forEach(async (item: any) => {
+		if (this.status == 'delivered') {
+			this.isDelivered = true;
+
+			for (const item of this.items) {
 				const product = await Product.findById(item._id);
+
 				if (product) {
 					if (item.deliveredQty < item.qty) {
-						product.stock += item.qty - item.deliveredQty;
 						item.deliveredQty = item.qty;
-						await product.save();
+						const product = await Product.findById(item._id);
+						if (product) {
+							product.stock += item.qty;
+							await product.save();
+						}
 					}
 				}
-			});
+			}
 		}
+		next();
 	} catch (error: any) {
 		console.log('Error Updating item Qty:', error);
+		next();
 	}
 });
 

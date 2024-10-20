@@ -6,6 +6,7 @@ export const getTopCustomers = async (req: any, res: Response) => {
 		const { sort, limit = 10, fields, skip }: any = req.meta;
 
 		let query: any = req?.queryHelper || {};
+		query.isCancelled = false;
 
 		const doc = await Order.aggregate([
 			{ $match: query },
@@ -60,7 +61,7 @@ export const getTopCustomers = async (req: any, res: Response) => {
 		req.meta.totalDocs = count;
 		req.meta.totalPages = Math.ceil(count / limit);
 
-		return res.status(200).json({ ...req.meta, doc: doc });
+		return res.status(200).json({ ...req.meta, doc: doc, query });
 	} catch (e: any) {
 		console.error(e);
 		res.status(500).json({ message: e.message });

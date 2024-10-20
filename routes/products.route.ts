@@ -5,7 +5,7 @@ import Product, { settings } from '../models/products/products.model.js';
 import cancelOrder from '../controllers/order/cancelOrder.controller.js';
 import topSellingProductController from '../controllers/top/topSellingProduct.controller.js';
 import { Filter } from '../lib/types/settings.types.js';
-import Order from '../models/order/order.model.js';
+import Order, { settings as orderSettings } from '../models/order/order.model.js';
 import { orderStatus } from '../models/order/order.settings.js';
 import {
 	getSum,
@@ -70,6 +70,11 @@ const config = constructConfig({
 	config: settings,
 });
 
+const orderConfig = constructConfig({
+	model: Order,
+	config: orderSettings,
+});
+
 const topProductConfig = constructConfig({
 	model: Order,
 	config: topProductsFilters,
@@ -82,6 +87,14 @@ const commonMiddleware = [
 	query(config.FILTER_OPTIONS),
 	hasPermission([permissions.read]),
 ];
+
+const orderMiddleware = [
+	protect,
+	sort,
+	query(orderConfig.FILTER_OPTIONS),
+	hasPermission([permissions.read]),
+];
+
 const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
 const updateMiddleware = [
 	protect,
@@ -99,7 +112,7 @@ router
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, hasPermission([permissions.create]), createDocument(config.MODEL));
 
-router.get('/top-selling', ...commonMiddleware, topSellingProductController);
+router.get('/top-selling', ...orderMiddleware, topSellingProductController);
 
 // roduct.find({ $expr: { $gt: ['$lowStockAlert', '$stock'] } }
 router.get(

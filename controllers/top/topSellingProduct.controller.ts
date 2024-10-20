@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
 import Order from '../../models/order/order.model.js'; // Assuming you have an Order model
-import Product from '../../models/products/products.model.js'; // Assuming you have a Product model
-import mongoose from 'mongoose';
 
 const topSellingProductController = async (req: any, res: Response) => {
 	try {
 		const { sort, limit = 10, fields, skip }: any = req.meta;
 
 		let query: any = req?.queryHelper || {};
-
-		const findOrders = await Order.find(query);
+		query.isCancelled = false;
 
 		const doc = await Order.aggregate([
 			{ $match: query },
@@ -81,7 +78,7 @@ const topSellingProductController = async (req: any, res: Response) => {
 		req.meta.totalDocs = count;
 		req.meta.totalPages = Math.ceil(count / limit);
 
-		return res.status(200).json({ ...req.meta, doc: doc, query, findOrders });
+		return res.status(200).json({ ...req.meta, doc: doc });
 	} catch (error: any) {
 		console.error(error);
 		return res.status(500).json({ message: error.message });
