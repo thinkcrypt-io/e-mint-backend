@@ -108,6 +108,10 @@ const settings = {
 			title: 'Display In Menu',
 		},
 	},
+	shop: {
+		title: 'Shop',
+		type: 'string',
+	},
 	meta: {
 		edit: true,
 		title: 'Meta',

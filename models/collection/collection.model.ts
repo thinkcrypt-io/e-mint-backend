@@ -41,6 +41,11 @@ const schema = new Schema<CollectionType>(
 			type: Boolean,
 			default: false,
 		},
+		shop: {
+			type: Schema.Types.ObjectId,
+			ref: 'Shop',
+			required: true,
+		},
 
 		displayInMenu: {
 			type: Boolean,
@@ -63,11 +68,6 @@ const schema = new Schema<CollectionType>(
 			description: {
 				type: String,
 				trim: true,
-			},
-			shop: {
-				type: Schema.Types.ObjectId,
-				ref: 'Shop',
-				required: true,
 			},
 		},
 	},
