@@ -15,6 +15,7 @@ export type CollectionType = DocumentBaseType & {
 	isFeatured: boolean;
 	priority: number;
 	dataKey?: string;
+	shop: Schema.Types.ObjectId;
 	images?: string[];
 	meta?: {
 		title: string;
