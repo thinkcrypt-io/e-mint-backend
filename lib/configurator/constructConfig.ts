@@ -50,6 +50,10 @@ type ReturnType = {
 	DUPLICATE_OPTIONS: any;
 	FILTER_LIST: any;
 	POPULATE: any;
+	EXPORT_OPTIONS: {
+		model: any;
+		populate: any;
+	};
 };
 
 const constructConfig = ({ model, config, options }: ConstructConfigParams): ReturnType => {
@@ -75,6 +79,11 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 		DUPLICATE_OPTIONS: {
 			model: model,
 			unique: configKeys.filter(key => config[key].unique).join(' ') || '',
+		},
+		EXPORT_OPTIONS: {
+			model: model,
+			populate:
+				configKeys.filter(key => config[key].populate).map(key => config[key].populate) || '',
 		},
 		QUERY_OPTIONS: {
 			model: model,

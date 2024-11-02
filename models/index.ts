@@ -2,6 +2,10 @@
 export { default as Customer } from './customer/customer.model.js';
 export { default as customerSettings } from './customer/customer.settings.js';
 
+//Category
+export { default as Category } from './category/category.model.js';
+export { settings as categorySettings } from './category/category.model.js';
+
 //Product
 export { ProductType } from './products/products.types.js';
 export { default as Product } from './products/products.model.js';

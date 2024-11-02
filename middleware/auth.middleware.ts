@@ -28,8 +28,10 @@ export const protect = async (
 			return res.status(401).json({ message: 'Not authorized, token failed' });
 		}
 
-		req.user = await User.findById(decoded?._id).select('-password');
-		req.shop = req?.user?.shop;
+		req.user = await User.findById(decoded?._id).select('-password').populate('shop');
+
+		req.shop = req?.user?.shop?._id;
+		req.expire = req?.user?.shop?.expire;
 
 		if (decoded.shop != req.shop) {
 			return res.status(401).json({ message: 'Shop ID Does not match user' });

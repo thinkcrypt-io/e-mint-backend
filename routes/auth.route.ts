@@ -8,7 +8,9 @@ import {
 	register,
 	getSellerSelf,
 	shopRegister,
+	UpdateShop,
 } from '../controllers/index.js';
+import Shop from '../models/shop/shop.model.js';
 
 const router = express.Router();
 
@@ -17,6 +19,15 @@ router.post('/login', login).post('/register', register).get('/self', protect, g
 
 router.put('/update/preferences', protect, updateSellerPreferences);
 router.put('/update/self', protect, updateSellerSelf);
+
+router.put(
+	'/update/shop/:id',
+	protect,
+	UpdateShop({
+		model: Shop,
+		allowEdits: ['name', 'phone', 'email', 'description', 'address'],
+	})
+);
 
 router.post('/shop/register', shopRegister);
 
