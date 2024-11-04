@@ -76,7 +76,8 @@ const schema = new Schema<ShopType>(
 		},
 
 		package: {
-			type: mongoose.Schema.Types.Mixed,
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'UserSubscription',
 		},
 
 		isDeleted: {

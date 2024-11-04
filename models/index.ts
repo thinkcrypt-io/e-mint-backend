@@ -64,3 +64,11 @@ export { purchaseSettings, Purchase } from './purchase/index.js';
 export { default as Admin } from './admin/admin.model.js';
 export { default as AdminRole, adminRoleSettings } from './admin/adminRole.model.js';
 // export { adminSettings } from './admin/admin.model.js';
+
+//Subscription
+export { default as Subscription } from './subscription/subscription.model.js';
+export { subscriptionSettings } from './subscription/subscription.model.js';
+
+//UserSubscription
+export { default as UserSubscription } from './subscription/userSubscription.model.js';
+export { userSubscriptionSettings } from './subscription/userSubscription.model.js';

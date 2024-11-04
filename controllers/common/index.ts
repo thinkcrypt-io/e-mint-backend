@@ -20,6 +20,7 @@ export { default as getCount } from './getCount.controller.js';
 export { default as getFilters } from './getFilters.controller.js';
 //11
 export { default as exportDocument } from './exportDocument.controller.js';
+export { default as exportCsv } from './exportDocument.controller.js';
 //12
 export { default as getDocumentToEditById } from './getDocumentToEditById.controller.js';
 //13

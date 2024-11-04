@@ -1,9 +1,8 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import { Category as Model, categorySettings as settings } from '../models/index.js';
+import { Subscription as Model, subscriptionSettings as settings } from '../../models/index.js';
 import {
 	deleteDocument,
-	createDocument,
 	updateDocument,
 	getAllDocuments,
 	getDocumentById,
@@ -14,20 +13,21 @@ import {
 	exportPdf,
 	getCount,
 	getFilters,
-} from '../controllers/index.js';
+} from '../../controllers/index.js';
+
+import { createAdminDocument as createDocument } from '../../admin-controllers/index.js';
 
 import {
-	isExpired,
 	hasPermission,
-	protect,
+	adminProtect as protect,
 	validate,
 	paginate,
 	filter,
-} from '../middleware/index.js';
-import { constructPermissions, constructConfig } from '../imports.js';
+} from '../../middleware/index.js';
+import { constructPermissions, constructConfig } from '../../imports.js';
 
 // Define the permissions
-const permission = 'category';
+const permission = 'subscription';
 
 // Initialize a new router
 const router = express.Router();
@@ -36,6 +36,7 @@ const router = express.Router();
 const config = constructConfig({
 	model: Model,
 	config: settings,
+	options: { role: 'admin' },
 });
 const permissions = constructPermissions(permission);
 
