@@ -1,8 +1,7 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import { Subscription as Model, subscriptionSettings as settings } from '../../models/index.js';
+import { Product as Model, productSettings as settings } from '../../models/index.js';
 import {
-	deleteDocument,
 	updateDocument,
 	getAllDocuments,
 	getDocumentById,
@@ -13,9 +12,8 @@ import {
 	exportPdf,
 	getCount,
 	getFilters,
+	getSum,
 } from '../../controllers/index.js';
-
-import { createAdminDocument as createDocument } from '../../admin-controllers/index.js';
 
 import {
 	adminProtect as protect,
@@ -25,11 +23,9 @@ import {
 	adminPermissions as hasPermission,
 } from '../../middleware/index.js';
 import { constructPermissions, constructConfig } from '../../imports.js';
-import renewPackage from './controller/renewPackage.controller.js';
-import assignPackageController from './controller/assignPackage.controller.js';
 
 // Define the permissions
-const permission = 'subscription';
+const permission = 'product';
 
 // Initialize a new router
 const router = express.Router();
@@ -68,17 +64,15 @@ const middlewares = {
 
 //GENERIC_ROUTES
 // Define the routes
-router
-	.route('/')
-	.get(...middlewares.getAll, getAllDocuments(config.QUERY_OPTIONS))
-	.post(...middlewares.post, createDocument(config.MODEL));
+router.route('/').get(...middlewares.getAll, getAllDocuments(config.QUERY_OPTIONS));
+// .post(...middlewares.post, createDocument(config.MODEL));
 
 //:id is a dynamic parameter that will be extracted from the URL
 router
 	.route('/:id')
 	.get(...middlewares.getById, getDocumentById(config.QUERY_OPTIONS))
-	.put(...middlewares.update, updateDocument(config.EDITS))
-	.delete(...middlewares.delete, deleteDocument(config.MODEL));
+	.put(...middlewares.update, updateDocument(config.EDITS));
+// .delete(...middlewares.delete, deleteDocument(config.MODEL));
 
 //Find to edit
 router.get('/edit/:id', ...middlewares.getById, getDocumentToEditById(config.MODEL));
@@ -97,12 +91,9 @@ router.post('/export/pdf', ...middlewares.export, exportPdf(config.EXPORT_OPTION
 //Duplicate
 router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.MODEL }));
 
-//EXTRA_ROUTES
-//Renew package
-router.put('/renew/:id', ...middlewares.update, renewPackage);
-
-//Assign Package
-router.put('/assign-package/:id', protect, assignPackageController);
+//Count/Sum Aggregations
+router.get('/get/count', ...middlewares.count, getCount(config.MODEL));
+router.get('/get/sum/:field', ...middlewares.count, getSum(config.MODEL));
 
 // Export the router
 export default router;

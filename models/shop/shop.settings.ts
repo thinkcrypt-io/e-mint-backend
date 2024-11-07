@@ -1,8 +1,6 @@
 import { SettingsType, filters } from '../../imports.js';
 import { ShopType } from './index.js';
 
-import User from '../user/user.model.js';
-
 const shopSettings: SettingsType<ShopType> = {
 	id: {
 		type: 'string',
@@ -99,6 +97,14 @@ const shopSettings: SettingsType<ShopType> = {
 		type: 'object',
 		title: 'Package',
 		edit: true,
+		populate: {
+			path: 'package',
+			select: 'name',
+			populate: {
+				path: 'subscription',
+				select: 'name',
+			},
+		},
 	},
 	isDeleted: {
 		type: 'boolean',

@@ -1,6 +1,9 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import { Subscription as Model, subscriptionSettings as settings } from '../../models/index.js';
+import {
+	UserSubscription as Model,
+	userSubscriptionSettings as settings,
+} from '../../models/index.js';
 import {
 	deleteDocument,
 	updateDocument,
@@ -25,8 +28,8 @@ import {
 	adminPermissions as hasPermission,
 } from '../../middleware/index.js';
 import { constructPermissions, constructConfig } from '../../imports.js';
-import renewPackage from './controller/renewPackage.controller.js';
 import assignPackageController from './controller/assignPackage.controller.js';
+import renewPackage from './controller/renewPackage.controller.js';
 
 // Define the permissions
 const permission = 'subscription';
@@ -66,12 +69,11 @@ const middlewares = {
 	filter: [protect],
 };
 
-//GENERIC_ROUTES
 // Define the routes
 router
 	.route('/')
 	.get(...middlewares.getAll, getAllDocuments(config.QUERY_OPTIONS))
-	.post(...middlewares.post, createDocument(config.MODEL));
+	.post(...middlewares.post, assignPackageController);
 
 //:id is a dynamic parameter that will be extracted from the URL
 router
@@ -100,9 +102,6 @@ router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.M
 //EXTRA_ROUTES
 //Renew package
 router.put('/renew/:id', ...middlewares.update, renewPackage);
-
-//Assign Package
-router.put('/assign-package/:id', protect, assignPackageController);
 
 // Export the router
 export default router;

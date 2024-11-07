@@ -62,6 +62,8 @@ type Type = {
 	name: string;
 	amount: number;
 	duration: number;
+	billingCycle: 'monthly' | 'yearly' | 'custom';
+	isDiscounted: boolean;
 	tags?: string[];
 	note?: string;
 	currency?: string;
@@ -69,8 +71,6 @@ type Type = {
 	addedBy?: Types.ObjectId;
 	isActive?: boolean;
 	features?: string[];
-	billingCycle: 'monthly' | 'yearly' | 'custom';
-	isDiscounted: boolean;
 	discountedPrice?: number;
 };
 

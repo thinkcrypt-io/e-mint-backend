@@ -3,10 +3,10 @@ import { SettingsType } from '../../imports.js';
 
 const schema = new Schema<Type>(
 	{
-		customer: {
+		shop: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Customer',
-			required: [true, 'Customer is required'],
+			ref: 'Shop',
+			required: [true, 'Shop is required'],
 		},
 		subscription: {
 			type: mongoose.Schema.Types.ObjectId,
@@ -56,7 +56,7 @@ const schema = new Schema<Type>(
 );
 
 type Type = {
-	customer: Types.ObjectId;
+	shop: Types.ObjectId;
 	subscription: Types.ObjectId;
 	start: Date;
 	end: Date;
@@ -72,8 +72,8 @@ type Type = {
 };
 
 export const userSubscriptionSettings: SettingsType<Type> = {
-	customer: {
-		title: 'Customer',
+	shop: {
+		title: 'Shop',
 		type: 'string',
 		required: true,
 	},

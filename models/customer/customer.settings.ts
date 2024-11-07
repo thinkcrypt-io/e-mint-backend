@@ -1,4 +1,5 @@
 import Group from '../collection/group.model.js';
+import Shop from '../shop/shop.model.js';
 
 const settings: any = {
 	name: {
@@ -11,6 +12,28 @@ const settings: any = {
 		max: 50,
 		required: true,
 		trim: true,
+	},
+
+	shop: {
+		type: 'string',
+		title: 'Shop',
+		populate: {
+			path: 'shop',
+			select: 'name',
+		},
+		sort: true,
+		filter: {
+			roles: ['admin'],
+			name: 'shop',
+			field: 'shop_in',
+			type: 'multi-select',
+			label: 'Shop',
+			title: 'Sort by shop',
+			options: [],
+			category: 'model',
+			model: Shop,
+			key: 'name',
+		},
 	},
 
 	email: {

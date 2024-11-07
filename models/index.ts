@@ -56,6 +56,7 @@ export { groupSettings } from './collection/group.model.js';
 
 //Shop
 export { default as Shop } from './shop/shop.model.js';
+export { default as shopSettings } from './shop/shop.settings.js';
 
 //Purchase
 export { purchaseSettings, Purchase } from './purchase/index.js';

@@ -46,6 +46,8 @@ type BaseProductType = {
 	meta?: { title: string; description: string; keywords: string[] };
 	faq?: { question: string; answer: string }[];
 	createdAt?: Date;
+
+	shop?: Types.ObjectId;
 };
 
 export type ProductType = mongoose.Document & BaseProductType;

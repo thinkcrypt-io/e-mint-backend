@@ -78,6 +78,7 @@ const schema = new Schema<ShopType>(
 		package: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'UserSubscription',
+			// required: true,
 		},
 
 		isDeleted: {
@@ -95,8 +96,13 @@ const schema = new Schema<ShopType>(
 
 	{
 		timestamps: true,
+		toJSON: { virtuals: true },
 	}
 );
+
+schema.virtual('isExpired').get(function (this: ShopType) {
+	return this.expire < new Date();
+});
 
 // Pre-save hook to auto-increment the invoice number
 schema.pre<any>('save', async function (next) {
@@ -121,4 +127,4 @@ schema.pre<any>('save', async function (next) {
 const Shop = mongoose.model<ShopType>('Shop', schema);
 export { ShopType as ModelType } from './index.js';
 export default Shop;
-export { shopSettings as settings } from './index.js';
+// export { shopSettings as settings } from './index.js';

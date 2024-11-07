@@ -37,7 +37,7 @@ type SettingType = {
 	filter?: Filter;
 	edit?: boolean;
 	trim?: boolean;
-	populate?: { path: string; select: string };
+	populate?: { path: string; select: string; populate?: any };
 	min?: number;
 	max?: number;
 };

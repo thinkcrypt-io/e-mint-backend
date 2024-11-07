@@ -23,8 +23,10 @@ import {
 	getSum,
 	adminProtect as protect,
 	exportPdf,
+	shopSettings,
 } from '../../imports.js';
-import Model, { settings } from '../../models/shop/shop.model.js';
+import { Shop as Model, shopSettings as settings } from '../../models/index.js';
+import adminShopRegister from './controller/adminShopRegister.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -40,7 +42,7 @@ const permissions = constructPermissions('shop');
 // Define common middleware
 const postMiddleware = [
 	protect,
-	validate(config.VALIDATORS.POST),
+	// validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
 ];
 
@@ -64,8 +66,10 @@ const deleteMiddleware = [protect, hasPermission([permissions.delete])];
 const getByIdMiddleware = [protect, hasPermission([permissions.view])];
 
 // Define the routes for the product store
-router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS));
-// .post(...postMiddleware, createDocument(config.MODEL));
+router
+	.route('/')
+	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
+	.post(...postMiddleware, adminShopRegister);
 
 router
 	.route('/:id')

@@ -1,6 +1,7 @@
 import { ProductSettings } from './products.types.js';
 import Category from '../category/category.model.js';
 import Collection from '../collection/collection.model.js';
+import Shop from '../shop/shop.model.js';
 import Brand from '../brand/brand.model.js';
 
 /**
@@ -50,6 +51,27 @@ const settings: ProductSettings = {
 		type: 'string',
 		title: 'Short Description',
 		edit: true,
+	},
+	shop: {
+		type: 'string',
+		title: 'Shop',
+		populate: {
+			path: 'shop',
+			select: 'name',
+		},
+		sort: true,
+		filter: {
+			roles: ['admin'],
+			name: 'shop',
+			field: 'shop_in',
+			type: 'multi-select',
+			label: 'Shop',
+			title: 'Sort by shop',
+			options: [],
+			category: 'model',
+			model: Shop,
+			key: 'name',
+		},
 	},
 
 	collection: {
@@ -110,7 +132,6 @@ const settings: ProductSettings = {
 			type: 'multi-select',
 			label: 'Brand',
 			title: 'Sort by Brand',
-			options: [],
 			category: 'model',
 			model: Brand,
 			key: 'name',
