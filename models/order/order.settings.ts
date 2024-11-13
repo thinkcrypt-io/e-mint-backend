@@ -154,6 +154,7 @@ const settings: any = {
 	dueAmount: {
 		type: 'number',
 		title: 'Due amount',
+		sort: true,
 	},
 	returnAmount: {
 		type: 'number',

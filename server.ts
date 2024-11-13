@@ -38,15 +38,10 @@ import {
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
+import userRouter from './user-routes/user.router.js';
+import appRouter from './app-route/app.router.js';
 
 //User Routes
-import userStoreRoute from './user-routes/store.user.route.js';
-import userCategoryRoute from './user-routes/categories.user.route.js';
-import userCollectionRoute from './user-routes/collections.user.route.js';
-import userProductRoute from './user-routes/product.user.route.js';
-import userAuthRoute from './user-routes/auth.user.route.js';
-import userOrder from './user-routes/order.user.route.js';
-// import userCategoryRoute from './user-routes/category.user.route.js';
 
 const app: Application = express();
 
@@ -86,6 +81,8 @@ app.use('/', (req, res, next) => {
 });
 
 app.use('/admin/api', adminRouter);
+app.use('/user-api', userRouter);
+app.use('/app-api/', appRouter);
 
 //app.use('/api/orders', orderRoute);
 app.use('/api/auth', authRoute);
@@ -121,16 +118,6 @@ app.use('/api/ledgers', ledgerRoute);
 app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
-
-//user routes
-app.use('/user-api/store', userStoreRoute);
-app.use('/user-api/categories', userCategoryRoute);
-app.use('/user-api/collections', userCollectionRoute);
-app.use('/user-api/products', userProductRoute);
-app.use('/user-api/auth', userAuthRoute);
-app.use('/user-api/orders', userOrder);
-
-// app.use('/user-api/categories', userCategoryRoute);
 
 app.use((req, res, next) => {
 	return res

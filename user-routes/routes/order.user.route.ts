@@ -1,6 +1,6 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import constructConfig from '../lib/configurator/constructConfig.js';
+import constructConfig from '../../lib/configurator/constructConfig.js';
 
 import {
 	deleteDocument,
@@ -14,15 +14,15 @@ import {
 	updateManyDocuments,
 	exportDocument,
 	getCount,
-} from '../controllers/common/index.js';
+} from '../../controllers/common/index.js';
 
-import cancelOrder from '../controllers/order/cancelOrder.controller.js';
-import addUserOrder from '../controllers/order/addUserOrder.controller.js';
-import getUserCartTotal from '../controllers/order/getUserCartTotal.js';
-import getOrderTotal from '../controllers/order/getOrderTotal.js';
-import Order, { settings } from '../models/order/order.model.js';
+import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
+import addUserOrder from '../../controllers/order/addUserOrder.controller.js';
+import getUserCartTotal from '../../controllers/order/getUserCartTotal.js';
+import getOrderTotal from '../../controllers/order/getOrderTotal.js';
+import Order, { settings } from '../../models/order/order.model.js';
 
-import { myData, userProtect as protect, sort, query } from '../middleware/index.js';
+import { myData, userProtect as protect, sort, query } from '../../middleware/index.js';
 
 // Initialize a new router
 const router = express.Router();

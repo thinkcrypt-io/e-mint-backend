@@ -1,12 +1,12 @@
 import express from 'express';
-import { protect } from '../middleware/userAuth.middleware.js';
+import { protect } from '../../middleware/userAuth.middleware.js';
 
-import updateSellerPreferences from '../controllers/auth/updatePreference.controller.js';
-import userLoginController from '../controllers/auth/userLogin.controller.js';
-import userRegisterController from '../controllers/auth/userRegister.controller.js';
-import userGetSelf from '../controllers/auth/userGetSelf.controller.js';
-import updateSelf from '../controllers/auth/updateSelf.controller.js';
-import changeUserPassword from '../controllers/auth/changeUserPassword.controller.js';
+import updateSellerPreferences from '../../controllers/auth/updatePreference.controller.js';
+import userLoginController from '../../controllers/auth/userLogin.controller.js';
+import userRegisterController from '../../controllers/auth/userRegister.controller.js';
+import userGetSelf from '../../controllers/auth/userGetSelf.controller.js';
+import updateSelf from '../../controllers/auth/updateSelf.controller.js';
+import changeUserPassword from '../../controllers/auth/changeUserPassword.controller.js';
 
 const router = express.Router();
 

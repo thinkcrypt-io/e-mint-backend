@@ -102,6 +102,11 @@ schema.pre<any>('save', function (next) {
 // Pre-save hook to auto-increment the invoice number
 schema.post<any>('save', async function (next) {
 	try {
+		if (this.status == 'refunded') {
+			const getOrder: any = await Order.findById(this.order);
+			getOrder.dueAmount = getOrder.dueAmount + this.amount;
+			await getOrder.save();
+		}
 		if (isNewOrder) {
 			if (this.order) {
 				const getOrder: any = await Order.findById(this.order);
@@ -181,7 +186,7 @@ export const paymentSettings: SettingsType<PaymentType> = {
 		// search: true,
 		title: 'Payment Invoice',
 		type: 'string',
-		required: true,
+		// required: true,
 		trim: true,
 		filter: {
 			name: 'paymentInvoice',

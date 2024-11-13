@@ -3,7 +3,7 @@ import { Order, Payment } from '../../imports.js';
 
 const addPayment = async (req: any, res: any): Promise<Response> => {
 	try {
-		const { invoice, amount } = req.body;
+		const { invoice, amount, status } = req.body;
 
 		if (invoice) {
 			const getOrder: any = await Order.findById(invoice).populate('customer');
@@ -12,7 +12,7 @@ const addPayment = async (req: any, res: any): Promise<Response> => {
 				return res.status(404).json({ message: 'Order not found' });
 			}
 
-			if (getOrder) {
+			if (getOrder && status !== 'refunded') {
 				if (getOrder.dueAmount < amount) {
 					return res.status(400).json({ message: 'Amount exceeds due amount' });
 				}
@@ -23,6 +23,11 @@ const addPayment = async (req: any, res: any): Promise<Response> => {
 					getOrder.isPaid = true;
 				}
 			}
+
+			if (getOrder && status === 'refunded') {
+				getOrder.dueAmount = getOrder.dueAmount + Number(amount);
+			}
+
 			const saved = await getOrder.save();
 			const payment = new Payment({
 				...req.body,
