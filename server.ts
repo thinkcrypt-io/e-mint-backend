@@ -35,6 +35,8 @@ import {
 	supplierRoute,
 	groupRoute,
 	purchaseRoute,
+	exportPDFRoute,
+	shopFaqRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -98,7 +100,15 @@ app.use('/api/deliveries', deliveryRoute);
 
 app.use('/api/restaurant', restaurantRoute);
 app.use('/api/collections', collectionRoute);
+
+
+
 app.use('/api/orders', orderRoute);
+
+app.use('/api/shopFaq', shopFaqRoute);
+
+
+
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
 app.use('/api/users', userRoute);
@@ -119,10 +129,16 @@ app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
 
+// generate pdf invoice
+app.use('/api/generate-pdf', exportPDFRoute);
+
 app.use((req, res, next) => {
 	return res
 		.status(404)
-		.json({ error: 'Not Found', message: 'The requested resource could not be found' });
+		.json({
+			error: 'Not Found',
+			message: 'The requested resource could not be found',
+		});
 });
 
 const port: string | number = process.env.PORT || 5000;

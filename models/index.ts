@@ -11,6 +11,11 @@ export { ProductType } from './products/products.types.js';
 export { default as Product } from './products/products.model.js';
 export { settings as productSettings } from './products/products.model.js';
 
+//Shop Faq
+export { default as ShopFaq } from './shopFaq/shopFaq.model.js';
+export { settings as shopFaqSettings } from './shopFaq/shopFaq.model.js';
+
+
 //Order
 export { default as Order } from './order/order.model.js';
 export { settings as orderSettings } from './order/order.model.js';

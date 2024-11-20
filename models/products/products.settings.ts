@@ -102,7 +102,6 @@ const settings: ProductSettings = {
 			path: 'category',
 			select: 'name',
 		},
-
 		filter: {
 			name: 'category',
 			field: 'category_in',
