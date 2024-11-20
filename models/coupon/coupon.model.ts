@@ -1,11 +1,12 @@
-import mongoose, { Schema, Types } from 'mongoose';
-// import { CouponType } from '../../lib/types/model.types';
+import mongoose, { Schema } from 'mongoose';
+import CouponType from './coupon.type.js';
 
-const schema = new Schema<any>(
+const schema = new Schema<CouponType>(
 	{
 		name: {
 			type: String,
 			trim: true,
+			required: true,
 		},
 		description: {
 			type: String,
@@ -64,17 +65,16 @@ const schema = new Schema<any>(
 			trim: true,
 		},
 		addedBy: {
-			type: Types.ObjectId,
+			type: Schema.Types.ObjectId,
 			ref: 'User',
 		},
 		maxUsePerUser: {
 			type: Number,
-			required: true,
-			default: 1,
+			default: 99,
 		},
 		user: {
-			type: Types.ObjectId,
-			ref: 'User',
+			type: Schema.Types.ObjectId,
+			ref: 'Customer',
 		},
 	},
 
@@ -83,7 +83,6 @@ const schema = new Schema<any>(
 	}
 );
 
-const Coupon = mongoose.model<any>('Coupon', schema);
-// export { default as settings } from './config.js';
-// export { default as filters } from './filters.js';
+const Coupon = mongoose.model<CouponType>('Coupon', schema);
+
 export default Coupon;

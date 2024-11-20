@@ -15,9 +15,7 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 		let couponId;
 		let totalItems = 0;
 
-		//const { coupon, shipping = 0 } = req.body;
-		const shipping = 0;
-		const { coupon } = req.query;
+		const { coupon, shipping = 0 } = req.body;
 
 		const couponData = await Coupon.findOne({
 			code: coupon,
@@ -26,20 +24,20 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 			validTill: { $gte: new Date() },
 		});
 
-		if (coupon && (req as any).user) {
+		if (coupon) {
 			if (!couponData)
 				return res.status(400).json({ message: `Coupon ${coupon} is invalid or is expired` });
 
-			const orders = await Order.countDocuments({
-				user: (req as any).user._id,
-				coupon: couponData._id,
-				shop: (req as any).shop,
-			});
+			// const orders = await Order.countDocuments({
+			// 	user: (req as any).user._id,
+			// 	coupon: couponData._id,
+			// 	shop: (req as any).shop,
+			// });
 
-			if (orders >= couponData.maxUsePerUser)
-				return res
-					.status(400)
-					.json({ message: `Coupon ${coupon} has been used maximum number of times` });
+			// if (orders >= couponData.maxUsePerUser)
+			// 	return res
+			// 		.status(400)
+			// 		.json({ message: `Coupon ${coupon} has been used maximum number of times` });
 
 			const totalCouponUse = await Order.countDocuments({
 				coupon: couponData._id,
@@ -82,7 +80,7 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 			}
 		}
 
-		if (couponData && (req as any).user) {
+		if (couponData) {
 			if (couponData.isFlat) {
 				discount = couponData.maxAmount;
 			} else {

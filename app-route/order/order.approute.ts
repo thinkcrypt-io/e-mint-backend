@@ -1,5 +1,5 @@
 import express from 'express';
-import { store, filter, paginate, getAppCart } from '../middlewares/index.js';
+import { store, filter, paginate, getAppCart, verifyCoupon } from '../middlewares/index.js';
 
 import { constructConfig, getAllDocuments, getDocumentById } from '../../imports.js';
 import { Product, productSettings } from '../../imports.js';
@@ -14,5 +14,6 @@ const router = express.Router();
 
 router.post('/', store, addAppOrder);
 router.post('/get-cart', store, getAppCart);
+router.post('/verify-coupon', store, verifyCoupon);
 
 export default router;

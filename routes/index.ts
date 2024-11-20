@@ -27,3 +27,4 @@ export { default as ledgerRoute } from './ledger.route.js';
 export { default as supplierRoute } from './suppliers.route.js';
 export { default as groupRoute } from './group.route.js';
 export { default as purchaseRoute } from './purchase.route.js';
+export { default as couponRoute } from './coupons.route.js';
