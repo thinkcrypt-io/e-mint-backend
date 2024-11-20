@@ -89,13 +89,17 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 			}
 		}
 
-		let total = subTotal + vat - discount + shipping - (req?.body?.discount || 0);
+		const isOrderValueValid = couponData ? subTotal >= couponData.minOrderValue : true;
+
+		let total = isOrderValueValid
+			? subTotal + vat - discount + shipping - (req?.body?.discount || 0)
+			: subTotal + vat + shipping;
 
 		return res.json({
 			subTotal,
 			total,
 			vat,
-			discount: discount + (req.body.discount || 0),
+			discount: isOrderValueValid ? discount + (req.body.discount || 0) : 0,
 			coupon,
 			couponId,
 			shipping,
