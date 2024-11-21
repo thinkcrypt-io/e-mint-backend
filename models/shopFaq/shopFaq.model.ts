@@ -13,10 +13,10 @@ const schema = new Schema<ShopFaqType>(
 			type: String,
 			required: [true, 'Answer is required'],
 		},
-		// shop: {
-		// 	type: mongoose.Schema.Types.ObjectId,
-		// 	// required: [true, 'Shop id is required'],
-		// },
+		shop: {
+			type: mongoose.Schema.Types.ObjectId,
+			// required: [true, 'Shop id is required'],
+		},
 	},
 
 	{
