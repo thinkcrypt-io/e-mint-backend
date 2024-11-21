@@ -21,9 +21,6 @@ export { default as Order } from './order/order.model.js';
 export { settings as orderSettings } from './order/order.model.js';
 export { default as OrderType } from './order/order.types.js';
 
-//Coupon
-export { default as Coupon } from './coupon/coupon.model.js';
-
 //User
 export { default as User } from './user/user.model.js';
 export { settings as userSettings } from './user/user.model.js';
@@ -78,3 +75,8 @@ export { subscriptionSettings } from './subscription/subscription.model.js';
 //UserSubscription
 export { default as UserSubscription } from './subscription/userSubscription.model.js';
 export { userSubscriptionSettings } from './subscription/userSubscription.model.js';
+
+//Coupon
+export { default as Coupon } from './coupon/coupon.model.js';
+export { default as couponSettings } from './coupon/coupon.settings.js';
+export { default as CouponType } from './coupon/coupon.type.js';

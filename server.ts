@@ -37,6 +37,7 @@ import {
 	purchaseRoute,
 	exportPDFRoute,
 	shopFaqRoute,
+	couponRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -92,6 +93,7 @@ app.use('/api/brands', brandRoute);
 app.use('/api/categories', categoryRoute);
 app.use('/api/contents', contentRoute);
 app.use('/api/adjustments', adjustmentRoute);
+app.use('/api/coupons', couponRoute);
 
 app.use('/api/items', itemRoute);
 app.use('/api/products', productRoute);
