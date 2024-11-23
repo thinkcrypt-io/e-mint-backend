@@ -13,6 +13,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 		paidAmount,
 		status,
 		note,
+		origin,
 	} = req.body;
 
 	try {
@@ -30,7 +31,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			customer: customer == 'guest' ? null : customer ? customer : (req as any).user._id,
 			orderDate,
 			paymentAmount,
-			origin: 'pos',
+			origin: origin || 'pos',
 			note,
 			paidAmount,
 			shippingCharge: cart.shipping,

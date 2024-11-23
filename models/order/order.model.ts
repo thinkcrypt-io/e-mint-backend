@@ -64,7 +64,7 @@ const schema: Schema = new Schema<OrderType>(
 
 		origin: {
 			type: String,
-			enum: ['pos', 'website', 'mint-app'],
+			enum: ['pos', 'website', 'mint-app', 'invoice'],
 			default: 'pos',
 		},
 	},

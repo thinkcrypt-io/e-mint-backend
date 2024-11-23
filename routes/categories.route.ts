@@ -23,6 +23,7 @@ import {
 	validate,
 	paginate,
 	filter,
+	isExists,
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig } from '../imports.js';
 
@@ -42,7 +43,12 @@ const permissions = constructPermissions(permission);
 //Define the middlewares
 const middlewares = {
 	//Middleware for creating a new category
-	post: [protect, validate(config.VALIDATORS.POST), hasPermission([permissions.create])],
+	post: [
+		protect,
+		validate(config.VALIDATORS.POST),
+		isExists(config.EXIST_OPTIONS),
+		hasPermission([permissions.create]),
+	],
 	//Middleware for getting all categories
 	getAll: [protect, paginate, filter(config.FILTER_OPTIONS), hasPermission([permissions.read])],
 	//Middleware for updating a category
