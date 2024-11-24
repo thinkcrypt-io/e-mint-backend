@@ -35,7 +35,6 @@ import {
 	supplierRoute,
 	groupRoute,
 	purchaseRoute,
-	exportPDFRoute,
 	shopFaqRoute,
 	couponRoute,
 	shopDetailsRoute,
@@ -129,8 +128,6 @@ app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
 
-// generate pdf invoice
-app.use('/api/generate-pdf', exportPDFRoute);
 
 app.use((req, res, next) => {
 	return res.status(404).json({
