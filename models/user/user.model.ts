@@ -54,6 +54,7 @@ const schema = new Schema<any>(
 		},
 		preferences: {
 			categories: [String],
+			shops: [String],
 			items: [String],
 			users: [String],
 			collections: [String],

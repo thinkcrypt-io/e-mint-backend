@@ -15,6 +15,7 @@ export type UserType = Document & {
 		categories: string[];
 		items: string[];
 		users: string[];
+		shops: [String];
 	};
 };
 export type UserSettings = {
@@ -32,5 +33,6 @@ export type UserSettings = {
 		categories: SettingType;
 		items: SettingType;
 		users: SettingType;
+		shops: SettingType;
 	};
 };

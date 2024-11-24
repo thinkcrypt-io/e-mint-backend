@@ -21,16 +21,21 @@ const pagination = async (
 ): Promise<Response | void> => {
 	try {
 		const { sort = '-createdAt', search = '', query = '' } = req.query;
-		const page: number = req.query.page && req.query.page > 0 ? parseInt(req.query.page) : 1;
-		const limit: number = req.query.limit ? parseInt(req.query.limit) : PAGE_LIMIT;
+		const page: number =
+			req.query.page && req.query.page > 0 ? parseInt(req.query.page) : 1;
+		const limit: number = req.query.limit
+			? parseInt(req.query.limit)
+			: PAGE_LIMIT;
 		const skip: number = (page - 1) * limit;
 
 		const queryFields = req.query.fields;
-
+		console.log('queryFields::', queryFields);
 		const fields =
-			queryFields && typeof queryFields == 'string' ? queryFields?.split(',').join(' ') : '';
+			queryFields && typeof queryFields == 'string'
+				? queryFields?.split(',').join(' ')
+				: '';
 		// Construct the query options for selective fields
-
+		
 		req.meta = {
 			search,
 			sort,

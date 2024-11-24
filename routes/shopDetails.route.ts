@@ -1,10 +1,6 @@
 // Import necessary modules from their respective files
-
 import express from 'express';
-import {
-	ShopFaq as Model,
-	shopFaqSettings as settings,
-} from '../models/index.js';
+import { Shop, shopSettings } from '../models/shop/index.js';
 import {
 	deleteDocument,
 	createDocument,
@@ -27,20 +23,19 @@ import {
 	validate,
 	paginate,
 	filter,
-	myData,
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig } from '../imports.js';
 
 // Define the permissions
-const permission = 'shop';
+const permission = 'shops';
 
 // Initialize a new router
 const router = express.Router();
 
 // Construct configuration and permissions
 const config = constructConfig({
-	model: Model,
-	config: settings,
+	model: Shop,
+	config: shopSettings,
 });
 const permissions = constructPermissions(permission);
 
@@ -55,7 +50,6 @@ const middlewares = {
 	//Middleware for getting all categories
 	getAll: [
 		protect,
-		// myData,
 		paginate,
 		filter(config.FILTER_OPTIONS),
 		hasPermission([permissions.read]),
@@ -83,7 +77,6 @@ const middlewares = {
 };
 
 // Define the routes
-
 router
 	.route('/')
 	.get(...middlewares.getAll, getAllDocuments(config.QUERY_OPTIONS))
@@ -92,7 +85,7 @@ router
 //:id is a dynamic parameter that will be extracted from the URL
 router
 	.route('/:id')
-	.get(getDocumentById(config.QUERY_OPTIONS))
+	.get(...middlewares.getById, getDocumentById(config.QUERY_OPTIONS))
 	.put(...middlewares.update, updateDocument(config.EDITS))
 	.delete(...middlewares.delete, deleteDocument(config.MODEL));
 

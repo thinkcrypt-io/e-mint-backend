@@ -44,7 +44,6 @@ export const protect = async (
 		let query: any = (req as any).queryHelper || {};
 		query.shop = req.shop;
 		req.queryHelper = query;
-
 		next();
 	} catch (e: any) {
 		console.error(e);

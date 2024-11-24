@@ -34,13 +34,15 @@ const getAllDocuments = ({
 		try {
 			const { sort, limit = 10, skip = 0, fields }: Meta = req.meta;
 			let query: any = req?.queryHelper || {};
-
 			// query.restaurant = req.restaurant;
-
 			const listQuery = model
 				.find(query)
 				.populate(populate || '')
-				.select(select || (fields && `${fields} ${exclude && exclude}`) || (exclude && exclude))
+				.select(
+					select ||
+						(fields && `${fields} ${exclude && exclude}`) ||
+						(exclude && exclude)
+				)
 				.sort(sort)
 				.limit(limit)
 				.skip(skip);

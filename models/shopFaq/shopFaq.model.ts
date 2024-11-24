@@ -15,7 +15,6 @@ const schema = new Schema<ShopFaqType>(
 		},
 		shop: {
 			type: mongoose.Schema.Types.ObjectId,
-			// required: [true, 'Shop id is required'],
 		},
 	},
 
@@ -25,6 +24,5 @@ const schema = new Schema<ShopFaqType>(
 );
 
 const ShopFaq = mongoose.model<any>('ShopFaq', schema);
-// export { ShopFaqSettings as settings } from './shopFaq.settings.js';
 export { default as settings } from './shopFaq.settings.js';
 export default ShopFaq;

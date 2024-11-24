@@ -15,16 +15,6 @@ const settings: ShopFaqSettings = {
 		required: true,
 	},
 
-	// shop: {
-	// 	title: 'Shop',
-	// 	type: 'string',
-	// 	required: true,
-	// 	populate: {
-	// 		path: 'shop',
-	// 		select: '_id name',
-	// 	},
-	// },
-
 	createdAt: {
 		sort: true,
 		type: 'string',

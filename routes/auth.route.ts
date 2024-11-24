@@ -16,9 +16,9 @@ const router = express.Router();
 
 //route for: /api/auth route
 router.post('/login', login).post('/register', register).get('/self', protect, getSellerSelf);
-
 router.put('/update/preferences', protect, updateSellerPreferences);
 router.put('/update/self', protect, updateSellerSelf);
+
 
 router.put(
 	'/update/shop/:id',
