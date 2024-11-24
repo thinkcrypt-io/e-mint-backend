@@ -99,6 +99,14 @@ const schema = new Schema<CategoryType>(
 	}
 );
 
+// Pre-save middleware to set the slug field
+schema.pre('save', function (next) {
+	if (!this.slug) {
+		this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
+	}
+	next();
+});
+
 const Session = mongoose.model<any>('Category', schema);
 export { default as settings } from './category.settings.js';
 export default Session;

@@ -12,6 +12,7 @@ const settings: CategorySettings = {
 		type: 'string',
 		required: true,
 		trim: true,
+		unique: true,
 	},
 
 	image: {
