@@ -25,7 +25,7 @@ router.put(
 	protect,
 	UpdateShop({
 		model: Shop,
-		allowEdits: ['name', 'phone', 'email', 'description', 'address'],
+		allowEdits: ['name', 'phone', 'email', 'description', 'address', 'logo'],
 	})
 );
 

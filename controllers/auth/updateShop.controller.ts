@@ -19,6 +19,7 @@ const updateShop = ({ model, allowEdits }: EndwareType) => {
 			}
 
 			const updates = Object.keys(req.body);
+
 			const isValidOperation = updates.every(update => allowEdits.includes(update));
 
 			if (!isValidOperation) {

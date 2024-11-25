@@ -32,15 +32,6 @@ const shopSettings: SettingsType<ShopType> = {
 			select: 'name email phone',
 		},
 		sort: true,
-		// filter: {
-		// 	name: 'owner',
-		// 	field: 'owner_in',
-		// 	type: 'multi-select',
-		// 	label: 'Owner',
-		// 	title: 'Find by Owner',
-		// 	category: 'model',
-		// 	model: User,
-		// },
 	},
 	description: {
 		type: 'string',
@@ -54,22 +45,28 @@ const shopSettings: SettingsType<ShopType> = {
 	logo: {
 		type: 'uri',
 		title: 'Logo',
+		edit: true,
 	},
 	image: {
 		type: 'uri',
 		title: 'Image',
+		edit: true,
 	},
 	coverImage: {
 		type: 'uri',
 		title: 'Cover Image',
+		edit: true,
 	},
 	location: {
 		type: 'string',
 		title: 'Location',
+		edit: true,
 	},
 	address: {
 		type: 'string',
 		title: 'Address',
+		edit: true,
+		search: true,
 	},
 	email: {
 		type: 'string',
@@ -92,6 +89,7 @@ const shopSettings: SettingsType<ShopType> = {
 	phone: {
 		type: 'string',
 		title: 'Phone',
+		edit: true,
 	},
 	package: {
 		type: 'object',
@@ -111,6 +109,7 @@ const shopSettings: SettingsType<ShopType> = {
 		title: 'Is Deleted',
 		edit: true,
 		sort: true,
+		filter: filters.isDeleted,
 	},
 	isActive: {
 		type: 'boolean',
