@@ -35,10 +35,9 @@ import {
 	supplierRoute,
 	groupRoute,
 	purchaseRoute,
-	exportPDFRoute,
 	shopFaqRoute,
 	couponRoute,
-	shopDetailsRoute,
+	billingInfoRoute
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -107,7 +106,7 @@ app.use('/api/collections', collectionRoute);
 app.use('/api/orders', orderRoute);
 
 app.use('/api/shop-faq', shopFaqRoute);
-app.use('/api/shopDetails', shopDetailsRoute);
+app.use('/api/billing-info', billingInfoRoute);
 
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
@@ -129,8 +128,6 @@ app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
 
-// generate pdf invoice
-app.use('/api/generate-pdf', exportPDFRoute);
 
 app.use((req, res, next) => {
 	return res.status(404).json({

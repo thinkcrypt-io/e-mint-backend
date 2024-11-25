@@ -54,6 +54,8 @@ const schema = new Schema<any>(
 		},
 		preferences: {
 			categories: [String],
+			'billing-info': [String],
+			'shop-faq': [String],
 			shops: [String],
 			items: [String],
 			users: [String],
