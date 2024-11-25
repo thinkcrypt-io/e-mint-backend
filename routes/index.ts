@@ -30,4 +30,5 @@ export { default as purchaseRoute } from './purchase.route.js';
 export { default as shopFaqRoute } from './shopFaq.route.js';
 export { default as couponRoute } from './coupons.route.js';
 export { default as billingInfoRoute } from './billingInfo.route.js';
+export { default as termsConditionRoute } from './termsConditions.route.js';
 

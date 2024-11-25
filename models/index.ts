@@ -19,6 +19,10 @@ export { settings as shopFaqSettings } from './shopFaq/shopFaq.model.js';
 export { default as BillingInfo } from './billing-info/billingInfo.model.js';
 export { settings as billingInfoSettings } from './billing-info/billingInfo.model.js';
 
+//Billing Information
+export { default as TermsCondition } from './terms-conditions/termsCondition.model.js';
+export { settings as termsConditionSettings } from './terms-conditions/termsCondition.model.js';
+
 //Order
 export { default as Order } from './order/order.model.js';
 export { settings as orderSettings } from './order/order.model.js';

@@ -37,7 +37,8 @@ import {
 	purchaseRoute,
 	shopFaqRoute,
 	couponRoute,
-	billingInfoRoute
+	billingInfoRoute,
+	termsConditionRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -102,11 +103,12 @@ app.use('/api/deliveries', deliveryRoute);
 
 app.use('/api/restaurant', restaurantRoute);
 app.use('/api/collections', collectionRoute);
-
 app.use('/api/orders', orderRoute);
 
+////////
 app.use('/api/shop-faq', shopFaqRoute);
 app.use('/api/billing-info', billingInfoRoute);
+app.use('/api/terms-conditions', termsConditionRoute);
 
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
@@ -127,7 +129,6 @@ app.use('/api/ledgers', ledgerRoute);
 app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
-
 
 app.use((req, res, next) => {
 	return res.status(404).json({
