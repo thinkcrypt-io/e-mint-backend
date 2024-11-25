@@ -27,6 +27,7 @@ const schema = new Schema<ShopType>(
 		logo: {
 			type: String,
 			trim: true,
+			default: 'https://thinkcrypt.io/e-mint/icon9.png',
 		},
 
 		image: {
