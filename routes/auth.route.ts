@@ -21,11 +21,11 @@ router.put('/update/preferences', protect, updateSellerPreferences);
 router.put('/update/self', protect, updateSellerSelf);
 
 router.put(
-	'/update/shop/:id',
+	'/update/shop/edit/:id',
 	protect,
 	UpdateShop({
 		model: Shop,
-		allowEdits: ['name', 'phone', 'email', 'description', 'address', 'logo'],
+		allowEdits: ['name', 'phone', 'email', 'description', 'address', 'logo', 'faq', 'terms'],
 	})
 );
 

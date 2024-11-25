@@ -19,6 +19,8 @@ type ShopType = {
 	isActive: boolean;
 	createdAt: Date;
 	owner: Types.ObjectId;
+	faq: { title: string; description: string }[];
+	terms: string[];
 };
 
 export default ShopType;

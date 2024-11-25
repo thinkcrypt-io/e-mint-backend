@@ -93,6 +93,13 @@ const schema = new Schema<ShopType>(
 			default: true,
 			required: true,
 		},
+		faq: [
+			{
+				title: { type: String },
+				description: { type: String },
+			},
+		],
+		terms: [String],
 	},
 
 	{

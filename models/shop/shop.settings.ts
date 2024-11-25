@@ -124,6 +124,16 @@ const shopSettings: SettingsType<ShopType> = {
 		sort: true,
 		filter: filters.createdAt,
 	},
+	faq: {
+		type: 'array-object',
+		edit: true,
+		title: 'FAQ',
+	},
+	terms: {
+		type: 'array-string',
+		title: 'Terms & Conditions',
+		edit: true,
+	},
 };
 
 export default shopSettings;
