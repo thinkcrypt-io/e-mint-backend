@@ -13,6 +13,6 @@ export type BillingInfoSettings = {
 	transactionId: SettingType;
 	transactionTime: SettingType;
 	amount?: SettingType;
-	shop: SettingType;
+	shop?: SettingType;
 	createdAt?: SettingType;
 };

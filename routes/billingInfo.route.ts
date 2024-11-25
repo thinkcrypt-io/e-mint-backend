@@ -1,6 +1,9 @@
+// BillingInfo
+// billingInfoSettings
+
 // Import necessary modules from their respective files
 import express from 'express';
-import { Shop, shopSettings } from '../models/shop/index.js';
+import { BillingInfo as Model, billingInfoSettings as settings } from '../models/index.js';
 import {
 	deleteDocument,
 	createDocument,
@@ -23,19 +26,20 @@ import {
 	validate,
 	paginate,
 	filter,
+	isExists,
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig } from '../imports.js';
 
 // Define the permissions
-const permission = 'shops';
+const permission = 'category';
 
 // Initialize a new router
 const router = express.Router();
 
 // Construct configuration and permissions
 const config = constructConfig({
-	model: Shop,
-	config: shopSettings,
+	model: Model,
+	config: settings,
 });
 const permissions = constructPermissions(permission);
 
@@ -45,21 +49,13 @@ const middlewares = {
 	post: [
 		protect,
 		validate(config.VALIDATORS.POST),
+		isExists(config.EXIST_OPTIONS),
 		hasPermission([permissions.create]),
 	],
 	//Middleware for getting all categories
-	getAll: [
-		protect,
-		paginate,
-		filter(config.FILTER_OPTIONS),
-		hasPermission([permissions.read]),
-	],
+	getAll: [protect, paginate, filter(config.FILTER_OPTIONS), hasPermission([permissions.read])],
 	//Middleware for updating a category
-	update: [
-		protect,
-		validate(config.VALIDATORS.UPDATE),
-		hasPermission([permissions.update]),
-	],
+	update: [protect, validate(config.VALIDATORS.UPDATE), hasPermission([permissions.update])],
 	//Middleware for updating many categories
 	updateMany: [protect, hasPermission([permissions.update])],
 	//Middleware for getting a category by ID
@@ -90,45 +86,21 @@ router
 	.delete(...middlewares.delete, deleteDocument(config.MODEL));
 
 //Find to edit
-router.get(
-	'/edit/:id',
-	...middlewares.getById,
-	getDocumentToEditById(config.MODEL)
-);
+router.get('/edit/:id', ...middlewares.getById, getDocumentToEditById(config.MODEL));
 
 //Update Manu
-router.put(
-	'/update/many',
-	...middlewares.updateMany,
-	updateManyDocuments(config.EDITS)
-);
+router.put('/update/many', ...middlewares.updateMany, updateManyDocuments(config.EDITS));
 
 //get Filters & count
-router.get(
-	'/get/filters',
-	...middlewares.filter,
-	getFilters(config.FILTER_LIST)
-);
+router.get('/get/filters', ...middlewares.filter, getFilters(config.FILTER_LIST));
 router.get('/get/count', ...middlewares.count, getCount(config.MODEL));
 
 //Export as CSV and PDF
-router.post(
-	'/export/csv',
-	...middlewares.export,
-	exportCsv(config.EXPORT_OPTIONS)
-);
-router.post(
-	'/export/pdf',
-	...middlewares.export,
-	exportPdf(config.EXPORT_OPTIONS)
-);
+router.post('/export/csv', ...middlewares.export, exportCsv(config.EXPORT_OPTIONS));
+router.post('/export/pdf', ...middlewares.export, exportPdf(config.EXPORT_OPTIONS));
 
 //Duplicate
-router.put(
-	'/copy/:id',
-	...middlewares.copy,
-	duplicateDocument({ model: config.MODEL })
-);
+router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.MODEL }));
 
 // Export the router
 export default router;

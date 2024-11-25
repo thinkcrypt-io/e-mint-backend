@@ -28,5 +28,5 @@ const schema = new Schema<BillingInfoType>(
 );
 
 const BillingInfo = mongoose.model<any>('BillingInfo', schema);
-// export { default as settings } from './category.settings.js';
+export { default as settings } from './billingInfo.settings.js';
 export default BillingInfo;

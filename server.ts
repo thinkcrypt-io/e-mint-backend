@@ -37,7 +37,7 @@ import {
 	purchaseRoute,
 	shopFaqRoute,
 	couponRoute,
-	shopDetailsRoute,
+	billingInfoRoute
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -106,7 +106,7 @@ app.use('/api/collections', collectionRoute);
 app.use('/api/orders', orderRoute);
 
 app.use('/api/shop-faq', shopFaqRoute);
-app.use('/api/shopDetails', shopDetailsRoute);
+app.use('/api/billing-info', billingInfoRoute);
 
 app.use('/api/roles', roleRoute);
 app.use('/api/permissions', permissionRoute);
