@@ -21,6 +21,11 @@ type ShopType = {
 	owner: Types.ObjectId;
 	faq: { title: string; description: string }[];
 	terms: string[];
+	smsBalance: number;
+	smsExpense: number;
+	website?: string;
+	instagram?: string;
+	facebook?: string;
 };
 
 export default ShopType;

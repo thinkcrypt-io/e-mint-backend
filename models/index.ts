@@ -75,3 +75,8 @@ export { userSubscriptionSettings } from './subscription/userSubscription.model.
 export { default as Coupon } from './coupon/coupon.model.js';
 export { default as couponSettings } from './coupon/coupon.settings.js';
 export { default as CouponType } from './coupon/coupon.type.js';
+
+//SMS
+export { default as SMS } from './sms/sms.model.js';
+export { default as SMSType } from './sms/sms.types.js';
+export { default as smsSettings } from './sms/sms.settings.js';

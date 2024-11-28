@@ -88,10 +88,34 @@ const schema = new Schema<ShopType>(
 			required: true,
 		},
 
+		smsBalance: {
+			type: Number,
+			default: 0.0,
+			required: true,
+		},
+
+		smsExpense: {
+			type: Number,
+			default: 0.0,
+			required: true,
+		},
+
 		isActive: {
 			type: Boolean,
 			default: true,
 			required: true,
+		},
+		website: {
+			type: String,
+			trim: true,
+		},
+		facebook: {
+			type: String,
+			trim: true,
+		},
+		instagram: {
+			type: String,
+			trim: true,
 		},
 		faq: [
 			{

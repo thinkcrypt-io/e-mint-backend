@@ -124,6 +124,18 @@ const shopSettings: SettingsType<ShopType> = {
 		sort: true,
 		filter: filters.createdAt,
 	},
+	smsBalance: {
+		type: 'number',
+		title: 'SMS Balance',
+		edit: true,
+		sort: true,
+	},
+	smsExpense: {
+		type: 'number',
+		title: 'SMS Expense',
+		edit: true,
+		sort: true,
+	},
 	faq: {
 		type: 'array-object',
 		edit: true,
@@ -132,6 +144,21 @@ const shopSettings: SettingsType<ShopType> = {
 	terms: {
 		type: 'array-string',
 		title: 'Terms & Conditions',
+		edit: true,
+	},
+	website: {
+		type: 'string',
+		title: 'Website',
+		edit: true,
+	},
+	facebook: {
+		type: 'string',
+		title: 'Website',
+		edit: true,
+	},
+	instagram: {
+		type: 'string',
+		title: 'Website',
 		edit: true,
 	},
 };

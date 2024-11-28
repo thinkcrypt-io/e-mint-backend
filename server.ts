@@ -36,6 +36,7 @@ import {
 	groupRoute,
 	purchaseRoute,
 	couponRoute,
+	smsRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -55,7 +56,7 @@ app.use(
 	})
 );
 
-const allowedOrigins = ['http://localhost:3000', 'http://example.com'];
+const allowedOrigins = ['http://localhost:3000', 'http://example.com', 'http://localhost:3001'];
 
 app.use(cors());
 app.use(morgan('combined'));
@@ -120,6 +121,7 @@ app.use('/api/ledgers', ledgerRoute);
 app.use('/api/suppliers', supplierRoute);
 app.use('/api/groups', groupRoute);
 app.use('/api/purchases', purchaseRoute);
+app.use('/api/sms', smsRoute);
 
 app.use((req, res, next) => {
 	return res
