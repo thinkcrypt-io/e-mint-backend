@@ -4,10 +4,14 @@ import { IfExistType } from '../lib/types/default.types.js';
 const ifExists = ({ model, fields }: IfExistType) => {
 	return async (req: any, res: Response, next: NextFunction) => {
 		try {
+			if (!fields) return next();
+
 			const fieldArray = fields.split(' ');
 			const conditions = fieldArray.map(field => ({
 				[field]: req.body[field],
 			}));
+
+			console.log(fieldArray);
 
 			const existingEntry = await model.findOne({ $or: conditions, shop: req.shop });
 

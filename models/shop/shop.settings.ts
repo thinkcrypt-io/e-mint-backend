@@ -17,6 +17,11 @@ const shopSettings: SettingsType<ShopType> = {
 			title: 'Find by ID',
 		},
 	},
+	shippingCharge: {
+		type: 'number',
+		title: 'Shipping Charge',
+		edit: true,
+	},
 	name: {
 		type: 'string',
 		required: true,
@@ -153,12 +158,47 @@ const shopSettings: SettingsType<ShopType> = {
 	},
 	facebook: {
 		type: 'string',
-		title: 'Website',
+		title: 'Facebook URL',
 		edit: true,
 	},
 	instagram: {
 		type: 'string',
-		title: 'Website',
+		title: 'Instagram URL',
+		edit: true,
+	},
+	linkedin: {
+		type: 'string',
+		title: 'Linkedin URL',
+		edit: true,
+	},
+	youtube: {
+		type: 'string',
+		title: 'Youtube URL',
+		edit: true,
+	},
+	daraz: {
+		type: 'string',
+		title: 'Daraz URL',
+		edit: true,
+	},
+	twitter: {
+		type: 'string',
+		title: 'Twitter URL',
+		edit: true,
+	},
+	whatsapp: {
+		type: 'string',
+		title: 'Whatsapp number',
+		edit: true,
+	},
+	tiktok: {
+		type: 'string',
+		title: 'Tiktok URL',
+		edit: true,
+	},
+	telegram: {
+		type: 'string',
+		title: 'Telegram URL',
 		edit: true,
 	},
 };

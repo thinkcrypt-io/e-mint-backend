@@ -25,7 +25,27 @@ router.put(
 	protect,
 	UpdateShop({
 		model: Shop,
-		allowEdits: ['name', 'phone', 'email', 'description', 'address', 'logo', 'faq', 'terms'],
+		allowEdits: [
+			'name',
+			'phone',
+			'email',
+			'description',
+			'address',
+			'logo',
+			'faq',
+			'terms',
+			'coverImage',
+			'website',
+			'facebook',
+			'twitter',
+			'instagram',
+			'linkedin',
+			'youtube',
+			'whatsapp',
+			'daraz',
+			'tiktok',
+			'telegram',
+		],
 	})
 );
 

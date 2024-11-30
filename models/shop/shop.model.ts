@@ -18,6 +18,12 @@ const schema = new Schema<ShopType>(
 			trim: true,
 		},
 
+		shippingCharge: {
+			type: Number,
+			default: 0,
+			required: true,
+		},
+
 		template: {
 			type: Number,
 			default: 1,
@@ -114,6 +120,34 @@ const schema = new Schema<ShopType>(
 			trim: true,
 		},
 		instagram: {
+			type: String,
+			trim: true,
+		},
+		linkedin: {
+			type: String,
+			trim: true,
+		},
+		youtube: {
+			type: String,
+			trim: true,
+		},
+		daraz: {
+			type: String,
+			trim: true,
+		},
+		twitter: {
+			type: String,
+			trim: true,
+		},
+		whatsapp: {
+			type: String,
+			trim: true,
+		},
+		tiktok: {
+			type: String,
+			trim: true,
+		},
+		telegram: {
 			type: String,
 			trim: true,
 		},

@@ -80,3 +80,11 @@ export { default as CouponType } from './coupon/coupon.type.js';
 export { default as SMS } from './sms/sms.model.js';
 export { default as SMSType } from './sms/sms.types.js';
 export { default as smsSettings } from './sms/sms.settings.js';
+
+//Asset
+export { default as Asset } from './asset/asset.model.js';
+export { default as AssetType } from './asset/asset.types.js';
+export { default as assetSettings } from './asset/asset.settings.js';
+
+//Payment Account
+export * from './payment-account/index.js';

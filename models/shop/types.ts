@@ -4,6 +4,7 @@ type ShopType = {
 	id: string;
 	name: string;
 	description: string;
+	shippingCharge: number;
 	template?: number;
 	logo?: string;
 	image?: string;
@@ -26,6 +27,13 @@ type ShopType = {
 	website?: string;
 	instagram?: string;
 	facebook?: string;
+	linkedin?: string;
+	twitter?: string;
+	whatsapp?: string;
+	telegram?: string;
+	daraz?: string;
+	youtube?: string;
+	tiktok?: string;
 };
 
 export default ShopType;
