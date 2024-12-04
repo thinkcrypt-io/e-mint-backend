@@ -16,7 +16,7 @@ import {
 	getCount,
 } from '../controllers/common/index.js';
 
-import Order, { settings } from '../models/order/order.model.js';
+import Model, { contentSettings as settinggs } from '../models/store/store.model.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import getSum from '../controllers/common/getSum.controller.js';
@@ -56,11 +56,11 @@ const router = express.Router();
 // 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 // 	.post(...postMiddleware, addOrder);
 
-router.get('/', getContent);
-router.put('/', updateContent);
-router.post('/product', addProductList);
-router.delete('/product/:id', deleteProductList);
-router.put('/product/:id', editProductList);
+router.get('/', protect, getContent);
+router.put('/', protect, updateContent);
+router.post('/product', protect, addProductList);
+router.delete('/product/:id', protect, deleteProductList);
+router.put('/product/:id', protect, editProductList);
 
 // router.get('/:id', protect, hasPermission(['view_order']), getDocumentById(config.QUERY_OPTIONS));
 

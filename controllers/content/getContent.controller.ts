@@ -1,17 +1,41 @@
 import { Response } from 'express';
 import Store from '../../models/store/store.model.js';
+import { getErrorMessage, Shop } from '../../imports.js';
 
 const getContent = async (req: any, res: any): Promise<Response> => {
 	try {
-		const data = await Store.findOne({});
+		const queryHelper = (req as any).queryHelper || {};
+
+		let data = await Store.findOne(queryHelper).populate('shop');
+
 		if (!data) {
-			return res.status(404).json({ message: 'Store not found' });
+			const shop = await Shop.findOne({ _id: req.shop });
+			const newStore = new Store({
+				shop: req.shop,
+				basic: {
+					name: shop?.name,
+					logo: shop?.logo,
+					phone: shop?.phone,
+					email: shop?.email,
+				},
+				socials: {
+					facebook: shop?.facebook,
+					twitter: shop?.twitter,
+					instagram: shop?.instagram,
+					linkedin: shop?.linkedin,
+					youtube: shop?.youtube,
+				},
+				isActive: true,
+			});
+
+			const saved = await newStore.save();
+			data = await Store.findOne({ _id: saved._id }).populate('shop');
 		}
+
 		return res.status(200).json(data);
 	} catch (e: any) {
-		console.log(e.message);
-		const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : e.message;
-		return res.status(500).json({ message: 'Internal Server Errir' });
+		const message = getErrorMessage(e);
+		return res.status(500).json({ message });
 	}
 };
 

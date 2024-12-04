@@ -9,7 +9,9 @@ const addProductList = async (req: any, res: any): Promise<Response> => {
 	const { type, title, subTitle, id, priority } = req.body;
 
 	try {
-		const data = await Store.findOne({});
+		const queryHelper = (req as any).queryHelper || {};
+		let data = await Store.findOne(queryHelper);
+
 		if (!data) {
 			return res.status(404).json({ message: 'Store not found' });
 		}

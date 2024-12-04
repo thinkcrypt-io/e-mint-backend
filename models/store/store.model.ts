@@ -1,3 +1,4 @@
+import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 
 const schema = new Schema<any>(
@@ -118,10 +119,19 @@ const schema = new Schema<any>(
 				],
 			},
 			about: {
-				title: String,
-				subTitle: String,
+				title: {
+					type: String,
+					default: '',
+				},
+				subTitle: {
+					type: String,
+					default: '',
+				},
 				image: String,
-				btnText: String,
+				btnText: {
+					type: String,
+					default: 'Read More',
+				},
 			},
 		},
 		isActive: { type: Boolean, required: true, default: true },
@@ -134,9 +144,34 @@ const schema = new Schema<any>(
 	}
 );
 
+export const contentSettings: Settings = {
+	basic: {
+		type: 'array-object',
+		title: 'Basic',
+		edit: true,
+	},
+
+	content: {
+		type: 'array-object',
+		title: 'Content',
+		edit: true,
+	},
+	isActive: {
+		type: 'boolean',
+		title: 'Is Active',
+		edit: true,
+	},
+	shop: {
+		type: 'string',
+		title: 'Shop',
+		edit: true,
+	},
+	socials: {
+		type: 'object',
+		title: 'Socials',
+		edit: true,
+	},
+};
+
 const Store = mongoose.model<any>('Store', schema);
 export default Store;
-
-// export { default as filters } from './filters.js';
-//export { default as config } from './config.js';
-// export { default as settings } from './products.settings.js';
