@@ -26,7 +26,7 @@ export const protect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		const getShop = await Shop.findOne({ id: req.headers.store });
+		const getShop = await Shop.findOne({ id: req.headers.store || '0001' });
 		req.shop = getShop?._id;
 
 		req.user = await Customer.findById(decoded?._id).select('-password');

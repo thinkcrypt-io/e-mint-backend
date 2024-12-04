@@ -4,7 +4,7 @@ import Store from '../../models/store/store.model.js';
 const getStore = async (req: any, res: any): Promise<Response> => {
 	try {
 		const data = await Store.findOne({
-			shop: req.shop,
+			shop: req.shop || '0001',
 		});
 		if (!data) {
 			return res.status(404).json({ message: 'Store not found' });
