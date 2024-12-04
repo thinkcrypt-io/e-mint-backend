@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../../middleware/userAuth.middleware.js';
+import { protect, shop } from '../../middleware/userAuth.middleware.js';
 
 import updateSellerPreferences from '../../controllers/auth/updatePreference.controller.js';
 import userLoginController from '../../controllers/auth/userLogin.controller.js';
@@ -13,7 +13,7 @@ const router = express.Router();
 //route for: /api/auth route
 router
 	.post('/login', userLoginController)
-	.post('/register', userRegisterController)
+	.post('/register', shop, userRegisterController)
 	.get('/self', protect, userGetSelf);
 
 router.put('/update/preferences', protect, updateSellerPreferences);

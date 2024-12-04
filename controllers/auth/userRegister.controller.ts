@@ -22,7 +22,7 @@ const userRegisterController = async (req: any, res: Response): Promise<Response
 
 	try {
 		const { name, email, password, confirm } = req.body;
-		let user = await Customer.findOne({ email });
+		let user = await Customer.findOne({ email, shop: req.shop });
 
 		if (user?.isRegisteredOnline)
 			return res.status(400).json({
