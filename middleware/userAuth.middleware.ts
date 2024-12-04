@@ -48,7 +48,7 @@ export const shop = async (
 	next: NextFunction
 ): Promise<Response | void> => {
 	try {
-		const getShop = await Shop.findOne({ id: req.headers.store });
+		const getShop = await Shop.findOne({ id: req.headers.store || '0001' });
 		req.shop = getShop?._id;
 		next();
 	} catch (e: any) {
