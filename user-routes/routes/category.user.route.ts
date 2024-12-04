@@ -20,6 +20,7 @@ import {
 import addOrder from '../../controllers/order/addOrder.controller.js';
 import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
 import Category, { settings } from '../../models/category/category.model.js';
+import { shop } from '../../middleware/userAuth.middleware.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -32,6 +33,7 @@ const config = constructConfig({
 // Define common middleware
 const commonMiddleware = [
 	//protect,
+	shop,
 	sort,
 	query(config.FILTER_OPTIONS),
 ];
@@ -63,7 +65,7 @@ router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 // 	updateDocument(config.EDITS)
 // );
 // router.delete('/:id', protect, hasPermission(['delete_product']), deleteDocument(config.MODEL));
-router.get('/get/count', protect, getCount(config.MODEL));
+router.get('/get/count', protect, shop, getCount(config.MODEL));
 
 // router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
 

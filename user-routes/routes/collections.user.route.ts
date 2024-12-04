@@ -14,6 +14,7 @@ import updateDocument from '../../controllers/common/updateDocument.controller.j
 import updateManyDocuments from '../../controllers/common/updateManyDocuments.controller.js';
 import getDocumentToEditById from '../../controllers/common/getDocumentToEditById.controller.js';
 import hasPermission from '../../middleware/hasPermission.middleware.js';
+import { shop } from '../../middleware/userAuth.middleware.js';
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ const config = constructConfig({
 
 const commonMiddleware = [
 	// protect,
+	shop,
 	sort,
 	query(config.FILTER_OPTIONS),
 	// hasPermission(['view_collection']),

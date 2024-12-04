@@ -13,9 +13,7 @@ import Customer from '../../models/customer/customer.model.js';
 //     "phone": "12345678901"
 // }
 
-type RequestType = Request & { body: any };
-
-const userRegisterController = async (req: RequestType, res: Response): Promise<Response> => {
+const userRegisterController = async (req: any, res: Response): Promise<Response> => {
 	const { error } = validate(req.body);
 	if (error) return res.status(400).send({ message: error.details[0].message });
 
@@ -58,6 +56,7 @@ const userRegisterController = async (req: RequestType, res: Response): Promise<
 			password,
 			isRegisteredOnline: true,
 			isActive: true,
+			shop: req.shop,
 		});
 
 		const salt = await bcrypt.genSalt(10);

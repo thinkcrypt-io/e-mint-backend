@@ -16,6 +16,14 @@ const schema = new Schema<any>(
 				type: String,
 				default: 'asifistiaque.ai@gmail.com',
 			},
+			brandColor: {
+				type: String,
+				default: '#202020',
+			},
+			brandTextColor: {
+				type: String,
+				default: '#fff',
+			},
 		},
 		shop: {
 			type: Schema.Types.ObjectId,
@@ -38,6 +46,14 @@ const schema = new Schema<any>(
 				subTitle: String,
 				btnText: String,
 				href: String,
+				titleColor: {
+					type: String,
+					default: '#000',
+				},
+				subTitleColor: {
+					type: String,
+					default: '#000',
+				},
 			},
 			featuredCollection: [
 				{

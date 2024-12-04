@@ -4,6 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 //import { DecodedTokenType } from '../lib/types/model.types.js';
 import { SUPER_ADMIN } from '../lib/types/permissions.js';
 import Customer from '../models/customer/customer.model.js';
+import { Shop } from '../imports.js';
 
 type RequestType = Request & {
 	user?: unknown;
@@ -25,16 +26,10 @@ export const protect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		// if (!decoded.restaurant) {
-		// 	return res.status(401).json({ message: 'Not authorized, token failed' });
-		// }
+		const getShop = await Shop.findOne({ id: req.headers.store });
+		req.shop = getShop?._id;
 
 		req.user = await Customer.findById(decoded?._id).select('-password');
-		// req.restaurant = decoded.restaurant;
-
-		// if (decoded.restaurant != req.restaurant) {
-		// 	return res.status(401).json({ message: 'Restaurant ID Does not match user' });
-		// }
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
@@ -44,6 +39,21 @@ export const protect = async (
 	} catch (e: any) {
 		console.error(e);
 		return res.status(401).json({ message: 'Not authorized, token failed' });
+	}
+};
+
+export const shop = async (
+	req: any,
+	res: Response,
+	next: NextFunction
+): Promise<Response | void> => {
+	try {
+		const getShop = await Shop.findOne({ id: req.headers.store });
+		req.shop = getShop?._id;
+		next();
+	} catch (e: any) {
+		console.error(e);
+		return res.status(401).json({ message: 'Internal server error' });
 	}
 };
 

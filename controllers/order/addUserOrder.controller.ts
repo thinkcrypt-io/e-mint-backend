@@ -30,6 +30,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 			shippingCharge: cart.shipping,
 			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
 			discount: cart.discount,
+			shop: req.shop,
 		});
 
 		const saved = (await order.save()) as any;
