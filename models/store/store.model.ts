@@ -1,3 +1,4 @@
+import { autoBatchEnhancer } from '@reduxjs/toolkit';
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 
@@ -16,6 +17,14 @@ const schema = new Schema<any>(
 				type: String,
 				default: 'asifistiaque.ai@gmail.com',
 			},
+			primaryFont: {
+				type: String,
+				default: 'Roboto',
+			},
+			secondaryFont: {
+				type: String,
+				default: 'Roboto',
+			},
 			brandColor: {
 				type: String,
 				default: '#202020',
@@ -24,6 +33,23 @@ const schema = new Schema<any>(
 				type: String,
 				default: '#fff',
 			},
+			primaryTextColor: {
+				type: String,
+				default: '#000',
+			},
+			secondaryTextColor: {
+				type: String,
+				default: '#666',
+			},
+			headerBg: {
+				type: String,
+				default: '#fff',
+			},
+			headerFg: {
+				type: String,
+				default: '#000',
+			},
+			headerBorder: String,
 		},
 		shop: {
 			type: Schema.Types.ObjectId,
@@ -40,12 +66,34 @@ const schema = new Schema<any>(
 			youtube: String,
 		},
 		content: {
+			banner: {
+				centerText: {
+					type: String,
+					default: '',
+				},
+				rightText: {
+					type: String,
+					default: '',
+				},
+				bgColor: String,
+				fgColor: String,
+				hide: {
+					type: Boolean,
+					default: false,
+				},
+			},
+
 			hero: {
 				image: String,
 				title: String,
 				subTitle: String,
 				btnText: String,
 				href: String,
+				align: {
+					type: String,
+					enum: ['left', 'right', 'center'],
+					default: 'left',
+				},
 				titleColor: {
 					type: String,
 					default: '#000',
@@ -58,15 +106,6 @@ const schema = new Schema<any>(
 			featuredCollection: [
 				{
 					title: String,
-					// type: {
-					// 	type: String,
-					// 	enum: ['categories', 'collections', 'products'],
-					// 	required: true,
-					// },
-					// href: {
-					// 	type: String,
-					// 	required: true,
-					// },
 					subTitle: String,
 					image: String,
 					priority: {
