@@ -17,6 +17,10 @@ const schema = new Schema<any>(
 				type: String,
 				default: 'asifistiaque.ai@gmail.com',
 			},
+			bgColor: {
+				type: String,
+				default: '#fff',
+			},
 			primaryFont: {
 				type: String,
 				default: 'Roboto',
