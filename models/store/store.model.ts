@@ -92,6 +92,12 @@ const schema = new Schema<any>(
 				subTitle: String,
 				btnText: String,
 				href: String,
+				padding: {
+					type: String,
+					default: 'apply',
+					enum: ['apply', 'none'],
+					required: true,
+				},
 				align: {
 					type: String,
 					enum: ['left', 'right', 'center'],
