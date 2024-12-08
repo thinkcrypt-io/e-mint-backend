@@ -20,6 +20,7 @@ import {
 import Product, { settings } from '../../models/products/products.model.js';
 import addOrder from '../../controllers/order/addOrder.controller.js';
 import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
+import { shop } from '../../middleware/userAuth.middleware.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -32,6 +33,7 @@ const config = constructConfig({
 // Define common middleware
 const commonMiddleware = [
 	//protect,
+	shop,
 	sort,
 	query(config.FILTER_OPTIONS),
 ];

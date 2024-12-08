@@ -19,6 +19,7 @@ import updateManyDocuments from '../../controllers/common/updateManyDocuments.co
 import duplicateDocument from '../../controllers/common/duplicateDocument.controller.js';
 import getDocumentToEditById from '../../controllers/common/getDocumentToEditById.controller.js';
 import hasPermission from '../../middleware/hasPermission.middleware.js';
+import { shop } from '../../middleware/userAuth.middleware.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -34,6 +35,7 @@ const postMiddleware = [protect, validate(config.VALIDATORS.POST), hasPermission
 const commonMiddleware = [
 	// protect,
 	sort,
+	shop,
 	query(config.FILTER_OPTIONS),
 	// hasPermission(['view_category']),
 ];
@@ -47,7 +49,7 @@ const updateMiddleware = [
 router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS));
 // .post(...postMiddleware, createDocument(config.MODEL));
 router.get('/:id', getDocumentById(config.QUERY_OPTIONS));
-router.get('/get/count', getCount(config.MODEL));
+router.get('/get/count', shop, getCount(config.MODEL));
 //router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
 // router.put('/:id', ...updateMiddleware, updateDocument(config.EDITS));
 // router.delete('/:id', protect, hasPermission(['delete_category']), deleteDocument(config.MODEL));
