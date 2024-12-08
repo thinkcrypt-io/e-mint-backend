@@ -184,6 +184,15 @@ schema.virtual('inStock').get(function (this: any) {
 	return this.stock > 0;
 });
 
+// Pre-save middleware to set the slug field
+schema.pre('save', function (next) {
+	if (!this.slug) {
+		if (!this.name) return;
+		this.slug = (this.name as any).toLowerCase().replace(/\s+/g, '-');
+	}
+	next();
+});
+
 // Define the virtual property
 schema.virtual('inventoryCostPrice').get(function (this: any) {
 	return this.price * this.stock;
