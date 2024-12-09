@@ -53,6 +53,11 @@ const schema = new Schema<any>(
 				default: '#000',
 			},
 			headerBorder: String,
+			footerBg: String,
+			footerFg: String,
+			footerBannerBg: String,
+			footerBannerFg: String,
+			footerBorder: String,
 		},
 		shop: {
 			type: Schema.Types.ObjectId,
@@ -80,6 +85,7 @@ const schema = new Schema<any>(
 				},
 				bgColor: String,
 				fgColor: String,
+
 				hide: {
 					type: Boolean,
 					default: false,
