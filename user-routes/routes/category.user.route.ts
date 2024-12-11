@@ -31,12 +31,7 @@ const config = constructConfig({
 });
 
 // Define common middleware
-const commonMiddleware = [
-	//protect,
-	shop,
-	sort,
-	query(config.FILTER_OPTIONS),
-];
+const commonMiddleware = [shop, sort, query(config.FILTER_OPTIONS)];
 const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
 const updateMiddleware = [
 	protect,

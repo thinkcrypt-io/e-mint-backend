@@ -50,6 +50,11 @@ export const shop = async (
 	try {
 		const getShop = await Shop.findOne({ id: req.headers.store || '0001' });
 		req.shop = getShop?._id;
+
+		let query: any = req?.queryHelper || {};
+		query.shop = getShop?._id;
+		req.queryHelper = query;
+
 		next();
 	} catch (e: any) {
 		console.error(e);
