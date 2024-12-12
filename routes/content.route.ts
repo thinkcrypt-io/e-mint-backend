@@ -20,11 +20,11 @@ import editProductListHongo from '../controllers/hongo/editProductListController
 const router = express.Router();
 
 //NEXA THEME
-router.get('/', protect, getContent);
-router.put('/', protect, updateContent);
-router.post('/product', protect, addProductList);
-router.delete('/product/:id', protect, deleteProductList);
-router.put('/product/:id', protect, editProductList);
+router.get('/nexa', protect, getContent);
+router.put('/nexa', protect, updateContent);
+router.post('/product/nexa', protect, addProductList);
+router.delete('/product/nexa/:id', protect, deleteProductList);
+router.put('/product/nexa/:id', protect, editProductList);
 
 //HONGO THEME
 router.get('/hongo', protect, getContentHongo);
