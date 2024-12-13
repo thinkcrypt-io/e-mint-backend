@@ -72,6 +72,27 @@ const schema = new Schema<any>(
 				type: String,
 				default: '#000',
 			},
+			headerTagColor: {
+				type: String,
+				default: '#000',
+			},
+			headerTagTextColor: {
+				type: String,
+				default: '#000',
+			},
+			searchTextColor: {
+				type: String,
+				default: '#000',
+			},
+			searchBoxColor: {
+				type: String,
+				default: '#fff',
+			},
+			headerIconColor: {
+				type: String,
+				default: '#000',
+			},
+
 			headerBorder: String,
 			footerBg: String,
 			footerFg: String,
@@ -114,6 +135,70 @@ const schema = new Schema<any>(
 
 			services: [{ image: String, title: String, description: String }],
 
+			aboutPage: {
+				image: String,
+				title: {
+					type: String,
+					default: 'Enter your title here',
+				},
+				description: {
+					type: String,
+					default: 'Enter your description here',
+				},
+				textColor: {
+					type: String,
+					default: '#fff',
+				},
+			},
+
+			privaryPolicyPage: {
+				image: String,
+				title: {
+					type: String,
+					default: 'Enter your title here',
+				},
+				description: {
+					type: String,
+					default: 'Enter your description here',
+				},
+				textColor: {
+					type: String,
+					default: '#fff',
+				},
+			},
+
+			faqPage: {
+				image: String,
+				title: {
+					type: String,
+					default: 'Enter your title here',
+				},
+				description: {
+					type: String,
+					default: 'Enter your description here',
+				},
+				textColor: {
+					type: String,
+					default: '#fff',
+				},
+			},
+
+			contactPage: {
+				image: String,
+				title: {
+					type: String,
+					default: 'Enter your title here',
+				},
+				description: {
+					type: String,
+					default: 'Enter your description here',
+				},
+				textColor: {
+					type: String,
+					default: '#fff',
+				},
+			},
+
 			hero: {
 				image: String,
 				title: {
@@ -136,7 +221,7 @@ const schema = new Schema<any>(
 				align: {
 					type: String,
 					enum: ['left', 'right', 'center'],
-					default: 'left',
+					default: 'center',
 				},
 				titleColor: {
 					type: String,
