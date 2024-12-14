@@ -16,6 +16,10 @@ const schema = new Schema<any>(
 				type: String,
 				default: 'asifistiaque.ai@gmail.com',
 			},
+			address: {
+				type: String,
+				default: 'Dhaka, Bangladesh',
+			},
 			bgColor: {
 				type: String,
 				default: '#fff',
@@ -242,6 +246,17 @@ const schema = new Schema<any>(
 				iconRadius: {
 					type: Number,
 					default: 999,
+				},
+			},
+
+			footer: {
+				bgColor: {
+					type: String,
+					default: '#fff',
+				},
+				fgColor: {
+					type: String,
+					default: '#000',
 				},
 			},
 
