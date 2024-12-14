@@ -319,6 +319,10 @@ const schema = new Schema<any>(
 					type: String,
 					default: 'Collections',
 				},
+				borderRadius: {
+					type: Number,
+					default: 4,
+				},
 				subTitle: {
 					type: String,
 					default: 'Discover our collection',
