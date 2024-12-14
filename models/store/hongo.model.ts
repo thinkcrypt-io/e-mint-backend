@@ -183,6 +183,68 @@ const schema = new Schema<any>(
 				},
 			},
 
+			header: {
+				bgColor: {
+					type: String,
+					default: '#fff',
+				},
+				fgColor: {
+					type: String,
+					default: '#000',
+				},
+				borderColor: {
+					type: String,
+					default: '#000',
+				},
+				searchBoxBg: {
+					type: String,
+					default: '#fff',
+				},
+				searchBoxFg: {
+					type: String,
+					default: '#000',
+				},
+				searchBoxIcon: {
+					type: String,
+					default: '#000',
+				},
+				searchBoxText: {
+					type: String,
+					default: 'Search',
+				},
+				searchBoxTextColor: {
+					type: String,
+					default: '#000',
+				},
+				iconBg: {
+					type: String,
+					default: '#000',
+				},
+				iconFg: {
+					type: String,
+					default: '#fff',
+				},
+				tagBg: {
+					type: String,
+					default: '#000',
+				},
+				tagFg: {
+					type: String,
+					default: '#fff',
+				},
+				logo: {
+					type: String,
+				},
+				searchBoxRadius: {
+					type: Number,
+					default: 999,
+				},
+				iconRadius: {
+					type: Number,
+					default: 999,
+				},
+			},
+
 			contactPage: {
 				image: String,
 				title: {
