@@ -1,108 +1,98 @@
+import { color } from 'framer-motion';
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
+
+const font = {
+	type: String,
+	default: 'Roboto',
+};
+
+const getFontSize = (size?: number) => {
+	return {
+		type: Number,
+		default: size || 16,
+	};
+};
+
+const getBoolean = (bol: boolean) => {
+	return {
+		type: Boolean,
+		default: bol,
+	};
+};
+
+const getNumber = (num: number) => {
+	return {
+		type: Number,
+		default: num,
+	};
+};
+
+const getResponsiveFontSize = (lg: number, sm: number) => {
+	return {
+		sm: {
+			type: Number,
+			default: sm || 16,
+		},
+		lg: {
+			type: Number,
+			default: lg || 16,
+		},
+	};
+};
+
+const getString = (str: string, required?: boolean) => {
+	return {
+		type: String,
+		default: str,
+		required: required || false,
+	};
+};
+
+const colors = {
+	fg: {
+		type: String,
+		default: '#353535',
+	},
+	bg: {
+		type: String,
+		default: '#e5e5e5',
+	},
+};
 
 const schema = new Schema<any>(
 	{
 		basic: {
-			name: { type: String, required: true, default: 'Hongo Store' },
-			logo: {
-				type: String,
-			},
-			phone: {
-				type: String,
-				default: '+880 1828 398 225',
-			},
-			email: {
-				type: String,
-				default: 'asifistiaque.ai@gmail.com',
-			},
-			address: {
-				type: String,
-				default: 'Dhaka, Bangladesh',
-			},
-			bgColor: {
-				type: String,
-				default: '#fff',
-			},
-			borderColor: {
-				type: String,
-				default: '#000',
-			},
-			cardBg: {
-				type: String,
-				default: '#fff',
-			},
-			btnColor: {
-				type: String,
-				default: '#000',
-			},
-			btnTextColor: {
-				type: String,
-				default: '#fff',
-			},
-			cardRadius: {
-				type: Number,
-				default: 4,
-			},
-			primaryFont: {
-				type: String,
-				default: 'Roboto',
-			},
-			secondaryFont: {
-				type: String,
-				default: 'Roboto',
-			},
-			brandColor: {
-				type: String,
-				default: '#202020',
-			},
-			brandTextColor: {
-				type: String,
-				default: '#fff',
-			},
-			primaryTextColor: {
-				type: String,
-				default: '#000',
-			},
-			secondaryTextColor: {
-				type: String,
-				default: '#666',
-			},
-			headerBg: {
-				type: String,
-				default: '#fff',
-			},
-			headerFg: {
-				type: String,
-				default: '#000',
-			},
-			headerTagColor: {
-				type: String,
-				default: '#000',
-			},
-			headerTagTextColor: {
-				type: String,
-				default: '#000',
-			},
-			searchTextColor: {
-				type: String,
-				default: '#000',
-			},
-			searchBoxColor: {
-				type: String,
-				default: '#fff',
-			},
-			headerIconColor: {
-				type: String,
-				default: '#000',
-			},
-
-			headerBorder: String,
-			footerBg: String,
-			footerFg: String,
-			footerBannerBg: String,
-			footerBannerFg: String,
-			footerBorder: String,
+			name: getString('Hongo Store', true),
+			logo: getString(''),
+			phone: getString('+8801xxxxxxxxx'),
+			email: getString('example@yourmail.com'),
+			address: getString('Dhaka, Bangladesh'),
+			bgColor: colors?.bg,
+			borderColor: colors?.fg,
+			cardBg: colors?.bg,
+			btnColor: colors?.fg,
+			btnTextColor: colors?.bg,
+			cardRadius: getNumber(4),
+			primaryFont: font,
+			secondaryFont: font,
+			brandColor: colors?.bg,
+			brandTextColor: colors?.fg,
+			primaryTextColor: colors?.bg,
+			secondaryTextColor: colors?.bg,
+			headerBg: colors?.fg,
+			headerFg: colors?.bg,
+			headerTagBg: colors?.fg,
+			headerTagTextColor: colors?.fg,
+			searchTextColor: colors?.fg,
+			searchBoxColor: colors?.bg,
+			headerIconColor: colors?.fg,
+			headerBorder: colors?.bg,
+			footerBg: colors?.bg,
+			footerFg: colors?.fg,
+			footerBannerBg: colors?.bg,
+			footerBannerFg: colors?.fg,
+			footerBorder: colors?.fg,
 		},
 		shop: {
 			type: Schema.Types.ObjectId,
@@ -120,201 +110,114 @@ const schema = new Schema<any>(
 		},
 		content: {
 			banner: {
-				leftText: {
-					type: String,
-					default: '',
-				},
-				rightText: {
-					type: String,
-					default: '',
-				},
-				bgColor: String,
-				fgColor: String,
-
-				hide: {
-					type: Boolean,
-					default: false,
-				},
+				leftText: getString('Left Text'),
+				rightText: getString('Right Text'),
+				fontFamily: font,
+				height: Number,
+				fontSize: getNumber(16),
+				letterSpacing: getNumber(0),
+				paddingY: getNumber(8),
+				fontWeight: getNumber(400),
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+				hide: getBoolean(false),
 			},
 
 			services: [{ image: String, title: String, description: String }],
-
 			aboutPage: {
 				image: String,
-				title: {
-					type: String,
-					default: 'Enter your title here',
-				},
-				description: {
-					type: String,
-					default: 'Enter your description here',
-				},
-				textColor: {
-					type: String,
-					default: '#fff',
-				},
+				title: getString('Enter your title here'),
+				description: getString('Enter your description here'),
+				textColor: colors?.fg,
 			},
 
 			privaryPolicyPage: {
 				image: String,
-				title: {
-					type: String,
-					default: 'Enter your title here',
-				},
-				description: {
-					type: String,
-					default: 'Enter your description here',
-				},
-				textColor: {
-					type: String,
-					default: '#fff',
-				},
+				title: getString('Enter your title here'),
+				description: getString('Enter your description here'),
+				textColor: colors?.bg,
 			},
 
 			faqPage: {
 				image: String,
-				title: {
-					type: String,
-					default: 'Enter your title here',
-				},
-				description: {
-					type: String,
-					default: 'Enter your description here',
-				},
-				textColor: {
-					type: String,
-					default: '#fff',
-				},
+				title: getString('Enter your title here'),
+				description: getString('Enter your description here'),
+				textColor: colors?.bg,
 			},
 
 			header: {
-				bgColor: {
-					type: String,
-					default: '#fff',
-				},
-				fgColor: {
-					type: String,
-					default: '#000',
-				},
-				borderColor: {
-					type: String,
-					default: '#000',
-				},
-				searchBoxBg: {
-					type: String,
-					default: '#fff',
-				},
-				searchBoxFg: {
-					type: String,
-					default: '#000',
-				},
-				searchBoxIcon: {
-					type: String,
-					default: '#000',
-				},
-				searchBoxText: {
-					type: String,
-					default: 'Search',
-				},
-				searchBoxTextColor: {
-					type: String,
-					default: '#000',
-				},
-				iconBg: {
-					type: String,
-					default: '#000',
-				},
-				iconFg: {
-					type: String,
-					default: '#fff',
-				},
-				tagBg: {
-					type: String,
-					default: '#000',
-				},
-				tagFg: {
-					type: String,
-					default: '#fff',
-				},
-				logo: {
-					type: String,
-				},
-				searchBoxRadius: {
-					type: Number,
-					default: 999,
-				},
-				iconRadius: {
-					type: Number,
-					default: 999,
-				},
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+				borderColor: colors?.bg,
+				searchBoxBg: colors?.bg,
+				searchBoxFg: colors?.fg,
+				searchBoxIcon: colors?.fg,
+				searchBoxText: getString('Search'),
+				searchBoxTextColor: colors?.fg,
+				iconBg: colors?.fg,
+				iconFg: colors?.bg,
+				tagBg: colors?.fg,
+				tagFg: colors?.bg,
+				logo: getString(''),
+				searchBoxRadius: getNumber(999),
+				iconRadius: getNumber(999),
 			},
 
 			footer: {
-				bgColor: {
-					type: String,
-					default: '#fff',
-				},
-				fgColor: {
-					type: String,
-					default: '#000',
-				},
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
 			},
 
 			contactPage: {
 				image: String,
-				title: {
-					type: String,
-					default: 'Enter your title here',
-				},
-				description: {
-					type: String,
-					default: 'Enter your description here',
-				},
-				textColor: {
-					type: String,
-					default: '#fff',
-				},
+				title: getString('Enter your title here'),
+				description: getString('Enter your description here'),
+				textColor: colors?.fg,
 			},
 
 			hero: {
 				image: String,
-				title: {
-					type: String,
-					default: 'Your title here',
-				},
-				subTitle: {
-					type: String,
-					default: 'Your subtitle here',
-				},
-				btnText: {
-					type: String,
-					default: 'Shop Now',
-				},
-				href: {
-					type: String,
-					default: '#',
-				},
+
+				//
+				title: getString('Your Title Here'),
+				titleFont: String,
+				titleFontSizeSm: getNumber(40),
+				titleFontSizeLg: getNumber(84),
+				titleLineHeight: getNumber(4),
+				titleColor: colors?.fg,
+				titleLetterSpacing: getNumber(0),
+				titleFontWeight: getString('600'),
+
+				//
+				subTitle: getString('Your Subtitle Here'),
+				subTitleFont: String,
+				subTitleFontSizeSm: getNumber(16),
+				subTitleFontSizeLg: getNumber(16),
+				subTitleColor: colors?.fg,
+				subTitleLineHeight: getNumber(1),
+				subTitleLetterSpacing: getNumber(1),
+				subTitleFontWeight: getString('400'),
+
+				//
+				btnText: getString('Shop Now'),
+				href: getString('#'),
+				btnHeight: getNumber(44),
+				btnWidth: getNumber(100),
+				btnColor: colors?.bg,
+				btnTextColor: colors?.fg,
+				btnRadius: getNumber(0),
+				btnBorderColor: colors?.bg,
+				btnFontSize: getNumber(16),
+
+				//btn hover
+				btnHoverColor: colors?.fg,
+				btnHoverTextColor: colors?.bg,
+				btnHoverBorderColor: colors?.fg,
 
 				align: {
 					type: String,
 					enum: ['left', 'right', 'center'],
 					default: 'center',
-				},
-				titleColor: {
-					type: String,
-					default: '#000',
-				},
-				subTitleColor: {
-					type: String,
-					default: '#000',
-				},
-				btnColor: {
-					type: String,
-					default: '#fff',
-				},
-				btnTextColor: {
-					type: String,
-					default: '#000',
 				},
 			},
 			featuredCollection: [
@@ -330,22 +233,10 @@ const schema = new Schema<any>(
 			],
 
 			collections: {
-				title: {
-					type: String,
-					default: 'Collections',
-				},
-				borderRadius: {
-					type: Number,
-					default: 4,
-				},
-				subTitle: {
-					type: String,
-					default: 'Discover our collection',
-				},
-				btnText: {
-					type: String,
-					default: 'View All',
-				},
+				title: getString('Collections'),
+				borderRadius: getNumber(4),
+				subTitle: getString('Discover our collection'),
+				btnText: getString('View All'),
 				items: [
 					{
 						id: {

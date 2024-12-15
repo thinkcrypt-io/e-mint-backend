@@ -32,7 +32,7 @@ const updateContent = async (req: any, res: any): Promise<Response> => {
 	} catch (e: any) {
 		console.log(e.message);
 		const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : e.message;
-		return res.status(500).json({ message: 'Internal Server Error' });
+		return res.status(500).json({ message: e.message });
 	}
 };
 

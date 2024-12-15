@@ -24,6 +24,27 @@ const updateContent = async (req: any, res: any): Promise<Response> => {
 			}
 		});
 
+		// Object.keys(content).forEach(key => {
+		// 	if (key in data[type]) {
+		// 		if (typeof content[key] === 'object' && content[key] !== null) {
+		// 			Object.keys(content[key]).forEach(subKey => {
+		// 				if (typeof content[key][subKey] === 'object' && content[key][subKey] !== null) {
+		// 					Object.keys(content[key][subKey]).forEach(nestedKey => {
+		// 						data[type][key][subKey][nestedKey] = content[key][subKey][nestedKey];
+		// 					});
+		// 				} else {
+		// 					data[type][key][subKey] = content[key][subKey];
+		// 				}
+		// 			});
+		// 		} else {
+		// 			data[type][key] = content[key];
+		// 		}
+		// 	} else {
+		// 		// Add new key if it doesn't exist
+		// 		data[type][key] = content[key];
+		// 	}
+		// });
+
 		const saved = await data.save();
 		return res.status(200).json(saved);
 	} catch (e: any) {
