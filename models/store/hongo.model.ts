@@ -1,4 +1,3 @@
-import { color } from 'framer-motion';
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 
