@@ -88,3 +88,6 @@ export { default as assetSettings } from './asset/asset.settings.js';
 
 //Payment Account
 export * from './payment-account/index.js';
+
+//deployment
+export { default as Deployment } from './deployment/Deployment.model.js';

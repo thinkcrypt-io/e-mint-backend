@@ -1,63 +1,6 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
-
-const font = {
-	type: String,
-	default: 'Roboto',
-};
-
-const getFontSize = (size?: number) => {
-	return {
-		type: Number,
-		default: size || 16,
-	};
-};
-
-const getBoolean = (bol: boolean) => {
-	return {
-		type: Boolean,
-		default: bol,
-	};
-};
-
-const getNumber = (num: number) => {
-	return {
-		type: Number,
-		default: num,
-	};
-};
-
-const getResponsiveFontSize = (lg: number, sm: number) => {
-	return {
-		sm: {
-			type: Number,
-			default: sm || 16,
-		},
-		lg: {
-			type: Number,
-			default: lg || 16,
-		},
-	};
-};
-
-const getString = (str: string, required?: boolean) => {
-	return {
-		type: String,
-		default: str,
-		required: required || false,
-	};
-};
-
-const colors = {
-	fg: {
-		type: String,
-		default: '#353535',
-	},
-	bg: {
-		type: String,
-		default: '#e5e5e5',
-	},
-};
+import { getString, colors, getNumber, font, getBoolean } from '../../util/index.js';
 
 const schema = new Schema<any>(
 	{
@@ -145,9 +88,11 @@ const schema = new Schema<any>(
 			},
 
 			header: {
+				//colors
 				bgColor: colors?.bg,
 				fgColor: colors?.fg,
 				borderColor: colors?.bg,
+
 				searchBoxBg: colors?.bg,
 				searchBoxFg: colors?.fg,
 				searchBoxIcon: colors?.fg,

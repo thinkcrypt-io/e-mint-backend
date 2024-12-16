@@ -1,8 +1,5 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import constructConfig from '../lib/configurator/constructConfig.js';
-
-import { protect, sort, query, validate, hasPermission } from '../middleware/index.js';
 
 import getContent from '../controllers/content/getContent.controller.js';
 import updateContent from '../controllers/content/updateContent.controller.js';
@@ -10,14 +7,28 @@ import addProductList from '../controllers/content/addProductList.controller.js'
 import deleteProductList from '../controllers/content/deleteProductListController.js';
 import editProductList from '../controllers/content/editProductListController.js';
 
-import getContentHongo from '../controllers/hongo/getContent.controller.js';
-import updateContentHongo from '../controllers/hongo/updateContent.controller.js';
-import addProductListHongo from '../controllers/hongo/addProductList.controller.js';
-import deleteProductListHongo from '../controllers/hongo/deleteProductListController.js';
-import editProductListHongo from '../controllers/hongo/editProductListController.js';
+import {
+	getContentHongo,
+	updateContentHongo,
+	addProductListHongo,
+	deleteProductListHongo,
+	editProductListHongo,
+	deployProjectHongo,
+	addHongoEnvController,
+	addDomainController,
+	checkDomainConfig,
+} from '../controllers/hongo/index.js';
+
+import Deploy, { settings as deploySettings } from '../models/deployment/Deployment.model.js';
+import { constructConfig, validate, protect } from '../imports.js';
 
 // Initialize a new router
 const router = express.Router();
+
+const hongoConfig = constructConfig({
+	model: Deploy,
+	config: deploySettings,
+});
 
 //NEXA THEME
 router.get('/nexa', protect, getContent);
@@ -32,5 +43,14 @@ router.put('/hongo', protect, updateContentHongo);
 router.post('/product/hongo', protect, addProductListHongo);
 router.delete('/product/hongo/:id', protect, deleteProductListHongo);
 router.put('/product/hongo/:id', protect, editProductListHongo);
+
+router.post('/deploy/hongo', protect, validate(hongoConfig.VALIDATORS.POST), deployProjectHongo);
+router.post('/env/hongo', protect, addHongoEnvController);
+
+//deployProject
+router.post('/add-domain', protect, addDomainController);
+
+//check domain  config
+router.get('/check-domain/:id', protect, checkDomainConfig);
 
 export default router;
