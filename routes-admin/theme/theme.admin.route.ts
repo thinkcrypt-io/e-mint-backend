@@ -25,6 +25,7 @@ import {
 } from '../../middleware/index.js';
 
 import { constructPermissions, constructConfig } from '../../imports.js';
+import { get } from 'mongoose';
 
 // Define the permissions
 const permission = 'category';
@@ -44,13 +45,13 @@ const middlewares = {
 	//Middleware for creating a new category
 	post: [protect, validate(config.VALIDATORS.POST), hasPermission([permissions.create])],
 	//Middleware for getting all categories
-	getAll: [protect, paginate, filter(config.FILTER_OPTIONS), hasPermission([permissions.read])],
+	getAll: [paginate, filter(config.FILTER_OPTIONS)],
 	//Middleware for updating a category
 	update: [protect, validate(config.VALIDATORS.UPDATE), hasPermission([permissions.update])],
 	//Middleware for updating many categories
 	updateMany: [protect, hasPermission([permissions.update])],
 	//Middleware for getting a category by ID
-	getById: [protect, hasPermission([permissions.read])],
+	getById: [],
 	//Middleware for deleting a category
 	delete: [protect, hasPermission([permissions.delete])],
 	//Middleware for copying a category
