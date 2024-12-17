@@ -7,6 +7,7 @@ import {
 	subscriptionRoute,
 	productRoute,
 	customerRoute,
+	themeRouter,
 } from './index.js';
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.use('/packages', packagesRoute);
 router.use('/subscriptions', subscriptionRoute);
 router.use('/products', productRoute);
 router.use('/customers', customerRoute);
+router.use('/themes', themeRouter);
 
 export default router;

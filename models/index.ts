@@ -91,3 +91,7 @@ export * from './payment-account/index.js';
 
 //deployment
 export { default as Deployment } from './deployment/Deployment.model.js';
+
+//theme
+export { default as Theme } from './theme/Theme.model.js';
+export { ThemeType, themeSettings } from './theme/Theme.model.js';
