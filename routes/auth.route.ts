@@ -11,6 +11,7 @@ import {
 	UpdateShop,
 } from '../controllers/index.js';
 import Shop from '../models/shop/shop.model.js';
+import changeSellerPassword from '../controllers/auth/changeSellerPassword.controller.js';
 
 const router = express.Router();
 
@@ -51,7 +52,7 @@ router.put(
 
 router.post('/shop/register', shopRegister);
 
-// router.post('/request-password-change', requestPasswordChange);
+router.put('/change-password', protect, changeSellerPassword);
 // router.get('/verify-reset-token/:token', verifyToken);
 // router.post('/reset', resetPassword);
 

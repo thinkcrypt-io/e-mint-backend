@@ -14,7 +14,7 @@ const deployProject = async (req: any, res: any) => {
 		});
 
 		const queryHelper = (req as any).queryHelper || {};
-		const { slug } = req.body;
+		const { slug, theme } = req.body;
 		const findDeployment = await Deployment.findOne({ slug });
 
 		if (findDeployment)
@@ -22,6 +22,11 @@ const deployProject = async (req: any, res: any) => {
 
 		const shop = await Shop.findOne({ _id: req.shop });
 		if (!shop) return res.status(400).json({ message: 'Shop not found' });
+
+		// const findIfStoreHasDeployment = await Deployment.findOne({ shop: req.shop });
+
+		// if (findIfStoreHasDeployment)
+		// 	return res.status(400).json({ message: 'Store already has a deployment' });
 
 		const createResponse = await vercel.projects.createProject({
 			requestBody: {
@@ -52,7 +57,7 @@ const deployProject = async (req: any, res: any) => {
 				},
 				{
 					key: 'NEXT_PUBLIC_TOKEN_NAME',
-					value: `MINT_HONGO_THEME_${shop.id}`,
+					value: `MINT_${theme.toUpperCase()}_THEME_${shop.id}`,
 					target: ['production', 'preview', 'development'],
 					type: 'plain',
 				},
@@ -103,7 +108,7 @@ const deployProject = async (req: any, res: any) => {
 			vercelId: createResponse.id,
 			vercelName: createResponse.name,
 			deployUrl: createDeployment.url,
-			theme: 'hongo',
+			theme: theme,
 			deploymentId: createDeployment.id,
 		});
 

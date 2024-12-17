@@ -78,4 +78,11 @@ export const settings: Settings = {
 		required: true,
 		trim: true,
 	},
+	theme: {
+		search: true,
+		title: 'Theme',
+		type: 'string',
+		required: true,
+		trim: true,
+	},
 };
