@@ -31,3 +31,4 @@ export { default as couponRoute } from './coupons.route.js';
 export { default as smsRoute } from './sms.route.js';
 export { default as assetRoute } from './asset.route.js';
 export { default as paymentAccountRoute } from './paymentAccount.route.js';
+export { default as deploymentRoute } from './deployment.route.js';

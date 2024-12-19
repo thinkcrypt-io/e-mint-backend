@@ -90,7 +90,10 @@ export { default as assetSettings } from './asset/asset.settings.js';
 export * from './payment-account/index.js';
 
 //deployment
-export { default as Deployment } from './deployment/Deployment.model.js';
+export {
+	default as Deployment,
+	settings as deploymentSettings,
+} from './deployment/Deployment.model.js';
 
 //theme
 export { default as Theme } from './theme/Theme.model.js';

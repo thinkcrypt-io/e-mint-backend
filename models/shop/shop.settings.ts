@@ -17,9 +17,23 @@ const shopSettings: SettingsType<ShopType> = {
 			title: 'Find by ID',
 		},
 	},
+	deployment: {
+		type: 'string',
+		title: 'Deployment',
+		edit: true,
+		populate: {
+			path: 'deployment',
+			select: 'slug deployUrl vercelName domain vercelDomain vercelURI theme shopId',
+		},
+	},
 	shippingCharge: {
 		type: 'number',
 		title: 'Shipping Charge',
+		edit: true,
+	},
+	url: {
+		type: 'string',
+		title: 'URL',
 		edit: true,
 	},
 	name: {

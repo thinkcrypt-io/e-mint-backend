@@ -21,6 +21,7 @@ import {
 
 import Deploy, { settings as deploySettings } from '../models/deployment/Deployment.model.js';
 import { constructConfig, validate, protect } from '../imports.js';
+import checkIfSlugAvailable from '../controllers/hongo/checkIfSlugAvailable.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -52,5 +53,8 @@ router.post('/add-domain', protect, addDomainController);
 
 //check domain  config
 router.get('/check-domain/:id', protect, checkDomainConfig);
+
+//find if deployment exists
+router.get('/deployments/:slug', checkIfSlugAvailable);
 
 export default router;

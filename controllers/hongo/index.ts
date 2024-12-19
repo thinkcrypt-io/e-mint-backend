@@ -7,3 +7,6 @@ export { default as editProductListHongo } from './editProductListController.js'
 export { default as addHongoEnvController } from './addEnvVariables.js';
 export { default as addDomainController } from './addDomain.js';
 export { default as checkDomainConfig } from './getDomains.js';
+export { default as checkIfSlugAvailable } from './checkIfSlugAvailable.js';
+export { default as getMyDomain } from './getMyDomain.controller.js';
+export { default as deleteProject } from './deleteProject.controller.js';

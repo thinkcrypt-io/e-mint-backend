@@ -39,6 +39,7 @@ import {
 	smsRoute,
 	assetRoute,
 	paymentAccountRoute,
+	deploymentRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -126,6 +127,8 @@ app.use('/api/purchases', purchaseRoute);
 app.use('/api/sms', smsRoute);
 app.use('/api/assets', assetRoute);
 app.use('/api/payment-accounts', paymentAccountRoute);
+
+app.use('/api/deployments', deploymentRoute);
 
 app.use((req, res, next) => {
 	return res

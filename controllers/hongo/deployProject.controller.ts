@@ -24,7 +24,6 @@ const deployProject = async (req: any, res: any) => {
 		if (!shop) return res.status(400).json({ message: 'Shop not found' });
 
 		// const findIfStoreHasDeployment = await Deployment.findOne({ shop: req.shop });
-
 		// if (findIfStoreHasDeployment)
 		// 	return res.status(400).json({ message: 'Store already has a deployment' });
 
@@ -113,6 +112,7 @@ const deployProject = async (req: any, res: any) => {
 		});
 
 		const saved = await deployment.save();
+		shop.deployment = saved._id;
 
 		res.status(200).json({
 			project: createResponse,

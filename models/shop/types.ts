@@ -13,7 +13,9 @@ type ShopType = {
 	address?: string;
 	email: string;
 	expire: Date;
+	deployment?: Types.ObjectId;
 	trial: boolean;
+	url?: string;
 	phone: string;
 	package?: any;
 	isDeleted?: boolean;

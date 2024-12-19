@@ -8,6 +8,14 @@ const schema = new Schema<ShopType>(
 			type: String,
 			unique: true,
 		},
+		url: {
+			type: String,
+			trim: true,
+		},
+		deployment: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Deployment',
+		},
 		name: {
 			type: String,
 			required: [true, 'Name is required'],
