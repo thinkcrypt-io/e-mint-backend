@@ -63,14 +63,14 @@ export const settings: Settings = {
 		type: 'string',
 		edit: false,
 		sort: true,
-		filter: filters.createdAt,
+		// filter: filters.createdAt,
 	},
 	tags: {
 		edit: true,
 		title: 'Tags',
 		type: 'array-string',
 		sort: true,
-		filter: filters.tags,
+		// filter: filters.tags,
 	},
 };
 

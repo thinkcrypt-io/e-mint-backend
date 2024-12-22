@@ -1,4 +1,19 @@
-import { Filter } from '../../../imports.js';
+import mongoose from 'mongoose';
+
+type Options = { label: string; value: string };
+
+type Filter = {
+	name: string;
+	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text';
+	label: string;
+	title: string;
+	options?: Options[];
+	category?: 'model' | 'distinct';
+	model?: mongoose.Model<any>;
+	key?: string;
+	roles?: [string];
+	field?: string;
+};
 
 const createdAtFilter: Filter = {
 	name: 'createdAt',

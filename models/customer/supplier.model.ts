@@ -217,7 +217,7 @@ export const supplierSettings: SettingsType<SupplierType> = {
 	createdAt: {
 		title: 'Created At',
 		type: 'string',
-		filter: filters.createdAt,
+		// filter: filters.createdAt,
 		sort: true,
 	},
 };

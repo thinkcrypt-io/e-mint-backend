@@ -128,7 +128,7 @@ const shopSettings: SettingsType<ShopType> = {
 		title: 'Is Deleted',
 		edit: true,
 		sort: true,
-		filter: filters.isDeleted,
+		// filter: filters.isDeleted,
 	},
 	isActive: {
 		type: 'boolean',
