@@ -35,3 +35,4 @@ export { default as getInventoryCount } from './getInventoryCount.controller.js'
 export { default as exportPdf } from './exportPdf.controller.js';
 
 //18
+export * from './theme/index.js';

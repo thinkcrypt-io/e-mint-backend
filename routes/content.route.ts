@@ -20,7 +20,17 @@ import {
 } from '../controllers/hongo/index.js';
 
 import Deploy, { settings as deploySettings } from '../models/deployment/Deployment.model.js';
-import { constructConfig, validate, protect } from '../imports.js';
+import {
+	constructConfig,
+	validate,
+	protect,
+	getThemeContent,
+	Pulse,
+	updateThemeContent,
+	addProductListToTheme,
+	deleteProductListFromTheme,
+	updateProductListInTheme,
+} from '../imports.js';
 import checkIfSlugAvailable from '../controllers/hongo/checkIfSlugAvailable.js';
 
 // Initialize a new router
@@ -41,6 +51,7 @@ router.put('/product/nexa/:id', protect, editProductList);
 //HONGO THEME
 router.get('/hongo', protect, getContentHongo);
 router.put('/hongo', protect, updateContentHongo);
+
 router.post('/product/hongo', protect, addProductListHongo);
 router.delete('/product/hongo/:id', protect, deleteProductListHongo);
 router.put('/product/hongo/:id', protect, editProductListHongo);
@@ -56,5 +67,13 @@ router.get('/check-domain/:id', protect, checkDomainConfig);
 
 //find if deployment exists
 router.get('/deployments/:slug', checkIfSlugAvailable);
+
+//Pulse THEME
+router.get('/pulse', protect, getThemeContent(Pulse));
+router.put('/pulse', protect, updateThemeContent(Pulse));
+
+router.post('/product/pulse', protect, addProductListToTheme(Pulse));
+router.delete('/product/pulse/:id', protect, deleteProductListFromTheme(Pulse));
+router.put('/product/pulse/:id', protect, updateProductListInTheme(Pulse));
 
 export default router;

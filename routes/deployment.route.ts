@@ -26,6 +26,7 @@ import {
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig, getOneDocument } from '../imports.js';
 import deleteProject from '../controllers/hongo/deleteProject.controller.js';
+import getDeploymentStatus from '../controllers/hongo/getDeploymentStatus.js';
 
 // Define the permissions
 const permission = 'category';
@@ -103,6 +104,7 @@ router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.M
 
 //Get One
 router.get('/get/one', ...middlewares.getById, getOneDocument(config.QUERY_OPTIONS));
+router.get('/status/:id', getDeploymentStatus);
 
 //Extra Routes
 router.post('/delete', ...middlewares.delete, deleteProject);

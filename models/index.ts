@@ -6,6 +6,10 @@ export { default as customerSettings } from './customer/customer.settings.js';
 export { default as Category } from './category/category.model.js';
 export { settings as categorySettings } from './category/category.model.js';
 
+//Collection
+export { default as Collection } from './collection/collection.model.js';
+export { settings as collectionSettings } from './collection/collection.model.js';
+
 //Product
 export { ProductType } from './products/products.types.js';
 export { default as Product } from './products/products.model.js';
@@ -98,3 +102,8 @@ export {
 //theme
 export { default as Theme } from './theme/Theme.model.js';
 export { ThemeType, themeSettings } from './theme/Theme.model.js';
+
+//Themes
+export { default as Nexa } from './store/store.model.js';
+export { default as Hongo } from './store/hongo.model.js';
+export { default as Pulse } from './store/pulse.model.js';
