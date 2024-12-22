@@ -1,9 +1,6 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 import { getString, colors, getNumber, font, getBoolean, getImage } from '../../util/index.js';
-import { border } from '@chakra-ui/react';
-import { image } from 'pdfkit';
-import { title } from 'process';
 
 const schema = new Schema<any>(
 	{
