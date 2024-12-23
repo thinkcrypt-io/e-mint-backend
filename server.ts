@@ -4,6 +4,7 @@ import connectDb from './db.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import requestIp from 'request-ip';
 
 //import routes
 import {
@@ -63,6 +64,7 @@ const allowedOrigins = ['http://localhost:3000', 'http://example.com', 'http://l
 
 app.use(cors());
 app.use(morgan('combined'));
+app.use(requestIp.mw());
 
 connectDb();
 

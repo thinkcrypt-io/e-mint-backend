@@ -2,6 +2,10 @@ import Joi from 'joi';
 import User from '../../models/user/user.model.js';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+import sendMail from '../mail/sendMail.controller.js';
+import geoip from 'geoip-lite';
+import { Shop } from '../../models/index.js';
+import { UAParser } from 'ua-parser-js';
 
 type RequestType = Request & { body: any };
 
@@ -12,6 +16,8 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 
 		if (error) return res.status(400).json({ message: error.details[0].message });
 		let user = await User.findOne({ email });
+
+		const shop = await Shop.findById(user.shop);
 
 		let isAdmin = false;
 
@@ -34,6 +40,29 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 			return res.status(400).json({ status: 'error', message: 'Incorrect password' });
 
 		const token: string = user.generateAuthToken();
+
+		const parser = new UAParser();
+		const userAgent = req.headers['user-agent'];
+		const deviceDetails: any = userAgent && parser.setUA(userAgent).getResult();
+
+		console.log(userAgent);
+
+		const ip = req.clientIp || req.ip || 'Unknown IP';
+		const geo = geoip.lookup(ip); // Get location details from IP
+
+		console.log(ip, geo);
+
+		const location = geo ? `${geo?.city}, ${geo?.region}, ${geo?.country}` : 'Unknown Location';
+
+		sendMail({
+			to: 'log.mintapp@gmail.com',
+			subject: `Login Notification, ${new Date().toLocaleString()}`,
+			body: `New Login from account. \n\n Email: ${email}, \n Shop: ${shop?.name} \n Shop Id: ${
+				shop?.id
+			} \n Time: ${new Date().toLocaleString()} \n User Ip: ${ip} \n Location: ${location} \n Browser: ${
+				deviceDetails?.browser?.name
+			} \n OS: ${deviceDetails?.os?.name} \n Device: ${deviceDetails?.device?.type}`,
+		});
 
 		return res.status(200).json({ token: `Bearer ${token}` });
 	} catch (e: any) {

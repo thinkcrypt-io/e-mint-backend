@@ -4,9 +4,10 @@ type SendMailProps = {
 	to: string;
 	subject: string;
 	body: string;
+	title?: string;
 };
 
-const sendMail = async ({ to, subject, body }: SendMailProps) => {
+const sendMail = async ({ to, subject, body, title }: SendMailProps) => {
 	try {
 		var transporter = nodemailer.createTransport({
 			host: process.env.MAIL_HOST,
@@ -19,7 +20,7 @@ const sendMail = async ({ to, subject, body }: SendMailProps) => {
 		});
 
 		var mailOptions: any = {
-			from: `MINT <${process.env.MAIL_ADDRESS}>`,
+			from: `${title || 'MINT'} <${process.env.MAIL_ADDRESS}>`,
 			to: to,
 			subject: subject,
 			text: body,
