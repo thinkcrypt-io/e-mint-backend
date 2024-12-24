@@ -73,7 +73,7 @@ router.get('/pulse', protect, getThemeContent(Pulse));
 router.put('/pulse', protect, updateThemeContent(Pulse));
 
 router.post('/product/pulse', protect, addProductListToTheme(Pulse));
-router.delete('/product/pulse/:id', protect, deleteProductListFromTheme(Pulse));
-router.put('/product/pulse/:id', protect, updateProductListInTheme(Pulse));
+// router.delete('/product/pulse/:id', protect, deleteProductListFromTheme(Pulse));
+// router.put('/product/pulse/:id', protect, updateProductListInTheme(Pulse));
 
 export default router;
