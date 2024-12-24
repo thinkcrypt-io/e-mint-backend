@@ -32,7 +32,7 @@ const deployProject = async (req: any, res: any) => {
 				name: slug,
 				framework: 'nextjs',
 				gitRepository: {
-					repo: 'aiasifistiaque/hongo',
+					repo: `aiasifistiaque/${theme || GIT_REPO}`,
 					type: 'github',
 				},
 			},
@@ -69,7 +69,7 @@ const deployProject = async (req: any, res: any) => {
 				target: 'production',
 				gitSource: {
 					type: 'github',
-					repo: GIT_REPO,
+					repo: theme || GIT_REPO,
 					ref: BRANCH,
 					org: ORG_NAME,
 				},
