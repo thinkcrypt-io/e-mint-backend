@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 
-const deleteThemeProductList = (model: mongoose.Model<any>): any => {
-	async (req: any, res: any): Promise<Response> => {
+const deleteThemeProductList = (model: mongoose.Model<any>) => {
+	return async (req: any, res: any): Promise<Response> => {
 		const id = req.params.id;
 
 		try {

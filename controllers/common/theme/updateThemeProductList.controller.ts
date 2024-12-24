@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { Request, Response, RequestHandler } from 'express';
 import mongoose from 'mongoose';
 
-const updateThemeProductList = (model: mongoose.Model<any>): any => {
-	async (req: any, res: any): Promise<Response> => {
+const updateThemeProductList = (model: mongoose.Model<any>): RequestHandler => {
+	return async (req: Request, res: Response): Promise<Response> => {
 		const { title, subTitle, id, type, priority } = req.body;
 		const findId = req.params.id;
 
