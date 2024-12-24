@@ -1,0 +1,1560 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.2.0-beta",
+    "title": "Checkout API"
+  },
+  "paths": {
+    "/checkout/payment/create": {
+      "post": {
+        "tags": [
+          "Payment"
+        ],
+        "summary": "Create Payment (Sale or Authorize)",
+        "operationId": "createPaymentUsingPOST",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "currency",
+                  "intent",
+                  "merchantInvoiceNumber"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "description": "Amount"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Currency(BDT)"
+                  },
+                  "intent": {
+                    "type": "string",
+                    "description": "Intent(sale/authorization)"
+                  },
+                  "merchantInvoiceNumber": {
+                    "type": "string",
+                    "description": "Merchant Invoice Number"
+                  },
+                  "merchantAssociationInfo": {
+                    "type": "string",
+                    "description": "Merchant Association Info"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentID": {
+                      "type": "string"
+                    },
+                    "createTime": {
+                      "type": "string"
+                    },
+                    "orgLogo": {
+                      "type": "string"
+                    },
+                    "orgName": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "intent": {
+                      "type": "string"
+                    },
+                    "merchantInvoiceNumber": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/execute/{paymentID}": {
+      "post": {
+        "tags": [
+          "Payment"
+        ],
+        "summary": "Execute Payment",
+        "operationId": "executePaymentUsingPOST",
+        "parameters": [
+          {
+            "name": "paymentID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentID": {
+                      "type": "string"
+                    },
+                    "createTime": {
+                      "type": "string"
+                    },
+                    "updateTime": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "intent": {
+                      "type": "string"
+                    },
+                    "merchantInvoiceNumber": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/capture/{paymentID}": {
+      "post": {
+        "tags": [
+          "Authorized and Capture"
+        ],
+        "summary": "Capture",
+        "operationId": "capturePaymentUsingPOST",
+        "parameters": [
+          {
+            "name": "paymentID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentID": {
+                      "type": "string"
+                    },
+                    "createTime": {
+                      "type": "string"
+                    },
+                    "updateTime": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/query/{paymentID}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "summary": "Query Payment",
+        "operationId": "queryPaymentUsingGET",
+        "parameters": [
+          {
+            "name": "paymentID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentID": {
+                      "type": "string"
+                    },
+                    "createTime": {
+                      "type": "string"
+                    },
+                    "updateTime": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "intent": {
+                      "type": "string"
+                    },
+                    "merchantInvoiceNumber": {
+                      "type": "string"
+                    },
+                    "refundAmount": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/void/{paymentID}": {
+      "post": {
+        "tags": [
+          "Payment"
+        ],
+        "summary": "Void",
+        "operationId": "voidPaymentUsingPOST",
+        "parameters": [
+          {
+            "name": "paymentID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentID": {
+                      "type": "string"
+                    },
+                    "createTime": {
+                      "type": "string"
+                    },
+                    "updateTime": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/b2cPayment": {
+      "post": {
+        "tags": [
+          "Payout"
+        ],
+        "summary": "B2C Payment",
+        "operationId": "b2cPaymentUsingPOST",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "currency",
+                  "merchantInvoiceNumber",
+                  "receiverMSISDN"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "description": "Amount"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Currency(BDT)"
+                  },
+                  "merchantInvoiceNumber": {
+                    "type": "string",
+                    "description": "Merchant Invoice Number"
+                  },
+                  "receiverMSISDN": {
+                    "type": "string",
+                    "description": "Receiver MSISDN"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "completedTime": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "merchantInvoiceNumber": {
+                      "type": "string"
+                    },
+                    "receiverMSISDN": {
+                      "type": "string"
+                    },
+                    "b2cFee": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/organizationBalance": {
+      "get": {
+        "tags": [
+          "Supporting Operations"
+        ],
+        "summary": "Query Organization Balance",
+        "operationId": "queryOrganizationBalanceUsingGET",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizationBalance": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountHolderName": {
+                            "type": "string"
+                          },
+                          "accountStatus": {
+                            "type": "string"
+                          },
+                          "accountTypeName": {
+                            "type": "string"
+                          },
+                          "availableBalance": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "currentBalance": {
+                            "type": "string"
+                          },
+                          "updateTime": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/intraAccountTransfer": {
+      "post": {
+        "tags": [
+          "Supporting Operations"
+        ],
+        "summary": "Intra-Account Transfer",
+        "operationId": "intraAccountTransferUsingPOST",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "currency",
+                  "transferType"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "description": "Amount"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Currency(BDT)"
+                  },
+                  "transferType": {
+                    "type": "string",
+                    "description": "TransferType(Collection2Disbursement/Disbursement2Collection)"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "string"
+                    },
+                    "completedTime": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "transferType": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/payment/search/{trxID}": {
+      "get": {
+        "tags": [
+          "Supporting Operations"
+        ],
+        "summary": "Search Transaction Details",
+        "operationId": "searchTransactionUsingGET",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trxID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "string"
+                    },
+                    "completedTime": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "customerMsisdn": {
+                      "type": "string"
+                    },
+                    "initiationTime": {
+                      "type": "string"
+                    },
+                    "organizationShortCode": {
+                      "type": "string"
+                    },
+                    "transactionReference": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "transactionType": {
+                      "type": "string"
+                    },
+                    "trxID": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/checkout/token/grant": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "summary": "Grant Token",
+        "operationId": "getTokenUsingPOST",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "app_key",
+                  "app_secret"
+                ],
+                "properties": {
+                  "app_key": {
+                    "type": "string",
+                    "description": "App Key"
+                  },
+                  "app_secret": {
+                    "type": "string",
+                    "description": "App Secret"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "expires_in": {
+                      "type": "string"
+                    },
+                    "id_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/token/refresh": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "summary": "Refresh Token",
+        "operationId": "refreshTokenUsingPOST",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "app_key",
+                  "app_secret",
+                  "refresh_token"
+                ],
+                "properties": {
+                  "app_key": {
+                    "type": "string",
+                    "description": "App Key"
+                  },
+                  "app_secret": {
+                    "type": "string",
+                    "description": "App Secret"
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Refresh Token"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "expires_in": {
+                      "type": "string"
+                    },
+                    "id_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/payment/refund": {
+      "post": {
+        "tags": [
+          "Refund"
+        ],
+        "summary": "Refund",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-APP-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "paymentId",
+                  "trxID"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "description": "Amount"
+                  },
+                  "paymentId": {
+                    "type": "string",
+                    "description": "paymentId"
+                  },
+                  "trxID": {
+                    "type": "string",
+                    "description": "trxID"
+                  },
+                  "sku": {
+                    "type": "string",
+                    "description": "sku"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "reason"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "completedTime": {
+                      "type": "string"
+                    },
+                    "originalTrxID": {
+                      "type": "string"
+                    },
+                    "refundTrxID": {
+                      "type": "string"
+                    },
+                    "transactionStatus": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cognitoAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "arn:aws:apigateway:ap-southeast-1:lambda:path/2015-03-31/functions/arn:aws:lambda:ap-southeast-1:xxxxxxxxxxxxx:function:sbTokenizedRefundPayment/invocations",
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\r\n  \"body\" : $input.json('$'),\r\n  \"headers\": {\r\n    #foreach($param in $input.params().header.keySet())\r\n    \"$param\": \"$util.escapeJavaScript($input.params().header.get($param))\" #if($foreach.hasNext),#end\r\n    #end  \r\n  },\r\n  \"apiRequestId\" : {\r\n      \"request-id\" : \"$context.requestId\"\r\n   },\r\n   \"stageVariables\" : {\r\n        #foreach($key in $stageVariables.keySet())\r\n        \"$key\" : \"$util.escapeJavaScript($stageVariables.get($key))\"\r\n            #if($foreach.hasNext),#end\r\n        #end\r\n},\"requestContext\" : {\r\n    \"apiId\" : \"$context.apiId\",\r\n    \"httpMethod\" : \"$context.httpMethod\",\r\n    \"stage\" : \"$context.stage\",\r\n    \"requestId\" : \"$context.requestId\",\r\n    \"resourceId\" : \"$context.resourceId\",\r\n    \"resourcePath\" : \"$context.resourcePath\"\r\n    }\r\n}"
+          },
+          "passthroughBehavior": "when_no_templates",
+          "httpMethod": "POST",
+          "contentHandling": "CONVERT_TO_TEXT",
+          "type": "aws"
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://checkout.sandbox.bka.sh/v1.2.0-beta"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cognitoAuthorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "cognito_user_pools"
+      }
+    },
+    "schemas": {
+      "ExecutePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string"
+          },
+          "updateTime": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "GetTokenRequest": {
+        "type": "object",
+        "required": [
+          "app_key",
+          "app_secret"
+        ],
+        "properties": {
+          "app_key": {
+            "type": "string",
+            "description": "App Key"
+          },
+          "app_secret": {
+            "type": "string",
+            "description": "App Secret"
+          }
+        }
+      },
+      "QueryOrganizationBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "organizationBalance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "accountHolderName": {
+                  "type": "string"
+                },
+                "accountStatus": {
+                  "type": "string"
+                },
+                "accountTypeName": {
+                  "type": "string"
+                },
+                "availableBalance": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "currentBalance": {
+                  "type": "string"
+                },
+                "updateTime": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RefreshTokenResponse": {
+        "type": "object",
+        "properties": {
+          "expires_in": {
+            "type": "string"
+          },
+          "id_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string"
+          }
+        }
+      },
+      "SearchTransactionResponse": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "completedTime": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "customerMsisdn": {
+            "type": "string"
+          },
+          "initiationTime": {
+            "type": "string"
+          },
+          "organizationShortCode": {
+            "type": "string"
+          },
+          "transactionReference": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "transactionType": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatePaymentRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "intent",
+          "merchantInvoiceNumber"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency(BDT)"
+          },
+          "intent": {
+            "type": "string",
+            "description": "Intent(sale/authorization)"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string",
+            "description": "Merchant Invoice Number"
+          },
+          "merchantAssociationInfo": {
+            "type": "string",
+            "description": "Merchant Association Info"
+          }
+        }
+      },
+      "IntraAccountTransferRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "transferType"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency(BDT)"
+          },
+          "transferType": {
+            "type": "string",
+            "description": "TransferType(Collection2Disbursement/Disbursement2Collection)"
+          }
+        }
+      },
+      "B2CPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "completedTime": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string"
+          },
+          "receiverMSISDN": {
+            "type": "string"
+          },
+          "b2cFee": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string"
+          },
+          "orgLogo": {
+            "type": "string"
+          },
+          "orgName": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "B2CPaymentRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "merchantInvoiceNumber",
+          "receiverMSISDN"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency(BDT)"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string",
+            "description": "Merchant Invoice Number"
+          },
+          "receiverMSISDN": {
+            "type": "string",
+            "description": "Receiver MSISDN"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": [
+          "app_key",
+          "app_secret",
+          "refresh_token"
+        ],
+        "properties": {
+          "app_key": {
+            "type": "string",
+            "description": "App Key"
+          },
+          "app_secret": {
+            "type": "string",
+            "description": "App Secret"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh Token"
+          }
+        }
+      },
+      "GetTokenResponse": {
+        "type": "object",
+        "properties": {
+          "expires_in": {
+            "type": "string"
+          },
+          "id_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string"
+          }
+        }
+      },
+      "CapturePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string"
+          },
+          "updateTime": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "IntraAccountTransferResponse": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "completedTime": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "transferType": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          }
+        }
+      },
+      "OrganizationBalance": {
+        "type": "object",
+        "properties": {
+          "accountHolderName": {
+            "type": "string"
+          },
+          "accountStatus": {
+            "type": "string"
+          },
+          "accountTypeName": {
+            "type": "string"
+          },
+          "availableBalance": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "currentBalance": {
+            "type": "string"
+          },
+          "updateTime": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string"
+          },
+          "updateTime": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "merchantInvoiceNumber": {
+            "type": "string"
+          },
+          "refundAmount": {
+            "type": "string"
+          }
+        }
+      },
+      "VoidPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "string"
+          },
+          "createTime": {
+            "type": "string"
+          },
+          "updateTime": {
+            "type": "string"
+          },
+          "trxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "RefundRequest": {
+        "type": "object",
+        "required": [
+          "paymentId",
+          "trxID"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Amount"
+          },
+          "paymentId": {
+            "type": "string",
+            "description": "paymentId"
+          },
+          "trxID": {
+            "type": "string",
+            "description": "trxID"
+          },
+          "sku": {
+            "type": "string",
+            "description": "sku"
+          },
+          "reason": {
+            "type": "string",
+            "description": "reason"
+          }
+        }
+      },
+      "RefundResponse": {
+        "type": "object",
+        "properties": {
+          "completedTime": {
+            "type": "string"
+          },
+          "originalTrxID": {
+            "type": "string"
+          },
+          "refundTrxID": {
+            "type": "string"
+          },
+          "transactionStatus": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

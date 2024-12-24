@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "bkash",
+      "source": "@bkash/v1.2.0-beta#1mld74kq6voepa",
+      "integrity": "sha512-3D3GiNNsQGxzge6bSNWyvpVID7AlS2vmAg9Fy9je+k8Ff/zIazxT6ToPzzcFVhTSi3iJ1NWzrxxhGtge2TfU9w==",
+      "installerVersion": "6.1.2"
+    }
+  ]
+}

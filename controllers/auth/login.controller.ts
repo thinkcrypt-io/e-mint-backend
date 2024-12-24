@@ -12,7 +12,7 @@ type RequestType = Request & { body: any };
 const loginController = async (req: RequestType, res: Response): Promise<Response> => {
 	try {
 		const { error } = validate(req.body);
-		const { email, password }: any = req.body;
+		const { email, password, lead, from }: any = req.body;
 
 		if (error) return res.status(400).json({ message: error.details[0].message });
 		let user = await User.findOne({ email });
@@ -45,12 +45,8 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 		const userAgent = req.headers['user-agent'];
 		const deviceDetails: any = userAgent && parser.setUA(userAgent).getResult();
 
-		console.log(userAgent);
-
 		const ip = req.clientIp || req.ip || 'Unknown IP';
 		const geo = geoip.lookup(ip); // Get location details from IP
-
-		console.log(ip, geo);
 
 		const location = geo ? `${geo?.city}, ${geo?.region}, ${geo?.country}` : 'Unknown Location';
 
@@ -61,7 +57,9 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 				shop?.id
 			} \n Time: ${new Date().toLocaleString()} \n User Ip: ${ip} \n Location: ${location} \n Browser: ${
 				deviceDetails?.browser?.name
-			} \n OS: ${deviceDetails?.os?.name} \n Device: ${deviceDetails?.device?.type}`,
+			} \n OS: ${deviceDetails?.os?.name} \n Device: ${deviceDetails?.device?.type} \n ${
+				from ? `From: ${from}` : ''
+			} \n ${lead ? `Lead: ${lead}` : ''}`,
 		});
 
 		return res.status(200).json({ token: `Bearer ${token}` });
@@ -76,6 +74,8 @@ function validate(data: any): Joi.ValidationResult {
 			'any.required': 'Email is required',
 			'string.email': 'Invalid Email, please enter a valid email address',
 		}),
+		lead: Joi.string().allow(null, ''),
+		from: Joi.string().allow(null, ''),
 		password: Joi.string().min(8).max(255).required().messages({
 			'string.min': 'Password must be 8 characters long',
 			'any.required': 'Password is required',

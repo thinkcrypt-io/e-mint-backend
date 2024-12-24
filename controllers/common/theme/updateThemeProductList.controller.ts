@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 
-const editProductList = (model: mongoose.Model<any>) => {
+const updateThemeProductList = (model: mongoose.Model<any>): any => {
 	async (req: any, res: any): Promise<Response> => {
 		const { title, subTitle, id, type, priority } = req.body;
 		const findId = req.params.id;
@@ -50,4 +50,4 @@ const editProductList = (model: mongoose.Model<any>) => {
 	};
 };
 
-export default editProductList;
+export default updateThemeProductList;
