@@ -129,7 +129,6 @@ schema.pre<any>('save', function (next) {
 
 // Pre-save hook to auto-increment the invoice number
 schema.post<any>('save', async function (next) {
-	console.log('Order saved:', this, this.isNew);
 	try {
 		if (isNewOrder) {
 			const ledger = new Ledger({

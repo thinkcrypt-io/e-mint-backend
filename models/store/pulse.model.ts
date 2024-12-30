@@ -295,6 +295,57 @@ const schema = new Schema<any>(
 				},
 			],
 
+			productPage: {
+				//Add to cart button
+				atcBtnFg: colors?.fg,
+				atcBtnBg: colors?.bg,
+				atcBtnFontSize: getNumber(16),
+				atcBtnFontWeight: getNumber(500),
+				atcBtnRadius: getNumber(4),
+				atcBtnHoverBg: colors?.fg,
+				atcBtnHoberFg: colors?.bg,
+
+				//secondary Button
+				secondaryBtnFg: colors?.fg,
+				secondaryBtnBg: colors?.bg,
+				secondaryBtnFontSize: getNumber(16),
+				secondaryBtnFontWeight: getNumber(500),
+				secondaryBtnRadius: getNumber(4),
+				secondaryBtnHoverBg: colors?.fg,
+				secondaryBtnHoberFg: colors?.bg,
+
+				//title text
+				titleFontSizeBg: getNumber(36),
+				titleFontSizeBase: getNumber(24),
+				titleFontWeight: getNumber(700),
+				titleColor: colors?.fg,
+
+				//price text
+				priceFontSizeBg: getNumber(36),
+				priceFontSizeBase: getNumber(24),
+				priceFontWeight: getNumber(700),
+				priceColor: colors?.fg,
+
+				//tabs
+				tabBg: colors?.bg,
+				tabFg: colors?.fg,
+				tabHoverBg: colors?.fg,
+				tabHoverFg: colors?.bg,
+				// tabBorderBottom: getNumber(0),
+				// tabBorderBottomColor: colors?.bg,
+
+				//text
+				textPrimary: colors?.bg,
+				textSecondary: colors?.bg,
+				HeadingFg: colors?.bg,
+				headingBg: colors?.bg,
+				headingFontSize: getNumber(24),
+				headingFontWeight: getNumber(700),
+
+				//misc
+				borderColor: colors?.fg,
+			},
+
 			productList: [
 				{
 					id: {
