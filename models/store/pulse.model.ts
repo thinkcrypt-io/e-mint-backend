@@ -344,6 +344,13 @@ const schema = new Schema<any>(
 
 				//misc
 				borderColor: colors?.fg,
+
+				//badge
+				badgeBg: colors?.bg,
+				badgeFg: colors?.fg,
+				badgeSecondaryFg: colors?.fg,
+				badgeRadius: getNumber(4),
+				badgeFontWeight: getNumber(500),
 			},
 
 			productList: [
