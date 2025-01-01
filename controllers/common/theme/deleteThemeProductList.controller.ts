@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 const deleteThemeProductList = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
 		const id = req.params.id;
+		const key = req.query.key || 'productList';
 
 		try {
 			const queryHelper = (req as any).queryHelper || {};
@@ -13,14 +14,14 @@ const deleteThemeProductList = (model: mongoose.Model<any>) => {
 			}
 
 			// Ensure content.productList exists and is an array
-			if (!Array.isArray(data.content.productList)) {
+			if (!Array.isArray(data.content[key])) {
 				return res.status(400).json({ message: 'Product list is not an array' });
 			}
 
 			// Filter out the item with the given id
-			const newArr = data.content.productList.filter((product: any) => product._id != id);
+			const newArr = data.content[key].filter((product: any) => product._id != id);
 
-			data.content.productList = newArr;
+			data.content[key] = newArr;
 
 			const saved = await data.save();
 			return res.status(200).json(saved);

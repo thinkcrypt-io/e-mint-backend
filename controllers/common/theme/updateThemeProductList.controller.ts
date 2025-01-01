@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 const updateThemeProductList = (model: mongoose.Model<any>): RequestHandler => {
 	return async (req: Request, res: Response): Promise<Response> => {
-		const { title, subTitle, id, type, priority } = req.body;
+		const { title, subTitle, id, type, priority, key = 'productList' } = req.body;
 		const findId = req.params.id;
 
 		try {
@@ -14,20 +14,20 @@ const updateThemeProductList = (model: mongoose.Model<any>): RequestHandler => {
 			}
 
 			// Ensure content.productList exists and is an array
-			if (!Array.isArray(data.content.productList)) {
+			if (!Array.isArray(data.content[key])) {
 				return res.status(400).json({ message: 'Product list is not an array' });
 			}
 
 			// Filter out the item with the given id
-			let productToEdit = data.content.productList.find(
+			let productToEdit = data.content[key].find(
 				(product: any) => product._id.toString() == findId
 			);
 
 			if (!productToEdit) {
-				return res.status(404).json({ message: data.content.productList });
+				return res.status(404).json({ message: data.content[key] });
 			}
 
-			let newArr = data.content.productList.filter((product: any) => product._id != findId);
+			let newArr = data.content[key].filter((product: any) => product._id != findId);
 
 			// Update the product properties
 			productToEdit.title = title || productToEdit.title;
@@ -38,7 +38,7 @@ const updateThemeProductList = (model: mongoose.Model<any>): RequestHandler => {
 
 			newArr.push(productToEdit);
 
-			data.content.productList = newArr;
+			data.content[key] = newArr;
 
 			const saved = await data.save();
 			return res.status(200).json(saved);

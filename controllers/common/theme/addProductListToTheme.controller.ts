@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 const addProductList = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
 		const { error } = validate(req.body);
-		const { type, title, subTitle, id, priority } = req.body;
+		const { type, title, subTitle, id, priority, key = 'productList' } = req.body;
 
 		try {
 			const queryHelper = (req as any).queryHelper || {};
@@ -30,11 +30,11 @@ const addProductList = (model: mongoose.Model<any>) => {
 				return res.status(400).json({ message: 'Invalid type' });
 			}
 
-			if (!Array.isArray(data.content.productList)) {
-				data.content.productList = [];
+			if (!Array.isArray(data.content[key])) {
+				data.content[key] = [];
 			}
 
-			data.content.productList.push({ type, title, subTitle, id, priority });
+			data.content[key].push({ type, title, subTitle, id, priority });
 
 			const saved = await data.save();
 			return res.status(200).json(saved);
