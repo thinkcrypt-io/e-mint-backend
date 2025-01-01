@@ -2,6 +2,27 @@ import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 import { getString, colors, getNumber, font, getBoolean, getImage } from '../../util/index.js';
 
+const productListData = [
+	{
+		id: {
+			type: mongoose.Schema.Types.ObjectId,
+			required: true,
+		},
+		title: String,
+		subTitle: String,
+		priority: {
+			type: Number,
+			default: 0,
+		},
+		type: {
+			type: String,
+			default: 'category',
+			enum: ['category', 'collection'],
+			required: true,
+		},
+	},
+];
+
 const schema = new Schema<any>(
 	{
 		basic: {
@@ -22,6 +43,9 @@ const schema = new Schema<any>(
 			brandTextColor: colors?.fg,
 			primaryTextColor: colors?.bg,
 			secondaryTextColor: colors?.bg,
+			paddingXBase: getNumber(16),
+			paddingXBG: getNumber(128),
+			maxWidth: getNumber(1200),
 		},
 		shop: {
 			type: Schema.Types.ObjectId,
@@ -95,11 +119,9 @@ const schema = new Schema<any>(
 				bgColor: colors?.bg,
 				fgColor: colors?.fg,
 				hoverFg: colors?.fg,
-
 				borderBottomColor: colors?.fg,
 				borderBottomWidth: getNumber(1),
 				shadow: String,
-
 				hide: getBoolean(false),
 
 				fontSize: getNumber(16),
@@ -174,12 +196,15 @@ const schema = new Schema<any>(
 				imageHeight: getNumber(100),
 				imageWidth: getNumber(100),
 				hide: getBoolean(false),
+				innerGap: getNumber(4),
+				outerGap: getNumber(4),
 			},
 			homeProductCss: {
 				titleFontSizeBASE: getNumber(20),
 				subTitleFontSizeBASE: getNumber(16),
 				titleFontSizeBG: getNumber(20),
 				subTitleFontSizeBG: getNumber(16),
+
 				showBtnColor: colors?.fg,
 				titleColor: colors?.fg,
 				subTitleColor: colors?.fg,
@@ -204,6 +229,13 @@ const schema = new Schema<any>(
 				btnFontSize: getNumber(16),
 				btnFontWeight: getNumber(600),
 				btnText: getString('Add to Cart'),
+				showBtn: getBoolean(true),
+
+				bannerBg: colors?.bg,
+				bannerFg: colors?.fg,
+
+				arrowBtnBg: colors?.fg,
+				arrowBtnFg: colors?.bg,
 			},
 
 			faqPage: {
@@ -225,14 +257,14 @@ const schema = new Schema<any>(
 				hrefOne: String,
 				hrefTwo: String,
 				imageTwo: getImage(),
-				borderRadius: getNumber(0),
+				borderRadius: getNumber(4),
 				hide: getBoolean(false),
 			},
 
 			sponsoredBannerThree: {
 				image: getImage(),
 				h: getNumber(200),
-				borderRadius: getNumber(0),
+				borderRadius: getNumber(4),
 				href: String,
 				hide: getBoolean(false),
 			},
@@ -353,27 +385,13 @@ const schema = new Schema<any>(
 				badgeFontWeight: getNumber(500),
 			},
 
-			productList: [
-				{
-					id: {
-						type: mongoose.Schema.Types.ObjectId,
-						required: true,
-					},
-					title: String,
-					subTitle: String,
-					priority: {
-						type: Number,
-						default: 0,
-					},
-					type: {
-						type: String,
-						default: 'category',
-						enum: ['category', 'collection'],
-						required: true,
-					},
-				},
-			],
+			productList: productListData,
+			productListTwo: productListData,
+			productListThree: productListData,
+			productListFour: productListData,
+			productListFive: productListData,
 		},
+
 		isActive: { type: Boolean, required: true, default: true },
 	},
 
