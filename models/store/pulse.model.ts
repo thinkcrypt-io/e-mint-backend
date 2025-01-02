@@ -1,6 +1,7 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 import { getString, colors, getNumber, font, getBoolean, getImage } from '../../util/index.js';
+import { get } from 'lodash';
 
 const productListData = [
 	{
@@ -152,6 +153,7 @@ const schema = new Schema<any>(
 				descriptionSize: getNumber(16),
 				borderRadius: getNumber(4),
 				shadow: String,
+				boxShadow: { type: String, default: '0 1px 1px rgba(0, 0, 0, 0.1)' },
 				showDivider: getBoolean(true),
 				dividerColor: colors?.fg,
 				hide: getBoolean(false),
@@ -292,6 +294,9 @@ const schema = new Schema<any>(
 				iconHoverBg: colors?.fg,
 				iconHoverFg: colors?.bg,
 				iconSize: getNumber(20),
+
+				logoWidth: getNumber(80),
+				logoHeight: getNumber(80),
 			},
 
 			aboutPage: {
@@ -390,6 +395,35 @@ const schema = new Schema<any>(
 			productListThree: productListData,
 			productListFour: productListData,
 			productListFive: productListData,
+
+			shoppingCartCSS: {
+				headingBg: colors?.bg,
+				headingFg: colors?.fg,
+				headingSizeBase: getNumber(20),
+				headingSizeBg: getNumber(24),
+				bodyBg: colors?.bg,
+				bodyFg: colors?.fg,
+				titleSizeBase: getNumber(16),
+				titleSizeBg: getNumber(20),
+				titleWeight: getNumber(600),
+				removeFg: colors?.fg,
+				removeSize: getNumber(16),
+				borderColor: colors?.fg,
+				priceSizeBase: getNumber(16),
+				priceSizeBg: getNumber(20),
+				qtyBg: colors?.bg,
+				qtyFg: colors?.fg,
+				footerBg: colors?.bg,
+				footerFg: colors?.fg,
+				fTextSize: getNumber(16),
+				fTextWeight: getNumber(600),
+				checkoutBg: colors?.fg,
+				checkoutFg: colors?.bg,
+				checkoutHoverBg: colors?.bg,
+				checkoutHoverFg: colors?.fg,
+				checkoutTextSize: getNumber(16),
+				checkoutTextWeight: getNumber(600),
+			},
 		},
 
 		isActive: { type: Boolean, required: true, default: true },
