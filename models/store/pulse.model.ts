@@ -1,7 +1,6 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 import { getString, colors, getNumber, font, getBoolean, getImage } from '../../util/index.js';
-import { get } from 'lodash';
 
 const productListData = [
 	{
