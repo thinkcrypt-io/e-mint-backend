@@ -1,23 +1,6 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { CategoryType } from './category.type.js';
-
-const keys = [
-	'name',
-	'shortDescription',
-	'description',
-	'parent',
-	'displayInHomePage',
-	'dispayInMenu',
-	'meta',
-	'slug',
-	'isActive',
-	'isFeatured',
-	'priority',
-	'image',
-	'isDeleted',
-	'timestamps',
-	'tags',
-];
+import Product from '../products/products.model.js';
 
 const schema = new Schema<CategoryType>(
 	{
@@ -96,6 +79,8 @@ const schema = new Schema<CategoryType>(
 
 	{
 		timestamps: true,
+		toJSON: { virtuals: true }, // Include this line to ensure virtuals are included when converting to JSON
+		toObject: { virtuals: true }, // Include this line to ensure virtuals are included when converting to objects
 	}
 );
 
@@ -108,5 +93,6 @@ schema.pre('save', function (next) {
 });
 
 const Session = mongoose.model<any>('Category', schema);
-export { default as settings } from './category.settings.js';
 export default Session;
+
+export { default as settings } from './category.settings.js';

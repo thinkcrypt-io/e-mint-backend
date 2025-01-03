@@ -1,6 +1,6 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import { Category as Model, categorySettings as settings } from '../models/index.js';
+import { Category as Model, Product, categorySettings as settings } from '../models/index.js';
 import {
 	deleteDocument,
 	createDocument,
@@ -24,6 +24,7 @@ import {
 	paginate,
 	filter,
 	isExists,
+	isDeleteAllowed,
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig } from '../imports.js';
 
@@ -39,6 +40,12 @@ const config = constructConfig({
 	config: settings,
 });
 const permissions = constructPermissions(permission);
+const allowdelete = isDeleteAllowed({
+	model: Product,
+	field: 'category',
+	error:
+		'This category is assigned to one or multiple products. Please reassign the products before deleting the category.',
+});
 
 //Define the middlewares
 const middlewares = {
@@ -58,7 +65,7 @@ const middlewares = {
 	//Middleware for getting a category by ID
 	getById: [protect, hasPermission([permissions.read])],
 	//Middleware for deleting a category
-	delete: [protect, hasPermission([permissions.delete])],
+	delete: [protect, hasPermission([permissions.delete]), allowdelete],
 	//Middleware for copying a category
 	copy: [protect, hasPermission([permissions.create])],
 	// Middleware for getting the count of categories

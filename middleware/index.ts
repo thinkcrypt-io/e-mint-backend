@@ -36,4 +36,7 @@ export { default as extendRequestBody } from './extendRequestBody.middleware.js'
 export { default as isExpired } from './isExpired.middleware.js';
 export { default as packageExpired } from './isExpired.middleware.js';
 
+export { default as isDeletePossible } from './isDeletePossible.middleware.js';
+export { default as isDeleteAllowed } from './isDeletePossible.middleware.js';
+
 export * from './admin/index.js';

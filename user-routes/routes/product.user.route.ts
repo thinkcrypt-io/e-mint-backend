@@ -2,7 +2,15 @@
 import express from 'express';
 import constructConfig from '../../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, ifExists, validate, hasPermission } from '../../middleware/index.js';
+import {
+	protect,
+	sort,
+	query,
+	ifExists,
+	validate,
+	hasPermission,
+	customQuery,
+} from '../../middleware/index.js';
 import {
 	deleteDocument,
 	getFilters,
@@ -45,7 +53,15 @@ const updateMiddleware = [
 ];
 
 // Define the routes for the product store
-router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS));
+router.route('/').get(
+	...commonMiddleware,
+	customQuery({
+		query: {
+			status: 'published',
+		},
+	}),
+	getAllDocuments(config.QUERY_OPTIONS)
+);
 // .post(...postMiddleware, hasPermission(['add_product']), createDocument(config.MODEL));
 
 router.get('/:id', getDocumentById(config.QUERY_OPTIONS));

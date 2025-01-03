@@ -3,6 +3,7 @@ import { Filter } from './filter.types.js';
 import Joi from 'joi';
 
 export type IfExistType = { model: mongoose.Model<any>; fields: string };
+export type IsDeletePossibleType = { model: mongoose.Model<any>; field?: string; error?: string };
 
 export type QuerySettings = {
 	sortables: string[];

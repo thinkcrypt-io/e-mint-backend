@@ -11,8 +11,6 @@ const ifExists = ({ model, fields }: IfExistType) => {
 				[field]: req.body[field],
 			}));
 
-			console.log(fieldArray);
-
 			const existingEntry = await model.findOne({ $or: conditions, shop: req.shop });
 
 			if (existingEntry) {
