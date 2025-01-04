@@ -33,6 +33,8 @@ router.put(
 			'description',
 			'address',
 			'logo',
+			'activeTheme',
+			'dateActivated',
 			'faq',
 			'terms',
 			'coverImage',
@@ -51,8 +53,8 @@ router.put(
 );
 
 router.post('/shop/register', shopRegister);
-
 router.put('/change-password', protect, changeSellerPassword);
+
 // router.get('/verify-reset-token/:token', verifyToken);
 // router.post('/reset', resetPassword);
 

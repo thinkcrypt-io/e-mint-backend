@@ -8,6 +8,7 @@ import {
 	productRoute,
 	customerRoute,
 	themeRouter,
+	uploadRoute,
 } from './index.js';
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.use('/subscriptions', subscriptionRoute);
 router.use('/products', productRoute);
 router.use('/customers', customerRoute);
 router.use('/themes', themeRouter);
+router.use('/upload', uploadRoute);
 
 export default router;

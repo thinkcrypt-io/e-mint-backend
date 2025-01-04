@@ -16,6 +16,9 @@ type ShopType = {
 	deployment?: Types.ObjectId;
 	trial: boolean;
 	url?: string;
+	themes?: Types.ObjectId[];
+	activeTheme?: Types.ObjectId;
+	dateActivated?: Date;
 	phone: string;
 	package?: any;
 	isDeleted?: boolean;

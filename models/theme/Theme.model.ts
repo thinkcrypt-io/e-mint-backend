@@ -12,6 +12,7 @@ type ModelType = {
 	framework: string; // Framework of the theme
 	shortDescription: string; // Short description of the theme
 	description: string; // Description of the theme
+	gitRepo: string; // URL to the GitHub repository of the theme
 	isDiscounted?: boolean; // Whether the theme is discounted or not
 	discountedPrice?: number; // Discounted price of the theme
 	demoVariants?: object; // Variants of the demo
@@ -39,6 +40,10 @@ const schema = new Schema<ModelType>(
 			required: true,
 		},
 		slug: String,
+		gitRepo: {
+			type: String,
+			required: true,
+		},
 		title: {
 			type: String,
 		},
@@ -99,6 +104,12 @@ export const themeSettings: SettingsType<ModelType> = {
 		type: 'string',
 		required: true,
 		trim: true,
+		edit: true,
+	},
+	gitRepo: {
+		title: 'Git Repo',
+		type: 'string',
+		required: true,
 		edit: true,
 	},
 	sections: {

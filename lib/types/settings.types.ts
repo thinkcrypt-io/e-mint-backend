@@ -16,11 +16,7 @@ export type Filter = {
 };
 
 type SettingType = {
-	sort?: boolean;
-	search?: boolean;
 	title: string;
-	unique?: boolean;
-	exclude?: boolean;
 	type:
 		| 'string'
 		| 'email'
@@ -33,6 +29,11 @@ type SettingType = {
 		| 'array-number'
 		| 'array'
 		| 'array-object';
+	sort?: boolean;
+	search?: boolean;
+	unique?: boolean;
+	exclude?: boolean;
+
 	required?: boolean;
 	filter?: Filter;
 	edit?: boolean;

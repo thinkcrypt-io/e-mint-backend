@@ -52,6 +52,15 @@ const shopSettings: SettingsType<ShopType> = {
 		},
 		sort: true,
 	},
+	activeTheme: {
+		type: 'string',
+		title: 'Active Theme',
+		edit: true,
+		populate: {
+			path: 'activeTheme',
+			select: 'name',
+		},
+	},
 	description: {
 		type: 'string',
 		title: 'Description',

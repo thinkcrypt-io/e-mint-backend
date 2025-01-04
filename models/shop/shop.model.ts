@@ -26,6 +26,22 @@ const schema = new Schema<ShopType>(
 			trim: true,
 		},
 
+		themes: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'Theme',
+			},
+		],
+
+		activeTheme: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Theme',
+		},
+
+		dateActivated: {
+			type: Date,
+		},
+
 		shippingCharge: {
 			type: Number,
 			default: 0,
