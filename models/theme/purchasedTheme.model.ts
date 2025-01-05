@@ -12,6 +12,7 @@ type ModelType = {
 	isDeployed: boolean;
 	deployment: Types.ObjectId;
 	name: string;
+	status: string;
 };
 
 const schema = new Schema<ModelType>(
@@ -40,6 +41,20 @@ const schema = new Schema<ModelType>(
 		},
 		activatedAt: {
 			type: Date,
+		},
+		status: {
+			type: String,
+			enum: [
+				'active',
+				'inactive',
+				'deleted',
+				'pending',
+				'ready',
+				'deployed',
+				'paused',
+				'processing',
+			],
+			default: 'pending',
 		},
 		isDeployed: {
 			type: Boolean,
@@ -70,6 +85,12 @@ export const purchasedThemeSettings: SettingsType<ModelType> = {
 			path: 'theme',
 			select: 'name',
 		},
+	},
+	status: {
+		title: 'Status',
+		type: 'string',
+		sort: true,
+		edit: true,
 	},
 	name: {
 		title: 'Name',

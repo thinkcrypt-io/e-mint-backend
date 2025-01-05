@@ -21,13 +21,14 @@ const makeDefaultFromAdmin = async (req: any, res: Response) => {
 
 		getPurchasedTheme.isActivated = true;
 		getPurchasedTheme.activatedAt = new Date();
+		getPurchasedTheme.status = 'active';
 
 		const savePurchase = await getPurchasedTheme.save();
 
 		// Deactivate all other purchased themes for the shop
 		await PurchasedTheme.updateMany(
 			{ shop: shop, _id: { $ne: purchase } },
-			{ $set: { isActivated: false, activatedAt: null } }
+			{ $set: { isActivated: false, activatedAt: null, status: 'inactive' } }
 		);
 
 		const saveShop = await getShop.save();
