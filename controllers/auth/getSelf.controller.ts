@@ -9,9 +9,15 @@ const getSelf = async (req: any, res: Response): Promise<Response> => {
 			.populate([
 				{
 					path: 'shop',
-					populate: {
-						path: 'deployment',
-					},
+					populate: [
+						{
+							path: 'deployment',
+						},
+						{
+							path: 'activeTheme',
+							populate: 'theme',
+						},
+					],
 				},
 				{
 					path: 'role',

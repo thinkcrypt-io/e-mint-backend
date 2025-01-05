@@ -20,6 +20,7 @@ const makeDefaultFromAdmin = async (req: any, res: Response) => {
 		getShop.dateActivated = new Date();
 
 		getPurchasedTheme.isActivated = true;
+		getPurchasedTheme.activatedAt = new Date();
 
 		const savePurchase = await getPurchasedTheme.save();
 

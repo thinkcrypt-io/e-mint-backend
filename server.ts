@@ -41,6 +41,7 @@ import {
 	assetRoute,
 	paymentAccountRoute,
 	deploymentRoute,
+	activeThemeRoute,
 } from './routes/index.js';
 
 import adminRouter from './routes-admin/admin.router.js';
@@ -131,6 +132,7 @@ app.use('/api/assets', assetRoute);
 app.use('/api/payment-accounts', paymentAccountRoute);
 
 app.use('/api/deployments', deploymentRoute);
+app.use('/api/active-theme', activeThemeRoute);
 
 app.use((req, res, next) => {
 	return res
