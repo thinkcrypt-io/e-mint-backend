@@ -35,7 +35,7 @@ const schema = new Schema<ShopType>(
 
 		activeTheme: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Theme',
+			ref: 'PurchasedTheme',
 		},
 
 		dateActivated: {

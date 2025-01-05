@@ -20,6 +20,8 @@ export { default as isExists } from './isExists.middleware.js';
 export { default as doesExist } from './isExists.middleware.js';
 export { default as duplicateEntry } from './isExists.middleware.js';
 
+export { default as existCondition } from './existCondition.middleware.js';
+
 export { default as myData } from './myData.middleware.js';
 export { default as pagination } from './pagination.middleware.js';
 export { default as paginate } from './pagination.middleware.js';

@@ -52,6 +52,8 @@ router.put(
 	})
 );
 
+router.post('/theme/purchase', shopRegister);
+
 router.post('/shop/register', shopRegister);
 router.put('/change-password', protect, changeSellerPassword);
 

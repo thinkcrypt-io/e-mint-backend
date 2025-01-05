@@ -1,5 +1,6 @@
 //1
 export { default as createDocument } from './createDocument.controller.js';
+export { default as createAdminDocument } from './createAdminDocument.controller.js';
 //2
 export { default as createOrUpdateDocument } from './createOrUpdateDocument.controller.js';
 //3

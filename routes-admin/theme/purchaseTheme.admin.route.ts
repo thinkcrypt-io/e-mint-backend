@@ -1,9 +1,9 @@
 // Import necessary modules from their respective files
 import express from 'express';
-import { Theme as Model, themeSettings as settings } from '../../models/index.js';
+import { PurchasedTheme as Model, purchasedThemeSettings as settings } from '../../models/index.js';
 import {
 	deleteDocument,
-	createDocument,
+	createAdminDocument as createDocument,
 	updateDocument,
 	getAllDocuments,
 	getDocumentById,
@@ -14,6 +14,7 @@ import {
 	exportPdf,
 	getCount,
 	getFilters,
+	makeDefaultFromAdmin,
 } from '../../controllers/index.js';
 
 import {
@@ -22,6 +23,7 @@ import {
 	paginate,
 	filter,
 	adminPermissions as hasPermission,
+	existCondition,
 } from '../../middleware/index.js';
 
 import { constructPermissions, constructConfig } from '../../imports.js';
@@ -42,7 +44,12 @@ const permissions = constructPermissions(permission);
 //Define the middlewares
 const middlewares = {
 	//Middleware for creating a new category
-	post: [protect, validate(config.VALIDATORS.POST), hasPermission([permissions.create])],
+	post: [
+		protect,
+		validate(config.VALIDATORS.POST),
+		hasPermission([permissions.create]),
+		existCondition({ model: Model, fields: 'shop theme', message: 'Theme already purchased' }),
+	],
 	//Middleware for getting all categories
 	getAll: [paginate, filter(config.FILTER_OPTIONS)],
 	//Middleware for updating a category
@@ -92,6 +99,9 @@ router.post('/export/pdf', ...middlewares.export, exportPdf(config.EXPORT_OPTION
 
 //Duplicate
 router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.MODEL }));
+
+//Custom Route
+router.put('/make/default/:id', protect, makeDefaultFromAdmin);
 
 // Export the router
 export default router;

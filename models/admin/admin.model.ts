@@ -79,6 +79,7 @@ const schema = new Schema<AdminType>(
 			shops: [String],
 			sellers: [String],
 			themes: [String],
+			purchasedthemes: [String],
 		},
 	},
 

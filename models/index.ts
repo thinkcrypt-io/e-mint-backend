@@ -99,6 +99,10 @@ export {
 export { default as Theme } from './theme/Theme.model.js';
 export { ThemeType, themeSettings } from './theme/Theme.model.js';
 
+//purchased theme
+export { default as PurchasedTheme } from './theme/purchasedTheme.model.js';
+export { PurchasedThemeType, purchasedThemeSettings } from './theme/purchasedTheme.model.js';
+
 //Themes
 export { default as Nexa } from './store/store.model.js';
 export { default as Hongo } from './store/hongo.model.js';
