@@ -56,7 +56,7 @@ router.post('/product/hongo', protect, addProductListHongo);
 router.delete('/product/hongo/:id', protect, deleteProductListHongo);
 router.put('/product/hongo/:id', protect, editProductListHongo);
 
-router.post('/deploy/hongo', protect, validate(hongoConfig.VALIDATORS.POST), deployProjectHongo);
+router.post('/deploy', protect, deployProjectHongo);
 router.post('/env/hongo', protect, addHongoEnvController);
 
 //deployProject

@@ -1,5 +1,5 @@
 import { getErrorMessage } from '../../imports.js';
-import { Shop, Deployment } from '../../models/index.js';
+import { Shop, Deployment, PurchasedTheme } from '../../models/index.js';
 import { Vercel } from '@vercel/sdk';
 
 const deleteProject = async (req: any, res: any) => {
@@ -20,11 +20,17 @@ const deleteProject = async (req: any, res: any) => {
 		const shop = await Shop.findOne({ _id: req.shop });
 		if (!shop) return res.status(400).json({ message: 'Shop not found' });
 
+		const getActiveTheme = (await PurchasedTheme.findOne({ deployment: id })) as any;
+
 		const createResponse = await vercel.projects.deleteProject({
 			idOrName: findDeployment.vercelName,
 		});
 
 		const saved = await Deployment.findByIdAndDelete(id);
+
+		getActiveTheme.deployment = null;
+		getActiveTheme.isDeployed = false;
+		await getActiveTheme.save();
 
 		res.status(200).json({
 			message: 'Project Deleted Successfully',

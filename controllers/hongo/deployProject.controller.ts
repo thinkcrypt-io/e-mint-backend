@@ -1,5 +1,6 @@
+import { get } from 'lodash';
 import { getErrorMessage } from '../../imports.js';
-import { Shop, Deployment } from '../../models/index.js';
+import { Shop, Deployment, PurchasedTheme } from '../../models/index.js';
 import { Vercel } from '@vercel/sdk';
 
 const GIT_REPO = 'hongo';
@@ -9,12 +10,33 @@ const BACKEND = 'https://e-mint-c5a78779aa41.herokuapp.com';
 
 const deployProject = async (req: any, res: any) => {
 	try {
+		const { slug } = req.body;
+
+		if (!slug) {
+			return res.status(400).json({ message: 'Name is required' });
+		}
+
 		const vercel = new Vercel({
 			bearerToken: process.env.VERCEL_TOKEN,
 		});
 
+		const getShop = await Shop.findById(req.shop);
+		if (!getShop) return res.status(404).json({ message: 'Shop not found' });
+
+		const getActiveTheme = (await PurchasedTheme.findById(getShop.activeTheme).populate(
+			'theme deployment'
+		)) as any;
+
+		if (!getActiveTheme)
+			return res.status(404).json({ message: 'No active theme found for this shop' });
+
+		const theme = getActiveTheme.theme.slug;
+		const gitRepo = getActiveTheme.theme.gitRepo;
+
+		if (!theme) return res.status(404).json({ message: 'No active theme found for this shop' });
+
 		const queryHelper = (req as any).queryHelper || {};
-		const { slug, theme } = req.body;
+
 		const findDeployment = await Deployment.findOne({ slug });
 
 		if (findDeployment)
@@ -32,7 +54,7 @@ const deployProject = async (req: any, res: any) => {
 				name: slug,
 				framework: 'nextjs',
 				gitRepository: {
-					repo: `aiasifistiaque/${theme || GIT_REPO}`,
+					repo: `aiasifistiaque/${gitRepo || GIT_REPO}`,
 					type: 'github',
 				},
 			},
@@ -69,7 +91,7 @@ const deployProject = async (req: any, res: any) => {
 				target: 'production',
 				gitSource: {
 					type: 'github',
-					repo: theme || GIT_REPO,
+					repo: gitRepo || GIT_REPO,
 					ref: BRANCH,
 					org: ORG_NAME,
 				},
@@ -99,7 +121,7 @@ const deployProject = async (req: any, res: any) => {
 			shop: req.shop,
 			shopId: shop.id,
 			slug,
-			gitRepo: GIT_REPO,
+			gitRepo: gitRepo,
 			gitBranch: BRANCH,
 			gitOrg: ORG_NAME,
 			domain: addDomainResponse.name,
@@ -113,6 +135,11 @@ const deployProject = async (req: any, res: any) => {
 
 		const saved = await deployment.save();
 		shop.deployment = saved._id;
+		getActiveTheme.deployment = saved._id;
+		getActiveTheme.isDeployed = true;
+
+		await shop.save();
+		await getActiveTheme.save();
 
 		res.status(200).json({
 			project: createResponse,
