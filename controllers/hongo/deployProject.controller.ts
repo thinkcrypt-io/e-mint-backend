@@ -1,4 +1,3 @@
-import { get } from 'lodash';
 import { getErrorMessage } from '../../imports.js';
 import { Shop, Deployment, PurchasedTheme } from '../../models/index.js';
 import { Vercel } from '@vercel/sdk';
