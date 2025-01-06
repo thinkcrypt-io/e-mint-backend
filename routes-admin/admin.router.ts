@@ -10,6 +10,7 @@ import {
 	themeRouter,
 	uploadRoute,
 	purchasedThemeRoute,
+	smsRoute,
 } from './index.js';
 
 const router = express.Router();
@@ -24,5 +25,7 @@ router.use('/customers', customerRoute);
 router.use('/themes', themeRouter);
 router.use('/upload', uploadRoute);
 router.use('/purchasedthemes', purchasedThemeRoute);
+
+router.use('/sms', smsRoute);
 
 export default router;

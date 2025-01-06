@@ -8,3 +8,5 @@ export { default as customerRoute } from './customers/customer.admin.route.js';
 export { default as themeRouter } from './theme/theme.admin.route.js';
 export { default as uploadRoute } from './file/upload.admin.route.js';
 export { default as purchasedThemeRoute } from './theme/purchaseTheme.admin.route.js';
+
+export { default as smsRoute } from './sms/sms.admin.route.js';
