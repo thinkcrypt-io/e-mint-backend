@@ -212,6 +212,7 @@ const schema = new Schema<any>(
 				hide: getBoolean(false),
 				innerGap: getNumber(4),
 				outerGap: getNumber(4),
+				boxShadow: { type: String, default: '0 1px 1px rgba(0, 0, 0, 0.1)' },
 			},
 			homeProductCss: {
 				titleFontSizeBASE: getNumber(20),
@@ -250,6 +251,11 @@ const schema = new Schema<any>(
 
 				arrowBtnBg: colors?.fg,
 				arrowBtnFg: colors?.bg,
+
+				tagBg: colors?.bg,
+				tagFg: colors?.fg,
+				tagRadius: getNumber(20),
+				tagTextSize: getNumber(12),
 			},
 
 			faqPage: {
@@ -288,6 +294,7 @@ const schema = new Schema<any>(
 				fgColor: colors?.fg,
 				hoverColor: colors?.fg,
 
+				titleFontWeight: getNumber(600),
 				titleSizeBase: getNumber(20),
 				titleSizeBG: getNumber(20),
 
@@ -309,6 +316,9 @@ const schema = new Schema<any>(
 
 				logoWidth: getNumber(80),
 				logoHeight: getNumber(80),
+
+				copyrightFontSize: getNumber(14),
+				copyrightFontColor: colors?.fg,
 			},
 
 			aboutPage: {
@@ -401,11 +411,20 @@ const schema = new Schema<any>(
 				badgeRadius: getNumber(4),
 				badgeFontWeight: getNumber(500),
 
-				// social share
+				// specification card
 				cardBg: colors?.bg,
 				cardFg: colors?.fg,
 				cardTableBg: colors?.bg,
 				cardTableFg: colors?.bg,
+
+				// social share
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+				fontSize: getNumber(12),
+				iconSize: getNumber(18),
+				iconFg: colors?.fg,
+				borderRadius: getNumber(40),
+				boxShadow: { type: String, default: '0 1px 1px rgba(0, 0, 0, 0.1)' },
 			},
 
 			productList: productListData,
@@ -441,6 +460,34 @@ const schema = new Schema<any>(
 				checkoutHoverFg: colors?.fg,
 				checkoutTextSize: getNumber(16),
 				checkoutTextWeight: getNumber(600),
+			},
+			authModalCss: {
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+				titleSizeBase: getNumber(14),
+				titleSizeBg: getNumber(20),
+				titleColor: colors?.fg,
+				titleFontWeight: getNumber(600),
+				titleAlign: getString('center'),
+
+				secondaryTextColor: colors?.fg,
+				secondaryTextSize: getNumber(12),
+
+				labelSize: getNumber(12),
+				labelWeight: getNumber(600),
+				primaryBtnBg: colors?.bg,
+				primaryBtnFg: colors?.fg,
+				primaryBtnHoverBg: colors?.bg,
+				primaryBtnHoverFg: colors?.fg,
+
+				secondaryBtnBg: colors?.bg,
+				secondaryBtnFg: colors?.fg,
+				secondaryBtnHoverBg: colors?.bg,
+				secondaryBtnHoverFg: colors?.fg,
+				borderColor: colors?.fg,
+
+				btnFontSize: getNumber(16),
+				btnFontWeight: getNumber(600),
 			},
 		},
 
