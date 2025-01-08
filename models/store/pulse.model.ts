@@ -1,6 +1,13 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
-import { getString, colors, getNumber, font, getBoolean, getImage } from '../../util/index.js';
+import {
+	getString,
+	colors,
+	getNumber,
+	font,
+	getBoolean,
+	getImage,
+} from '../../util/index.js';
 
 const productListData = [
 	{
@@ -139,7 +146,13 @@ const schema = new Schema<any>(
 				hide: getBoolean(false),
 			},
 
-			serviceContent: [{ image: getImage(), title: getString('Enter Title'), description: String }],
+			serviceContent: [
+				{
+					image: getImage(),
+					title: getString('Enter Title'),
+					description: String,
+				},
+			],
 			serviceCSS: {
 				imageHeight: getNumber(100),
 				imageWidth: getNumber(100),
@@ -387,6 +400,12 @@ const schema = new Schema<any>(
 				badgeSecondaryFg: colors?.fg,
 				badgeRadius: getNumber(4),
 				badgeFontWeight: getNumber(500),
+
+				// social share
+				cardBg: colors?.bg,
+				cardFg: colors?.fg,
+				cardTableBg: colors?.bg,
+				cardTableFg: colors?.bg,
 			},
 
 			productList: productListData,
