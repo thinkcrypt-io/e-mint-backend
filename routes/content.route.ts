@@ -1,79 +1,102 @@
 // Import necessary modules from their respective files
-import express from 'express';
+import express from "express";
 
-import getContent from '../controllers/content/getContent.controller.js';
-import updateContent from '../controllers/content/updateContent.controller.js';
-import addProductList from '../controllers/content/addProductList.controller.js';
-import deleteProductList from '../controllers/content/deleteProductListController.js';
-import editProductList from '../controllers/content/editProductListController.js';
+import getContent from "../controllers/content/getContent.controller.js";
+import updateContent from "../controllers/content/updateContent.controller.js";
+import addProductList from "../controllers/content/addProductList.controller.js";
+import deleteProductList from "../controllers/content/deleteProductListController.js";
+import editProductList from "../controllers/content/editProductListController.js";
 
 import {
-	getContentHongo,
-	updateContentHongo,
-	addProductListHongo,
-	deleteProductListHongo,
-	editProductListHongo,
-	deployProjectHongo,
-	addHongoEnvController,
-	addDomainController,
-	checkDomainConfig,
-} from '../controllers/hongo/index.js';
+  getContentHongo,
+  updateContentHongo,
+  addProductListHongo,
+  deleteProductListHongo,
+  editProductListHongo,
+  deployProjectHongo,
+  addHongoEnvController,
+  addDomainController,
+  checkDomainConfig,
+} from "../controllers/hongo/index.js";
 
-import Deploy, { settings as deploySettings } from '../models/deployment/Deployment.model.js';
+import Deploy, {
+  settings as deploySettings,
+} from "../models/deployment/Deployment.model.js";
 import {
-	constructConfig,
-	validate,
-	protect,
-	getThemeContent,
-	Pulse,
-	updateThemeContent,
-	addProductListToTheme,
-	deleteProductListFromTheme,
-	updateProductListInTheme,
-} from '../imports.js';
-import checkIfSlugAvailable from '../controllers/hongo/checkIfSlugAvailable.js';
+  constructConfig,
+  validate,
+  protect,
+  getThemeContent,
+  Pulse,
+  AimersVision,
+  updateThemeContent,
+  addProductListToTheme,
+  deleteProductListFromTheme,
+  updateProductListInTheme,
+} from "../imports.js";
+import checkIfSlugAvailable from "../controllers/hongo/checkIfSlugAvailable.js";
 
 // Initialize a new router
 const router = express.Router();
 
 const hongoConfig = constructConfig({
-	model: Deploy,
-	config: deploySettings,
+  model: Deploy,
+  config: deploySettings,
 });
 
 //NEXA THEME
-router.get('/nexa', protect, getContent);
-router.put('/nexa', protect, updateContent);
-router.post('/product/nexa', protect, addProductList);
-router.delete('/product/nexa/:id', protect, deleteProductList);
-router.put('/product/nexa/:id', protect, editProductList);
+router.get("/nexa", protect, getContent);
+router.put("/nexa", protect, updateContent);
+router.post("/product/nexa", protect, addProductList);
+router.delete("/product/nexa/:id", protect, deleteProductList);
+router.put("/product/nexa/:id", protect, editProductList);
 
 //HONGO THEME
-router.get('/hongo', protect, getContentHongo);
-router.put('/hongo', protect, updateContentHongo);
+router.get("/hongo", protect, getContentHongo);
+router.put("/hongo", protect, updateContentHongo);
 
-router.post('/product/hongo', protect, addProductListHongo);
-router.delete('/product/hongo/:id', protect, deleteProductListHongo);
-router.put('/product/hongo/:id', protect, editProductListHongo);
+router.post("/product/hongo", protect, addProductListHongo);
+router.delete("/product/hongo/:id", protect, deleteProductListHongo);
+router.put("/product/hongo/:id", protect, editProductListHongo);
 
-router.post('/deploy', protect, deployProjectHongo);
-router.post('/env/hongo', protect, addHongoEnvController);
+router.post("/deploy", protect, deployProjectHongo);
+router.post("/env/hongo", protect, addHongoEnvController);
 
 //deployProject
-router.post('/add-domain', protect, addDomainController);
+router.post("/add-domain", protect, addDomainController);
 
 //check domain  config
-router.get('/check-domain/:id', protect, checkDomainConfig);
+router.get("/check-domain/:id", protect, checkDomainConfig);
 
 //find if deployment exists
-router.get('/deployments/:slug', checkIfSlugAvailable);
+router.get("/deployments/:slug", checkIfSlugAvailable);
 
 //Pulse THEME
-router.get('/pulse', protect, getThemeContent(Pulse));
-router.put('/pulse', protect, updateThemeContent(Pulse));
+router.get("/pulse", protect, getThemeContent(Pulse));
+router.put("/pulse", protect, updateThemeContent(Pulse));
 
-router.post('/product/pulse', protect, addProductListToTheme(Pulse));
-router.delete('/product/pulse/:id', protect, deleteProductListFromTheme(Pulse));
-router.put('/product/pulse/:id', protect, updateProductListInTheme(Pulse));
+router.post("/product/pulse", protect, addProductListToTheme(Pulse));
+router.delete("/product/pulse/:id", protect, deleteProductListFromTheme(Pulse));
+router.put("/product/pulse/:id", protect, updateProductListInTheme(Pulse));
+
+//AIMERS-VISION THEME
+router.get("/aimers-vision", protect, getThemeContent(AimersVision));
+router.put("/aimers-vision", protect, updateThemeContent(AimersVision));
+
+router.post(
+  "/product/aimers-vision",
+  protect,
+  addProductListToTheme(AimersVision)
+);
+router.delete(
+  "/product/aimers-vision/:id",
+  protect,
+  deleteProductListFromTheme(AimersVision)
+);
+router.put(
+  "/product/aimers-vision/:id",
+  protect,
+  updateProductListInTheme(AimersVision)
+);
 
 export default router;
