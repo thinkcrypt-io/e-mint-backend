@@ -336,125 +336,65 @@ const schema = new Schema<any>(
 				// textColor: colors?.fg,
 				banner: {
 					imgSrc: getImage(),
-					text: {
-						title: getString('Enter your title here'),
-						default: String,
-					},
+					text: getString('Enter your title here'),
 				},
 				mission: {
-					label: {
-						title: getString('Our Mission'),
-						default: String,
-					},
-					paraOne: {
-						title: getString(
-							'A mission statement is a simple statement about the goals, values, andobjectives of an organization. A mission statement summarizes why abusiness exists and helps a company respond to change and make decisionsthat align with its vision.'
-						),
-						default: String,
-					},
-					paraTwo: {
-						title: getString(
-							'Our mission is simple: to offer a shopping experience that combinesquality, convenience, and value. We aim to create a platform that’s morethan a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life'
-						),
-						default: String,
-					},
+					label: getString('Our Mission'),
+					paraOne: getString(
+						'A mission statement is a simple statement about the goals, values, and objectives of an organization. A mission statement summarizes why a business exists and helps a company respond to change and make decisions that align with its vision.'
+					),
+					paraTwo: getString(
+						'Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life.'
+					),
 				},
 				productRange: {
-					label: {
-						title: getString('Wide Product Range'),
-						default: String,
-					},
-					paraOne: {
-						title: getString(
-							'We believe in variety and diversity, curating a vast selection of products to cater to all kinds of preferences and needs. Whether you’re searching for the latest fashion trends, premium electronics, household essentials, or unique gifts, we have it all. Our team works diligently to expand our collection, constantly adding new and exciting products to ensure there’s something for everyone.'
-						),
-						default: String,
-					},
-					paraTwo: {
-						title: getString(
-							'Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life'
-						),
-						default: String,
-					},
-					customerCentric: {
-						label: {
-							title: getString('Customer-Centric Approach'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								"Customer satisfaction is our top priority. We’re here to make sure that your experience on our site is smooth from start to finish. Our dedicated customer support team is always available to help with questions, order tracking, returns, and more. We listen to our customers' feedback and continuously work to improve every aspect of our service."
-							),
-							default: String,
-						},
-					},
-					trustedQuality: {
-						label: {
-							title: getString('Trusted Quality'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								'Quality is at the core of our brand. We carefully select each product based on rigorous standards, partnering with trusted suppliers to bring you only the best. Every item undergoes a thorough quality check, ensuring it meets our promise of excellence. This commitment to quality sets us apart and helps build trust with our valued customers.'
-							),
-							default: String,
-						},
-					},
-					seamlessShopping: {
-						label: {
-							title: getString('Seamless Shopping Experience'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								'Our website is designed with you in mind, featuring an intuitive interface that makes it easy to find what you need. With advanced search filters, personalized recommendations, and a streamlined checkout process, we aim to make shopping simple, fast, and enjoyable. Your safety and convenience are paramount, which is why we offer multiple payment options and robust security measures for a worry-free shopping experience.'
-							),
-							default: String,
-						},
-					},
-					reliableDelivery: {
-						label: {
-							title: getString('Fast & Reliable Delivery'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								'We know that timely delivery is crucial. Our logistics team works with reputable delivery partners to ensure your order reaches you safely and on time. We offer a variety of shipping options to suit your preferences, including expedited services for those last-minute needs.'
-							),
-							default: String,
-						},
-					},
-					sustainablePractice: {
-						label: {
-							title: getString('Sustainable Practices'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								'we’re committed to making a positive impact. We continuously strive to adopt sustainable practices in our operations, from eco-friendly packaging to responsible sourcing. By supporting sustainable products and reducing our environmental footprint, we aim to contribute to a better, greener future.'
-							),
-							default: String,
-						},
-					},
-					community: {
-						label: {
-							title: getString('Community & Care'),
-							default: String,
-						},
-						paraOne: {
-							title: getString(
-								'We believe in giving back to our community and are passionate about supporting meaningful causes. We work closely with local artisans, small businesses, and social initiatives to bring unique and impactful products to our store. Our aim is to connect customers with products they love while making a positive difference in the world.'
-							),
-							default: String,
-						},
-					},
-					greetings: {
-						title: getString(
-							'Thank you for choosing [Your Website Name] as your trusted e-commerce platform. We’re excited to be part of your journey and look forward to serving you with dedication, passion, and excellence.'
-						),
-						default: String,
-					},
+					label: getString('Wide Product Range'),
+					paraOne: getString(
+						'We believe in variety and diversity, curating a vast selection of products to cater to all kinds of preferences and needs. Whether you’re searching for the latest fashion trends, premium electronics, household essentials, or unique gifts, we have it all. Our team works diligently to expand our collection, constantly adding new and exciting products to ensure there’s something for everyone.'
+					),
+					paraTwo: getString(
+						'Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life.'
+					),
 				},
+				customerCentric: {
+					label: getString('Customer-Centric Approach'),
+					paraOne: getString(
+						"Customer satisfaction is our top priority. We’re here to make sure that your experience on our site is smooth from start to finish. Our dedicated customer support team is always available to help with questions, order tracking, returns, and more. We listen to our customers' feedback and continuously work to improve every aspect of our service."
+					),
+				},
+				trustedQuality: {
+					label: getString('Trusted Quality'),
+					paraOne: getString(
+						'Quality is at the core of our brand. We carefully select each product based on rigorous standards, partnering with trusted suppliers to bring you only the best. Every item undergoes a thorough quality check, ensuring it meets our promise of excellence. This commitment to quality sets us apart and helps build trust with our valued customers.'
+					),
+				},
+				seamlessShopping: {
+					label: getString('Seamless Shopping Experience'),
+					paraOne: getString(
+						'Our website is designed with you in mind, featuring an intuitive interface that makes it easy to find what you need. With advanced search filters, personalized recommendations, and a streamlined checkout process, we aim to make shopping simple, fast, and enjoyable. Your safety and convenience are paramount, which is why we offer multiple payment options and robust security measures for a worry-free shopping experience.'
+					),
+				},
+				reliableDelivery: {
+					label: getString('Fast & Reliable Delivery'),
+					paraOne: getString(
+						'We know that timely delivery is crucial. Our logistics team works with reputable delivery partners to ensure your order reaches you safely and on time. We offer a variety of shipping options to suit your preferences, including expedited services for those last-minute needs.'
+					),
+				},
+				sustainablePractice: {
+					label: getString('Sustainable Practices'),
+					paraOne: getString(
+						'We’re committed to making a positive impact. We continuously strive to adopt sustainable practices in our operations, from eco-friendly packaging to responsible sourcing. By supporting sustainable products and reducing our environmental footprint, we aim to contribute to a better, greener future.'
+					),
+				},
+				community: {
+					label: getString('Community & Care'),
+					paraOne: getString(
+						'We believe in giving back to our community and are passionate about supporting meaningful causes. We work closely with local artisans, small businesses, and social initiatives to bring unique and impactful products to our store. Our aim is to connect customers with products they love while making a positive difference in the world.'
+					),
+				},
+				greetings: getString(
+					'Thank you for choosing [Your Website Name] as your trusted e-commerce platform. We’re excited to be part of your journey and look forward to serving you with dedication, passion, and excellence.'
+				),
 			},
 			///////////////////// ends
 
