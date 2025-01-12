@@ -121,6 +121,8 @@ const schema = new Schema<any>(
 
 			hero: {
 				image: String,
+				bgColor: colors?.bg,
+				opacity: getNumber(0),
 
 				//
 				title: getString('Your Title Here'),
