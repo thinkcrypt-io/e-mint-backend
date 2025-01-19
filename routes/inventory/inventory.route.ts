@@ -28,6 +28,8 @@ import {
 import { constructPermissions, constructConfig, getSum } from '../../imports.js';
 import transferInventoryController from './transferInventory.controller.js';
 import transferBulkInventoryController from './transferBulkInventory.controller.js';
+import getInventory from './getInventory.controller.js';
+import receiveInventoryController from './receiveInventory.controller.js';
 
 // Define the permissions
 const permission = 'location';
@@ -76,7 +78,7 @@ const middlewares = {
 // Define the routes
 router
 	.route('/')
-	.get(...middlewares.getAll, getAllDocuments(config.QUERY_OPTIONS))
+	.get(...middlewares.getAll, getInventory(config.QUERY_OPTIONS))
 	.post(...middlewares.post, createDocument(config.MODEL));
 
 //:id is a dynamic parameter that will be extracted from the URL
@@ -106,6 +108,7 @@ router.put('/copy/:id', ...middlewares.copy, duplicateDocument({ model: config.M
 
 router.put('/transfer/:id', protect, transferInventoryController);
 router.put('/transfer/product/bulk', protect, transferBulkInventoryController);
+router.put('/transfer/product/bulk/:id', protect, receiveInventoryController);
 
 // Export the router
 export default router;

@@ -1,13 +1,13 @@
 import Joi from 'joi';
 import { Product, Transfer } from '../../models/index.js';
 import { Response } from 'express';
-import addProductList from '@/controllers/content/addProductList.controller.js';
 
 const transferBulkInventoryController = async (req: any, res: Response) => {
 	const { error } = validate(req.body);
 	if (error) return res.status(400).send({ message: error.details[0].message });
 	try {
 		const { location, source, reason, items, status, date, ref } = req.body;
+		let isSuccessfull = true;
 
 		const productUpdates = items?.map(async (item: any) => {
 			const { _id, qty } = item;
@@ -25,18 +25,23 @@ const transferBulkInventoryController = async (req: any, res: Response) => {
 					(inv: any) => inv.location.toString() === source
 				);
 
-				if (sourceInventory.stock < qty)
+				if (sourceInventory.stock < qty) {
+					isSuccessfull = false;
+
 					return res.status(400).json({ message: 'Insufficient stock in source location' });
+				}
 
 				// Deduct from source location
 				sourceInventory.stock -= Number(qty);
 			} else {
 				type = 'mtl';
 				// If no source location, deduct from main product stock
-				if (product.stock < qty)
+				if (product.stock < qty) {
+					isSuccessfull = false;
 					return res
 						.status(400)
 						.json({ message: `Insufficient stock for product ${product?.name}` });
+				}
 
 				product.stock -= Number(qty);
 			}
@@ -63,29 +68,28 @@ const transferBulkInventoryController = async (req: any, res: Response) => {
 			await product.save();
 		});
 
-		await Promise.all(productUpdates);
+		const success = await Promise.all(productUpdates);
 
-		const createTransfer = new Transfer({
-			destination: location,
-			source: source && source != '' ? source : null,
-			reason,
-			products: items.map((item: any) => ({
-				product: item._id,
-				quantity: item.qty,
-				status: status,
-				damagedQty: 0,
-				receivedQty: status == 'completed' ? item.qty : 0,
-				toReceive: status == 'completed' ? 0 : item.qty,
-			})),
-			status,
-			ref,
-			date,
-			shop: req.shop,
-		});
+		if (success && isSuccessfull) {
+			const createTransfer = new Transfer({
+				destination: location,
+				source: source && source != '' ? source : null,
+				reason,
+				products: items.map((item: any) => ({
+					product: item._id,
+					quantity: item.qty,
+					status: status,
+					damagedQty: 0,
+					receivedQty: status == 'completed' ? item.qty : 0,
+					toReceive: status == 'completed' ? 0 : item.qty,
+				})),
+				status,
+				ref,
+				date,
+				shop: req.shop,
+			});
 
-		const saved = await createTransfer.save();
-
-		if (saved) {
+			const saved = await createTransfer.save();
 			if (!res.headersSent) return res.status(200).json({ message: 'Transfer successful' });
 		}
 
