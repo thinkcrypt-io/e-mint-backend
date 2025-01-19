@@ -66,3 +66,23 @@ export const colors = {
 		default: '#e5e5e5',
 	},
 };
+
+export const h1 = {
+	fontSize: {
+		base: getNumber(40),
+		md: getNumber(84),
+	},
+	fontWeight: getString('600'),
+	color: colors.fg,
+	fontFamily: font,
+	letterSpacing: getNumber(0),
+	lineHeight: getNumber(1.2),
+	fontStyle: {
+		type: String,
+		enum: ['normal', 'italic', 'oblique'],
+		default: 'normal',
+	},
+};
+
+export { default as TextSchema } from './TextSchema/index.js';
+export { default as ButtonSchema } from './ButtonSchema/index.js';

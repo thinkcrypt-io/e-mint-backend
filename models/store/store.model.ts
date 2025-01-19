@@ -1,5 +1,6 @@
 import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
+import { getString, colors, getNumber, h1, TextSchema, ButtonSchema } from '../../util/index.js';
 
 const schema = new Schema<any>(
 	{
@@ -94,10 +95,50 @@ const schema = new Schema<any>(
 
 			hero: {
 				image: String,
-				title: String,
+
 				subTitle: String,
 				btnText: String,
 				href: String,
+
+				bgColor: colors?.bg,
+				opacity: getNumber(0),
+				heading: h1,
+				headingContent: getString('Enter Title Here'),
+				headingCss: TextSchema({
+					fontSize: {
+						base: 40,
+						md: 84,
+					},
+					fontWeight: '600',
+				}),
+				subHeadingContent: getString('Enter Subtitle Here'),
+				subHeadingCss: TextSchema({
+					fontSize: {
+						base: 18,
+						md: 22,
+					},
+					fontWeight: '400',
+				}),
+				title: getString('Enter your title here'),
+				titleFontSizeSm: getNumber(40),
+				titleFontSizeLg: getNumber(84),
+				titleFontWeight: getString('600'),
+				titleLetterSpacing: getNumber(0),
+				titleFont: String,
+				titleLineHeight: getNumber(1.2),
+				button: ButtonSchema(),
+
+				titleFontStyle: {
+					type: String,
+					enum: ['normal', 'italic', 'oblique'],
+					default: 'normal',
+				},
+
+				titleColor: {
+					type: String,
+					default: '#000',
+				},
+
 				padding: {
 					type: String,
 					default: 'apply',
@@ -109,10 +150,7 @@ const schema = new Schema<any>(
 					enum: ['left', 'right', 'center'],
 					default: 'left',
 				},
-				titleColor: {
-					type: String,
-					default: '#000',
-				},
+
 				subTitleColor: {
 					type: String,
 					default: '#000',

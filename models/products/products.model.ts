@@ -1,40 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
 
-const schemaKeys = [
-	'name',
-	'shortDescription',
-	'description',
-	'isActive',
-	'image',
-	'images',
-	'category',
-	'collection',
-	'isFeatured',
-	'price',
-	'isDiscount',
-	'discount',
-	'sku',
-	'slug',
-	'weight',
-	'dimensions',
-	'barcode',
-	'tags',
-	'stock',
-	'unit',
-	'unitValue',
-	'customAttributes',
-	'customSections',
-	'extraAttributes',
-	'discountedPrice',
-	'vat',
-	'isVisible',
-	'supplier',
-	'isDeleted',
-	'meta',
-	'faq',
-	'timestamps',
-];
-
 const schema = new Schema<any>(
 	{
 		name: { type: String, required: true },
@@ -155,6 +120,30 @@ const schema = new Schema<any>(
 			type: Boolean,
 			default: true,
 		},
+		inventory: [
+			{
+				location: {
+					type: Schema.Types.ObjectId,
+					ref: 'Location',
+				},
+				stock: {
+					type: Number,
+					default: 0,
+				},
+				damage: {
+					type: Number,
+					default: 0,
+				},
+				reservedStock: {
+					type: Number,
+					default: 0,
+				},
+				incomingStock: {
+					type: Number,
+					default: 0,
+				},
+			},
+		],
 		meta: {
 			title: {
 				type: String,
@@ -182,6 +171,33 @@ const schema = new Schema<any>(
 // Add the 'inStock' virtual field
 schema.virtual('inStock').get(function (this: any) {
 	return this.stock > 0;
+});
+
+//Total Stock
+schema.virtual('totalStock').get(function (this: any) {
+	let totalStock = 0;
+	this.inventory?.forEach((inv: any) => {
+		totalStock += inv.stock;
+	});
+	return totalStock + this.stock;
+});
+
+//Total Inventory Sell value
+schema.virtual('totalInventorySellValue').get(function (this: any) {
+	let totalValue = 0;
+	this.inventory?.forEach((inv: any) => {
+		totalValue += inv.stock * this.price;
+	});
+	return totalValue + this.stock * this.price;
+});
+
+//Total Inventory Sell value
+schema.virtual('stockInTransit').get(function (this: any) {
+	let totalValue = 0;
+	this.inventory?.forEach((inv: any) => {
+		totalValue += inv.incomingStock;
+	});
+	return totalValue;
 });
 
 // Pre-save middleware to set the slug field
