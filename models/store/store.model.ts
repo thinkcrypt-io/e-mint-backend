@@ -45,6 +45,9 @@ const schema = new Schema<any>(
 				type: String,
 				default: '#666',
 			},
+
+			logoWidthSm: getNumber(160),
+			logoWidthLg: getNumber(160),
 			headerBg: {
 				type: String,
 				default: '#fff',
