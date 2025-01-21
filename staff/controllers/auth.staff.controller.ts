@@ -8,6 +8,49 @@ type RequestType = Request & {
 	user?: unknown;
 };
 
+export const productProtect = async (
+	req: any,
+	res: Response,
+	next: NextFunction
+): Promise<Response | void> => {
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		return res.status(401).json({ message: 'Not authorized, no token' });
+	}
+	try {
+		const token: string = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		) as any;
+
+		if (!decoded.shop || !decoded.location) {
+			return res.status(401).json({ message: 'Not authorized, token failed, no location or shop' });
+		}
+
+		req.user = await Staff.findById(decoded?._id).select('-password').populate('shop');
+
+		req.shop = req?.user?.shop?._id;
+		// req.location = req?.user?.location._id;
+
+		if (!req.user) {
+			return res.status(401).json({ message: 'User was not found' });
+		}
+
+		console.log(req.user);
+
+		let query: any = (req as any).queryHelper || {};
+		query.shop = req.shop;
+		query['inventory.location'] = req.user.location;
+		req.queryHelper = query;
+
+		next();
+	} catch (e: any) {
+		console.error(e);
+		return res.status(401).json({ message: 'Not authorized, token failed', error: e.message });
+	}
+};
+
 export const protect = async (
 	req: any,
 	res: Response,
@@ -40,6 +83,46 @@ export const protect = async (
 		let query: any = (req as any).queryHelper || {};
 		query.shop = req.shop;
 		query.location = req.location;
+		req.queryHelper = query;
+
+		next();
+	} catch (e: any) {
+		console.error(e);
+		return res.status(401).json({ message: 'Not authorized, token failed' });
+	}
+};
+
+export const soft = async (
+	req: any,
+	res: Response,
+	next: NextFunction
+): Promise<Response | void> => {
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		return res.status(401).json({ message: 'Not authorized, no token' });
+	}
+	try {
+		const token: string = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		) as any;
+
+		if (!decoded.shop || !decoded.location) {
+			return res.status(401).json({ message: 'Not authorized, token failed' });
+		}
+
+		req.user = await Staff.findById(decoded?._id).select('-password');
+
+		req.shop = req?.user?.shop;
+
+		if (!req.user) {
+			return res.status(401).json({ message: 'User was not found' });
+		}
+
+		let query: any = (req as any).queryHelper || {};
+		query.shop = req.shop;
+		query.isActive = true;
 		req.queryHelper = query;
 
 		next();
