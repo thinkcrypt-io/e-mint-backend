@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { OrderType, Product, Order, Payment } from '../../imports.js';
+import { OrderType, Product, Order, Payment, User, Customer } from '../../imports.js';
+import sendMail from '../mail/sendMail.controller.js';
 
 const addOrder = async (req: any, res: Response): Promise<Response> => {
 	const {
@@ -14,9 +15,13 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 		status,
 		note,
 		origin,
+		emailReceipt,
 	} = req.body;
 
+	console.log(req.body);
+
 	try {
+		const isCustomerSet = customer == 'guest' ? false : customer ? true : false;
 		const order = new Order({
 			user: (req as any).user._id,
 			items: cart.items,
@@ -68,6 +73,17 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 				currency: 'BDT',
 			});
 			const savePayment = await payment.save();
+		}
+
+		if (emailReceipt && isCustomerSet && customer != 'guest') {
+			const findCustomer = await Customer.findById(saved?.customer).populate('shop');
+			if (findCustomer)
+				sendMail({
+					title: findCustomer.shop?.name,
+					to: findCustomer?.email,
+					subject: 'Order Placed',
+					body: `Your order has been placed successfully. Order id: ${saved._id}, Total: ${saved.total}`,
+				});
 		}
 
 		return res.status(201).json(saved);

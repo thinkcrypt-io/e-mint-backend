@@ -151,6 +151,7 @@ const schema = new Schema<any>(
 					'https://images.pexels.com/photos/19599329/pexels-photo-19599329/free-photo-of-kitchen-appliances-in-a-store.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
 				],
 				height: getNumber(600),
+				heightBase: getNumber(300),
 				hide: getBoolean(false),
 			},
 
@@ -340,7 +341,6 @@ const schema = new Schema<any>(
 				fgColor: colors?.fg,
 			},
 			aboutPage: {
-			
 				bannerImgSrc: getImage(),
 				bannerText: getString('About'),
 				missionLabel: getString('Our Mission'),
@@ -407,6 +407,37 @@ const schema = new Schema<any>(
 				description: getString('Enter your description here'),
 				textColor: colors?.fg,
 			},
+			// contactPage: {
+			// 	cardBg: "#fff",
+			// 	cardFg: "#000",
+			// 	boxShadow: "0px 8px 9px -14px rgb(0, 0, 0)",
+
+			// 	bgColor: "#F2F4F8",
+			// 	fgColor: "#333333",
+
+			// 	titleSizeBase: 24,
+			// 	titleSizeBg: 32,
+			// 	titleWeight: 600,
+			// 	titleColor: "#000",
+
+			// 	subTitleSizeBase: 24,
+			// 	subTitleSizeBg: 32,
+			// 	subTitleWeight: 600,
+			// 	subTitleColor: "#000",
+
+			// 	iconTitleSize: 16,
+			// 	iconTitleWeight: 600,
+			// 	iconTitleColor: "#000",
+
+			// 	iconAddressSize: 14,
+			// 	iconAddressWeight: 400,
+			// 	iconAddressColor: "#ddd",
+			// 	iconRadius: 100,
+
+			// 	iconBg: "#000",
+			// 	iconFg: "#fff",
+			// 	iconSize: 18,
+			//   },
 
 			featuredCollection: [
 				{
@@ -514,8 +545,11 @@ const schema = new Schema<any>(
 				borderColor: colors?.fg,
 				priceSizeBase: getNumber(16),
 				priceSizeBg: getNumber(20),
+				priceColor: colors?.fg,
+				priceWeight: getNumber(600),
 				qtyBg: colors?.bg,
 				qtyFg: colors?.fg,
+				qtyBtnRadius: getNumber(4),
 				footerBg: colors?.bg,
 				footerFg: colors?.fg,
 				fTextSize: getNumber(16),

@@ -33,3 +33,7 @@ export { default as assetRoute } from './asset.route.js';
 export { default as paymentAccountRoute } from './paymentAccount.route.js';
 export { default as deploymentRoute } from './deployment.route.js';
 export { default as activeThemeRoute } from './activeTheme.route.js';
+export { default as locationRoute } from './location.route.js';
+export { default as staffRoute } from './staff.route.js';
+export { default as inventoryRoute } from './inventory/inventory.route.js';
+export { default as transferRoute } from './transfer.route.js';

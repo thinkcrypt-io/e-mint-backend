@@ -48,6 +48,10 @@ const settings: any = {
 		// 	key: 'name',
 		// },
 	},
+	emailReceipt: {
+		type: 'boolean',
+		title: 'Email Receipt',
+	},
 
 	total: {
 		type: 'number',
