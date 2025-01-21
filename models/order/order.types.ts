@@ -29,8 +29,10 @@ export type OrderType = DocumentBaseType & {
 	// delivery?: Schema.Types.ObjectId;
 	paymentMethod?: string;
 	status?: string;
+	location?: any;
 	paidAmount?: number;
 	dueAmount?: number;
+	trnxRef?: string;
 	returnAmount?: number;
 	// transactions?: any[];
 	customer?: Schema.Types.ObjectId;

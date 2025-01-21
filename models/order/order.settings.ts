@@ -53,6 +53,11 @@ const settings: any = {
 		title: 'Email Receipt',
 	},
 
+	trnxRef: {
+		type: 'string',
+		title: 'Transaction Reference',
+	},
+
 	total: {
 		type: 'number',
 		title: 'Total Price',
