@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import { OrderType, Product, Order, Payment, User, Customer } from '../../imports.js';
-import sendMail from '../mail/sendMail.controller.js';
+import sendMail from '../../controllers/mail/sendMail.controller.js';
 
-const addOrder = async (req: any, res: Response): Promise<Response> => {
+const addStaffOrder = async (req: any, res: Response): Promise<Response> => {
 	const {
 		cart,
 		isPaid,
@@ -35,6 +35,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			customer: customer == 'guest' ? null : customer ? customer : (req as any).user._id,
 			orderDate,
 			paymentAmount,
+			location: req.location,
 			origin: origin || 'pos',
 			note,
 			trnxRef,
@@ -93,4 +94,4 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 	}
 };
 
-export default addOrder;
+export default addStaffOrder;
