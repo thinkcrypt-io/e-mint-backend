@@ -55,7 +55,12 @@ router
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, addStaffOrder);
 
-router.get('/:id', protect, hasPermission(['view_order']), getDocumentById(config.QUERY_OPTIONS));
+router.get(
+	'/:id',
+	protect,
+	// hasPermission(['view_order']),
+	getDocumentById(config.QUERY_OPTIONS)
+);
 
 router.get(
 	'/edit/:id',
