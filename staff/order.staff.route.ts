@@ -16,7 +16,7 @@ import {
 	getCount,
 } from '../controllers/common/index.js';
 
-import { protect } from '../middleware/auth.middleware.js';
+import { protect } from './controllers/auth.staff.controller.js';
 
 import Order, { settings } from '../models/order/order.model.js';
 import getOrderTotal from '../controllers/order/getOrderTotal.js';
