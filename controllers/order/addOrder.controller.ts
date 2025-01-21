@@ -16,6 +16,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 		note,
 		origin,
 		emailReceipt,
+		trnxRef,
 	} = req.body;
 
 	console.log(req.body);
@@ -38,6 +39,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 			paymentAmount,
 			origin: origin || 'pos',
 			note,
+			trnxRef,
 			paidAmount,
 			shippingCharge: cart.shipping,
 			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
@@ -64,7 +66,7 @@ const addOrder = async (req: any, res: Response): Promise<Response> => {
 				order: saved._id,
 				date: orderDate,
 				trnxId: 'POS',
-				reference: saved.invoice,
+				reference: trnxRef || saved.invoice,
 				tags: ['order'],
 				note,
 				account: 'credit',
