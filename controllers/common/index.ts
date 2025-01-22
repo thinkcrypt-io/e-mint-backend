@@ -37,3 +37,6 @@ export { default as exportPdf } from './exportPdf.controller.js';
 
 //18
 export * from './theme/index.js';
+
+//19
+export { default as updatePreference } from './updatePreference.contoller.js';
