@@ -75,6 +75,7 @@ export const protect = async (
 
 		req.shop = req?.user?.shop?._id;
 		req.location = req?.user?.location;
+		req.destination = req?.user?.destination;
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
