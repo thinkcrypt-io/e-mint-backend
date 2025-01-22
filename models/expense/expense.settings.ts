@@ -1,6 +1,6 @@
 //
 
-import { filters } from '../../imports.js';
+import { filters, Location } from '../../imports.js';
 import SettingType from '../../lib/types/settings.types.js';
 import ExpenseCategory from './expenseCategory.model.js';
 
@@ -19,6 +19,25 @@ const settings: Settings = {
 		type: 'string',
 		required: true,
 		trim: true,
+	},
+	location: {
+		type: 'string',
+		title: 'Location',
+		sort: true,
+		populate: {
+			path: 'location',
+			select: 'name',
+		},
+		filter: {
+			name: 'location',
+			field: 'location_in',
+			type: 'multi-select',
+			label: 'Location',
+			title: 'Sort by location',
+			category: 'model',
+			model: Location,
+			key: 'name',
+		},
 	},
 
 	amount: {

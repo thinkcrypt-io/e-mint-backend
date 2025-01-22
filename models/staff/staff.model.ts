@@ -72,6 +72,7 @@ const schema = new Schema<Type>(
 			customers: [String],
 			expenses: [String],
 			transfers: [String],
+			inventories: [String],
 		},
 	},
 
