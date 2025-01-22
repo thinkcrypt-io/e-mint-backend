@@ -9,11 +9,14 @@ import express from 'express';
 import { protect } from './controllers/auth.staff.controller.js';
 import staffLoginController from './controllers/login.staff.controller.js';
 import staffGetSelfController from './controllers/self.staff.controller.js';
+import { Staff, updatePreference } from '../imports.js';
 
 const router = express.Router();
 
 router.post('/login', staffLoginController);
 router.get('/self', protect, staffGetSelfController);
+
+router.put('/update/preferences', protect, updatePreference(Staff));
 
 // router.put('/', protect, adminUpdateSelfCongroller);
 // router.put('/update/preferences', adminProtect, updateAdminPreferences);

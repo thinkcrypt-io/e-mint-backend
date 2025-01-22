@@ -66,6 +66,14 @@ const schema = new Schema<Type>(
 				lastUsed: { type: Date, default: Date.now },
 			},
 		],
+		preferences: {
+			orders: [String],
+			products: [String],
+			customers: [String],
+			expenses: [String],
+			transfers: [String],
+			inventories: [String],
+		},
 	},
 
 	{
