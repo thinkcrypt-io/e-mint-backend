@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { ProtectedRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
 
 type EndwareType = {
@@ -16,12 +15,6 @@ type Meta = {
 	docsInPage?: number;
 	totalDocs?: number;
 	totalPages?: number;
-};
-
-type RequestType = ProtectedRequestType & {
-	queryHelper?: any;
-	store?: any;
-	meta?: any;
 };
 
 const getAllDocuments = ({

@@ -25,7 +25,7 @@ import {
 	isExists,
 } from '../middleware/index.js';
 import { constructPermissions, constructConfig, getSum } from '../imports.js';
-import { protect } from './controllers/auth.staff.controller.js';
+import { transferProtect as protect } from './controllers/auth.staff.controller.js';
 
 // Define the permissions
 const permission = 'transfer';
