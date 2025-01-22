@@ -51,6 +51,48 @@ export const productProtect = async (
 	}
 };
 
+export const transferProtect = async (
+	req: any,
+	res: Response,
+	next: NextFunction
+): Promise<Response | void> => {
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		return res.status(401).json({ message: 'Not authorized, no token' });
+	}
+	try {
+		const token: string = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		) as any;
+
+		if (!decoded.shop || !decoded.location) {
+			return res.status(401).json({ message: 'Not authorized, token failed' });
+		}
+
+		req.user = await Staff.findById(decoded?._id).select('-password').populate('shop');
+
+		req.shop = req?.user?.shop?._id;
+		req.location = req?.user?.location;
+
+		if (!req.user) {
+			return res.status(401).json({ message: 'User was not found' });
+		}
+
+		let query: any = (req as any).queryHelper || {};
+		query.shop = req.shop;
+
+		query.destination = req.location;
+		req.queryHelper = query;
+
+		next();
+	} catch (e: any) {
+		console.error(e);
+		return res.status(401).json({ message: 'Not authorized, token failed' });
+	}
+};
+
 export const protect = async (
 	req: any,
 	res: Response,
@@ -75,7 +117,7 @@ export const protect = async (
 
 		req.shop = req?.user?.shop?._id;
 		req.location = req?.user?.location;
-		req.destination = req?.user?.destination;
+		req.destination = req?.user?.location;
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
