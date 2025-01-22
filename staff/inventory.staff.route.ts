@@ -36,6 +36,7 @@ import {
 	transferInventory as transferInventoryController,
 	receiveInventory as receiveInventoryController,
 	getInventory,
+	getStaffInventory,
 } from '../routes/inventory/index.js';
 
 import { protect } from './controllers/auth.staff.controller.js';
