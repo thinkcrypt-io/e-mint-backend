@@ -36,6 +36,7 @@ import {
 	transferInventory as transferInventoryController,
 	receiveInventory as receiveInventoryController,
 	getInventory,
+	getStaffInventory,
 } from '../routes/inventory/index.js';
 
 import { protect } from './controllers/auth.staff.controller.js';
@@ -87,7 +88,7 @@ const middlewares = {
 // Define the routes
 router
 	.route('/')
-	.get(...middlewares.getAll, getInventory(config.QUERY_OPTIONS))
+	.get(...middlewares.getAll, getStaffInventory(config.QUERY_OPTIONS))
 	.post(...middlewares.post, createDocument(config.MODEL));
 
 //:id is a dynamic parameter that will be extracted from the URL
