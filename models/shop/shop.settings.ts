@@ -26,6 +26,21 @@ const shopSettings: SettingsType<ShopType> = {
 			select: 'slug deployUrl vercelName domain vercelDomain vercelURI theme shopId',
 		},
 	},
+	metaImage: {
+		type: 'uri',
+		title: 'Image',
+		edit: true,
+	},
+	meta: {
+		title: 'Meta',
+		type: 'object',
+		edit: true,
+	},
+	metaKeywords: {
+		type: 'array-string',
+		title: 'Tags',
+		edit: true,
+	},
 	shippingCharge: {
 		type: 'number',
 		title: 'Shipping Charge',

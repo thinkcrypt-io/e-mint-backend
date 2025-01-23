@@ -39,6 +39,9 @@ type ShopType = {
 	daraz?: string;
 	youtube?: string;
 	tiktok?: string;
+	meta?: { title: string; description: string };
+	metaImage?: string;
+	metaKeywords?: string[];
 };
 
 export default ShopType;
