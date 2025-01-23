@@ -144,6 +144,8 @@ const schema = new Schema<any>(
 				},
 			},
 		],
+		metaKeywords: [String],
+		metaImage: String,
 		meta: {
 			title: {
 				type: String,
