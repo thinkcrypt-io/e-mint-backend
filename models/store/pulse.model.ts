@@ -407,37 +407,36 @@ const schema = new Schema<any>(
 				description: getString('Enter your description here'),
 				textColor: colors?.fg,
 			},
-			// contactPage: {
-			// 	cardBg: "#fff",
-			// 	cardFg: "#000",
-			// 	boxShadow: "0px 8px 9px -14px rgb(0, 0, 0)",
+			contactPageCss: {
+				cardBg: colors?.bg,
+				cardFg: colors?.fg,
+				boxShadow: { type: String, default: '0px 8px 9px -14px rgb(0, 0, 0)' },
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
 
-			// 	bgColor: "#F2F4F8",
-			// 	fgColor: "#333333",
+				titleSizeBase: getNumber(24),
+				titleSizeBg: getNumber(32),
+				titleWeight: getNumber(600),
+				titleColor: colors?.fg,
 
-			// 	titleSizeBase: 24,
-			// 	titleSizeBg: 32,
-			// 	titleWeight: 600,
-			// 	titleColor: "#000",
+				subTitleSizeBase: getNumber(24),
+				subTitleSizeBg: getNumber(32),
+				subTitleWeight: getNumber(600),
+				subTitleColor: colors?.fg,
 
-			// 	subTitleSizeBase: 24,
-			// 	subTitleSizeBg: 32,
-			// 	subTitleWeight: 600,
-			// 	subTitleColor: "#000",
+				iconTitleSize: getNumber(16),
+				iconTitleWeight: getNumber(600),
+				iconTitleColor: colors?.fg,
 
-			// 	iconTitleSize: 16,
-			// 	iconTitleWeight: 600,
-			// 	iconTitleColor: "#000",
+				iconAddressSize: getNumber(14),
+				iconAddressWeight: getNumber(400),
+				iconAddressColor: colors?.fg,
+				iconRadius: getNumber(100),
 
-			// 	iconAddressSize: 14,
-			// 	iconAddressWeight: 400,
-			// 	iconAddressColor: "#ddd",
-			// 	iconRadius: 100,
-
-			// 	iconBg: "#000",
-			// 	iconFg: "#fff",
-			// 	iconSize: 18,
-			//   },
+				iconBg: '#000',
+				iconFg: colors?.fg,
+				iconSize: getNumber(18),
+			},
 
 			featuredCollection: [
 				{
