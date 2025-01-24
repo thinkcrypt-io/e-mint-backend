@@ -50,6 +50,10 @@ import {
 // import adminRouter from './routes-admin/admin.router.js';
 // import userRouter from './user-routes/user.router.js';
 // import appRouter from './app-route/app.router.js';
+
+import adminRouter from "./routes-admin/admin.router.js";
+import userRouter from "./user-routes/user.router.js";
+import appRouter from "./app-route/app.router.js";
 import sellerApi from "./seller-api/sellerApi.js";
 import staffApi from "./staff/router.js";
 
@@ -149,6 +153,17 @@ app.use("/", (req, res, next) => {
 
   app.use("/api/deployments", deploymentRoute);
   app.use("/api/active-theme", activeThemeRoute);
+  app.use("/", (req, res, next) => {
+    next();
+  });
+
+  app.use("/admin/api", adminRouter);
+  app.use("/user-api", userRouter);
+  app.use("/app-api/", appRouter);
+  app.use("/api", sellerApi);
+  app.use("/staff-api/", staffApi);
+
+  //app.use('/api/orders', orderRoute);
 
   app.use((req, res, next) => {
     return res.status(404).json({

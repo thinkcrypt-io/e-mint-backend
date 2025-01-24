@@ -151,6 +151,7 @@ const schema = new Schema<any>(
 					'https://images.pexels.com/photos/19599329/pexels-photo-19599329/free-photo-of-kitchen-appliances-in-a-store.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
 				],
 				height: getNumber(600),
+				heightBase: getNumber(300),
 				hide: getBoolean(false),
 			},
 
@@ -340,7 +341,6 @@ const schema = new Schema<any>(
 				fgColor: colors?.fg,
 			},
 			aboutPage: {
-			
 				bannerImgSrc: getImage(),
 				bannerText: getString('About'),
 				missionLabel: getString('Our Mission'),
@@ -406,6 +406,36 @@ const schema = new Schema<any>(
 				title: getString('Enter your title here'),
 				description: getString('Enter your description here'),
 				textColor: colors?.fg,
+			},
+			contactPageCss: {
+				cardBg: colors?.bg,
+				cardFg: colors?.fg,
+				boxShadow: { type: String, default: '0px 8px 9px -14px rgb(0, 0, 0)' },
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+
+				titleSizeBase: getNumber(24),
+				titleSizeBg: getNumber(32),
+				titleWeight: getNumber(600),
+				titleColor: colors?.fg,
+
+				subTitleSizeBase: getNumber(24),
+				subTitleSizeBg: getNumber(32),
+				subTitleWeight: getNumber(600),
+				subTitleColor: colors?.fg,
+
+				iconTitleSize: getNumber(16),
+				iconTitleWeight: getNumber(600),
+				iconTitleColor: colors?.fg,
+
+				iconAddressSize: getNumber(14),
+				iconAddressWeight: getNumber(400),
+				iconAddressColor: colors?.fg,
+				iconRadius: getNumber(100),
+
+				iconBg: '#000',
+				iconFg: colors?.fg,
+				iconSize: getNumber(18),
 			},
 
 			featuredCollection: [
@@ -514,8 +544,11 @@ const schema = new Schema<any>(
 				borderColor: colors?.fg,
 				priceSizeBase: getNumber(16),
 				priceSizeBg: getNumber(20),
+				priceColor: colors?.fg,
+				priceWeight: getNumber(600),
 				qtyBg: colors?.bg,
 				qtyFg: colors?.fg,
+				qtyBtnRadius: getNumber(4),
 				footerBg: colors?.bg,
 				footerFg: colors?.fg,
 				fTextSize: getNumber(16),

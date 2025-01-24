@@ -33,6 +33,10 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 		},
+		location: {
+			type: Schema.Types.ObjectId,
+			ref: 'Location',
+		},
 	},
 
 	{
