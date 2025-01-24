@@ -48,6 +48,9 @@ router.put(
 			'daraz',
 			'tiktok',
 			'telegram',
+			'meta',
+			'metaImage',
+			'metaKeywords',
 		],
 	})
 );
