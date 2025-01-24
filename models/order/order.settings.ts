@@ -1,4 +1,5 @@
-import { Customer } from '../../imports.js';
+import { populate } from 'dotenv';
+import { Customer, Location } from '../../imports.js';
 import Product from '../products/products.model.js';
 import User from '../user/user.model.js';
 
@@ -47,6 +48,15 @@ const settings: any = {
 		// 	model: Product,
 		// 	key: 'name',
 		// },
+	},
+	emailReceipt: {
+		type: 'boolean',
+		title: 'Email Receipt',
+	},
+
+	trnxRef: {
+		type: 'string',
+		title: 'Transaction Reference',
 	},
 
 	total: {
@@ -122,6 +132,25 @@ const settings: any = {
 		type: 'string',
 		title: 'Note',
 		allowNull: true,
+	},
+	location: {
+		type: 'string',
+		title: 'Location',
+		sort: true,
+		populate: {
+			path: 'location',
+			select: 'name',
+		},
+		filter: {
+			name: 'location',
+			field: 'location_in',
+			type: 'multi-select',
+			label: 'Location',
+			title: 'Sort by location',
+			category: 'model',
+			model: Location,
+			key: 'name',
+		},
 	},
 
 	address: {

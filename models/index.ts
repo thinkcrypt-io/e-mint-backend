@@ -6,10 +6,14 @@ export { default as customerSettings } from './customer/customer.settings.js';
 export { default as Category } from './category/category.model.js';
 export { settings as categorySettings } from './category/category.model.js';
 
+//Brand
+export { default as Brand } from './brand/brand.model.js';
+
 //Product
 export { ProductType } from './products/products.types.js';
 export { default as Product } from './products/products.model.js';
 export { settings as productSettings } from './products/products.model.js';
+export { default as inventorySettings } from './products/inventory.settings.js';
 
 //Order
 export { default as Order } from './order/order.model.js';
@@ -27,6 +31,8 @@ export { settings as roleSettings } from './role/role.model.js';
 //Inventory Adjustment
 export { default as InventoryAdjustment } from './inventory-adjustment/inventoryAdjustment.model.js';
 export { settings as inventoryAdjustmentSettings } from './inventory-adjustment/inventoryAdjustment.model.js';
+export { default as Transfer } from './transfer/Transfer.model.js';
+export { default as transferSettings } from './transfer/transfer.settings.js';
 
 //Counter
 export { default as Counter } from './counter/counter.model.js';
@@ -111,3 +117,13 @@ export { default as Pulse } from './store/pulse.model.js';
 //Collection
 export { default as Collection } from './collection/collection.model.js';
 export { settings as collectionSettings } from './collection/collection.model.js';
+
+//Location
+export { default as Location } from './location/location.model.js';
+export { default as LocationType } from './location/location.types.js';
+export { default as locationSettings } from './location/location.settings.js';
+
+//Staff
+export { default as Staff } from './staff/staff.model.js';
+export { default as StaffType } from './staff/staff.types.js';
+export { default as staffSettings } from './staff/staff.settings.js';

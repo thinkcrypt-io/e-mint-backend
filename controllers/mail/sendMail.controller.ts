@@ -30,7 +30,7 @@ const sendMail = async ({ to, subject, body, title }: SendMailProps) => {
 			if (error) {
 				console.log('Error Sending Mail' + error);
 			} else {
-				console.log('Email sent: ' + info.response);
+				console.log('Email sent: to email' + to + ': Resposnse:' + info.response);
 			}
 		});
 	} catch (e) {

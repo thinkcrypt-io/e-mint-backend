@@ -36,6 +36,7 @@ const schema: Schema = new Schema<OrderType>(
 		address: { type: Schema.Types.Mixed },
 		shippingCharge: { type: Number, required: true, default: 0 },
 		paymentMethod: { type: String },
+		trnxRef: { type: String },
 		status: { type: String, default: 'order-placed' },
 		customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
 		orderDate: { type: Date, default: Date.now, required: true },
@@ -60,6 +61,10 @@ const schema: Schema = new Schema<OrderType>(
 		delivery: {
 			type: Schema.Types.ObjectId,
 			ref: 'Delivery',
+		},
+		location: {
+			type: Schema.Types.Mixed,
+			ref: 'Location',
 		},
 
 		origin: {
