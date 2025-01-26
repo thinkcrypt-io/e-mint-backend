@@ -41,6 +41,17 @@ const schema = new Schema<ShopType>(
 		dateActivated: {
 			type: Date,
 		},
+		metaKeywords: [String],
+		metaImage: String,
+		meta: {
+			title: {
+				type: String,
+			},
+			description: {
+				type: String,
+			},
+			// keywords: [String],
+		},
 
 		shippingCharge: {
 			type: Number,
