@@ -34,4 +34,6 @@ export type CategorySettings = {
 	displayInMenu: SettingType;
 	displayInHomePage: SettingType;
 	meta: SettingType;
+	metaImage: SettingType;
+	metaKeywords: SettingType;
 };

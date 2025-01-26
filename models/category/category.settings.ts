@@ -156,12 +156,6 @@ const settings: CategorySettings = {
 		},
 	},
 
-	meta: {
-		edit: true,
-		title: 'Meta',
-		type: 'object',
-	},
-
 	isFeatured: {
 		edit: true,
 		type: 'boolean',
@@ -169,11 +163,27 @@ const settings: CategorySettings = {
 		sort: true,
 
 		filter: {
-			name: 'isActive',
+			name: 'isFeatured',
 			type: 'boolean',
 			label: 'Featured',
 			title: 'Sort by active status',
 		},
+	},
+	meta: {
+		title: 'Meta',
+		type: 'object',
+		edit: true,
+	},
+	metaImage: {
+		type: 'uri',
+		title: 'Image',
+		edit: true,
+	},
+
+	metaKeywords: {
+		type: 'array-string',
+		title: 'Tags',
+		edit: true,
 	},
 };
 

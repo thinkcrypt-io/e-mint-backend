@@ -57,6 +57,8 @@ const schema = new Schema<CollectionType>(
 			default: false,
 			required: true,
 		},
+		metaKeywords: [String],
+		metaImage: String,
 		meta: {
 			title: {
 				type: String,

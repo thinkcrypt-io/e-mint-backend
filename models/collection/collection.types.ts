@@ -17,6 +17,8 @@ export type CollectionType = DocumentBaseType & {
 	dataKey?: string;
 	shop: Schema.Types.ObjectId;
 	images?: string[];
+	metaKeywords?: string[];
+	metaImage?: string;
 	meta?: {
 		title: string;
 		description: string;
