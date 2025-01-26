@@ -433,7 +433,7 @@ const schema = new Schema<any>(
 				iconAddressColor: colors?.fg,
 				iconRadius: getNumber(100),
 
-				iconBg: '#000',
+				iconBg: colors?.bg,
 				iconFg: colors?.fg,
 				iconSize: getNumber(18),
 			},
