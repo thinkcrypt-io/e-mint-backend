@@ -122,6 +122,7 @@ export const themeSettings: SettingsType<ModelType> = {
 		title: 'Slug',
 		type: 'string',
 		trim: true,
+		edit: true,
 	},
 	title: {
 		title: 'Title',
