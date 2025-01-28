@@ -164,6 +164,15 @@ const schema = new Schema<any>(
 					title: String,
 					subTitle: String,
 					image: String,
+					href: {
+						type: String,
+						default: '#',
+					},
+					type: {
+						type: String,
+						enum: ['category', 'collection', 'product', 'page', 'external'],
+						default: 'page',
+					},
 					priority: {
 						type: Number,
 						default: 0,
