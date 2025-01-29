@@ -17,15 +17,15 @@ const loginController = async (req: RequestType, res: Response): Promise<Respons
 		if (error) return res.status(400).json({ message: error.details[0].message });
 		let user = await User.findOne({ email });
 
-		const shop = await Shop.findById(user.shop);
-
-		let isAdmin = false;
-
 		if (!user)
 			return res.status(400).json({
 				status: 'error',
 				message: 'This email is not yet registered',
 			});
+
+		const shop = await Shop.findById(user.shop);
+
+		let isAdmin = false;
 
 		if (!user.isActive) {
 			return res.status(400).json({
