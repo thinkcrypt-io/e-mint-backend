@@ -1,5 +1,5 @@
-import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
+import { Settings } from '../../imports.js';
 import {
 	getString,
 	colors,
@@ -8,10 +8,26 @@ import {
 	getBoolean,
 	getImage,
 } from '../../util/index.js';
-import { title } from 'process';
-import { height } from 'pdfkit/js/page';
 
 const productListData = [
+	{
+		id: {
+			type: mongoose.Schema.Types.ObjectId,
+			required: true,
+		},
+		title: String,
+		subTitle: String,
+		priority: {
+			type: Number,
+			default: 0,
+		},
+		type: {
+			type: String,
+			default: 'category',
+			enum: ['category', 'collection'],
+			required: true,
+		},
+	},
 	{
 		id: {
 			type: mongoose.Schema.Types.ObjectId,
@@ -100,6 +116,8 @@ const schema = new Schema<any>(
 				borderWidth: getNumber(1),
 				shadow: String,
 
+				headerPaddingY: getNumber(8),
+
 				searchBoxBg: colors?.bg,
 				searchBoxFg: colors?.fg,
 				searchBoxText: getString('Search'),
@@ -126,6 +144,8 @@ const schema = new Schema<any>(
 				tagBg: colors?.fg,
 				tagFg: colors?.bg,
 				tagRadius: getNumber(999),
+
+				height: getNumber(40),
 
 				logoText: getString(''),
 				logoHeight: getNumber(50),
@@ -279,6 +299,8 @@ const schema = new Schema<any>(
 				images: [],
 				hide: getBoolean(true),
 				borderRadius: getNumber(4),
+				height: getNumber(200),
+				heightBase: getNumber(100),
 				grid: getNumber(4),
 			},
 
@@ -286,6 +308,8 @@ const schema = new Schema<any>(
 				imageOne: getImage(),
 				hrefOne: String,
 				hrefTwo: String,
+				height: getNumber(200),
+				heightBase: getNumber(100),
 				imageTwo: getImage(),
 				borderRadius: getNumber(4),
 				hide: getBoolean(false),
@@ -293,7 +317,8 @@ const schema = new Schema<any>(
 
 			sponsoredBannerThree: {
 				image: getImage(),
-				h: getNumber(200),
+				height: getNumber(200),
+				heightBase: getNumber(100),
 				borderRadius: getNumber(4),
 				href: String,
 				hide: getBoolean(false),
@@ -395,7 +420,7 @@ const schema = new Schema<any>(
 			},
 			///////////////////// ends
 
-			privaryPolicyPage: {
+			privacyPolicyPage: {
 				image: String,
 				title: getString('Enter your title here'),
 				description: getString('Enter your description here'),
