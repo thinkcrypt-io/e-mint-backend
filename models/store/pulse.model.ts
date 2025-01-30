@@ -99,7 +99,7 @@ const schema = new Schema<any>(
 				borderColor: colors?.bg,
 				borderWidth: getNumber(1),
 				shadow: String,
-                 
+
 				headerPaddingY: getNumber(8),
 
 				searchBoxBg: colors?.bg,
