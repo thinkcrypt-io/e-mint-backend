@@ -164,6 +164,15 @@ const schema = new Schema<any>(
 					title: String,
 					subTitle: String,
 					image: String,
+					href: {
+						type: String,
+						default: '#',
+					},
+					type: {
+						type: String,
+						enum: ['category', 'collection', 'product', 'page', 'external'],
+						default: 'page',
+					},
 					priority: {
 						type: Number,
 						default: 0,
@@ -219,13 +228,26 @@ const schema = new Schema<any>(
 				},
 			],
 			discover: {
-				title: String,
-				subTitle: String,
+				title: getString('Lorem ipsum dolor sit amet, consectetur adipiscing elit'),
+				subTitle: getString(
+					'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
+				),
 				items: [
 					{
-						btnText: String,
-						href: String,
+						btnText: {
+							type: String,
+							default: 'Button',
+						},
 						image: String,
+						href: {
+							type: String,
+							default: '/',
+						},
+						type: {
+							type: String,
+							enum: ['category', 'collection', 'product', 'page', 'external'],
+							default: 'page',
+						},
 					},
 				],
 			},

@@ -78,7 +78,7 @@ const settings = {
 		filter: {
 			name: 'isFeatured',
 			type: 'boolean',
-			label: 'Active',
+			label: 'Featured',
 			title: 'Sort by featured',
 		},
 	},
@@ -116,6 +116,17 @@ const settings = {
 		edit: true,
 		title: 'Meta',
 		type: 'object',
+	},
+	metaImage: {
+		type: 'uri',
+		title: 'Image',
+		edit: true,
+	},
+
+	metaKeywords: {
+		type: 'array-string',
+		title: 'Tags',
+		edit: true,
 	},
 };
 

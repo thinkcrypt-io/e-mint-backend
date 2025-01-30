@@ -174,12 +174,6 @@ const settings: any = {
 		edit: true,
 	},
 
-	metaImage: {
-		type: 'uri',
-		title: 'Image',
-		edit: true,
-	},
-
 	images: {
 		type: 'array-string',
 		title: 'Image',
@@ -187,12 +181,6 @@ const settings: any = {
 	},
 
 	tags: {
-		type: 'array-string',
-		title: 'Tags',
-		edit: true,
-	},
-
-	metaKeywords: {
 		type: 'array-string',
 		title: 'Tags',
 		edit: true,
@@ -448,6 +436,17 @@ const settings: any = {
 	meta: {
 		title: 'Meta',
 		type: 'object',
+		edit: true,
+	},
+	metaImage: {
+		type: 'uri',
+		title: 'Image',
+		edit: true,
+	},
+
+	metaKeywords: {
+		type: 'array-string',
+		title: 'Tags',
 		edit: true,
 	},
 };

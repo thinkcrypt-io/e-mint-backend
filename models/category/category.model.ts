@@ -66,6 +66,8 @@ const schema = new Schema<CategoryType>(
 			ref: 'Shop',
 			required: true,
 		},
+		metaKeywords: [String],
+		metaImage: String,
 		meta: {
 			title: {
 				type: String,
