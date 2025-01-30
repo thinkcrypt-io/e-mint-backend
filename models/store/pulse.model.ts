@@ -90,6 +90,8 @@ const schema = new Schema<any>(
 				borderColor: colors?.bg,
 				borderWidth: getNumber(1),
 				shadow: String,
+				height: getNumber(100),
+				heightSm: getNumber(80),
 
 				searchBoxBg: colors?.bg,
 				searchBoxFg: colors?.fg,
