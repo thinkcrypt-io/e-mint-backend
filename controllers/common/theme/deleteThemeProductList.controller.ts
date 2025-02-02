@@ -5,21 +5,25 @@ const deleteThemeProductList = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
 		const id = req.params.id;
 		const key = req.query.key || 'productList';
-
 		try {
 			const queryHelper = (req as any).queryHelper || {};
 			let data = await model.findOne(queryHelper);
+			console.log('data key::', data.content[key]);
 			if (!data) {
 				return res.status(404).json({ message: 'Store not found' });
 			}
 
 			// Ensure content.productList exists and is an array
 			if (!Array.isArray(data.content[key])) {
-				return res.status(400).json({ message: 'Product list is not an array' });
+				return res
+					.status(400)
+					.json({ message: 'Product list is not an array' });
 			}
 
 			// Filter out the item with the given id
-			const newArr = data.content[key].filter((product: any) => product._id != id);
+			const newArr = data.content[key].filter(
+				(product: any) => product._id != id
+			);
 
 			data.content[key] = newArr;
 
@@ -27,7 +31,10 @@ const deleteThemeProductList = (model: mongoose.Model<any>) => {
 			return res.status(200).json(saved);
 		} catch (e: any) {
 			console.log(e.message);
-			const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : e.message;
+			const message =
+				process.env.NODE_ENV === 'production'
+					? 'Internal Server Error'
+					: e.message;
 			return res.status(500).json({ message: message });
 		}
 	};

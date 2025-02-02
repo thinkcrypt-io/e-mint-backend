@@ -188,6 +188,7 @@ const schema = new Schema<any>(
 				imageWidth: getNumber(100),
 				imageRadius: getNumber(4),
 				bgColor: colors?.bg,
+				fontFamily: font,
 				titleColor: colors?.fg,
 				descriptionColor: colors?.fg,
 				titleSizeBG: getNumber(20),
@@ -585,6 +586,81 @@ const schema = new Schema<any>(
 		productListFour: productListData,
 		productListFive: productListData,
 
+		featuredAds: [
+			{
+				title: String,
+				subTitle: String,
+				image: String,
+				href: {
+					type: String,
+					default: '#',
+				},
+				type: {
+					type: String,
+					enum: ['category', 'collection', 'product', 'page', 'external'],
+					default: 'page',
+				},
+				priority: {
+					type: Number,
+					default: 0,
+				},
+			},
+		],
+		// collections: {
+		// 	title: {
+		// 		type: String,
+		// 		default: 'Collections',
+		// 	},
+		// 	subTitle: {
+		// 		type: String,
+		// 		default: 'Discover our collection',
+		// 	},
+		// 	btnText: {
+		// 		type: String,
+		// 		default: 'View All',
+		// 	},
+		// 	items: [
+		// 		{
+		// 			id: {
+		// 				type: mongoose.Schema.Types.ObjectId,
+		// 				required: true,
+		// 			},
+
+		// 			type: {
+		// 				type: String,
+		// 				enum: ['categories', 'collections'],
+		// 				required: true,
+		// 			},
+		// 		},
+		// 	],
+		// },
+
+		discover: {
+			title: getString(
+				'Lorem ipsum dolor sit amet, consectetur adipiscing elit'
+			),
+			subTitle: getString(
+				'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
+			),
+			items: [
+				{
+					btnText: {
+						type: String,
+						default: 'Button',
+					},
+					image: String,
+					href: {
+						type: String,
+						default: '/',
+					},
+					type: {
+						type: String,
+						enum: ['category', 'collection', 'product', 'page', 'external'],
+						default: 'page',
+					},
+				},
+			],
+		},
 		shoppingCartCSS: {
 			headingBg: colors?.bg,
 			headingFg: colors?.fg,

@@ -92,7 +92,9 @@ app.use("/app-api/", appRouter);
 app.use("/api/auth", authRoute);
 app.use("/api/brands", brandRoute);
 app.use("/api/categories", categoryRoute);
+
 app.use("/api/contents", contentRoute);
+
 app.use("/api/adjustments", adjustmentRoute);
 app.use("/api/coupons", couponRoute);
 
