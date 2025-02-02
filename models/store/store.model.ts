@@ -159,30 +159,48 @@ const schema = new Schema<any>(
 					default: '#000',
 				},
 			},
-			featuredCollection: [
-				{
-					title: String,
-					subTitle: String,
-					image: {
-						type: String,
-						default:
-							'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+			featuredCollection: {
+				type: [
+					{
+						title: String,
+						subTitle: String,
+						image: {
+							type: String,
+							default:
+								'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+						},
+						href: {
+							type: String,
+							default: '#',
+						},
+						type: {
+							type: String,
+							enum: ['category', 'collection', 'product', 'page', 'external'],
+							default: 'page',
+						},
+						priority: {
+							type: Number,
+							default: 0,
+						},
 					},
-					href: {
-						type: String,
-						default: '#',
-					},
-					type: {
-						type: String,
-						enum: ['category', 'collection', 'product', 'page', 'external'],
-						default: 'page',
-					},
-					priority: {
-						type: Number,
-						default: 0,
-					},
+				],
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'category',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+					];
 				},
-			],
+			},
 			collections: {
 				title: {
 					type: String,
@@ -259,16 +277,18 @@ const schema = new Schema<any>(
 							},
 						},
 					],
-					default: [
-						{
-							id: new mongoose.Types.ObjectId(), // Pre-generate unique IDs
-							type: 'categories',
-						},
-						{
-							id: new mongoose.Types.ObjectId(),
-							type: 'collections',
-						},
-					],
+					default: function () {
+						return [
+							{
+								id: new mongoose.Types.ObjectId(),
+								type: 'category',
+							},
+							{
+								id: new mongoose.Types.ObjectId(),
+								type: 'collection',
+							},
+						];
+					},
 				},
 			},
 			about: {
