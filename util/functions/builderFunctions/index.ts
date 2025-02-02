@@ -86,3 +86,4 @@ export const h1 = {
 
 export { default as TextSchema } from './TextSchema/index.js';
 export { default as ButtonSchema } from './ButtonSchema/index.js';
+export { default as ImageSchema } from './ImageSchema/index.js';
