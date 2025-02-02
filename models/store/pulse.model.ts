@@ -160,10 +160,9 @@ const schema = new Schema<any>(
 				borderBottomWidth: getNumber(1),
 				shadow: String,
 				hide: getBoolean(false),
-
+				fontFamily: font,
 				fontSize: getNumber(16),
 				fontWeight: getNumber(600),
-
 				gap: getNumber(4),
 			},
 			hero: {
