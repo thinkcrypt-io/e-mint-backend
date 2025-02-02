@@ -21,6 +21,7 @@ import {
 	duplicateDocument,
 	getDocumentToEditById,
 	constructPermissions,
+	isExpired,
 } from '../imports.js';
 import Model, { settings } from '../models/brand/brand.model.js';
 
@@ -37,6 +38,7 @@ const permissions = constructPermissions('category');
 // Define common middleware
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
 	ifExists(config.EXIST_OPTIONS),
@@ -52,6 +54,7 @@ const commonMiddleware = [
 ];
 const updateMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.UPDATE),
 	hasPermission([permissions.update]),
 ];

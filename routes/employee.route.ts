@@ -9,6 +9,7 @@ import getFilters from '../controllers/common/getFilters.controller.js';
 import validate from '../middleware/validate.middleware.js';
 import ifExists from '../middleware/isExists.middleware.js';
 import createDocument from '../controllers/common/createDocument.controller.js';
+import { isExpired } from '../imports.js';
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ const postMiddleware = [validate(config.VALIDATORS.POST), ifExists(config.EXIST_
 
 router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS));
 router.get('/:id', getDocumentById(config.QUERY_OPTIONS));
-router.post('/', ...postMiddleware, createDocument(config.MODEL));
+router.post('/', isExpired, ...postMiddleware, createDocument(config.MODEL));
 router.get('/get/filters', getFilters(config.FILTER_LIST));
 
 export default router;

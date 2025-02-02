@@ -23,6 +23,7 @@ import {
 	getSum,
 	Purchase,
 	purchaseSettings as settings,
+	isExpired,
 } from '../imports.js';
 import addPurchase from '../controllers/order/addPurchase.controller.js';
 
@@ -39,6 +40,7 @@ const permissions = constructPermissions('order');
 // Define common middleware
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
 ];

@@ -22,6 +22,7 @@ import {
 	getDocumentToEditById,
 	constructPermissions,
 	getSum,
+	isExpired,
 } from '../imports.js';
 import { Supplier as Model, supplierSettings as settings } from '../models/index.js';
 
@@ -38,6 +39,7 @@ const permissions = constructPermissions('customer');
 // Define common middleware
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	ifExists(config.EXIST_OPTIONS),
 	hasPermission([permissions.create]),
@@ -53,6 +55,7 @@ const commonMiddleware = [
 ];
 const updateMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.UPDATE),
 	hasPermission([permissions.update]),
 ];

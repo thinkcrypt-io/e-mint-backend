@@ -2,7 +2,7 @@
 import express from 'express';
 import constructConfig from '../lib/configurator/constructConfig.js';
 
-import { protect, sort, query, validate, hasPermission } from '../middleware/index.js';
+import { protect, sort, query, validate, hasPermission, isExpired } from '../middleware/index.js';
 import {
 	deleteDocument,
 	getFilters,
@@ -33,6 +33,7 @@ const config = constructConfig({
 // Define common middleware
 const commonMiddleware = [
 	protect,
+	isExpired,
 	sort,
 	query(config.FILTER_OPTIONS),
 	hasPermission(['view_order']),

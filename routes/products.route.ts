@@ -31,6 +31,7 @@ import {
 	exportPdf,
 	customQuery,
 	constructPermissions,
+	isExpired,
 } from '../imports.js';
 
 type TopProductsFilters = {
@@ -95,16 +96,22 @@ const orderMiddleware = [
 	hasPermission([permissions.read]),
 ];
 
-const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
+const postMiddleware = [
+	protect,
+	isExpired,
+	ifExists(config.EXIST_OPTIONS),
+	validate(config.VALIDATORS.POST),
+];
 const updateMiddleware = [
 	protect,
+	isExpired,
 	ifExists(config.EXIST_OPTIONS),
 	validate(config.VALIDATORS.UPDATE),
 ];
 
 const getByIdMiddleware = [protect, hasPermission([permissions.view])];
 const countMiddleware = [protect, query(config.FILTER_OPTIONS)];
-const deleteMiddleware = [protect, hasPermission([permissions.delete])];
+const deleteMiddleware = [protect, isExpired, hasPermission([permissions.delete])];
 
 // Define the routes for the product store
 router

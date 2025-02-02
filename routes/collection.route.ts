@@ -14,6 +14,7 @@ import updateDocument from '../controllers/common/updateDocument.controller.js';
 import updateManyDocuments from '../controllers/common/updateManyDocuments.controller.js';
 import getDocumentToEditById from '../controllers/common/getDocumentToEditById.controller.js';
 import hasPermission from '../middleware/hasPermission.middleware.js';
+import { isExpired } from '../imports.js';
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ const commonMiddleware = [
 ];
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	hasPermission(['add_collection']),
 	ifExists(config.EXIST_OPTIONS),
@@ -48,6 +50,7 @@ router.put('/:id', protect, hasPermission(['edit_collection']), updateDocument(c
 router.put(
 	'/update/many',
 	protect,
+	isExpired,
 	hasPermission(['edit_collection']),
 	updateManyDocuments(config.EDITS)
 );

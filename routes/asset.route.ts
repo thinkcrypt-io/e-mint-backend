@@ -45,6 +45,7 @@ const middlewares = {
 	//Middleware for creating a new category
 	post: [
 		protect,
+		isExpired,
 		validate(config.VALIDATORS.POST),
 		isExists(config.EXIST_OPTIONS),
 		hasPermission([permissions.create]),
