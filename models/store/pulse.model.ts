@@ -96,6 +96,23 @@ const schema = new Schema<any>(
 			youtube: String,
 		},
 		content: {
+			productPageCss: {
+				titleCss: TextSchema({
+					fontSize: {
+						base: 26,
+						md: 32,
+					},
+					fontWeight: '700',
+				}),
+				priceTextCss: TextSchema({
+					fontSize: {
+						base: 24,
+						md: 36,
+					},
+					fontWeight: '700',
+					color: '#292929',
+				}),
+			},
 			banner: {
 				children: getString('Enter your text here'),
 				fontFamily: font,
@@ -522,13 +539,6 @@ const schema = new Schema<any>(
 		],
 
 		productPage: {
-			titleCss: TextSchema({
-				fontSize: {
-					base: 26,
-					md: 32,
-				},
-				fontWeight: '700',
-			}),
 			//Add to cart button
 			atcBtnFg: colors?.fg,
 			atcBtnBg: colors?.bg,

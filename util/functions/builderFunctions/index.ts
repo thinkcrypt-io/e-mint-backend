@@ -40,10 +40,10 @@ export const getResponsiveFontSize = (lg: number, sm: number) => {
 	};
 };
 
-export const getString = (str: string, required?: boolean) => {
+export const getString = (str?: string, required?: boolean) => {
 	return {
 		type: String,
-		default: str,
+		...(str && { default: str }),
 		required: required || false,
 	};
 };

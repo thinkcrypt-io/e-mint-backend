@@ -37,7 +37,7 @@ const TextSchema = ({
 		fontWeight: getString(fontWeight || '400'),
 		textAlign: getString(textAlign || 'left'),
 		color: color ? getString(color) : colors.fg,
-		fontFamily: fontFamily ? getString(fontFamily) : font,
+		fontFamily: fontFamily ? getString(fontFamily) : getString(),
 		letterSpacing: getNumber(letterSpacing || 0),
 		lineHeight: getNumber(lineHeight || 1.2),
 		pb: getNumber(pb || 0),
