@@ -159,26 +159,48 @@ const schema = new Schema<any>(
 					default: '#000',
 				},
 			},
-			featuredCollection: [
-				{
-					title: String,
-					subTitle: String,
-					image: String,
-					href: {
-						type: String,
-						default: '#',
+			featuredCollection: {
+				type: [
+					{
+						title: String,
+						subTitle: String,
+						image: {
+							type: String,
+							default:
+								'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+						},
+						href: {
+							type: String,
+							default: '#',
+						},
+						type: {
+							type: String,
+							enum: ['category', 'collection', 'product', 'page', 'external'],
+							default: 'page',
+						},
+						priority: {
+							type: Number,
+							default: 0,
+						},
 					},
-					type: {
-						type: String,
-						enum: ['category', 'collection', 'product', 'page', 'external'],
-						default: 'page',
-					},
-					priority: {
-						type: Number,
-						default: 0,
-					},
+				],
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'category',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+					];
 				},
-			],
+			},
 			collections: {
 				title: {
 					type: String,
@@ -232,24 +254,42 @@ const schema = new Schema<any>(
 				subTitle: getString(
 					'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
 				),
-				items: [
-					{
-						btnText: {
-							type: String,
-							default: 'Button',
+				items: {
+					type: [
+						{
+							btnText: {
+								type: String,
+								default: 'Button',
+							},
+							image: {
+								type: String,
+								default:
+									'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+							},
+							href: {
+								type: String,
+								default: '/',
+							},
+							type: {
+								type: String,
+								enum: ['category', 'collection', 'product', 'page', 'external'],
+								default: 'page',
+							},
 						},
-						image: String,
-						href: {
-							type: String,
-							default: '/',
-						},
-						type: {
-							type: String,
-							enum: ['category', 'collection', 'product', 'page', 'external'],
-							default: 'page',
-						},
+					],
+					default: function () {
+						return [
+							{
+								id: new mongoose.Types.ObjectId(),
+								type: 'category',
+							},
+							{
+								id: new mongoose.Types.ObjectId(),
+								type: 'collection',
+							},
+						];
 					},
-				],
+				},
 			},
 			about: {
 				title: {

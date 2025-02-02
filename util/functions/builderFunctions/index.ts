@@ -40,10 +40,10 @@ export const getResponsiveFontSize = (lg: number, sm: number) => {
 	};
 };
 
-export const getString = (str: string, required?: boolean) => {
+export const getString = (str?: string, required?: boolean) => {
 	return {
 		type: String,
-		default: str,
+		...(str && { default: str }),
 		required: required || false,
 	};
 };
@@ -86,3 +86,4 @@ export const h1 = {
 
 export { default as TextSchema } from './TextSchema/index.js';
 export { default as ButtonSchema } from './ButtonSchema/index.js';
+export { default as ImageSchema } from './ImageSchema/index.js';
