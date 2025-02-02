@@ -238,7 +238,11 @@ const schema = new Schema<any>(
 							type: String,
 							default: 'Button',
 						},
-						image: String,
+						image: {
+							type: String,
+							default:
+								'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+						},
 						href: {
 							type: String,
 							default: '/',
