@@ -337,8 +337,14 @@ const schema = new Schema<any>(
 				heightBase: getNumber(100),
 				grid: getNumber(4),
 			},
+			sponserBannerTwoCss: {
+				height: getNumber(200),
+				heightBase: getNumber(100),
+				borderRadius: getNumber(4),
+				hide: getBoolean(false),
+			},
 			sponsoredBannerTwo: {
-				type: [
+				items: [
 					{
 						// title: String,
 						// subTitle: String,
@@ -362,10 +368,22 @@ const schema = new Schema<any>(
 						},
 					},
 				],
-				height: getNumber(200),
-				heightBase: getNumber(100),
-				borderRadius: getNumber(4),
-				hide: getBoolean(false),
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'category',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+					];
+				},
 			},
 
 			sponsoredBannerThree: {
