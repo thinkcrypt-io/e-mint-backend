@@ -24,6 +24,7 @@ import {
 	getSum,
 	Payment,
 	paymentSettings,
+	isExpired,
 } from '../imports.js';
 import addPayment from '../controllers/order/addPayment.controller.js';
 // import Expense, { settings } from '../models/expense/expense.schema.js';
@@ -41,6 +42,7 @@ const permissions = constructPermissions('expense');
 // Define common middleware
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
 ];

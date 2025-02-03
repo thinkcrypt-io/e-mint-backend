@@ -21,6 +21,7 @@ import getDocumentToEditById from '../controllers/common/getDocumentToEditById.c
 import Customer, { settings } from '../models/user/user.model.js';
 import ifExistOnUpdate from '../middleware/ifExistOnUpdate.middleware.js';
 import hasPermission from '../middleware/hasPermission.middleware.js';
+import { isExpired } from '../imports.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -37,11 +38,13 @@ const config = constructConfig({
 const commonMiddleware = [
 	protect,
 	sort,
+
 	query(config.FILTER_OPTIONS),
 	hasPermission(['view_user']),
 ];
 const postMiddleware = [
 	protect,
+	isExpired,
 	ifExists(config.EXIST_OPTIONS),
 	validate(config.VALIDATORS.POST),
 	hasPermission(['add_user']),

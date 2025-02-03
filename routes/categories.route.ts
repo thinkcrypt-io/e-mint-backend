@@ -52,6 +52,7 @@ const middlewares = {
 	//Middleware for creating a new category
 	post: [
 		protect,
+		isExpired,
 		validate(config.VALIDATORS.POST),
 		isExists(config.EXIST_OPTIONS),
 		hasPermission([permissions.create]),
@@ -59,7 +60,12 @@ const middlewares = {
 	//Middleware for getting all categories
 	getAll: [protect, paginate, filter(config.FILTER_OPTIONS), hasPermission([permissions.read])],
 	//Middleware for updating a category
-	update: [protect, validate(config.VALIDATORS.UPDATE), hasPermission([permissions.update])],
+	update: [
+		protect,
+		isExpired,
+		validate(config.VALIDATORS.UPDATE),
+		hasPermission([permissions.update]),
+	],
 	//Middleware for updating many categories
 	updateMany: [protect, hasPermission([permissions.update])],
 	//Middleware for getting a category by ID

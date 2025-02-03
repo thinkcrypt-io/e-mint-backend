@@ -26,6 +26,7 @@ import { getTopCustomers } from '../controllers/top/topCustomer.controller.js';
 import { Filter } from '../lib/types/settings.types.js';
 import { orderStatus } from '../models/order/order.settings.js';
 import Order from '../models/order/order.model.js';
+import { isExpired } from '../imports.js';
 
 type TopProductsFilters = {
 	[key: string]: { filter: Filter; sort?: boolean };
@@ -76,6 +77,7 @@ const commonMiddleware = [
 ];
 const postMiddleware = [
 	protect,
+	isExpired,
 	ifExists(config.EXIST_OPTIONS),
 	validate(config.VALIDATORS.POST),
 	hasPermission(['add_customer']),

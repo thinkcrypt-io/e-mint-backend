@@ -21,6 +21,7 @@ import {
 	duplicateDocument,
 	getDocumentToEditById,
 	constructPermissions,
+	isExpired,
 } from '../imports.js';
 import ExpenseCategory, { settings } from '../models/expense/expenseCategory.model.js';
 
@@ -37,6 +38,7 @@ const permissions = constructPermissions('expense');
 // Define common middleware
 const postMiddleware = [
 	protect,
+	isExpired,
 	validate(config.VALIDATORS.POST),
 	hasPermission([permissions.create]),
 ];
