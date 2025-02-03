@@ -10,6 +10,7 @@ const getSelf = async (req: any, res: Response): Promise<Response> => {
 				{
 					path: 'shop',
 					populate: [
+						{ path: 'package', populate: 'subscription' },
 						{
 							path: 'deployment',
 						},
