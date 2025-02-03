@@ -12,11 +12,15 @@ import {
 } from '../controllers/index.js';
 import Shop from '../models/shop/shop.model.js';
 import changeSellerPassword from '../controllers/auth/changeSellerPassword.controller.js';
+import userShopRegisterController from '../controllers/onboarding/userShopRegister.controller.js';
 
 const router = express.Router();
 
 //route for: /api/auth route
-router.post('/login', login).post('/register', register).get('/self', protect, getSellerSelf);
+router
+	.post('/login', login)
+	.post('/register', userShopRegisterController)
+	.get('/self', protect, getSellerSelf);
 
 router.put('/update/preferences', protect, updateSellerPreferences);
 router.put('/update/self', protect, updateSellerSelf);
@@ -57,7 +61,7 @@ router.put(
 
 router.post('/theme/purchase', shopRegister);
 
-router.post('/shop/register', shopRegister);
+router.post('/shop/register', userShopRegisterController);
 router.put('/change-password', protect, changeSellerPassword);
 
 // router.get('/verify-reset-token/:token', verifyToken);
