@@ -81,11 +81,11 @@ const schema = new Schema<any>(
 			banner: {
 				centerText: {
 					type: String,
-					default: '',
+					default: 'Enter Text Here',
 				},
 				rightText: {
 					type: String,
-					default: '',
+					default: 'Enter Text Here',
 				},
 				bgColor: String,
 				fgColor: String,
