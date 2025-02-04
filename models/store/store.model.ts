@@ -317,6 +317,28 @@ const schema = new Schema<any>(
 					default: 'Button',
 				},
 			},
+			faq: {
+				type: [
+					{
+						title: { type: String, trim: true },
+						description: { type: String, trim: true },
+					},
+				],
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							question: 'Qestion One',
+							answer: LOREM,
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							question: 'Question Two',
+							answer: LOREM,
+						},
+					];
+				},
+			},
 		},
 		isActive: { type: Boolean, required: true, default: true },
 	},
