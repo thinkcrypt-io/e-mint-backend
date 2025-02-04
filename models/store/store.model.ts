@@ -276,7 +276,7 @@ const schema = new Schema<any>(
 							},
 							href: {
 								type: String,
-								default: '/',
+								default: '#',
 							},
 							type: {
 								type: String,
@@ -315,6 +315,15 @@ const schema = new Schema<any>(
 				btnText: {
 					type: String,
 					default: 'Button',
+				},
+				href: {
+					type: String,
+					default: '#',
+				},
+				type: {
+					type: String,
+					enum: ['category', 'collection', 'product', 'page', 'external'],
+					default: 'page',
 				},
 			},
 			faqPage: {
