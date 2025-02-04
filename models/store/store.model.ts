@@ -317,6 +317,17 @@ const schema = new Schema<any>(
 					default: 'Button',
 				},
 			},
+			faqPage: {
+				title: {
+					type: String,
+					default: 'Frequently Asked Questions',
+					required: true,
+				},
+				subTitle: {
+					type: String,
+					default: LOREM,
+				},
+			},
 			faq: {
 				type: [
 					{
