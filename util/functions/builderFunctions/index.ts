@@ -45,6 +45,7 @@ export const getString = (str?: string, required?: boolean) => {
 		type: String,
 		...(str && { default: str }),
 		required: required || false,
+		trum: true,
 	};
 };
 
