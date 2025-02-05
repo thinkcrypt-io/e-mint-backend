@@ -276,7 +276,7 @@ const schema = new Schema<any>(
         hide: getBoolean(false),
         innerGap: getNumber(4),
         outerGap: getNumber(4),
-        boxShadow: { type: String, default: "0 1px 1px rgba(0, 0, 0, 0.1)" },
+        boxShadow: { type: String, default: "0 1px 1px rgba(0, 0, 0, 0.8)" },
       },
       homeProductCss: {
         titleFontSizeBASE: getNumber(20),
