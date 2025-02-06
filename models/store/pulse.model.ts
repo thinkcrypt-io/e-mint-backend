@@ -115,17 +115,26 @@ const schema = new Schema<any>(
 			},
 			banner: {
 				children: getString('Enter your text here'),
-				fontFamily: font,
-				height: getNumber(50),
-				fontSize: getNumber(16),
-				letterSpacing: getNumber(0),
+				bannerText: TextSchema({
+					fontSize: {
+						base: 12,
+						md: 14,
+					},
+					fontWeight: '700',
+					color: '#ffffff',
+				}),
 				paddingY: getNumber(8),
 				paddingX: getNumber(16),
-				fontWeight: getNumber(400),
 				bgColor: getString('#333333'),
-				fgColor: getString('#f5f5f5'),
-				hide: getBoolean(true),
+				height: getNumber(50),
 				textAlign: getString('center'),
+				hide: getBoolean(true),
+				// fontFamily: font,
+				// fontSize: getNumber(16),
+				// fgColor: getString('#f5f5f5'),
+				// fontWeight: getNumber(400),
+				// letterSpacing: getNumber(0),
+				// textAlign: getString('center'),
 			},
 			header: {
 				//colors
@@ -328,9 +337,54 @@ const schema = new Schema<any>(
 				description: getString('Enter your description here'),
 				textColor: colors?.bg,
 			},
-
 			sponsoredBannerOne: {
-				images: [],
+				type: [
+					{
+						title: String,
+						subTitle: String,
+						image: {
+							type: String,
+							default:
+								'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+						},
+						href: {
+							type: String,
+							default: '#',
+						},
+						type: {
+							type: String,
+							enum: ['category', 'collection', 'product', 'page', 'external'],
+							default: 'page',
+						},
+						priority: {
+							type: Number,
+							default: 0,
+						},
+					},
+				],
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'category',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							type: 'page',
+						},
+					];
+				},
+			},
+			sponserBannerOneCss: {
+				// images: [],
 				hide: getBoolean(true),
 				borderRadius: getNumber(4),
 				height: getNumber(200),
@@ -343,11 +397,50 @@ const schema = new Schema<any>(
 				borderRadius: getNumber(4),
 				hide: getBoolean(false),
 			},
+			// sponsoredBannerTwo: {
+			// 	type: [
+			// 		{
+			// 			// title: String,
+			// 			// subTitle: String,
+			// 			image: {
+			// 				type: String,
+			// 				default: [
+			// 					'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais',
+			// 				],
+			// 			},
+			// 			href: {
+			// 				type: String,
+			// 				default: '#',
+			// 			},
+			// 			type: {
+			// 				type: String,
+			// 				enum: ['category', 'collection', 'product', 'page', 'external'],
+			// 				default: 'page',
+			// 			},
+			// 			priority: {
+			// 				type: Number,
+			// 				default: 0,
+			// 			},
+			// 		},
+			// 	],
+			// 	default: function () {
+			// 		return [
+			// 			{
+			// 				id: new mongoose.Types.ObjectId(),
+			// 				type: 'category',
+			// 			},
+			// 			{
+			// 				id: new mongoose.Types.ObjectId(),
+			// 				type: 'page',
+			// 			},
+			// 		];
+			// 	},
+			// },
 			sponsoredBannerTwo: {
 				type: [
 					{
-						// title: String,
-						// subTitle: String,
+						title: String,
+						subTitle: String,
 						image: {
 							type: String,
 							default:
@@ -871,8 +964,6 @@ const schema = new Schema<any>(
 
 	{
 		timestamps: true,
-		toJSON: { virtuals: true }, // Include this line to ensure virtuals are included when converting to JSON
-		toObject: { virtuals: true }, // Include this line to ensure virtuals are included when converting to objects
 	}
 );
 
