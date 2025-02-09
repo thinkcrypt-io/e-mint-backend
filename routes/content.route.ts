@@ -2,7 +2,6 @@
 import express from 'express';
 
 import getContent from '../controllers/content/getContent.controller.js';
-import updateContent from '../controllers/content/updateContent.controller.js';
 import addProductList from '../controllers/content/addProductList.controller.js';
 import deleteProductList from '../controllers/content/deleteProductListController.js';
 import editProductList from '../controllers/content/editProductListController.js';
@@ -31,8 +30,10 @@ import {
 	deleteProductListFromTheme,
 	updateProductListInTheme,
 	isExpired,
+	updateContent as updateContentNew,
 } from '../imports.js';
 import checkIfSlugAvailable from '../controllers/hongo/checkIfSlugAvailable.js';
+import Store from '../models/store/store.model.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -43,8 +44,9 @@ const hongoConfig = constructConfig({
 });
 
 //NEXA THEME
-router.get('/nexa', protect, getContent);
-router.put('/nexa', protect, isExpired, updateContent);
+router.get('/nexa', protect, getThemeContent(Store));
+// router.put('/nexa', protect, isExpired, updateContent);
+router.put('/nexa', protect, isExpired, updateContentNew(Store));
 router.post('/product/nexa', protect, isExpired, addProductList);
 router.delete('/product/nexa/:id', protect, isExpired, deleteProductList);
 router.put('/product/nexa/:id', protect, isExpired, editProductList);
