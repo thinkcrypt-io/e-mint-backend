@@ -26,6 +26,7 @@ import {
 	protect,
 	getThemeContent,
 	Pulse,
+	Mango,
 	updateThemeContent,
 	addProductListToTheme,
 	deleteProductListFromTheme,
@@ -76,5 +77,9 @@ router.put('/pulse', protect, isExpired, updateThemeContent(Pulse));
 router.post('/product/pulse', protect, isExpired, addProductListToTheme(Pulse));
 router.delete('/product/pulse/:id', protect, isExpired, deleteProductListFromTheme(Pulse));
 router.put('/product/pulse/:id', protect, isExpired, updateProductListInTheme(Pulse));
+
+// Mango Theme
+router.get('/mango', protect, getThemeContent(Mango));
+router.put('/mango', protect, isExpired, updateThemeContent(Mango));
 
 export default router;

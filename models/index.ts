@@ -113,6 +113,7 @@ export { PurchasedThemeType, purchasedThemeSettings } from './theme/purchasedThe
 export { default as Nexa } from './store/store.model.js';
 export { default as Hongo } from './store/hongo.model.js';
 export { default as Pulse } from './store/pulse.model.js';
+export { default as Mango } from './store/mango.model.js';
 
 //Collection
 export { default as Collection } from './collection/collection.model.js';
