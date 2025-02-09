@@ -2,6 +2,12 @@ import { Settings } from '../../imports.js';
 import mongoose, { Schema } from 'mongoose';
 import { getString, colors, getNumber, h1, TextSchema, ButtonSchema } from '../../util/index.js';
 
+const PLACEHOLDER_IMAGE =
+	'https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg?size=626&ext=jpg&ga=GA1.1.1412446893.1704931200&semt=ais';
+
+const LOREM =
+	'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
+
 const schema = new Schema<any>(
 	{
 		basic: {
@@ -81,11 +87,13 @@ const schema = new Schema<any>(
 			banner: {
 				centerText: {
 					type: String,
-					default: '',
+					default: 'Enter Text Here',
+					trim: true,
 				},
 				rightText: {
 					type: String,
-					default: '',
+					default: 'Enter Text Here',
+					trim: true,
 				},
 				bgColor: String,
 				fgColor: String,
@@ -268,7 +276,7 @@ const schema = new Schema<any>(
 							},
 							href: {
 								type: String,
-								default: '/',
+								default: '#',
 							},
 							type: {
 								type: String,
@@ -294,16 +302,61 @@ const schema = new Schema<any>(
 			about: {
 				title: {
 					type: String,
-					default: '',
+					default: 'Enter Text Here',
 				},
 				subTitle: {
 					type: String,
-					default: '',
+					default: LOREM,
 				},
-				image: String,
+				image: {
+					type: String,
+					default: PLACEHOLDER_IMAGE,
+				},
 				btnText: {
 					type: String,
-					default: 'Read More',
+					default: 'Button',
+				},
+				href: {
+					type: String,
+					default: '#',
+				},
+				type: {
+					type: String,
+					enum: ['category', 'collection', 'product', 'page', 'external'],
+					default: 'page',
+				},
+			},
+			faqPage: {
+				title: {
+					type: String,
+					default: 'Frequently Asked Questions',
+					required: true,
+				},
+				subTitle: {
+					type: String,
+					default: LOREM,
+				},
+			},
+			faq: {
+				type: [
+					{
+						title: { type: String, trim: true },
+						description: { type: String, trim: true },
+					},
+				],
+				default: function () {
+					return [
+						{
+							id: new mongoose.Types.ObjectId(),
+							question: 'Qestion One',
+							answer: LOREM,
+						},
+						{
+							id: new mongoose.Types.ObjectId(),
+							question: 'Question Two',
+							answer: LOREM,
+						},
+					];
 				},
 			},
 		},
