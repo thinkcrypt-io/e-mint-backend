@@ -12,6 +12,7 @@ import {
 	purchasedThemeRoute,
 	smsRoute,
 } from './index.js';
+import { defineRoutes, Lead, leadSettings } from '../imports.js';
 
 const router = express.Router();
 
@@ -27,5 +28,7 @@ router.use('/upload', uploadRoute);
 router.use('/purchasedthemes', purchasedThemeRoute);
 
 router.use('/sms', smsRoute);
+
+router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
 
 export default router;

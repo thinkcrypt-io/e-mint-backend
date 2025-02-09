@@ -36,6 +36,7 @@ const config = constructConfig({
 	config: settings,
 	options: { role: 'admin' },
 });
+
 const permissions = constructPermissions(permission);
 
 //Define the middlewares
