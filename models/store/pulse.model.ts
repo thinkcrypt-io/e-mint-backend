@@ -10,7 +10,7 @@ import {
 	TextSchema,
 	ImageSchema,
 } from '../../util/index.js';
-
+// pulse
 const productListData = [
 	{
 		id: {
@@ -110,7 +110,7 @@ const schema = new Schema<any>(
 						base: 14,
 						md: 16,
 					},
-				})
+				}),
 			},
 			breadCrumbCss: {
 				fgColor: colors?.fg,
