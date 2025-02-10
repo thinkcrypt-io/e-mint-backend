@@ -15,6 +15,11 @@ export { default as Product } from './products/products.model.js';
 export { settings as productSettings } from './products/products.model.js';
 export { default as inventorySettings } from './products/inventory.settings.js';
 
+//Leads
+export { default as Lead } from './leads/leads.model.js';
+export { default as leadSettings } from './leads/leads.settings.js';
+export { default as LeadType } from './leads/leads.type.js';
+
 //Order
 export { default as Order } from './order/order.model.js';
 export { settings as orderSettings } from './order/order.model.js';

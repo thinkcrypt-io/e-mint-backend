@@ -32,6 +32,7 @@ type Config = {
 		role?: string;
 		baseModel: mongoose.Model<any>;
 	};
+	SCHEMA: any;
 };
 
 type ConstructConfigParams = {
@@ -54,6 +55,7 @@ type ReturnType = {
 		model: any;
 		populate: any;
 	};
+	SCHEMA: any;
 };
 
 const constructConfig = ({ model, config, options }: ConstructConfigParams): ReturnType => {
@@ -105,6 +107,7 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 			baseModel: model,
 		},
 		POPULATE: '',
+		SCHEMA: { settings: config },
 	};
 };
 

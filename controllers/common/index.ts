@@ -40,3 +40,6 @@ export * from './theme/index.js';
 
 //19
 export { default as updatePreference } from './updatePreference.contoller.js';
+
+//20
+export { default as getSchema } from './getSchema.controller.js';
