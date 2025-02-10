@@ -67,6 +67,7 @@ const settings: SettingsType<Type> = {
 			sort: true,
 		},
 	},
+
 	email: {
 		unique: true,
 		search: true,
@@ -241,7 +242,7 @@ const settings: SettingsType<Type> = {
 		type: 'array-string',
 		sort: true,
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 		filter: {
 			name: 'tags',
@@ -258,7 +259,7 @@ const settings: SettingsType<Type> = {
 		title: 'Interested In',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	priority: {
