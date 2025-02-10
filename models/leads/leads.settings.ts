@@ -68,8 +68,17 @@ const settings: SettingsType<Type> = {
 		},
 	},
 
+	requirements: {
+		edit: true,
+		title: 'Requirements',
+		type: 'string',
+		schema: {
+			type: 'textarea',
+		},
+	},
+
 	email: {
-		unique: true,
+		// unique: true,
 		search: true,
 		sort: true,
 		title: 'Email',

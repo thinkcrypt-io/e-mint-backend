@@ -95,6 +95,9 @@ const schema = new Schema<Type>(
 		estimatedBudget: {
 			type: Number,
 		},
+		requirements: {
+			type: String,
+		},
 		followUps: [
 			{
 				date: Date,

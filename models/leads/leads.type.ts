@@ -20,6 +20,7 @@ type LeadType = DocumentBaseType & {
 	instagram?: string;
 	hasWebsite?: boolean;
 	websiteUrl?: string;
+	requirements?: string;
 	isActive: boolean;
 	group?: string;
 	tags?: string[];
