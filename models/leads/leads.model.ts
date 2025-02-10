@@ -69,6 +69,7 @@ const schema = new Schema<Type>(
 		isActive: {
 			type: Boolean,
 			required: true,
+			default: true,
 		},
 
 		tags: [
