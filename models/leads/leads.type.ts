@@ -27,6 +27,7 @@ type LeadType = DocumentBaseType & {
 	priority: 'low' | 'medium' | 'high';
 	estimatedBudget?: number;
 	followUps?: [];
+	leadType?: 'cold' | 'warm' | 'hot';
 	source?:
 		| 'website'
 		| 'facebook'

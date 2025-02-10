@@ -295,6 +295,38 @@ const settings: SettingsType<Type> = {
 			key: 'priority',
 		},
 	},
+	leadType: {
+		edit: true,
+		title: 'Lead Type',
+		type: 'string',
+		sort: true,
+		filter: {
+			name: 'leadType',
+			field: 'leadType_in',
+			type: 'multi-select',
+			label: 'Lead Type',
+			title: 'Sort by lead type',
+			category: 'distinct',
+			key: 'leadType',
+		},
+		schema: {
+			type: 'select',
+			options: [
+				{
+					label: 'Cold',
+					value: 'cold',
+				},
+				{
+					label: 'Warm',
+					value: 'warm',
+				},
+				{
+					label: 'Hot',
+					value: 'hot',
+				},
+			],
+		},
+	},
 	estimatedBudget: {
 		edit: true,
 		title: 'Estimated Budget',
@@ -319,6 +351,26 @@ const settings: SettingsType<Type> = {
 				{
 					label: 'Facebook',
 					value: 'facebook',
+				},
+				{
+					label: 'Offline',
+					value: 'offline',
+				},
+				{
+					label: 'Inbound',
+					value: 'inbound',
+				},
+				{
+					label: 'Outbound Call',
+					value: 'outbound-call',
+				},
+				{
+					label: 'Outbound Email',
+					value: 'outbound-email',
+				},
+				{
+					label: 'Facebook ad',
+					value: 'facebook-ad',
 				},
 				{
 					label: 'Instagram',

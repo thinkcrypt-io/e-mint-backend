@@ -82,6 +82,11 @@ const schema = new Schema<Type>(
 				type: String,
 			},
 		],
+		leadType: {
+			type: String,
+			enum: ['cold', 'warm', 'hot'],
+			default: 'cold',
+		},
 		priority: {
 			type: String,
 			enum: ['low', 'medium', 'high'],
@@ -98,35 +103,10 @@ const schema = new Schema<Type>(
 		],
 		source: {
 			type: String,
-			enum: [
-				'website',
-				'facebook',
-				'instagram',
-				'referral',
-				'other',
-				'offline',
-				'email',
-				'call',
-				'event',
-				'search-engine',
-			],
 		},
 		status: {
 			type: String,
-			enum: [
-				'new',
-				'interested',
-				'contacted',
-				'qualified',
-				'attempted-contact',
-				'unqualified',
-				'follow-up',
-				'converted',
-				'dead',
-				'open',
-				'won',
-				'closed',
-			],
+
 			default: 'new',
 			required: [true, 'Status is required'],
 		},
