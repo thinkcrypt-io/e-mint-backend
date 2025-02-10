@@ -14,6 +14,7 @@ import {
 	getFilters,
 	getSum,
 	getSchema,
+	deleteDocument,
 } from '../../controllers/index.js';
 
 import {
@@ -89,8 +90,8 @@ const defineRoutes = ({ Model, settings, permission }: RouteOptions) => {
 	router
 		.route('/:id')
 		.get(...middlewares.getById, getDocumentById(config.QUERY_OPTIONS))
-		.put(...middlewares.update, updateDocument(config.EDITS));
-	// .delete(...middlewares.delete, deleteDocument(config.MODEL));
+		.put(...middlewares.update, updateDocument(config.EDITS))
+		.delete(...middlewares.delete, deleteDocument(config.MODEL));
 
 	//Find to edit
 	router.get('/edit/:id', ...middlewares.getById, getDocumentToEditById(config.MODEL));
