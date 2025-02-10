@@ -1,3 +1,4 @@
+import { any } from 'joi';
 import mongoose from 'mongoose';
 
 type Options = { label: string; value: string };
@@ -14,6 +15,8 @@ export type Filter = {
 	roles?: [string];
 	field?: string;
 };
+
+export type Schema = any;
 
 type SettingType = {
 	title: string;
@@ -36,6 +39,7 @@ type SettingType = {
 
 	required?: boolean;
 	filter?: Filter;
+	schema?: Schema;
 	edit?: boolean;
 	trim?: boolean;
 	populate?: { path: string; select: string; populate?: any };
