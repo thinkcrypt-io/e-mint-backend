@@ -77,9 +77,31 @@ const schema = new Schema<any>({
 				width: {
 					base: 'full',
 					md: 'full',
-				}
-			})
-		}
+				},
+				gap: {
+					base: 4,
+					md: 4,
+				},
+				justifyContent: {
+					base: 'space-between',
+					md: 'space-between',
+				},
+			}),
+			navItems: [
+				{
+					id: {
+						type: mongoose.Schema.Types.ObjectId,
+						required: true,
+					},
+					type: {
+						type: String,
+						enum: ['categories'],
+						required: true,
+					},
+				},
+			],
+			navLogo: String,
+		},
 	},
 });
 
