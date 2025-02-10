@@ -33,11 +33,14 @@ const getThemeContent = (model: mongoose.Model<any>) => {
 				const saved = await newStore.save();
 				data = await model.findOne({ _id: saved._id }).populate('shop');
 			}
-			model;
+			//model;
 			return res.status(200).json(data);
 		} catch (e: any) {
 			console.log(e.message);
-			const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : e.message;
+			const message =
+				process.env.NODE_ENV === 'production'
+					? 'Internal Server Error'
+					: e.message;
 			return res.status(500).json({ message: message });
 		}
 	};
