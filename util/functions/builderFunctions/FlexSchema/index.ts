@@ -43,8 +43,8 @@ type FlexSchemaProps = {
 };
 
 const FlexSchema = ({
-	height = { base: '0', md: '0' },
-	width = { base: '0', md: '0' },
+	height = { base: '40px', md: '20px' },
+	width = { base: 'full', md: 'full' },
   bg,
 	color,
 	direction = { base: 'row', md: 'row' },
