@@ -1,4 +1,5 @@
 import {
+	ButtonSchema,
 	colors,
 	FlexSchema,
 	font,
@@ -125,6 +126,37 @@ const schema = new Schema<any>({
 				width: {
 					base: 'full',
 					md: 'full',
+				},
+			}),
+		},
+
+		hero: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			heroImage: String,
+			heroImageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+			heroButton: ButtonSchema(),
+			heroButtonCss: FlexSchema({
+				justifyContent: {
+					base: 'center',
+					md: 'center',
 				},
 			}),
 		},
