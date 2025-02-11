@@ -5,7 +5,7 @@ import {
 	getBoolean,
 	getNumber,
 	getString,
-	ImageSchema,
+	ResponsiveImageSchema,
 	TextSchema,
 	TopBannerSchema,
 } from '../../util/index.js';
@@ -121,7 +121,7 @@ const schema = new Schema<any>({
 				fontFamily: '',
 			}),
 			navLogo: String,
-			logoCss: ImageSchema({
+			logoCss: ResponsiveImageSchema({
 				width: {
 					base: 'full',
 					md: 'full',
