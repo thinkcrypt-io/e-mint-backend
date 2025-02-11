@@ -75,6 +75,11 @@ export const adminRoleSettings: SettingsType<AdminRoleType> = {
 		required: true,
 		trim: true,
 		unique: true,
+		schema: {
+			displayInTable: true,
+			default: true,
+			isRequired: true,
+		},
 	},
 	description: {
 		edit: true,
@@ -101,6 +106,10 @@ export const adminRoleSettings: SettingsType<AdminRoleType> = {
 		type: 'boolean',
 		title: 'Active Status',
 		sort: true,
+		schema: {
+			displayInTable: true,
+			default: true,
+		},
 
 		filter: {
 			name: 'isActive',

@@ -73,6 +73,7 @@ export { purchaseSettings, Purchase } from './purchase/index.js';
 export { default as Admin } from './admin/admin.model.js';
 export { default as AdminRole, adminRoleSettings } from './admin/adminRole.model.js';
 // export { adminSettings } from './admin/admin.model.js';
+export { default as adminSettings } from './admin/admin.settings.js';
 
 //Subscription
 export { default as Subscription } from './subscription/subscription.model.js';
@@ -132,3 +133,8 @@ export { default as locationSettings } from './location/location.settings.js';
 export { default as Staff } from './staff/staff.model.js';
 export { default as StaffType } from './staff/staff.types.js';
 export { default as staffSettings } from './staff/staff.settings.js';
+
+//Projects
+export { default as Project } from './project/project.model.js';
+export { default as projectSettings } from './project/settings.js';
+export { default as ProjectType } from './project/types.js';
