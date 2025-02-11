@@ -76,8 +76,8 @@ const FlexSchema = ({
 			md: getString(wrap?.md || 'nowrap'),
 		},
 		justifyContent: {
-			base: getString(justifyContent?.base || 'flex-start'),
-			md: getString(justifyContent?.md || 'flex-start'),
+			base: getString(justifyContent?.base || 'space-between'),
+			md: getString(justifyContent?.md || 'space-between'),
 		},
 		alignItems: {
 			base: getString(alignItems?.base || 'flex-start'),
