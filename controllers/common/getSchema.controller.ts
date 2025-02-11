@@ -12,9 +12,9 @@ const getSchema = ({ settings }: { settings: any }) => {
 					isRequired: settings[key]?.required,
 					...settings[key]?.schema,
 				};
-				if (settings[key].schema) {
-					acc[key] = constructSchema;
-				}
+
+				acc[key] = constructSchema;
+
 				return acc;
 			}, {} as Record<string, any>);
 
