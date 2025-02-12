@@ -12,7 +12,17 @@ import {
 	purchasedThemeRoute,
 	smsRoute,
 } from './index.js';
-import { defineRoutes, Lead, leadSettings } from '../imports.js';
+import {
+	Admin,
+	AdminRole,
+	adminRoleSettings,
+	adminSettings,
+	defineRoutes,
+	Lead,
+	leadSettings,
+	Project,
+	projectSettings,
+} from '../imports.js';
 
 const router = express.Router();
 
@@ -30,5 +40,14 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
+router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
+router.use(
+	'/adminroles',
+	defineRoutes({ Model: AdminRole, settings: adminRoleSettings, permission: 'adminrole' })
+);
+router.use(
+	'/projects',
+	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
+);
 
 export default router;
