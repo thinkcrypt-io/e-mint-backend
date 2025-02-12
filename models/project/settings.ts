@@ -66,6 +66,7 @@ const settings: SettingsType<Type> = {
 		edit: true,
 		title: 'Client Name',
 		type: 'string',
+		search: true,
 	},
 	devUrl: {
 		edit: true,
@@ -103,7 +104,7 @@ const settings: SettingsType<Type> = {
 			key: 'projectType',
 		},
 		schema: {
-			type: 'select',
+			sort: true,
 			options: [
 				{
 					label: 'Frontend',
@@ -162,7 +163,7 @@ const settings: SettingsType<Type> = {
 		title: 'Technologies',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	frameworks: {
@@ -170,7 +171,7 @@ const settings: SettingsType<Type> = {
 		title: 'frameworks',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	libraries: {
@@ -178,7 +179,7 @@ const settings: SettingsType<Type> = {
 		title: 'Libraries',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	githubUrl: {
