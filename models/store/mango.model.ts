@@ -276,6 +276,10 @@ const schema = new Schema<any>({
 					base: 'full',
 					md: 'full',
 				},
+				height: {
+					base: '300px',
+					md: '700px',
+				},
 			}),
 		},
 
@@ -354,7 +358,30 @@ const schema = new Schema<any>({
 			}),
 		},
 
-		
+		about: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+			button: ButtonSchema()
+		},
 	},
 });
 
