@@ -253,6 +253,108 @@ const schema = new Schema<any>({
 				}),
 			},
 		},
+
+		banner1: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitleLink: String || '/',
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+		},
+
+		banner2: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitleLink: String || '/',
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+		},
+
+		banner3: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitleLink: String || '/',
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+		},
+
+		banner4: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitleLink: String || '/',
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+		},
+
+		
 	},
 });
 
