@@ -23,6 +23,10 @@ const schema = new Schema<ProjectType>(
 			type: String,
 			trim: true,
 		},
+		client: {
+			type: Schema.Types.ObjectId,
+			ref: 'Client',
+		},
 		devUrl: {
 			type: String,
 			trim: true,

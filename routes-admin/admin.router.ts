@@ -22,6 +22,8 @@ import {
 	leadSettings,
 	Project,
 	projectSettings,
+	Client,
+	clientSettings,
 } from '../imports.js';
 
 const router = express.Router();
@@ -48,6 +50,11 @@ router.use(
 router.use(
 	'/projects',
 	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
+);
+
+router.use(
+	'/clients',
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
 );
 
 export default router;
