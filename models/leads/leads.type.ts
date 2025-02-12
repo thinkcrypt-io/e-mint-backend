@@ -20,6 +20,7 @@ type LeadType = DocumentBaseType & {
 	instagram?: string;
 	hasWebsite?: boolean;
 	websiteUrl?: string;
+	requirements?: string;
 	isActive: boolean;
 	group?: string;
 	tags?: string[];
@@ -27,6 +28,7 @@ type LeadType = DocumentBaseType & {
 	priority: 'low' | 'medium' | 'high';
 	estimatedBudget?: number;
 	followUps?: [];
+	leadType?: 'cold' | 'warm' | 'hot';
 	source?:
 		| 'website'
 		| 'facebook'

@@ -5,6 +5,7 @@ import {
 	getBoolean,
 	getNumber,
 	getString,
+	ImageSchema,
 	TextSchema,
 	TopBannerSchema,
 } from '../../util/index.js';
@@ -77,9 +78,56 @@ const schema = new Schema<any>({
 				width: {
 					base: 'full',
 					md: 'full',
-				}
-			})
-		}
+				},
+				height: {
+					base: '40px',
+					md: '40px',
+				},
+				gap: {
+					base: 2,
+					md: 2,
+				},
+				justifyContent: {
+					base: 'space-between',
+					md: 'space-between',
+				},
+				alignItems: {
+					base: 'center',
+					md: 'center',
+				},
+				paddingX: {
+					base: 4,
+					md: 8,
+				},
+			}),
+			navItems: [
+				{
+					id: {
+						type: mongoose.Schema.Types.ObjectId,
+						required: true,
+					},
+					type: {
+						type: String,
+						enum: ['categories'],
+						required: true,
+					},
+				},
+			],
+			navItemsCss: TextSchema({
+				fontSize: {
+					base: 16,
+					md: 16,
+				},
+				fontFamily: '',
+			}),
+			navLogo: String,
+			logoCss: ImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+		},
 	},
 });
 

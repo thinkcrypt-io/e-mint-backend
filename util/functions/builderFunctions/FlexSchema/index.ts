@@ -43,8 +43,8 @@ type FlexSchemaProps = {
 };
 
 const FlexSchema = ({
-	height = { base: '0', md: '0' },
-	width = { base: '0', md: '0' },
+	height = { base: '40px', md: '20px' },
+	width = { base: 'full', md: 'full' },
   bg,
 	color,
 	direction = { base: 'row', md: 'row' },
@@ -76,8 +76,8 @@ const FlexSchema = ({
 			md: getString(wrap?.md || 'nowrap'),
 		},
 		justifyContent: {
-			base: getString(justifyContent?.base || 'flex-start'),
-			md: getString(justifyContent?.md || 'flex-start'),
+			base: getString(justifyContent?.base || 'space-between'),
+			md: getString(justifyContent?.md || 'space-between'),
 		},
 		alignItems: {
 			base: getString(alignItems?.base || 'flex-start'),

@@ -1,8 +1,14 @@
 import { getNumber, getString } from '../index.js';
 
 type ImageSchemaProps = {
-	width: string;
-	height?: string;
+	width: {
+		base: string;
+		md: string;
+	};
+	height?: {
+		base: string;
+		md: string;
+	};
 	objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
 	borderRadius?: number;
 	borderWidth?: number;
@@ -14,14 +20,20 @@ type ImageSchemaProps = {
 	px?: number;
 	py?: number;
 	display?: 'block' | 'inline-block' | 'flex' | 'none';
-	src: string;
+	src?: string;
 	href?: string;
 	alt?: string;
 };
 
 const ImageSchema = ({
-	width = 'auto',
-	height = 'auto',
+	width = {
+		base: 'full',
+		md: 'full',
+	},
+	height = {
+		base: 'auto',
+		md: 'auto',
+	},
 	objectFit = 'cover',
 	borderRadius = 0,
 	borderWidth = 0,
@@ -38,8 +50,8 @@ const ImageSchema = ({
 }: ImageSchemaProps): any => {
 	return {
 		width: {
-			base: getString(width),
-			md: getString(width),
+			base: getString(width?.base || '20px'),
+			md: getString(width?.md || '40px'),
 		},
 
 		alt: getString(alt),
@@ -49,8 +61,8 @@ const ImageSchema = ({
 			md: getString(src),
 		},
 		height: {
-			base: getString(height),
-			md: getString(height),
+			base: getString(height.base	|| '20px'),
+			md: getString(height.base || '40px'),
 		},
 		objectFit: getString(objectFit),
 		borderRadius: getNumber(borderRadius),
