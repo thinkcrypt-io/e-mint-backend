@@ -1,11 +1,12 @@
 import {
+	ButtonSchema,
 	colors,
 	FlexSchema,
 	font,
 	getBoolean,
 	getNumber,
 	getString,
-	ImageSchema,
+	ResponsiveImageSchema,
 	TextSchema,
 	TopBannerSchema,
 } from '../../util/index.js';
@@ -121,10 +122,41 @@ const schema = new Schema<any>({
 				fontFamily: '',
 			}),
 			navLogo: String,
-			logoCss: ImageSchema({
+			logoCss: ResponsiveImageSchema({
 				width: {
 					base: 'full',
 					md: 'full',
+				},
+			}),
+		},
+
+		hero: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			heroImage: String,
+			heroImageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+			heroButton: ButtonSchema(),
+			heroButtonCss: FlexSchema({
+				justifyContent: {
+					base: 'center',
+					md: 'center',
 				},
 			}),
 		},
