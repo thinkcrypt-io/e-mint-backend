@@ -145,6 +145,7 @@ const schema = new Schema<any>({
 					md: 16,
 				},
 			}),
+			heroSubTitleLink: String || '/',
 			heroImage: String,
 			heroImageCss: ResponsiveImageSchema({
 				width: {
@@ -152,13 +153,105 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
-			heroButton: ButtonSchema(),
-			heroButtonCss: FlexSchema({
-				justifyContent: {
-					base: 'center',
-					md: 'center',
-				},
-			}),
+		},
+
+		cat: {
+			cat1: {
+				title: getString('Enter Your Text'),
+				titleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subTitle: getString('Enter Your Text'),
+				subTitleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subtitleLink: String || '/',
+				image: String,
+				imageCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+				}),
+			},
+			cat2: {
+				title: getString('Enter Your Text'),
+				titleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subTitle: getString('Enter Your Text'),
+				subTitleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subtitleLink: String || '/',
+				image: String,
+				imageCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+				}),
+			},
+			cat3: {
+				title: getString('Enter Your Text'),
+				titleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subTitle: getString('Enter Your Text'),
+				subTitleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subtitleLink: String || '/',
+				image: String,
+				imageCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+				}),
+			},
+			cat4: {
+				title: getString('Enter Your Text'),
+				titleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subTitle: getString('Enter Your Text'),
+				subTitleCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				subtitleLink: String || '/',
+				image: String,
+				imageCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+				}),
+			},
 		},
 	},
 });
