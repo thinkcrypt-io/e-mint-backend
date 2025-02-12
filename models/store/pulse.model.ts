@@ -795,10 +795,10 @@ const schema = new Schema<any>(
 			productListFive: productListData,
 
 			shoppingCartCSS: {
-				headingBg: colors?.bg,
-				headingFg: colors?.fg,
-				headingSizeBase: getNumber(20),
-				headingSizeBg: getNumber(24),
+				// headingBg: colors?.bg,
+				// headingFg: colors?.fg,
+				// headingSizeBase: getNumber(20),
+				// headingSizeBg: getNumber(24),
 				bodyBg: colors?.bg,
 				bodyFg: colors?.fg,
 				titleSizeBase: getNumber(16),
@@ -814,10 +814,10 @@ const schema = new Schema<any>(
 				qtyBg: colors?.bg,
 				qtyFg: colors?.fg,
 				qtyBtnRadius: getNumber(4),
-				footerBg: colors?.bg,
-				footerFg: colors?.fg,
-				fTextSize: getNumber(16),
-				fTextWeight: getNumber(600),
+				// footerBg: colors?.bg,
+				// footerFg: colors?.fg,
+				// fTextSize: getNumber(16),
+				// fTextWeight: getNumber(600),
 				checkoutBg: colors?.fg,
 				checkoutFg: colors?.bg,
 				checkoutHoverBg: colors?.bg,
@@ -858,9 +858,17 @@ const schema = new Schema<any>(
 				fgColor: colors?.fg,
 				cardBg: colors?.bg,
 				cardFg: colors?.fg,
-				headingSizeBase: getNumber(18),
-				headingSizeBg: getNumber(24),
-				headingWeight: getNumber(600),
+				// headingSizeBase: getNumber(18),
+				// headingSizeBg: getNumber(24),
+				// headingWeight: getNumber(600),
+				headingText: TextSchema({
+					fontSize: {
+						base: 16,
+						md: 20,
+					},
+					color: '#292929',
+					fontWeight: '600',
+				}),
 
 				cardTitleSizeBase: getNumber(16),
 				cardTitleSizeBg: getNumber(20),
@@ -876,6 +884,8 @@ const schema = new Schema<any>(
 				nameWeight: getNumber(500),
 				nameColor: colors?.fg,
 
+				border: colors?.fg,
+				placeholderFg: colors?.fg,
 				qtySizeBase: getNumber(12),
 				qtySizeBg: getNumber(18),
 				qtyWeight: getNumber(400),
@@ -952,6 +962,10 @@ const schema = new Schema<any>(
 				tableBg: colors?.bg,
 				tableRadius: getNumber(8),
 				tableBorder: colors?.fg,
+
+				// subtitle
+				subtitleColor: colors?.fg,
+				editBtnBg: colors?.bg,
 
 				// Faq Related Css
 				faqTitleSizeBase: getNumber(16),
