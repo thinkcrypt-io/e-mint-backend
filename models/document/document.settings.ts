@@ -179,13 +179,19 @@ const settings: SettingsType<Type> = {
 
 		populate: {
 			path: 'addedBy',
-			select: 'name',
+			select: 'name email',
 		},
 
 		schema: {
 			displayInTable: true,
 			tableKey: 'addedBy.name',
 		},
+	},
+	access: {
+		edit: true,
+		title: 'Access',
+		type: 'array-string',
+		sort: true,
 	},
 
 	createdAt: {

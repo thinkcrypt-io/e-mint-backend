@@ -41,6 +41,12 @@ const schema = new Schema<Type>(
 			type: Schema.Types.ObjectId,
 			ref: 'Admin',
 		},
+		access: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: 'Admin',
+			},
+		],
 	},
 	{ timestamps: true }
 );

@@ -15,6 +15,7 @@ type DocumentType = DocumentBaseType & {
 	tags?: string[];
 	project?: Types.ObjectId;
 	addedBy: Types.ObjectId;
+	access: [Types.ObjectId];
 };
 
 export default DocumentType;

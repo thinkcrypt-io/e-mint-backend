@@ -27,6 +27,7 @@ import {
 	docSettings,
 	Doc,
 } from '../imports.js';
+import hasAccess from './middlewares/hasAccess.middleware.js';
 
 const router = express.Router();
 
@@ -66,7 +67,12 @@ router.use(
 
 router.use(
 	'/documents',
-	defineRoutes({ Model: Doc, settings: docSettings, permission: 'documents' })
+	defineRoutes({
+		Model: Doc,
+		settings: docSettings,
+		permission: 'documents',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
 );
 
 export default router;

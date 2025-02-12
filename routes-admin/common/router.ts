@@ -37,9 +37,10 @@ type RouteOptions = {
 	Model: mongoose.Model<any>;
 	settings: SettingsType<any>;
 	permission: string;
+	injectMiddleware?: any;
 };
 
-const defineRoutes = ({ Model, settings, permission }: RouteOptions) => {
+const defineRoutes = ({ Model, settings, permission, injectMiddleware }: RouteOptions) => {
 	const router = express.Router();
 	// Construct configuration and permissions
 	const config = constructConfig({
@@ -58,25 +59,41 @@ const defineRoutes = ({ Model, settings, permission }: RouteOptions) => {
 			validate(config.VALIDATORS.POST),
 			ifExists(config.EXIST_OPTIONS),
 			hasPermission([permissions.create]),
+			...(injectMiddleware?.post || []),
 		],
 		//Middleware for getting all categories
-		getAll: [protect, paginate, filter(config.FILTER_OPTIONS), hasPermission([permissions.read])],
+		getAll: [
+			protect,
+			paginate,
+			filter(config.FILTER_OPTIONS),
+			hasPermission([permissions.read]),
+			...(injectMiddleware?.getAll || []),
+		],
 		//Middleware for updating a category
-		update: [protect, validate(config.VALIDATORS.UPDATE), hasPermission([permissions.update])],
+		update: [
+			protect,
+			validate(config.VALIDATORS.UPDATE),
+			hasPermission([permissions.update]),
+			...(injectMiddleware?.update || []),
+		],
 		//Middleware for updating many categories
-		updateMany: [protect, hasPermission([permissions.update])],
+		updateMany: [
+			protect,
+			hasPermission([permissions.update]),
+			...(injectMiddleware?.updateMany || []),
+		],
 		//Middleware for getting a category by ID
-		getById: [protect, hasPermission([permissions.read])],
+		getById: [protect, hasPermission([permissions.read]), ...(injectMiddleware?.getById || [])],
 		//Middleware for deleting a category
-		delete: [protect, hasPermission([permissions.delete])],
+		delete: [protect, hasPermission([permissions.delete]), ...(injectMiddleware?.delete || [])],
 		//Middleware for copying a category
-		copy: [protect, hasPermission([permissions.create])],
+		copy: [protect, hasPermission([permissions.create]), ...(injectMiddleware?.copy || [])],
 		// Middleware for getting the count of categories
-		count: [protect],
+		count: [protect, ...(injectMiddleware?.count || [])],
 		// Middleware for exporting category data
-		export: [protect],
+		export: [protect, ...(injectMiddleware?.export || [])],
 		// Middleware for filtering documents
-		filter: [protect],
+		filter: [protect, ...(injectMiddleware?.filter || [])],
 	};
 
 	//GENERIC_ROUTES
