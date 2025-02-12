@@ -92,7 +92,7 @@ const schema = new Schema<AdminType>(
 			projects: [String],
 			adminroles: [String],
 			clients: [String],
-			docs: [String],
+			documents: [String],
 		},
 	},
 

@@ -24,6 +24,8 @@ import {
 	projectSettings,
 	Client,
 	clientSettings,
+	docSettings,
+	Doc,
 } from '../imports.js';
 
 const router = express.Router();
@@ -55,6 +57,16 @@ router.use(
 router.use(
 	'/clients',
 	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+);
+
+router.use(
+	'/clients',
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+);
+
+router.use(
+	'/documents',
+	defineRoutes({ Model: Doc, settings: docSettings, permission: 'documents' })
 );
 
 export default router;
