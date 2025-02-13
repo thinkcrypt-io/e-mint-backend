@@ -24,7 +24,7 @@ const schema = new Schema<JobPostType>(
 		},
 		postingDate: {
 			type: Date,
-			required: true,
+
 			default: Date.now,
 		},
 		postingMedia: {

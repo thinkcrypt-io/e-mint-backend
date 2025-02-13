@@ -436,7 +436,7 @@ const settings: SettingsType<JobPostType> = {
 		sort: true,
 		title: 'Deadline',
 		type: 'string',
-		required: true,
+
 		schema: {
 			displayInTable: true,
 			sort: true,
