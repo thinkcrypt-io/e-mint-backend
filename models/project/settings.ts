@@ -1,4 +1,5 @@
 import { SettingsType } from '../../lib/types/settings.types.js';
+import Client from '../client/client.model.js';
 import Type from './types.js';
 
 const statusOptions = [
@@ -66,6 +67,7 @@ const settings: SettingsType<Type> = {
 		edit: true,
 		title: 'Client Name',
 		type: 'string',
+		search: true,
 	},
 	devUrl: {
 		edit: true,
@@ -103,7 +105,7 @@ const settings: SettingsType<Type> = {
 			key: 'projectType',
 		},
 		schema: {
-			type: 'select',
+			sort: true,
 			options: [
 				{
 					label: 'Frontend',
@@ -162,7 +164,34 @@ const settings: SettingsType<Type> = {
 		title: 'Technologies',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
+		},
+	},
+	client: {
+		edit: true,
+		sort: true,
+		title: 'Client',
+		type: 'string',
+		populate: {
+			path: 'client',
+			select: 'name',
+		},
+		schema: {
+			displayInTable: true,
+			sort: true,
+			tableKey: 'client.name',
+			type: 'data-menu',
+			model: 'clients',
+		},
+		filter: {
+			name: 'client',
+			field: 'client_in',
+			type: 'multi-select',
+			label: 'Client',
+			title: 'Sort by client',
+			category: 'model',
+			model: Client,
+			key: 'name',
 		},
 	},
 	frameworks: {
@@ -170,7 +199,7 @@ const settings: SettingsType<Type> = {
 		title: 'frameworks',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	libraries: {
@@ -178,7 +207,7 @@ const settings: SettingsType<Type> = {
 		title: 'Libraries',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	githubUrl: {

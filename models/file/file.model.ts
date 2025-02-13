@@ -15,6 +15,11 @@ const schema = new Schema<any>(
 			ref: 'Shop',
 			required: true,
 		},
+		fileType: {
+			type: String,
+			trim: true,
+			enum: ['image', 'document', 'video'],
+		},
 
 		isActive: {
 			type: Boolean,
