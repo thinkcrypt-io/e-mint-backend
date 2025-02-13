@@ -28,6 +28,8 @@ import {
 	Doc,
 	JobPost,
 	jobPostSettings,
+	JobApplication,
+	jobApplicationSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -83,6 +85,15 @@ router.use(
 		Model: JobPost,
 		settings: jobPostSettings,
 		permission: 'jobposts',
+	})
+);
+
+router.use(
+	'/jobapplications',
+	defineRoutes({
+		Model: JobApplication,
+		settings: jobApplicationSettings,
+		permission: 'jobapplications',
 	})
 );
 

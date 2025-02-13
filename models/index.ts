@@ -153,3 +153,8 @@ export { default as DocType } from './document/document.types.js';
 export { default as JobPost } from './jobpost/jobpost.model.js';
 export { default as jobPostSettings } from './jobpost/jobpost.settings.js';
 export { default as JobPostType } from './jobpost/jobpost.types.js';
+
+//Job Application
+export { default as JobApplication } from './jobpost/jobApplication.model.js';
+export { default as jobApplicationSettings } from './jobpost/jobApplication.settings.js';
+export { default as JobApplicationType } from './jobpost/jobApplication.types.js';
