@@ -323,6 +323,9 @@ const schema = new Schema<any>(
 				cardTitleWeight: getNumber(600),
 				cardTitleTextAlign: getString('center'),
 				priceTextColor: colors?.fg,
+				// view all btn
+				btnColor: colors?.fg,
+				// other btn
 				btnBg: colors?.fg,
 				btnFg: colors?.bg,
 				btnHoverBg: colors?.bg,
@@ -510,24 +513,13 @@ const schema = new Schema<any>(
 				titleColor: colors?.fg,
 				imageHeight: getNumber(300),
 			},
+
+			copyrightFontSize: getNumber(14),
+			copyrightFontColor: colors?.fg,
 			aboutPageCss: {
 				bgColor: colors?.bg,
 				fgColor: colors?.fg,
 			},
-
-			copyrightFontSize: getNumber(14),
-			copyrightFontColor: colors?.fg,
-			//////////// was outside
-			// smallBannerCss: {
-			// 	titleSizeBase: getNumber(18),
-			// 	titleSizeBg: getNumber(36),
-			// 	titleColor: colors?.fg,
-			// 	imageHeight: getNumber(300),
-			// },
-			// aboutPageCss: {
-			// 	bgColor: colors?.bg,
-			// 	fgColor: colors?.fg,
-			// },
 			aboutPage: {
 				bannerImgSrc: getImage(),
 				bannerText: getString('About'),
@@ -801,6 +793,8 @@ const schema = new Schema<any>(
 				// headingSizeBg: getNumber(24),
 				bodyBg: colors?.bg,
 				bodyFg: colors?.fg,
+				titleColor: colors?.fg,
+				titlePriceColor: colors?.fg,
 				titleSizeBase: getNumber(16),
 				titleSizeBg: getNumber(20),
 				titleWeight: getNumber(600),
@@ -822,8 +816,42 @@ const schema = new Schema<any>(
 				checkoutFg: colors?.bg,
 				checkoutHoverBg: colors?.bg,
 				checkoutHoverFg: colors?.fg,
-				checkoutTextSize: getNumber(16),
+				checkoutTextSizeBase: getNumber(14),
+				checkoutTextSizeBg: getNumber(16),
 				checkoutTextWeight: getNumber(600),
+				// order summary
+				// summary Title
+				orderSummaryTitle: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+					fontWeight: '600',
+				}),
+				// summary row
+				orderSummaryRow: TextSchema({
+					fontSize: {
+						base: 12,
+						md: 14,
+					},
+					fontWeight: '600',
+				}),
+				// summary Sub Total
+				orderSummarySub: TextSchema({
+					fontSize: {
+						base: 12,
+						md: 14,
+					},
+					fontWeight: '600',
+				}),
+				// summary Total
+				orderSummaryTotal: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 18,
+					},
+					fontWeight: '600',
+				}),
 			},
 			authModalCss: {
 				bgColor: colors?.bg,
@@ -911,14 +939,19 @@ const schema = new Schema<any>(
 			searchBoxCss: {
 				bgColor: colors?.bg,
 				fgColor: colors?.fg,
+
 				labelSize: getNumber(12),
 				titleSize: getNumber(14),
 				priceSize: getNumber(14),
+
 				priceColor: colors?.fg,
+
 				outStockBg: colors?.bg,
 				outStockFg: colors?.fg,
+
 				inStockBg: colors?.bg,
 				inStockFg: colors?.fg,
+
 				stockSize: getNumber(12),
 				borderColor: colors?.fg,
 			},
@@ -936,11 +969,25 @@ const schema = new Schema<any>(
 
 				// Account Info Related Css
 				editBtnBorder: colors?.fg,
+				editBtnBg: colors?.bg,
+				editBtnHoverBg: colors?.bg,
 				editBtnColor: colors?.fg,
+				editBtnHoverColor: colors?.fg,
 				editBtnWidth: getNumber(100),
 				editBtnHeight: getNumber(32),
-				subtitleSize: getNumber(16),
-				subtitleWeight: getNumber(600),
+
+				// cancel btn
+				cancelBtnBg: colors?.bg,
+				cancelBtnFg: colors?.fg,
+				cancelBtnHoverBg: colors?.bg,
+				cancelBtnHoverFg: colors?.fg,
+				// save btn
+				saveBtnBorder: colors?.fg,
+				saveBtnBg: colors?.fg,
+				saveBtnColor: colors?.bg,
+				saveBtnHoverFg: colors?.bg,
+				saveBtnHoverBg: colors?.bg,
+
 				inputLagelSize: getNumber(12),
 				inputLagelWeight: getNumber(600),
 				inputLabelColor: colors?.fg,
@@ -965,7 +1012,9 @@ const schema = new Schema<any>(
 
 				// subtitle
 				subtitleColor: colors?.fg,
-				editBtnBg: colors?.bg,
+				subtitleSizeBase: getNumber(14),
+				subtitleSizeBg: getNumber(16),
+				subtitleWeight: getNumber(600),
 
 				// Faq Related Css
 				faqTitleSizeBase: getNumber(16),
