@@ -93,6 +93,7 @@ const schema = new Schema<AdminType>(
 			adminroles: [String],
 			clients: [String],
 			documents: [String],
+			jobposts: [String],
 		},
 	},
 
