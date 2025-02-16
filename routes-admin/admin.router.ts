@@ -26,6 +26,10 @@ import {
 	clientSettings,
 	docSettings,
 	Doc,
+	JobPost,
+	jobPostSettings,
+	JobApplication,
+	jobApplicationSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -72,6 +76,24 @@ router.use(
 		settings: docSettings,
 		permission: 'documents',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/jobposts',
+	defineRoutes({
+		Model: JobPost,
+		settings: jobPostSettings,
+		permission: 'jobposts',
+	})
+);
+
+router.use(
+	'/jobapplications',
+	defineRoutes({
+		Model: JobApplication,
+		settings: jobApplicationSettings,
+		permission: 'jobapplications',
 	})
 );
 
