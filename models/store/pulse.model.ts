@@ -348,11 +348,36 @@ const schema = new Schema<any>(
 				tagTextSize: getNumber(12),
 			},
 
-			faqPage: {
-				image: String,
-				title: getString('Enter your title here'),
-				description: getString('Enter your description here'),
-				textColor: colors?.bg,
+			faqPageCss: {
+				faqSectionBg: colors?.bg,
+				title: TextSchema({
+					fontSize: {
+						base: 18,
+						md: 24,
+					},
+					fontWeight: '600',
+				}),
+				description: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+					fontWeight: '400',
+				}),
+				fqaTitle: TextSchema({
+					fontSize: {
+						base: 16,
+						md: 18,
+					},
+					fontWeight: '600',
+				}),
+				fqaDescription: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+					fontWeight: '400',
+				}),
 			},
 			sponsoredBannerOne: {
 				items: {
@@ -520,65 +545,42 @@ const schema = new Schema<any>(
 				bgColor: colors?.bg,
 				fgColor: colors?.fg,
 			},
-			aboutPage: {
-				bannerImgSrc: getImage(),
+
+			aboutPageContent: {
+				//ImageSchema
+				// bannerImgSrc: getImage(),
+				bannerImgSrc: ImageSchema({
+					src: 'https://pulse-star.vercel.app/privacy/one.jpg',
+					width: 'full',
+				}),
 				bannerText: getString('About'),
-				missionLabel: getString('Our Mission'),
-				missionParagraphOne: getString(
-					'A mission statement is a simple statement about the goals, values, and objectives of an organization. A mission statement summarizes why a business exists and helps a company respond to change and make decisions that align with its vision.'
-				),
-				missionParagraphTwo: getString(
-					'Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life.'
-				),
-
-				productRangeLabel: getString('Wide Product Range'),
-				productRangeParagraphOne: getString(
-					'We believe in variety and diversity, curating a vast selection of products to cater to all kinds of preferences and needs. Whether you’re searching for the latest fashion trends, premium electronics, household essentials, or unique gifts, we have it all. Our team works diligently to expand our collection, constantly adding new and exciting products to ensure there’s something for everyone.'
-				),
-				productRangeParagraphTwo: getString(
-					'Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life.'
-				),
-
-				customerCentricLabel: getString('Customer-Centric Approach'),
-				customerCentricParagraphOne: getString(
-					"Customer satisfaction is our top priority. We’re here to make sure that your experience on our site is smooth from start to finish. Our dedicated customer support team is always available to help with questions, order tracking, returns, and more. We listen to our customers' feedback and continuously work to improve every aspect of our service."
-				),
-
-				trustedQualityLabel: getString('Trusted Quality'),
-				trustedQualityParagraphOne: getString(
-					'Quality is at the core of our brand. We carefully select each product based on rigorous standards, partnering with trusted suppliers to bring you only the best. Every item undergoes a thorough quality check, ensuring it meets our promise of excellence. This commitment to quality sets us apart and helps build trust with our valued customers.'
-				),
-
-				seamlessShoppingLabel: getString('Seamless Shopping Experience'),
-				seamlessShoppingParagraphOne: getString(
-					'Our website is designed with you in mind, featuring an intuitive interface that makes it easy to find what you need. With advanced search filters, personalized recommendations, and a streamlined checkout process, we aim to make shopping simple, fast, and enjoyable. Your safety and convenience are paramount, which is why we offer multiple payment options and robust security measures for a worry-free shopping experience.'
-				),
-
-				reliableDeliveryLabel: getString('Fast & Reliable Delivery'),
-				reliableDeliveryParagraphOne: getString(
-					'We know that timely delivery is crucial. Our logistics team works with reputable delivery partners to ensure your order reaches you safely and on time. We offer a variety of shipping options to suit your preferences, including expedited services for those last-minute needs.'
-				),
-
-				sustainablePracticeLabel: getString('Sustainable Practices'),
-				sustainablePracticeParagraphOne: getString(
-					'We’re committed to making a positive impact. We continuously strive to adopt sustainable practices in our operations, from eco-friendly packaging to responsible sourcing. By supporting sustainable products and reducing our environmental footprint, we aim to contribute to a better, greener future.'
-				),
-
-				communityLabel: getString('Community & Care'),
-				communityParagraphOne: getString(
-					'We believe in giving back to our community and are passionate about supporting meaningful causes. We work closely with local artisans, small businesses, and social initiatives to bring unique and impactful products to our store. Our aim is to connect customers with products they love while making a positive difference in the world.'
-				),
-				greetings: getString(
-					'Thank you for choosing [Your Website Name] as your trusted e-commerce platform. We’re excited to be part of your journey and look forward to serving you with dedication, passion, and excellence.'
-				),
+				contents: getString('Enter your contents here'),
 			},
-			///////////////////// ends
-
-			privacyPolicyPage: {
-				image: String,
-				title: getString('Enter your title here'),
-				description: getString('Enter your description here'),
-				textColor: colors?.bg,
+			///////////////////// privacyPolicyPage
+			privacyPolicyCss: {
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+			},
+			privacyPolicy: {
+				bannerImgSrc: ImageSchema({
+					src: 'https://pulse-star.vercel.app/privacy/one.jpg',
+					width: 'full',
+				}),
+				bannerText: getString('Privacy Policy'),
+				contents: getString('Enter your contents here'),
+			},
+			// terms & conditions
+			termsConditionsCss: {
+				bgColor: colors?.bg,
+				fgColor: colors?.fg,
+			},
+			termsConditions: {
+				bannerImgSrc: ImageSchema({
+					src: 'https://pulse-star.vercel.app/privacy/one.jpg',
+					width: 'full',
+				}),
+				bannerText: getString('Terms & Conditions'),
+				contents: getString('Enter your contents here'),
 			},
 
 			contactPage: {
