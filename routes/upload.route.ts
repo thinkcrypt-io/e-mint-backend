@@ -100,7 +100,7 @@ router.post('/', protect, uploadFile.single('image'), async (req: any, res: Resp
 		});
 
 		if (req?.file?.path) {
-			fs.unlinkSync(req.file.path);
+			// fs.unlinkSync(req.file.path);
 		}
 	} catch (e: any) {
 		console.error(e.message);
