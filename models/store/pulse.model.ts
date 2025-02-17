@@ -323,6 +323,9 @@ const schema = new Schema<any>(
         cardTitleWeight: getNumber(600),
         cardTitleTextAlign: getString("center"),
         priceTextColor: colors?.fg,
+        // view all btn
+        btnColor: colors?.fg,
+        // other btn
         btnBg: colors?.fg,
         btnFg: colors?.bg,
         btnHoverBg: colors?.bg,
@@ -345,11 +348,36 @@ const schema = new Schema<any>(
         tagTextSize: getNumber(12),
       },
 
-      faqPage: {
-        image: String,
-        title: getString("Enter your title here"),
-        description: getString("Enter your description here"),
-        textColor: colors?.bg,
+      faqPageCss: {
+        faqSectionBg: colors?.bg,
+        title: TextSchema({
+          fontSize: {
+            base: 18,
+            md: 24,
+          },
+          fontWeight: "600",
+        }),
+        description: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          fontWeight: "400",
+        }),
+        fqaTitle: TextSchema({
+          fontSize: {
+            base: 16,
+            md: 18,
+          },
+          fontWeight: "600",
+        }),
+        fqaDescription: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          fontWeight: "400",
+        }),
       },
       sponsoredBannerOne: {
         items: {
@@ -510,120 +538,114 @@ const schema = new Schema<any>(
         titleColor: colors?.fg,
         imageHeight: getNumber(300),
       },
+
+      copyrightFontSize: getNumber(14),
+      copyrightFontColor: colors?.fg,
       aboutPageCss: {
         bgColor: colors?.bg,
         fgColor: colors?.fg,
       },
 
-      copyrightFontSize: getNumber(14),
-      copyrightFontColor: colors?.fg,
-      //////////// was outside
-      // smallBannerCss: {
-      // 	titleSizeBase: getNumber(18),
-      // 	titleSizeBg: getNumber(36),
-      // 	titleColor: colors?.fg,
-      // 	imageHeight: getNumber(300),
-      // },
-      // aboutPageCss: {
-      // 	bgColor: colors?.bg,
-      // 	fgColor: colors?.fg,
-      // },
-      aboutPage: {
-        bannerImgSrc: getImage(),
+      // about page
+      aboutPageContent: {
+        //ImageSchema
+        // bannerImgSrc: getImage(),
+        bannerImgSrc: ImageSchema({
+          src: "https://pulse-star.vercel.app/privacy/one.jpg",
+          width: "full",
+        }),
         bannerText: getString("About"),
-        missionLabel: getString("Our Mission"),
-        missionParagraphOne: getString(
-          "A mission statement is a simple statement about the goals, values, and objectives of an organization. A mission statement summarizes why a business exists and helps a company respond to change and make decisions that align with its vision."
-        ),
-        missionParagraphTwo: getString(
-          "Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life."
-        ),
-
-        productRangeLabel: getString("Wide Product Range"),
-        productRangeParagraphOne: getString(
-          "We believe in variety and diversity, curating a vast selection of products to cater to all kinds of preferences and needs. Whether you’re searching for the latest fashion trends, premium electronics, household essentials, or unique gifts, we have it all. Our team works diligently to expand our collection, constantly adding new and exciting products to ensure there’s something for everyone."
-        ),
-        productRangeParagraphTwo: getString(
-          "Our mission is simple: to offer a shopping experience that combines quality, convenience, and value. We aim to create a platform that’s more than a marketplace – it’s a trusted resource for discovering products you love, providing easy access to items that enhance your life."
-        ),
-
-        customerCentricLabel: getString("Customer-Centric Approach"),
-        customerCentricParagraphOne: getString(
-          "Customer satisfaction is our top priority. We’re here to make sure that your experience on our site is smooth from start to finish. Our dedicated customer support team is always available to help with questions, order tracking, returns, and more. We listen to our customers' feedback and continuously work to improve every aspect of our service."
-        ),
-
-        trustedQualityLabel: getString("Trusted Quality"),
-        trustedQualityParagraphOne: getString(
-          "Quality is at the core of our brand. We carefully select each product based on rigorous standards, partnering with trusted suppliers to bring you only the best. Every item undergoes a thorough quality check, ensuring it meets our promise of excellence. This commitment to quality sets us apart and helps build trust with our valued customers."
-        ),
-
-        seamlessShoppingLabel: getString("Seamless Shopping Experience"),
-        seamlessShoppingParagraphOne: getString(
-          "Our website is designed with you in mind, featuring an intuitive interface that makes it easy to find what you need. With advanced search filters, personalized recommendations, and a streamlined checkout process, we aim to make shopping simple, fast, and enjoyable. Your safety and convenience are paramount, which is why we offer multiple payment options and robust security measures for a worry-free shopping experience."
-        ),
-
-        reliableDeliveryLabel: getString("Fast & Reliable Delivery"),
-        reliableDeliveryParagraphOne: getString(
-          "We know that timely delivery is crucial. Our logistics team works with reputable delivery partners to ensure your order reaches you safely and on time. We offer a variety of shipping options to suit your preferences, including expedited services for those last-minute needs."
-        ),
-
-        sustainablePracticeLabel: getString("Sustainable Practices"),
-        sustainablePracticeParagraphOne: getString(
-          "We’re committed to making a positive impact. We continuously strive to adopt sustainable practices in our operations, from eco-friendly packaging to responsible sourcing. By supporting sustainable products and reducing our environmental footprint, we aim to contribute to a better, greener future."
-        ),
-
-        communityLabel: getString("Community & Care"),
-        communityParagraphOne: getString(
-          "We believe in giving back to our community and are passionate about supporting meaningful causes. We work closely with local artisans, small businesses, and social initiatives to bring unique and impactful products to our store. Our aim is to connect customers with products they love while making a positive difference in the world."
-        ),
-        greetings: getString(
-          "Thank you for choosing [Your Website Name] as your trusted e-commerce platform. We’re excited to be part of your journey and look forward to serving you with dedication, passion, and excellence."
-        ),
+        contents: getString("Enter your contents here"),
       },
-      ///////////////////// ends
-
-      privacyPolicyPage: {
-        image: String,
-        title: getString("Enter your title here"),
-        description: getString("Enter your description here"),
-        textColor: colors?.bg,
-      },
-
-      contactPage: {
-        image: String,
-        title: getString("Enter your title here"),
-        description: getString("Enter your description here"),
-        textColor: colors?.fg,
-      },
-      contactPageCss: {
-        cardBg: colors?.bg,
-        cardFg: colors?.fg,
-        boxShadow: { type: String, default: "0px 8px 9px -14px rgb(0, 0, 0)" },
+      ///////////////////// privacyPolicyPage
+      privacyPolicyCss: {
         bgColor: colors?.bg,
         fgColor: colors?.fg,
+      },
+      privacyPolicy: {
+        bannerImgSrc: ImageSchema({
+          src: "https://pulse-star.vercel.app/privacy/one.jpg",
+          width: "full",
+        }),
+        bannerText: getString("Privacy Policy"),
+        contents: getString("Enter your contents here"),
+      },
+      // terms & conditions
+      termsConditionsCss: {
+        bgColor: colors?.bg,
+        fgColor: colors?.fg,
+      },
+      termsConditions: {
+        bannerImgSrc: ImageSchema({
+          src: "https://pulse-star.vercel.app/privacy/one.jpg",
+          width: "full",
+        }),
+        bannerText: getString("Terms & Conditions"),
+        contents: getString("Enter your contents here"),
+      },
 
-        titleSizeBase: getNumber(24),
-        titleSizeBg: getNumber(32),
-        titleWeight: getNumber(600),
-        titleColor: colors?.fg,
+      // contact page
+      contactPage: {
+        bannerImgSrc: ImageSchema({
+          src: "https://pulse-star.vercel.app/privacy/one.jpg",
+          width: "full",
+        }),
+        bannerText: getString("Contact Us"),
+        contactHeading: getString("Get in Touch"),
+        contactDescription: getString(
+          "Have questions or need assistance? Reach out via email, phone, or our online form. We’re here to help and look forward to hearing from you! Reach out to us for any inquiries, whether it's about our services support, or anything else you need."
+        ),
+      },
 
-        subTitleSizeBase: getNumber(24),
-        subTitleSizeBg: getNumber(32),
-        subTitleWeight: getNumber(600),
-        subTitleColor: colors?.fg,
-
-        iconTitleSize: getNumber(16),
-        iconTitleWeight: getNumber(600),
-        iconTitleColor: colors?.fg,
-
-        iconAddressSize: getNumber(14),
-        iconAddressWeight: getNumber(400),
-        iconAddressColor: colors?.fg,
+      contactPageCss: {
+        // banner text
+        fgColor: colors?.fg,
+        //card
+        cardBg: colors?.bg,
+        cardFg: colors?.fg,
+        boxShadow: {
+          type: String,
+          default: "0px 8px 9px -14px rgba(0, 0, 0, 0.03)",
+        },
+        //section bg
+        bgColor: colors?.bg,
+        // fgColor: colors?.fg,
+        contactHeadingCss: TextSchema({
+          fontSize: {
+            base: 18,
+            md: 24,
+          },
+          fontWeight: "600",
+          color: "#111111",
+        }),
+        contactDescriptionCss: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          color: "#111111",
+        }),
+        //icons
+        iconSizeBase: getNumber(18),
+        // iconSizeBg: getNumber(20),
+        iconBackground: colors?.bg,
+        iconForeground: colors?.fg,
         iconRadius: getNumber(100),
-
-        iconBg: colors?.bg,
-        iconFg: colors?.fg,
-        iconSize: getNumber(18),
+        iconTitleCss: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          fontWeight: "600",
+          color: "#111111",
+        }),
+        iconSubTitleCss: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          color: "#111111",
+        }),
       },
 
       featuredCollection: [
@@ -801,6 +823,8 @@ const schema = new Schema<any>(
         // headingSizeBg: getNumber(24),
         bodyBg: colors?.bg,
         bodyFg: colors?.fg,
+        titleColor: colors?.fg,
+        titlePriceColor: colors?.fg,
         titleSizeBase: getNumber(16),
         titleSizeBg: getNumber(20),
         titleWeight: getNumber(600),
@@ -822,8 +846,42 @@ const schema = new Schema<any>(
         checkoutFg: colors?.bg,
         checkoutHoverBg: colors?.bg,
         checkoutHoverFg: colors?.fg,
-        checkoutTextSize: getNumber(16),
+        checkoutTextSizeBase: getNumber(14),
+        checkoutTextSizeBg: getNumber(16),
         checkoutTextWeight: getNumber(600),
+        // order summary
+        // summary Title
+        orderSummaryTitle: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 16,
+          },
+          fontWeight: "600",
+        }),
+        // summary row
+        orderSummaryRow: TextSchema({
+          fontSize: {
+            base: 12,
+            md: 14,
+          },
+          fontWeight: "600",
+        }),
+        // summary Sub Total
+        orderSummarySub: TextSchema({
+          fontSize: {
+            base: 12,
+            md: 14,
+          },
+          fontWeight: "600",
+        }),
+        // summary Total
+        orderSummaryTotal: TextSchema({
+          fontSize: {
+            base: 14,
+            md: 18,
+          },
+          fontWeight: "600",
+        }),
       },
       authModalCss: {
         bgColor: colors?.bg,
@@ -911,14 +969,19 @@ const schema = new Schema<any>(
       searchBoxCss: {
         bgColor: colors?.bg,
         fgColor: colors?.fg,
+
         labelSize: getNumber(12),
         titleSize: getNumber(14),
         priceSize: getNumber(14),
+
         priceColor: colors?.fg,
+
         outStockBg: colors?.bg,
         outStockFg: colors?.fg,
+
         inStockBg: colors?.bg,
         inStockFg: colors?.fg,
+
         stockSize: getNumber(12),
         borderColor: colors?.fg,
       },
@@ -936,11 +999,25 @@ const schema = new Schema<any>(
 
         // Account Info Related Css
         editBtnBorder: colors?.fg,
+        editBtnBg: colors?.bg,
+        editBtnHoverBg: colors?.bg,
         editBtnColor: colors?.fg,
+        editBtnHoverColor: colors?.fg,
         editBtnWidth: getNumber(100),
         editBtnHeight: getNumber(32),
-        subtitleSize: getNumber(16),
-        subtitleWeight: getNumber(600),
+
+        // cancel btn
+        cancelBtnBg: colors?.bg,
+        cancelBtnFg: colors?.fg,
+        cancelBtnHoverBg: colors?.bg,
+        cancelBtnHoverFg: colors?.fg,
+        // save btn
+        saveBtnBorder: colors?.fg,
+        saveBtnBg: colors?.fg,
+        saveBtnColor: colors?.bg,
+        saveBtnHoverFg: colors?.bg,
+        saveBtnHoverBg: colors?.bg,
+
         inputLagelSize: getNumber(12),
         inputLagelWeight: getNumber(600),
         inputLabelColor: colors?.fg,
@@ -965,7 +1042,9 @@ const schema = new Schema<any>(
 
         // subtitle
         subtitleColor: colors?.fg,
-        editBtnBg: colors?.bg,
+        subtitleSizeBase: getNumber(14),
+        subtitleSizeBg: getNumber(16),
+        subtitleWeight: getNumber(600),
 
         // Faq Related Css
         faqTitleSizeBase: getNumber(16),

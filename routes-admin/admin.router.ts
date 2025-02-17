@@ -22,7 +22,16 @@ import {
 	leadSettings,
 	Project,
 	projectSettings,
+	Client,
+	clientSettings,
+	docSettings,
+	Doc,
+	JobPost,
+	jobPostSettings,
+	JobApplication,
+	jobApplicationSettings,
 } from '../imports.js';
+import hasAccess from './middlewares/hasAccess.middleware.js';
 
 const router = express.Router();
 
@@ -48,6 +57,44 @@ router.use(
 router.use(
 	'/projects',
 	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
+);
+
+router.use(
+	'/clients',
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+);
+
+router.use(
+	'/clients',
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+);
+
+router.use(
+	'/documents',
+	defineRoutes({
+		Model: Doc,
+		settings: docSettings,
+		permission: 'documents',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/jobposts',
+	defineRoutes({
+		Model: JobPost,
+		settings: jobPostSettings,
+		permission: 'jobposts',
+	})
+);
+
+router.use(
+	'/jobapplications',
+	defineRoutes({
+		Model: JobApplication,
+		settings: jobApplicationSettings,
+		permission: 'jobapplications',
+	})
 );
 
 export default router;

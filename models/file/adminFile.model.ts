@@ -37,6 +37,11 @@ const schema = new Schema<any>(
 			trim: true,
 			required: true,
 		},
+		fileType: {
+			type: String,
+			trim: true,
+			enum: ['image', 'document', 'video'],
+		},
 		bucket: {
 			type: String,
 			trim: true,

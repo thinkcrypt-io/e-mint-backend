@@ -138,3 +138,23 @@ export { default as staffSettings } from './staff/staff.settings.js';
 export { default as Project } from './project/project.model.js';
 export { default as projectSettings } from './project/settings.js';
 export { default as ProjectType } from './project/types.js';
+
+//Clients
+export { default as Client } from './client/client.model.js';
+export { default as clientSettings } from './client/client.settings.js';
+export { default as ClientType } from './client/client.types.js';
+
+//Documents
+export { default as Doc } from './document/document.model.js';
+export { default as docSettings } from './document/document.settings.js';
+export { default as DocType } from './document/document.types.js';
+
+//Job Post
+export { default as JobPost } from './jobpost/jobpost.model.js';
+export { default as jobPostSettings } from './jobpost/jobpost.settings.js';
+export { default as JobPostType } from './jobpost/jobpost.types.js';
+
+//Job Application
+export { default as JobApplication } from './jobpost/jobApplication.model.js';
+export { default as jobApplicationSettings } from './jobpost/jobApplication.settings.js';
+export { default as JobApplicationType } from './jobpost/jobApplication.types.js';
