@@ -30,6 +30,7 @@ import {
 	jobPostSettings,
 	JobApplication,
 	jobApplicationSettings,
+	getModelKeys,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -96,5 +97,7 @@ router.use(
 		permission: 'jobapplications',
 	})
 );
+
+router.get('/model/:id/:type', getModelKeys);
 
 export default router;

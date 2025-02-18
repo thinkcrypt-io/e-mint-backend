@@ -60,6 +60,7 @@ export const settings: Settings = {
 		type: 'uri',
 		schema: {
 			type: 'image',
+			tableType: 'text',
 		},
 	},
 	description: {
