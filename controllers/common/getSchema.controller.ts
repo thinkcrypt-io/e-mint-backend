@@ -1,5 +1,10 @@
 import { Response } from 'express';
 
+const convertType = (type: string) => {
+	if (type == 'array-string') return 'tag';
+	else return type;
+};
+
 const getSchema = ({ settings }: { settings: any }) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
@@ -8,7 +13,9 @@ const getSchema = ({ settings }: { settings: any }) => {
 				keys.push(key);
 				const constructSchema = {
 					label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
-					type: settings[key]?.schema?.type ? settings[key].schema.type : settings[key].type,
+					type: settings[key]?.schema?.type
+						? settings[key].schema.type
+						: convertType(settings[key].type),
 					isRequired: settings[key]?.required,
 					...settings[key]?.schema,
 				};

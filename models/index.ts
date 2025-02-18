@@ -8,6 +8,7 @@ export { settings as categorySettings } from './category/category.model.js';
 
 //Brand
 export { default as Brand } from './brand/brand.model.js';
+export { settings as brandSettings } from './brand/brand.model.js';
 
 //Product
 export { ProductType } from './products/products.types.js';

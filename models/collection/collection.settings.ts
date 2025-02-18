@@ -1,4 +1,6 @@
-const settings = {
+import { SettingsType } from '../../imports.js';
+
+const settings: SettingsType<any> = {
 	name: {
 		edit: true,
 		sort: true,
