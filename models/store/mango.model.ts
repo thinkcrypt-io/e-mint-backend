@@ -380,7 +380,73 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
-			button: ButtonSchema()
+			button: ButtonSchema(),
+			buttonLink: String || '/',
+		},
+
+		contact: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			button: ButtonSchema(),
+			buttonLink: String || '/',
+		},
+
+		footer: {
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			bg: String,
+			gap: Number,
+			py: {
+				base: Number,
+				md: Number,
+			},
+			px: {
+				base: Number,
+				md: Number,
+			},
+			link: String || '/',
+		},
+
+		bottomFooter: {
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			bg: String,
+			py: {
+				base: Number,
+				md: Number,
+			},
+			px: {
+				base: Number,
+				md: Number,
+			},
+			link: String || '/',
 		},
 	},
 });
