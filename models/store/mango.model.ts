@@ -461,6 +461,34 @@ const schema = new Schema<any>({
 			},
 			link: String || '/',
 		},
+
+		// Auth Models
+
+		register: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			messageTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			linkPrivacy: String || '/',
+			linkTerms: String || '/',
+			linkSignin: String || '/',
+			button: ButtonSchema(),
+		},
 	},
 });
 
