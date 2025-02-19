@@ -382,6 +382,19 @@ const schema = new Schema<any>({
 			}),
 			button: ButtonSchema(),
 			buttonLink: String || '/',
+			bg: String,
+			py: {
+				base: Number,
+				md: Number,
+			},
+			px: {
+				base: Number,
+				md: Number,
+			},
+			pb: {
+				base: Number,
+				md: Number,
+			},
 		},
 
 		contact: {
