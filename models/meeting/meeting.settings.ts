@@ -280,7 +280,12 @@ const meetingSettings: SettingsType<MeetingType> = {
 	map: {
 		title: 'Map',
 		type: 'uri',
-		schema: { displayInTable: true, type: 'string' },
+		schema: {
+			displayInTable: true,
+			type: 'string',
+			viewType: 'external-link',
+			tableType: 'external-link',
+		},
 	},
 	platform: {
 		title: 'Virtual Meeting Platform',
