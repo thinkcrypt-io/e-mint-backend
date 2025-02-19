@@ -159,3 +159,8 @@ export { default as JobPostType } from './jobpost/jobpost.types.js';
 export { default as JobApplication } from './jobpost/jobApplication.model.js';
 export { default as jobApplicationSettings } from './jobpost/jobApplication.settings.js';
 export { default as JobApplicationType } from './jobpost/jobApplication.types.js';
+
+//Meeting
+export { default as Meeting } from './meeting/meeting.model.js';
+export { default as meetingSettings } from './meeting/meeting.settings.js';
+export { default as MeetingType } from './meeting/meeting.types.js';

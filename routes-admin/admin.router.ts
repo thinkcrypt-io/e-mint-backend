@@ -31,6 +31,8 @@ import {
 	JobApplication,
 	jobApplicationSettings,
 	getModelKeys,
+	Meeting,
+	meetingSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -99,5 +101,15 @@ router.use(
 );
 
 router.get('/model/:id/:type', getModelKeys);
+
+router.use(
+	'/meetings',
+	defineRoutes({
+		Model: Meeting,
+		settings: meetingSettings,
+		permission: 'meetings',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
+);
 
 export default router;

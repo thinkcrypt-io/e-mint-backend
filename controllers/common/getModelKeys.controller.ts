@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { setttingsTypeOptions } from '../../lib/types/settings.types.js';
+import { generateSchema } from '../../imports.js';
 
 const getModelKeys = (req: Request, res: Response) => {
 	const { id } = req.params;
@@ -11,7 +12,6 @@ const getModelKeys = (req: Request, res: Response) => {
 		}
 
 		let model;
-
 		model = mongoose.model(id);
 
 		if (!model) return res.status(404).json({ message: `Model '${id}' not found.` });
@@ -24,38 +24,7 @@ const getModelKeys = (req: Request, res: Response) => {
 		if (type == 'keys') {
 			return res.json(filteredKeys);
 		} else if (type == 'settings') {
-			const settings = filteredKeys.reduce((acc: Record<string, any>, key: string) => {
-				acc[key] = {
-					title: key.charAt(0).toUpperCase() + key.slice(1),
-					type: model.schema.paths[key].instance?.toLowerCase(),
-					sort: false,
-					search: false,
-					unique: false,
-					exclude: false,
-					required: model.schema.paths[key].isRequired,
-					trim: model.schema.paths[key].options.trim,
-					...(model.schema.paths[key].instance == 'ObjectId' && {
-						populate: {
-							path: key,
-							select: 'name',
-						},
-					}),
-					min: model.schema.paths[key].options.min,
-					max: model.schema.paths[key].options.max,
-					schema: {
-						displayIntable: true,
-					},
-					filter: {
-						name: key,
-						field: key,
-						type: 'text',
-						label: key,
-						title: `Sort by ${key}`,
-					},
-				};
-				return acc;
-			}, {});
-
+			const settings = generateSchema({ keys: filteredKeys, model });
 			return res.status(200).json(settings);
 		} else if (type == 'types') {
 			const types = setttingsTypeOptions;
