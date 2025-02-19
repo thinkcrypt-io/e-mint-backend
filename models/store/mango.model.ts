@@ -56,6 +56,8 @@ const schema = new Schema<any>({
 		},
 	},
 	content: {
+		// Home Page Models
+
 		topBanner: {
 			css: TopBannerSchema({
 				bg: '#dc2e2e',
@@ -416,6 +418,14 @@ const schema = new Schema<any>({
 			buttonLink: String || '/',
 		},
 
+		socialContact: {
+			py: {
+				base: Number,
+				md: Number,
+			},
+			bg: String,
+		},
+
 		footer: {
 			titleCss: TextSchema({
 				fontSize: {
@@ -462,7 +472,7 @@ const schema = new Schema<any>({
 			link: String || '/',
 		},
 
-		// Auth Models
+		// Auth Page Models
 
 		register: {
 			title: getString('Enter Your Text'),
@@ -488,6 +498,25 @@ const schema = new Schema<any>({
 			linkTerms: String || '/',
 			linkSignin: String || '/',
 			button: ButtonSchema(),
+		},
+
+		login: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			buttonSignin: ButtonSchema(),
+			buttonCreateAccount: ButtonSchema(),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			linkForgetPassword: String || '/',
 		},
 	},
 });
