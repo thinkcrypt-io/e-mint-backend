@@ -418,7 +418,6 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Added By',
 		type: 'string',
 		sort: true,
-		edit: true,
 
 		filter: {
 			name: 'addedBy',
