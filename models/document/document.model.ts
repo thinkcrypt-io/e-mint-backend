@@ -25,6 +25,7 @@ const schema = new Schema<Type>(
 		category: {
 			type: String,
 			trim: true,
+			lowercase: true,
 		},
 		direction: {
 			type: String,
