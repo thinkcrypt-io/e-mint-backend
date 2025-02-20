@@ -63,22 +63,29 @@ const meetingSettings: SettingsType<MeetingType> = {
 		search: true,
 		required: true,
 		trim: true,
+		edit: true,
+
 		schema: { displayInTable: true, default: true },
 	},
 	agenda: {
 		title: 'Agenda',
 		type: 'string',
 		trim: true,
+		edit: true,
+
 		schema: { displayInTable: true, type: 'textarea' },
 	},
 	description: {
 		title: 'Description',
 		type: 'string',
+		edit: true,
 	},
 	priority: {
 		title: 'Priority',
 		type: 'string',
 		sort: true,
+		edit: true,
+
 		schema: {
 			displayInTable: true,
 			default: true,
@@ -99,6 +106,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Tags',
 		type: 'array-string',
 		search: false,
+		edit: true,
+
 		schema: {
 			type: 'tag',
 		},
@@ -116,6 +125,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Host',
 		type: 'string',
 		sort: true,
+		edit: true,
+
 		populate: { path: 'host', select: 'name' },
 		schema: {
 			displayInTable: true,
@@ -137,6 +148,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 		},
 	},
 	invitees: {
+		edit: true,
+
 		title: 'Invitees',
 		type: 'array-string',
 		schema: {
@@ -149,6 +162,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	client: {
 		title: 'Client',
 		type: 'string',
+		edit: true,
+
 		sort: true,
 		populate: { path: 'client', select: 'name' },
 		schema: {
@@ -163,6 +178,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	project: {
 		title: 'Project',
 		type: 'string',
+		edit: true,
+
 		sort: true,
 		populate: { path: 'project', select: 'name' },
 		schema: {
@@ -177,6 +194,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	lead: {
 		title: 'Lead',
 		type: 'string',
+		edit: true,
+
 		sort: true,
 		populate: { path: 'lead', select: 'name' },
 		schema: {
@@ -191,6 +210,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	date: {
 		title: 'Date',
 		type: 'string',
+		edit: true,
+
 		sort: true,
 		schema: { displayInTable: true, default: true, sort: true, type: 'date' },
 		filter: { name: 'date', type: 'date', label: 'date', title: 'Sort by date' },
@@ -198,32 +219,42 @@ const meetingSettings: SettingsType<MeetingType> = {
 	scheduledTime: {
 		title: 'Scheduled Time',
 		type: 'string',
+		edit: true,
+
 		schema: { displayInTable: true, type: 'string' },
 	},
 	duration: {
 		title: 'Duration',
 		type: 'string',
+		edit: true,
+
 		schema: { displayInTable: true },
 	},
 	startTime: {
 		title: 'Start Time',
 		type: 'string',
+		edit: true,
+
 		schema: { displayInTable: true, type: 'string', default: true },
 	},
 	endTime: {
 		title: 'End Time',
 		type: 'string',
+		edit: true,
 		schema: { displayInTable: true, type: 'string' },
 	},
 	externalCalendarId: {
 		title: 'ExternalCalendarId',
 		type: 'uri',
+		edit: true,
+
 		schema: { displayInTable: true, type: 'string' },
 	},
 	status: {
 		title: 'Status',
 		type: 'string',
 		sort: true,
+		edit: true,
 		required: true,
 		schema: {
 			displayInTable: true,
@@ -244,17 +275,23 @@ const meetingSettings: SettingsType<MeetingType> = {
 	rescheduleReason: {
 		title: 'Reschedule Reason',
 		type: 'string',
+		edit: true,
+
 		schema: { displayInTable: true, type: 'textarea' },
 	},
 	cancelReason: {
 		title: 'Cancel Reason',
 		type: 'string',
+		edit: true,
+
 		schema: { displayInTable: true, type: 'textarea' },
 	},
 	meetingType: {
 		title: 'Meeting Type',
 		type: 'string',
 		sort: true,
+		edit: true,
+
 		required: true,
 		schema: {
 			displayInTable: true,
@@ -283,6 +320,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	location: {
 		title: 'Location',
 		type: 'string',
+		edit: true,
+
 		schema: {
 			displayInTable: true,
 		},
@@ -290,6 +329,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 
 	map: {
 		title: 'Map',
+		edit: true,
+
 		type: 'uri',
 		schema: {
 			displayInTable: true,
@@ -302,11 +343,15 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Virtual Meeting Platform',
 		type: 'string',
 		search: true,
+		edit: true,
+
 		schema: { displayInTable: true },
 	},
 	meetingUrl: {
 		title: 'Meeting Url',
 		type: 'uri',
+		edit: true,
+
 		schema: {
 			displayInTable: true,
 			type: 'string',
@@ -317,6 +362,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	meetingId: {
 		title: 'MeetingId',
 		type: 'string',
+		edit: true,
+
 		schema: {
 			copy: true,
 			displayInTable: true,
@@ -325,6 +372,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 	meetingPassword: {
 		title: 'MeetingPassword',
 		type: 'string',
+		edit: true,
+
 		schema: {
 			copy: true,
 		},
@@ -332,27 +381,35 @@ const meetingSettings: SettingsType<MeetingType> = {
 	note: {
 		title: 'Note',
 		type: 'string',
+		edit: true,
 
 		schema: { type: 'textarea' },
 	},
 	participants: {
 		title: 'Participants',
 		type: 'array-string',
+		edit: true,
+
 		schema: { type: 'tag' },
 	},
 	file: {
 		title: 'File',
+		edit: true,
+
 		type: 'string',
 		schema: { type: 'file' },
 	},
 	fileUrl: {
 		title: 'File Url',
 		type: 'uri',
+		edit: true,
+
 		schema: { type: 'string', tableType: 'external-link', viewType: 'external-link' },
 	},
 	recordingUrl: {
 		title: 'RecordingUrl',
 		type: 'uri',
+		edit: true,
 
 		schema: { type: 'string', viewType: 'external-link', tableType: 'external-link', copy: true },
 	},
@@ -361,6 +418,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Added By',
 		type: 'string',
 		sort: true,
+		edit: true,
+
 		filter: {
 			name: 'addedBy',
 			field: 'addedBy_in',
@@ -389,6 +448,8 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'CreatedAt',
 		type: 'date',
 		sort: true,
+		edit: true,
+
 		schema: { displayInTable: true, sort: true },
 		filter: {
 			name: 'createdAt',
