@@ -201,6 +201,16 @@ const settings: SettingsType<Type> = {
 		title: 'Access',
 		type: 'array-string',
 		sort: true,
+		filter: {
+			name: 'access',
+			field: 'access_in',
+			type: 'multi-select',
+			label: 'Access',
+			title: 'Sort by access',
+			category: 'model',
+			model: Admin,
+			key: 'name',
+		},
 	},
 
 	createdAt: {
