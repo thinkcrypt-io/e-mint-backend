@@ -99,6 +99,15 @@ const settings: SettingsType<Type> = {
 		search: true,
 		required: true,
 		sort: true,
+		filter: {
+			type: 'multi-select',
+			name: 'category',
+			field: 'category_in',
+			label: 'Category',
+			title: 'Filter by category',
+			category: 'distinct',
+			key: 'category',
+		},
 
 		schema: {
 			displayInTable: true,
