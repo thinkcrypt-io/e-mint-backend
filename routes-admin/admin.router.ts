@@ -82,7 +82,7 @@ router.use(
 		Model: Doc,
 		settings: docSettings,
 		permission: 'documents',
-		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 
@@ -112,7 +112,7 @@ router.use(
 		Model: Meeting,
 		settings: meetingSettings,
 		permission: 'meetings',
-		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 
@@ -122,7 +122,7 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
-		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 
@@ -132,7 +132,7 @@ router.use(
 		Model: Leave,
 		settings: leaveSettings,
 		permission: 'leaves',
-		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 
