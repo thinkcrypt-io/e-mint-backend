@@ -98,6 +98,10 @@ const settings: SettingsType<Type> = {
 					value: 'completed',
 				},
 				{
+					label: 'Maintenance',
+					value: 'maintenance',
+				},
+				{
 					label: 'Review',
 					value: 'review',
 				},
