@@ -200,6 +200,7 @@ const settings: SettingsType<Type> = {
 		edit: true,
 		title: 'Access',
 		type: 'array-string',
+
 		sort: true,
 		filter: {
 			name: 'access',

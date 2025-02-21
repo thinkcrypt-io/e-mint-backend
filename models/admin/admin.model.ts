@@ -96,6 +96,8 @@ const schema = new Schema<AdminType>(
 			jobposts: [String],
 			jobapplications: [String],
 			meetings: [String],
+			invoices: [String],
+			leaves: [String],
 		},
 	},
 

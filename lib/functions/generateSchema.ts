@@ -12,8 +12,9 @@ const generateSchema = ({ keys, model }: GenerateSchema) => {
 			type: model.schema.paths[key].instance?.toLowerCase(),
 			sort: false,
 			search: false,
-			unique: false,
-			exclude: false,
+			// unique: false,
+			// exclude: false,
+			edit: true,
 			required: model.schema.paths[key].isRequired,
 			trim: model.schema.paths[key].options.trim,
 			...(model.schema.paths[key].instance == 'ObjectId' && {
@@ -27,13 +28,13 @@ const generateSchema = ({ keys, model }: GenerateSchema) => {
 			schema: {
 				displayInTable: true,
 			},
-			filter: {
-				name: key,
-				field: key,
-				type: 'text',
-				label: key,
-				title: `Sort by ${key}`,
-			},
+			// filter: {
+			// 	name: key,
+			// 	field: key,
+			// 	type: 'text',
+			// 	label: key,
+			// 	title: `Sort by ${key}`,
+			// },
 		};
 		return acc;
 	}, {});

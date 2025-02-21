@@ -164,3 +164,10 @@ export { default as JobApplicationType } from './jobpost/jobApplication.types.js
 export { default as Meeting } from './meeting/meeting.model.js';
 export { default as meetingSettings } from './meeting/meeting.settings.js';
 export { default as MeetingType } from './meeting/meeting.types.js';
+
+//Admin Invoice
+export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminInvoice.model.js';
+
+//Leave
+export { default as Leave } from './employee/leave.model.js';
+export { default as leaveSettings } from './employee/leaveSettings.js';

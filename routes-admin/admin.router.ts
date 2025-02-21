@@ -33,6 +33,10 @@ import {
 	getModelKeys,
 	Meeting,
 	meetingSettings,
+	AdminInvoice,
+	adminInvoiceSettings,
+	Leave,
+	leaveSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -108,6 +112,26 @@ router.use(
 		Model: Meeting,
 		settings: meetingSettings,
 		permission: 'meetings',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/invoices',
+	defineRoutes({
+		Model: AdminInvoice,
+		settings: adminInvoiceSettings,
+		permission: 'invoices',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/leaves',
+	defineRoutes({
+		Model: Leave,
+		settings: leaveSettings,
+		permission: 'leaves',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()] },
 	})
 );
