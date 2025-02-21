@@ -12,6 +12,7 @@ type ProjectType = DocumentBaseType & {
 	clientName?: string;
 	devUrl?: string;
 	client?: Types.ObjectId;
+	project?: Types.ObjectId;
 	liveUrl?: string;
 	testUrl?: string;
 	prodUrl?: string;

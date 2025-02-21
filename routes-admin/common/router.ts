@@ -91,7 +91,7 @@ const defineRoutes = ({ Model, settings, permission, injectMiddleware }: RouteOp
 		// Middleware for getting the count of categories
 		count: [protect, ...(injectMiddleware?.count || [])],
 		// Middleware for exporting category data
-		export: [protect, ...(injectMiddleware?.export || [])],
+		export: [protect, filter(config.FILTER_OPTIONS), ...(injectMiddleware?.export || [])],
 		// Middleware for filtering documents
 		filter: [protect, ...(injectMiddleware?.filter || [])],
 	};

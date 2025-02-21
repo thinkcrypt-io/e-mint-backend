@@ -36,7 +36,7 @@ const schema = new Schema<Type>(
 
 		project: {
 			type: Schema.Types.ObjectId,
-			ref: 'Project',
+			ref: 'Software',
 		},
 		addedBy: {
 			type: Schema.Types.ObjectId,

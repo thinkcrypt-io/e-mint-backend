@@ -179,7 +179,6 @@ const meetingSettings: SettingsType<MeetingType> = {
 		title: 'Project',
 		type: 'string',
 		edit: true,
-
 		sort: true,
 		populate: { path: 'project', select: 'name' },
 		schema: {
@@ -213,8 +212,19 @@ const meetingSettings: SettingsType<MeetingType> = {
 		edit: true,
 
 		sort: true,
-		schema: { displayInTable: true, default: true, sort: true, type: 'date' },
-		filter: { name: 'date', type: 'date', label: 'date', title: 'Sort by date' },
+		schema: {
+			displayInTable: true,
+			default: true,
+			sort: true,
+			type: 'date',
+			tableType: 'date-only',
+		},
+		filter: {
+			name: 'date',
+			type: 'date',
+			label: 'date',
+			title: 'Sort by date',
+		},
 	},
 	scheduledTime: {
 		title: 'Scheduled Time',

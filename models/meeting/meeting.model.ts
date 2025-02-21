@@ -24,7 +24,7 @@ const MinutesSchema = new Schema<MeetingType>(
 
 		//client/project/lead
 		client: { type: Schema.Types.ObjectId, ref: 'Client' },
-		project: { type: Schema.Types.ObjectId, ref: 'Project' },
+		project: { type: Schema.Types.ObjectId, ref: 'Software' },
 		lead: { type: Schema.Types.ObjectId, ref: 'Lead' },
 
 		//host

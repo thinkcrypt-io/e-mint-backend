@@ -37,6 +37,8 @@ import {
 	adminInvoiceSettings,
 	Leave,
 	leaveSettings,
+	softwareSettings,
+	Software,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -62,13 +64,8 @@ router.use(
 	defineRoutes({ Model: AdminRole, settings: adminRoleSettings, permission: 'adminrole' })
 );
 router.use(
-	'/projects',
+	'/repos',
 	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
-);
-
-router.use(
-	'/clients',
-	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
 );
 
 router.use(
@@ -132,6 +129,16 @@ router.use(
 		Model: Leave,
 		settings: leaveSettings,
 		permission: 'leaves',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/projects',
+	defineRoutes({
+		Model: Software,
+		settings: softwareSettings,
+		permission: 'softwares',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );

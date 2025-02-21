@@ -1,5 +1,5 @@
 import mongoose, { Schema, Types } from 'mongoose';
-import { Admin, Client, Counter, Project, SettingsType } from '../../imports.js';
+import { Admin, Client, Counter, Project, SettingsType, Software } from '../../imports.js';
 
 const invoiceStatus = [
 	{ label: 'Draft', value: 'draft' },
@@ -27,7 +27,7 @@ const schema = new Schema<Type>(
 		name: { type: String, required: true, trim: true },
 		description: { type: String, trim: true },
 		client: { type: Schema.Types.ObjectId, ref: 'Client' },
-		project: { type: Schema.Types.ObjectId, ref: 'Project' },
+		project: { type: Schema.Types.ObjectId, ref: 'Software' },
 		issueDate: { type: Date, default: Date.now },
 		dueDate: { type: Date },
 		subTotal: { type: Number, required: true },
@@ -216,7 +216,7 @@ export const adminInvoiceSettings: SettingsType<any> = {
 			label: 'Project',
 			title: 'Sort by Project',
 			category: 'model',
-			model: Project,
+			model: Software,
 			key: 'name',
 		},
 	},

@@ -1,5 +1,6 @@
 import { SettingsType } from '../../lib/types/settings.types.js';
 import Client from '../client/client.model.js';
+import Software from '../software/software.model.js';
 import Type from './types.js';
 
 const statusOptions = [
@@ -159,6 +160,26 @@ const settings: SettingsType<Type> = {
 			key: 'status',
 		},
 	},
+	project: {
+		edit: true,
+		title: 'Project',
+		type: 'string',
+		populate: {
+			path: 'project',
+			select: 'name',
+		},
+		sort: true,
+		filter: {
+			name: 'project',
+			field: 'project_in',
+			type: 'multi-select',
+			label: 'Project',
+			title: 'Sort by project',
+			category: 'model',
+			model: Software,
+			key: 'name',
+		},
+	},
 	technologies: {
 		edit: true,
 		title: 'Technologies',
@@ -182,16 +203,6 @@ const settings: SettingsType<Type> = {
 			tableKey: 'client.name',
 			type: 'data-menu',
 			model: 'clients',
-		},
-		filter: {
-			name: 'client',
-			field: 'client_in',
-			type: 'multi-select',
-			label: 'Client',
-			title: 'Sort by client',
-			category: 'model',
-			model: Client,
-			key: 'name',
 		},
 	},
 	frameworks: {

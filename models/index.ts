@@ -171,3 +171,7 @@ export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminIn
 //Leave
 export { default as Leave } from './employee/leave.model.js';
 export { default as leaveSettings } from './employee/leaveSettings.js';
+
+//Software
+export { default as Software } from './software/software.model.js';
+export { default as softwareSettings } from './software/settings.js';

@@ -2,6 +2,7 @@ import { SettingsType } from '../../lib/types/settings.types.js';
 import Admin from '../admin/admin.model.js';
 import Client from '../client/client.model.js';
 import Project from '../project/project.model.js';
+import Software from '../software/software.model.js';
 import Type from './document.types.js';
 
 const directionOptions = [
@@ -152,7 +153,7 @@ const settings: SettingsType<Type> = {
 			label: 'Project',
 			title: 'Sort by project',
 			category: 'model',
-			model: Project,
+			model: Software,
 			key: 'name',
 		},
 		populate: {

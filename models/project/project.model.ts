@@ -27,6 +27,10 @@ const schema = new Schema<ProjectType>(
 			type: Schema.Types.ObjectId,
 			ref: 'Client',
 		},
+		project: {
+			type: Schema.Types.ObjectId,
+			ref: 'Software',
+		},
 		devUrl: {
 			type: String,
 			trim: true,

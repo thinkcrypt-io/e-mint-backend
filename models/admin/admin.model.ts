@@ -98,6 +98,8 @@ const schema = new Schema<AdminType>(
 			meetings: [String],
 			invoices: [String],
 			leaves: [String],
+			softwares: [String],
+			repos: [String],
 		},
 	},
 
