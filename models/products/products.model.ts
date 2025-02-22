@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import variationSchema from './productVariation.js';
 
 const schema = new Schema<any>(
 	{
@@ -85,6 +86,7 @@ const schema = new Schema<any>(
 		stock: { type: Number, default: 0, required: true },
 		damage: { type: Number, default: 0, required: true },
 		lowStockAlert: { type: Number, default: 0 },
+		variations: [{ type: variationSchema }],
 
 		status: {
 			type: String,
@@ -224,6 +226,4 @@ schema.virtual('inventorySellPrice').get(function (this: any) {
 const Product = mongoose.model<any>('Product', schema);
 export default Product;
 
-// export { default as filters } from './filters.js';
-//export { default as config } from './config.js';
 export { default as settings } from './products.settings.js';

@@ -53,6 +53,11 @@ const settings: any = {
 		title: 'Short Description',
 		edit: true,
 	},
+	variations: {
+		type: 'array-object',
+		title: 'Variations',
+		edit: true,
+	},
 	shop: {
 		type: 'string',
 		title: 'Shop',
