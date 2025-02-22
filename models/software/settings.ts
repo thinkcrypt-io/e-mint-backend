@@ -7,6 +7,7 @@ const settings: SettingsType<Type> = {
 		type: 'string',
 		search: true,
 		edit: true,
+		sort: true,
 		required: true,
 		trim: true,
 		schema: { displayInTable: true, default: true, sort: true },
