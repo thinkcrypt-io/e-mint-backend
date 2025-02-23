@@ -529,13 +529,13 @@ const schema = new Schema<any>({
 					md: 16,
 				},
 			}),
-			CatTitleCss: TextSchema({
+			catTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			PriceTitleCss: TextSchema({
+			priceTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
