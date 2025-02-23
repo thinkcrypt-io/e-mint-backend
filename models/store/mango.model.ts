@@ -518,6 +518,30 @@ const schema = new Schema<any>({
 			}),
 			linkForgetPassword: String || '/',
 		},
+
+		// Category Models
+
+		category: {
+			bg: String,
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			catTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			priceTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+		}
 	},
 });
 
