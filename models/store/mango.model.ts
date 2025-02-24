@@ -62,7 +62,7 @@ const schema = new Schema<any>({
 			css: TopBannerSchema({
 				bg: '#dc2e2e',
 				color: '#ffffff',
-				width: 'full',
+				// width: 'full',
 			}),
 			content: getString('Enter Your Text'),
 			contentCss: TextSchema({
@@ -416,6 +416,11 @@ const schema = new Schema<any>({
 			}),
 			button: ButtonSchema(),
 			buttonLink: String || '/',
+			py: {
+				base: Number,
+				md: Number,
+			},
+			bg: String,
 		},
 
 		socialContact: {
@@ -541,7 +546,67 @@ const schema = new Schema<any>({
 					md: 16,
 				},
 			}),
-		}
+		},
+
+		// Product Models
+
+		product: {
+			bg: String,
+			p: {
+				base: Number,
+				md: Number,
+			},
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			catTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			priceTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			sizeLabelTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			sizeItemTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			button: ButtonSchema(),
+			description: {
+				headerCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				detailsCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				p: {
+					base: Number,
+					md: Number,
+				},
+				bg: String,
+			},
+		},
 	},
 });
 
