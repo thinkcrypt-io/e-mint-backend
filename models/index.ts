@@ -8,6 +8,7 @@ export { settings as categorySettings } from './category/category.model.js';
 
 //Brand
 export { default as Brand } from './brand/brand.model.js';
+export { settings as brandSettings } from './brand/brand.model.js';
 
 //Product
 export { ProductType } from './products/products.types.js';
@@ -73,6 +74,7 @@ export { purchaseSettings, Purchase } from './purchase/index.js';
 export { default as Admin } from './admin/admin.model.js';
 export { default as AdminRole, adminRoleSettings } from './admin/adminRole.model.js';
 // export { adminSettings } from './admin/admin.model.js';
+export { default as adminSettings } from './admin/admin.settings.js';
 
 //Subscription
 export { default as Subscription } from './subscription/subscription.model.js';
@@ -133,3 +135,44 @@ export { default as locationSettings } from './location/location.settings.js';
 export { default as Staff } from './staff/staff.model.js';
 export { default as StaffType } from './staff/staff.types.js';
 export { default as staffSettings } from './staff/staff.settings.js';
+
+//Projects
+export { default as Project } from './project/project.model.js';
+export { default as projectSettings } from './project/settings.js';
+export { default as ProjectType } from './project/types.js';
+
+//Clients
+export { default as Client } from './client/client.model.js';
+export { default as clientSettings } from './client/client.settings.js';
+export { default as ClientType } from './client/client.types.js';
+
+//Documents
+export { default as Doc } from './document/document.model.js';
+export { default as docSettings } from './document/document.settings.js';
+export { default as DocType } from './document/document.types.js';
+
+//Job Post
+export { default as JobPost } from './jobpost/jobpost.model.js';
+export { default as jobPostSettings } from './jobpost/jobpost.settings.js';
+export { default as JobPostType } from './jobpost/jobpost.types.js';
+
+//Job Application
+export { default as JobApplication } from './jobpost/jobApplication.model.js';
+export { default as jobApplicationSettings } from './jobpost/jobApplication.settings.js';
+export { default as JobApplicationType } from './jobpost/jobApplication.types.js';
+
+//Meeting
+export { default as Meeting } from './meeting/meeting.model.js';
+export { default as meetingSettings } from './meeting/meeting.settings.js';
+export { default as MeetingType } from './meeting/meeting.types.js';
+
+//Admin Invoice
+export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminInvoice.model.js';
+
+//Leave
+export { default as Leave } from './employee/leave.model.js';
+export { default as leaveSettings } from './employee/leaveSettings.js';
+
+//Software
+export { default as Software } from './software/software.model.js';
+export { default as softwareSettings } from './software/settings.js';

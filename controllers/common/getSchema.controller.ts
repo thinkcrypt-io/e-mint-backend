@@ -1,22 +1,36 @@
 import { Response } from 'express';
+import { Schema } from 'mongoose';
+
+const convertType = (type: string) => {
+	if (type == 'array-string') return 'tag';
+	else return type;
+};
 
 const getSchema = ({ settings }: { settings: any }) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			let keys: string[] = [];
-			const schema = Object.keys(settings).reduce((acc, key) => {
-				keys.push(key);
-				const constructSchema = {
-					label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
-					type: settings[key]?.schema?.type ? settings[key].schema.type : settings[key].type,
-					isRequired: settings[key]?.required,
-					...settings[key]?.schema,
-				};
+			const schema = Object.keys(settings).reduce(
+				(acc, key) => {
+					keys.push(key);
+					const constructSchema = {
+						label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
+						type: settings[key]?.schema?.type
+							? settings[key].schema.type
+							: convertType(settings[key].type),
+						isRequired: settings[key]?.required,
+						renderCondition: settings[key]?.schema?.renderCondition
+							? settings[key].schema.renderCondition.toString()
+							: undefined,
+						...settings[key]?.schema,
+					};
 
-				acc[key] = constructSchema;
+					acc[key] = constructSchema;
 
-				return acc;
-			}, {} as Record<string, any>);
+					return acc;
+				},
+				{} as Record<string, any>
+			);
 
 			const { type } = req.query;
 

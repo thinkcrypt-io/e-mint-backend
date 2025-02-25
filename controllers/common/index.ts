@@ -43,3 +43,9 @@ export { default as updatePreference } from './updatePreference.contoller.js';
 
 //20
 export { default as getSchema } from './getSchema.controller.js';
+
+//21
+export { default as getModelKeys } from './getModelKeys.controller.js';
+
+//
+export { default as getModelSettings } from './getModelSettings.controller.js';

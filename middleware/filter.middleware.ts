@@ -76,8 +76,30 @@ const getEndOfDay = (value: string): Date => {
 	return moment(value, 'YYYY-MM-DD').endOf('day').toDate();
 };
 
-const getDate = ({ key, value }: { key: string; value: any }) => {
-	const [field, operator] = key.split('_');
+/**
+ * Generates a MongoDB date query condition based on the provided key and value.
+ *
+ * The key should follow the pattern "field_operator" where the operator can be:
+ * - "gte" or "gt": for greater-than-or-equal comparisons.
+ * - "lte" or "lt": for less-than comparisons.
+ * - "btwn": for a between range (value should be "from_to").
+ *
+ * If no operator is specified in the key, the value is interpreted as a relative
+ * or specific date query. For example:
+ * - "days_7": 7 days ago until now.
+ * - "today" or "daily": today's date.
+ * - "weekly"/"week", "monthly"/"month", "yearly"/"year": respective ranges.
+ * - Otherwise, the value is assumed to be a specific date string in "YYYY-MM-DD" format.
+ *
+ * @param {Object} params - The parameters for generating the date condition.
+ * @param {string} params.key - A string in the format "field_operator" (e.g., "date_gte").
+ * @param {string} params.value - The value used to build the query condition.
+ * @returns {Object} A MongoDB query object with date conditions.
+ */
+
+const getDate = ({ key, value }: { key: string; value: any }): Record<string, Date> => {
+	// Destructure the key to get field and operator. The 'field' is currently unused.
+	const [_, operator] = key.split('_');
 	const [from, to] = value.split('_');
 
 	let startOfDay, endOfDay;

@@ -12,3 +12,4 @@ export * from './models/index.js';
 export type * from './models/types.js';
 
 export { default as defineRoutes } from './routes-admin/common/router.js';
+export { default as commonRouter } from './routes/common/commonRouter.js';
