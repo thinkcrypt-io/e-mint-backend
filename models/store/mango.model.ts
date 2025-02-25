@@ -606,6 +606,19 @@ const schema = new Schema<any>({
 				},
 				bg: String,
 			},
+			similar: {
+				headerCss: TextSchema({
+					fontSize: {
+						base: 14,
+						md: 16,
+					},
+				}),
+				p: {
+					base: Number,
+					md: Number,
+				},
+				bg: String,
+			},
 		},
 	},
 });
