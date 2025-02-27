@@ -399,6 +399,49 @@ const schema = new Schema<any>({
 			},
 		},
 
+		aboutTwo: {
+			title: getString('Enter Your Text'),
+			titleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subTitle: getString('Enter Your Text'),
+			subTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			image: String,
+			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+				height: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
+			button: ButtonSchema(),
+			buttonLink: String || '/',
+			bg: String,
+			py: {
+				base: Number,
+				md: Number,
+			},
+			px: {
+				base: Number,
+				md: Number,
+			},
+			pb: {
+				base: Number,
+				md: Number,
+			},
+		},
+
 		contact: {
 			title: getString('Enter Your Text'),
 			titleCss: TextSchema({
@@ -620,6 +663,98 @@ const schema = new Schema<any>({
 				bg: String,
 			},
 		},
+
+		// Cart Models
+
+		cart: {
+			bg: String,
+			productTitleCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			productPriceCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			productQtyCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			productSizeCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			checkoutTitleOne: getString('Enter Your Text'),
+			checkoutTitleOneCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			checkoutTitleTwo: getString('Enter Your Text'),
+			checkoutTitleTwoCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			button: ButtonSchema(),
+			subtotalHeaderCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			subtotalContentCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			deliveryHeaderCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			deliveryContentCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			totalHeaderCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			totalContentCss: TextSchema({
+				fontSize: {
+					base: 14,
+					md: 16,
+				},
+			}),
+			checkout: {
+				bg: String,
+				py: {
+					base: Number,
+					md: Number,
+				},
+				px: {
+					base: Number,
+					md: Number,
+				},
+			}
+		}
 	},
 });
 
