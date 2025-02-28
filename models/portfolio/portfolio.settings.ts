@@ -73,6 +73,18 @@ const settings: SettingsType<any> = {
 			],
 		},
 	},
+	liveUrl: {
+		title: 'Live Url',
+		type: 'uri',
+		edit: true,
+		required: true,
+		schema: {
+			type: 'string',
+			tableType: 'external-link',
+			copy: true,
+			viewType: 'external-link',
+		},
+	},
 	priority: {
 		title: 'Priority',
 		type: 'number',

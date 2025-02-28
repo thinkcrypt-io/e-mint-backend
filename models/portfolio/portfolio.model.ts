@@ -27,6 +27,12 @@ const schema = new Schema<any>(
 			required: true,
 		},
 
+		liveUrl: {
+			type: String,
+			required: true,
+			match: REGEX.URL,
+		},
+
 		priority: {
 			type: Number,
 			default: 1,
