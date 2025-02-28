@@ -179,3 +179,7 @@ export { default as softwareSettings } from './software/settings.js';
 //Team Member
 export { default as TeamMember } from './team-members/team.model.js';
 export { default as teamMemberSettings } from './team-members/team.settings.js';
+
+//Portfolio
+export { default as Portfolio } from './portfolio/portfolio.model.js';
+export { default as portfolioSettings } from './portfolio/portfolio.settings.js';

@@ -41,6 +41,8 @@ import {
 	Software,
 	TeamMember,
 	teamMemberSettings,
+	Portfolio,
+	portfolioSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -151,6 +153,15 @@ router.use(
 		Model: TeamMember,
 		settings: teamMemberSettings,
 		permission: 'teams',
+	})
+);
+
+router.use(
+	'/portfolios',
+	defineRoutes({
+		Model: Portfolio,
+		settings: portfolioSettings,
+		permission: 'portfolios',
 	})
 );
 
