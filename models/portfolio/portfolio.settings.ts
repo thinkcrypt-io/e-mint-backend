@@ -101,7 +101,7 @@ const settings: SettingsType<any> = {
 		type: 'boolean',
 		sort: true,
 		edit: true,
-		required: true,
+
 		filter: {
 			name: 'isFeatured',
 			type: 'boolean',
