@@ -183,3 +183,7 @@ export { default as teamMemberSettings } from './team-members/team.settings.js';
 //Portfolio
 export { default as Portfolio } from './portfolio/portfolio.model.js';
 export { default as portfolioSettings } from './portfolio/portfolio.settings.js';
+
+//Service
+export { default as Service } from './services/services.model.js';
+export { default as serviceSettings } from './services/service.settings.js';
