@@ -13,7 +13,15 @@ const generateSettingsFilter = ({ key, type, values }: any): any => {
 					title: `Filter by ${generateLabel(key)}`,
 				},
 			};
-		else if (type == 'Date') return {};
+		else if (type == 'Date')
+			return {
+				filter: {
+					name: key,
+					type: 'date',
+					label: generateLabel(key),
+					title: `Filter by ${generateLabel(key)}`,
+				},
+			};
 		else if (type == 'ObjectId')
 			return {
 				filter: {

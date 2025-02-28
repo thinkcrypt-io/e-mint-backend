@@ -103,6 +103,7 @@ const schema = new Schema<AdminType>(
 			teams: [String],
 			portfolios: [String],
 			services: [String],
+			issues: [String],
 		},
 	},
 

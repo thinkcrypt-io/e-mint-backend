@@ -187,3 +187,7 @@ export { default as portfolioSettings } from './portfolio/portfolio.settings.js'
 //Service
 export { default as Service } from './services/services.model.js';
 export { default as serviceSettings } from './services/service.settings.js';
+
+//Issue
+export { default as Issue } from './issues/issues.model.js';
+export { default as issueSettings } from './issues/issues.settings.js';

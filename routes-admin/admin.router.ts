@@ -45,6 +45,8 @@ import {
 	portfolioSettings,
 	Service,
 	serviceSettings,
+	Issue,
+	issueSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -173,6 +175,15 @@ router.use(
 		Model: Service,
 		settings: serviceSettings,
 		permission: 'services',
+	})
+);
+
+router.use(
+	'/issues',
+	defineRoutes({
+		Model: Issue,
+		settings: issueSettings,
+		permission: 'issues',
 	})
 );
 

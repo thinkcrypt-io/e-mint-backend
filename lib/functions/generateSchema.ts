@@ -1,12 +1,5 @@
 // Purpose: Generate schema for the table based on the model.
-import {
-	booleanFilter,
-	generateLabel,
-	generateEnumFilter,
-	convertToSchemaType,
-	modelFilter,
-	generateSettingsFilter,
-} from './util/index.js';
+import { generateLabel, convertToSchemaType, generateSettingsFilter } from './util/index.js';
 
 type GenerateSchema = {
 	keys: string[];
