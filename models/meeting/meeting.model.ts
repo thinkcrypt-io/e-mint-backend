@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import MeetingType from './meeting.types.js';
+import { REGEX } from '../../imports.js';
 
 const statusEmun = [
 	'draft',
@@ -64,7 +65,7 @@ const MinutesSchema = new Schema<MeetingType>(
 
 		//if Virtual Meeting
 		platform: { type: String },
-		meetingUrl: { type: String },
+		meetingUrl: { type: String, match: REGEX.URL },
 		meetingId: { type: String },
 		meetingPassword: { type: String },
 
@@ -74,8 +75,8 @@ const MinutesSchema = new Schema<MeetingType>(
 
 		// Attachments and recording details
 		file: { type: String },
-		fileUrl: { type: String },
-		recordingUrl: { type: String },
+		fileUrl: { type: String, match: REGEX.URL },
+		recordingUrl: { type: String, match: REGEX.URL },
 
 		//access
 		addedBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },

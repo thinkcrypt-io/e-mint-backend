@@ -100,6 +100,7 @@ const schema = new Schema<AdminType>(
 			leaves: [String],
 			softwares: [String],
 			repos: [String],
+			teams: [String],
 		},
 	},
 

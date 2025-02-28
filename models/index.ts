@@ -175,3 +175,7 @@ export { default as leaveSettings } from './employee/leaveSettings.js';
 //Software
 export { default as Software } from './software/software.model.js';
 export { default as softwareSettings } from './software/settings.js';
+
+//Team Member
+export { default as TeamMember } from './team-members/team.model.js';
+export { default as teamMemberSettings } from './team-members/team.settings.js';

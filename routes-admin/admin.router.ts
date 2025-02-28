@@ -39,6 +39,8 @@ import {
 	leaveSettings,
 	softwareSettings,
 	Software,
+	TeamMember,
+	teamMemberSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -140,6 +142,15 @@ router.use(
 		settings: softwareSettings,
 		permission: 'softwares',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/teams',
+	defineRoutes({
+		Model: TeamMember,
+		settings: teamMemberSettings,
+		permission: 'teams',
 	})
 );
 
