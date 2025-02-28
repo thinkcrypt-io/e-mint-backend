@@ -156,7 +156,7 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		sort: true,
 		edit: true,
-		required: true,
+
 		populate: { path: 'project', select: 'name' },
 		filter: {
 			name: 'project',

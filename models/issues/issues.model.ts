@@ -51,7 +51,6 @@ const schema = new Schema<any>(
 		project: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Software',
-			required: true,
 		},
 		assignedTo: {
 			type: mongoose.Schema.Types.ObjectId,
