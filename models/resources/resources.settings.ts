@@ -1,4 +1,3 @@
-import { Tooltip } from '@chakra-ui/react';
 import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
