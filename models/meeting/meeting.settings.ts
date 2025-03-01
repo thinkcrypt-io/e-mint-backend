@@ -1,4 +1,4 @@
-import { Admin, SettingsType } from '../../imports.js';
+import { Admin, SettingsType, ACCESS_CONTROL } from '../../imports.js';
 import MeetingType from './meeting.types.js';
 
 const priorityOptions = [
@@ -56,7 +56,7 @@ const statusOptions = [
 	},
 ];
 
-const meetingSettings: SettingsType<MeetingType> = {
+const meetingSettings: SettingsType<any> = {
 	name: {
 		title: 'Name',
 		type: 'string',
@@ -423,35 +423,7 @@ const meetingSettings: SettingsType<MeetingType> = {
 
 		schema: { type: 'string', viewType: 'external-link', tableType: 'external-link', copy: true },
 	},
-	addedBy: {
-		edit: true,
-		title: 'Added By',
-		type: 'string',
-		sort: true,
-
-		filter: {
-			name: 'addedBy',
-			field: 'addedBy_in',
-			type: 'multi-select',
-			label: 'Added By',
-			title: 'Sort by added by',
-			category: 'model',
-			model: Admin,
-			key: 'name',
-		},
-	},
-	access: {
-		edit: true,
-		title: 'Access',
-		type: 'array-string',
-		sort: true,
-		schema: {
-			label: 'Access',
-			type: 'data-tag',
-			model: 'admins',
-			modelAddOn: 'email',
-		},
-	},
+	...ACCESS_CONTROL.SETTINGS,
 
 	createdAt: {
 		title: 'CreatedAt',

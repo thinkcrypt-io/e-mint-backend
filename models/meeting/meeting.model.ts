@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import MeetingType from './meeting.types.js';
 import { REGEX } from '../../imports.js';
+import ACCESS_CONTROL from '../../lib/functions/generateAccessControlSchema.js';
 
 const statusEmun = [
 	'draft',
@@ -79,8 +80,9 @@ const MinutesSchema = new Schema<MeetingType>(
 		recordingUrl: { type: String, match: REGEX.URL },
 
 		//access
-		addedBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
-		access: [{ type: Schema.Types.ObjectId, ref: 'Admin' }],
+		// addedBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+		// access: [{ type: Schema.Types.ObjectId, ref: 'Admin' }],
+		...ACCESS_CONTROL.SCHEMA,
 	},
 	{
 		timestamps: true,

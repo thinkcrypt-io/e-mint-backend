@@ -1,4 +1,5 @@
 import { Admin, Client, SettingsType } from '../../imports.js';
+import ACCESS_CONTROL from '../../lib/functions/generateAccessControlSchema.js';
 import Type from './types.js';
 
 const settings: SettingsType<Type> = {
@@ -169,35 +170,36 @@ const settings: SettingsType<Type> = {
 		edit: true,
 		schema: { displayInTable: true, type: 'checkbox' },
 	},
-	addedBy: {
-		edit: true,
-		title: 'Added By',
-		type: 'string',
-		sort: true,
+	...ACCESS_CONTROL.SETTINGS,
+	// addedBy: {
+	// 	edit: true,
+	// 	title: 'Added By',
+	// 	type: 'string',
+	// 	sort: true,
 
-		filter: {
-			name: 'addedBy',
-			field: 'addedBy_in',
-			type: 'multi-select',
-			label: 'Added By',
-			title: 'Sort by added by',
-			category: 'model',
-			model: Admin,
-			key: 'name',
-		},
-	},
-	access: {
-		edit: true,
-		title: 'Access',
-		type: 'array-string',
-		sort: true,
-		schema: {
-			label: 'Access',
-			type: 'data-tag',
-			model: 'admins',
-			modelAddOn: 'email',
-		},
-	},
+	// 	filter: {
+	// 		name: 'addedBy',
+	// 		field: 'addedBy_in',
+	// 		type: 'multi-select',
+	// 		label: 'Added By',
+	// 		title: 'Sort by added by',
+	// 		category: 'model',
+	// 		model: Admin,
+	// 		key: 'name',
+	// 	},
+	// },
+	// access: {
+	// 	edit: true,
+	// 	title: 'Access',
+	// 	type: 'array-string',
+	// 	sort: true,
+	// 	schema: {
+	// 		label: 'Access',
+	// 		type: 'data-tag',
+	// 		model: 'admins',
+	// 		modelAddOn: 'email',
+	// 	},
+	// },
 
 	createdAt: {
 		title: 'CreatedAt',
