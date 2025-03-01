@@ -117,7 +117,7 @@ const leaveSettings: SettingsType<any> = {
 
 		edit: true,
 		required: true,
-		schema: { displayInTable: true, type: 'date', tableType: 'date-only' },
+		schema: { displayInTable: true, type: 'date', tableType: 'date-only', sort: true },
 	},
 	endDate: {
 		title: 'End Date',
