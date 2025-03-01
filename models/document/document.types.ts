@@ -11,6 +11,7 @@ type DocumentType = DocumentBaseType & {
 	docUrl?: string;
 	fileUrl?: string;
 	category: string;
+	code?: string;
 	direction: 'inbound' | 'outbound' | 'internal' | 'other';
 	privacy?: 'public' | 'private' | 'only-me';
 	tags?: string[];

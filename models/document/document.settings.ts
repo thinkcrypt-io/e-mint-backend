@@ -40,6 +40,16 @@ const directionOptions = [
 ];
 
 const settings: SettingsType<Type> = {
+	code: {
+		search: true,
+		title: 'Code',
+		type: 'string',
+		trim: true,
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
 	name: {
 		edit: true,
 		sort: true,

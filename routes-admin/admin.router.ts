@@ -47,6 +47,8 @@ import {
 	serviceSettings,
 	Issue,
 	issueSettings,
+	Maintenance,
+	maintenanceSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -184,6 +186,15 @@ router.use(
 		Model: Issue,
 		settings: issueSettings,
 		permission: 'issues',
+	})
+);
+
+router.use(
+	'/maintenances',
+	defineRoutes({
+		Model: Maintenance,
+		settings: maintenanceSettings,
+		permission: 'maintenances',
 	})
 );
 

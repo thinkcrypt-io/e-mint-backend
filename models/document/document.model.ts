@@ -1,8 +1,15 @@
 import mongoose, { Schema } from 'mongoose';
-import Type from './document.types.js';
+import Counter from '../counter/counter.model.js';
+import Admin from '../admin/admin.model.js';
+import sendMail from '../../controllers/mail/sendMail.controller';
 
-const schema = new Schema<Type>(
+const schema = new Schema<any>(
 	{
+		code: {
+			type: String,
+			unique: true,
+			trim: true,
+		},
 		name: {
 			type: String,
 			required: true,
@@ -57,5 +64,32 @@ const schema = new Schema<Type>(
 	{ timestamps: true }
 );
 
-const Doc = mongoose.model<Type>('Document', schema);
+let isNewItem = false;
+
+schema.pre<any>('save', function (next) {
+	isNewItem = this.isNew;
+	next();
+});
+
+// Pre-save hook to auto-increment the invoice number
+schema.pre<any>('save', async function (next) {
+	try {
+		if (this.isNew) {
+			let counter = await Counter.findOne({ slug: 'document' });
+			if (!counter) counter = new Counter({ sequenceValue: 40, slug: 'document' });
+
+			counter.sequenceValue += 1;
+			await counter.save();
+
+			this.code = `DOC-` + counter.sequenceValue.toString().padStart(4, '0');
+		}
+
+		next();
+	} catch (error: any) {
+		console.log(error);
+		next();
+	}
+});
+
+const Doc = mongoose.model<any>('Document', schema);
 export default Doc;
