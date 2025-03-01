@@ -1,5 +1,4 @@
-import { Admin, Client, SettingsType } from '../../imports.js';
-import ACCESS_CONTROL from '../../lib/functions/generateAccessControlSchema.js';
+import { Admin, Client, SettingsType, ACCESS_CONTROL } from '../../imports.js';
 import Type from './types.js';
 
 const settings: SettingsType<Type> = {

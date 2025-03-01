@@ -1,5 +1,4 @@
 import { Admin, SettingsType, ACCESS_CONTROL } from '../../imports.js';
-import MeetingType from './meeting.types.js';
 
 const priorityOptions = [
 	{
