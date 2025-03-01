@@ -5,6 +5,21 @@ import Project from '../project/project.model.js';
 import Software from '../software/software.model.js';
 import Type from './document.types.js';
 
+const privacyOptions = [
+	{
+		value: 'public',
+		label: 'Public',
+	},
+	{
+		value: 'private',
+		label: 'Private',
+	},
+	{
+		value: 'only-me',
+		label: 'Only Me',
+	},
+];
+
 const directionOptions = [
 	{
 		label: 'Inbound',
@@ -195,6 +210,27 @@ const settings: SettingsType<Type> = {
 		schema: {
 			displayInTable: true,
 			tableKey: 'addedBy.name',
+		},
+	},
+	privacy: {
+		title: 'Privacy',
+		type: 'string',
+		edit: true,
+		sort: true,
+		required: true,
+		filter: {
+			name: 'privacy',
+			field: 'privacy_in',
+			type: 'multi-select',
+			label: 'Privacy',
+			title: 'Sort By Privacy',
+			options: privacyOptions,
+		},
+		schema: {
+			type: 'select',
+			options: privacyOptions,
+			sort: true,
+			default: true,
 		},
 	},
 	access: {

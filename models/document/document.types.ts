@@ -12,6 +12,7 @@ type DocumentType = DocumentBaseType & {
 	fileUrl?: string;
 	category: string;
 	direction: 'inbound' | 'outbound' | 'internal' | 'other';
+	privacy?: 'public' | 'private' | 'only-me';
 	tags?: string[];
 	project?: Types.ObjectId;
 	addedBy: Types.ObjectId;

@@ -1,11 +1,27 @@
 import { NextFunction, Request, Response } from 'express';
 
+/**
+ * Scenarios where access is granted:
+ * - User's ID exists in the access array
+ * - User is the one who added/created the resource
+ * - Resource has privacy set to 'public'
+ */
+
 const hasAccess = () => {
 	return (req: any, res: Response, next: NextFunction): any => {
 		try {
-			console.log('injecting hasAccess middleware');
-
-			const access = { $or: [{ access: { $in: [req.user._id] } }, { addedBy: req.user._id }] };
+			const access = {
+				$or: [
+					// If privacy is not 'only-me',
+					// allow access to users in access array and the user who added the resource
+					// and resources with privacy set to 'public'
+					{
+						$and: [{ access: { $in: [req.user._id] } }, { privacy: { $ne: 'only-me' } }],
+					},
+					{ addedBy: req.user._id },
+					{ privacy: 'public' },
+				],
+			};
 			req.queryHelper = { ...(req.queryHelper || {}), ...access };
 
 			next();

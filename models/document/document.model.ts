@@ -38,6 +38,11 @@ const schema = new Schema<Type>(
 			type: Schema.Types.ObjectId,
 			ref: 'Software',
 		},
+		privacy: {
+			type: String,
+			enum: ['public', 'private', 'only-me'],
+			default: 'private',
+		},
 		addedBy: {
 			type: Schema.Types.ObjectId,
 			ref: 'Admin',
