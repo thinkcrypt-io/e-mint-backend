@@ -199,3 +199,7 @@ export { default as maintenanceSettings } from './maintenance/maintenance.settin
 //Admin Expense
 export { default as AdminExpense } from './admin-expense/adminExpense.model.js';
 export { default as adminExpenseSettings } from './admin-expense/adminExpense.settings.js';
+
+//Resources
+export { default as Resource } from './resources/resources.model.js';
+export { default as resourceSettings } from './resources/resources.settings.js';

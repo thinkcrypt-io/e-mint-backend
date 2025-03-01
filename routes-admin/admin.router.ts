@@ -51,6 +51,8 @@ import {
 	maintenanceSettings,
 	AdminExpense,
 	adminExpenseSettings,
+	Resource,
+	resourceSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -188,6 +190,15 @@ router.use(
 		Model: Issue,
 		settings: issueSettings,
 		permission: 'issues',
+	})
+);
+
+router.use(
+	'/resources',
+	defineRoutes({
+		Model: Resource,
+		settings: resourceSettings,
+		permission: 'resources',
 	})
 );
 

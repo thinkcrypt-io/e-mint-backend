@@ -105,6 +105,7 @@ const schema = new Schema<AdminType>(
 			services: [String],
 			issues: [String],
 			maintenances: [String],
+			resources: [String],
 		},
 	},
 
