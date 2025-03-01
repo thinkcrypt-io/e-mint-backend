@@ -1,6 +1,7 @@
+import { ACCESS_CONTROL } from '../../lib/index.js';
+
 import mongoose, { Schema } from 'mongoose';
 import ProjectType from './types.js';
-import { ACCESS_CONTROL } from '../../imports.js';
 
 const schema = new Schema<ProjectType>(
 	{

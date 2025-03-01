@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import MeetingType from './meeting.types.js';
-import { REGEX, ACCESS_CONTROL } from '../../imports.js';
+import { REGEX } from '../../imports.js';
+import { ACCESS_CONTROL } from '../../lib/index.js';
 
 const statusEmun = [
 	'draft',

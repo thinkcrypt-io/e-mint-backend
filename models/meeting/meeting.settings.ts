@@ -1,4 +1,5 @@
-import { Admin, SettingsType, ACCESS_CONTROL } from '../../imports.js';
+import { Admin, SettingsType } from '../../imports.js';
+import { ACCESS_CONTROL } from '../../lib/index.js';
 
 const priorityOptions = [
 	{

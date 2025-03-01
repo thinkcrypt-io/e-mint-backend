@@ -1,5 +1,6 @@
-import { Admin, Client, SettingsType, ACCESS_CONTROL } from '../../imports.js';
+import { Client, SettingsType } from '../../imports.js';
 import Type from './types.js';
+import { ACCESS_CONTROL } from '../../lib/index.js';
 
 const settings: SettingsType<Type> = {
 	name: {
