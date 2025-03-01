@@ -10,41 +10,39 @@ const schema = new Schema<any>(
 		},
 		name: {
 			type: String,
-			required: true,
 			trim: true,
+			required: true,
+		},
+		amount: {
+			type: Number,
+			required: true,
 		},
 		project: {
 			type: Schema.Types.ObjectId,
 			ref: 'Software',
 		},
+		details: {
+			type: String,
+		},
 
-		description: {
+		category: {
+			type: String,
+		},
+		date: {
+			type: Date,
+			required: true,
+			default: Date.now,
+		},
+		tags: [String],
+		receipt: String,
+		note: {
 			type: String,
 			trim: true,
 		},
-		startDate: {
-			type: Date,
-			required: true,
-		},
-		endDate: {
-			type: Date,
-			required: true,
-		},
-		status: {
-			type: String,
-			enum: ['active', 'pending', 'ended', 'on-hold', 'extended', 'cancelled'],
-			default: 'active',
-		},
-		attachment: {
-			type: String,
-		},
-		priority: {
-			type: String,
-			enum: ['low', 'medium', 'high', 'critical'],
-			default: 'medium',
-		},
+
 		...ACCESS_CONTROL.SCHEMA,
 	},
+
 	{
 		timestamps: true,
 	}
@@ -54,13 +52,13 @@ const schema = new Schema<any>(
 schema.pre<any>('save', async function (next) {
 	try {
 		if (this.isNew) {
-			let counter = await Counter.findOne({ slug: 'maintenance' });
-			if (!counter) counter = new Counter({ sequenceValue: 0, slug: 'maintenance' });
+			let counter = await Counter.findOne({ slug: 'adminexpense' });
+			if (!counter) counter = new Counter({ sequenceValue: 0, slug: 'adminexpense' });
 
 			counter.sequenceValue += 1;
 			await counter.save();
 
-			this.code = `M-` + counter.sequenceValue.toString().padStart(4, '0');
+			this.code = `EXP-` + counter.sequenceValue.toString().padStart(4, '0');
 		}
 
 		next();
@@ -70,5 +68,5 @@ schema.pre<any>('save', async function (next) {
 	}
 });
 
-const Maintenance = mongoose.model<any>('Maintenance', schema);
-export default Maintenance;
+const AdminExpense = mongoose.model<any>('AdminExpense', schema);
+export default AdminExpense;

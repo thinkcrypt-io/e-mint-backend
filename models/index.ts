@@ -195,3 +195,7 @@ export { default as issueSettings } from './issues/issues.settings.js';
 //Maintenance
 export { default as Maintenance } from './maintenance/maintenance.model.js';
 export { default as maintenanceSettings } from './maintenance/maintenance.settings.js';
+
+//Admin Expense
+export { default as AdminExpense } from './admin-expense/adminExpense.model.js';
+export { default as adminExpenseSettings } from './admin-expense/adminExpense.settings.js';

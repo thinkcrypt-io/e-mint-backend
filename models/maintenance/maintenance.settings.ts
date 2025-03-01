@@ -1,4 +1,5 @@
 import { SettingsType, Software } from '../../imports.js';
+import { ACCESS_CONTROL } from '../../lib/index.js';
 
 const settings: SettingsType<any> = {
 	code: {
@@ -157,6 +158,7 @@ const settings: SettingsType<any> = {
 			],
 		},
 	},
+	...ACCESS_CONTROL.SETTINGS,
 	createdAt: {
 		title: 'Created at',
 		type: 'date',

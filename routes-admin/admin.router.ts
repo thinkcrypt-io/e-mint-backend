@@ -49,6 +49,8 @@ import {
 	issueSettings,
 	Maintenance,
 	maintenanceSettings,
+	AdminExpense,
+	adminExpenseSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -195,6 +197,17 @@ router.use(
 		Model: Maintenance,
 		settings: maintenanceSettings,
 		permission: 'maintenances',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/expenses',
+	defineRoutes({
+		Model: AdminExpense,
+		settings: adminExpenseSettings,
+		permission: 'expenses',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 
