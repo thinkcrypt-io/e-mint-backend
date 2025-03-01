@@ -106,6 +106,8 @@ const schema = new Schema<AdminType>(
 			issues: [String],
 			maintenances: [String],
 			resources: [String],
+			components: [String],
+			props: [String],
 		},
 	},
 

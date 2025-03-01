@@ -147,8 +147,8 @@ const leaveSettings: SettingsType<any> = {
 		sort: true,
 		filter: {
 			name: 'status',
-			field: 'status_in',
-			type: 'multi-select',
+			// field: 'status_in',
+			type: 'select',
 			label: 'Status',
 			title: 'Sort by Status',
 			options: statusOptions,

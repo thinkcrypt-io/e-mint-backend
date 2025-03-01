@@ -53,6 +53,10 @@ import {
 	adminExpenseSettings,
 	Resource,
 	resourceSettings,
+	Component,
+	componentSettings,
+	Prop,
+	propSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -219,6 +223,24 @@ router.use(
 		settings: adminExpenseSettings,
 		permission: 'expenses',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/components',
+	defineRoutes({
+		Model: Component,
+		settings: componentSettings,
+		permission: 'components',
+	})
+);
+
+router.use(
+	'/props',
+	defineRoutes({
+		Model: Prop,
+		settings: propSettings,
+		permission: 'props',
 	})
 );
 

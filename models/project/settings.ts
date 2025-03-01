@@ -1,5 +1,4 @@
 import { SettingsType } from '../../lib/types/settings.types.js';
-import Client from '../client/client.model.js';
 import Software from '../software/software.model.js';
 import Type from './types.js';
 

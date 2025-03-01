@@ -4,7 +4,7 @@ type Options = { label: string; value: string };
 
 export type Filter = {
 	name: string;
-	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text';
+	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text' | 'select';
 	label: string;
 	title: string;
 	options?: Options[];

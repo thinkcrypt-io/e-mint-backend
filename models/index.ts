@@ -203,3 +203,11 @@ export { default as adminExpenseSettings } from './admin-expense/adminExpense.se
 //Resources
 export { default as Resource } from './resources/resources.model.js';
 export { default as resourceSettings } from './resources/resources.settings.js';
+
+//Components
+export { default as Component } from './components/components.model.js';
+export { default as componentSettings } from './components/components.settings.js';
+
+//Props
+export { default as Prop } from './components/props.model.js';
+export { default as propSettings } from './components/props.settings.js';
