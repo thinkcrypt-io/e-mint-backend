@@ -45,7 +45,7 @@ const settings: SettingsType<any> = {
 			type: 'data-menu',
 			tableType: 'string',
 			tableKey: 'project.name',
-			model: 'projects',
+			model: 'plannedprojects',
 			default: true,
 			sort: true,
 		},
