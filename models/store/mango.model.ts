@@ -754,6 +754,54 @@ const schema = new Schema<any>({
 					md: Number,
 				},
 			}
+		},
+
+		// Checkout Models
+
+		checkoutCss: {
+			bgColor: colors?.bg,
+			fgColor: colors?.fg,
+			cardBg: colors?.bg,
+			cardFg: colors?.fg,
+			headingSizeBase: getNumber(18),
+			headingSizeBg: getNumber(24),
+			headingWeight: getNumber(600),
+
+			cardTitleSizeBase: getNumber(16),
+			cardTitleSizeBg: getNumber(20),
+			cardTitleWeight: getNumber(600),
+
+			labelSize: getNumber(16),
+			labelWeight: getNumber(500),
+
+			inputBorder: colors?.fg,
+
+			nameSizeBase: getNumber(12),
+			nameSizeBg: getNumber(18),
+			nameWeight: getNumber(500),
+			nameColor: colors?.fg,
+
+			qtySizeBase: getNumber(12),
+			qtySizeBg: getNumber(18),
+			qtyWeight: getNumber(400),
+			qtyColor: colors?.fg,
+
+			totalSizeBase: getNumber(12),
+			totalSizeBg: getNumber(18),
+			totalWeight: getNumber(400),
+			totalColor: colors?.fg,
+
+			summarySizeBase: getNumber(12),
+			summarySizeBg: getNumber(18),
+			summaryWeight: getNumber(600),
+			summaryColor: colors?.fg,
+
+			btnBg: colors?.bg,
+			btnFg: colors?.fg,
+			btnHoverBg: colors?.bg,
+			btnHoverFg: colors?.fg,
+			btnSize: getNumber(16),
+			btnWeight: getNumber(500),
 		}
 	},
 });
