@@ -1,5 +1,7 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
-import ProjectType from './types';
+import { ACCESS_CONTROL } from '../../lib/index.js';
+
+import mongoose, { Schema } from 'mongoose';
+import ProjectType from './types.js';
 
 const schema = new Schema<ProjectType>(
 	{
@@ -56,11 +58,12 @@ const schema = new Schema<ProjectType>(
 			type: Boolean,
 			default: true,
 		},
-		addedBy: {
-			type: Schema.Types.ObjectId,
-			ref: 'Admin',
-		},
-		access: [{ type: Schema.Types.ObjectId, ref: 'Admin' }],
+		...ACCESS_CONTROL.SCHEMA,
+		// addedBy: {
+		// 	type: Schema.Types.ObjectId,
+		// 	ref: 'Admin',
+		// },
+		// access: [{ type: Schema.Types.ObjectId, ref: 'Admin' }],
 	},
 	{ timestamps: true }
 );

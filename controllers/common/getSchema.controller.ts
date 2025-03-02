@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { Schema } from 'mongoose';
 
 const convertType = (type: string) => {
 	if (type == 'array-string') return 'tag';
+	else if (type == 'boolean') return 'checkbox';
 	else return type;
 };
 
@@ -19,6 +19,7 @@ const getSchema = ({ settings }: { settings: any }) => {
 							? settings[key].schema.type
 							: convertType(settings[key].type),
 						isRequired: settings[key]?.required,
+						displayInTable: true,
 						renderCondition: settings[key]?.schema?.renderCondition
 							? settings[key].schema.renderCondition.toString()
 							: undefined,

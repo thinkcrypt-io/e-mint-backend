@@ -117,7 +117,7 @@ const leaveSettings: SettingsType<any> = {
 
 		edit: true,
 		required: true,
-		schema: { displayInTable: true, type: 'date', tableType: 'date-only' },
+		schema: { displayInTable: true, type: 'date', tableType: 'date-only', sort: true },
 	},
 	endDate: {
 		title: 'End Date',
@@ -147,8 +147,8 @@ const leaveSettings: SettingsType<any> = {
 		sort: true,
 		filter: {
 			name: 'status',
-			field: 'status_in',
-			type: 'multi-select',
+			// field: 'status_in',
+			type: 'select',
 			label: 'Status',
 			title: 'Sort by Status',
 			options: statusOptions,

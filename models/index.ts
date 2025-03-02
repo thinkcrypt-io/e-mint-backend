@@ -176,3 +176,39 @@ export { default as leaveSettings } from './employee/leaveSettings.js';
 //Software
 export { default as Software } from './software/software.model.js';
 export { default as softwareSettings } from './software/settings.js';
+
+//Team Member
+export { default as TeamMember } from './team-members/team.model.js';
+export { default as teamMemberSettings } from './team-members/team.settings.js';
+
+//Portfolio
+export { default as Portfolio } from './portfolio/portfolio.model.js';
+export { default as portfolioSettings } from './portfolio/portfolio.settings.js';
+
+//Service
+export { default as Service } from './services/services.model.js';
+export { default as serviceSettings } from './services/service.settings.js';
+
+//Issue
+export { default as Issue } from './issues/issues.model.js';
+export { default as issueSettings } from './issues/issues.settings.js';
+
+//Maintenance
+export { default as Maintenance } from './maintenance/maintenance.model.js';
+export { default as maintenanceSettings } from './maintenance/maintenance.settings.js';
+
+//Admin Expense
+export { default as AdminExpense } from './admin-expense/adminExpense.model.js';
+export { default as adminExpenseSettings } from './admin-expense/adminExpense.settings.js';
+
+//Resources
+export { default as Resource } from './resources/resources.model.js';
+export { default as resourceSettings } from './resources/resources.settings.js';
+
+//Components
+export { default as Component } from './components/components.model.js';
+export { default as componentSettings } from './components/components.settings.js';
+
+//Props
+export { default as Prop } from './components/props.model.js';
+export { default as propSettings } from './components/props.settings.js';

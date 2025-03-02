@@ -39,6 +39,24 @@ import {
 	leaveSettings,
 	softwareSettings,
 	Software,
+	TeamMember,
+	teamMemberSettings,
+	Portfolio,
+	portfolioSettings,
+	Service,
+	serviceSettings,
+	Issue,
+	issueSettings,
+	Maintenance,
+	maintenanceSettings,
+	AdminExpense,
+	adminExpenseSettings,
+	Resource,
+	resourceSettings,
+	Component,
+	componentSettings,
+	Prop,
+	propSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -140,6 +158,89 @@ router.use(
 		settings: softwareSettings,
 		permission: 'softwares',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/teams',
+	defineRoutes({
+		Model: TeamMember,
+		settings: teamMemberSettings,
+		permission: 'teams',
+	})
+);
+
+router.use(
+	'/portfolios',
+	defineRoutes({
+		Model: Portfolio,
+		settings: portfolioSettings,
+		permission: 'portfolios',
+	})
+);
+
+router.use(
+	'/services',
+	defineRoutes({
+		Model: Service,
+		settings: serviceSettings,
+		permission: 'services',
+	})
+);
+
+router.use(
+	'/issues',
+	defineRoutes({
+		Model: Issue,
+		settings: issueSettings,
+		permission: 'issues',
+	})
+);
+
+router.use(
+	'/resources',
+	defineRoutes({
+		Model: Resource,
+		settings: resourceSettings,
+		permission: 'resources',
+	})
+);
+
+router.use(
+	'/maintenances',
+	defineRoutes({
+		Model: Maintenance,
+		settings: maintenanceSettings,
+		permission: 'maintenances',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/expenses',
+	defineRoutes({
+		Model: AdminExpense,
+		settings: adminExpenseSettings,
+		permission: 'expenses',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/components',
+	defineRoutes({
+		Model: Component,
+		settings: componentSettings,
+		permission: 'components',
+	})
+);
+
+router.use(
+	'/props',
+	defineRoutes({
+		Model: Prop,
+		settings: propSettings,
+		permission: 'props',
 	})
 );
 
