@@ -44,6 +44,7 @@ type JobPostType = DocumentBaseType & {
 	degree?: string;
 	university?: string;
 	passingYear?: string;
+	scheduledAt?: Date;
 
 	//experience
 	portfolioUrl?: string;

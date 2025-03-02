@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import JobApplicationType from './jobApplication.types';
 
-const schema = new Schema<JobApplicationType>(
+const schema = new Schema<any>(
 	{
 		// Basic Info
 		jobPost: {
@@ -108,6 +108,7 @@ const schema = new Schema<JobApplicationType>(
 				'reviewed',
 				'shortlisted',
 				'called',
+				'invite-sent',
 				'interview-scheduled',
 				'interviewed',
 				'offer-accepted',
@@ -130,6 +131,13 @@ const schema = new Schema<JobApplicationType>(
 			type: String,
 			required: true,
 			enum: ['linkedin', 'email', 'facebook', 'applicationUrl', 'referral', 'other'],
+		},
+
+		scheduledAt: {
+			type: Date,
+			required: function () {
+				return (this as any).status == 'interview-scheduled';
+			},
 		},
 
 		// Internal Use
@@ -160,5 +168,5 @@ const schema = new Schema<JobApplicationType>(
 	{ timestamps: true }
 );
 
-const JobApplication = mongoose.model<JobApplicationType>('JobApplication', schema);
+const JobApplication = mongoose.model<any>('JobApplication', schema);
 export default JobApplication;
