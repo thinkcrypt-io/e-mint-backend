@@ -212,3 +212,7 @@ export { default as componentSettings } from './components/components.settings.j
 //Props
 export { default as Prop } from './components/props.model.js';
 export { default as propSettings } from './components/props.settings.js';
+
+//Newsletter
+export { default as Newsletter } from './newsletter/newsletter.model.js';
+export { default as newsletterSettings } from './newsletter/newsletter.settings.js';
