@@ -108,6 +108,12 @@ const schema = new Schema<AdminType>(
 			resources: [String],
 			components: [String],
 			props: [String],
+			//plans
+			plannedmodels: [String],
+			plannedprojects: [String],
+			plannedfeatures: [String],
+			plannedpages: [String],
+			modelattributes: [String],
 		},
 	},
 

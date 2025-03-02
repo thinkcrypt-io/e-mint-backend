@@ -57,6 +57,16 @@ import {
 	componentSettings,
 	Prop,
 	propSettings,
+	PlannedProject,
+	plannedProjectSettings,
+	PlannedFeature,
+	plannedFeatureSettings,
+	PlannedPage,
+	plannedPageSettings,
+	PlannedModel,
+	plannedModelSettings,
+	ModelAttributes,
+	modelAttributesSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -244,4 +254,45 @@ router.use(
 	})
 );
 
+router.use(
+	'/plannedmodels',
+	defineRoutes({
+		Model: PlannedModel,
+		settings: plannedModelSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedprojects',
+	defineRoutes({
+		Model: PlannedProject,
+		settings: plannedProjectSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedfeatures',
+	defineRoutes({
+		Model: PlannedFeature,
+		settings: plannedFeatureSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedpages',
+	defineRoutes({
+		Model: PlannedPage,
+		settings: plannedPageSettings,
+		permission: 'plans',
+	})
+);
+
+router.use(
+	'/modelattributes',
+	defineRoutes({
+		Model: ModelAttributes,
+		settings: modelAttributesSettings,
+		permission: 'plans',
+	})
+);
 export default router;

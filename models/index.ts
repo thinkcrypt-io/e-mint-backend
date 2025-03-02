@@ -211,3 +211,6 @@ export { default as componentSettings } from './components/components.settings.j
 //Props
 export { default as Prop } from './components/props.model.js';
 export { default as propSettings } from './components/props.settings.js';
+
+//Project Plan #Project #Feature #Page #Model
+export * from './project-plan/index.js';
