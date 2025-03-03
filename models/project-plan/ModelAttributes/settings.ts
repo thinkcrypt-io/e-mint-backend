@@ -211,7 +211,7 @@ const settings: SettingsType<any> = {
 		type: 'date',
 		sort: true,
 		edit: true,
-		schema: { type: 'date', tableType: 'date-only' },
+		schema: { type: 'date', tableType: 'date-only', sort: true },
 	},
 };
 
