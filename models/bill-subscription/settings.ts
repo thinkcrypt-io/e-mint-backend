@@ -1,6 +1,16 @@
 import { ACCESS_CONTROL, SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
+	code: {
+		title: 'Code',
+		type: 'string',
+		edit: false,
+		search: true,
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
 	name: {
 		title: 'Name',
 		type: 'string',
@@ -24,7 +34,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	plan: {
-		title: 'Plan',
+		title: 'Plan Name',
 		type: 'string',
 		search: true,
 		edit: true,
@@ -136,7 +146,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	renewDate: {
-		title: 'Renew date',
+		title: 'Next Renewal Date',
 		type: 'date',
 		sort: true,
 		edit: true,
@@ -144,7 +154,7 @@ const settings: SettingsType<any> = {
 		schema: { type: 'date', tableType: 'date-only', sort: true },
 	},
 	lastPaymentDate: {
-		title: 'Last payment date',
+		title: 'Last Payment Date',
 		type: 'date',
 		sort: true,
 		search: false,
@@ -171,11 +181,12 @@ const settings: SettingsType<any> = {
 		schema: { sort: true },
 	},
 	accountLogin: {
-		title: 'Account login',
+		title: 'Account login Info',
 		type: 'string',
 		edit: true,
 		schema: {
 			type: 'textarea',
+			helper: 'Enter the account login information here',
 		},
 	},
 	...ACCESS_CONTROL.SETTINGS,

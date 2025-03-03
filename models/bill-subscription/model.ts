@@ -1,8 +1,12 @@
 import mongoose, { Schema } from 'mongoose';
 import { ACCESS_CONTROL } from '../../lib/index.js';
+import Counter from '../counter/counter.model.js';
 
 const schema = new Schema<any>(
 	{
+		code: {
+			type: String,
+		},
 		name: {
 			type: String,
 			required: [true, 'Name is required'],
@@ -48,6 +52,26 @@ const schema = new Schema<any>(
 		timestamps: true,
 	}
 );
+
+// Pre-save hook to auto-increment the invoice number
+schema.pre<any>('save', async function (next) {
+	try {
+		if (this.isNew) {
+			let counter = await Counter.findOne({ slug: 'adminsubscription' });
+			if (!counter) counter = new Counter({ sequenceValue: 0, slug: 'adminsubscription' });
+
+			counter.sequenceValue += 1;
+			await counter.save();
+
+			this.code = `SBS-` + counter.sequenceValue.toString().padStart(4, '0');
+		}
+
+		next();
+	} catch (error: any) {
+		console.log(error);
+		next();
+	}
+});
 
 const BillSubscription = mongoose.model<any>('BillSubscription', schema);
 export default BillSubscription;
