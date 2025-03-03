@@ -135,9 +135,9 @@ const schema = new Schema<any>(
 
 		scheduledAt: {
 			type: Date,
-			required: function () {
-				return (this as any).status == 'interview-scheduled';
-			},
+			// required: function () {
+			// 	return (this as any).status == 'interview-scheduled';
+			// },
 		},
 
 		// Internal Use
