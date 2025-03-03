@@ -299,7 +299,7 @@ router.use(
 );
 
 router.use(
-	'/subscriptions',
+	'/billsubscriptions',
 	defineRoutes({
 		Model: BillSubscription,
 		settings: billSubscriptionSettings,
