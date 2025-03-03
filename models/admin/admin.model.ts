@@ -114,6 +114,8 @@ const schema = new Schema<AdminType>(
 			plannedfeatures: [String],
 			plannedpages: [String],
 			modelattributes: [String],
+
+			subscriptions: [String],
 		},
 	},
 

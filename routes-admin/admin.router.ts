@@ -67,6 +67,8 @@ import {
 	plannedModelSettings,
 	ModelAttributes,
 	modelAttributesSettings,
+	BillSubscription,
+	billSubscriptionSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -295,4 +297,14 @@ router.use(
 		permission: 'plans',
 	})
 );
+
+router.use(
+	'/subscriptions',
+	defineRoutes({
+		Model: BillSubscription,
+		settings: billSubscriptionSettings,
+		permission: 'subscriptions',
+	})
+);
+
 export default router;

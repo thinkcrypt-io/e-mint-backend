@@ -214,3 +214,7 @@ export { default as propSettings } from './components/props.settings.js';
 
 //Project Plan #Project #Feature #Page #Model
 export * from './project-plan/index.js';
+
+//Bill Subscription
+export { default as BillSubscription } from './bill-subscription/model.js';
+export { default as billSubscriptionSettings } from './bill-subscription/settings.js';
