@@ -4,23 +4,16 @@ import constructConfig from '../../lib/configurator/constructConfig.js';
 
 import { protect, sort, query, ifExists, validate, hasPermission } from '../../middleware/index.js';
 import {
-	deleteDocument,
 	getFilters,
-	createDocument,
-	updateDocument,
 	getAllDocuments,
 	getDocumentById,
-	getDocumentToEditById,
-	duplicateDocument,
-	updateManyDocuments,
-	exportDocument,
 	getCount,
 } from '../../controllers/common/index.js';
 
-import addOrder from '../../controllers/order/addOrder.controller.js';
 import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
-import Category, { settings } from '../../models/category/category.model.js';
+import Category from '../../models/category/category.model.js';
 import { shop } from '../../middleware/userAuth.middleware.js';
+import settings from '../../models/category/category.settings.js';
 
 // Initialize a new router
 const router = express.Router();
