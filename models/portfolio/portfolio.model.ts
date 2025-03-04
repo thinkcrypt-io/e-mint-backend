@@ -16,7 +16,6 @@ const schema = new Schema<any>(
 		category: {
 			type: String,
 			required: true,
-			trim: true,
 			lowercase: true,
 		},
 		status: {
