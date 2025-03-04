@@ -69,6 +69,8 @@ import {
 	modelAttributesSettings,
 	BillSubscription,
 	billSubscriptionSettings,
+	TCClient,
+	tcClientSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -304,6 +306,15 @@ router.use(
 		Model: BillSubscription,
 		settings: billSubscriptionSettings,
 		permission: 'subscriptions',
+	})
+);
+
+router.use(
+	'/tcclients',
+	defineRoutes({
+		Model: TCClient,
+		settings: tcClientSettings,
+		permission: 'website',
 	})
 );
 

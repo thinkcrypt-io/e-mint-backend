@@ -218,3 +218,7 @@ export * from './project-plan/index.js';
 //Bill Subscription
 export { default as BillSubscription } from './bill-subscription/model.js';
 export { default as billSubscriptionSettings } from './bill-subscription/settings.js';
+
+//Client
+export { default as TCClient } from './tc-clients/model.js';
+export { default as tcClientSettings } from './tc-clients/settings.js';

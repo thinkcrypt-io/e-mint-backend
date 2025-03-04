@@ -116,6 +116,7 @@ const schema = new Schema<AdminType>(
 			modelattributes: [String],
 
 			billsubscriptions: [String],
+			tcclients: [String],
 		},
 	},
 
