@@ -1,6 +1,5 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { CategoryType } from './category.type.js';
-import Product from '../products/products.model.js';
 
 const schema = new Schema<CategoryType>(
 	{
@@ -24,6 +23,11 @@ const schema = new Schema<CategoryType>(
 			trim: true,
 		},
 		parent: {
+			type: Types.ObjectId,
+			ref: 'Category',
+		},
+
+		parentCategory: {
 			type: Types.ObjectId,
 			ref: 'Category',
 		},
@@ -97,4 +101,4 @@ schema.pre('save', function (next) {
 const Session = mongoose.model<any>('Category', schema);
 export default Session;
 
-export { default as settings } from './category.settings.js';
+// export { default as settings } from './category.settings.js';

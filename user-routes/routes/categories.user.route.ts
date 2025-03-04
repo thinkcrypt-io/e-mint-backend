@@ -3,21 +3,14 @@ import express from 'express';
 import sort from '../../middleware/pagination.middleware.js';
 import query from '../../middleware/filter.middleware.js';
 import getDocumentById from '../../controllers/common/getDocumentById.controller.js';
-import Category, { settings } from '../../models/category/category.model.js';
+import Category from '../../models/category/category.model.js';
+import settings from '../../models/category/category.settings.js';
 import getAllDocuments from '../../controllers/common/getAllDocuments.controller.js';
-import updateDocument from '../../controllers/common/updateDocument.controller.js';
 import validate from '../../middleware/validate.middleware.js';
-import ifExists from '../../middleware/isExists.middleware.js';
-import createDocument from '../../controllers/common/createDocument.controller.js';
-import getFilters from '../../controllers/common/getFilters.controller.js';
-import deleteDocument from '../../controllers/common/deleteDocument.controller.js';
 import constructConfig from '../../lib/configurator/constructConfig.js';
 import { protect } from '../../middleware/auth.middleware.js';
 import getCount from '../../controllers/common/getCount.controller.js';
-import exportDocument from '../../controllers/common/exportDocument.controller.js';
-import updateManyDocuments from '../../controllers/common/updateManyDocuments.controller.js';
-import duplicateDocument from '../../controllers/common/duplicateDocument.controller.js';
-import getDocumentToEditById from '../../controllers/common/getDocumentToEditById.controller.js';
+
 import hasPermission from '../../middleware/hasPermission.middleware.js';
 import { shop } from '../../middleware/userAuth.middleware.js';
 
