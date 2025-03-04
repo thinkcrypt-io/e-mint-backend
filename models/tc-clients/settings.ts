@@ -21,6 +21,9 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			type: 'text',
+			tableType: 'image-text',
+			imageKey: 'icon',
 		},
 	},
 	description: {
