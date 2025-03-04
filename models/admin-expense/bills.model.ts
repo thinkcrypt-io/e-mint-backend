@@ -59,7 +59,9 @@ const schema = new Schema<any>(
 schema.virtual('overDuration').get(function (this: any) {
 	if (this.status === 'paid') return null;
 	if (this.status === 'void') return null;
-	if (!this.dueDate) return 0;
+	if (!this.dueDate) return `0 days`;
+
+	if (this.dueDate.getTime() < Date.now()) return `0 days`;
 
 	const diff = Date.now() - this.dueDate.getTime();
 	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -70,7 +72,7 @@ schema.virtual('overDuration').get(function (this: any) {
 schema.virtual('dueIn').get(function (this: any) {
 	if (this.status != 'due') return null;
 
-	if (!this.dueDate) return 0;
+	if (!this.dueDate) return `0 days`;
 
 	const diff = this.dueDate.getTime() - Date.now();
 	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
