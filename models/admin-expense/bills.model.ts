@@ -61,7 +61,7 @@ schema.virtual('overDuration').get(function (this: any) {
 	if (this.status === 'void') return null;
 	if (!this.dueDate) return `0 days`;
 
-	if (this.dueDate.getTime() < Date.now()) return `0 days`;
+	if (this.dueDate.getTime() > Date.now()) return `0 days`;
 
 	const diff = Date.now() - this.dueDate.getTime();
 	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
