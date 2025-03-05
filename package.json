@@ -10,7 +10,8 @@
 		"server": "nodemon server",
 		"tsc": "tsc -p tsconfig.json",
 		"dev": "tsc --watch & NODE_ENV=development nodemon dist/server.js",
-		"test": "jest --watchAll --runInBand"
+		"test": "jest --watchAll --runInBand",
+		"go": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\" && npm run sentry:sourcemaps"
 	},
 	"engines": {
 		"node": "20.x"

@@ -1,7 +1,11 @@
 import { Shop } from '../../models/index.js';
 import { NextFunction, Response } from 'express';
 
-const appStoreMiddleware = async (req: any, res: Response, next: NextFunction) => {
+const appStoreMiddleware = async (
+	req: any,
+	res: Response,
+	next: NextFunction
+) => {
 	try {
 		const { storeId } = req.query;
 

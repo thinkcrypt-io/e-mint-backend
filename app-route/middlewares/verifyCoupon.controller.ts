@@ -9,7 +9,7 @@ import Coupon from '../../models/coupon/coupon.model.js';
 const verifyCoupon = async (req: Request, res: Response): Promise<Response> => {
 	try {
 		const { coupon } = req.body;
-
+		// console.log('cupon:', coupon);
 		const couponData = await Coupon.findOne({
 			code: coupon,
 			shop: (req as any).shop,
@@ -18,7 +18,9 @@ const verifyCoupon = async (req: Request, res: Response): Promise<Response> => {
 		});
 
 		if (!couponData)
-			return res.status(400).json({ message: `Coupon ${coupon} is invalid or is expired` });
+			return res
+				.status(400)
+				.json({ message: `Coupon ${coupon} is invalid or is expired` });
 
 		// const orders = await Order.countDocuments({
 		// 	user: (req as any).user._id,
@@ -37,9 +39,9 @@ const verifyCoupon = async (req: Request, res: Response): Promise<Response> => {
 		});
 
 		if (totalCouponUse >= couponData.maxUse)
-			return res
-				.status(400)
-				.json({ message: `Coupon ${coupon} has been used maximum number of times` });
+			return res.status(400).json({
+				message: `Coupon ${coupon} has been used maximum number of times`,
+			});
 
 		return res.status(200).json({ coupon: couponData });
 	} catch (e: any) {
