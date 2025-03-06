@@ -9,6 +9,8 @@ const schema = new Schema<ProjectType>(
 			type: String,
 			required: true,
 			trim: true,
+			search: true,
+			sort: true,
 			minlength: 3,
 			maxlength: 50,
 		},
