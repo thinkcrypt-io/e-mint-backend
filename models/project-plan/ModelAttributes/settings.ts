@@ -4,7 +4,7 @@ const settings: SettingsType<any> = {
 	name: {
 		title: 'Name',
 		type: 'string',
-		sort: false,
+		sort: true,
 		search: true,
 		edit: true,
 		required: true,

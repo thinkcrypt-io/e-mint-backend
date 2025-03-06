@@ -80,6 +80,7 @@ const settings: SettingsType<JobApplicationType> = {
 	email: {
 		edit: true,
 		search: true,
+		sort: true,
 		title: 'Email',
 		type: 'email',
 		// required: true,
@@ -112,6 +113,7 @@ const settings: SettingsType<JobApplicationType> = {
 		edit: true,
 		search: true,
 		title: 'Phone',
+		sort: true,
 		type: 'string',
 		schema: {
 			displayInTable: true,

@@ -6,6 +6,7 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		search: true,
 		edit: true,
+		sort: true,
 		required: true,
 		trim: true,
 		schema: {
