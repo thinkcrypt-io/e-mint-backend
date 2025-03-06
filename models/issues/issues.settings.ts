@@ -85,6 +85,14 @@ const settings: SettingsType<any> = {
 			type: 'image-array',
 		},
 	},
+	attachment: {
+		title: 'Attachment',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'file',
+		},
+	},
 	priority: {
 		title: 'Priority',
 		type: 'string',

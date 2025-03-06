@@ -38,6 +38,7 @@ const schema = new Schema<any>(
 			default: 'open',
 		},
 		images: [String],
+		atttachment: String,
 		priority: {
 			type: String,
 			enum: ['low', 'medium', 'high', 'critical'],
