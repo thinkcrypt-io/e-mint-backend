@@ -1,0 +1,443 @@
+import { ACCESS_CONTROL, Admin, SettingsType } from '../../imports.js';
+
+const settings: SettingsType<any> = {
+	code: {
+		title: 'Employee Id',
+		type: 'string',
+		search: true,
+		edit: true,
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	name: {
+		title: 'Name',
+		type: 'string',
+		search: true,
+		edit: true,
+		required: true,
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	email: {
+		title: 'Email',
+		type: 'string',
+		search: true,
+		edit: true,
+		trim: true,
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	phone: {
+		title: 'Phone',
+		type: 'string',
+		search: true,
+		edit: true,
+		schema: {
+			default: true,
+		},
+	},
+	whatsApp: {
+		title: 'WhatsApp',
+		type: 'string',
+		search: true,
+		edit: true,
+		schema: {},
+	},
+	github: { title: 'Github', type: 'string', search: true, edit: true, schema: { sort: true } },
+	discord: { title: 'Discord', type: 'string', search: true, edit: true, schema: { sort: true } },
+	gender: {
+		title: 'Gender',
+		type: 'string',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'gender',
+			field: 'gender_in',
+			type: 'multi-select',
+			label: 'Gender',
+			title: 'Filter by Gender',
+			options: [
+				{ label: 'Male', value: 'male' },
+				{ label: 'Female', value: 'female' },
+				{ label: 'Other', value: 'other' },
+			],
+		},
+		schema: {
+			type: 'select',
+			sort: true,
+			options: [
+				{ label: 'Male', value: 'male' },
+				{ label: 'Female', value: 'female' },
+				{ label: 'Other', value: 'other' },
+			],
+		},
+	},
+	dob: {
+		title: 'Date of Birth',
+		type: 'date',
+		sort: true,
+		edit: true,
+		schema: { type: 'date', tableType: 'date-only', sort: true },
+	},
+	presentAddress: {
+		title: 'Present address',
+		type: 'string',
+		edit: true,
+		schema: { type: 'textarea' },
+	},
+	permanentAddress: {
+		title: 'Permanent address',
+		type: 'string',
+		edit: true,
+		schema: { type: 'textarea' },
+	},
+	university: {
+		title: 'University',
+		type: 'string',
+		edit: true,
+		schema: { sort: true },
+	},
+	degree: { title: 'Degree', type: 'string', edit: true, schema: {} },
+	passingYear: {
+		title: 'Passing year',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	nid: { title: 'Nid', type: 'string', search: true, edit: true, schema: {} },
+	bloodGroup: {
+		title: 'Blood group',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'select',
+			options: [
+				{ label: 'A+', value: 'A+' },
+				{ label: 'A', value: 'A-' },
+				{ label: 'B+', value: 'B+' },
+				{ label: 'B', value: 'B-' },
+				{ label: 'A b+', value: 'AB+' },
+				{ label: 'A b', value: 'AB-' },
+				{ label: 'O+', value: 'O+' },
+				{ label: 'O', value: 'O-' },
+			],
+		},
+	},
+	nidAttachment: {
+		title: 'Nid attachment',
+		type: 'string',
+		edit: true,
+		schema: { type: 'file' },
+	},
+	photo: {
+		title: 'Photo',
+		type: 'uri',
+		edit: true,
+		schema: { type: 'image' },
+	},
+	cvAttachment: {
+		title: 'Cv attachment',
+		type: 'string',
+		edit: true,
+		schema: { type: 'file' },
+	},
+	joiningDate: {
+		title: 'Joining date',
+		type: 'date',
+		edit: true,
+		schema: { type: 'date', tableType: 'date-only' },
+	},
+	jobTitle: {
+		title: 'Job title',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	department: {
+		title: 'Department',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	salary: { title: 'Salary', type: 'number', edit: true, schema: {} },
+
+	bankAccountName: {
+		title: 'Bank Account Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	bankAccount: {
+		title: 'Bank account No.',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	bankName: {
+		title: 'Bank Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	branchName: {
+		title: 'Branch Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	bankRoutingNumber: {
+		title: 'Routing Number',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+
+	documents: {
+		title: 'Documents',
+		type: 'array',
+		edit: true,
+		schema: {},
+	},
+	experience: {
+		title: 'Experience',
+		type: 'array',
+		edit: true,
+		schema: {
+			type: 'section-data-array',
+			section: {
+				title: 'Professional Experience',
+				addBtnText: 'Add Experience',
+				btnText: 'Add Experience',
+				display: {
+					title: 'company',
+					description: 'position',
+				},
+				dataModel: [
+					{ name: 'company', label: 'Company', type: 'text', isRequired: true },
+					{ name: 'position', label: 'Position', type: 'text', isRequired: true },
+					{ name: 'startDate', label: 'Start Date', type: 'date' },
+					{ name: 'endDate', label: 'End Date', type: 'date' },
+				],
+			},
+		},
+	},
+	education: {
+		title: 'Education',
+		type: 'array',
+
+		edit: true,
+		schema: {
+			type: 'section-data-array',
+			section: {
+				title: 'Education',
+				addBtnText: 'Add Degree',
+				btnText: 'Add Degree',
+				display: {
+					title: 'institution',
+					description: 'passingYear',
+				},
+				dataModel: [
+					{ name: 'institution', label: 'Institution', type: 'text', isRequired: true },
+					{ name: 'degree', label: 'Degree', type: 'text', isRequired: true },
+					{ name: 'field', label: 'Study Field', type: 'text' },
+					{ name: 'passingYear', label: 'Passing Year', type: 'date', isRequired: true },
+					{ name: 'grade', label: 'Grade', type: 'string' },
+				],
+			},
+		},
+	},
+	bKash: {
+		title: 'Bkash number',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	status: {
+		title: 'Status',
+		type: 'string',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'status',
+			field: 'status_in',
+			type: 'multi-select',
+			label: 'Status',
+			title: 'Filter by Status',
+			options: [
+				{ label: 'Present', value: 'present' },
+				{ label: 'Former', value: 'former' },
+			],
+		},
+		schema: {
+			sort: true,
+			default: true,
+			type: 'select',
+			options: [
+				{ label: 'Present', value: 'present' },
+				{ label: 'Former', value: 'former' },
+			],
+		},
+	},
+	emergencyContactName: {
+		title: 'Emergency Contact Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	emergencyContactRelationship: {
+		title: 'Emergency Contact Relationship',
+		type: 'string',
+
+		edit: true,
+		schema: {},
+	},
+	emergencyContactNumber: {
+		title: 'Emergency Contact Phone No.',
+		type: 'string',
+
+		edit: true,
+		schema: {},
+	},
+	maritalStatus: {
+		title: 'Marital status',
+		type: 'string',
+
+		edit: true,
+		schema: {},
+	},
+	employeeType: {
+		title: 'Employee type',
+		type: 'string',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'employeeType',
+			field: 'employeeType_in',
+			type: 'multi-select',
+			label: 'EmployeeType',
+			title: 'Filter by EmployeeType',
+			options: [
+				{ label: 'Full Time', value: 'full-time' },
+				{ label: 'Part Time', value: 'part-time' },
+				{ label: 'Contractual', value: 'contractual' },
+				{ label: 'Intern', value: 'intern' },
+				{ label: 'Other', value: 'other' },
+			],
+		},
+		schema: {
+			sort: true,
+			type: 'select',
+			options: [
+				{ label: 'Full Time', value: 'full-time' },
+				{ label: 'Part Time', value: 'part-time' },
+				{ label: 'Contractual', value: 'contractual' },
+				{ label: 'Intern', value: 'intern' },
+				{ label: 'Other', value: 'other' },
+			],
+		},
+	},
+	contractEndDate: {
+		title: 'Contract end date',
+		type: 'date',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'contractEndDate',
+			type: 'date',
+			label: 'Contract End Date',
+			title: 'Filter by Contract end date',
+		},
+		schema: { type: 'date', tableType: 'date-only', sort: true },
+	},
+	contractDoc: {
+		title: 'Contract Document',
+		type: 'string',
+		edit: true,
+		schema: { type: 'file' },
+	},
+	adminId: {
+		title: 'Admin Id',
+		type: 'string',
+		edit: true,
+		populate: { path: 'adminId', select: 'name' },
+		schema: { type: 'data-menu', tableType: 'string', tableKey: 'adminId.name', model: 'admins' },
+	},
+	linkedIn: {
+		title: 'LinkedIn Profile',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	skills: {
+		title: 'Skills',
+		type: 'array-string',
+		edit: true,
+		schema: { type: 'tag' },
+	},
+	foodSubsidy: {
+		title: 'Food Subsidy',
+		type: 'string',
+		edit: true,
+		schema: {
+			helperText: 'Is Food Subsidized? If yes what percent?',
+		},
+	},
+	salaryDisburstmentPreference: {
+		title: 'Salary disburstment preference',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'select',
+			options: [
+				{ label: 'Bank', value: 'bank' },
+				{ label: 'B kash', value: 'bKash' },
+				{ label: 'Cash', value: 'cash' },
+			],
+		},
+	},
+	nationality: {
+		title: 'Nationality',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	reportingTo: {
+		title: 'Reporting Manager',
+		type: 'string',
+		sort: true,
+		edit: true,
+		populate: { path: 'reportingTo', select: 'name' },
+		filter: {
+			name: 'reportingTo',
+			field: 'reportingTo_in',
+			type: 'multi-select',
+			category: 'model',
+			model: Admin,
+			key: 'name',
+			label: 'Reporting to',
+			title: 'Filter by Reporting Manager',
+		},
+		schema: {
+			sort: true,
+			type: 'data-menu',
+			tableType: 'string',
+			tableKey: 'reportingTo.name',
+			model: 'admins',
+		},
+	},
+	...ACCESS_CONTROL.SETTINGS,
+	createdAt: {
+		title: 'Created at',
+		type: 'date',
+		sort: true,
+		schema: { type: 'date', tableType: 'date-only', sort: true },
+	},
+};
+
+export default settings;

@@ -73,6 +73,8 @@ import {
 	tcClientSettings,
 	billSettings,
 	Bill,
+	Employee,
+	employeeSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -153,6 +155,16 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/employees',
+	defineRoutes({
+		Model: Employee,
+		settings: employeeSettings,
+		permission: 'employee',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
