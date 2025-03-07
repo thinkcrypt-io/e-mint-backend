@@ -75,6 +75,8 @@ import {
 	Bill,
 	Employee,
 	employeeSettings,
+	FacebookGroups,
+	facebookGroupsSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -94,6 +96,11 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
+router.use(
+	'/fgroups',
+	defineRoutes({ Model: FacebookGroups, settings: facebookGroupsSettings, permission: 'lead' })
+);
+
 router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
 router.use(
 	'/adminroles',

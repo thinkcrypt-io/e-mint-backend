@@ -21,6 +21,10 @@ export { default as Lead } from './leads/leads.model.js';
 export { default as leadSettings } from './leads/leads.settings.js';
 export { default as LeadType } from './leads/leads.type.js';
 
+//Facebook Groups
+export { default as FacebookGroups } from './leads/fgroups.model.js';
+export { default as facebookGroupsSettings } from './leads/fgroups.settings.js';
+
 //Order
 export { default as Order } from './order/order.model.js';
 export { settings as orderSettings } from './order/order.model.js';

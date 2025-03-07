@@ -31,6 +31,7 @@ const settings: SettingsType<any> = {
 	email: {
 		title: 'Email',
 		type: 'string',
+		required: true,
 		search: true,
 		edit: true,
 		trim: true,
