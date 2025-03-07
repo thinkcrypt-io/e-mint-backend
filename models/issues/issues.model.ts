@@ -110,8 +110,7 @@ schema.pre<any>('save', async function (next) {
 schema.post<any>('save', async function (next) {
 	try {
 		if (isNewItem) {
-			if (!this.assignedTo || !this.assignees) return;
-			else {
+			if (this.assignedTo) {
 				const getAssignee: any = await Admin.findById(this.assignedTo);
 				sendMail({
 					title: 'THINKERP | TASKS',
@@ -119,19 +118,22 @@ schema.post<any>('save', async function (next) {
 					subject: `New Issue Assigned #${this.code}`,
 					body: `A new issue has been assigned to you. Please check your dashboard for more details. \n\nISSUE ID: ${this.code} \n\nTitle: ${this.name} \n\nDescription: ${this.description} \n\nPriority: ${this.priority} \n\nType: ${this.type} \n\nDue Date: ${this.dueDate} \n`,
 				});
-				// Multiple assignees
-				const getAssignees = await Admin.find({
-					_id: { $in: this.assignees },
+			}
+
+			if (this.assignees.length === 0) return;
+
+			// Multiple assignees
+			const getAssignees = await Admin.find({
+				_id: { $in: this.assignees },
+			});
+			if (getAssignees.length > 0) {
+				const emails = getAssignees.map((assignee: any) => assignee.email).join(', ');
+				sendMail({
+					title: 'THINKERP | TASKS',
+					to: emails,
+					subject: `New Issue Assigned #${this.code}`,
+					body: `You have been assigned to a new issue. Please check your dashboard for more details. \n\nISSUE ID: ${this.code} \n\nTitle: ${this.name} \n\nDescription: ${this.description} \n\nPriority: ${this.priority} \n\nType: ${this.type} \n\nDue Date: ${this.dueDate} \n`,
 				});
-				if (getAssignees.length > 0) {
-					const emails = getAssignees.map((assignee: any) => assignee.email).join(', ');
-					sendMail({
-						title: 'THINKERP | TASKS',
-						to: emails,
-						subject: `New Issue Assigned #${this.code}`,
-						body: `You have been assigned to a new issue. Please check your dashboard for more details. \n\nISSUE ID: ${this.code} \n\nTitle: ${this.name} \n\nDescription: ${this.description} \n\nPriority: ${this.priority} \n\nType: ${this.type} \n\nDue Date: ${this.dueDate} \n`,
-					});
-				}
 			}
 		}
 	} catch (error: any) {
