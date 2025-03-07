@@ -100,7 +100,7 @@ export const accessControlSettings: SettingsType<any> = {
 		},
 		schema: {
 			type: 'data-tag',
-			viewType: 'data-tag-array',
+			viewType: 'data-array-tag',
 			model: 'admins',
 			modelAddOn: 'email',
 			tooltip: 'Users who can access this document',
