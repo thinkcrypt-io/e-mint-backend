@@ -259,6 +259,11 @@ const settings: SettingsType<Type> = {
 			model: Admin,
 			key: 'name',
 		},
+		schema: {
+			type: 'data-tag',
+			model: 'admins',
+			modelAddOn: 'email',
+		},
 	},
 
 	createdAt: {
