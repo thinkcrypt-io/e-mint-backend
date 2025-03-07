@@ -11,6 +11,12 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
+	photo: {
+		title: 'Photo',
+		type: 'uri',
+		edit: true,
+		schema: { type: 'image' },
+	},
 	name: {
 		title: 'Name',
 		type: 'string',
@@ -135,12 +141,7 @@ const settings: SettingsType<any> = {
 		edit: true,
 		schema: { type: 'file' },
 	},
-	photo: {
-		title: 'Photo',
-		type: 'uri',
-		edit: true,
-		schema: { type: 'image' },
-	},
+
 	cvAttachment: {
 		title: 'Cv attachment',
 		type: 'string',
