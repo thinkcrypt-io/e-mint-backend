@@ -129,7 +129,7 @@ schema.post<any>('save', async function (next) {
 						title: 'THINKERP | TASKS',
 						to: emails,
 						subject: `New Issue Assigned #${this.code}`,
-						body: `A new issue has been assigned to you. Please check your dashboard for more details. \n\nISSUE ID: ${this.code} \n\nTitle: ${this.name} \n\nDescription: ${this.description} \n\nPriority: ${this.priority} \n\nType: ${this.type} \n\nDue Date: ${this.dueDate} \n`,
+						body: `You have been assigned to a new issue. Please check your dashboard for more details. \n\nISSUE ID: ${this.code} \n\nTitle: ${this.name} \n\nDescription: ${this.description} \n\nPriority: ${this.priority} \n\nType: ${this.type} \n\nDue Date: ${this.dueDate} \n`,
 					});
 				}
 			}
