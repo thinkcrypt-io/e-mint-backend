@@ -37,8 +37,32 @@ const settings: SettingsType<any> = {
 			title: 'Filter by Category',
 			options: [
 				{
-					label: 'Business to business, business to customer,startups,other',
-					value: 'businessToBusiness, businessToCustomer,startups,other',
+					label: 'Business to business',
+					value: 'businessToBusiness',
+				},
+				{
+					label: 'Business to customer',
+					value: 'businessToCustomer',
+				},
+				{
+					label: 'Startups',
+					value: 'startups',
+				},
+				{
+					label: 'Developers',
+					value: 'developers',
+				},
+				{
+					label: 'Investors',
+					value: 'investors',
+				},
+				{
+					label: 'Ecommerce',
+					value: 'ecommerce',
+				},
+				{
+					label: 'Others',
+					value: 'others',
 				},
 			],
 		},
@@ -48,8 +72,32 @@ const settings: SettingsType<any> = {
 			type: 'select',
 			options: [
 				{
-					label: 'Business to business, business to customer,startups,other',
-					value: 'businessToBusiness, businessToCustomer,startups,other',
+					label: 'Business to business',
+					value: 'businessToBusiness',
+				},
+				{
+					label: 'Business to customer',
+					value: 'businessToCustomer',
+				},
+				{
+					label: 'Startups',
+					value: 'startups',
+				},
+				{
+					label: 'Developers',
+					value: 'developers',
+				},
+				{
+					label: 'Investors',
+					value: 'investors',
+				},
+				{
+					label: 'Ecommerce',
+					value: 'ecommerce',
+				},
+				{
+					label: 'Others',
+					value: 'others',
 				},
 			],
 		},

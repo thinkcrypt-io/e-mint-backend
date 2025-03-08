@@ -14,7 +14,15 @@ const schema = new Schema<any>(
 		category: {
 			type: String,
 			trim: true,
-			enum: ['businessToBusiness, businessToCustomer,startups,other'],
+			enum: [
+				'businessToBusiness',
+				'businessToCustomer',
+				'startups',
+				'developers',
+				'investors',
+				'ecommerce',
+				'others',
+			],
 		},
 		url: {
 			type: String,
