@@ -93,6 +93,7 @@ const schema = new Schema<any>(
 			enum: ['full-time', 'part-time', 'contractual', 'intern', 'other'],
 		},
 		contractEndDate: Date,
+		terminationDate: Date,
 		adminId: {
 			type: Schema.Types.ObjectId,
 			red: 'Admin',

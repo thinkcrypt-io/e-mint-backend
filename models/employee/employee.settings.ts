@@ -357,6 +357,14 @@ const settings: SettingsType<any> = {
 		},
 		schema: { type: 'date', tableType: 'date-only', sort: true },
 	},
+	terminationDate: {
+		title: 'Termination Date',
+		type: 'date',
+		sort: true,
+		edit: true,
+
+		schema: { type: 'date', tableType: 'date-only', sort: true },
+	},
 	contractDoc: {
 		title: 'Contract Document',
 		type: 'string',
