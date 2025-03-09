@@ -12,7 +12,53 @@ import {
 	purchasedThemeRoute,
 	smsRoute,
 } from './index.js';
-import { defineRoutes, Lead, leadSettings } from '../imports.js';
+import {
+	Admin,
+	AdminRole,
+	adminRoleSettings,
+	adminSettings,
+	defineRoutes,
+	Lead,
+	leadSettings,
+	Project,
+	projectSettings,
+	Client,
+	clientSettings,
+	docSettings,
+	Doc,
+	JobPost,
+	jobPostSettings,
+	JobApplication,
+	jobApplicationSettings,
+	getModelKeys,
+	Meeting,
+	meetingSettings,
+	AdminInvoice,
+	adminInvoiceSettings,
+	Leave,
+	leaveSettings,
+	softwareSettings,
+	Software,
+	TeamMember,
+	teamMemberSettings,
+	Portfolio,
+	portfolioSettings,
+	Service,
+	serviceSettings,
+	Issue,
+	issueSettings,
+	Maintenance,
+	maintenanceSettings,
+	AdminExpense,
+	adminExpenseSettings,
+	Resource,
+	resourceSettings,
+	Component,
+	componentSettings,
+	Prop,
+	propSettings,
+} from '../imports.js';
+import hasAccess from './middlewares/hasAccess.middleware.js';
 
 const router = express.Router();
 
@@ -30,5 +76,172 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
+router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
+router.use(
+	'/adminroles',
+	defineRoutes({ Model: AdminRole, settings: adminRoleSettings, permission: 'adminrole' })
+);
+router.use(
+	'/repos',
+	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
+);
+
+router.use(
+	'/clients',
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+);
+
+router.use(
+	'/documents',
+	defineRoutes({
+		Model: Doc,
+		settings: docSettings,
+		permission: 'documents',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/jobposts',
+	defineRoutes({
+		Model: JobPost,
+		settings: jobPostSettings,
+		permission: 'jobposts',
+	})
+);
+
+router.use(
+	'/jobapplications',
+	defineRoutes({
+		Model: JobApplication,
+		settings: jobApplicationSettings,
+		permission: 'jobapplications',
+	})
+);
+
+router.get('/model/:id/:type', getModelKeys);
+
+router.use(
+	'/meetings',
+	defineRoutes({
+		Model: Meeting,
+		settings: meetingSettings,
+		permission: 'meetings',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/invoices',
+	defineRoutes({
+		Model: AdminInvoice,
+		settings: adminInvoiceSettings,
+		permission: 'invoices',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/leaves',
+	defineRoutes({
+		Model: Leave,
+		settings: leaveSettings,
+		permission: 'leaves',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/projects',
+	defineRoutes({
+		Model: Software,
+		settings: softwareSettings,
+		permission: 'softwares',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/teams',
+	defineRoutes({
+		Model: TeamMember,
+		settings: teamMemberSettings,
+		permission: 'teams',
+	})
+);
+
+router.use(
+	'/portfolios',
+	defineRoutes({
+		Model: Portfolio,
+		settings: portfolioSettings,
+		permission: 'portfolios',
+	})
+);
+
+router.use(
+	'/services',
+	defineRoutes({
+		Model: Service,
+		settings: serviceSettings,
+		permission: 'services',
+	})
+);
+
+router.use(
+	'/issues',
+	defineRoutes({
+		Model: Issue,
+		settings: issueSettings,
+		permission: 'issues',
+	})
+);
+
+router.use(
+	'/resources',
+	defineRoutes({
+		Model: Resource,
+		settings: resourceSettings,
+		permission: 'resources',
+	})
+);
+
+router.use(
+	'/maintenances',
+	defineRoutes({
+		Model: Maintenance,
+		settings: maintenanceSettings,
+		permission: 'maintenances',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/expenses',
+	defineRoutes({
+		Model: AdminExpense,
+		settings: adminExpenseSettings,
+		permission: 'expenses',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/components',
+	defineRoutes({
+		Model: Component,
+		settings: componentSettings,
+		permission: 'components',
+	})
+);
+
+router.use(
+	'/props',
+	defineRoutes({
+		Model: Prop,
+		settings: propSettings,
+		permission: 'props',
+	})
+);
 
 export default router;

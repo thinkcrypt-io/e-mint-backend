@@ -16,6 +16,7 @@ type BaseProductType = {
 	brand?: Types.ObjectId;
 	damage?: number;
 	inventory?: object;
+	variations: any;
 
 	isDiscount: boolean;
 	discount?: number;

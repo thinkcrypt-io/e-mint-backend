@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import moment from 'moment';
+import { getErrorMessage } from '../lib/index.js';
 
 type QueryType = {
 	allowSort?: string[];
@@ -11,12 +11,12 @@ const extendRequestBody = ({ query }: any) => {
 		try {
 			req.body = { ...(req.body || {}), ...query };
 
-			console.log(req.body);
-
 			next();
-		} catch (e: any) {
-			const msg = process.env.NODE_ENV === 'development' ? e.message : 'Internal Server Error';
-			return res.status(500).json({ message: msg });
+		} catch (error: any) {
+			// In case of any errors,
+			// extract the error message and return a 500 Internal Server Error response.
+			const message = getErrorMessage(error);
+			return res.status(500).json({ message });
 		}
 	};
 };

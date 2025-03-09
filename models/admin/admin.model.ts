@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt, { compare, hash } from 'bcrypt';
+import { admin } from '../../middleware';
 
 export type AdminType = {
 	name: string;
@@ -10,6 +11,7 @@ export type AdminType = {
 	isActive?: boolean;
 	isDeleted?: boolean;
 	password: string;
+	github?: string;
 	preferences?: any;
 	role: Schema.Types.ObjectId;
 	generateAuthToken?: () => string;
@@ -24,6 +26,11 @@ const schema = new Schema<AdminType>(
 		},
 
 		username: {
+			type: String,
+			trim: true,
+		},
+
+		github: {
 			type: String,
 			trim: true,
 		},
@@ -81,6 +88,26 @@ const schema = new Schema<AdminType>(
 			themes: [String],
 			purchasedthemes: [String],
 			leads: [String],
+			admins: [String],
+			projects: [String],
+			adminroles: [String],
+			clients: [String],
+			documents: [String],
+			jobposts: [String],
+			jobapplications: [String],
+			meetings: [String],
+			invoices: [String],
+			leaves: [String],
+			softwares: [String],
+			repos: [String],
+			teams: [String],
+			portfolios: [String],
+			services: [String],
+			issues: [String],
+			maintenances: [String],
+			resources: [String],
+			components: [String],
+			props: [String],
 		},
 	},
 

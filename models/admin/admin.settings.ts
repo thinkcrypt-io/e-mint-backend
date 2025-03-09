@@ -8,18 +8,25 @@ const settings: SettingsType<any> = {
 		edit: true,
 		sort: true,
 		search: true,
+
 		title: 'Name',
 		type: 'string',
 		min: 3,
 		max: 50,
 		required: true,
 		trim: true,
+		schema: {
+			displayInTable: true,
+			default: true,
+			isRequired: true,
+		},
 	},
 
 	username: {
 		sort: true,
 		title: 'Username',
 		type: 'text',
+		search: true,
 	},
 	email: {
 		unique: true,
@@ -29,19 +36,35 @@ const settings: SettingsType<any> = {
 		title: 'Email',
 		type: 'email',
 		required: true,
+		schema: {
+			displayInTable: true,
+			default: true,
+		},
 	},
 	phone: {
 		search: true,
 		edit: true,
 		title: 'Phone',
 		type: 'text',
+		schema: {
+			displayInTable: true,
+			default: true,
+		},
 	},
 
 	role: {
 		edit: true,
 		sort: true,
-		title: 'User Role',
+		title: 'Role',
 		type: 'text',
+		schema: {
+			displayInTable: true,
+			default: true,
+			type: 'data-menu',
+			model: 'adminroles',
+			tableKey: 'role.name',
+			isRequired: true,
+		},
 		populate: {
 			path: 'role',
 			select: 'name',
@@ -64,6 +87,9 @@ const settings: SettingsType<any> = {
 		type: 'boolean',
 		title: 'Active Status',
 		sort: true,
+		schema: {
+			displayInTable: true,
+		},
 
 		filter: {
 			name: 'isActive',
@@ -77,6 +103,11 @@ const settings: SettingsType<any> = {
 		type: 'boolean',
 		title: 'Active Status',
 		sort: true,
+	},
+	github: {
+		edit: true,
+		title: 'Github Username',
+		type: 'string',
 	},
 
 	password: {

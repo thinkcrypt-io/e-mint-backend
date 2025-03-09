@@ -74,6 +74,7 @@ const schema = new Schema<any>(
 			assets: [String],
 			inventories: [String],
 			transfers: [String],
+			brands: [String],
 		},
 	},
 

@@ -1,11 +1,10 @@
-import { any } from 'joi';
 import mongoose from 'mongoose';
 
 type Options = { label: string; value: string };
 
 export type Filter = {
 	name: string;
-	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text';
+	type: 'multi-select' | 'range' | 'boolean' | 'date' | 'text' | 'select';
 	label: string;
 	title: string;
 	options?: Options[];
@@ -18,31 +17,34 @@ export type Filter = {
 
 export type Schema = any;
 
+export const setttingsTypeOptions = [
+	'string',
+	'email',
+	'uri',
+	'date',
+	'array-string',
+	'boolean',
+	'number',
+	'text',
+	'object',
+	'array-number',
+	'array',
+	'array-object',
+];
+
 type SettingType = {
 	title: string;
-	type:
-		| 'string'
-		| 'email'
-		| 'uri'
-		| 'array-string'
-		| 'boolean'
-		| 'number'
-		| 'text'
-		| 'object'
-		| 'array-number'
-		| 'array'
-		| 'array-object';
+	type: (typeof setttingsTypeOptions)[number];
 	sort?: boolean;
 	search?: boolean;
 	unique?: boolean;
 	exclude?: boolean;
-
 	required?: boolean;
 	filter?: Filter;
 	schema?: Schema;
 	edit?: boolean;
 	trim?: boolean;
-	populate?: { path: string; select: string; populate?: any };
+	populate?: { path: string; select?: string; populate?: any };
 	min?: number;
 	max?: number;
 };

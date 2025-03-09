@@ -47,29 +47,58 @@ export const settings: Settings = {
 		required: true,
 		trim: true,
 		unique: true,
+
+		schema: {
+			sort: true,
+			default: true,
+			displayInTable: true,
+		},
 	},
 	image: {
 		edit: true,
 		title: 'Image',
 		type: 'uri',
+		schema: {
+			type: 'image',
+			tableType: 'text',
+		},
 	},
 	description: {
 		edit: true,
 		title: 'Description',
 		type: 'string',
+		schema: {
+			type: 'textarea',
+			displayInTable: true,
+		},
 	},
 	createdAt: {
 		title: 'Created At',
 		type: 'string',
 		edit: false,
 		sort: true,
-		// filter: filters.createdAt,
+		filter: {
+			name: 'createdAt',
+			field: 'createdAt',
+			type: 'date',
+			label: 'Created At',
+			title: 'Sort by created at',
+		},
+		schema: {
+			type: 'date',
+			sort: true,
+			default: true,
+			displayInTable: true,
+		},
 	},
 	tags: {
 		edit: true,
 		title: 'Tags',
 		type: 'array-string',
 		sort: true,
+		schema: {
+			displayInTable: true,
+		},
 		// filter: filters.tags,
 	},
 };
