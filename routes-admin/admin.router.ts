@@ -77,6 +77,7 @@ import {
 	employeeSettings,
 	FacebookGroups,
 	facebookGroupsSettings,
+	notAllowed,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
