@@ -155,6 +155,13 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
+			heroImageMobile: String,
+			heroImageMobileCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
 		},
 
 		cat: {
