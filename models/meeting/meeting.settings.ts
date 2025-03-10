@@ -64,6 +64,7 @@ const meetingSettings: SettingsType<any> = {
 		required: true,
 		trim: true,
 		edit: true,
+		sort: true,
 
 		schema: { displayInTable: true, default: true },
 	},

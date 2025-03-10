@@ -114,10 +114,12 @@ const schema = new Schema<AdminType>(
 			plannedfeatures: [String],
 			plannedpages: [String],
 			modelattributes: [String],
+			employees: [String],
 
 			billsubscriptions: [String],
 			tcclients: [String],
 			bills: [String],
+			fgroups: [String],
 		},
 	},
 

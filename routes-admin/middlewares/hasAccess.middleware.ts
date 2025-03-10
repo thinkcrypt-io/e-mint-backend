@@ -10,20 +10,27 @@ import { NextFunction, Request, Response } from 'express';
 const hasAccess = () => {
 	return (req: any, res: Response, next: NextFunction): any => {
 		try {
+			const existingQuery = req.queryHelper || {};
+
 			const access = {
 				$or: [
-					// If privacy is not 'only-me',
-					// allow access to users in access array and the user who added the resource
-					// and resources with privacy set to 'public'
 					{
-						$and: [{ access: { $in: [req.user._id] } }, { privacy: { $ne: 'only-me' } }],
+						$and: [
+							{ access: { $in: [req.user._id] } },
+							{ privacy: { $ne: 'only-me' } },
+							{ ...existingQuery },
+						],
 					},
-					{ addedBy: req.user._id },
-					{ privacy: 'public' },
+					{
+						$and: [{ addedBy: req.user._id }, { ...existingQuery }],
+					},
+					{
+						$and: [{ privacy: 'public' }, { ...existingQuery }],
+					},
 				],
 			};
-			req.queryHelper = { ...(req.queryHelper || {}), ...access };
 
+			req.queryHelper = access;
 			next();
 		} catch (e: any) {
 			const msg = process.env.NODE_ENV === 'development' ? e.message : 'Internal Server Error';

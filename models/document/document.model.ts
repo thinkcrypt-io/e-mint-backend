@@ -17,6 +17,10 @@ const schema = new Schema<any>(
 			min: 3,
 			max: 50,
 		},
+		description: {
+			type: String,
+			trim: true,
+		},
 		client: {
 			type: Schema.Types.ObjectId,
 			ref: 'Client',

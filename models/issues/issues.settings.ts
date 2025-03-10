@@ -209,6 +209,16 @@ const settings: SettingsType<any> = {
 			model: 'admins',
 		},
 	},
+	assignees: {
+		title: 'Other Assignees/Watchers',
+		type: 'array',
+		edit: true,
+		schema: {
+			sort: true,
+			type: 'data-tag',
+			model: 'admins',
+		},
+	},
 	addedBy: {
 		title: 'Added by',
 		type: 'string',

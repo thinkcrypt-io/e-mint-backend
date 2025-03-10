@@ -73,6 +73,11 @@ import {
 	tcClientSettings,
 	billSettings,
 	Bill,
+	Employee,
+	employeeSettings,
+	FacebookGroups,
+	facebookGroupsSettings,
+	notAllowed,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -92,6 +97,11 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
+router.use(
+	'/fgroups',
+	defineRoutes({ Model: FacebookGroups, settings: facebookGroupsSettings, permission: 'lead' })
+);
+
 router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
 router.use(
 	'/adminroles',
@@ -153,6 +163,16 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/employees',
+	defineRoutes({
+		Model: Employee,
+		settings: employeeSettings,
+		permission: 'employee',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
