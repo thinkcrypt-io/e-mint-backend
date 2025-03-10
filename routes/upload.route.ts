@@ -62,7 +62,7 @@ router.post('/', protect, uploadFile.single('image'), async (req: any, res: Resp
 		const fileName = `${req?.file?.originalname}_${Date.now()}`;
 
 		const data = await sharp(req?.file?.path)
-			.webp({ quality: 5, force: true, alphaQuality: 5 })
+			.webp({ quality: 50, force: true, alphaQuality: 80 })
 			.toBuffer();
 
 		var params: any = {
