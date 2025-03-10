@@ -1,4 +1,3 @@
-import { table } from 'console';
 import { SettingsType } from '../../lib/types/settings.types';
 import JobApplicationType from './jobApplication.types';
 
@@ -25,6 +24,7 @@ const applicationStatusOptions = [
 	{ label: 'Reviewed', value: 'reviewed' },
 	{ label: 'Shortlisted', value: 'shortlisted' },
 	{ label: 'Called', value: 'called' },
+	{ label: 'Invite Sent', value: 'invite-sent' },
 	{ label: 'Interview Scheduled', value: 'interview-scheduled' },
 	{ label: 'Interviewed', value: 'interviewed' },
 	{ label: 'Offer Sent', value: 'offer-sent' },
@@ -80,6 +80,7 @@ const settings: SettingsType<JobApplicationType> = {
 	email: {
 		edit: true,
 		search: true,
+		sort: true,
 		title: 'Email',
 		type: 'email',
 		// required: true,
@@ -89,10 +90,30 @@ const settings: SettingsType<JobApplicationType> = {
 			default: true,
 		},
 	},
+	scheduledAt: {
+		edit: true,
+		title: 'Interview Date',
+		type: 'date',
+		sort: true,
+		filter: {
+			name: 'scheduledAt',
+			field: 'scheduledAt_in',
+			type: 'date',
+			label: 'Inverview Schedule',
+			title: 'Filter by Interview Date',
+		},
+
+		schema: {
+			type: 'date',
+			tableType: 'date-only',
+			sort: true,
+		},
+	},
 	phone: {
 		edit: true,
 		search: true,
 		title: 'Phone',
+		sort: true,
 		type: 'string',
 		schema: {
 			displayInTable: true,

@@ -57,6 +57,27 @@ import {
 	componentSettings,
 	Prop,
 	propSettings,
+	PlannedProject,
+	plannedProjectSettings,
+	PlannedFeature,
+	plannedFeatureSettings,
+	PlannedPage,
+	plannedPageSettings,
+	PlannedModel,
+	plannedModelSettings,
+	ModelAttributes,
+	modelAttributesSettings,
+	BillSubscription,
+	billSubscriptionSettings,
+	TCClient,
+	tcClientSettings,
+	billSettings,
+	Bill,
+	Employee,
+	employeeSettings,
+	FacebookGroups,
+	facebookGroupsSettings,
+	notAllowed,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -76,6 +97,11 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
+router.use(
+	'/fgroups',
+	defineRoutes({ Model: FacebookGroups, settings: facebookGroupsSettings, permission: 'lead' })
+);
+
 router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
 router.use(
 	'/adminroles',
@@ -137,6 +163,16 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/employees',
+	defineRoutes({
+		Model: Employee,
+		settings: employeeSettings,
+		permission: 'employee',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
@@ -241,6 +277,76 @@ router.use(
 		Model: Prop,
 		settings: propSettings,
 		permission: 'props',
+	})
+);
+
+router.use(
+	'/plannedmodels',
+	defineRoutes({
+		Model: PlannedModel,
+		settings: plannedModelSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedprojects',
+	defineRoutes({
+		Model: PlannedProject,
+		settings: plannedProjectSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedfeatures',
+	defineRoutes({
+		Model: PlannedFeature,
+		settings: plannedFeatureSettings,
+		permission: 'plans',
+	})
+);
+router.use(
+	'/plannedpages',
+	defineRoutes({
+		Model: PlannedPage,
+		settings: plannedPageSettings,
+		permission: 'plans',
+	})
+);
+
+router.use(
+	'/modelattributes',
+	defineRoutes({
+		Model: ModelAttributes,
+		settings: modelAttributesSettings,
+		permission: 'plans',
+	})
+);
+
+router.use(
+	'/billsubscriptions',
+	defineRoutes({
+		Model: BillSubscription,
+		settings: billSubscriptionSettings,
+		permission: 'subscriptions',
+	})
+);
+
+router.use(
+	'/tcclients',
+	defineRoutes({
+		Model: TCClient,
+		settings: tcClientSettings,
+		permission: 'website',
+	})
+);
+
+router.use(
+	'/bills',
+	defineRoutes({
+		Model: Bill,
+		settings: billSettings,
+		permission: 'bill',
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 

@@ -9,8 +9,6 @@ const schema = new Schema<ProjectType>(
 			type: String,
 			required: true,
 			trim: true,
-			minlength: 3,
-			maxlength: 50,
 		},
 
 		category: {

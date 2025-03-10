@@ -17,6 +17,8 @@ export type Filter = {
 
 export type Schema = any;
 
+// 'string' | 'text' | 'email' | 'uri' | 'date' | 'array-string' | 'boolean' | 'number' | 'object' | 'array' | 'array-number' | 'array-object';
+
 export const setttingsTypeOptions = [
 	'string',
 	'email',

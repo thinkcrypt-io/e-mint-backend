@@ -3,8 +3,8 @@ export { default as Customer } from './customer/customer.model.js';
 export { default as customerSettings } from './customer/customer.settings.js';
 
 //Category
+export { default as categorySettings } from './category/category.settings.js';
 export { default as Category } from './category/category.model.js';
-export { settings as categorySettings } from './category/category.model.js';
 
 //Brand
 export { default as Brand } from './brand/brand.model.js';
@@ -20,6 +20,10 @@ export { default as inventorySettings } from './products/inventory.settings.js';
 export { default as Lead } from './leads/leads.model.js';
 export { default as leadSettings } from './leads/leads.settings.js';
 export { default as LeadType } from './leads/leads.type.js';
+
+//Facebook Groups
+export { default as FacebookGroups } from './leads/fgroups.model.js';
+export { default as facebookGroupsSettings } from './leads/fgroups.settings.js';
 
 //Order
 export { default as Order } from './order/order.model.js';
@@ -173,6 +177,10 @@ export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminIn
 export { default as Leave } from './employee/leave.model.js';
 export { default as leaveSettings } from './employee/leaveSettings.js';
 
+//Employee
+export { default as Employee } from './employee/employee.model.js';
+export { default as employeeSettings } from './employee/employee.settings.js';
+
 //Software
 export { default as Software } from './software/software.model.js';
 export { default as softwareSettings } from './software/settings.js';
@@ -216,3 +224,18 @@ export { default as propSettings } from './components/props.settings.js';
 //Newsletter
 export { default as Newsletter } from './newsletter/newsletter.model.js';
 export { default as newsletterSettings } from './newsletter/newsletter.settings.js';
+
+//Project Plan #Project #Feature #Page #Model
+export * from './project-plan/index.js';
+
+//Bill Subscription
+export { default as BillSubscription } from './bill-subscription/model.js';
+export { default as billSubscriptionSettings } from './bill-subscription/settings.js';
+
+//Client
+export { default as TCClient } from './tc-clients/model.js';
+export { default as tcClientSettings } from './tc-clients/settings.js';
+
+//Bill
+export { default as Bill } from './admin-expense/bills.model.js';
+export { default as billSettings } from './admin-expense/bills.settings.js';

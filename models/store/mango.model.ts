@@ -848,7 +848,7 @@ const schema = new Schema<any>({
 					base: Number,
 					md: Number,
 				},
-			}
+			},
 		},
 
 		// Checkout Models
@@ -897,7 +897,7 @@ const schema = new Schema<any>({
 			btnHoverFg: colors?.fg,
 			btnSize: getNumber(16),
 			btnWeight: getNumber(500),
-		}
+		},
 	},
 });
 
