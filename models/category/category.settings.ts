@@ -21,6 +21,26 @@ const settings: CategorySettings = {
 		type: 'uri',
 		title: 'Image',
 	},
+	parent: {
+		edit: true,
+		sort: true,
+		title: 'Parent Category',
+		type: 'string',
+		populate: {
+			path: 'parent',
+			select: 'name',
+		},
+		filter: {
+			name: 'parent',
+			field: 'parent_in',
+			type: 'multi-select',
+			label: 'Parent Category',
+			title: 'Sort by parent category',
+			category: 'model',
+			model: Category,
+			key: 'name',
+		},
+	},
 
 	parentCategory: {
 		edit: true,
