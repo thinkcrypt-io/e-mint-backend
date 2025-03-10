@@ -3,6 +3,7 @@ import Order from '../../models/order/order.model.js';
 import Product from '../../models/products/products.model.js';
 import sendMail from '../mail/sendMail.controller.js';
 import sendSMS from '../util/sendSms.controller.js';
+import { Shop } from '../../imports.js';
 
 const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 	const { cart, isPaid, address, paymentMethod, paymentAmount, paidAmount, status, note } =
@@ -33,9 +34,12 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 			shop: req.shop,
 		});
 
+		const findShop = await Shop.findById(req.shop);
+
 		const saved = (await order.save()) as any;
 
 		sendMail({
+			title: findShop?.name,
 			to: req.user.email,
 			subject: 'Order Placed',
 			body: `Your order has been placed successfully. Order id: ${saved._id}, Total: ${saved.total}`,
@@ -44,7 +48,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
 		if (address?.phone) {
 			sendSMS({
 				receiver: address?.phone,
-				message: `Thank you for shopping at Nexa. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
+				message: `Thank you for shopping at ${findShop?.name}. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
 			});
 		}
 
