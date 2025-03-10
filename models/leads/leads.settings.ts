@@ -63,7 +63,6 @@ const settings: SettingsType<Type> = {
 		trim: true,
 		schema: {
 			default: true,
-			displayInTable: true,
 			sort: true,
 		},
 	},
@@ -78,15 +77,12 @@ const settings: SettingsType<Type> = {
 	},
 
 	email: {
-		// unique: true,
 		search: true,
 		sort: true,
 		title: 'Email',
 		type: 'email',
 		schema: {
 			default: true,
-			displayInTable: true,
-			type: 'string',
 		},
 	},
 	phone: {
@@ -97,7 +93,6 @@ const settings: SettingsType<Type> = {
 		type: 'string',
 		schema: {
 			default: true,
-			displayInTable: true,
 		},
 	},
 	category: {
@@ -105,9 +100,7 @@ const settings: SettingsType<Type> = {
 		title: 'Category',
 		type: 'string',
 		search: true,
-		schema: {
-			displayInTable: true,
-		},
+		schema: {},
 	},
 	businessName: {
 		edit: true,
