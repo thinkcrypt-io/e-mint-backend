@@ -52,7 +52,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
     if (address?.phone) {
       sendSMS({
         receiver: address?.phone,
-        message: `Thank you for shopping at Nexa. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
+        message: `Thank you for shopping at Mood Studio. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
       });
     }
 
@@ -65,12 +65,10 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
       }
     }
 
-    return res
-      .status(201)
-      .json({
-        message: `Order id: ${saved._id} added successfully`,
-        order: saved,
-      });
+    return res.status(201).json({
+      message: `Order id: ${saved._id} added successfully`,
+      order: saved,
+    });
   } catch (e: any) {
     console.error(e);
     return res.status(500).json({ message: e.message });
