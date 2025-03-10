@@ -108,7 +108,7 @@ MinutesSchema.pre<any>('save', async function (next) {
 	try {
 		if (this.isNew) {
 			let counter = await Counter.findOne({ slug: 'meeting' });
-			if (!counter) counter = new Counter({ sequenceValue: 1, slug: 'meeting' });
+			if (!counter) counter = new Counter({ sequenceValue: 50, slug: 'meeting' });
 
 			counter.sequenceValue += 1;
 			await counter.save();
@@ -137,7 +137,7 @@ MinutesSchema.post<any>('save', async function (next) {
 					title: 'THINKERP | MEETING',
 					to: emails,
 					subject: `You have been invited to a new meeting #${this.code}`,
-					body: `You have been invited to a new meeting. \n\Meeting ID: ${this.code} \n\nTitle: ${this.name} \n\Agenda: ${this.agenda} \n\Meeting Date: ${this.date} \n\Meeting Time: ${this.scheduledTime} \n\nMeeting Type: ${this.meetingType} \mMeeting Location: ${this.meetingType == 'virtual' ? this.meetingUrl : this.location} \n`,
+					body: `You have been invited to a new meeting. \n\nMeeting ID: ${this.code} \n\nTitle: ${this.name} \n\nAgenda: ${this.agenda} \n\nMeeting Date: ${this.date} \n\nMeeting Time: ${this.scheduledTime} \n\nMeeting Type: ${this.meetingType} \n\nMeeting Location: ${this.meetingType == 'virtual' ? this.meetingUrl : this.location} \n`,
 				});
 			}
 		}
