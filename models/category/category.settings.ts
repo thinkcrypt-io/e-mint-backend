@@ -41,7 +41,7 @@ const settings: CategorySettings = {
 
 	parentCategory: {
 		edit: true,
-		// sort: true,
+		sort: true,
 		title: 'Parent Category',
 		type: 'string',
 		populate: {
