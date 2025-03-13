@@ -55,6 +55,7 @@ const schema = new Schema<any>(
 		preferences: {
 			categories: [String],
 			items: [String],
+			'email-subscriptions': [String],
 			users: [String],
 			collections: [String],
 			feedbacks: [String],
