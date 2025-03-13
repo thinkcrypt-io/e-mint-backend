@@ -23,7 +23,6 @@ type CustomerType = DocumentBaseType & {
 	isDeleted?: boolean;
 	generateAuthToken: () => string;
 	shop?: Schema.Types.ObjectId;
-	checkPassword: (password: string) => Promise<boolean>;
 };
 
 export default CustomerType;

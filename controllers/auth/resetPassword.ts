@@ -14,7 +14,7 @@ const resetPassword = async (req: any, res: Response) => {
 		if (!data) return res.status(404).json({ message: 'User Not Found' });
 
 		const salt = await bcrypt.genSalt(10);
-		data.password = password;
+		data.password = await bcrypt.hash(data.password, salt);
 
 		const saved = await data.save();
 		return res.status(200).json({ message: 'Password Updated Successfully' });
