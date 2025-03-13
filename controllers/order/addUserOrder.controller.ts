@@ -47,7 +47,7 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
     const saved = (await order.save()) as any;
 
     sendMail({
-      title: "HINT",
+      // title: "HINT",
 			title: findShop?.name,
       to: req.user.email,
       subject: "Order Placed",
