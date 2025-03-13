@@ -48,8 +48,11 @@ export const shop = async (
 	next: NextFunction
 ): Promise<Response | void> => {
 	try {
+	
+		
 		const getShop = await Shop.findOne({ id: req.headers.store });
 		req.shop = getShop?._id;
+
 
 		let query: any = req?.queryHelper || {};
 		query.shop = getShop?._id;

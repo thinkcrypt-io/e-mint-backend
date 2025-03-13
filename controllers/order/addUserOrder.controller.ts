@@ -47,13 +47,13 @@ const addUserOrder = async (req: any, res: Response): Promise<Response> => {
       title: "HINT",
       to: req.user.email,
       subject: "Order Placed",
-      body: `Thank you for shopping at Mood Studio. Your order has been placed successfully. Order id: ${saved._id}, Total: ${saved.total}. Download your invoice from here: https://mango-frontend-test.vercel.app/my-purchase/${saved?._id}/invoice `,
+      body: `Thank you for shopping at HINT. Your order has been placed successfully. Order id: ${saved._id}, Total: ${saved.total}. Download your invoice from here: https://mango-frontend-test.vercel.app/my-purchase/${saved?._id}/invoice `,
     });
 
     if (address?.phone) {
       sendSMS({
         receiver: address?.phone,
-        message: `Thank you for shopping at Mood Studio. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
+        message: `Thank you for shopping at HINT. Invoice: ${saved._id}, Tk. ${saved.total}. Details: ${process.env.WEBSITE}/invoice/${saved._id}. Shop Online: ${process.env.WEBSITE}`,
       });
     }
 
