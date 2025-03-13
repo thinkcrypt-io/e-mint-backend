@@ -1,7 +1,5 @@
-//
-
+import Category from './category.model.js';
 import { CategorySettings } from './category.type.js';
-//import Category from './category.model.js';
 
 const settings: CategorySettings = {
 	name: {
@@ -20,30 +18,47 @@ const settings: CategorySettings = {
 		type: 'uri',
 		title: 'Image',
 	},
+	parent: {
+		edit: true,
+		sort: true,
+		title: 'Parent Category',
+		type: 'string',
+		populate: {
+			path: 'parent',
+			select: 'name',
+		},
+		filter: {
+			name: 'parent',
+			field: 'parent_in',
+			type: 'multi-select',
+			label: 'Parent Category',
+			title: 'Sort by parent category',
+			category: 'model',
+			model: Category,
+			key: 'name',
+		},
+	},
 
-	// parent: {
-	// 	edit: true,
-	// 	sort: true,
-	// 	title: 'Parent Category',
-	// 	type: 'string',
-	// 	required: true,
-	// 	populate: {
-	// 		path: 'category',
-	// 		select: 'name',
-	// 	},
-
-	// 	filter: {
-	// 		name: 'parent',
-	// 		field: 'category_in',
-	// 		type: 'multi-select',
-	// 		label: 'Category',
-	// 		title: 'Sort by category',
-	// 		options: [],
-	// 		category: 'model',
-	// 		model: Category,
-	// 		key: 'name',
-	// 	},
-	// },
+	parentCategory: {
+		edit: true,
+		sort: true,
+		title: 'Parent Category',
+		type: 'string',
+		populate: {
+			path: 'parentCategory',
+			select: 'name',
+		},
+		filter: {
+			name: 'parentCategory',
+			field: 'parentCategory_in',
+			type: 'multi-select',
+			label: 'Parent Category',
+			title: 'Sort by parent category',
+			category: 'model',
+			model: Category,
+			key: 'name',
+		},
+	},
 
 	description: {
 		edit: true,

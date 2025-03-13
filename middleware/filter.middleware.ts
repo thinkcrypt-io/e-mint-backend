@@ -36,7 +36,7 @@ const filter = ({ allowSort = [], allowSearch = [] }: QueryType) => {
 				const [field, operator] = key.split('_');
 
 				if (allowSort.includes(field) && req.query[key]) {
-					if (field === 'createdAt' || field === 'updatedAt' || field === 'date') {
+					if (field.endsWith('At') || field.endsWith('Date') || field === 'date') {
 						query[field] = getDate({ key, value: req.query[key] });
 					} else {
 						if (operator && allowOp.includes(operator)) {

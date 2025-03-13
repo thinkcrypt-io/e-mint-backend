@@ -41,4 +41,6 @@ export { default as packageExpired } from './isExpired.middleware.js';
 export { default as isDeletePossible } from './isDeletePossible.middleware.js';
 export { default as isDeleteAllowed } from './isDeletePossible.middleware.js';
 
+export { default as notAllowed } from './notAllowed.middleware.js';
+
 export * from './admin/index.js';

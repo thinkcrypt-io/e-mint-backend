@@ -39,7 +39,7 @@ const directionOptions = [
 	},
 ];
 
-const settings: SettingsType<Type> = {
+const settings: SettingsType<any> = {
 	code: {
 		search: true,
 		title: 'Code',
@@ -62,6 +62,17 @@ const settings: SettingsType<Type> = {
 			default: true,
 			displayInTable: true,
 			sort: true,
+		},
+	},
+
+	description: {
+		edit: true,
+		title: 'Description',
+		type: 'string',
+		search: true,
+		schema: {
+			type: 'textarea',
+			default: true,
 		},
 	},
 
@@ -258,6 +269,11 @@ const settings: SettingsType<Type> = {
 			category: 'model',
 			model: Admin,
 			key: 'name',
+		},
+		schema: {
+			type: 'data-tag',
+			model: 'admins',
+			modelAddOn: 'email',
 		},
 	},
 

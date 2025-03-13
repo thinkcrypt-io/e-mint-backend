@@ -66,7 +66,7 @@ const MinutesSchema = new Schema<MeetingType>(
 
 		//if Virtual Meeting
 		platform: { type: String },
-		meetingUrl: { type: String, match: REGEX.URL },
+		meetingUrl: { type: String },
 		meetingId: { type: String },
 		meetingPassword: { type: String },
 
@@ -76,8 +76,8 @@ const MinutesSchema = new Schema<MeetingType>(
 
 		// Attachments and recording details
 		file: { type: String },
-		fileUrl: { type: String, match: REGEX.URL },
-		recordingUrl: { type: String, match: REGEX.URL },
+		fileUrl: { type: String },
+		recordingUrl: { type: String },
 
 		//access
 		// addedBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },

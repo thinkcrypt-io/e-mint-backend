@@ -85,6 +85,14 @@ const settings: SettingsType<any> = {
 			type: 'image-array',
 		},
 	},
+	attachment: {
+		title: 'Attachment',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'file',
+		},
+	},
 	priority: {
 		title: 'Priority',
 		type: 'string',
@@ -198,6 +206,16 @@ const settings: SettingsType<any> = {
 			type: 'data-menu',
 			tableType: 'string',
 			tableKey: 'assignedTo.name',
+			model: 'admins',
+		},
+	},
+	assignees: {
+		title: 'Other Assignees/Watchers',
+		type: 'array',
+		edit: true,
+		schema: {
+			sort: true,
+			type: 'data-tag',
 			model: 'admins',
 		},
 	},

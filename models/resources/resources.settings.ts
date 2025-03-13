@@ -5,6 +5,7 @@ const settings: SettingsType<any> = {
 		title: 'Code',
 		type: 'string',
 		search: true,
+		sort: true,
 		schema: {
 			sort: true,
 		},

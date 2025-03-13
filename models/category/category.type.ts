@@ -15,6 +15,7 @@ export type CategoryType = Document & {
 	createdAt?: Date;
 	updatedAt?: Date;
 	priority: number;
+	parentCategory?: Types.ObjectId;
 };
 
 export type CategorySettings = {
@@ -22,6 +23,7 @@ export type CategorySettings = {
 	description: SettingType;
 	shortDescription?: SettingType;
 	isActive: SettingType;
+	parentCategory?: SettingType;
 	isDeleted?: SettingType;
 	isFeatured: SettingType;
 	image: SettingType;

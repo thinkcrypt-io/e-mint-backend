@@ -6,7 +6,7 @@ const schema = new Schema<any>(
 		image: {
 			type: String,
 			required: true,
-			match: REGEX.URL,
+			// match: REGEX.URL,
 		},
 		name: {
 			type: String,
@@ -16,8 +16,6 @@ const schema = new Schema<any>(
 		category: {
 			type: String,
 			required: true,
-			trim: true,
-			unique: true,
 			lowercase: true,
 		},
 		status: {
@@ -30,7 +28,7 @@ const schema = new Schema<any>(
 		liveUrl: {
 			type: String,
 			required: true,
-			match: REGEX.URL,
+			// match: REGEX.URL,
 		},
 
 		priority: {

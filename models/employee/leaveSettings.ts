@@ -106,7 +106,7 @@ const leaveSettings: SettingsType<any> = {
 	},
 	startDate: {
 		title: 'StartDate',
-		type: 'string',
+		type: 'date',
 		sort: true,
 		filter: {
 			name: 'startDate',

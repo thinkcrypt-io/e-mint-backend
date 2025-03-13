@@ -155,6 +155,13 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
+			heroImageMobile: String,
+			heroImageMobileCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+			}),
 		},
 
 		cat: {
@@ -181,6 +188,17 @@ const schema = new Schema<any>({
 						md: 'full',
 					},
 				}),
+				imageMobile: String,
+				imageMobileCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+					height: {
+						base: '300px',
+						md: '700px',
+					},
+				}),
 			},
 			cat2: {
 				title: getString('Enter Your Text'),
@@ -203,6 +221,17 @@ const schema = new Schema<any>({
 					width: {
 						base: 'full',
 						md: 'full',
+					},
+				}),
+				imageMobile: String,
+				imageMobileCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+					height: {
+						base: '300px',
+						md: '700px',
 					},
 				}),
 			},
@@ -229,6 +258,17 @@ const schema = new Schema<any>({
 						md: 'full',
 					},
 				}),
+				imageMobile: String,
+				imageMobileCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+					height: {
+						base: '300px',
+						md: '700px',
+					},
+				}),
 			},
 			cat4: {
 				title: getString('Enter Your Text'),
@@ -253,6 +293,17 @@ const schema = new Schema<any>({
 						md: 'full',
 					},
 				}),
+				imageMobile: String,
+				imageMobileCss: ResponsiveImageSchema({
+					width: {
+						base: 'full',
+						md: 'full',
+					},
+					height: {
+						base: '300px',
+						md: '700px',
+					},
+				}),
 			},
 		},
 
@@ -274,6 +325,17 @@ const schema = new Schema<any>({
 			subTitleLink: String || '/',
 			image: String,
 			imageCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+				height: {
+					base: '300px',
+					md: '700px',
+				},
+			}),
+			imageMobile: String,
+			imageMobileCss: ResponsiveImageSchema({
 				width: {
 					base: 'full',
 					md: 'full',
@@ -308,6 +370,17 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
+			imageMobile: String,
+			imageMobileCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+				height: {
+					base: '300px',
+					md: '700px',
+				},
+			}),
 		},
 
 		banner3: {
@@ -333,6 +406,17 @@ const schema = new Schema<any>({
 					md: 'full',
 				},
 			}),
+			imageMobile: String,
+			imageMobileCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+				height: {
+					base: '300px',
+					md: '700px',
+				},
+			}),
 		},
 
 		banner4: {
@@ -356,6 +440,17 @@ const schema = new Schema<any>({
 				width: {
 					base: 'full',
 					md: 'full',
+				},
+			}),
+			imageMobile: String,
+			imageMobileCss: ResponsiveImageSchema({
+				width: {
+					base: 'full',
+					md: 'full',
+				},
+				height: {
+					base: '300px',
+					md: '700px',
 				},
 			}),
 		},
@@ -753,7 +848,7 @@ const schema = new Schema<any>({
 					base: Number,
 					md: Number,
 				},
-			}
+			},
 		},
 
 		// Checkout Models
@@ -802,7 +897,7 @@ const schema = new Schema<any>({
 			btnHoverFg: colors?.fg,
 			btnSize: getNumber(16),
 			btnWeight: getNumber(500),
-		}
+		},
 	},
 });
 
