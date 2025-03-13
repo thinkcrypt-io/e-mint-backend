@@ -1,7 +1,8 @@
 import mongoose, { Schema } from 'mongoose';
 import MeetingType from './meeting.types.js';
-import { REGEX } from '../../imports.js';
+import { Admin, Counter, REGEX } from '../../imports.js';
 import { ACCESS_CONTROL } from '../../lib/index.js';
+import sendMail from '../../controllers/mail/sendMail.controller.js';
 
 const statusEmun = [
 	'draft',
@@ -15,9 +16,13 @@ const statusEmun = [
 	'archived',
 ];
 
-const MinutesSchema = new Schema<MeetingType>(
+const MinutesSchema = new Schema<any>(
 	{
 		//Basic Details
+		code: {
+			type: String,
+			trim: true,
+		},
 		name: { type: String, required: true, trim: true },
 		agenda: { type: String, trim: true },
 		description: { type: String },
@@ -91,5 +96,55 @@ const MinutesSchema = new Schema<MeetingType>(
 	}
 );
 
-export const Meeting = mongoose.model<MeetingType>('Meeting', MinutesSchema);
+let isNewItem = false;
+
+MinutesSchema.pre<any>('save', function (next) {
+	isNewItem = this.isNew;
+	next();
+});
+
+// Pre-save hook to auto-increment the invoice number
+MinutesSchema.pre<any>('save', async function (next) {
+	try {
+		if (this.isNew) {
+			let counter = await Counter.findOne({ slug: 'meeting' });
+			if (!counter) counter = new Counter({ sequenceValue: 50, slug: 'meeting' });
+
+			counter.sequenceValue += 1;
+			await counter.save();
+
+			this.code = `MTG-` + counter.sequenceValue.toString().padStart(4, '0');
+		}
+
+		next();
+	} catch (error: any) {
+		console.log(error);
+		next();
+	}
+});
+
+// Pre-save hook to auto-increment the invoice number
+MinutesSchema.post<any>('save', async function (next) {
+	try {
+		if (isNewItem) {
+			// Multiple assignees
+			const getAssignees = await Admin.find({
+				_id: { $in: this.access },
+			});
+			if (getAssignees.length > 0) {
+				const emails: any = getAssignees.map((assignee: any) => assignee.email).join(', ');
+				sendMail({
+					title: 'THINKERP | MEETING',
+					to: emails,
+					subject: `You have been invited to a new meeting #${this.code}`,
+					body: `You have been invited to a new meeting. \n\nMeeting ID: ${this.code} \n\nTitle: ${this.name} \n\nAgenda: ${this.agenda} \n\nMeeting Date: ${this.date} \n\nMeeting Time: ${this.scheduledTime} \n\nMeeting Type: ${this.meetingType} \n\nMeeting Location: ${this.meetingType == 'virtual' ? this.meetingUrl : this.location} \n`,
+				});
+			}
+		}
+	} catch (error: any) {
+		console.log('Error with issue:', error);
+	}
+});
+
+export const Meeting = mongoose.model<any>('Meeting', MinutesSchema);
 export default Meeting;

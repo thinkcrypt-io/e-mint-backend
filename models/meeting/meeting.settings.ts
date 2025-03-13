@@ -57,6 +57,13 @@ const statusOptions = [
 ];
 
 const meetingSettings: SettingsType<any> = {
+	code: {
+		title: 'Code',
+		type: 'string',
+		trim: true,
+
+		schema: { displayInTable: true },
+	},
 	name: {
 		title: 'Name',
 		type: 'string',
