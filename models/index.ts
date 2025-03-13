@@ -124,6 +124,7 @@ export { PurchasedThemeType, purchasedThemeSettings } from './theme/purchasedThe
 export { default as Nexa } from './store/store.model.js';
 export { default as Hongo } from './store/hongo.model.js';
 export { default as Pulse } from './store/pulse.model.js';
+export { default as Mango } from './store/mango.model.js';
 
 //Collection
 export { default as Collection } from './collection/collection.model.js';
@@ -219,6 +220,10 @@ export { default as componentSettings } from './components/components.settings.j
 //Props
 export { default as Prop } from './components/props.model.js';
 export { default as propSettings } from './components/props.settings.js';
+
+//Newsletter
+export { default as Newsletter } from './newsletter/newsletter.model.js';
+export { default as newsletterSettings } from './newsletter/newsletter.settings.js';
 
 //Project Plan #Project #Feature #Page #Model
 export * from './project-plan/index.js';

@@ -1,8 +1,5 @@
-//
-
 import Category from './category.model.js';
 import { CategorySettings } from './category.type.js';
-//import Category from './category.model.js';
 
 const settings: CategorySettings = {
 	name: {

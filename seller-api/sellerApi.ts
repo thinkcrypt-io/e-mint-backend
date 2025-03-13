@@ -87,4 +87,6 @@ router.use('/staffs', staffRoute);
 router.use('/inventories', inventoryRoute);
 router.use('/transfers', transferRoute);
 
+
+
 export default router;
