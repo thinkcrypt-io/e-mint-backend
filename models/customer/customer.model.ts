@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import CustomerType from './customer.types.js';
+import { compare, hash } from 'bcrypt';
 
 const schema = new Schema<CustomerType>(
 	{
@@ -80,6 +81,12 @@ const schema = new Schema<CustomerType>(
 	}
 );
 
+schema.methods.checkPassword = async function (password: string) {
+	// is match comment
+	const isMatch = await compare(password, this.password);
+	return isMatch;
+};
+
 schema.methods.generateAuthToken = function (this: CustomerType): string {
 	const token = jwt.sign(
 		{
@@ -93,6 +100,15 @@ schema.methods.generateAuthToken = function (this: CustomerType): string {
 
 	return token;
 };
+
+schema.pre<CustomerType>('save', async function (next) {
+	// if the password is not modified, skip this middleware
+	if (!this.isModified('password')) return next();
+	// hash the password
+	const hashedPassword = await hash(this.password, 10);
+	this.password = hashedPassword;
+	next();
+});
 
 const Customer = mongoose.model<any>('Customer', schema);
 export default Customer;

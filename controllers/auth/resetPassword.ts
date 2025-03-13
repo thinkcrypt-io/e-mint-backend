@@ -13,7 +13,7 @@ const resetPassword = async (req: any, res: Response) => {
 		
 		if (!data) return res.status(404).json({ message: 'User Not Found' });
 
-		// const salt = await bcrypt.genSalt(10);
+		const salt = await bcrypt.genSalt(10);
 		data.password = password;
 
 		const saved = await data.save();
