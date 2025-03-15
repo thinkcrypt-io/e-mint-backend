@@ -22,7 +22,12 @@ import getUserCartTotal from '../../controllers/order/getUserCartTotal.js';
 import getOrderTotal from '../../controllers/order/getOrderTotal.js';
 import Order, { settings } from '../../models/order/order.model.js';
 
-import { myData, userProtect as protect, sort, query } from '../../middleware/index.js';
+import {
+	myData,
+	userProtect as protect,
+	sort,
+	query,
+} from '../../middleware/index.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -44,6 +49,34 @@ router.get(
 	query(config.FILTER_OPTIONS),
 	getAllDocuments(config.QUERY_OPTIONS)
 );
+
+router.post('/success/:transId', async (req, res) => {
+	// res.redirect(`${process.env.WEBSITE}/payment/success/${req.params.transId}`);
+	// console.log('check 1', req.params.transId);
+	const result = await Order.updateOne(
+		{ trnxRef: req.params.transId },
+		{
+			$set: {
+				isPaid: true,
+			},
+		}
+	);
+	if (result?.modifiedCount > 0) {
+	res.redirect(`${process.env.WEBSITE}/payment/success/${req.params.transId}`);
+	}
+});
+
+router.post('/fail/:transId', async (req, res) => {
+	// res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+	// console.log('check 2', req.params.transId);
+	const result = await Order.deleteOne({
+		trnxRef: req.params.transId,
+	});
+	
+	if (result?.deletedCount > 0) {
+		res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+	}
+});
 
 // // Define common middleware
 // const commonMiddleware = [
