@@ -33,7 +33,7 @@ const schema = new Schema<CustomerType>(
 		shop: {
 			type: Schema.Types.ObjectId,
 			ref: 'Shop',
-			required: true,
+			// required: true,
 		},
 
 		isDeleted: {

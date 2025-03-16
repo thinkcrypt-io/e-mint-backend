@@ -1,28 +1,23 @@
-// Import necessary modules from their respective files
 import express from 'express';
 import constructConfig from '../../lib/configurator/constructConfig.js';
-
 import {
-	deleteDocument,
-	getFilters,
-	createDocument,
-	updateDocument,
 	getAllDocuments,
 	getDocumentById,
-	getDocumentToEditById,
-	duplicateDocument,
-	updateManyDocuments,
-	exportDocument,
-	getCount,
 } from '../../controllers/common/index.js';
-
-import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
-import addUserOrder from '../../controllers/order/addUserOrder.controller.js';
-import getUserCartTotal from '../../controllers/order/getUserCartTotal.js';
+import addUserOrder, {
+	PendingPayment,
+	reduceProductStock,
+	sendOrderNotifications,
+} from '../../controllers/order/addUserOrder.controller.js';
 import getOrderTotal from '../../controllers/order/getOrderTotal.js';
 import Order, { settings } from '../../models/order/order.model.js';
-
-import { myData, userProtect as protect, sort, query } from '../../middleware/index.js';
+import { Shop } from '../../imports.js';
+import {
+	myData,
+	userProtect as protect,
+	sort,
+	query,
+} from '../../middleware/index.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -45,48 +40,83 @@ router.get(
 	getAllDocuments(config.QUERY_OPTIONS)
 );
 
-// // Define common middleware
-// const commonMiddleware = [
-// 	//protect,
-// 	sort,
-// 	query(config.FILTER_OPTIONS),
-// ];
-// const postMiddleware = [protect, ifExists(config.EXIST_OPTIONS), validate(config.VALIDATORS.POST)];
-// const updateMiddleware = [
-// 	protect,
-// 	ifExists(config.EXIST_OPTIONS),
-// 	validate(config.VALIDATORS.UPDATE),
-// ];
+// Handle successful payment
+router.post('/success/:transId', async (req, res) => {
+	try {
+		// Find the pending payment record
+		const pendingPayment = await PendingPayment.findOne({
+			transactionId: req.params.transId,
+		});
 
-// // Define the routes for the product store
-// router.route('/').get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS));
-// // .post(...postMiddleware, hasPermission(['add_product']), createDocument(config.MODEL));
+		if (!pendingPayment) {
+			return res.status(404).redirect(`${process.env.WEBSITE}/payment/error`);
+		}
 
-// router.get('/:id', getDocumentById(config.QUERY_OPTIONS));
+		// Create the actual order now that payment is successful
+		const orderData = pendingPayment.orderData;
+		const order = new Order(orderData);
+		const savedOrder = await order.save();
 
-// router.get(
-// 	'/edit/:id',
-// 	protect,
-// 	hasPermission(['view_product']),
-// 	getDocumentToEditById(config.MODEL)
-// );
+		// Reduce stock quantities now that payment is successful
+		await reduceProductStock(pendingPayment.items);
 
-// router.get('/get/filters', protect, getFilters(config.FILTER_LIST));
-// // router.put(
-// // 	'/:id',
-// // 	...updateMiddleware,
-// // 	hasPermission(['edit_product']),
-// // 	updateDocument(config.EDITS)
-// // );
-// // router.delete('/:id', protect, hasPermission(['delete_product']), deleteDocument(config.MODEL));
-// router.get('/get/count', protect, getCount(config.MODEL));
+		// Find shop for notifications
+		const findShop = await Shop.findById(orderData.shop);
 
-// // router.post('/export/csv', protect, exportDocument(config.QUERY_OPTIONS));
+		// Send order notifications
+		await sendOrderNotifications(
+			orderData.address.email || '',
+			orderData.address.phone || '',
+			savedOrder._id,
+			orderData.total,
+			findShop?.name || 'Shop'
+		);
 
-// // router.put('/update/many', protect, hasPermission(['edit']), updateManyDocuments(config.EDITS));
-// // router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
+		// Remove the pending payment record
+		await PendingPayment.deleteOne({ transactionId: req.params.transId });
 
-// router.put('/:id/cancel', protect, cancelOrder);
+		// Redirect to success page
+		res.redirect(
+			`${process.env.WEBSITE}/payment/success/${req.params.transId}`
+		);
+	} catch (error) {
+		console.error('Error processing successful payment:', error);
+		res.status(500).redirect(`${process.env.WEBSITE}/payment/error`);
+	}
+});
 
-// Export the router
+// Handle failed payment
+router.post('/fail/:transId', async (req, res) => {
+	try {
+		// Delete the pending payment record (no order was created yet)
+		await PendingPayment.deleteOne({ transactionId: req.params.transId });
+
+		// Redirect to failure page
+		res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+	} catch (error) {
+		console.error('Error handling payment failure:', error);
+		res.status(500).redirect(`${process.env.WEBSITE}/payment/error`);
+	}
+});
+
+// Handle canceled payment (similar to fail)
+router.post('/cancel/:transId', async (req, res) => {
+	try {
+		// Delete the pending payment record (no order was created yet)
+		await PendingPayment.deleteOne({ transactionId: req.params.transId });
+
+		// Redirect to cancel page
+		res.redirect(`${process.env.WEBSITE}/payment/cancel/${req.params.transId}`);
+	} catch (error) {
+		console.error('Error handling payment cancellation:', error);
+		res.status(500).redirect(`${process.env.WEBSITE}/payment/error`);
+	}
+});
+
+// IPN (Instant Payment Notification) handler
+router.post('/ipn/:transId', async (req, res) => {
+	// Handle IPN validation if needed
+	res.status(200).end();
+});
+
 export default router;
