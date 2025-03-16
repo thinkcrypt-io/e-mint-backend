@@ -27,7 +27,11 @@ import {
 	ifExists,
 	isExpired,
 } from '../../middleware/index.js';
-import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
+import {
+	constructPermissions,
+	constructConfig,
+	SettingsType,
+} from '../../imports.js';
 import mongoose from 'mongoose';
 
 // Define the permissions
@@ -119,11 +123,23 @@ const commonRouter = ({
 			...(injectMiddleware?.updateMany || []),
 		],
 		//Middleware for getting a category by ID
-		getById: [protect, hasPermission([permissions.read]), ...(injectMiddleware?.getById || [])],
+		getById: [
+			protect,
+			hasPermission([permissions.read]),
+			...(injectMiddleware?.getById || []),
+		],
 		//Middleware for deleting a category
-		delete: [protect, hasPermission([permissions.delete]), ...(injectMiddleware?.delete || [])],
+		delete: [
+			protect,
+			hasPermission([permissions.delete]),
+			...(injectMiddleware?.delete || []),
+		],
 		//Middleware for copying a category
-		copy: [protect, hasPermission([permissions.create]), ...(injectMiddleware?.copy || [])],
+		copy: [
+			protect,
+			hasPermission([permissions.create]),
+			...(injectMiddleware?.copy || []),
+		],
 		// Middleware for getting the count of categories
 		count: [protect, ...(injectMiddleware?.count || [])],
 		// Middleware for getting the sum
@@ -138,8 +154,14 @@ const commonRouter = ({
 	// Define the routes
 	router
 		.route('/')
-		.get(...middlewares.getAll, replaceController?.getAll || getAllDocuments(config.QUERY_OPTIONS))
-		.post(...middlewares.post, replaceController?.post || createDocument(config.MODEL));
+		.get(
+			...middlewares.getAll,
+			replaceController?.getAll || getAllDocuments(config.QUERY_OPTIONS)
+		)
+		.post(
+			...middlewares.post,
+			replaceController?.post || createDocument(config.MODEL)
+		);
 
 	//:id is a dynamic parameter that will be extracted from the URL
 	router
@@ -148,8 +170,14 @@ const commonRouter = ({
 			...middlewares.getById,
 			replaceController?.getById || getDocumentById(config.QUERY_OPTIONS)
 		)
-		.put(...middlewares.update, replaceController?.update || updateDocument(config.EDITS))
-		.delete(...middlewares.delete, replaceController?.delete || deleteDocument(config.MODEL));
+		.put(
+			...middlewares.update,
+			replaceController?.update || updateDocument(config.EDITS)
+		)
+		.delete(
+			...middlewares.delete,
+			replaceController?.delete || deleteDocument(config.MODEL)
+		);
 
 	//Find to edit
 	router.get(
@@ -171,7 +199,10 @@ const commonRouter = ({
 		...middlewares.filter,
 		replaceController?.filter || getFilters(config.FILTER_LIST)
 	);
-	router.get('/get/schema', replaceController?.schema || getSchema(config.SCHEMA));
+	router.get(
+		'/get/schema',
+		replaceController?.schema || getSchema(config.SCHEMA)
+	);
 
 	//Export as CSV and PDF
 	router.post(
@@ -198,7 +229,11 @@ const commonRouter = ({
 		...middlewares.count,
 		replaceController?.count || getCount(config.MODEL)
 	);
-	router.get('/get/sum/:field', ...middlewares.sum, replaceController?.sum || getSum(config.MODEL));
+	router.get(
+		'/get/sum/:field',
+		...middlewares.sum,
+		replaceController?.sum || getSum(config.MODEL)
+	);
 
 	return router;
 };
