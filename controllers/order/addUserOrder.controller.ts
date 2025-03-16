@@ -20,6 +20,9 @@ const addUserOrder = async (req: any, res: Response) => {
 		note,
 	} = req.body;
 
+	console.log('cart', cart);
+	
+
 	try {
 		// Generate a unique transaction ID
 		const transactionId = uuidv4();
@@ -206,4 +209,22 @@ const reduceProductStock = async (items: any[]) => {
 	}
 };
 
+const restoreProductStock = async (items: any[]) => {
+	try {
+		for (const item of items) {
+			const product = await Product.findById(item._id);
+			if (product) {
+				product.stock = product.stock + item.qty;
+				await product.save();
+			}
+		}
+	} catch (error) {
+		console.error('Error restoring product stock:', error);
+		throw error;
+	}
+};
+
+export { restoreProductStock };
+
 export default addUserOrder;
+

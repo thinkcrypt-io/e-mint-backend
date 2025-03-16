@@ -17,7 +17,7 @@ import {
 } from '../../controllers/common/index.js';
 
 import cancelOrder from '../../controllers/order/cancelOrder.controller.js';
-import addUserOrder from '../../controllers/order/addUserOrder.controller.js';
+import addUserOrder, { restoreProductStock } from '../../controllers/order/addUserOrder.controller.js';
 import getUserCartTotal from '../../controllers/order/getUserCartTotal.js';
 import getOrderTotal from '../../controllers/order/getOrderTotal.js';
 import Order, { settings } from '../../models/order/order.model.js';
@@ -66,15 +66,45 @@ router.post('/success/:transId', async (req, res) => {
 	}
 });
 
-router.post('/fail/:transId', async (req, res) => {
-	// res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
-	// console.log('check 2', req.params.transId);
-	const result = await Order.deleteOne({
-		trnxRef: req.params.transId,
-	});
+// router.post('/fail/:transId', async (req, res) => {
+// 	// res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+// 	// console.log('check 2', req.params.transId);
+// 	const result = await Order.deleteOne({
+// 		trnxRef: req.params.transId,
+// 	});
 	
-	if (result?.deletedCount > 0) {
-		res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+// 	if (result?.deletedCount > 0) {
+// 		res.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+// 	}
+// });
+
+router.post('/fail/:transId', async (req, res) => {
+	try {
+		// First find the order to get the items before deleting
+		const order = await Order.findOne({ trnxRef: req.params.transId });
+
+		if (!order) {
+			return res
+				.status(404)
+				.redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
+		}
+
+		// Restore stock for all items in the order
+		await restoreProductStock(order.items);
+
+		// Then delete the order
+		const result = await Order.deleteOne({ trnxRef: req.params.transId });
+
+		if (result?.deletedCount > 0) {
+			return res.redirect(
+				`${process.env.WEBSITE}/payment/fail/${req.params.transId}`
+			);
+		} else {
+			return res.status(500).redirect(`${process.env.WEBSITE}/payment/error`);
+		}
+	} catch (error) {
+		console.error('Error in payment failure handling:', error);
+		return res.status(500).redirect(`${process.env.WEBSITE}/payment/error`);
 	}
 });
 
