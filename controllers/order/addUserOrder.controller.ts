@@ -6,7 +6,20 @@ import sendSMS from '../util/sendSms.controller.js';
 import { Shop } from '../../imports.js';
 import { v4 as uuidv4 } from 'uuid';
 import SSLCommerzPayment from 'sslcommerz-lts';
-// const SSLCommerzPayment = require('sslcommerz-lts');
+import mongoose from 'mongoose';
+
+// Create a schema for pending payments
+const pendingPaymentSchema = new mongoose.Schema({
+	transactionId: { type: String, required: true, unique: true },
+	orderData: { type: Object, required: true },
+	items: { type: Array, required: true },
+	createdAt: { type: Date, default: Date.now, expires: '24h' }, // Auto-expire after 24 hours
+});
+
+// Create model if it doesn't exist (prevents re-declaration error)
+const PendingPayment =
+	mongoose.models.PendingPayment ||
+	mongoose.model('PendingPayment', pendingPaymentSchema);
 
 const addUserOrder = async (req: any, res: Response) => {
 	const {
@@ -20,25 +33,20 @@ const addUserOrder = async (req: any, res: Response) => {
 		note,
 	} = req.body;
 
-	console.log('cart', cart);
-	
-
 	try {
 		// Generate a unique transaction ID
 		const transactionId = uuidv4();
 
-		// Create order object
+		// Create base order data object
 		const orderData = {
-			user: (req as any).user._id,
+			user: req.user._id,
 			items: cart.items,
 			total: cart.total,
 			vat: cart.vat,
 			subTotal: cart.subTotal,
 			coupon: cart.couponId,
-			isPaid: paymentMethod === 'cash on delivery' ? false : isPaid,
 			address,
 			origin: 'website',
-			status: status || 'pending',
 			paymentMethod,
 			customer: req.user._id,
 			orderDate: Date.now(),
@@ -46,22 +54,28 @@ const addUserOrder = async (req: any, res: Response) => {
 			note,
 			paidAmount,
 			shippingCharge: cart.shipping,
-			dueAmount: isPaid ? 0 : Number(cart?.total) - Number(paymentAmount || 0),
 			discount: cart.discount,
 			shop: req.shop,
 			trnxRef: transactionId,
 		};
 
+		const findShop: any = await Shop.findById(req.shop);
+
 		// Handle different payment methods
 		if (paymentMethod === 'cash on delivery') {
-			// Process cash on delivery order
-			const order = new Order(orderData);
+			// For COD, create order immediately with isPaid=false
+			const codOrderData = {
+				...orderData,
+				isPaid: false,
+				status: status || 'pending',
+				dueAmount: Number(cart?.total) - Number(paymentAmount || 0),
+			};
+
+			const order = new Order(codOrderData);
 			const saved = (await order.save()) as any;
 
-			const findShop: any = await Shop.findById(req.shop);
-
 			// Send notifications
-			sendOrderNotifications(
+			await sendOrderNotifications(
 				req.user.email,
 				address?.phone,
 				saved._id,
@@ -77,16 +91,8 @@ const addUserOrder = async (req: any, res: Response) => {
 				order: saved,
 			});
 		} else if (paymentMethod === 'sslcommerz') {
-			// First save the order with pending payment status
-			const order = new Order({
-				...orderData,
-				isPaid: false,
-				status: 'pending',
-			});
-
-			const saved = (await order.save()) as any;
-			
-			const findShop = await Shop.findById(req.shop);
+			// For SSL, store order data temporarily without creating actual order
+			// and without reducing stock yet
 
 			// Initialize SSLCommerz payment
 			const store_id = process.env.STORE_ID;
@@ -103,17 +109,16 @@ const addUserOrder = async (req: any, res: Response) => {
 				cancel_url: `${process.env.API_URL}/user-api/orders/cancel/${transactionId}`,
 				ipn_url: `${process.env.API_URL}/user-api/orders/ipn/${transactionId}`,
 				shipping_method: 'Courier',
-				// product_name: 'product',
-				product_name: cart.items
-					.map((item: any) => item.title)
-					.join(', ')
-					.substring(0, 50) || 'Product',
-
+				product_name:
+					cart.items
+						.map((item: any) => item.title)
+						.join(', ')
+						.substring(0, 50) || 'Product',
 				product_category: 'Mixed',
 				product_profile: 'general',
 				cus_name: address.name || 'Customer',
 				cus_email: address.email || req.user.email,
-				cus_add1: address.name || 'Address',
+				cus_add1: address.address || 'Address',
 				cus_add2: '',
 				cus_city: '',
 				cus_state: '',
@@ -122,7 +127,7 @@ const addUserOrder = async (req: any, res: Response) => {
 				cus_phone: address.phone || '',
 				cus_fax: '',
 				ship_name: address.name || 'Customer',
-				ship_add1: address.name || 'Address',
+				ship_add1: address.address || 'Address',
 				ship_add2: '',
 				ship_city: 'Dhaka',
 				ship_state: 'Dhaka',
@@ -132,36 +137,37 @@ const addUserOrder = async (req: any, res: Response) => {
 
 			const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
 
-			// Initialize SSLCommerz payment
-			const apiResponse = await sslcz.init(sslData);
-			// console.log('check', apiResponse);
+			// Store order data in pending payments collection
+			const completeOrderData = {
+				...orderData,
+				isPaid: true, // Will be true when payment succeeds
+				status: 'processing', // Status for paid orders
+				dueAmount: 0, // Fully paid
+			};
 
-			// Get the redirect URL from SSLCommerz
-			const redirectUrl = await apiResponse?.GatewayPageURL;
-
-			await reduceProductStock(cart.items);
-
-			return res.send({
-				url: apiResponse?.GatewayPageURL,
-				orderId: saved._id,
-				transactionId: transactionId,
+			await PendingPayment.create({
+				transactionId,
+				orderData: completeOrderData,
+				items: cart.items,
 			});
 
-			// if (redirectUrl) {
+			// Initialize SSLCommerz payment
+			const apiResponse = await sslcz.init(sslData);
+			const redirectUrl = apiResponse?.GatewayPageURL;
 
-			// 	return res.status(200).json({
-			// 		url: redirectUrl,
-			// orderId: saved._id,
-			// transactionId: transactionId,
-			// 	});
-			// } else {
-			// 	// If SSLCommerz initialization fails, delete the order
-			// 	await Order.findByIdAndDelete(saved._id);
-			// 	return res.status(400).json({
-			// 		message: 'Payment initialization failed',
-			//     res: apiResponse
-			// 	});
-			// }
+			if (!redirectUrl) {
+				// If SSLCommerz initialization fails, delete the pending payment record
+				await PendingPayment.deleteOne({ transactionId });
+				return res.status(400).json({
+					message: 'Payment initialization failed',
+					res: apiResponse,
+				});
+			}
+
+			return res.status(200).json({
+				url: redirectUrl,
+				transactionId: transactionId,
+			});
 		} else {
 			return res.status(400).json({
 				message: 'Invalid payment method',
@@ -177,7 +183,7 @@ const addUserOrder = async (req: any, res: Response) => {
 const sendOrderNotifications = async (
 	email: string,
 	phone: string,
-	orderId: string,
+	orderId: string | any,
 	total: number,
 	shopName: string
 ) => {
@@ -198,33 +204,47 @@ const sendOrderNotifications = async (
 	}
 };
 
-// Helper function to reduce product stock
 const reduceProductStock = async (items: any[]) => {
 	for (const item of items) {
-		const product = await Product.findById(item._id);
-		if (product) {
-			product.stock = product.stock - item.qty;
-			await product.save();
-		}
-	}
-};
-
-const restoreProductStock = async (items: any[]) => {
-	try {
-		for (const item of items) {
+		try {
+			// Find the product
 			const product = await Product.findById(item._id);
-			if (product) {
-				product.stock = product.stock + item.qty;
-				await product.save();
+
+			if (!product) {
+				console.error(`Product not found: ${item._id}`);
+				continue;
 			}
+
+			// Find the specific variant
+			const variantIndex = product.variations.findIndex(
+				(variant: any) => variant._id.toString() === item.variantId
+			);
+
+			if (variantIndex === -1) {
+				console.error(
+					`Variant not found for product ${item._id}: ${item.variantId}`
+				);
+				continue;
+			}
+
+			// Reduce stock for the specific variant
+			product.variations[variantIndex].stock -= item.qty;
+
+			product.stock = product.variations.reduce(
+				(total: number, variant: any) => total + variant.stock,
+				0
+			);
+
+			// Save the updated product
+			await product.save();
+		} catch (error) {
+			console.error(`Error reducing variant stock: ${error}`);
+			throw error;
 		}
-	} catch (error) {
-		console.error('Error restoring product stock:', error);
-		throw error;
 	}
 };
 
-export { restoreProductStock };
+// Export functions for use in routes
+export { PendingPayment, reduceProductStock, sendOrderNotifications };
 
 export default addUserOrder;
-
