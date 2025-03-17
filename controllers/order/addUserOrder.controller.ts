@@ -33,6 +33,10 @@ const addUserOrder = async (req: any, res: Response) => {
 		note,
 	} = req.body;
 
+	// console.log('check cart', cart);
+	// return res.json(req.body);
+	
+
 	try {
 		// Generate a unique transaction ID
 		const transactionId = uuidv4();
@@ -79,6 +83,7 @@ const addUserOrder = async (req: any, res: Response) => {
 				req.user.email,
 				address?.phone,
 				saved._id,
+				saved.invoice,
 				saved.total,
 				findShop?.name
 			);
@@ -145,11 +150,13 @@ const addUserOrder = async (req: any, res: Response) => {
 				dueAmount: 0, // Fully paid
 			};
 
-			await PendingPayment.create({
+			const savePayment = await PendingPayment.create({
 				transactionId,
 				orderData: completeOrderData,
 				items: cart.items,
 			});
+
+			// return res.json(savePayment);
 
 			// Initialize SSLCommerz payment
 			const apiResponse = await sslcz.init(sslData);
@@ -184,6 +191,7 @@ const sendOrderNotifications = async (
 	email: string,
 	phone: string,
 	orderId: string | any,
+	invoiceId: string | any,
 	total: number,
 	shopName: string
 ) => {
@@ -192,14 +200,14 @@ const sendOrderNotifications = async (
 		title: shopName || 'Shop',
 		to: email,
 		subject: 'Order Placed',
-		body: `Thank you for shopping at ${shopName}. Your order has been placed successfully. Order id: ${orderId}, Total: ${total}. Download your invoice from here: ${process.env.WEBSITE}/my-purchase/${orderId}/invoice`,
+		body: `Thank you for shopping at ${shopName}. Your order has been placed successfully. Order id: ${invoiceId}, Total: ${total}. Download your invoice from here: ${process.env.WEBSITE}/my-purchase/${orderId}/invoice`,
 	});
 
 	// Send SMS notification if phone number is available
 	if (phone) {
 		sendSMS({
 			receiver: phone,
-			message: `Thank you for shopping at ${shopName}. Invoice: ${orderId}, Tk. ${total}. Details: ${process.env.WEBSITE}/invoice/${orderId}. Shop Online: ${process.env.WEBSITE}`,
+			message: `Thank you for shopping at ${shopName}. Invoice: ${invoiceId}, Tk. ${total}. Details: ${process.env.WEBSITE}/my-purchase/${orderId}/invoice. Shop Online: ${process.env.WEBSITE}`,
 		});
 	}
 };

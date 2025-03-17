@@ -10,6 +10,8 @@ const addSslSuccess = async (req: any, res: Response) => {
 			transactionId: req.params.transId,
 		});
 
+		// return res.json(pendingPayment)
+
 		if (!pendingPayment) {
 			return res.status(404).redirect(`${process.env.WEBSITE}/payment/fail/${req.params.transId}`);
 		}
@@ -30,6 +32,7 @@ const addSslSuccess = async (req: any, res: Response) => {
 			orderData.address.email || '',
 			orderData.address.phone || '',
 			savedOrder._id,
+			savedOrder.invoice,
 			orderData.total,
 			findShop?.name || 'Shop'
 		);
