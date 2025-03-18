@@ -7,11 +7,12 @@ import {
 	userProductRoute,
 	userAuthRoute,
 	userOrder,
+	emailSubscriptionRouter,
 } from './index.js';
 
 const router = express.Router();
 
-//user routes
+//user routes.
 router.use('/store', userStoreRoute);
 router.use('/categories', userCategoryRoute);
 router.use('/collections', userCollectionRoute);

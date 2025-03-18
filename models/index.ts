@@ -1,241 +1,254 @@
 //Customer
-export { default as Customer } from './customer/customer.model.js';
-export { default as customerSettings } from './customer/customer.settings.js';
+export { default as Customer } from "./customer/customer.model.js";
+export { default as customerSettings } from "./customer/customer.settings.js";
 
 //Category
-export { default as categorySettings } from './category/category.settings.js';
-export { default as Category } from './category/category.model.js';
+export { default as categorySettings } from "./category/category.settings.js";
+export { default as Category } from "./category/category.model.js";
 
 //Brand
-export { default as Brand } from './brand/brand.model.js';
-export { settings as brandSettings } from './brand/brand.model.js';
+export { default as Brand } from "./brand/brand.model.js";
+export { settings as brandSettings } from "./brand/brand.model.js";
+
+//Email subs
+export { default as EmailSubscription } from "./email-subscription/emailSubs.model.js";
+export { settings as EmailSubscriptionSettings } from "./email-subscription/emailSubs.model.js";
 
 //Product
-export { ProductType } from './products/products.types.js';
-export { default as Product } from './products/products.model.js';
-export { settings as productSettings } from './products/products.model.js';
-export { default as inventorySettings } from './products/inventory.settings.js';
+export { ProductType } from "./products/products.types.js";
+export { default as Product } from "./products/products.model.js";
+export { settings as productSettings } from "./products/products.model.js";
+export { default as inventorySettings } from "./products/inventory.settings.js";
 
 //Leads
-export { default as Lead } from './leads/leads.model.js';
-export { default as leadSettings } from './leads/leads.settings.js';
-export { default as LeadType } from './leads/leads.type.js';
+export { default as Lead } from "./leads/leads.model.js";
+export { default as leadSettings } from "./leads/leads.settings.js";
+export { default as LeadType } from "./leads/leads.type.js";
 
 //Facebook Groups
-export { default as FacebookGroups } from './leads/fgroups.model.js';
-export { default as facebookGroupsSettings } from './leads/fgroups.settings.js';
+export { default as FacebookGroups } from "./leads/fgroups.model.js";
+export { default as facebookGroupsSettings } from "./leads/fgroups.settings.js";
 
 //Order
-export { default as Order } from './order/order.model.js';
-export { settings as orderSettings } from './order/order.model.js';
-export { default as OrderType } from './order/order.types.js';
+export { default as Order } from "./order/order.model.js";
+export { settings as orderSettings } from "./order/order.model.js";
+export { default as OrderType } from "./order/order.types.js";
 
 //User
-export { default as User } from './user/user.model.js';
-export { settings as userSettings } from './user/user.model.js';
+export { default as User } from "./user/user.model.js";
+export { settings as userSettings } from "./user/user.model.js";
 
 //role
-export { default as Role } from './role/role.model.js';
-export { settings as roleSettings } from './role/role.model.js';
+export { default as Role } from "./role/role.model.js";
+export { settings as roleSettings } from "./role/role.model.js";
 
 //Inventory Adjustment
-export { default as InventoryAdjustment } from './inventory-adjustment/inventoryAdjustment.model.js';
-export { settings as inventoryAdjustmentSettings } from './inventory-adjustment/inventoryAdjustment.model.js';
-export { default as Transfer } from './transfer/Transfer.model.js';
-export { default as transferSettings } from './transfer/transfer.settings.js';
+export { default as InventoryAdjustment } from "./inventory-adjustment/inventoryAdjustment.model.js";
+export { settings as inventoryAdjustmentSettings } from "./inventory-adjustment/inventoryAdjustment.model.js";
+export { default as Transfer } from "./transfer/Transfer.model.js";
+export { default as transferSettings } from "./transfer/transfer.settings.js";
 
 //Counter
-export { default as Counter } from './counter/counter.model.js';
+export { default as Counter } from "./counter/counter.model.js";
 
 //Payment
-export { default as Payment } from './payment/payment.model.js';
-export { paymentSettings } from './payment/payment.model.js';
+export { default as Payment } from "./payment/payment.model.js";
+export { paymentSettings } from "./payment/payment.model.js";
 
 //Delivery
-export { default as Delivery } from './delivery/delivery.model.js';
-export { deliverySettings } from './delivery/delivery.model.js';
+export { default as Delivery } from "./delivery/delivery.model.js";
+export { deliverySettings } from "./delivery/delivery.model.js";
 
 //Ledger
-export { default as Ledger } from './ledger/ledger.model.js';
-export { ledgerSettings } from './ledger/ledger.model.js';
+export { default as Ledger } from "./ledger/ledger.model.js";
+export { ledgerSettings } from "./ledger/ledger.model.js";
 
 //Contacts
-export { default as Supplier } from './customer/supplier.model.js';
-export { supplierSettings } from './customer/supplier.model.js';
+export { default as Supplier } from "./customer/supplier.model.js";
+export { supplierSettings } from "./customer/supplier.model.js";
 
 //Group
-export { default as Group } from './collection/group.model.js';
-export { groupSettings } from './collection/group.model.js';
+export { default as Group } from "./collection/group.model.js";
+export { groupSettings } from "./collection/group.model.js";
 
 //Shop
-export { default as Shop } from './shop/shop.model.js';
-export { default as shopSettings } from './shop/shop.settings.js';
+export { default as Shop } from "./shop/shop.model.js";
+export { default as shopSettings } from "./shop/shop.settings.js";
 
 //Purchase
-export { purchaseSettings, Purchase } from './purchase/index.js';
+export { purchaseSettings, Purchase } from "./purchase/index.js";
 
 //Admin Role & User
-export { default as Admin } from './admin/admin.model.js';
-export { default as AdminRole, adminRoleSettings } from './admin/adminRole.model.js';
+export { default as Admin } from "./admin/admin.model.js";
+export {
+  default as AdminRole,
+  adminRoleSettings,
+} from "./admin/adminRole.model.js";
 // export { adminSettings } from './admin/admin.model.js';
-export { default as adminSettings } from './admin/admin.settings.js';
+export { default as adminSettings } from "./admin/admin.settings.js";
 
 //Subscription
-export { default as Subscription } from './subscription/subscription.model.js';
-export { subscriptionSettings } from './subscription/subscription.model.js';
+export { default as Subscription } from "./subscription/subscription.model.js";
+export { subscriptionSettings } from "./subscription/subscription.model.js";
 
 //UserSubscription
-export { default as UserSubscription } from './subscription/userSubscription.model.js';
-export { userSubscriptionSettings } from './subscription/userSubscription.model.js';
+export { default as UserSubscription } from "./subscription/userSubscription.model.js";
+export { userSubscriptionSettings } from "./subscription/userSubscription.model.js";
 
 //Coupon
-export { default as Coupon } from './coupon/coupon.model.js';
-export { default as couponSettings } from './coupon/coupon.settings.js';
-export { default as CouponType } from './coupon/coupon.type.js';
+export { default as Coupon } from "./coupon/coupon.model.js";
+export { default as couponSettings } from "./coupon/coupon.settings.js";
+export { default as CouponType } from "./coupon/coupon.type.js";
 
 //SMS
-export { default as SMS } from './sms/sms.model.js';
-export { default as SMSType } from './sms/sms.types.js';
-export { default as smsSettings } from './sms/sms.settings.js';
+export { default as SMS } from "./sms/sms.model.js";
+export { default as SMSType } from "./sms/sms.types.js";
+export { default as smsSettings } from "./sms/sms.settings.js";
 
 //Asset
-export { default as Asset } from './asset/asset.model.js';
-export { default as AssetType } from './asset/asset.types.js';
-export { default as assetSettings } from './asset/asset.settings.js';
+export { default as Asset } from "./asset/asset.model.js";
+export { default as AssetType } from "./asset/asset.types.js";
+export { default as assetSettings } from "./asset/asset.settings.js";
 
 //Payment Account
-export * from './payment-account/index.js';
+export * from "./payment-account/index.js";
 
 //deployment
 export {
-	default as Deployment,
-	settings as deploymentSettings,
-} from './deployment/Deployment.model.js';
+  default as Deployment,
+  settings as deploymentSettings,
+} from "./deployment/Deployment.model.js";
 
 //theme
-export { default as Theme } from './theme/Theme.model.js';
-export { ThemeType, themeSettings } from './theme/Theme.model.js';
+export { default as Theme } from "./theme/Theme.model.js";
+export { ThemeType, themeSettings } from "./theme/Theme.model.js";
 
 //purchased theme
-export { default as PurchasedTheme } from './theme/purchasedTheme.model.js';
-export { PurchasedThemeType, purchasedThemeSettings } from './theme/purchasedTheme.model.js';
+export { default as PurchasedTheme } from "./theme/purchasedTheme.model.js";
+export {
+  PurchasedThemeType,
+  purchasedThemeSettings,
+} from "./theme/purchasedTheme.model.js";
 
 //Themes
-export { default as Nexa } from './store/store.model.js';
-export { default as Hongo } from './store/hongo.model.js';
-export { default as Pulse } from './store/pulse.model.js';
+export { default as Nexa } from "./store/store.model.js";
+export { default as Hongo } from "./store/hongo.model.js";
+export { default as Pulse } from "./store/pulse.model.js";
 export { default as Mango } from './store/mango.model.js';
 
 //Collection
-export { default as Collection } from './collection/collection.model.js';
-export { settings as collectionSettings } from './collection/collection.model.js';
+export { default as Collection } from "./collection/collection.model.js";
+export { settings as collectionSettings } from "./collection/collection.model.js";
 
 //Location
-export { default as Location } from './location/location.model.js';
-export { default as LocationType } from './location/location.types.js';
-export { default as locationSettings } from './location/location.settings.js';
+export { default as Location } from "./location/location.model.js";
+export { default as LocationType } from "./location/location.types.js";
+export { default as locationSettings } from "./location/location.settings.js";
 
 //Staff
-export { default as Staff } from './staff/staff.model.js';
-export { default as StaffType } from './staff/staff.types.js';
-export { default as staffSettings } from './staff/staff.settings.js';
+export { default as Staff } from "./staff/staff.model.js";
+export { default as StaffType } from "./staff/staff.types.js";
+export { default as staffSettings } from "./staff/staff.settings.js";
 
 //Projects
-export { default as Project } from './project/project.model.js';
-export { default as projectSettings } from './project/settings.js';
-export { default as ProjectType } from './project/types.js';
+export { default as Project } from "./project/project.model.js";
+export { default as projectSettings } from "./project/settings.js";
+export { default as ProjectType } from "./project/types.js";
 
 //Clients
-export { default as Client } from './client/client.model.js';
-export { default as clientSettings } from './client/client.settings.js';
-export { default as ClientType } from './client/client.types.js';
+export { default as Client } from "./client/client.model.js";
+export { default as clientSettings } from "./client/client.settings.js";
+export { default as ClientType } from "./client/client.types.js";
 
 //Documents
-export { default as Doc } from './document/document.model.js';
-export { default as docSettings } from './document/document.settings.js';
-export { default as DocType } from './document/document.types.js';
+export { default as Doc } from "./document/document.model.js";
+export { default as docSettings } from "./document/document.settings.js";
+export { default as DocType } from "./document/document.types.js";
 
 //Job Post
-export { default as JobPost } from './jobpost/jobpost.model.js';
-export { default as jobPostSettings } from './jobpost/jobpost.settings.js';
-export { default as JobPostType } from './jobpost/jobpost.types.js';
+export { default as JobPost } from "./jobpost/jobpost.model.js";
+export { default as jobPostSettings } from "./jobpost/jobpost.settings.js";
+export { default as JobPostType } from "./jobpost/jobpost.types.js";
 
 //Job Application
-export { default as JobApplication } from './jobpost/jobApplication.model.js';
-export { default as jobApplicationSettings } from './jobpost/jobApplication.settings.js';
-export { default as JobApplicationType } from './jobpost/jobApplication.types.js';
+export { default as JobApplication } from "./jobpost/jobApplication.model.js";
+export { default as jobApplicationSettings } from "./jobpost/jobApplication.settings.js";
+export { default as JobApplicationType } from "./jobpost/jobApplication.types.js";
 
 //Meeting
-export { default as Meeting } from './meeting/meeting.model.js';
-export { default as meetingSettings } from './meeting/meeting.settings.js';
-export { default as MeetingType } from './meeting/meeting.types.js';
+export { default as Meeting } from "./meeting/meeting.model.js";
+export { default as meetingSettings } from "./meeting/meeting.settings.js";
+export { default as MeetingType } from "./meeting/meeting.types.js";
 
 //Admin Invoice
-export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminInvoice.model.js';
+export {
+  default as AdminInvoice,
+  adminInvoiceSettings,
+} from "./payment/adminInvoice.model.js";
 
 //Leave
-export { default as Leave } from './employee/leave.model.js';
-export { default as leaveSettings } from './employee/leaveSettings.js';
+export { default as Leave } from "./employee/leave.model.js";
+export { default as leaveSettings } from "./employee/leaveSettings.js";
 
 //Employee
-export { default as Employee } from './employee/employee.model.js';
-export { default as employeeSettings } from './employee/employee.settings.js';
+export { default as Employee } from "./employee/employee.model.js";
+export { default as employeeSettings } from "./employee/employee.settings.js";
 
 //Software
-export { default as Software } from './software/software.model.js';
-export { default as softwareSettings } from './software/settings.js';
+export { default as Software } from "./software/software.model.js";
+export { default as softwareSettings } from "./software/settings.js";
 
 //Team Member
-export { default as TeamMember } from './team-members/team.model.js';
-export { default as teamMemberSettings } from './team-members/team.settings.js';
+export { default as TeamMember } from "./team-members/team.model.js";
+export { default as teamMemberSettings } from "./team-members/team.settings.js";
 
 //Portfolio
-export { default as Portfolio } from './portfolio/portfolio.model.js';
-export { default as portfolioSettings } from './portfolio/portfolio.settings.js';
+export { default as Portfolio } from "./portfolio/portfolio.model.js";
+export { default as portfolioSettings } from "./portfolio/portfolio.settings.js";
 
 //Service
-export { default as Service } from './services/services.model.js';
-export { default as serviceSettings } from './services/service.settings.js';
+export { default as Service } from "./services/services.model.js";
+export { default as serviceSettings } from "./services/service.settings.js";
 
 //Issue
-export { default as Issue } from './issues/issues.model.js';
-export { default as issueSettings } from './issues/issues.settings.js';
+export { default as Issue } from "./issues/issues.model.js";
+export { default as issueSettings } from "./issues/issues.settings.js";
 
 //Maintenance
-export { default as Maintenance } from './maintenance/maintenance.model.js';
-export { default as maintenanceSettings } from './maintenance/maintenance.settings.js';
+export { default as Maintenance } from "./maintenance/maintenance.model.js";
+export { default as maintenanceSettings } from "./maintenance/maintenance.settings.js";
 
 //Admin Expense
-export { default as AdminExpense } from './admin-expense/adminExpense.model.js';
-export { default as adminExpenseSettings } from './admin-expense/adminExpense.settings.js';
+export { default as AdminExpense } from "./admin-expense/adminExpense.model.js";
+export { default as adminExpenseSettings } from "./admin-expense/adminExpense.settings.js";
 
 //Resources
-export { default as Resource } from './resources/resources.model.js';
-export { default as resourceSettings } from './resources/resources.settings.js';
+export { default as Resource } from "./resources/resources.model.js";
+export { default as resourceSettings } from "./resources/resources.settings.js";
 
 //Components
-export { default as Component } from './components/components.model.js';
-export { default as componentSettings } from './components/components.settings.js';
+export { default as Component } from "./components/components.model.js";
+export { default as componentSettings } from "./components/components.settings.js";
 
 //Props
-export { default as Prop } from './components/props.model.js';
-export { default as propSettings } from './components/props.settings.js';
+export { default as Prop } from "./components/props.model.js";
+export { default as propSettings } from "./components/props.settings.js";
 
 //Newsletter
 export { default as Newsletter } from './newsletter/newsletter.model.js';
 export { default as newsletterSettings } from './newsletter/newsletter.settings.js';
 
 //Project Plan #Project #Feature #Page #Model
-export * from './project-plan/index.js';
+export * from "./project-plan/index.js";
 
 //Bill Subscription
-export { default as BillSubscription } from './bill-subscription/model.js';
-export { default as billSubscriptionSettings } from './bill-subscription/settings.js';
+export { default as BillSubscription } from "./bill-subscription/model.js";
+export { default as billSubscriptionSettings } from "./bill-subscription/settings.js";
 
 //Client
-export { default as TCClient } from './tc-clients/model.js';
-export { default as tcClientSettings } from './tc-clients/settings.js';
+export { default as TCClient } from "./tc-clients/model.js";
+export { default as tcClientSettings } from "./tc-clients/settings.js";
 
 //Bill
-export { default as Bill } from './admin-expense/bills.model.js';
-export { default as billSettings } from './admin-expense/bills.settings.js';
+export { default as Bill } from "./admin-expense/bills.model.js";
+export { default as billSettings } from "./admin-expense/bills.settings.js";

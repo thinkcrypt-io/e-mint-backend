@@ -5,7 +5,11 @@ import { getErrorMessage } from '../../imports.js';
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const document = new model({ ...req.body, shop: req.shop, addedBy: req.user._id });
+			const document = new model({
+				...req?.body,
+				shop: req?.shop,
+				addedBy: req?.user?._id,
+			});
 			const saved = await document.save();
 
 			return res.status(201).json({
