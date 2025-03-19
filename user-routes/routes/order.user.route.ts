@@ -4,14 +4,9 @@ import {
 	getAllDocuments,
 	getDocumentById,
 } from '../../controllers/common/index.js';
-import addUserOrder, {
-	PendingPayment,
-	reduceProductStock,
-	sendOrderNotifications,
-} from '../../controllers/order/addUserOrder.controller.js';
+import addUserOrder from '../../controllers/order/addUserOrder.controller.js';
 import getOrderTotal from '../../controllers/order/getOrderTotal.js';
 import Order, { settings } from '../../models/order/order.model.js';
-import { Shop } from '../../imports.js';
 import {
 	myData,
 	userProtect as protect,

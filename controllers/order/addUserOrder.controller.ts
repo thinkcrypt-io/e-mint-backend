@@ -154,12 +154,6 @@ const addUserOrder = async (req: any, res: Response) => {
         dueAmount: 0, // Fully paid
       };
 
-      // await PendingPayment.create({
-      //   transactionId,
-      //   orderData: completeOrderData,
-      //   items: cart.items,
-      // });
-
 			const savePayment = await PendingPayment.create({
 				transactionId,
 				orderData: completeOrderData,
