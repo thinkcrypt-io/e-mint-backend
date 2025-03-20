@@ -7,11 +7,10 @@ const createDocument = (model: mongoose.Model<any>) => {
 		try {
 			const document = new model({
 				...req?.body,
-				shop: req?.shop,
+				shop: req.shop,
 				addedBy: req?.user?._id,
 			});
 			const saved = await document.save();
-
 			return res.status(201).json({
 				message: `${model.modelName} with id: ${saved._id} added successfully`,
 				doc: saved,
