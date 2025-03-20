@@ -53,7 +53,7 @@ app.use('/', (req, res, next) => {
 
 app.use('/admin/api', adminRouter);
 app.use('/user-api', userRouter);
-app.use('/app-api/', appRouter);
+app.use('/app-api', appRouter);
 app.use('/api', sellerApi);
 app.use('/staff-api/', staffApi);
 
