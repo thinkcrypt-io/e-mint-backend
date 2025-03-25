@@ -3,6 +3,10 @@ import sendMail from '../../controllers/mail/sendMail.controller.js';
 
 const schema = new mongoose.Schema(
 	{
+		title: {
+			type: String,
+			trim: true,
+		},
 		subject: {
 			type: String,
 			trim: true,
@@ -52,7 +56,7 @@ schema.post<any>('save', async function (next) {
 			const emails: any = this.to.map((assignee: any) => assignee).join(', ');
 
 			sendMail({
-				title: 'Thinkcrypt.io | We Build Digital Experience',
+				title: this.title || 'Thinkcrypt.io | We Build Digital Experience',
 				to: emails,
 				cc: this.cc.map((assignee: any) => assignee).join(', '),
 				bcc: this.bcc.map((assignee: any) => assignee).join(', '),

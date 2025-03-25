@@ -11,6 +11,21 @@ const settings: SettingsType<any> = {
 		trim: true,
 		schema: { sort: false, default: true },
 	},
+	title: {
+		title: 'Title',
+		type: 'string',
+		sort: false,
+		search: true,
+		edit: true,
+		required: true,
+		trim: true,
+		schema: {
+			sort: true,
+			default: true,
+			helperText:
+				'This is the text that goes in the email title, leave it blank if you are unsure, default: Thinkcrypt.io | We Build Digital Experience',
+		},
+	},
 	recipients: {
 		title: 'Recipients',
 		type: 'mixed',
