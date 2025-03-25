@@ -234,3 +234,7 @@ export { default as tcClientSettings } from './tc-clients/settings.js';
 //Bill
 export { default as Bill } from './admin-expense/bills.model.js';
 export { default as billSettings } from './admin-expense/bills.settings.js';
+
+//Email
+export { default as Email } from './email/model.js';
+export { default as emailSettings } from './email/settings.js';

@@ -78,6 +78,8 @@ import {
 	FacebookGroups,
 	facebookGroupsSettings,
 	notAllowed,
+	Email,
+	emailSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -347,6 +349,15 @@ router.use(
 		settings: billSettings,
 		permission: 'bill',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/emails',
+	defineRoutes({
+		Model: Email,
+		settings: emailSettings,
+		permission: 'email',
 	})
 );
 
