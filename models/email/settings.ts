@@ -17,7 +17,7 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: true,
 		edit: true,
-		required: true,
+		required: false,
 		trim: true,
 		schema: {
 			sort: true,
