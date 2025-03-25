@@ -55,8 +55,9 @@ schema.post<any>('save', async function (next) {
 
 			const emails: any = this.to.map((assignee: any) => assignee).join(', ');
 
+			const title = this.title?.trim() || 'Thinkcrypt.io | We Build Digital Experience';
 			sendMail({
-				title: this.title || 'Thinkcrypt.io | We Build Digital Experience',
+				title: title,
 				to: emails,
 				cc: this.cc.map((assignee: any) => assignee).join(', '),
 				bcc: this.bcc.map((assignee: any) => assignee).join(', '),
