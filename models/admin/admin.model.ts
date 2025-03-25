@@ -120,6 +120,7 @@ const schema = new Schema<AdminType>(
 			tcclients: [String],
 			bills: [String],
 			fgroups: [String],
+			emails: [String],
 		},
 	},
 

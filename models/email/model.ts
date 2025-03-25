@@ -41,8 +41,6 @@ schema.pre<any>('save', function (next) {
 schema.post<any>('save', async function (next) {
 	try {
 		if (isNewItem) {
-			// Multiple assignees
-
 			if (this.to.length == 0) {
 				if (this.cc.length == 0) {
 					if (this.bcc.length == 0) {
@@ -54,7 +52,7 @@ schema.post<any>('save', async function (next) {
 			const emails: any = this.to.map((assignee: any) => assignee).join(', ');
 
 			sendMail({
-				title: 'THINKCRYPT.IO LTD',
+				title: 'Thinkcrypt.io | We Build Digital Experience',
 				to: emails,
 				cc: this.cc.map((assignee: any) => assignee).join(', '),
 				bcc: this.bcc.map((assignee: any) => assignee).join(', '),
