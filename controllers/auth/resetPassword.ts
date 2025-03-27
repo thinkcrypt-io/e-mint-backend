@@ -10,11 +10,11 @@ const resetPassword = async (req: any, res: Response) => {
 		const { email, _id } = decoded;
 
 		let data = await Customer.findById(_id);
-		
+		console.log('decoded id and email:', email, _id, password)
 		if (!data) return res.status(404).json({ message: 'User Not Found' });
 
 		const salt = await bcrypt.genSalt(10);
-		data.password = await bcrypt.hash(data.password, salt);
+		data.password = await bcrypt.hash(password, salt);
 
 		const saved = await data.save();
 		return res.status(200).json({ message: 'Password Updated Successfully' });
