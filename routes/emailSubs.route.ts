@@ -59,6 +59,7 @@ import {
 } from '../imports.js';
 import deleteProject from '../controllers/hongo/deleteProject.controller.js';
 import getDeploymentStatus from '../controllers/hongo/getDeploymentStatus.js';
+import { shop } from '../middleware/userAuth.middleware.js';
 
 // Define the permissions
 const permission = 'email-subscription';
@@ -81,6 +82,7 @@ const middlewares = {
 		// validate(config.VALIDATORS.POST),
 		// isExists(config.EXIST_OPTIONS),
 		// hasPermission([permissions.create]),
+		shop,
 		checkEmailExists({ Model }),
 	],
 	//Middleware for getting all categories

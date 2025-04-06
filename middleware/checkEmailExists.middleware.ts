@@ -9,7 +9,6 @@ const checkEmailExists = ({ Model }: CheckEmailExistsOptions) => {
 	return async (req: Request, res: Response, next: NextFunction) => {
 		try {
 			const { email } = req.body;
-			console.log('email:', email);
 			if (!email) {
 				return res.status(400).json({ message: 'Email is required' });
 			}

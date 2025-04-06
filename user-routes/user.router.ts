@@ -19,7 +19,7 @@ router.use('/collections', userCollectionRoute);
 router.use('/products', userProductRoute);
 router.use('/auth', userAuthRoute);
 router.use('/orders', userOrder);
-
+router.use('/email-subscriptions', emailSubscriptionRouter);
 router.use('/store/hongo', userStoreRoute);
 
 export default router;
