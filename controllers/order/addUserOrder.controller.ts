@@ -33,14 +33,6 @@ const addUserOrder = async (req: any, res: Response) => {
     note,
   } = req.body;
 
-	// console.log('check cart', cart);
-	// return res.json(req.body);
-	
-
-	// console.log('check cart', cart);
-	// return res.json(req.body);
-	
-
 	try {
 		// Generate a unique transaction ID
 		const transactionId = uuidv4();
@@ -73,11 +65,12 @@ const addUserOrder = async (req: any, res: Response) => {
     if (paymentMethod === "cash on delivery") {
       // For COD, create order immediately with isPaid=false
       const codOrderData = {
-        ...orderData,
-        isPaid: false,
-        status: status || "pending",
-        dueAmount: Number(cart?.total) - Number(paymentAmount || 0),
-      };
+				...orderData,
+				isPaid: false,
+				status: status || 'pending',
+				dueAmount:
+					Number(cart?.total + cart.shipping) - Number(paymentAmount || 0),
+			};
 
       const order = new Order(codOrderData);
       const saved = (await order.save()) as any;
@@ -148,11 +141,12 @@ const addUserOrder = async (req: any, res: Response) => {
 
       // Store order data in pending payments collection
       const completeOrderData = {
-        ...orderData,
-        isPaid: true, // Will be true when payment succeeds
-        status: "processing", // Status for paid orders
-        dueAmount: 0, // Fully paid
-      };
+				...orderData,
+				isPaid: true, // Will be true when payment succeeds
+				status: 'processing', // Status for paid orders
+				dueAmount: 0, // Fully paid
+				paidAmount: cart.total + cart.shipping,
+			};
 
 			const savePayment = await PendingPayment.create({
 				transactionId,
