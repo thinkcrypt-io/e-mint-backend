@@ -133,14 +133,14 @@ const schema = new Schema<any>({
 		},
 
 		hero: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Hero Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Hero Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -166,14 +166,14 @@ const schema = new Schema<any>({
 
 		cat: {
 			cat1: {
-				title: getString('Enter Your Text'),
+				title: getString('Enter Category Title'),
 				titleCss: TextSchema({
 					fontSize: {
 						base: 14,
 						md: 16,
 					},
 				}),
-				subTitle: getString('Enter Your Text'),
+				subTitle: getString('Enter Category Subtitle'),
 				subTitleCss: TextSchema({
 					fontSize: {
 						base: 14,
@@ -201,14 +201,14 @@ const schema = new Schema<any>({
 				}),
 			},
 			cat2: {
-				title: getString('Enter Your Text'),
+				title: getString('Enter Category Title'),
 				titleCss: TextSchema({
 					fontSize: {
 						base: 14,
 						md: 16,
 					},
 				}),
-				subTitle: getString('Enter Your Text'),
+				subTitle: getString('Enter Category Subtitle'),
 				subTitleCss: TextSchema({
 					fontSize: {
 						base: 14,
@@ -236,14 +236,14 @@ const schema = new Schema<any>({
 				}),
 			},
 			cat3: {
-				title: getString('Enter Your Text'),
+				title: getString('Enter Category Title'),
 				titleCss: TextSchema({
 					fontSize: {
 						base: 14,
 						md: 16,
 					},
 				}),
-				subTitle: getString('Enter Your Text'),
+				subTitle: getString('Enter Category Subtitle'),
 				subTitleCss: TextSchema({
 					fontSize: {
 						base: 14,
@@ -271,14 +271,14 @@ const schema = new Schema<any>({
 				}),
 			},
 			cat4: {
-				title: getString('Enter Your Text'),
+				title: getString('Enter Category Title'),
 				titleCss: TextSchema({
 					fontSize: {
 						base: 14,
 						md: 16,
 					},
 				}),
-				subTitle: getString('Enter Your Text'),
+				subTitle: getString('Enter Category Subtitle'),
 				subTitleCss: TextSchema({
 					fontSize: {
 						base: 14,
@@ -308,14 +308,14 @@ const schema = new Schema<any>({
 		},
 
 		banner1: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Banner Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Banner Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -349,14 +349,14 @@ const schema = new Schema<any>({
 		},
 
 		banner2: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Banner Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Banner Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -386,14 +386,14 @@ const schema = new Schema<any>({
 		},
 
 		banner3: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Banner Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Banner Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -423,14 +423,14 @@ const schema = new Schema<any>({
 		},
 
 		banner4: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Banner Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Banner Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -460,14 +460,14 @@ const schema = new Schema<any>({
 		},
 
 		about: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter About Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter About Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -500,14 +500,14 @@ const schema = new Schema<any>({
 		},
 
 		aboutTwo: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter About Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter About Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -544,14 +544,14 @@ const schema = new Schema<any>({
 		},
 
 		contact: {
-			title: getString('Enter Your Text'),
+			title: getString('Enter Contact Title'),
 			titleCss: TextSchema({
 				fontSize: {
 					base: 14,
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Contact Subtitle'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
@@ -602,7 +602,7 @@ const schema = new Schema<any>({
 					md: 16,
 				},
 			}),
-			subTitle: getString('Enter Your Text'),
+			subTitle: getString('Enter Bottom Footer Title'),
 			subTitleCss: TextSchema({
 				fontSize: {
 					base: 14,
