@@ -345,6 +345,7 @@ const schema = new Schema<any>({
 					md: '700px',
 				},
 			}),
+			hide: getBoolean(false),
 		},
 
 		banner2: {
@@ -381,6 +382,7 @@ const schema = new Schema<any>({
 					md: '700px',
 				},
 			}),
+			hide: getBoolean(false),
 		},
 
 		banner3: {
@@ -417,6 +419,7 @@ const schema = new Schema<any>({
 					md: '700px',
 				},
 			}),
+			hide: getBoolean(false),
 		},
 
 		banner4: {
@@ -453,6 +456,7 @@ const schema = new Schema<any>({
 					md: '700px',
 				},
 			}),
+			hide: getBoolean(false),
 		},
 
 		about: {
@@ -492,6 +496,7 @@ const schema = new Schema<any>({
 				base: Number,
 				md: Number,
 			},
+			hide: getBoolean(false),
 		},
 
 		aboutTwo: {
@@ -535,6 +540,7 @@ const schema = new Schema<any>({
 				base: Number,
 				md: Number,
 			},
+			hide: getBoolean(false),
 		},
 
 		contact: {
