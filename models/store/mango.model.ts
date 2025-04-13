@@ -62,9 +62,10 @@ const schema = new Schema<any>({
 			css: TopBannerSchema({
 				bg: '#dc2e2e',
 				color: '#ffffff',
-				// width: 'full',
+				width: 'full',
+				height: '60px',
 			}),
-			content: getString('Enter Your Text'),
+			content: getString('Enter Top Banner Title'),
 			contentCss: TextSchema({
 				fontSize: {
 					base: 14,
