@@ -200,6 +200,7 @@ const schema = new Schema<any>({
 						md: '700px',
 					},
 				}),
+				hide: getBoolean(false),
 			},
 			cat2: {
 				title: getString('Enter Category Title'),
@@ -235,6 +236,7 @@ const schema = new Schema<any>({
 						md: '700px',
 					},
 				}),
+				hide: getBoolean(false),
 			},
 			cat3: {
 				title: getString('Enter Category Title'),
@@ -270,6 +272,7 @@ const schema = new Schema<any>({
 						md: '700px',
 					},
 				}),
+				hide: getBoolean(false),
 			},
 			cat4: {
 				title: getString('Enter Category Title'),
@@ -305,6 +308,7 @@ const schema = new Schema<any>({
 						md: '700px',
 					},
 				}),
+				hide: getBoolean(false),
 			},
 		},
 
