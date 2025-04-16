@@ -28,6 +28,7 @@ export const protect = async (
 
 		const getShop = await Shop.findOne({ id: req.headers.store || '0001' });
 		req.shop = getShop?._id;
+		// return res.json(getShop);
 
 		req.user = await Customer.findById(decoded?._id).select('-password');
 
@@ -49,6 +50,7 @@ export const shop = async (
 ): Promise<Response | void> => {
 	try {
 		const getShop = await Shop.findOne({ id: req.headers.store });
+
 		req.shop = getShop?._id;
 
 		let query: any = req?.queryHelper || {};
@@ -62,7 +64,11 @@ export const shop = async (
 	}
 };
 
-export const self = (req: any, res: Response, next: NextFunction): Response | void => {
+export const self = (
+	req: any,
+	res: Response,
+	next: NextFunction
+): Response | void => {
 	try {
 		let query: any = req?.queryHelper || {};
 		query.user = req.user._id;
@@ -99,7 +105,9 @@ export const superAdmin = async (
 			next(); // Call the next middleware function
 		} else {
 			// If the user is not a super admin, return a 401 Unauthorized status code and a message
-			return res.status(401).json({ message: 'You need to be a superadmin to open stores' });
+			return res
+				.status(401)
+				.json({ message: 'You need to be a superadmin to open stores' });
 		}
 	} catch (e: any) {
 		console.error(e);
@@ -126,11 +134,16 @@ export const admin = async (
 		req.user = await User.findById(decoded?._id).select('-password');
 
 		// If the user exists on the request object and their role is SUPER_ADMIN
-		if ((req as any).user?.role == 'admin' || (req as any).user?.role == 'super-admin') {
+		if (
+			(req as any).user?.role == 'admin' ||
+			(req as any).user?.role == 'super-admin'
+		) {
 			next(); // Call the next middleware function
 		} else {
 			// If the user is not a super admin, return a 401 Unauthorized status code and a message
-			return res.status(401).json({ message: 'You need to be a superadmin to open stores' });
+			return res
+				.status(401)
+				.json({ message: 'You need to be a superadmin to open stores' });
 		}
 	} catch (e: any) {
 		console.error(e);
@@ -138,7 +151,11 @@ export const admin = async (
 	}
 };
 
-export const softProtect = (req: RequestType, res: Response, next: NextFunction): void => {
+export const softProtect = (
+	req: RequestType,
+	res: Response,
+	next: NextFunction
+): void => {
 	const authHeader = req.headers.authorization;
 
 	try {

@@ -39,6 +39,7 @@ import {
 	transferRoute,
 } from '../routes/index.js';
 import express from 'express';
+import { emailSubscriptionRouter } from '../user-routes/index.js';
 
 const router = express.Router();
 
@@ -48,6 +49,7 @@ router.use('/categories', categoryRoute);
 router.use('/contents', contentRoute);
 router.use('/adjustments', adjustmentRoute);
 router.use('/coupons', couponRoute);
+router.use('/email-subscriptions', emailSubscriptionRouter);
 
 router.use('/items', itemRoute);
 router.use('/products', productRoute);
@@ -86,5 +88,7 @@ router.use('/locations', locationRoute);
 router.use('/staffs', staffRoute);
 router.use('/inventories', inventoryRoute);
 router.use('/transfers', transferRoute);
+
+
 
 export default router;

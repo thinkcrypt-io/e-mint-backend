@@ -26,7 +26,9 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 
 		if (coupon) {
 			if (!couponData)
-				return res.status(400).json({ message: `Coupon ${coupon} is invalid or is expired` });
+				return res
+					.status(400)
+					.json({ message: `Coupon ${coupon} is invalid or is expired` });
 
 			// const orders = await Order.countDocuments({
 			// 	user: (req as any).user._id,
@@ -47,7 +49,9 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 			if (totalCouponUse >= couponData.maxUse)
 				return res
 					.status(400)
-					.json({ message: `Coupon ${coupon} has been used maximum number of times` });
+					.json({
+						message: `Coupon ${coupon} has been used maximum number of times`,
+					});
 
 			couponId = couponData._id;
 		}
@@ -57,39 +61,45 @@ const getAppCart = async (req: Request, res: Response): Promise<Response> => {
 		for (const item of items) {
 			const product = (await Product.findById(item.id)) as any; // Fetch the product from the database
 
-			if (!product) return res.status(400).json({ message: `Product ${item.id} not found` });
+			if (!product)
+				return res
+					.status(400)
+					.json({ message: `Product ${item.id} not found` });
 
-			if (product.price === item.price) {
-				// Compare the prices
-				subTotal += item.price * item.qty; // Add to the total
-				const itemVat = (item.price * item.qty * product.vat) / 100;
-				vat += itemVat;
-				totalItems = totalItems + item.qty;
-				const cartItem = {
-					_id: product._id,
-					name: product.name,
-					image: product.image,
-					totalPrice: product.price * item.qty,
-					vat: itemVat,
-					qty: item.qty,
-					unitPrice: item.price,
-				};
-				cartItems.push(cartItem);
-			} else {
-				return res.status(400).json({ message: `Price mismatch for product ${item.id}` });
-			}
+			// if (product.price === item.price) {
+			// Compare the prices
+			subTotal += item.price * item.qty; // Add to the total
+			const itemVat = (item.price * item.qty * product.vat) / 100;
+			vat += itemVat;
+			totalItems = totalItems + item.qty;
+			const cartItem = {
+				_id: product._id,
+				name: product.name,
+				image: product.image,
+				totalPrice: product.price * item.qty,
+				vat: itemVat,
+				qty: item.qty,
+				unitPrice: item.price,
+			};
+			cartItems.push(cartItem);
+			// } else {
+			// 	return res.status(400).json({ message: `Price mismatch for product ${item.id}` });
+			// }
 		}
 
 		if (couponData) {
 			if (couponData.isFlat) {
 				discount = couponData.maxAmount;
 			} else {
-				const calculatedDiscount = (subTotal * (couponData as any).percentage) / 100;
+				const calculatedDiscount =
+					(subTotal * (couponData as any).percentage) / 100;
 				discount = Math.min(calculatedDiscount, couponData.maxAmount);
 			}
 		}
 
-		const isOrderValueValid = couponData ? subTotal >= couponData.minOrderValue : true;
+		const isOrderValueValid = couponData
+			? subTotal >= couponData.minOrderValue
+			: true;
 
 		let total = isOrderValueValid
 			? subTotal + vat - discount + shipping - (req?.body?.discount || 0)

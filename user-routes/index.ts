@@ -4,3 +4,4 @@ export { default as userCollectionRoute } from './routes/collections.user.route.
 export { default as userProductRoute } from './routes/product.user.route.js';
 export { default as userAuthRoute } from './routes/auth.user.route.js';
 export { default as userOrder } from './routes/order.user.route.js';
+export { default as emailSubscriptionRouter } from '../routes/emailSubs.route.js';

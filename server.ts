@@ -13,6 +13,7 @@ import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
 import staffApi from './staff/router.js';
+import { contentRoute } from './routes/index.js';
 
 //User Routes
 
@@ -52,9 +53,11 @@ app.use('/', (req, res, next) => {
 
 app.use('/admin/api', adminRouter);
 app.use('/user-api', userRouter);
-app.use('/app-api/', appRouter);
+app.use('/app-api', appRouter);
 app.use('/api', sellerApi);
 app.use('/staff-api/', staffApi);
+
+app.use('/api/contents', contentRoute);
 
 //app.use('/api/orders', orderRoute);
 
