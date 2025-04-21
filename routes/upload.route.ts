@@ -73,7 +73,8 @@ router.post(
 			// File keys
 			const lowResKey = `${nameWithoutExt}_low_${timestamp}.webp`;
 			const highResKey = `${nameWithoutExt}_high_${timestamp}.webp`;
-
+			console.log('Low-res file key:', lowResKey);
+			console.log('High-res file key:', highResKey);
 			// Create buffers
 			const lowResBuffer = await sharp(req.file.path)
 				.webp({ quality: 50 }) // lower quality for preview
@@ -130,7 +131,7 @@ router.post(
 			const saved = await newFile.save();
 
 			// Clean up tmp file
-			if (req.file?.path) fs.unlinkSync(req.file.path);
+			// if (req.file?.path) fs.unlinkSync(req.file.path);
 
 			return res.status(200).json({
 				message: 'Image uploaded successfully',
@@ -146,8 +147,8 @@ router.post(
 
 export default router;
 
-// previous version
-// uploads a file to s3
+// // previous version
+// // uploads a file to s3
 // router.post('/', protect, uploadFile.single('image'), async (req: any, res: Response) => {
 // 	try {
 // 		AWS.config.update({
