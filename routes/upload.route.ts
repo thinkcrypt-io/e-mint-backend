@@ -5,16 +5,20 @@ import multer from 'multer';
 import sharp from 'sharp';
 import File from '../models/file/file.model.js';
 import { protect } from '../middleware/auth.middleware.js';
-
+import path from 'path';
 const router = express.Router();
 
 const uploadFile = multer({ dest: 'from/' });
 
 router.get('/', protect, async (req: Request, res: Response) => {
 	try {
-		const files = await File.find({ shop: (req as any).shop }).sort('-createdAt');
+		const files = await File.find({ shop: (req as any).shop }).sort(
+			'-createdAt'
+		);
 
-		return res.status(200).json({ message: 'Files fetched successfully', doc: files });
+		return res
+			.status(200)
+			.json({ message: 'Files fetched successfully', doc: files });
 	} catch (e: any) {
 		console.error(e.message);
 		return res.status(500).json({ message: e.message });
@@ -39,7 +43,8 @@ router.delete('/:key', async (req: Request, res: Response) => {
 
 		s3.deleteObject(params, function (err, data) {
 			if (err) return res.status(500).json({ message: err });
-			if (data) return res.status(200).json({ message: 'File deleted successfully' });
+			if (data)
+				return res.status(200).json({ message: 'File deleted successfully' });
 		});
 	} catch (e: any) {
 		console.error(e.message);
@@ -48,64 +53,158 @@ router.delete('/:key', async (req: Request, res: Response) => {
 });
 
 // uploads a file to s3
-router.post('/', protect, uploadFile.single('image'), async (req: any, res: Response) => {
-	try {
-		AWS.config.update({
-			region: process.env.AWS_REGION,
-			accessKeyId: process.env.AWS_ACCESS_KEY,
-			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-			signatureVersion: 'v4',
-		});
+router.post(
+	'/',
+	protect,
+	uploadFile.single('image'),
+	async (req: any, res: Response) => {
+		try {
+			AWS.config.update({
+				region: process.env.AWS_REGION,
+				accessKeyId: process.env.AWS_ACCESS_KEY,
+				secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+				signatureVersion: 'v4',
+			});
+			const bucketName = process.env.S3_BUCKET_NAME!;
+			const timestamp = Date.now();
+			const ext = path.extname(req.file.originalname);
+			const nameWithoutExt = path.basename(req.file.originalname, ext);
 
-		const s3 = new AWS.S3();
+			// File keys
+			const lowResKey = `${nameWithoutExt}_low_${timestamp}.webp`;
+			const highResKey = `${nameWithoutExt}_high_${timestamp}.webp`;
+			console.log('Low-res file key:', lowResKey);
+			console.log('High-res file key:', highResKey);
+			// Create buffers
+			const lowResBuffer = await sharp(req.file.path)
+				.webp({ quality: 50 }) // lower quality for preview
+				.toBuffer();
 
-		const fileName = `${req?.file?.originalname}_${Date.now()}`;
+			const highResBuffer = await sharp(req.file.path)
+				.webp({ quality: 100 }) // full quality for zoom
+				.toBuffer();
 
-		const data = await sharp(req?.file?.path)
-			.webp({ quality: 100, force: true, alphaQuality: 100 })
-			.toBuffer();
+			// S3 Uploads
+			const s3 = new AWS.S3();
+			const [lowResUpload, highResUpload] = await Promise.all([
+				s3
+					.upload({
+						Bucket: bucketName,
+						Body: lowResBuffer,
+						Key: lowResKey,
+					})
+					.promise(),
 
-		var params: any = {
-			Bucket: process.env.S3_BUCKET_NAME,
-			Body: data,
-			Key: fileName,
-		};
+				s3
+					.upload({
+						Bucket: bucketName,
+						Body: highResBuffer,
+						Key: highResKey,
+					})
+					.promise(),
+			]);
 
-		s3.upload(params, async (err: any, data: any): Promise<any> => {
-			if (err) return res.status(500).json({ message: err.message });
-			if (data) {
-				// Get metadata of the uploaded file
-				const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
+			// Get metadata of the low-res file (optional)
+			const metadata = await s3
+				.headObject({ Bucket: bucketName, Key: lowResKey })
+				.promise();
 
-				// Add the size to the response
-				data.size = metadata.ContentLength;
+			const data = {
+				Location: lowResUpload.Location,
+				Bucket: lowResUpload.Bucket,
+				Key: lowResKey,
+				size: metadata.ContentLength,
+			};
 
-				const newFile = new File({
-					name: data.Key,
-					shop: req.shop,
-					url: data.Location,
-					key: data.Key,
-					type: req?.file?.mimetype,
-					bucket: data.Bucket,
-					size: data.size,
-					folder: (req as any)?.body?.folder,
-				});
+			// Save only the low-res URL in DB
+			const newFile = new File({
+				name: lowResKey,
+				shop: req.shop,
+				url: data.Location,
+				key: data.Key,
+				type: req?.file?.mimetype,
+				bucket: data.Bucket,
+				size: data.size,
+				folder: req.body?.folder,
+			});
 
-				const saved = await newFile.save();
+			const saved = await newFile.save();
 
-				return res
-					.status(200)
-					.json({ message: 'File uploaded successfully', data: saved, file: data });
-			}
-		});
+			// Clean up tmp file
+			// if (req.file?.path) fs.unlinkSync(req.file.path);
 
-		if (req?.file?.path) {
-			fs.unlinkSync(req.file.path);
+			return res.status(200).json({
+				message: 'Image uploaded successfully',
+				data: saved,
+				file: data.Location, // <-- This is the only URL you store/use
+			});
+		} catch (e: any) {
+			console.error(e.message);
+			return res.status(500).json({ message: e.message });
 		}
-	} catch (e: any) {
-		console.error(e.message);
-		return res.status(500).json({ message: e.message });
 	}
-});
+);
 
 export default router;
+
+// // previous version
+// // uploads a file to s3
+// router.post('/', protect, uploadFile.single('image'), async (req: any, res: Response) => {
+// 	try {
+// 		AWS.config.update({
+// 			region: process.env.AWS_REGION,
+// 			accessKeyId: process.env.AWS_ACCESS_KEY,
+// 			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+// 			signatureVersion: 'v4',
+// 		});
+
+// 		const s3 = new AWS.S3();
+
+// 		const fileName = `${req?.file?.originalname}_${Date.now()}`;
+
+// 		const data = await sharp(req?.file?.path)
+// 			.webp({ quality: 100, force: true, alphaQuality: 100 })
+// 			.toBuffer();
+
+// 		var params: any = {
+// 			Bucket: process.env.S3_BUCKET_NAME,
+// 			Body: data,
+// 			Key: fileName,
+// 		};
+
+// 		s3.upload(params, async (err: any, data: any): Promise<any> => {
+// 			if (err) return res.status(500).json({ message: err.message });
+// 			if (data) {
+// 				// Get metadata of the uploaded file
+// 				const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
+
+// 				// Add the size to the response
+// 				data.size = metadata.ContentLength;
+
+// 				const newFile = new File({
+// 					name: data.Key,
+// 					shop: req.shop,
+// 					url: data.Location,
+// 					key: data.Key,
+// 					type: req?.file?.mimetype,
+// 					bucket: data.Bucket,
+// 					size: data.size,
+// 					folder: (req as any)?.body?.folder,
+// 				});
+
+// 				const saved = await newFile.save();
+
+// 				return res
+// 					.status(200)
+// 					.json({ message: 'File uploaded successfully', data: saved, file: data });
+// 			}
+// 		});
+
+// 		if (req?.file?.path) {
+// 			fs.unlinkSync(req.file.path);
+// 		}
+// 	} catch (e: any) {
+// 		console.error(e.message);
+// 		return res.status(500).json({ message: e.message });
+// 	}
+// });
