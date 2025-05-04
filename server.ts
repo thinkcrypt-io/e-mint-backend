@@ -28,7 +28,11 @@ app.use(
 	})
 );
 
-const allowedOrigins = ['http://localhost:3000', 'http://example.com', 'http://localhost:3001'];
+const allowedOrigins = [
+	'http://localhost:3000',
+	'http://example.com',
+	'http://localhost:3001',
+];
 
 app.use(cors());
 app.use(morgan('combined'));
@@ -52,8 +56,11 @@ app.use('/', (req, res, next) => {
 });
 
 app.use('/admin/api', adminRouter);
+// frontend
 app.use('/user-api', userRouter);
+
 app.use('/app-api', appRouter);
+
 app.use('/api', sellerApi);
 app.use('/staff-api/', staffApi);
 
@@ -64,7 +71,10 @@ app.use('/api/contents', contentRoute);
 app.use((req, res, next) => {
 	return res
 		.status(404)
-		.json({ error: 'Not Found', message: 'The requested resource could not be found' });
+		.json({
+			error: 'Not Found',
+			message: 'The requested resource could not be found',
+		});
 });
 
 const port: string | number = process.env.PORT || 5000;
