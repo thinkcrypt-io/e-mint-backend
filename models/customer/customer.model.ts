@@ -13,7 +13,7 @@ const schema = new Schema<CustomerType>(
 		email: {
 			type: String,
 			trim: true,
-			required: [true, 'Email is required'],
+			// required: [true, 'Email is required'],
 			toLowerCase: true,
 		},
 		phone: { type: String, trim: true },
