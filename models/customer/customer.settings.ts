@@ -42,7 +42,7 @@ const settings: any = {
 		sort: true,
 		title: 'Email',
 		type: 'email',
-		required: true,
+		// required: true,
 	},
 	group: {
 		sort: true,

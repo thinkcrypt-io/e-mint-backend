@@ -10,8 +10,17 @@ type SendMailProps = {
 	attachment?: string;
 };
 
-const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendMailProps) => {
+const sendMail = async ({
+	to,
+	subject,
+	body,
+	title,
+	cc,
+	bcc,
+	attachment,
+}: SendMailProps) => {
 	try {
+		// console.log('env mail:', process.env.MAIL_ADDRESS);
 		var transporter = nodemailer.createTransport({
 			host: process.env.MAIL_HOST,
 			port: 587,
@@ -29,7 +38,9 @@ const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendM
 			...(bcc && { bcc: bcc }),
 			subject: subject,
 			text: body,
-			...(attachment && { attachments: [{ fileName: 'Attachment', path: attachment }] }),
+			...(attachment && {
+				attachments: [{ fileName: 'Attachment', path: attachment }],
+			}),
 		};
 
 		console.log('Mail Options:', mailOptions);
@@ -38,7 +49,9 @@ const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendM
 			if (error) {
 				console.log('Error Sending Mail' + error);
 			} else {
-				console.log('Email sent: to email' + to + ': Resposnse:' + info.response);
+				console.log(
+					'Email sent: to email' + to + ': Resposnse:' + info.response
+				);
 			}
 		});
 	} catch (e) {
