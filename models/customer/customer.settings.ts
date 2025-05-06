@@ -37,7 +37,7 @@ const settings: any = {
 	},
 
 	email: {
-		unique: true,
+		// unique: true,
 		search: true,
 		sort: true,
 		title: 'Email',
