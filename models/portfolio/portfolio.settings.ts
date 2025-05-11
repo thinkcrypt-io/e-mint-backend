@@ -179,7 +179,9 @@ const settings: SettingsType<any> = {
 		search: true,
 		edit: true,
 		trim: true,
-		schema: {},
+		schema: {
+			type: 'textarea',
+		},
 	},
 	subTitle: {
 		title: 'Sub Title',
@@ -204,7 +206,9 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: false,
 		edit: true,
-		schema: {},
+		schema: {
+			type: 'tag',
+		},
 	},
 	challengeTitle: {
 		title: 'Challenge Title',
@@ -287,7 +291,9 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		edit: true,
 		trim: true,
-		schema: {},
+		schema: {
+			type: 'textarea',
+		},
 	},
 	solutionTitle: {
 		title: 'Solution Title',
@@ -366,7 +372,9 @@ const settings: SettingsType<any> = {
 		title: 'Tech Stack',
 		type: 'array',
 		edit: true,
-		schema: {},
+		schema: {
+			type: 'tag',
+		},
 	},
 	review: {
 		title: 'Review',
