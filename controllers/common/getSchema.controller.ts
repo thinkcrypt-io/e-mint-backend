@@ -1,9 +1,13 @@
 import { Response } from 'express';
 
-const convertType = (type: string) => {
-	if (type == 'array-string') return 'tag';
-	else if (type == 'boolean') return 'checkbox';
-	else return type;
+const typeMap: Record<string, string> = {
+	email: 'string',
+	'array-string': 'tag',
+	boolean: 'checkbox',
+};
+
+const convertType = (type: string): string => {
+	return typeMap[type] || type;
 };
 
 const getSchema = ({ settings }: { settings: any }) => {

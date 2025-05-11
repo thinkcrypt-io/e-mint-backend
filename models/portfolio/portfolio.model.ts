@@ -1,5 +1,4 @@
 import mongoose, { Schema } from 'mongoose';
-import { REGEX } from '../../imports.js';
 
 const schema = new Schema<any>(
 	{
@@ -8,6 +7,7 @@ const schema = new Schema<any>(
 			required: true,
 			// match: REGEX.URL,
 		},
+
 		name: {
 			type: String,
 			required: true,
@@ -42,6 +42,122 @@ const schema = new Schema<any>(
 			default: false,
 			required: true,
 		},
+		//
+		images: [String],
+
+		client: {
+			type: String,
+			trim: true,
+		},
+		shortDescription: {
+			type: String,
+			trim: true,
+		},
+		logo: {
+			type: String,
+			trim: true,
+		},
+		coverImage: {
+			type: String,
+		},
+		title: {
+			type: String,
+			trim: true,
+		},
+		overview: {
+			type: String,
+			trim: true,
+		},
+		subTitle: {
+			type: String,
+			trim: true,
+		},
+		longDescription: String,
+		tags: [String],
+
+		challengeTitle: {
+			type: String,
+			trim: true,
+		},
+
+		challengeDescription: {
+			type: String,
+			trim: true,
+		},
+
+		productTitle: {
+			type: String,
+			trim: true,
+		},
+
+		productDescription: {
+			type: String,
+			trim: true,
+		},
+
+		companyName: {
+			type: String,
+			trim: true,
+		},
+
+		companyTitle: {
+			type: String,
+			trim: true,
+		},
+
+		companyDescription: {
+			type: String,
+			trim: true,
+		},
+
+		companyCategory: {
+			type: String,
+			trim: true,
+		},
+
+		companyUrl: {
+			type: String,
+			trim: true,
+		},
+
+		approachTitle: {
+			type: String,
+			trim: true,
+		},
+
+		approachDescription: {
+			type: String,
+			trim: true,
+		},
+
+		solutionTitle: {
+			type: String,
+			trim: true,
+		},
+
+		solutionDescription: {
+			type: String,
+			trim: true,
+		},
+
+		solutionFeatures: [{ title: String, description: String }],
+
+		showCaseStudy: {
+			type: Boolean,
+			default: false,
+		},
+
+		showLiveUrl: {
+			type: Boolean,
+			default: false,
+		},
+
+		techStackTitle: String,
+		techStackDescription: String,
+		techStack: [String],
+		review: String,
+		duration: String,
+		year: String,
 
 		// shortDescription: {
 		// 	type: String,
