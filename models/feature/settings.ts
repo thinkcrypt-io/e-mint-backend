@@ -56,7 +56,7 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: false,
 		edit: true,
-		required: true,
+
 		schema: {
 			default: true,
 			sort: true,
