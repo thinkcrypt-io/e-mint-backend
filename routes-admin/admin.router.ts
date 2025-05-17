@@ -80,6 +80,10 @@ import {
 	notAllowed,
 	Email,
 	emailSettings,
+	Offer,
+	offerSettings,
+	Feature,
+	featureSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -357,6 +361,24 @@ router.use(
 	defineRoutes({
 		Model: Email,
 		settings: emailSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/offers',
+	defineRoutes({
+		Model: Offer,
+		settings: offerSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/features',
+	defineRoutes({
+		Model: Feature,
+		settings: featureSettings,
 		permission: 'email',
 	})
 );

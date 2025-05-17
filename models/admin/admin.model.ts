@@ -121,6 +121,8 @@ const schema = new Schema<AdminType>(
 			bills: [String],
 			fgroups: [String],
 			emails: [String],
+			offers: [String],
+			features: [String],
 		},
 	},
 

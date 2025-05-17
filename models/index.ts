@@ -238,3 +238,11 @@ export { default as billSettings } from './admin-expense/bills.settings.js';
 //Email
 export { default as Email } from './email/model.js';
 export { default as emailSettings } from './email/settings.js';
+
+//Offers
+export { default as Offer } from './offer/model.js';
+export { default as offerSettings } from './offer/settings.js';
+
+//Features
+export { default as Feature } from './feature/model.js';
+export { default as featureSettings } from './feature/settings.js';
