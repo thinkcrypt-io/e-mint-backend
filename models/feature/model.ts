@@ -25,7 +25,6 @@ const schema = new Schema<any>(
 		priority: {
 			type: Number,
 			default: 1,
-			required: true,
 		},
 		status: {
 			type: String,

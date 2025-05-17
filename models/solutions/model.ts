@@ -5,6 +5,16 @@ const schema = new Schema<any>(
 		coverImage: {
 			type: String,
 		},
+		title: {
+			type: String,
+		},
+		subtitle: {
+			type: String,
+		},
+
+		description: {
+			type: String,
+		},
 		icon: {
 			type: String,
 			required: true,
@@ -81,7 +91,7 @@ const schema = new Schema<any>(
 		features: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
-				ref: 'Offer',
+				ref: 'Feature',
 			},
 		],
 		benifitTitle: {

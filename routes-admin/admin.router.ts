@@ -84,6 +84,8 @@ import {
 	offerSettings,
 	Feature,
 	featureSettings,
+	Solution,
+	solutionSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -379,6 +381,15 @@ router.use(
 	defineRoutes({
 		Model: Feature,
 		settings: featureSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/solutions',
+	defineRoutes({
+		Model: Solution,
+		settings: solutionSettings,
 		permission: 'email',
 	})
 );

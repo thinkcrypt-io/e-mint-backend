@@ -246,3 +246,7 @@ export { default as offerSettings } from './offer/settings.js';
 //Features
 export { default as Feature } from './feature/model.js';
 export { default as featureSettings } from './feature/settings.js';
+
+//Solutions
+export { default as Solution } from './solutions/model.js';
+export { default as solutionSettings } from './solutions/settongs.js';
