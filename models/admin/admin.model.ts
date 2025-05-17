@@ -123,6 +123,7 @@ const schema = new Schema<AdminType>(
 			emails: [String],
 			offers: [String],
 			features: [String],
+			solutions: [String],
 		},
 	},
 
