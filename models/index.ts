@@ -250,3 +250,7 @@ export { default as featureSettings } from './feature/settings.js';
 //Solutions
 export { default as Solution } from './solutions/model.js';
 export { default as solutionSettings } from './solutions/settongs.js';
+
+//Tech Stack
+export { default as TechStack } from './techstack/model.js';
+export { default as techStackSettings } from './techstack/settings.js';

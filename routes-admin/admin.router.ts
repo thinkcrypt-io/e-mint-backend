@@ -86,6 +86,8 @@ import {
 	featureSettings,
 	Solution,
 	solutionSettings,
+	TechStack,
+	techStackSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -390,6 +392,15 @@ router.use(
 	defineRoutes({
 		Model: Solution,
 		settings: solutionSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/techstacks',
+	defineRoutes({
+		Model: TechStack,
+		settings: techStackSettings,
 		permission: 'email',
 	})
 );

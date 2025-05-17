@@ -124,6 +124,7 @@ const schema = new Schema<AdminType>(
 			offers: [String],
 			features: [String],
 			solutions: [String],
+			techstacks: [String],
 		},
 	},
 
