@@ -131,7 +131,7 @@ const settings: SettingsType<any> = {
 			title: 'Filter by To static page',
 		},
 		schema: {
-			helper: 'If checked, this redirect will be to a static page',
+			helperText: 'If checked, this redirect will be to a static page',
 		},
 	},
 	staticPageUrl: {
@@ -139,7 +139,7 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		edit: true,
 		schema: {
-			helper: 'If to static page is true, this redirect will be to this static page uri',
+			helperText: 'If to static page is true, this redirect will be to this static page uri',
 		},
 	},
 	priority: {
