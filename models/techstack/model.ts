@@ -33,6 +33,10 @@ const schema = new Schema<any>(
 		},
 		featureList: [String],
 		tags: [String],
+		isFeatured: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	{
 		timestamps: true,

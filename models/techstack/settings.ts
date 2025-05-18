@@ -119,6 +119,23 @@ const settings: SettingsType<any> = {
 			type: 'array-string',
 		},
 	},
+	isFeatured: {
+		title: 'Is featured',
+		type: 'boolean',
+		sort: true,
+		edit: true,
+
+		filter: {
+			name: 'isFeatured',
+			type: 'boolean',
+			label: 'Is featured',
+			title: 'Filter by Is featured',
+		},
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
 	tags: {
 		title: 'Tags',
 		type: 'array',
