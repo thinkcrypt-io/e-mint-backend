@@ -142,6 +142,23 @@ const settings: SettingsType<any> = {
 			helperText: 'If to static page is true, this redirect will be to this static page uri',
 		},
 	},
+	isFeatured: {
+		title: 'Is featured',
+		type: 'boolean',
+		sort: true,
+		edit: true,
+
+		filter: {
+			name: 'isFeatured',
+			type: 'boolean',
+			label: 'Is featured',
+			title: 'Filter by Is featured',
+		},
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
 	priority: {
 		title: 'Priority',
 		type: 'number',

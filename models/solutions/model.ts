@@ -35,6 +35,10 @@ const schema = new Schema<any>(
 			default: 'draft',
 			required: true,
 		},
+		isFeatured: {
+			type: Boolean,
+			default: false,
+		},
 
 		toStaticPage: {
 			type: Boolean,
