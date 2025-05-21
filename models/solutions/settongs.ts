@@ -1,5 +1,4 @@
 import { SettingsType } from '../../imports';
-import ServiceCat from '../servicecategories/model.js';
 
 const settings: SettingsType<any> = {
 	coverImage: {
