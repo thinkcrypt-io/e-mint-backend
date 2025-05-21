@@ -1,4 +1,5 @@
 import { SettingsType } from '../../imports.js';
+import ServiceCat from '../servicecategories/model.js';
 
 const settings: SettingsType<any> = {
 	icon: {
@@ -48,6 +49,54 @@ const settings: SettingsType<any> = {
 		trim: true,
 		schema: {
 			type: 'textarea',
+		},
+	},
+	isFeatured: {
+		title: 'Is featured',
+		type: 'boolean',
+		sort: false,
+		search: false,
+		edit: true,
+		schema: {
+			default: true,
+			sort: true,
+			type: 'checkbox',
+		},
+	},
+	cateogry: {
+		title: 'Category',
+		type: 'array',
+		sort: true,
+		edit: true,
+		schema: {
+			type: 'data-tag',
+			model: 'servicecategories',
+		},
+		filter: {
+			name: 'category',
+			field: 'category_in',
+			type: 'multi-select',
+			model: ServiceCat,
+			key: 'name',
+			label: 'Category',
+			title: 'Filter by Category',
+		},
+	},
+	isFeatured: {
+		title: 'Is featured',
+		type: 'boolean',
+		sort: true,
+		edit: true,
+
+		filter: {
+			name: 'isFeatured',
+			type: 'boolean',
+			label: 'Is featured',
+			title: 'Filter by Is featured',
+		},
+		schema: {
+			default: true,
+			sort: true,
 		},
 	},
 	priority: {
