@@ -81,6 +81,7 @@ const settings: SettingsType<any> = {
 			name: 'category',
 			field: 'category_in',
 			type: 'multi-select',
+			category: 'model',
 			model: ServiceCat,
 			key: 'name',
 			label: 'Category',
