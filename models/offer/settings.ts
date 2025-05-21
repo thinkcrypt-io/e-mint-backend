@@ -54,13 +54,18 @@ const settings: SettingsType<any> = {
 	isFeatured: {
 		title: 'Is featured',
 		type: 'boolean',
-		sort: false,
-		search: false,
+		sort: true,
 		edit: true,
+
+		filter: {
+			name: 'isFeatured',
+			type: 'boolean',
+			label: 'Is featured',
+			title: 'Filter by Is featured',
+		},
 		schema: {
 			default: true,
 			sort: true,
-			type: 'checkbox',
 		},
 	},
 	cateogry: {
@@ -82,23 +87,7 @@ const settings: SettingsType<any> = {
 			title: 'Filter by Category',
 		},
 	},
-	isFeatured: {
-		title: 'Is featured',
-		type: 'boolean',
-		sort: true,
-		edit: true,
 
-		filter: {
-			name: 'isFeatured',
-			type: 'boolean',
-			label: 'Is featured',
-			title: 'Filter by Is featured',
-		},
-		schema: {
-			default: true,
-			sort: true,
-		},
-	},
 	priority: {
 		title: 'Priority',
 		type: 'number',
