@@ -167,12 +167,12 @@ const settings: SettingsType<any> = {
 		sort: true,
 		edit: true,
 
-		filter: {
-			name: 'isFeatured',
-			type: 'boolean',
-			label: 'Is featured',
-			title: 'Filter by Is featured',
-		},
+		// filter: {
+		// 	name: 'isFeatured',
+		// 	type: 'boolean',
+		// 	label: 'Is featured',
+		// 	title: 'Filter by Is featured',
+		// },
 		schema: {
 			default: true,
 			sort: true,
