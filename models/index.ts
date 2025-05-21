@@ -254,3 +254,7 @@ export { default as solutionSettings } from './solutions/settongs.js';
 //Tech Stack
 export { default as TechStack } from './techstack/model.js';
 export { default as techStackSettings } from './techstack/settings.js';
+
+//Service Categories
+export { default as ServiceCategory } from './servicecategories/model.js';
+export { default as serviceCategorySettings } from './servicecategories/settings.js';

@@ -88,6 +88,8 @@ import {
 	solutionSettings,
 	TechStack,
 	techStackSettings,
+	ServiceCategory,
+	serviceCategorySettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 
@@ -401,6 +403,15 @@ router.use(
 	defineRoutes({
 		Model: TechStack,
 		settings: techStackSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/servicecategories',
+	defineRoutes({
+		Model: ServiceCategory,
+		settings: serviceCategorySettings,
 		permission: 'email',
 	})
 );

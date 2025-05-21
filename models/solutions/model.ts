@@ -35,6 +35,12 @@ const schema = new Schema<any>(
 			default: 'draft',
 			required: true,
 		},
+		category: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'Servicecategory',
+			},
+		],
 		isFeatured: {
 			type: Boolean,
 			default: false,

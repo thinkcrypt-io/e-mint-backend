@@ -1,4 +1,5 @@
 import { SettingsType } from '../../imports';
+import ServiceCat from '../servicecategories/model.js';
 
 const settings: SettingsType<any> = {
 	coverImage: {
@@ -55,6 +56,24 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+		},
+	},
+	cateogry: {
+		title: 'Category',
+		type: 'array',
+		sort: true,
+		edit: true,
+		schema: {
+			type: 'data-tag',
+			model: 'servicecategories',
+		},
+		filter: {
+			name: 'category',
+			field: 'category_in',
+			type: 'multi-select',
+			model: ServiceCat,
+			label: 'Category',
+			title: 'Filter by Category',
 		},
 	},
 	shortDescription: {
