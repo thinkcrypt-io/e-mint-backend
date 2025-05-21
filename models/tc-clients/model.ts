@@ -17,6 +17,9 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 		},
+		url: {
+			type: String,
+		},
 		priority: {
 			type: Number,
 			default: 1,

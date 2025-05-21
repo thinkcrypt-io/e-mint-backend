@@ -1,3 +1,4 @@
+import { url } from 'inspector';
 import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
@@ -24,6 +25,16 @@ const settings: SettingsType<any> = {
 			type: 'text',
 			tableType: 'image-text',
 			imageKey: 'icon',
+		},
+	},
+	url: {
+		title: 'Client URL',
+		type: 'string',
+		edit: true,
+		trim: true,
+		schema: {
+			default: true,
+			sort: true,
 		},
 	},
 	description: {
