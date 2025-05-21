@@ -68,7 +68,7 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
-	cateogry: {
+	category: {
 		title: 'Category',
 		type: 'array',
 		sort: true,
