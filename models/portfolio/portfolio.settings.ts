@@ -8,6 +8,7 @@ const settings: SettingsType<any> = {
 		required: true,
 		schema: {
 			type: 'image',
+			folder: 'portfolio-image',
 		},
 	},
 	name: {
@@ -53,6 +54,7 @@ const settings: SettingsType<any> = {
 		edit: true,
 		schema: {
 			type: 'image',
+			folder: 'portfolio-thumbnail',
 		},
 	},
 	category: {
@@ -151,6 +153,7 @@ const settings: SettingsType<any> = {
 		edit: true,
 		schema: {
 			type: 'image-array',
+			folder: 'portfolio-image',
 		},
 	},
 	client: {
