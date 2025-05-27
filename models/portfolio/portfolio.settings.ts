@@ -47,6 +47,14 @@ const settings: SettingsType<any> = {
 			type: 'video',
 		},
 	},
+	thumbnail: {
+		title: 'Video Thumbnail',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'image',
+		},
+	},
 	category: {
 		title: 'Category',
 		type: 'string',

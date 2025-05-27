@@ -39,6 +39,9 @@ const schema = new Schema<any>(
 		videoURL: {
 			type: String,
 		},
+		thumbnail: {
+			type: String,
+		},
 
 		priority: {
 			type: Number,
