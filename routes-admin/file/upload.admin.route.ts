@@ -119,7 +119,7 @@ router.post('/file', protect, uploadFile.single('file'), async (req: Request, re
 
 		const s3 = new AWS.S3();
 
-		const fileName = `${req?.file?.originalname}_${Date.now()}`;
+		const fileName = `${Date.now()}_${req?.file?.originalname}}`;
 
 		const fileContent = fs.readFileSync((req as any)?.file?.path);
 

@@ -31,6 +31,15 @@ const schema = new Schema<any>(
 			// match: REGEX.URL,
 		},
 
+		isVideoEnabled: {
+			type: Boolean,
+			default: false,
+		},
+
+		videoURL: {
+			type: String,
+		},
+
 		priority: {
 			type: Number,
 			default: 1,

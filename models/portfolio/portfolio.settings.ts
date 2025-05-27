@@ -23,6 +23,31 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
+	isVideoEnabled: {
+		title: 'Video Thumbnail',
+		type: 'boolean',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'isVideoEnabled',
+			type: 'boolean',
+			label: 'Show Video Instead of Image',
+			title: 'Filter by Show Video Instead of Image',
+		},
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
+	videoURL: {
+		title: 'Video URL',
+		type: 'string',
+		edit: true,
+		schema: {
+			type: 'file',
+			copy: true,
+		},
+	},
 	category: {
 		title: 'Category',
 		type: 'string',
