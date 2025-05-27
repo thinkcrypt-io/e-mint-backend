@@ -44,8 +44,7 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		edit: true,
 		schema: {
-			type: 'file',
-			copy: true,
+			type: 'video',
 		},
 	},
 	category: {

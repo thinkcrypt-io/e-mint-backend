@@ -10,6 +10,20 @@ const router = express.Router();
 
 const uploadFile = multer({ dest: 'from/' });
 
+const uploadVideo = multer({
+	dest: 'from/',
+	limits: {
+		fileSize: 50 * 1024 * 1024, // 50MB limit
+	},
+	fileFilter: (req, file, cb) => {
+		if (file.mimetype.startsWith('video/')) {
+			cb(null, true);
+		} else {
+			cb(new Error('Invalid file type. Only video files are allowed.'));
+		}
+	},
+});
+
 router.get('/', protect, async (req: Request, res: Response) => {
 	try {
 		const type = req.query.type || 'image';
@@ -119,7 +133,7 @@ router.post('/file', protect, uploadFile.single('file'), async (req: Request, re
 
 		const s3 = new AWS.S3();
 
-		const fileName = `${Date.now()}_${req?.file?.originalname}}`;
+		const fileName = `${Date.now()}_${req?.file?.originalname}`;
 
 		const fileContent = fs.readFileSync((req as any)?.file?.path);
 
@@ -159,6 +173,68 @@ router.post('/file', protect, uploadFile.single('file'), async (req: Request, re
 
 		if (req?.file?.path) {
 			fs.unlinkSync(req.file.path);
+		}
+	} catch (e: any) {
+		console.error(e.message);
+		return res.status(500).json({ message: e.message });
+	}
+});
+
+router.post('/video', protect, uploadVideo.single('image'), async (req: Request, res: Response) => {
+	try {
+		// Check if file exists
+		if (!req.file) {
+			return res.status(400).json({ message: 'No video file uploaded' });
+		}
+
+		AWS.config.update({
+			region: process.env.AWS_REGION,
+			accessKeyId: process.env.AWS_ACCESS_KEY,
+			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+			signatureVersion: 'v4',
+		});
+
+		const s3 = new AWS.S3();
+
+		const fileName = `${Date.now()}_${req?.file?.originalname}`;
+		const fileContent = fs.readFileSync((req as any)?.file?.path);
+
+		const params: AWS.S3.PutObjectRequest = {
+			Bucket: process.env.S3_BUCKET_NAME!,
+			Body: fileContent,
+			Key: fileName,
+			ContentType: req?.file?.mimetype,
+		};
+
+		s3.upload(params, async (err: any, data: any): Promise<any> => {
+			if (err) return res.status(500).json({ message: err.message });
+			if (data) {
+				// Get metadata of the uploaded file
+				const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
+
+				// Add the size to the response
+				data.size = metadata.ContentLength;
+				const newFile = new File({
+					name: data.Key,
+					url: data.Location,
+					key: data.Key,
+					type: req?.file?.mimetype,
+					bucket: data.Bucket,
+					fileType: 'video',
+					size: data.size,
+					folder: req.body?.folder,
+				});
+
+				const saved = await newFile.save();
+
+				return res
+					.status(200)
+					.json({ message: 'File uploaded successfully', data: saved, file: data });
+			}
+		});
+
+		if (req?.file?.path) {
+			fs.unlinkSync(req?.file?.path);
 		}
 	} catch (e: any) {
 		console.error(e.message);
