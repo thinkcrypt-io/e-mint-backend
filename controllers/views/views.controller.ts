@@ -92,7 +92,13 @@ export const trackView = async (req: Request, res: Response) => {
 		} = req.body;
 
 		// Get visitor information from request
-		const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+
+		// const ip = req.clientIp || req.ip || 'Unknown IP';
+		// const geo = geoip.lookup(ip); // Get location details from IP
+
+		// const location = geo ? `${geo?.city}, ${geo?.region}, ${geo?.country}` : 'Unknown Location';
+
+		const ipAddress = req.clientIp || req.ip || 'unknown';
 		const userAgent = req.get('User-Agent') || 'unknown';
 
 		// Skip tracking for localhost requests
