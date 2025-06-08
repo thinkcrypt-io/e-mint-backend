@@ -323,10 +323,10 @@ export const viewSettings: SettingsType<ViewType> = {
 		type: 'number',
 		sort: true,
 		edit: true,
-		min: -90,
-		max: 90,
+
 		schema: {
 			sort: true,
+			type: 'string',
 		},
 	},
 	locationLongitude: {
@@ -334,10 +334,10 @@ export const viewSettings: SettingsType<ViewType> = {
 		type: 'number',
 		sort: true,
 		edit: true,
-		min: -180,
-		max: 180,
+
 		schema: {
 			sort: true,
+			type: 'string',
 		},
 	},
 	locationIsp: {
