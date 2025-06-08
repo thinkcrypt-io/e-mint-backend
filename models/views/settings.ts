@@ -853,10 +853,7 @@ export const viewSettings: SettingsType<ViewType> = {
 		search: true,
 		edit: true,
 		schema: {
-			type: 'array',
-			items: {
-				type: 'string',
-			},
+			type: 'tag',
 		},
 	},
 	// customAttributes: {
