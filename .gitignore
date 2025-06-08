@@ -8,6 +8,9 @@
 # testing
 /scripts/node_modules
 
+# testing
+/script
+
 /dist
 dist
 
