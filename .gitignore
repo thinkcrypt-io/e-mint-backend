@@ -5,6 +5,9 @@
 /.pnp
 .pnp.js
 
+# testing
+/scripts/node_modules
+
 /dist
 dist
 
