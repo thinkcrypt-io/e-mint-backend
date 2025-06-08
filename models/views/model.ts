@@ -111,6 +111,7 @@ const schema = new Schema<ViewType>(
 			trim: true,
 			index: true,
 		},
+
 		locationTimezone: {
 			type: String,
 			trim: true,

@@ -136,9 +136,25 @@ export const trackView = async (req: Request, res: Response) => {
 		// Get geolocation data from IP address
 		const geoLocationData = await getLocationFromIP(ipAddress);
 
+		// Map geolocation data to flattened schema fields
+		const locationData = geoLocationData
+			? {
+					locationCountry: geoLocationData.country,
+					locationCountryCode: geoLocationData.countryCode,
+					locationRegion: geoLocationData.region,
+					locationRegionCode: geoLocationData.regionCode,
+					locationCity: geoLocationData.city,
+					locationTimezone: geoLocationData.timezone,
+					locationLatitude: geoLocationData.latitude,
+					locationLongitude: geoLocationData.longitude,
+					locationIsp: geoLocationData.isp,
+					locationOrganization: geoLocationData.organization,
+				}
+			: {};
+
 		// Merge provided location with geolocation data (prioritize provided data)
 		const enrichedLocation = {
-			...geoLocationData,
+			...locationData, // Flattened geolocation data
 			...location, // User-provided location data takes precedence
 		};
 
@@ -166,7 +182,8 @@ export const trackView = async (req: Request, res: Response) => {
 			fingerprint,
 			sessionId,
 			device: device || {},
-			location: enrichedLocation || {},
+			// Apply flattened location data directly to the view document
+			...enrichedLocation,
 			referrer,
 			utmSource,
 			utmMedium,
@@ -200,7 +217,12 @@ export const trackView = async (req: Request, res: Response) => {
 				viewId: view._id,
 				isUniqueVisitor,
 				visitCount,
-				location: enrichedLocation,
+				location: {
+					country: enrichedLocation.locationCountry,
+					city: enrichedLocation.locationCity,
+					region: enrichedLocation.locationRegion,
+					timezone: enrichedLocation.locationTimezone,
+				},
 				ipAddress: ipAddress !== 'unknown' ? ipAddress : undefined,
 			},
 		});
