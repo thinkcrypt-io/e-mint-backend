@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Analytics Tracking Demo - Simple Post</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				line-height: 1.6;
+			}
+			.demo-section {
+				background: #f5f5f5;
+				padding: 20px;
+				margin: 20px 0;
+				border-radius: 8px;
+				border: 1px solid #ddd;
+			}
+			button {
+				background: #007cba;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+			button:hover {
+				background: #005a87;
+			}
+			.stats {
+				background: #e8f5e8;
+				padding: 15px;
+				border-radius: 5px;
+				margin: 10px 0;
+			}
+			.error {
+				background: #ffe8e8;
+				padding: 15px;
+				border-radius: 5px;
+				margin: 10px 0;
+				border: 1px solid #ffccc7;
+			}
+			.success {
+				background: #e8f5e8;
+				padding: 15px;
+				border-radius: 5px;
+				margin: 10px 0;
+				border: 1px solid #b7eb8f;
+			}
+			pre {
+				background: #f8f8f8;
+				padding: 10px;
+				border-radius: 4px;
+				overflow-x: auto;
+				font-size: 12px;
+			}
+			.response {
+				margin-top: 10px;
+				padding: 10px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				background: #fafafa;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Analytics Tracking Demo - Simple Post Controller</h1>
+
+		<div class="demo-section">
+			<h2>Simple View Tracking</h2>
+			<p>
+				This demo uses the new simplified post controller that automatically detects device,
+				browser, and other analytics data from the request.
+			</p>
+
+			<div class="stats">
+				<h3>Current Session Info:</h3>
+				<div id="sessionInfo">Loading...</div>
+			</div>
+
+			<button onclick="trackSimpleView()">Track Current Page View</button>
+			<button onclick="trackCustomView()">Track Custom View</button>
+			<button onclick="simulateEngagement()">Simulate User Engagement</button>
+			<button onclick="testBulkTracking()">Test Bulk Tracking</button>
+
+			<div
+				id="trackingResponse"
+				class="response"
+				style="display: none"></div>
+		</div>
+
+		<div class="demo-section">
+			<h2>Real-time Analytics</h2>
+			<button onclick="getAnalytics()">Get Analytics Summary</button>
+			<button onclick="getRealTimeData()">Get Real-time Data</button>
+
+			<div
+				id="analyticsResponse"
+				class="response"
+				style="display: none"></div>
+		</div>
+
+		<script>
+			// Global variables
+			let currentViewId = null;
+			let sessionStartTime = Date.now();
+			let pageLoadTime = Date.now();
+			let scrollDepth = 0;
+			let clickCount = 0;
+
+			// Track scroll depth
+			window.addEventListener('scroll', () => {
+				const scrollPercentage = Math.min(
+					100,
+					Math.round(
+						(window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
+					)
+				);
+				scrollDepth = Math.max(scrollDepth, scrollPercentage);
+			});
+
+			// Track clicks
+			document.addEventListener('click', () => {
+				clickCount++;
+			});
+
+			// Display session info
+			function displaySessionInfo() {
+				const info = {
+					userAgent: navigator.userAgent,
+					language: navigator.language,
+					platform: navigator.platform,
+					cookieEnabled: navigator.cookieEnabled,
+					onLine: navigator.onLine,
+					screenResolution: `${screen.width}x${screen.height}`,
+					viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+					colorDepth: screen.colorDepth,
+					pixelRatio: window.devicePixelRatio,
+					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+					touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+				};
+
+				document.getElementById('sessionInfo').innerHTML = `
+                <strong>User Agent:</strong> ${info.userAgent.substring(0, 80)}...<br>
+                <strong>Language:</strong> ${info.language}<br>
+                <strong>Platform:</strong> ${info.platform}<br>
+                <strong>Screen:</strong> ${info.screenResolution}<br>
+                <strong>Viewport:</strong> ${info.viewportSize}<br>
+                <strong>Color Depth:</strong> ${info.colorDepth}<br>
+                <strong>Pixel Ratio:</strong> ${info.pixelRatio}<br>
+                <strong>Timezone:</strong> ${info.timezone}<br>
+                <strong>Touch Support:</strong> ${info.touchSupport}<br>
+                <strong>Cookies:</strong> ${info.cookieEnabled}
+            `;
+			}
+
+			// Generate a simple fingerprint
+			function generateFingerprint() {
+				const canvas = document.createElement('canvas');
+				const ctx = canvas.getContext('2d');
+				ctx.textBaseline = 'top';
+				ctx.font = '14px Arial';
+				ctx.fillText('Analytics fingerprint test', 2, 2);
+
+				return btoa(
+					JSON.stringify({
+						userAgent: navigator.userAgent,
+						language: navigator.language,
+						platform: navigator.platform,
+						screenResolution: `${screen.width}x${screen.height}`,
+						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+						canvas: canvas.toDataURL(),
+					})
+				).substring(0, 32);
+			}
+
+			// Generate session ID
+			function generateSessionId() {
+				return 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+			}
+
+			// Track simple view using the new post controller
+			async function trackSimpleView() {
+				try {
+					const trackingData = {
+						pageSlug: window.location.pathname || '/',
+						pageTitle: document.title,
+						pageUrl: window.location.href,
+						fingerprint: generateFingerprint(),
+						sessionId: generateSessionId(),
+						referrer: document.referrer,
+						language: navigator.language,
+						acceptLanguage: navigator.languages
+							? navigator.languages.join(',')
+							: navigator.language,
+						colorDepth: screen.colorDepth,
+						pixelRatio: window.devicePixelRatio,
+						touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+						cookieEnabled: navigator.cookieEnabled,
+						javaEnabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
+						screenResolution: `${screen.width}x${screen.height}`,
+						viewportWidth: window.innerWidth,
+						viewportHeight: window.innerHeight,
+						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+						tags: ['demo', 'test', 'simple-post'],
+						customAttributesLabel: 'Demo Type',
+						customAttributesValue: 'Simple Post Controller Test',
+					};
+
+					const response = await fetch('/api/views/track-view', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(trackingData),
+					});
+
+					const result = await response.json();
+
+					if (result.success) {
+						currentViewId = result.data.viewId;
+						showResponse('trackingResponse', result, 'success');
+					} else {
+						showResponse('trackingResponse', result, 'error');
+					}
+				} catch (error) {
+					showResponse('trackingResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Track custom view with custom data
+			async function trackCustomView() {
+				try {
+					const customData = {
+						pageSlug: '/demo/custom-page',
+						pageTitle: 'Custom Demo Page',
+						pageUrl: window.location.href + '#custom',
+						fingerprint: generateFingerprint(),
+						sessionId: generateSessionId(),
+						referrer: 'https://example.com/referrer',
+						utmSource: 'demo',
+						utmMedium: 'test',
+						utmCampaign: 'analytics-demo',
+						utmTerm: 'tracking',
+						utmContent: 'custom-view',
+						language: navigator.language,
+						screenResolution: `${screen.width}x${screen.height}`,
+						viewportWidth: window.innerWidth,
+						viewportHeight: window.innerHeight,
+						tags: ['demo', 'custom', 'utm-tagged'],
+						customAttributesLabel: 'Test Type',
+						customAttributesValue: 'Custom View Tracking',
+					};
+
+					const response = await fetch('/api/views/track-view', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(customData),
+					});
+
+					const result = await response.json();
+
+					if (result.success) {
+						currentViewId = result.data.viewId;
+						showResponse('trackingResponse', result, 'success');
+					} else {
+						showResponse('trackingResponse', result, 'error');
+					}
+				} catch (error) {
+					showResponse('trackingResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Simulate user engagement
+			async function simulateEngagement() {
+				if (!currentViewId) {
+					alert('Please track a view first!');
+					return;
+				}
+
+				try {
+					const timeOnPage = Math.floor((Date.now() - pageLoadTime) / 1000);
+					const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
+
+					const engagementData = {
+						timeOnPage: timeOnPage,
+						sessionDuration: sessionDuration,
+						interactionClicks: clickCount,
+						interactionScrollDepth: scrollDepth,
+						interactionDownloads: Math.floor(Math.random() * 3),
+						interactionFormSubmissions: Math.floor(Math.random() * 2),
+						bounceRate: timeOnPage < 30,
+						exitPage: Math.random() > 0.7,
+						pagesPerSession: Math.floor(Math.random() * 5) + 1,
+					};
+
+					const response = await fetch(`/api/views/engagement-update/${currentViewId}`, {
+						method: 'PUT',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(engagementData),
+					});
+
+					const result = await response.json();
+					showResponse('trackingResponse', result, result.success ? 'success' : 'error');
+				} catch (error) {
+					showResponse('trackingResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Test bulk tracking
+			async function testBulkTracking() {
+				try {
+					const bulkViews = [];
+					for (let i = 0; i < 3; i++) {
+						bulkViews.push({
+							pageSlug: `/demo/bulk-page-${i}`,
+							pageTitle: `Bulk Demo Page ${i}`,
+							pageUrl: `${window.location.href}#bulk-${i}`,
+							fingerprint: generateFingerprint() + i,
+							sessionId: generateSessionId(),
+							language: navigator.language,
+							screenResolution: `${screen.width}x${screen.height}`,
+							viewportWidth: window.innerWidth,
+							viewportHeight: window.innerHeight,
+							tags: ['demo', 'bulk', `bulk-${i}`],
+							customAttributesLabel: 'Bulk Test',
+							customAttributesValue: `Bulk item ${i}`,
+							visitDate: new Date(Date.now() - i * 60000), // Spread over last few minutes
+						});
+					}
+
+					const response = await fetch('/api/views/track-bulk', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ views: bulkViews }),
+					});
+
+					const result = await response.json();
+					showResponse('trackingResponse', result, result.success ? 'success' : 'error');
+				} catch (error) {
+					showResponse('trackingResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Get analytics summary
+			async function getAnalytics() {
+				try {
+					const response = await fetch('/api/views/analytics/summary');
+					const result = await response.json();
+					showResponse('analyticsResponse', result, result.success ? 'success' : 'error');
+				} catch (error) {
+					showResponse('analyticsResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Get real-time analytics
+			async function getRealTimeData() {
+				try {
+					const response = await fetch('/api/views/analytics/realtime');
+					const result = await response.json();
+					showResponse('analyticsResponse', result, result.success ? 'success' : 'error');
+				} catch (error) {
+					showResponse('analyticsResponse', { error: error.message }, 'error');
+				}
+			}
+
+			// Show response in UI
+			function showResponse(elementId, response, type) {
+				const element = document.getElementById(elementId);
+				element.style.display = 'block';
+				element.className = `response ${type}`;
+				element.innerHTML = `
+                <h4>Response:</h4>
+                <pre>${JSON.stringify(response, null, 2)}</pre>
+            `;
+			}
+
+			// Initialize
+			displaySessionInfo();
+		</script>
+	</body>
+</html>

@@ -5,6 +5,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import requestIp from 'request-ip';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 
 //import routes
 
@@ -21,6 +23,9 @@ const app: Application = express();
 dotenv.config();
 app.use(helmet());
 
+// Load Swagger documentation
+const swaggerDocument = YAML.load('./docs/swagger.yaml');
+
 app.use(
 	express.json({
 		limit: '50mb',
@@ -34,6 +39,20 @@ app.use(morgan('combined'));
 app.use(requestIp.mw());
 
 connectDb();
+
+// Swagger UI setup
+app.use(
+	'/api-docs',
+	swaggerUi.serve,
+	swaggerUi.setup(swaggerDocument, {
+		customCss: '.swagger-ui .topbar { display: none }',
+		customSiteTitle: 'E-Mint Admin API Documentation',
+		swaggerOptions: {
+			persistAuthorization: true,
+			displayRequestDuration: true,
+		},
+	})
+);
 
 // Global error handler
 process.on('unhandledRejection', (reason, promise) => {

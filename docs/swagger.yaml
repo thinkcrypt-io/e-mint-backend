@@ -1,0 +1,7004 @@
+openapi: 3.0.3
+info:
+  title: E-Mint Admin API
+  description: |
+    Comprehensive API documentation for the E-Mint admin panel system.
+
+    This API provides complete CRUD operations for managing various business entities including:
+    - Leads and client management
+    - Project and software tracking
+    - Meeting and invoice management
+    - Employee and team administration
+    - Document and resource management
+    - Planning and component systems
+
+    ## Authentication
+    All admin routes require JWT Bearer token authentication obtained through the `/api/admin/auth/login` endpoint.
+
+    ## Standard Route Patterns
+    Each resource follows a consistent pattern with the following endpoints:
+    - `GET /` - List all items with pagination and filtering
+    - `POST /` - Create new item
+    - `GET /{id}` - Get item by ID
+    - `PUT /{id}` - Update item by ID
+    - `DELETE /{id}` - Delete item by ID
+    - `GET /g/code/{code}` - Get item by code
+    - `GET /g/slug/{slug}` - Get item by slug
+    - `GET /edit/{id}` - Get item for editing
+    - `PUT /update/many` - Batch update multiple items
+    - `PUT /copy/{id}` - Duplicate item
+    - `GET /get/count` - Get total count
+    - `GET /get/sum/{field}` - Get sum of field
+    - `GET /get/filters` - Get available filters
+    - `GET /get/schema` - Get schema definition
+    - `POST /export/csv` - Export as CSV
+    - `POST /export/pdf` - Export as PDF
+
+    ## Permissions
+    Each endpoint requires specific permissions based on the resource type and operation:
+    - `create` - Permission to create new items
+    - `read` - Permission to view items
+    - `update` - Permission to modify items
+    - `delete` - Permission to remove items
+
+    ## Access Control
+    Some resources support access control with privacy levels:
+    - `public` - Accessible to all users
+    - `private` - Accessible to users in access list
+    - `only-me` - Accessible only to creator
+  version: 1.0.0
+  contact:
+    name: E-Mint API Support
+    email: support@emint.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000/admin/api
+    description: Development server
+  - url: https://e-mint-c5a78779aa41.herokuapp.com/admin/api
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Routes
+  /auth/login:
+    post:
+      tags:
+        - Authenticationa
+      summary: Admin login
+      description: Authenticate admin user and receive JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@emint.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/self:
+    get:
+      tags:
+        - Authentication
+      summary: Get current admin user
+      description: Retrieve information about the currently authenticated admin
+      responses:
+        '200':
+          description: Current admin user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - Authentication
+      summary: Update current admin user
+      description: Update information of the currently authenticated admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdate'
+      responses:
+        '200':
+          description: Admin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/update/preferences:
+    put:
+      tags:
+        - Authentication
+      summary: Update admin preferences
+      description: Update preferences for the currently authenticated admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferences:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Common API Testing Routes
+  #
+  # These endpoints allow testing of all standard admin API routes following
+  # the common router patterns. Use {resource} parameter to specify the resource type.
+  #
+  # Available Resources: leads, clients, projects, teams, admins, portfolios, services, issues, resources, documents, meetings
+  #
+
+  # 1 & 2. List Resources (GET) / Create Resource (POST) - /{resource}
+  /common/{resource}:
+    get:
+      tags:
+        - Common API Testing
+      summary: List resources with pagination
+      description: |
+        Get paginated list of resources with filtering and sorting.
+
+        **Example Usage:**
+        - Use `leads` to get all leads
+        - Use `clients` to get all clients  
+        - Use `projects` to get all projects
+        - Use `teams` to get all teams
+
+        Supports standard pagination, sorting, and search parameters.
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type (leads, clients, projects, teams, admins, portfolios, services, issues, resources, documents, meetings)
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated list of resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Common API Testing
+      summary: Create new resource
+      description: |
+        Create a new resource item.
+
+        **Example Usage:**
+        - Use `leads` to create a new lead
+        - Use `clients` to create a new client
+        - Use `projects` to create a new project
+
+        Request body format depends on the resource type.
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      requestBody:
+        required: true
+        description: Resource data
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                name: 'Sample Resource'
+                email: 'contact@example.com'
+                status: 'active'
+      responses:
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 3, 4 & 5. Get/Update/Delete Resource by ID - /{resource}/{id}
+  /common/{resource}/{id}:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource by ID
+      description: |
+        Retrieve a specific resource by its ID.
+
+        **Example Usage:**
+        - `leads/507f1f77bcf86cd799439011` - Get specific lead
+        - `clients/507f1f77bcf86cd799439011` - Get specific client
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: id
+          in: path
+          required: true
+          description: Resource ID
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Resource details
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Common API Testing
+      summary: Update resource by ID
+      description: |
+        Update a specific resource by its ID.
+
+        **Example Usage:**
+        - Update lead, client, project, or any other resource
+        - Provide the resource data in the request body
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: id
+          in: path
+          required: true
+          description: Resource ID
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        description: Updated resource data
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                name: 'Updated Resource Name'
+                status: 'active'
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Common API Testing
+      summary: Delete resource by ID
+      description: |
+        Delete a specific resource by its ID.
+
+        **Example Usage:**
+        - Delete lead, client, project, or any other resource
+        - Permanently removes the resource from the system
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: id
+          in: path
+          required: true
+          description: Resource ID
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 6. Get Resource by Code - GET /{resource}/g/code/{code}
+  /common/{resource}/g/code/{code}:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource by code
+      description: |
+        Retrieve a resource by its unique code identifier.
+
+        **Example Usage:**
+        - `leads/g/code/LEAD001` - Get lead by code
+        - `projects/g/code/PRJ001` - Get project by code
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: code
+          in: path
+          required: true
+          description: Resource code
+          schema:
+            type: string
+            example: LEAD001
+      responses:
+        '200':
+          description: Resource details
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 7. Get Resource by Slug - GET /{resource}/g/slug/{slug}
+  /common/{resource}/g/slug/{slug}:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource by slug
+      description: |
+        Retrieve a resource by its URL-friendly slug identifier.
+
+        **Example Usage:**
+        - `leads/g/slug/sample-lead` - Get lead by slug
+        - `projects/g/slug/my-project` - Get project by slug
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: slug
+          in: path
+          required: true
+          description: Resource slug
+          schema:
+            type: string
+            example: sample-lead
+      responses:
+        '200':
+          description: Resource details
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 8. Get Resource for Editing - GET /{resource}/edit/{id}
+  /common/{resource}/edit/{id}:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource for editing
+      description: |
+        Retrieve a resource with additional metadata for editing purposes.
+
+        **Example Usage:**
+        - `leads/edit/507f1f77bcf86cd799439011` - Get lead for editing
+        - `projects/edit/507f1f77bcf86cd799439011` - Get project for editing
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: id
+          in: path
+          required: true
+          description: Resource ID
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Resource with editing metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 9. Batch Update Resources - PUT /{resource}/update/many
+  /common/{resource}/update/many:
+    put:
+      tags:
+        - Common API Testing
+      summary: Batch update multiple resources
+      description: |
+        Update multiple resources in a single request.
+
+        **Example Usage:**
+        - `leads/update/many` - Batch update leads
+        - `projects/update/many` - Batch update projects
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      requestBody:
+        required: true
+        description: Array of resources to update
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      data:
+                        type: object
+                        additionalProperties: true
+                        example:
+                          status: 'updated'
+      responses:
+        '200':
+          description: Batch update successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: number
+                    example: 5
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 10. Duplicate Resource - PUT /{resource}/copy/{id}
+  /common/{resource}/copy/{id}:
+    put:
+      tags:
+        - Common API Testing
+      summary: Duplicate resource
+      description: |
+        Create a copy of an existing resource.
+
+        **Example Usage:**
+        - `leads/copy/507f1f77bcf86cd799439011` - Duplicate lead
+        - `projects/copy/507f1f77bcf86cd799439011` - Duplicate project
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: id
+          in: path
+          required: true
+          description: Resource ID to duplicate
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: false
+        description: Optional modifications for the duplicated resource
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                name: 'Copy of Original Resource'
+      responses:
+        '201':
+          description: Resource duplicated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 11. Get Resource Count - GET /{resource}/get/count
+  /common/{resource}/get/count:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource count
+      description: |
+        Get the total count of resources, optionally with filters.
+
+        **Example Usage:**
+        - `leads/get/count` - Get total lead count
+        - `projects/get/count` - Get total project count
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Resource count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: number
+                    example: 150
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 12. Get Field Sum - GET /{resource}/get/sum/{field}
+  /common/{resource}/get/sum/{field}:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get sum of numeric field
+      description: |
+        Calculate the sum of a numeric field across all resources.
+
+        **Example Usage:**
+        - `leads/get/sum/estimatedBudget` - Get sum of estimated budgets
+        - `projects/get/sum/actualCost` - Get sum of actual costs
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+        - name: field
+          in: path
+          required: true
+          description: Numeric field to sum
+          schema:
+            type: string
+            example: estimatedBudget
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Field sum
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sum:
+                    type: number
+                    example: 250000
+                  field:
+                    type: string
+                    example: estimatedBudget
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 13. Get Available Filters - GET /{resource}/get/filters
+  /common/{resource}/get/filters:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get available filters
+      description: |
+        Get available filter options for the resource type.
+
+        **Example Usage:**
+        - `leads/get/filters` - Get lead filter options
+        - `projects/get/filters` - Get project filter options
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      responses:
+        '200':
+          description: Available filters
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  status: ['new', 'interested', 'contacted', 'qualified']
+                  priority: ['hot', 'high', 'medium', 'low']
+                  source: ['facebook', 'instagram', 'linkedin', 'google']
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 14. Get Resource Schema - GET /{resource}/get/schema
+  /common/{resource}/get/schema:
+    get:
+      tags:
+        - Common API Testing
+      summary: Get resource schema
+      description: |
+        Get the schema definition for the resource type.
+
+        **Example Usage:**
+        - `leads/get/schema` - Get lead schema
+        - `projects/get/schema` - Get project schema
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      responses:
+        '200':
+          description: Resource schema
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fields:
+                    type: object
+                    additionalProperties: true
+                  required:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  fields:
+                    name: { type: 'string', required: true }
+                    email: { type: 'string', format: 'email' }
+                    status: { type: 'string', enum: ['new', 'active'] }
+                  required: ['name', 'email']
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 15. Export CSV - POST /{resource}/export/csv
+  /common/{resource}/export/csv:
+    post:
+      tags:
+        - Common API Testing
+      summary: Export resources as CSV
+      description: |
+        Export resources as CSV file with optional filters.
+
+        **Example Usage:**
+        - `leads/export/csv` - Export leads as CSV
+        - `projects/export/csv` - Export projects as CSV
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      requestBody:
+        required: false
+        description: Export filters and options
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    status: ['active', 'new']
+                    dateRange:
+                      start: '2024-01-01'
+                      end: '2024-12-31'
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  example: ['name', 'email', 'status', 'createdAt']
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # 16. Export PDF - POST /{resource}/export/pdf
+  /common/{resource}/export/pdf:
+    post:
+      tags:
+        - Common API Testing
+      summary: Export resources as PDF
+      description: |
+        Export resources as PDF file with optional filters.
+
+        **Example Usage:**
+        - `leads/export/pdf` - Export leads as PDF
+        - `projects/export/pdf` - Export projects as PDF
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          description: Resource type
+          schema:
+            type: string
+            enum:
+              [
+                leads,
+                clients,
+                projects,
+                teams,
+                admins,
+                portfolios,
+                services,
+                issues,
+                resources,
+                documents,
+                meetings,
+              ]
+            example: leads
+      requestBody:
+        required: false
+        description: Export filters and options
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    status: ['active', 'new']
+                    dateRange:
+                      start: '2024-01-01'
+                      end: '2024-12-31'
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  example: ['name', 'email', 'status', 'createdAt']
+                template:
+                  type: string
+                  enum: ['standard', 'detailed', 'summary']
+                  example: 'standard'
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # Leads Management
+  /leads:
+    get:
+      tags:
+        - Leads
+      summary: Get all leads
+      description: Retrieve paginated list of leads with filtering and sorting
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                [
+                  new,
+                  interested,
+                  contacted,
+                  qualified,
+                  attempted-contact,
+                  unqualified,
+                  follow-up,
+                  converted,
+                  dead,
+                  open,
+                  won,
+                  closed,
+                ]
+        - name: city
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: assignedTo
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: leadType
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [cold, warm, hot]
+        - name: priority
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [hot, high, medium, low]
+        - name: source
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [facebook, instagram, linkedin, google, referral, website, other]
+      responses:
+        '200':
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Lead'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Leads
+      summary: Create new lead
+      description: Create a new lead entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadCreate'
+      responses:
+        '201':
+          description: Lead created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /leads/{id}:
+    get:
+      tags:
+        - Leads
+      summary: Get lead by ID
+      description: Retrieve a specific lead by its ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Lead details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - Leads
+      summary: Update lead
+      description: Update an existing lead
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadUpdate'
+      responses:
+        '200':
+          description: Lead updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - Leads
+      summary: Delete lead
+      description: Delete a lead by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leads/g/code/{code}:
+    get:
+      tags:
+        - Leads
+      summary: Get lead by code
+      description: Retrieve a lead by its unique code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leads/g/slug/{slug}:
+    get:
+      tags:
+        - Leads
+      summary: Get lead by slug
+      description: Retrieve a lead by its slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leads/edit/{id}:
+    get:
+      tags:
+        - Leads
+      summary: Get lead for editing
+      description: Retrieve lead data formatted for editing
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Lead edit data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leads/update/many:
+    put:
+      tags:
+        - Leads
+      summary: Batch update leads
+      description: Update multiple leads at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                data:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          $ref: '#/components/responses/BatchUpdateResponse'
+
+  /leads/copy/{id}:
+    put:
+      tags:
+        - Leads
+      summary: Duplicate lead
+      description: Create a copy of an existing lead
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '201':
+          description: Lead duplicated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+
+  /leads/get/count:
+    get:
+      tags:
+        - Leads
+      summary: Get leads count
+      description: Get total count of leads
+      responses:
+        '200':
+          description: Total count
+          content:
+            application/json:
+              schema:
+                type: integer
+                example: 150
+
+  /leads/get/sum/{field}:
+    get:
+      tags:
+        - Leads
+      summary: Get sum of field
+      description: Calculate sum of a numeric field
+      parameters:
+        - name: field
+          in: path
+          required: true
+          schema:
+            type: string
+            example: estimatedBudget
+      responses:
+        '200':
+          description: Sum value
+          content:
+            application/json:
+              schema:
+                type: number
+                example: 250000
+
+  /leads/get/filters:
+    get:
+      tags:
+        - Leads
+      summary: Get available filters
+      description: Retrieve all available filter options for leads
+      responses:
+        '200':
+          description: Filter options
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterOptions'
+
+  /leads/get/schema:
+    get:
+      tags:
+        - Leads
+      summary: Get schema definition
+      description: Retrieve the schema definition for leads
+      responses:
+        '200':
+          description: Schema definition
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /leads/export/csv:
+    post:
+      tags:
+        - Leads
+      summary: Export leads as CSV
+      description: Export filtered leads data as CSV file
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /leads/export/pdf:
+    post:
+      tags:
+        - Leads
+      summary: Export leads as PDF
+      description: Export filtered leads data as PDF file
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # Admin Management
+  /admins:
+    get:
+      tags:
+        - Admins
+      summary: Get all admins
+      description: Retrieve paginated list of admin users
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: role
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of admins
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Admin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Admins
+      summary: Create new admin
+      description: Create a new admin user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreate'
+      responses:
+        '201':
+          description: Admin created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admins/{id}:
+    get:
+      tags:
+        - Admins
+      summary: Get admin by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Admin details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Admins
+      summary: Update admin
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdate'
+      responses:
+        '200':
+          description: Admin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Admins
+      summary: Delete admin
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Client Management
+  /clients:
+    get:
+      tags:
+        - Clients
+      summary: Get all clients
+      description: Retrieve paginated list of clients
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [active, inactive, pending]
+        - name: city
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Client'
+    post:
+      tags:
+        - Clients
+      summary: Create new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Client created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+
+  /clients/{id}:
+    get:
+      tags:
+        - Clients
+      summary: Get client by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Client details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+    put:
+      tags:
+        - Clients
+      summary: Update client
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: Client updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+    delete:
+      tags:
+        - Clients
+      summary: Delete client
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  # Team Management
+  /teams:
+    get:
+      tags:
+        - Teams
+      summary: Get all teams
+      description: Retrieve paginated list of teams
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Teams retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Team'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Teams
+      summary: Create new team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamInput'
+      responses:
+        '201':
+          description: Team created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+
+  /teams/{id}:
+    get:
+      tags:
+        - Teams
+      summary: Get team by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Team retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+    put:
+      tags:
+        - Teams
+      summary: Update team
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamInput'
+      responses:
+        '200':
+          description: Team updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+    delete:
+      tags:
+        - Teams
+      summary: Delete team
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  /teams/get/count:
+    get:
+      tags:
+        - Teams
+      summary: Get teams count
+      responses:
+        '200':
+          $ref: '#/components/responses/CountResponse'
+
+  /teams/export/csv:
+    get:
+      tags:
+        - Teams
+      summary: Export teams to CSV
+      responses:
+        '200':
+          description: CSV file generated
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # Portfolio Management
+  /portfolios:
+    get:
+      tags:
+        - Portfolios
+      summary: Get all portfolios
+      description: Retrieve paginated list of portfolios
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Portfolio'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Portfolios
+      summary: Create new portfolio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortfolioInput'
+      responses:
+        '201':
+          description: Portfolio created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+
+  /portfolios/{id}:
+    get:
+      tags:
+        - Portfolios
+      summary: Get portfolio by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Portfolio retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+    put:
+      tags:
+        - Portfolios
+      summary: Update portfolio
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortfolioInput'
+      responses:
+        '200':
+          description: Portfolio updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+    delete:
+      tags:
+        - Portfolios
+      summary: Delete portfolio
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  /portfolios/get/count:
+    get:
+      tags:
+        - Portfolios
+      summary: Get portfolios count
+      responses:
+        '200':
+          $ref: '#/components/responses/CountResponse'
+
+  /portfolios/export/csv:
+    get:
+      tags:
+        - Portfolios
+      summary: Export portfolios to CSV
+      responses:
+        '200':
+          description: CSV file generated
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # Service Management
+  /services:
+    get:
+      tags:
+        - Services
+      summary: Get all services
+      description: Retrieve paginated list of services
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Services retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Service'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Services
+      summary: Create new service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceInput'
+      responses:
+        '201':
+          description: Service created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+
+  /services/{id}:
+    get:
+      tags:
+        - Services
+      summary: Get service by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Service retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+    put:
+      tags:
+        - Services
+      summary: Update service
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceInput'
+      responses:
+        '200':
+          description: Service updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+    delete:
+      tags:
+        - Services
+      summary: Delete service
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  /services/get/count:
+    get:
+      tags:
+        - Services
+      summary: Get services count
+      responses:
+        '200':
+          $ref: '#/components/responses/CountResponse'
+
+  /services/export/csv:
+    get:
+      tags:
+        - Services
+      summary: Export services to CSV
+      responses:
+        '200':
+          description: CSV file generated
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # Issue Management
+  /issues:
+    get:
+      tags:
+        - Issues
+      summary: Get all issues
+      description: Retrieve paginated list of issues
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in-progress, resolved, closed]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+      responses:
+        '200':
+          description: Issues retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Issue'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Issues
+      summary: Create new issue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueInput'
+      responses:
+        '201':
+          description: Issue created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+
+  /issues/{id}:
+    get:
+      tags:
+        - Issues
+      summary: Get issue by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Issue retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+    put:
+      tags:
+        - Issues
+      summary: Update issue
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueInput'
+      responses:
+        '200':
+          description: Issue updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+    delete:
+      tags:
+        - Issues
+      summary: Delete issue
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  /issues/get/count:
+    get:
+      tags:
+        - Issues
+      summary: Get issues count
+      responses:
+        '200':
+          $ref: '#/components/responses/CountResponse'
+
+  /issues/export/csv:
+    get:
+      tags:
+        - Issues
+      summary: Export issues to CSV
+      responses:
+        '200':
+          description: CSV file generated
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # Resource Management
+  /resources:
+    get:
+      tags:
+        - Resources
+      summary: Get all resources
+      description: Retrieve paginated list of resources
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resources retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Resource'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Resources
+      summary: Create new resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceInput'
+      responses:
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+
+  /resources/{id}:
+    get:
+      tags:
+        - Resources
+      summary: Get resource by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Resource retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+    put:
+      tags:
+        - Resources
+      summary: Update resource
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceInput'
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+    delete:
+      tags:
+        - Resources
+      summary: Delete resource
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  /resources/get/count:
+    get:
+      tags:
+        - Resources
+      summary: Get resources count
+      responses:
+        '200':
+          $ref: '#/components/responses/CountResponse'
+
+  /resources/export/csv:
+    get:
+      tags:
+        - Resources
+      summary: Export resources to CSV
+      responses:
+        '200':
+          description: CSV file generated
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # Document Management
+  /documents:
+    get:
+      tags:
+        - Documents
+      summary: Get all documents
+      description: Retrieve paginated list of documents with access control
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: category
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: client
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: project
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: privacy
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [public, private, only-me]
+        - name: addedBy
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Document'
+    post:
+      tags:
+        - Documents
+      summary: Create new document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreate'
+      responses:
+        '201':
+          description: Document created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+
+  /documents/{id}:
+    get:
+      tags:
+        - Documents
+      summary: Get document by ID
+      description: Retrieve a document with access control validation
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '403':
+          description: Access denied to this document
+    put:
+      tags:
+        - Documents
+      summary: Update document
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdate'
+      responses:
+        '200':
+          description: Document updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+    delete:
+      tags:
+        - Documents
+      summary: Delete document
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  # Meeting Management
+  /meetings:
+    get:
+      tags:
+        - Meetings
+      summary: Get all meetings
+      description: Retrieve paginated list of meetings with access control
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                [
+                  draft,
+                  pending,
+                  completed,
+                  cancelled,
+                  scheduled,
+                  in-progress,
+                  rescheduled,
+                  postponed,
+                  archived,
+                ]
+        - name: priority
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [high, medium, low]
+        - name: meetingType
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [in-person, virtual, hybrid]
+        - name: host
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: client
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: project
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Meeting'
+    post:
+      tags:
+        - Meetings
+      summary: Create new meeting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetingCreate'
+      responses:
+        '201':
+          description: Meeting created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+
+  /meetings/{id}:
+    get:
+      tags:
+        - Meetings
+      summary: Get meeting by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Meeting details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+    put:
+      tags:
+        - Meetings
+      summary: Update meeting
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetingUpdate'
+      responses:
+        '200':
+          description: Meeting updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+    delete:
+      tags:
+        - Meetings
+      summary: Delete meeting
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  # Project Management
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: Get all projects
+      description: Retrieve paginated list of software projects with access control
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: client
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+    post:
+      tags:
+        - Projects
+      summary: Create new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get project by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+    put:
+      tags:
+        - Projects
+      summary: Update project
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+    delete:
+      tags:
+        - Projects
+      summary: Delete project
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  # Employee Management
+  /employees:
+    get:
+      tags:
+        - Employees
+      summary: Get all employees
+      description: Retrieve paginated list of employees with access control
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: department
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: position
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: employmentType
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [full-time, part-time, contract, intern]
+        - name: reportingTo
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Employee'
+    post:
+      tags:
+        - Employees
+      summary: Create new employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeCreate'
+      responses:
+        '201':
+          description: Employee created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+
+  /employees/{id}:
+    get:
+      tags:
+        - Employees
+      summary: Get employee by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Employee details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+    put:
+      tags:
+        - Employees
+      summary: Update employee
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdate'
+      responses:
+        '200':
+          description: Employee updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+    delete:
+      tags:
+        - Employees
+      summary: Delete employee
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+
+  # Blog Management Endpoints
+  /blogs:
+    get:
+      tags:
+        - Blogs
+      summary: List all blogs
+      description: Retrieve a paginated list of blogs with filtering and sorting options
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          description: Filter by blog status
+          schema:
+            type: string
+            enum: [published, draft, archived]
+        - name: category
+          in: query
+          description: Filter by blog category
+          schema:
+            type: string
+        - name: author
+          in: query
+          description: Filter by author ID
+          schema:
+            type: string
+        - name: isFeatured
+          in: query
+          description: Filter by featured status
+          schema:
+            type: boolean
+        - name: publishedAt
+          in: query
+          description: Filter by published date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of blogs with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Blog'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  filters:
+                    $ref: '#/components/schemas/FilterOptions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - Blogs
+      summary: Create new blog
+      description: Create a new blog post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlogCreate'
+      responses:
+        '201':
+          description: Blog created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Blog created successfully
+                  data:
+                    $ref: '#/components/schemas/Blog'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/{id}:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog by ID
+      description: Retrieve a specific blog by its ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Blog details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    put:
+      tags:
+        - Blogs
+      summary: Update blog
+      description: Update an existing blog
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlogUpdate'
+      responses:
+        '200':
+          description: Blog updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Blog updated successfully
+                  data:
+                    $ref: '#/components/schemas/Blog'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - Blogs
+      summary: Delete blog
+      description: Delete a blog by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessMessage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/g/code/{code}:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog by code
+      description: Retrieve a blog by its unique code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 'DOC0041'
+      responses:
+        '200':
+          description: Blog details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/g/slug/{slug}:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog by slug
+      description: Retrieve a blog by its URL slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 'comprehensive-guide-to-react-hooks'
+      responses:
+        '200':
+          description: Blog details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/edit/{id}:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog for editing
+      description: Retrieve blog data optimized for editing interface
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Blog edit data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/update/many:
+    put:
+      tags:
+        - Blogs
+      summary: Batch update blogs
+      description: Update multiple blogs at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                data:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [published, draft, archived]
+                    category:
+                      type: string
+                    isFeatured:
+                      type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/BatchUpdateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/copy/{id}:
+    put:
+      tags:
+        - Blogs
+      summary: Duplicate blog
+      description: Create a copy of an existing blog
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '201':
+          description: Blog duplicated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Blog duplicated successfully
+                  data:
+                    $ref: '#/components/schemas/Blog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/get/count:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog count
+      description: Get total count of blogs with optional filtering
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [published, draft, archived]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: author
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blog count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 42
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/get/sum/{field}:
+    get:
+      tags:
+        - Blogs
+      summary: Get sum of numeric field
+      description: Calculate sum of a numeric field across all blogs
+      parameters:
+        - name: field
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [views, likes, seoScore, contentScore]
+      responses:
+        '200':
+          description: Sum of field values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sum:
+                    type: number
+                    example: 15647
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/get/filters:
+    get:
+      tags:
+        - Blogs
+      summary: Get available filters
+      description: Retrieve all available filter options for blogs
+      responses:
+        '200':
+          description: Available filter options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                        value:
+                          type: string
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                  authors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/get/schema:
+    get:
+      tags:
+        - Blogs
+      summary: Get blog schema
+      description: Retrieve the blog model schema for dynamic form generation
+      responses:
+        '200':
+          description: Blog schema definition
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/export/csv:
+    post:
+      tags:
+        - Blogs
+      summary: Export blogs as CSV
+      description: Export blog data as CSV file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: string
+                filters:
+                  type: object
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /blogs/export/pdf:
+    post:
+      tags:
+        - Blogs
+      summary: Export blogs as PDF
+      description: Export blog data as PDF file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: string
+                filters:
+                  type: object
+      responses:
+        '200':
+          description: PDF export
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Invoices API
+  /invoices:
+    get:
+      tags:
+        - Invoices
+      summary: List all invoices
+      description: Retrieve a paginated list of all invoices with optional filtering and sorting
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          description: Filter by invoice status
+          schema:
+            type: string
+            enum: [draft, sent, paid, overdue, cancelled]
+        - name: client
+          in: query
+          description: Filter by client ID
+          schema:
+            type: string
+        - name: project
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          description: Filter by start date
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Filter by end date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Invoice'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - Invoices
+      summary: Create new invoice
+      description: Create a new invoice with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreate'
+      responses:
+        '201':
+          description: Invoice created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invoice created successfully
+                  doc:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /invoices/{id}:
+    get:
+      tags:
+        - Invoices
+      summary: Get invoice by ID
+      description: Retrieve a specific invoice by its ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  doc:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    put:
+      tags:
+        - Invoices
+      summary: Update invoice
+      description: Update an existing invoice with new data
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdate'
+      responses:
+        '200':
+          description: Invoice updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invoice updated successfully
+                  doc:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - Invoices
+      summary: Delete invoice
+      description: Delete an invoice by ID
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Invoice deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invoice deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Leaves API
+  /leaves:
+    get:
+      tags:
+        - Leaves
+      summary: List all leaves
+      description: Retrieve a paginated list of all leave requests with optional filtering
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          description: Filter by leave status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, cancelled]
+        - name: employee
+          in: query
+          description: Filter by employee ID
+          schema:
+            type: string
+        - name: leaveType
+          in: query
+          description: Filter by leave type
+          schema:
+            type: string
+            enum: [sick, vacation, personal, emergency, maternity, paternity]
+      responses:
+        '200':
+          description: List of leaves
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Leave'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - Leaves
+      summary: Create new leave request
+      description: Create a new leave request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveCreate'
+      responses:
+        '201':
+          description: Leave created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Leave request created successfully
+                  doc:
+                    $ref: '#/components/schemas/Leave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Expenses API
+  /expenses:
+    get:
+      tags:
+        - Expenses
+      summary: List all expenses
+      description: Retrieve a paginated list of all expenses with optional filtering
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: category
+          in: query
+          description: Filter by expense category
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by expense status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: dateFrom
+          in: query
+          description: Filter by start date
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Filter by end date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Expense'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - Expenses
+      summary: Create new expense
+      description: Create a new expense record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseCreate'
+      responses:
+        '201':
+          description: Expense created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Expense created successfully
+                  doc:
+                    $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Maintenances API
+  /maintenances:
+    get:
+      tags:
+        - Maintenances
+      summary: List all maintenances
+      description: Retrieve a paginated list of all maintenance records
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          description: Filter by maintenance status
+          schema:
+            type: string
+            enum: [scheduled, in-progress, completed, cancelled]
+        - name: type
+          in: query
+          description: Filter by maintenance type
+          schema:
+            type: string
+            enum: [preventive, corrective, emergency]
+      responses:
+        '200':
+          description: List of maintenances
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Maintenance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Components API
+  /components:
+    get:
+      tags:
+        - Components
+      summary: List all components
+      description: Retrieve a paginated list of all system components
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: type
+          in: query
+          description: Filter by component type
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by component status
+          schema:
+            type: string
+            enum: [active, inactive, deprecated]
+      responses:
+        '200':
+          description: List of components
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Component'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Props API
+  /props:
+    get:
+      tags:
+        - Props
+      summary: List all props
+      description: Retrieve a paginated list of all component props
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: component
+          in: query
+          description: Filter by component ID
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Filter by prop type
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of props
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Prop'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Planned Projects API
+  /plannedprojects:
+    get:
+      tags:
+        - Planning
+      summary: List all planned projects
+      description: Retrieve a paginated list of all planned projects
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          description: Filter by project status
+          schema:
+            type: string
+            enum: [planned, approved, in-development, completed, cancelled]
+        - name: priority
+          in: query
+          description: Filter by project priority
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+      responses:
+        '200':
+          description: List of planned projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlannedProject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Planned Features API
+  /plannedfeatures:
+    get:
+      tags:
+        - Planning
+      summary: List all planned features
+      description: Retrieve a paginated list of all planned features
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: project
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by feature status
+          schema:
+            type: string
+            enum: [planned, approved, in-development, completed, cancelled]
+      responses:
+        '200':
+          description: List of planned features
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlannedFeature'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Planned Pages API
+  /plannedpages:
+    get:
+      tags:
+        - Planning
+      summary: List all planned pages
+      description: Retrieve a paginated list of all planned pages
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: project
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+        - name: feature
+          in: query
+          description: Filter by feature ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of planned pages
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlannedPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Planned Models API
+  /plannedmodels:
+    get:
+      tags:
+        - Planning
+      summary: List all planned models
+      description: Retrieve a paginated list of all planned data models
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Search'
+        - name: project
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of planned models
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginationResponse'
+                  - type: object
+                    properties:
+                      doc:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlannedModel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  # Special utility endpoint
+  /model/{id}/{type}:
+    get:
+      tags:
+        - Utilities
+      summary: Get model keys
+      description: Retrieve keys for a specific model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model keys
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      description: The unique identifier of the resource
+      schema:
+        type: string
+        pattern: '^[0-9a-fA-F]{24}$'
+        example: 507f1f77bcf86cd799439011
+
+    Page:
+      name: page
+      in: query
+      description: Page number for pagination
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+        example: 10
+
+    Sort:
+      name: sort
+      in: query
+      description: Sort field and direction (e.g., 'name' or '-createdAt')
+      schema:
+        type: string
+        example: -createdAt
+
+    Search:
+      name: search
+      in: query
+      description: Search term for text-based filtering
+      schema:
+        type: string
+        example: project name
+
+  responses:
+    SuccessMessage:
+      description: Operation completed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Operation completed successfully
+
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Validation error
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Not authorized, no token
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Forbidden, insufficient permissions
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Document Not Found
+
+    BatchUpdateResponse:
+      description: Batch update completed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Batch Update Completed
+              result:
+                type: object
+                properties:
+                  modifiedCount:
+                    type: integer
+                    example: 5
+
+  schemas:
+    PaginatedResponse:
+      type: object
+      properties:
+        totalDocs:
+          type: integer
+          example: 150
+        docsInPage:
+          type: integer
+          example: 10
+        totalPages:
+          type: integer
+          example: 15
+        limit:
+          type: integer
+          example: 10
+        skip:
+          type: integer
+          example: 0
+        sort:
+          type: string
+          example: -createdAt
+
+    FilterOptions:
+      type: object
+      properties:
+        status:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+        category:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+
+    ExportRequest:
+      type: object
+      properties:
+        filters:
+          type: object
+          additionalProperties: true
+        fields:
+          type: array
+          items:
+            type: string
+
+    # Admin Schemas
+    Admin:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: John Doe
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@emint.com
+        phone:
+          type: string
+          example: +1234567890
+        role:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+              example: Super Admin
+        isActive:
+          type: boolean
+          example: true
+        github:
+          type: string
+          example: johndoe
+        preferences:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-01-01T00:00:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-01-01T00:00:00.000Z
+
+    AdminCreate:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: John Doe
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@emint.com
+        phone:
+          type: string
+          example: +1234567890
+        password:
+          type: string
+          minLength: 8
+          example: password123
+        role:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        isActive:
+          type: boolean
+          default: true
+        github:
+          type: string
+          example: johndoe
+
+    AdminUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 50
+        username:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        github:
+          type: string
+
+    # Team Schemas
+    Team:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: John Doe
+        position:
+          type: string
+          example: Senior Developer
+        bio:
+          type: string
+          example: Experienced full-stack developer with expertise in MERN stack
+        profilePicture:
+          type: string
+          format: uri
+          example: https://storage.emint.com/team/profile.jpg
+        skills:
+          type: array
+          items:
+            type: string
+          example: [MERN Stack, UI/UX, Project Management]
+        experienceInYears:
+          type: number
+          example: 5
+        priority:
+          type: number
+          example: 1
+        email:
+          type: string
+          format: email
+          example: john@emint.com
+        phone:
+          type: string
+          example: +1234567890
+        status:
+          type: string
+          enum: [active, former]
+          example: active
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TeamInput:
+      type: object
+      required:
+        - name
+        - position
+        - profilePicture
+      properties:
+        name:
+          type: string
+        position:
+          type: string
+        bio:
+          type: string
+        profilePicture:
+          type: string
+          format: uri
+        skills:
+          type: array
+          items:
+            type: string
+        experienceInYears:
+          type: number
+        priority:
+          type: number
+          default: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [active, former]
+          default: active
+        isActive:
+          type: boolean
+          default: true
+
+    # Portfolio Schemas
+    Portfolio:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        image:
+          type: string
+          format: uri
+          example: https://storage.emint.com/portfolio/project-image.jpg
+        name:
+          type: string
+          example: E-commerce Platform
+        category:
+          type: string
+          example: web development
+        status:
+          type: string
+          enum: [draft, published, archived]
+          example: published
+        liveUrl:
+          type: string
+          format: uri
+          example: https://example.com
+        isVideoEnabled:
+          type: boolean
+          example: false
+        videoURL:
+          type: string
+          format: uri
+        thumbnail:
+          type: string
+          format: uri
+        priority:
+          type: number
+          example: 1
+        isFeatured:
+          type: boolean
+          example: true
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        client:
+          type: string
+          example: Acme Corporation
+        shortDescription:
+          type: string
+          example: Modern e-commerce solution with admin panel
+        logo:
+          type: string
+          format: uri
+        coverImage:
+          type: string
+          format: uri
+        title:
+          type: string
+          example: Complete E-commerce Solution
+        overview:
+          type: string
+        subTitle:
+          type: string
+        longDescription:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: [react, nodejs, mongodb]
+        challengeTitle:
+          type: string
+        challengeDescription:
+          type: string
+        productTitle:
+          type: string
+        productDescription:
+          type: string
+        companyName:
+          type: string
+        companyTitle:
+          type: string
+        companyDescription:
+          type: string
+        companyCategory:
+          type: string
+        companyUrl:
+          type: string
+          format: uri
+        approachTitle:
+          type: string
+        approachDescription:
+          type: string
+        solutionTitle:
+          type: string
+        solutionDescription:
+          type: string
+        solutionFeatures:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+        showCaseStudy:
+          type: boolean
+          example: false
+        showLiveUrl:
+          type: boolean
+          example: false
+        techStackTitle:
+          type: string
+        techStackDescription:
+          type: string
+        techStack:
+          type: array
+          items:
+            type: string
+          example: [React, Node.js, MongoDB]
+        review:
+          type: string
+        duration:
+          type: string
+          example: 3 months
+        year:
+          type: string
+          example: '2024'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PortfolioInput:
+      type: object
+      required:
+        - image
+        - name
+        - category
+        - liveUrl
+      properties:
+        image:
+          type: string
+          format: uri
+        name:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, archived]
+          default: draft
+        liveUrl:
+          type: string
+          format: uri
+        isVideoEnabled:
+          type: boolean
+          default: false
+        videoURL:
+          type: string
+          format: uri
+        thumbnail:
+          type: string
+          format: uri
+        priority:
+          type: number
+          default: 1
+        isFeatured:
+          type: boolean
+          default: false
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        client:
+          type: string
+        shortDescription:
+          type: string
+        logo:
+          type: string
+          format: uri
+        coverImage:
+          type: string
+          format: uri
+        title:
+          type: string
+        overview:
+          type: string
+        subTitle:
+          type: string
+        longDescription:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        challengeTitle:
+          type: string
+        challengeDescription:
+          type: string
+        productTitle:
+          type: string
+        productDescription:
+          type: string
+        companyName:
+          type: string
+        companyTitle:
+          type: string
+        companyDescription:
+          type: string
+        companyCategory:
+          type: string
+        companyUrl:
+          type: string
+          format: uri
+        approachTitle:
+          type: string
+        approachDescription:
+          type: string
+        solutionTitle:
+          type: string
+        solutionDescription:
+          type: string
+        solutionFeatures:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+        showCaseStudy:
+          type: boolean
+          default: false
+        showLiveUrl:
+          type: boolean
+          default: false
+        techStackTitle:
+          type: string
+        techStackDescription:
+          type: string
+        techStack:
+          type: array
+          items:
+            type: string
+        review:
+          type: string
+        duration:
+          type: string
+        year:
+          type: string
+
+    # Service Schemas
+    Service:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        icon:
+          type: string
+          example: <svg>...</svg>
+        name:
+          type: string
+          example: Web Development
+        description:
+          type: string
+          example: Custom web application development using modern technologies
+        priority:
+          type: number
+          example: 1
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ServiceInput:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        icon:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: number
+          default: 1
+        isActive:
+          type: boolean
+          default: true
+
+    # Issue Schemas
+    Issue:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: TSK-0001
+        name:
+          type: string
+          example: Fix login bug
+        description:
+          type: string
+          example: Users unable to login with valid credentials
+        status:
+          type: string
+          enum:
+            [
+              open,
+              in-progress,
+              on-hold,
+              testing,
+              resolved,
+              closed,
+              pending,
+              review,
+              reopened,
+              invalid,
+              needs-discussion,
+            ]
+          example: open
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        attachment:
+          type: string
+          format: uri
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        type:
+          type: string
+          enum: [bug, feature-request, improvement, task, research, duplicate]
+          example: bug
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        assignedTo:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        assignees:
+          type: array
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+              name:
+                type: string
+        addedBy:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        note:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IssueInput:
+      type: object
+      required:
+        - name
+        - description
+        - priority
+        - type
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              open,
+              in-progress,
+              on-hold,
+              testing,
+              resolved,
+              closed,
+              pending,
+              review,
+              reopened,
+              invalid,
+              needs-discussion,
+            ]
+          default: open
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        attachment:
+          type: string
+          format: uri
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        type:
+          type: string
+          enum: [bug, feature-request, improvement, task, research, duplicate]
+        project:
+          type: string
+        assignedTo:
+          type: string
+        assignees:
+          type: array
+          items:
+            type: string
+        note:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+          default: true
+
+    # Resource Schemas
+    Resource:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: RES-001
+        icon:
+          type: string
+          example: <svg>...</svg>
+        name:
+          type: string
+          example: React Documentation
+        description:
+          type: string
+          example: Official React documentation and guides
+        category:
+          type: string
+          example: Documentation
+        url:
+          type: string
+          format: uri
+          example: https://reactjs.org/docs
+        type:
+          type: string
+          enum:
+            [
+              website,
+              artice,
+              documentation,
+              inspiration,
+              resource,
+              tutorial,
+              video,
+              git-repo,
+              internal-doc,
+              mockup,
+              audio,
+              podcast,
+              blog,
+              book,
+              other,
+            ]
+          example: documentation
+        attachment:
+          type: string
+          format: uri
+        note:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: [react, javascript, frontend]
+        priority:
+          type: string
+          enum: [low, medium, high, highest]
+          example: high
+        status:
+          type: string
+          enum: [active, archived, depricated]
+          example: active
+        isRecommended:
+          type: boolean
+          example: true
+        focus:
+          type: string
+          example: Frontend Development
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ResourceInput:
+      type: object
+      required:
+        - name
+        - category
+      properties:
+        icon:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        url:
+          type: string
+          format: uri
+        type:
+          type: string
+          enum:
+            [
+              website,
+              artice,
+              documentation,
+              inspiration,
+              resource,
+              tutorial,
+              video,
+              git-repo,
+              internal-doc,
+              mockup,
+              audio,
+              podcast,
+              blog,
+              book,
+              other,
+            ]
+        attachment:
+          type: string
+          format: uri
+        note:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum: [low, medium, high, highest]
+          default: medium
+        status:
+          type: string
+          enum: [active, archived, depricated]
+        isRecommended:
+          type: boolean
+          default: false
+        focus:
+          type: string
+
+    # Lead Schemas
+    Lead:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: Jane Smith
+        email:
+          type: string
+          format: email
+          example: jane@example.com
+        phone:
+          type: string
+          example: +1234567890
+        businessName:
+          type: string
+          example: Tech Solutions Inc
+        position:
+          type: string
+          example: CTO
+        businessAddress:
+          type: string
+          example: 123 Tech Street
+        city:
+          type: string
+          example: San Francisco
+        industry:
+          type: string
+          example: Technology
+        requirements:
+          type: string
+          example: Need a web application for inventory management
+        assignedTo:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        status:
+          type: string
+          enum:
+            [
+              new,
+              interested,
+              contacted,
+              qualified,
+              attempted-contact,
+              unqualified,
+              follow-up,
+              converted,
+              dead,
+              open,
+              won,
+              closed,
+            ]
+          example: new
+        priority:
+          type: string
+          enum: [hot, high, medium, low]
+          example: high
+        leadType:
+          type: string
+          enum: [cold, warm, hot]
+          example: warm
+        source:
+          type: string
+          enum: [facebook, instagram, linkedin, google, referral, website, other]
+          example: website
+        estimatedBudget:
+          type: number
+          example: 50000
+        notes:
+          type: array
+          items:
+            type: string
+        facebook:
+          type: string
+        instagram:
+          type: string
+        linkedin:
+          type: string
+        website:
+          type: string
+        followUps:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LeadCreate:
+      type: object
+      required:
+        - name
+        - email
+        - phone
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        businessName:
+          type: string
+        position:
+          type: string
+        businessAddress:
+          type: string
+        city:
+          type: string
+        industry:
+          type: string
+        requirements:
+          type: string
+        assignedTo:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              new,
+              interested,
+              contacted,
+              qualified,
+              attempted-contact,
+              unqualified,
+              follow-up,
+              converted,
+              dead,
+              open,
+              won,
+              closed,
+            ]
+          default: new
+        priority:
+          type: string
+          enum: [hot, high, medium, low]
+          default: medium
+        leadType:
+          type: string
+          enum: [cold, warm, hot]
+          default: cold
+        source:
+          type: string
+          enum: [facebook, instagram, linkedin, google, referral, website, other]
+        estimatedBudget:
+          type: number
+          minimum: 0
+        notes:
+          type: array
+          items:
+            type: string
+        facebook:
+          type: string
+        instagram:
+          type: string
+        linkedin:
+          type: string
+        website:
+          type: string
+
+    LeadUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        businessName:
+          type: string
+        position:
+          type: string
+        businessAddress:
+          type: string
+        city:
+          type: string
+        industry:
+          type: string
+        requirements:
+          type: string
+        assignedTo:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              new,
+              interested,
+              contacted,
+              qualified,
+              attempted-contact,
+              unqualified,
+              follow-up,
+              converted,
+              dead,
+              open,
+              won,
+              closed,
+            ]
+        priority:
+          type: string
+          enum: [hot, high, medium, low]
+        leadType:
+          type: string
+          enum: [cold, warm, hot]
+        source:
+          type: string
+          enum: [facebook, instagram, linkedin, google, referral, website, other]
+        estimatedBudget:
+          type: number
+        notes:
+          type: array
+          items:
+            type: string
+        facebook:
+          type: string
+        instagram:
+          type: string
+        linkedin:
+          type: string
+        website:
+          type: string
+
+    # Client Schemas
+    Client:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+          example: Acme Corporation
+        email:
+          type: string
+          format: email
+          example: contact@acme.com
+        phone:
+          type: string
+          example: +1234567890
+        address:
+          type: string
+          example: 456 Business Ave
+        city:
+          type: string
+          example: New York
+        country:
+          type: string
+          example: USA
+        website:
+          type: string
+          format: uri
+          example: https://acme.com
+        industry:
+          type: string
+          example: Manufacturing
+        contactPerson:
+          type: string
+          example: John Smith
+        notes:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive, pending]
+          example: active
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ClientCreate:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        website:
+          type: string
+          format: uri
+        industry:
+          type: string
+        contactPerson:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive, pending]
+          default: active
+        description:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        website:
+          type: string
+          format: uri
+        industry:
+          type: string
+        contactPerson:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, inactive, pending]
+        description:
+          type: string
+
+    # Document Schemas
+    Document:
+      type: object
+      properties:
+        _id:
+          type: string
+        code:
+          type: string
+          example: DOC-001
+        name:
+          type: string
+          example: Project Requirements
+        description:
+          type: string
+          example: Detailed requirements for the new project
+        client:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        docUrl:
+          type: string
+          format: uri
+          example: https://docs.google.com/document/d/123
+        fileUrl:
+          type: string
+          format: uri
+          example: https://storage.emint.com/documents/file.pdf
+        category:
+          type: string
+          example: Requirements
+        direction:
+          type: string
+          enum: [inbound, outbound, internal, other]
+          example: internal
+        addedBy:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+        privacy:
+          type: string
+          enum: [public, private, only-me]
+          example: private
+        access:
+          type: array
+          items:
+            type: string
+          description: Array of admin IDs who have access
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentCreate:
+      type: object
+      required:
+        - name
+        - category
+        - privacy
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        client:
+          type: string
+        project:
+          type: string
+        docUrl:
+          type: string
+          format: uri
+        fileUrl:
+          type: string
+          format: uri
+        category:
+          type: string
+        direction:
+          type: string
+          enum: [inbound, outbound, internal, other]
+        privacy:
+          type: string
+          enum: [public, private, only-me]
+        access:
+          type: array
+          items:
+            type: string
+
+    DocumentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        client:
+          type: string
+        project:
+          type: string
+        docUrl:
+          type: string
+          format: uri
+        fileUrl:
+          type: string
+          format: uri
+        category:
+          type: string
+        direction:
+          type: string
+          enum: [inbound, outbound, internal, other]
+        privacy:
+          type: string
+          enum: [public, private, only-me]
+        access:
+          type: array
+          items:
+            type: string
+
+    # Meeting Schemas
+    Meeting:
+      type: object
+      properties:
+        _id:
+          type: string
+        code:
+          type: string
+          example: MTG-001
+        name:
+          type: string
+          example: Project Kickoff Meeting
+        agenda:
+          type: string
+          example: Discuss project scope and timeline
+        description:
+          type: string
+          example: Initial meeting to align on project goals
+        priority:
+          type: string
+          enum: [high, medium, low]
+          example: high
+        tags:
+          type: array
+          items:
+            type: string
+          example: [project, kickoff, planning]
+        host:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        invitees:
+          type: array
+          items:
+            type: string
+        client:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        lead:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        date:
+          type: string
+          format: date
+          example: 2023-12-25
+        scheduledTime:
+          type: string
+          example: 14:00
+        duration:
+          type: string
+          example: 1 hour
+        startTime:
+          type: string
+          example: 14:00
+        endTime:
+          type: string
+          example: 15:00
+        status:
+          type: string
+          enum:
+            [
+              draft,
+              pending,
+              completed,
+              cancelled,
+              scheduled,
+              in-progress,
+              rescheduled,
+              postponed,
+              archived,
+            ]
+          example: scheduled
+        meetingType:
+          type: string
+          enum: [in-person, virtual, hybrid]
+          example: virtual
+        location:
+          type: string
+          example: Conference Room A
+        platform:
+          type: string
+          example: Zoom
+        meetingUrl:
+          type: string
+          format: uri
+          example: https://zoom.us/j/123456789
+        meetingId:
+          type: string
+          example: 123-456-789
+        meetingPassword:
+          type: string
+          example: secret123
+        note:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+        file:
+          type: string
+        fileUrl:
+          type: string
+          format: uri
+        recordingUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MeetingCreate:
+      type: object
+      required:
+        - name
+        - status
+        - meetingType
+      properties:
+        name:
+          type: string
+        agenda:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+        host:
+          type: string
+        invitees:
+          type: array
+          items:
+            type: string
+        client:
+          type: string
+        project:
+          type: string
+        lead:
+          type: string
+        date:
+          type: string
+          format: date
+        scheduledTime:
+          type: string
+        duration:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              draft,
+              pending,
+              completed,
+              cancelled,
+              scheduled,
+              in-progress,
+              rescheduled,
+              postponed,
+              archived,
+            ]
+        meetingType:
+          type: string
+          enum: [in-person, virtual, hybrid]
+        location:
+          type: string
+        platform:
+          type: string
+        meetingUrl:
+          type: string
+          format: uri
+        meetingId:
+          type: string
+        meetingPassword:
+          type: string
+        note:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+
+    MeetingUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        agenda:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+        host:
+          type: string
+        invitees:
+          type: array
+          items:
+            type: string
+        client:
+          type: string
+        project:
+          type: string
+        lead:
+          type: string
+        date:
+          type: string
+          format: date
+        scheduledTime:
+          type: string
+        duration:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              draft,
+              pending,
+              completed,
+              cancelled,
+              scheduled,
+              in-progress,
+              rescheduled,
+              postponed,
+              archived,
+            ]
+        meetingType:
+          type: string
+          enum: [in-person, virtual, hybrid]
+        location:
+          type: string
+        platform:
+          type: string
+        meetingUrl:
+          type: string
+          format: uri
+        meetingId:
+          type: string
+        meetingPassword:
+          type: string
+        note:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+        file:
+          type: string
+        fileUrl:
+          type: string
+          format: uri
+        recordingUrl:
+          type: string
+          format: uri
+
+    # Project Schemas
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+          example: E-commerce Platform
+        category:
+          type: string
+          example: Web Development
+        description:
+          type: string
+          example: Complete e-commerce solution with admin panel
+        client:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        status:
+          type: string
+          example: In Progress
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        budget:
+          type: number
+          example: 75000
+        technologies:
+          type: array
+          items:
+            type: string
+          example: [React, Node.js, MongoDB]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProjectCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        client:
+          type: string
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        budget:
+          type: number
+          minimum: 0
+        technologies:
+          type: array
+          items:
+            type: string
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        client:
+          type: string
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        budget:
+          type: number
+          minimum: 0
+        technologies:
+          type: array
+          items:
+            type: string
+
+    # Employee Schemas
+    Employee:
+      type: object
+      properties:
+        _id:
+          type: string
+        code:
+          type: string
+          example: EMP-001
+        photo:
+          type: string
+          format: uri
+        name:
+          type: string
+          example: Alice Johnson
+        email:
+          type: string
+          format: email
+          example: alice@emint.com
+        phone:
+          type: string
+          example: +1234567890
+        department:
+          type: string
+          example: Engineering
+        position:
+          type: string
+          example: Senior Developer
+        salary:
+          type: number
+          example: 75000
+        employmentType:
+          type: string
+          enum: [full-time, part-time, contract, intern]
+          example: full-time
+        startDate:
+          type: string
+          format: date
+          example: 2023-01-15
+        endDate:
+          type: string
+          format: date
+        terminationDate:
+          type: string
+          format: date
+        contractDoc:
+          type: string
+        adminId:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        linkedIn:
+          type: string
+          example: https://linkedin.com/in/alice-johnson
+        skills:
+          type: array
+          items:
+            type: string
+          example: [JavaScript, React, Node.js]
+        emergencyContact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            relationship:
+              type: string
+        reportingTo:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EmployeeCreate:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        photo:
+          type: string
+          format: uri
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        salary:
+          type: number
+          minimum: 0
+        employmentType:
+          type: string
+          enum: [full-time, part-time, contract, intern]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        contractDoc:
+          type: string
+        adminId:
+          type: string
+        linkedIn:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        emergencyContact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            relationship:
+              type: string
+        reportingTo:
+          type: string
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        photo:
+          type: string
+          format: uri
+        name:
+          type: string
+        phone:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        salary:
+          type: number
+          minimum: 0
+        employmentType:
+          type: string
+          enum: [full-time, part-time, contract, intern]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        terminationDate:
+          type: string
+          format: date
+        contractDoc:
+          type: string
+        adminId:
+          type: string
+        linkedIn:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        emergencyContact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            relationship:
+              type: string
+        reportingTo:
+          type: string
+
+    # Blog Schemas
+    Blog:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: DOC-0001
+        name:
+          type: string
+          example: Understanding Modern Web Development
+          minLength: 10
+          maxLength: 200
+        excerpt:
+          type: string
+          example: A comprehensive guide to modern web development practices and technologies
+          minLength: 50
+          maxLength: 300
+        content:
+          type: string
+          example: |
+            # Understanding Modern Web Development
+
+            Modern web development has evolved significantly over the past decade...
+          minLength: 500
+        author:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+          example:
+            _id: 507f1f77bcf86cd799439012
+            name: John Doe
+        publishedAt:
+          type: string
+          format: date-time
+          example: 2023-12-25T10:00:00Z
+        readTime:
+          type: string
+          example: 5 min read
+        tags:
+          type: array
+          items:
+            type: string
+          example: [web-development, javascript, react, tutorial]
+          minItems: 1
+          maxItems: 10
+        featuredImage:
+          type: string
+          format: uri
+          example: https://storage.emint.com/blogs/featured-image.jpg
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            [https://storage.emint.com/blogs/image1.jpg, https://storage.emint.com/blogs/image2.jpg]
+        slug:
+          type: string
+          example: understanding-modern-web-development
+        views:
+          type: number
+          minimum: 0
+          example: 1250
+        likes:
+          type: number
+          minimum: 0
+          example: 85
+        status:
+          type: string
+          enum: [published, draft, archived]
+          example: published
+        isFeatured:
+          type: boolean
+          example: true
+        metaTitle:
+          type: string
+          maxLength: 60
+          example: Modern Web Development Guide | E-Mint Blog
+        metaDescription:
+          type: string
+          maxLength: 160
+          example: Learn modern web development practices with our comprehensive guide covering the latest technologies and best practices.
+        metaKeywords:
+          type: array
+          items:
+            type: string
+          maxItems: 15
+          example: [web development, javascript, react, frontend, backend]
+        category:
+          type: string
+          example: Technology
+        allowComments:
+          type: boolean
+          example: true
+        seoScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 85
+        contentScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 92
+        scheduledAt:
+          type: string
+          format: date-time
+          example: 2023-12-30T09:00:00Z
+        isDeleted:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BlogCreate:
+      type: object
+      required:
+        - name
+        - excerpt
+        - content
+        - author
+        - publishedAt
+        - readTime
+        - tags
+        - featuredImage
+        - category
+      properties:
+        name:
+          type: string
+          minLength: 10
+          maxLength: 200
+          example: Understanding Modern Web Development
+        excerpt:
+          type: string
+          minLength: 50
+          maxLength: 300
+          example: A comprehensive guide to modern web development practices and technologies
+        content:
+          type: string
+          minLength: 500
+          example: |
+            # Understanding Modern Web Development
+
+            Modern web development has evolved significantly over the past decade...
+        author:
+          type: string
+          example: 507f1f77bcf86cd799439012
+        publishedAt:
+          type: string
+          format: date-time
+          example: 2023-12-25T10:00:00Z
+        readTime:
+          type: string
+          example: 5 min read
+        tags:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+          example: [web-development, javascript, react, tutorial]
+        featuredImage:
+          type: string
+          format: uri
+          example: https://storage.emint.com/blogs/featured-image.jpg
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: [https://storage.emint.com/blogs/image1.jpg]
+        slug:
+          type: string
+          example: understanding-modern-web-development
+        status:
+          type: string
+          enum: [published, draft, archived]
+          default: draft
+          example: draft
+        isFeatured:
+          type: boolean
+          default: false
+          example: false
+        metaTitle:
+          type: string
+          maxLength: 60
+          example: Modern Web Development Guide
+        metaDescription:
+          type: string
+          maxLength: 160
+          example: Learn modern web development practices with our comprehensive guide.
+        metaKeywords:
+          type: array
+          items:
+            type: string
+          maxItems: 15
+          example: [web development, javascript, react]
+        category:
+          type: string
+          example: Technology
+        allowComments:
+          type: boolean
+          default: true
+          example: true
+        seoScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 0
+          example: 0
+        contentScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 0
+          example: 0
+        scheduledAt:
+          type: string
+          format: date-time
+          example: 2023-12-30T09:00:00Z
+
+    BlogUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 10
+          maxLength: 200
+        excerpt:
+          type: string
+          minLength: 50
+          maxLength: 300
+        content:
+          type: string
+          minLength: 500
+        author:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        readTime:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        featuredImage:
+          type: string
+          format: uri
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [published, draft, archived]
+        isFeatured:
+          type: boolean
+        metaTitle:
+          type: string
+          maxLength: 60
+        metaDescription:
+          type: string
+          maxLength: 160
+        metaKeywords:
+          type: array
+          items:
+            type: string
+          maxItems: 15
+        category:
+          type: string
+        allowComments:
+          type: boolean
+        seoScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        contentScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        scheduledAt:
+          type: string
+          format: date-time
+
+    # Invoice Schemas
+    Invoice:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: INV-001
+        invoiceNumber:
+          type: string
+          example: 2023-001
+        client:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        amount:
+          type: number
+          example: 5000
+        taxAmount:
+          type: number
+          example: 500
+        totalAmount:
+          type: number
+          example: 5500
+        currency:
+          type: string
+          example: USD
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+          example: sent
+        dueDate:
+          type: string
+          format: date
+          example: 2023-12-31
+        issuedDate:
+          type: string
+          format: date
+          example: 2023-12-01
+        paidDate:
+          type: string
+          format: date
+        description:
+          type: string
+          example: Web development services
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              quantity:
+                type: number
+              rate:
+                type: number
+              amount:
+                type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    InvoiceCreate:
+      type: object
+      required:
+        - client
+        - amount
+        - dueDate
+      properties:
+        client:
+          type: string
+        project:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        taxAmount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          default: USD
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+          default: draft
+        dueDate:
+          type: string
+          format: date
+        issuedDate:
+          type: string
+          format: date
+        description:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              quantity:
+                type: number
+              rate:
+                type: number
+              amount:
+                type: number
+        notes:
+          type: string
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        client:
+          type: string
+        project:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        taxAmount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+        dueDate:
+          type: string
+          format: date
+        issuedDate:
+          type: string
+          format: date
+        paidDate:
+          type: string
+          format: date
+        description:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              quantity:
+                type: number
+              rate:
+                type: number
+              amount:
+                type: number
+        notes:
+          type: string
+
+    # Leave Schemas
+    Leave:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: LV-001
+        employee:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        leaveType:
+          type: string
+          enum: [sick, vacation, personal, emergency, maternity, paternity]
+          example: vacation
+        startDate:
+          type: string
+          format: date
+          example: 2023-12-25
+        endDate:
+          type: string
+          format: date
+          example: 2023-12-29
+        duration:
+          type: number
+          example: 5
+        reason:
+          type: string
+          example: Family vacation
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+          example: pending
+        approvedBy:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        approvedDate:
+          type: string
+          format: date-time
+        rejectionReason:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LeaveCreate:
+      type: object
+      required:
+        - employee
+        - leaveType
+        - startDate
+        - endDate
+        - reason
+      properties:
+        employee:
+          type: string
+        leaveType:
+          type: string
+          enum: [sick, vacation, personal, emergency, maternity, paternity]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    # Expense Schemas
+    Expense:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: EXP-001
+        title:
+          type: string
+          example: Office Supplies
+        description:
+          type: string
+          example: Monthly office supply purchase
+        amount:
+          type: number
+          example: 250.50
+        currency:
+          type: string
+          example: USD
+        category:
+          type: string
+          example: Office Supplies
+        date:
+          type: string
+          format: date
+          example: 2023-12-01
+        employee:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+          example: pending
+        receipt:
+          type: string
+          format: uri
+          example: https://storage.emint.com/receipts/receipt.pdf
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ExpenseCreate:
+      type: object
+      required:
+        - title
+        - amount
+        - category
+        - date
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          default: USD
+        category:
+          type: string
+        date:
+          type: string
+          format: date
+        employee:
+          type: string
+        project:
+          type: string
+        receipt:
+          type: string
+          format: uri
+        tags:
+          type: array
+          items:
+            type: string
+
+    # Maintenance Schemas
+    Maintenance:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        code:
+          type: string
+          example: MNT-001
+        title:
+          type: string
+          example: Server Maintenance
+        description:
+          type: string
+          example: Routine server maintenance and updates
+        type:
+          type: string
+          enum: [preventive, corrective, emergency]
+          example: preventive
+        status:
+          type: string
+          enum: [scheduled, in-progress, completed, cancelled]
+          example: scheduled
+        scheduledDate:
+          type: string
+          format: date-time
+          example: 2023-12-25T02:00:00Z
+        completedDate:
+          type: string
+          format: date-time
+        estimatedDuration:
+          type: string
+          example: 2 hours
+        actualDuration:
+          type: string
+          example: 1.5 hours
+        assignedTo:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        cost:
+          type: number
+          example: 500
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Component Schemas
+    Component:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: UserCard
+        description:
+          type: string
+          example: Reusable user profile card component
+        type:
+          type: string
+          example: UI Component
+        category:
+          type: string
+          example: Layout
+        status:
+          type: string
+          enum: [active, inactive, deprecated]
+          example: active
+        version:
+          type: string
+          example: 1.2.0
+        dependencies:
+          type: array
+          items:
+            type: string
+        props:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              required:
+                type: boolean
+              default:
+                type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Prop Schemas
+    Prop:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: title
+        type:
+          type: string
+          example: string
+        component:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        required:
+          type: boolean
+          example: true
+        defaultValue:
+          type: string
+          example: Default Title
+        description:
+          type: string
+          example: The title text to display
+        validation:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Planning Schemas
+    PlannedProject:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: E-commerce Mobile App
+        description:
+          type: string
+          example: Mobile application for e-commerce platform
+        status:
+          type: string
+          enum: [planned, approved, in-development, completed, cancelled]
+          example: planned
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          example: high
+        estimatedStartDate:
+          type: string
+          format: date
+        estimatedEndDate:
+          type: string
+          format: date
+        estimatedBudget:
+          type: number
+          example: 100000
+        technologies:
+          type: array
+          items:
+            type: string
+          example: [React Native, Node.js, MongoDB]
+        features:
+          type: array
+          items:
+            type: string
+        stakeholders:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PlannedFeature:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: User Authentication
+        description:
+          type: string
+          example: Secure user login and registration system
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        status:
+          type: string
+          enum: [planned, approved, in-development, completed, cancelled]
+          example: planned
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          example: critical
+        estimatedHours:
+          type: number
+          example: 40
+        dependencies:
+          type: array
+          items:
+            type: string
+        acceptanceCriteria:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PlannedPage:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: User Dashboard
+        description:
+          type: string
+          example: Main user dashboard page
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        feature:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        route:
+          type: string
+          example: /dashboard
+        layout:
+          type: string
+          example: DashboardLayout
+        components:
+          type: array
+          items:
+            type: string
+        wireframe:
+          type: string
+          format: uri
+        mockup:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PlannedModel:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: User
+        description:
+          type: string
+          example: User data model
+        project:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        tableName:
+          type: string
+          example: users
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              required:
+                type: boolean
+              unique:
+                type: boolean
+              default:
+                type: string
+        relationships:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [hasOne, hasMany, belongsTo, belongsToMany]
+              model:
+                type: string
+              foreignKey:
+                type: string
+        indexes:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+tags:
+  - name: Authentication
+    description: Admin authentication and user management
+  - name: Leads
+    description: Lead management and tracking
+  - name: Admins
+    description: Admin user management
+  - name: Clients
+    description: Client management
+  - name: Teams
+    description: Team management and organization
+  - name: Portfolios
+    description: Portfolio and showcase management
+  - name: Services
+    description: Service offering management
+  - name: Issues
+    description: Issue tracking and resolution
+  - name: Resources
+    description: Resource and asset management
+  - name: Documents
+    description: Document management with access control
+  - name: Meetings
+    description: Meeting scheduling and management
+  - name: Projects
+    description: Project and software management
+  - name: Employees
+    description: Employee management
+  - name: Blogs
+    description: Blog and content management
+  - name: Invoices
+    description: Invoice and billing management
+  - name: Leaves
+    description: Leave request management
+  - name: Expenses
+    description: Expense tracking and management
+  - name: Maintenances
+    description: Maintenance scheduling and tracking
+  - name: Components
+    description: System component management
+  - name: Props
+    description: Component property management
+  - name: Planning
+    description: Project planning and feature management
+  - name: Utilities
+    description: Utility endpoints and helper functions

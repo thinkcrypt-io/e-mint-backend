@@ -37,3 +37,4 @@ export { default as locationRoute } from './location.route.js';
 export { default as staffRoute } from './staff.route.js';
 export { default as inventoryRoute } from './inventory/inventory.route.js';
 export { default as transferRoute } from './transfer.route.js';
+export { default as viewsRoute } from './views.route.js';

@@ -37,6 +37,7 @@ import {
 	staffRoute,
 	inventoryRoute,
 	transferRoute,
+	viewsRoute,
 } from '../routes/index.js';
 import express from 'express';
 
@@ -86,5 +87,6 @@ router.use('/locations', locationRoute);
 router.use('/staffs', staffRoute);
 router.use('/inventories', inventoryRoute);
 router.use('/transfers', transferRoute);
+router.use('/views', viewsRoute);
 
 export default router;

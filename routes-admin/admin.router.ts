@@ -90,8 +90,11 @@ import {
 	techStackSettings,
 	ServiceCategory,
 	serviceCategorySettings,
+	View,
+	viewSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
+import { trackView } from '../controllers/index.js';
 
 const router = express.Router();
 
@@ -413,6 +416,18 @@ router.use(
 		Model: ServiceCategory,
 		settings: serviceCategorySettings,
 		permission: 'email',
+	})
+);
+
+router.use(
+	'/views',
+	defineRoutes({
+		Model: View,
+		settings: viewSettings,
+		permission: 'email',
+		replaceController: {
+			post: trackView,
+		},
 	})
 );
 

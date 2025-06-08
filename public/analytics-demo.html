@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>E-Mint Analytics Demo</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				line-height: 1.6;
+			}
+			.demo-section {
+				margin: 30px 0;
+				padding: 20px;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+			}
+			button {
+				background: #007cba;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 5px;
+			}
+			button:hover {
+				background: #005a87;
+			}
+			.analytics-info {
+				background: #f0f8ff;
+				padding: 15px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+			.download-link {
+				color: #007cba;
+				text-decoration: none;
+			}
+			.download-link:hover {
+				text-decoration: underline;
+			}
+			.form-demo {
+				margin: 20px 0;
+			}
+			.form-demo input,
+			.form-demo textarea {
+				width: 100%;
+				padding: 8px;
+				margin: 5px 0;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+			}
+			.scroll-content {
+				height: 1000px;
+				background: linear-gradient(to bottom, #f0f8ff, #e6f3ff);
+				padding: 20px;
+				border-radius: 8px;
+				margin: 20px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>E-Mint Analytics Tracking Demo</h1>
+
+		<div class="analytics-info">
+			<h3>🎯 Analytics Tracking Active</h3>
+			<p>
+				This page demonstrates the E-Mint analytics tracking system. All interactions are being
+				tracked in real-time:
+			</p>
+			<ul>
+				<li>Page views and visitor information</li>
+				<li>Device and browser detection</li>
+				<li>Click tracking and engagement metrics</li>
+				<li>Scroll depth measurement</li>
+				<li>Download link tracking</li>
+				<li>Form submission tracking</li>
+				<li>Session duration and time on page</li>
+			</ul>
+		</div>
+
+		<div class="demo-section">
+			<h2>Click Tracking Demo</h2>
+			<p>Click these buttons to test click tracking:</p>
+			<button onclick="handleButtonClick('primary')">Primary Action</button>
+			<button onclick="handleButtonClick('secondary')">Secondary Action</button>
+			<button onclick="handleButtonClick('tertiary')">Tertiary Action</button>
+
+			<div
+				id="click-counter"
+				style="margin-top: 10px; font-weight: bold"></div>
+		</div>
+
+		<div class="demo-section">
+			<h2>Download Tracking Demo</h2>
+			<p>These links will be tracked as downloads:</p>
+			<ul>
+				<li>
+					<a
+						href="/sample-document.pdf"
+						class="download-link"
+						onclick="trackDownload('PDF Document')"
+						>Download Sample PDF</a
+					>
+				</li>
+				<li>
+					<a
+						href="/presentation.pptx"
+						class="download-link"
+						onclick="trackDownload('PowerPoint Presentation')"
+						>Download PowerPoint</a
+					>
+				</li>
+				<li>
+					<a
+						href="/data.xlsx"
+						class="download-link"
+						onclick="trackDownload('Excel Spreadsheet')"
+						>Download Excel File</a
+					>
+				</li>
+				<li>
+					<a
+						href="/image.jpg"
+						class="download-link"
+						onclick="trackDownload('Image File')"
+						>Download Image</a
+					>
+				</li>
+			</ul>
+		</div>
+
+		<div class="demo-section">
+			<h2>Form Tracking Demo</h2>
+			<form
+				class="form-demo"
+				onsubmit="handleFormSubmit(event)">
+				<h3>Contact Form</h3>
+				<input
+					type="text"
+					placeholder="Your Name"
+					required />
+				<input
+					type="email"
+					placeholder="Your Email"
+					required />
+				<textarea
+					placeholder="Your Message"
+					rows="4"
+					required></textarea>
+				<button type="submit">Submit Form</button>
+			</form>
+		</div>
+
+		<div class="demo-section">
+			<h2>Custom Event Tracking</h2>
+			<p>Test custom event tracking:</p>
+			<button onclick="trackCustomEvent('video_play', {duration: 0, quality: 'HD'})">
+				Play Video (Custom Event)
+			</button>
+			<button
+				onclick="trackCustomEvent('product_view', {productId: '12345', category: 'electronics'})">
+				View Product (Custom Event)
+			</button>
+			<button onclick="trackCustomEvent('newsletter_signup', {source: 'demo_page'})">
+				Newsletter Signup (Custom Event)
+			</button>
+		</div>
+
+		<div class="demo-section">
+			<h2>Scroll Tracking Demo</h2>
+			<p>Scroll down through this content to test scroll depth tracking:</p>
+
+			<div class="scroll-content">
+				<h3>Long Content Section</h3>
+				<p>
+					This is a long section of content designed to test scroll tracking. As you scroll through
+					this content, the analytics system tracks your scroll depth as a percentage of the total
+					page height.
+				</p>
+
+				<h4>Section 1</h4>
+				<p>
+					Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+					ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+					ullamco laboris nisi ut aliquip ex ea commodo consequat.
+				</p>
+
+				<h4>Section 2</h4>
+				<p>
+					Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+					nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+					deserunt mollit anim id est laborum.
+				</p>
+
+				<h4>Section 3</h4>
+				<p>
+					Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
+					laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi
+					architecto beatae vitae dicta sunt explicabo.
+				</p>
+
+				<h4>Section 4</h4>
+				<p>
+					Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia
+					consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+				</p>
+
+				<h4>Section 5</h4>
+				<p>
+					Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci
+					velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam
+					quaerat voluptatem.
+				</p>
+
+				<div
+					style="
+						text-align: center;
+						margin-top: 50px;
+						padding: 20px;
+						background: rgba(255, 255, 255, 0.8);
+						border-radius: 8px;
+					">
+					<h3>🎉 You've reached the bottom!</h3>
+					<p>If you scrolled all the way down, you've achieved 100% scroll depth.</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="demo-section">
+			<h2>Analytics Configuration</h2>
+			<p>Current analytics configuration:</p>
+			<pre
+				id="config-display"
+				style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto"></pre>
+
+			<h3>Manual Tracking</h3>
+			<button onclick="manualTrack()">Track Current Page Manually</button>
+			<button onclick="updateEngagement()">Update Engagement Metrics</button>
+			<button onclick="addCustomTag()">Add Custom Tag</button>
+			<button onclick="setCustomAttribute()">Set Custom Attribute</button>
+		</div>
+
+		<!-- Include the analytics tracking script -->
+		<script src="/analytics-tracker.js"></script>
+
+		<script>
+			let clickCount = 0;
+
+			// Update config display
+			document.getElementById('config-display').textContent = JSON.stringify(
+				window.EMintAnalytics.config,
+				null,
+				2
+			);
+
+			function handleButtonClick(type) {
+				clickCount++;
+				document.getElementById('click-counter').textContent = `Clicks tracked: ${clickCount}`;
+
+				// Track custom click event
+				window.EMintAnalytics.trackEvent('button_click', {
+					buttonType: type,
+					timestamp: new Date().toISOString(),
+				});
+
+				console.log(`Button clicked: ${type}`);
+			}
+
+			function trackDownload(fileName) {
+				window.EMintAnalytics.trackEvent('download', {
+					fileName: fileName,
+					timestamp: new Date().toISOString(),
+				});
+
+				console.log(`Download tracked: ${fileName}`);
+
+				// Prevent actual download for demo
+				event.preventDefault();
+				alert(`Download tracking recorded for: ${fileName}`);
+			}
+
+			function handleFormSubmit(event) {
+				event.preventDefault();
+
+				window.EMintAnalytics.trackEvent('form_submit', {
+					formType: 'contact',
+					timestamp: new Date().toISOString(),
+				});
+
+				alert('Form submission tracked! (Demo - not actually submitted)');
+			}
+
+			function trackCustomEvent(eventName, eventData) {
+				window.EMintAnalytics.trackEvent(eventName, eventData);
+				console.log(`Custom event tracked: ${eventName}`, eventData);
+				alert(`Custom event "${eventName}" tracked successfully!`);
+			}
+
+			function manualTrack() {
+				window.EMintAnalytics.track({
+					pageSlug: 'analytics-demo',
+					pageTitle: 'Analytics Demo Page',
+					tags: ['demo', 'analytics', 'manual-track'],
+					customAttributes: [
+						{ label: 'demo_version', value: '1.0' },
+						{ label: 'user_type', value: 'demo_user' },
+					],
+				});
+				alert('Manual page tracking initiated!');
+			}
+
+			function updateEngagement() {
+				window.EMintAnalytics.updateEngagement();
+				alert('Engagement metrics updated!');
+			}
+
+			function addCustomTag() {
+				const tag = prompt('Enter a custom tag:');
+				if (tag) {
+					window.EMintAnalytics.addTag(tag);
+					alert(`Tag "${tag}" added successfully!`);
+				}
+			}
+
+			function setCustomAttribute() {
+				const label = prompt('Enter attribute label:');
+				const value = prompt('Enter attribute value:');
+				if (label && value) {
+					window.EMintAnalytics.setCustomAttribute(label, value);
+					alert(`Custom attribute "${label}: ${value}" set successfully!`);
+				}
+			}
+
+			// Add some demo UTM parameters to the URL for testing
+			if (!window.location.search) {
+				const demoParams =
+					'?utm_source=demo&utm_medium=web&utm_campaign=analytics_test&utm_term=tracking&utm_content=demo_page';
+				window.history.replaceState({}, '', window.location.pathname + demoParams);
+			}
+
+			// Display tracking status
+			console.log('E-Mint Analytics Demo Page Loaded');
+			console.log('Analytics tracking is active and monitoring all interactions');
+		</script>
+	</body>
+</html>

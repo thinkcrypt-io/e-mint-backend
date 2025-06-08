@@ -258,3 +258,15 @@ export { default as techStackSettings } from './techstack/settings.js';
 //Service Categories
 export { default as ServiceCategory } from './servicecategories/model.js';
 export { default as serviceCategorySettings } from './servicecategories/settings.js';
+
+//Blog
+export { default as Blog } from './blog/model.js';
+export { default as blogSettings } from './blog/settings.js';
+
+//Author
+export { default as Author } from './author/model.js';
+export { default as authorSettings } from './author/settings.js';
+
+//Views
+export { default as View } from './views/model.js';
+export { viewSettings } from './views/settings.js';

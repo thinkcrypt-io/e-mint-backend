@@ -47,5 +47,11 @@ export { default as getSchema } from './getSchema.controller.js';
 //21
 export { default as getModelKeys } from './getModelKeys.controller.js';
 
-//
+//22
 export { default as getModelSettings } from './getModelSettings.controller.js';
+
+//23
+export { default as getDocumentByCode } from './getByCode.controller.js';
+
+//24
+export { default as getDocumentBySlug } from './getBySlug.controller.js';
