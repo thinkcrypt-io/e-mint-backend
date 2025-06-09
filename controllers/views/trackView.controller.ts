@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getLocationFromIP } from './index.js';
 import { View } from '../../models/index.js';
 import { ViewType } from '../../models/views/model.js';
+import parseBrowserInfo from './parseBrowserInfo.function.js';
 
 export const trackView = async (req: Request, res: Response) => {
 	try {
@@ -76,6 +77,8 @@ export const trackView = async (req: Request, res: Response) => {
 		// Get geolocation data from IP address
 		const geoLocationData = await getLocationFromIP(ipAddress);
 
+		const browserInfo = req.headers['user-agent'] || 'unknown';
+
 		// Map geolocation data to flattened schema fields
 		const locationData = geoLocationData
 			? {
@@ -112,6 +115,9 @@ export const trackView = async (req: Request, res: Response) => {
 		const visitCount = existingView ? existingView.visitCount + 1 : 1;
 		const previousVisitDate = existingView?.visitDate;
 
+		const { browser, browserVersion, os, osVersion, deviceType, deviceBrand, deviceModel } =
+			parseBrowserInfo(browserInfo);
+
 		// Create new view document
 		const viewData: Partial<ViewType> = {
 			pageSlug,
@@ -121,6 +127,10 @@ export const trackView = async (req: Request, res: Response) => {
 			userAgent,
 			fingerprint,
 			sessionId,
+			deviceBroser: browser || 'unknown',
+			deviceOs: os || 'unknown',
+			devuceBrand: deviceBrand || 'unknown',
+			deviceModel: deviceModel || 'unknown',
 			device: device || {},
 			// Apply flattened location data directly to the view document
 			...enrichedLocation,

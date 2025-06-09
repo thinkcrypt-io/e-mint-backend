@@ -448,7 +448,7 @@ export const viewSettings: SettingsType<ViewType> = {
 		},
 	},
 	utmSource: {
-		title: 'UTM Source',
+		title: 'Traffic Source',
 		type: 'string',
 		search: true,
 		sort: true,
