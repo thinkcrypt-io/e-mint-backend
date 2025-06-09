@@ -129,7 +129,7 @@ const schema = new Schema<AdminType>(
 			views: [String],
 			authors: [String],
 			blogs: [String],
-			clicks: [String],
+			clickevents: [String],
 		},
 	},
 
