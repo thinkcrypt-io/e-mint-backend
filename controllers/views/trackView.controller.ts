@@ -15,6 +15,7 @@ export const trackView = async (req: Request, res: Response) => {
 			device,
 			location,
 			referrer,
+			r,
 			utmSource,
 			utmMedium,
 			utmCampaign,
@@ -135,6 +136,7 @@ export const trackView = async (req: Request, res: Response) => {
 			// Apply flattened location data directly to the view document
 			...enrichedLocation,
 			referrer,
+			customRef: r || '',
 			utmSource,
 			utmMedium,
 			utmCampaign,

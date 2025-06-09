@@ -427,6 +427,16 @@ export const viewSettings: SettingsType<ViewType> = {
 			sort: true,
 		},
 	},
+	customRef: {
+		title: 'Source',
+		type: 'string',
+		search: true,
+		edit: true,
+		trim: true,
+		schema: {
+			sort: true,
+		},
+	},
 	referrerDomain: {
 		title: 'Referrer Domain',
 		type: 'string',

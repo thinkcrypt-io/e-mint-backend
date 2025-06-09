@@ -152,6 +152,10 @@ const schema = new Schema<ViewType>(
 			type: String,
 			trim: true,
 		},
+		customRef: {
+			type: String,
+			trim: true,
+		},
 		referrerDomain: {
 			type: String,
 			trim: true,
