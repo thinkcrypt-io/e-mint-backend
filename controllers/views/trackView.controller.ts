@@ -127,7 +127,7 @@ export const trackView = async (req: Request, res: Response) => {
 			userAgent,
 			fingerprint,
 			sessionId,
-			deviceBroser: browser || 'unknown',
+			deviceBrowser: browser || 'unknown',
 			deviceOs: os || 'unknown',
 			devuceBrand: deviceBrand || 'unknown',
 			deviceModel: deviceModel || 'unknown',
