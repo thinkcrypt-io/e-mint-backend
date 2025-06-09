@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { getLocationFromIP } from './index.js';
-import { View } from '../../models/index.js';
-import { ViewType } from '../../models/views/model.js';
+import { Click } from '../../models/index.js';
 import parseBrowserInfo from './parseBrowserInfo.function.js';
 
 export const trackClick = async (req: Request, res: Response) => {
@@ -136,7 +135,7 @@ export const trackClick = async (req: Request, res: Response) => {
 			tags,
 		};
 
-		const view = new View(viewData);
+		const view = new Click(viewData);
 		const saved = await view.save();
 
 		res.status(201).json(saved);
