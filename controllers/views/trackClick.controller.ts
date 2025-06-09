@@ -99,7 +99,7 @@ export const trackClick = async (req: Request, res: Response) => {
 		// Merge provided location with geolocation data (prioritize provided data)
 		const enrichedLocation = {
 			...locationData, // Flattened geolocation data
-			...location, // User-provided location data takes precedence
+			// ...location, // User-provided location data takes precedence
 		};
 
 		const { browser, browserVersion, os, osVersion, deviceType, deviceBrand, deviceModel } =
