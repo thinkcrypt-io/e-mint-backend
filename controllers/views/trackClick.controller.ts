@@ -4,26 +4,28 @@ import { View } from '../../models/index.js';
 import { ViewType } from '../../models/views/model.js';
 import parseBrowserInfo from './parseBrowserInfo.function.js';
 
-export const trackView = async (req: Request, res: Response) => {
+export const trackClick = async (req: Request, res: Response) => {
 	try {
 		const {
+			elementType,
+			elementName,
+			elementId,
+			elementSlug,
+			sessionId,
+			elementText,
+			elementHref,
+			elementTag,
 			pageSlug,
 			pageTitle,
-			pageUrl,
-			fingerprint,
-			sessionId,
-			device,
-			location,
+
 			referrer,
-			customRef: r,
+			customref,
 			utmSource,
-			utmMedium,
-			utmCampaign,
-			utmTerm,
-			utmContent,
-			interactions,
-			language,
-			customAttributes,
+			clickType,
+			eventCategory,
+			eventName,
+			conversionType,
+
 			tags,
 		} = req.body;
 
@@ -63,9 +65,8 @@ export const trackView = async (req: Request, res: Response) => {
 			req.get('host')?.includes('localhost') ||
 			req.get('host')?.includes('127.0.0.1')
 		) {
-			return res.status(200).json({
-				success: true,
-				message: 'Localhost tracking skipped',
+			return res.status(400).json({
+				message: 'Tracking skipped for localhost or private IP requests',
 				data: {
 					skipped: true,
 					reason: 'localhost_request',
@@ -77,7 +78,6 @@ export const trackView = async (req: Request, res: Response) => {
 
 		// Get geolocation data from IP address
 		const geoLocationData = await getLocationFromIP(ipAddress);
-
 		const browserInfo = req.headers['user-agent'] || 'unknown';
 
 		// Map geolocation data to flattened schema fields
@@ -102,61 +102,38 @@ export const trackView = async (req: Request, res: Response) => {
 			...location, // User-provided location data takes precedence
 		};
 
-		// Check if this is a unique visitor (based on IP + fingerprint + sessionId)
-		const existingView = await View.findOne({
-			$or: [
-				{ ipAddress, fingerprint },
-				{ ipAddress, sessionId },
-				{ fingerprint, sessionId },
-			].filter(condition => Object.values(condition).every(val => val)),
-		}).sort({ visitDate: -1 });
-
-		const isUniqueVisitor = !existingView;
-		const isReturnVisitor = !!existingView;
-		const visitCount = existingView ? existingView.visitCount + 1 : 1;
-		const previousVisitDate = existingView?.visitDate;
-
 		const { browser, browserVersion, os, osVersion, deviceType, deviceBrand, deviceModel } =
 			parseBrowserInfo(browserInfo);
 
 		// Create new view document
-		const viewData: Partial<ViewType> = {
+		const viewData: any = {
 			pageSlug,
 			pageTitle,
-			pageUrl,
 			ipAddress,
 			userAgent,
-			fingerprint,
 			sessionId,
 			deviceBrowser: browser || 'unknown',
 			deviceOs: os || 'unknown',
 			devuceBrand: deviceBrand || 'unknown',
 			deviceModel: deviceModel || 'unknown',
-			device: device || {},
-			deviceType: deviceType || 'other',
-			// Apply flattened location data directly to the view document
 			...enrichedLocation,
 			referrer,
-			customRef: r || '',
+			deviceType: deviceType || 'other',
+			customRef: customref || '',
+			elementType,
+			elementName,
+			elementId,
+			elementSlug,
+			elementText,
+			elementHref,
+			elementTag,
+			customref,
 			utmSource,
-			utmMedium,
-			utmCampaign,
-			utmTerm,
-			utmContent,
-			isUniqueVisitor,
-			isReturnVisitor,
-			visitCount,
-			previousVisitDate,
-			interactions: interactions || {
-				clicks: 0,
-				scrollDepth: 0,
-				downloads: 0,
-				formSubmissions: 0,
-			},
-			language,
-			customAttributes,
+			clickType,
+			eventCategory,
+			eventName,
+			conversionType,
 			tags,
-			visitDate: new Date(),
 		};
 
 		const view = new View(viewData);
@@ -171,4 +148,4 @@ export const trackView = async (req: Request, res: Response) => {
 		});
 	}
 };
-export default trackView;
+export default trackClick;

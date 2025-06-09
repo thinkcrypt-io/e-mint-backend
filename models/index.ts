@@ -270,3 +270,7 @@ export { default as authorSettings } from './author/settings.js';
 //Views
 export { default as View } from './views/model.js';
 export { viewSettings } from './views/settings.js';
+
+//Clicks
+export { default as Click } from './click/model.js';
+export { default as clickSettings } from './click/settings.js';

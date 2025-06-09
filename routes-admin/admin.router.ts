@@ -92,9 +92,12 @@ import {
 	serviceCategorySettings,
 	View,
 	viewSettings,
+	Click,
+	clickSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { trackView } from '../controllers/index.js';
+import trackClick from '../controllers/views/trackClick.controller.js';
 
 const router = express.Router();
 
@@ -427,6 +430,18 @@ router.use(
 		permission: 'email',
 		replaceController: {
 			post: trackView,
+		},
+	})
+);
+
+router.use(
+	'/clickevents',
+	defineRoutes({
+		Model: Click,
+		settings: clickSettings,
+		permission: 'email',
+		replaceController: {
+			post: trackClick,
 		},
 	})
 );
