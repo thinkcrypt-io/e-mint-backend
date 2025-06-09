@@ -15,7 +15,7 @@ export const trackView = async (req: Request, res: Response) => {
 			device,
 			location,
 			referrer,
-			r,
+			customRef: r,
 			utmSource,
 			utmMedium,
 			utmCampaign,
