@@ -27,15 +27,4 @@ const AuthorSchema = new Schema<any>(
 	}
 );
 
-// Add indexes for performance
-AuthorSchema.index({ name: 1 });
-AuthorSchema.index({ email: 1 });
-AuthorSchema.index({ createdAt: -1 });
-
-// Add text search index
-AuthorSchema.index({
-	name: 'text',
-	bio: 'text',
-});
-
 export default mongoose.model<any>('Author', AuthorSchema);

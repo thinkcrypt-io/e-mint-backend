@@ -147,21 +147,21 @@ const BlogSchema = new Schema<any>(
 );
 
 // Indexes
-BlogSchema.index({ slug: 1 }, { unique: true });
-BlogSchema.index({ author: 1 });
-BlogSchema.index({ status: 1 });
-BlogSchema.index({ publishedAt: -1 });
-BlogSchema.index({ category: 1, status: 1 });
-BlogSchema.index({ tags: 1 });
-BlogSchema.index({ createdAt: -1 });
+// BlogSchema.index({ slug: 1 }, { unique: true });
+// BlogSchema.index({ author: 1 });
+// BlogSchema.index({ status: 1 });
+// BlogSchema.index({ publishedAt: -1 });
+// BlogSchema.index({ category: 1, status: 1 });
+// BlogSchema.index({ tags: 1 });
+// BlogSchema.index({ createdAt: -1 });
 
-// Text search index
-BlogSchema.index({
-	name: 'text',
-	excerpt: 'text',
-	content: 'text',
-	tags: 'text',
-});
+// // Text search index
+// BlogSchema.index({
+// 	name: 'text',
+// 	excerpt: 'text',
+// 	content: 'text',
+// 	tags: 'text',
+// });
 
 // Pre-save middleware
 BlogSchema.pre('save', function (next) {
