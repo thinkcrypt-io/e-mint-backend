@@ -97,7 +97,7 @@ const settings: SettingsType<any> = {
 		title: 'Tags',
 		type: 'array',
 		edit: true,
-		required: true,
+
 		schema: {
 			type: 'tag',
 		},

@@ -30,7 +30,7 @@ const BlogSchema = new Schema<any>(
 		publishedAt: {
 			type: Date,
 			default: null,
-			required: [true, 'Publist Date is required'],
+			// required: [true, 'Publist Date is required'],
 		},
 		readTime: {
 			type: String,
@@ -38,13 +38,6 @@ const BlogSchema = new Schema<any>(
 		},
 		tags: {
 			type: [String],
-			required: [true, 'At least one tag is required'],
-			validate: {
-				validator: function (tags: any) {
-					return tags.length >= 1 && tags.length <= 10;
-				},
-				message: 'Blog must have between 1 and 10 tags',
-			},
 		},
 		image: {
 			type: String,
@@ -59,7 +52,7 @@ const BlogSchema = new Schema<any>(
 		},
 		slug: {
 			type: String,
-			required: [true, 'Slug is required'],
+			// required: [true, 'Slug is required'],
 			unique: true,
 			trim: true,
 			lowercase: true,
@@ -167,18 +160,18 @@ const BlogSchema = new Schema<any>(
 BlogSchema.pre('save', function (next) {
 	const doc = this as any;
 
-	if (!doc.slug && doc.name) doc.slug = generateSlug(doc.name);
+	if (!doc.slug && doc.name) this.slug = generateSlug(doc.name);
 
 	// if (doc.status === 'published' && !doc.publishedAt) {
 	// 	doc.publishedAt = new Date();
 	// }
 
 	if (!doc.metaTitle) {
-		doc.metaTitle = doc.name ? doc.name.substring(0, 60) : '';
+		this.metaTitle = doc.name ? doc.name.substring(0, 60) : '';
 	}
 
 	if (!doc.metaDescription) {
-		doc.metaDescription = doc.excerpt ? doc.excerpt.substring(0, 160) : '';
+		this.metaDescription = doc.excerpt ? doc.excerpt.substring(0, 160) : '';
 	}
 
 	next();
