@@ -96,12 +96,12 @@ const BlogSchema = new Schema<any>(
 		},
 		metaKeywords: {
 			type: [String],
-			validate: {
-				validator: function (keywords: any) {
-					return keywords.length <= 15;
-				},
-				message: 'Cannot have more than 15 meta keywords',
-			},
+			// validate: {
+			// 	validator: function (keywords: any) {
+			// 		return keywords.length <= 15;
+			// 	},
+			// 	message: 'Cannot have more than 15 meta keywords',
+			// },
 		},
 		category: {
 			type: String,

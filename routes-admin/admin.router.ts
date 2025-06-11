@@ -94,6 +94,10 @@ import {
 	viewSettings,
 	Click,
 	clickSettings,
+	Blog,
+	blogSettings,
+	Author,
+	authorSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { trackView } from '../controllers/index.js';
@@ -418,6 +422,24 @@ router.use(
 	defineRoutes({
 		Model: ServiceCategory,
 		settings: serviceCategorySettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/blogs',
+	defineRoutes({
+		Model: Blog,
+		settings: blogSettings,
+		permission: 'email',
+	})
+);
+
+router.use(
+	'/authors',
+	defineRoutes({
+		Model: Author,
+		settings: authorSettings,
 		permission: 'email',
 	})
 );

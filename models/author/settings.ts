@@ -2,7 +2,7 @@ import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
 	name: {
-		title: 'Name',
+		title: 'Author Name',
 		type: 'string',
 		sort: true,
 		search: true,
@@ -15,7 +15,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	image: {
-		title: 'Image',
+		title: 'Avatar Image',
 		type: 'uri',
 		edit: true,
 		schema: {
@@ -23,7 +23,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	bio: {
-		title: 'Bio',
+		title: 'Short Bio',
 		type: 'string',
 		edit: true,
 		trim: true,
@@ -37,10 +37,8 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: true,
 		edit: true,
-		required: false,
 		trim: true,
 		schema: {
-			type: 'email',
 			default: true,
 			sort: true,
 		},
@@ -57,8 +55,7 @@ const settings: SettingsType<any> = {
 		},
 		schema: {
 			type: 'date',
-			tableType: 'string',
-			readonly: true,
+			tableType: 'date-only',
 		},
 	},
 };

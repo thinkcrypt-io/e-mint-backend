@@ -26,7 +26,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	content: {
-		title: 'Content',
+		title: 'Blog Content',
 		type: 'string',
 		edit: true,
 		schema: {
