@@ -19,8 +19,19 @@ const BlogSchema = new Schema<any>(
 		},
 		content: {
 			type: String,
-			required: [true, 'Blog content is required'],
-			minlength: [500, 'Content must be at least 500 characters'],
+			required: function (this: any) {
+				return this.status === 'published';
+			},
+			validate: {
+				validator: function (this: any, value: string) {
+					// If status is published, content must exist and have meaningful length
+					if (this.status === 'published') {
+						return value && value.trim().length > 50;
+					}
+					return true; // For draft, any content (or no content) is acceptable
+				},
+				message: 'Published blogs must have content with at least 50 characters',
+			},
 		},
 		author: {
 			type: mongoose.Schema.Types.ObjectId,
