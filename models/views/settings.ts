@@ -910,13 +910,13 @@ export const viewSettings: SettingsType<ViewType> = {
 		type: 'date',
 		sort: true,
 
-		filter: {
-			name: 'visitDate',
-			field: 'visitDate',
-			type: 'date',
-			label: 'Visit Date',
-			title: 'Filter by Visit Date',
-		},
+		// filter: {
+		// 	name: 'visitDate',
+		// 	field: 'visitDate',
+		// 	type: 'date',
+		// 	label: 'Visit Date',
+		// 	title: 'Filter by Visit Date',
+		// },
 		schema: {
 			sort: true,
 		},

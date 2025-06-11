@@ -532,7 +532,7 @@ const settings: SettingsType<any> = {
 		},
 		schema: {
 			type: 'date',
-			tableType: 'string',
+			sort: true,
 		},
 	},
 };
