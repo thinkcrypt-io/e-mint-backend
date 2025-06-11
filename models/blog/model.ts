@@ -193,8 +193,8 @@ BlogSchema.pre<any>(
 	'save',
 	addSequentialCodeMiddleware({
 		slug: 'document',
-		prefix: 'DOC',
-		initialValue: 40,
+		prefix: 'TBG',
+		initialValue: 5,
 		padding: 4,
 	})
 );
