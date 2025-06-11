@@ -61,6 +61,7 @@ export const trackClick = async (req: Request, res: Response) => {
 			ipAddress.startsWith('172.29.') ||
 			ipAddress.startsWith('172.30.') ||
 			ipAddress.startsWith('172.31.') ||
+			ipAddress.startsWith('103.217.111.') ||
 			req.get('host')?.includes('localhost') ||
 			req.get('host')?.includes('127.0.0.1')
 		) {
