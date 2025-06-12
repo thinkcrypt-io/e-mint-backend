@@ -12,6 +12,7 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			type: 'textarea',
 		},
 	},
 	excerpt: {
@@ -22,7 +23,7 @@ const settings: SettingsType<any> = {
 		required: true,
 		trim: true,
 		schema: {
-			type: 'textaera',
+			type: 'textarea',
 		},
 	},
 	content: {
