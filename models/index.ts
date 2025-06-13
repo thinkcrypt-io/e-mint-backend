@@ -274,3 +274,7 @@ export { viewSettings } from './views/settings.js';
 //Clicks
 export { default as Click } from './click/model.js';
 export { default as clickSettings } from './click/settings.js';
+
+//NPM Library
+export { default as NpmLibrary } from './npm-library/model.js';
+export { default as npmLibrarySettings } from './npm-library/settings.js';
