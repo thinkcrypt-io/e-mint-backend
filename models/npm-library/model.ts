@@ -7,7 +7,7 @@ export type NpmLibrary = any;
 const NpmLibrarySchema = new Schema(
 	{
 		name: { type: String, required: true, trim: true },
-		version: { type: String, required: true, trim: true },
+		version: { type: String, trim: true },
 		type: {
 			type: String,
 			trim: true,

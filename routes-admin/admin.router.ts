@@ -98,6 +98,8 @@ import {
 	blogSettings,
 	Author,
 	authorSettings,
+	NpmLibrary,
+	npmLibrarySettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { trackView } from '../controllers/index.js';
@@ -465,6 +467,15 @@ router.use(
 		replaceController: {
 			post: trackClick,
 		},
+	})
+);
+
+router.use(
+	'/npmlibraries',
+	defineRoutes({
+		Model: NpmLibrary,
+		settings: npmLibrarySettings,
+		permission: 'email',
 	})
 );
 

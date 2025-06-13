@@ -130,6 +130,7 @@ const schema = new Schema<AdminType>(
 			authors: [String],
 			blogs: [String],
 			clickevents: [String],
+			npmlibraries: [String],
 		},
 	},
 
