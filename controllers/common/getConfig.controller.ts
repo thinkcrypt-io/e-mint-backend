@@ -2,6 +2,7 @@ import { Response } from 'express';
 import convertType from './convertType.js';
 import convertToTableFields from '../../functions/convertToTableFields.js';
 import convertToViewFields from '../../functions/convertToViewFields.js';
+import { convertToFormFields } from '../../functions/index.js';
 
 type ConfigType = {
 	table: string[];
@@ -72,7 +73,14 @@ const getConfig = ({ config, schema }: { config?: ConfigType; schema: any }) => 
 					fields: filteredConfig?.fields,
 				});
 
-				return res.status(200).json({ table: tableFields, view: viewFields });
+				const formFields = convertToFormFields({
+					schema: schm,
+					layout: filteredConfig?.form,
+				});
+
+				return res
+					.status(200)
+					.json({ table: tableFields, view: viewFields, form: formFields, schema: schm });
 			}
 		} catch (e: any) {
 			console.error(e.message);
