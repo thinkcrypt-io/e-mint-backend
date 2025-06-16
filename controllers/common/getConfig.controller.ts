@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import convertType from './convertType.js';
 import convertToTableFields from '../../functions/convertToTableFields.js';
+import convertToViewFields from '../../functions/convertToViewFields.js';
 
 type ConfigType = {
 	table: string[];
@@ -63,10 +64,15 @@ const getConfig = ({ config, schema }: { config?: ConfigType; schema: any }) => 
 
 				const tableFields = convertToTableFields({
 					schema: schm,
-					fields: filteredConfig.table,
+					fields: filteredConfig?.table,
 				});
 
-				return res.status(200).json({ table: tableFields });
+				const viewFields = convertToViewFields({
+					schema: schm,
+					fields: filteredConfig?.fields,
+				});
+
+				return res.status(200).json({ table: tableFields, view: viewFields });
 			}
 		} catch (e: any) {
 			console.error(e.message);
