@@ -55,3 +55,9 @@ export { default as getDocumentByCode } from './getByCode.controller.js';
 
 //24
 export { default as getDocumentBySlug } from './getBySlug.controller.js';
+
+//25
+export { default as getConfig } from './getConfig.controller.js';
+
+//26
+export { default as convertType } from './convertType.js';

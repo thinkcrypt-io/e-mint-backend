@@ -17,6 +17,7 @@ import {
 	deleteDocument,
 	getDocumentByCode,
 	getDocumentBySlug,
+	getConfig,
 } from '../../controllers/index.js';
 
 import {
@@ -49,6 +50,7 @@ type ControllerOptions = {
 	export?: any;
 	filter?: any;
 	schema?: any;
+	config?: any;
 };
 
 // Initialize a new router
@@ -58,6 +60,7 @@ type RouteOptions = {
 	permission: string;
 	injectMiddleware?: ControllerOptions;
 	replaceController?: ControllerOptions;
+	frontendConfig?: any;
 };
 
 const defineRoutes = ({
@@ -66,6 +69,7 @@ const defineRoutes = ({
 	permission,
 	injectMiddleware,
 	replaceController,
+	frontendConfig,
 }: RouteOptions) => {
 	const router = express.Router();
 	// Construct configuration and permissions
@@ -193,6 +197,11 @@ const defineRoutes = ({
 		replaceController?.count || getCount(config.MODEL)
 	);
 	router.get('/get/schema', replaceController?.schema || getSchema(config.SCHEMA));
+	frontendConfig &&
+		router.get(
+			'/get/config',
+			replaceController?.config || getConfig({ config: frontendConfig, schema: config.SCHEMA })
+		);
 
 	//Export as CSV and PDF
 	router.post(

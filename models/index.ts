@@ -262,6 +262,7 @@ export { default as serviceCategorySettings } from './servicecategories/settings
 //Blog
 export { default as Blog } from './blog/model.js';
 export { default as blogSettings } from './blog/settings.js';
+export { default as blogConfig } from './blog/config.js';
 
 //Author
 export { default as Author } from './author/model.js';

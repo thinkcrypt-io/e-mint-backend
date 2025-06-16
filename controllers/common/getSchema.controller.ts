@@ -1,14 +1,5 @@
 import { Response } from 'express';
-
-const typeMap: Record<string, string> = {
-	email: 'string',
-	'array-string': 'tag',
-	boolean: 'checkbox',
-};
-
-const convertType = (type: string): string => {
-	return typeMap[type] || type;
-};
+import convertType from './convertType.js';
 
 const getSchema = ({ settings }: { settings: any }) => {
 	return async (req: any, res: Response): Promise<Response> => {

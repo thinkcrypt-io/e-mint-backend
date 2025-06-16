@@ -100,6 +100,7 @@ import {
 	authorSettings,
 	NpmLibrary,
 	npmLibrarySettings,
+	blogConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { trackView } from '../controllers/index.js';
@@ -434,6 +435,7 @@ router.use(
 		Model: Blog,
 		settings: blogSettings,
 		permission: 'email',
+		frontendConfig: blogConfig,
 	})
 );
 
