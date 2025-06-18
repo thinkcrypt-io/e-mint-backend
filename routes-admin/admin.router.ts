@@ -103,7 +103,7 @@ import {
 	blogConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
-import { trackView } from '../controllers/index.js';
+import { getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
 
 const router = express.Router();
@@ -428,6 +428,8 @@ router.use(
 		permission: 'email',
 	})
 );
+
+router.get('/sidebar/:platform/:page', getAdminSidebar());
 
 router.use(
 	'/blogs',

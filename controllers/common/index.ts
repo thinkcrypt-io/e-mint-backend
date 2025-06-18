@@ -61,3 +61,6 @@ export { default as getConfig } from './getConfig.controller.js';
 
 //26
 export { default as convertType } from './convertType.js';
+
+//27
+export { default as getAdminSidebar } from './getAdminSidebar.data.js';
