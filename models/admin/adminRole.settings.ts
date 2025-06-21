@@ -1,4 +1,4 @@
-import { AdminRole, SettingsType } from '../../imports.js';
+import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
 	name: {

@@ -101,6 +101,7 @@ import {
 	NpmLibrary,
 	npmLibrarySettings,
 	blogConfig,
+	adminRoleCOnfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -130,7 +131,12 @@ router.use(
 router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
 router.use(
 	'/adminroles',
-	defineRoutes({ Model: AdminRole, settings: adminRoleSettings, permission: 'adminrole' })
+	defineRoutes({
+		Model: AdminRole,
+		settings: adminRoleSettings,
+		permission: 'adminroles',
+		frontendConfig: adminRoleCOnfig,
+	})
 );
 router.use(
 	'/repos',

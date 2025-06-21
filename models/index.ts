@@ -76,8 +76,9 @@ export { purchaseSettings, Purchase } from './purchase/index.js';
 
 //Admin Role & User
 export { default as Admin } from './admin/admin.model.js';
-export { default as AdminRole, adminRoleSettings } from './admin/adminRole.model.js';
-// export { adminSettings } from './admin/admin.model.js';
+export { default as AdminRole } from './admin/adminRole.model.js';
+export { default as adminRoleSettings } from './admin/adminRole.settings.js';
+export { default as adminRoleCOnfig } from './admin/adminRole.config.js';
 export { default as adminSettings } from './admin/admin.settings.js';
 
 //Subscription
