@@ -64,3 +64,6 @@ export { default as convertType } from './convertType.js';
 
 //27
 export { default as getAdminSidebar } from './getAdminSidebar.data.js';
+
+//28
+export { default as getAdminPermissionList } from './getAdminPermissionList.js';

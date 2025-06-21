@@ -1,7 +1,4 @@
 import { AdminRole, SettingsType } from '../../imports.js';
-import Role from '../role/role.model.js';
-
-import Shop from '../shop/shop.model.js';
 
 const settings: SettingsType<any> = {
 	name: {
