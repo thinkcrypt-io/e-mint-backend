@@ -131,6 +131,8 @@ const schema = new Schema<AdminType>(
 			blogs: [String],
 			clickevents: [String],
 			npmlibraries: [String],
+			sidebarcategories: [String],
+			sidebaritems: [String],
 		},
 	},
 
