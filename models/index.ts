@@ -285,3 +285,8 @@ export { default as npmLibrarySettings } from './npm-library/settings.js';
 export { default as SidebarCategory } from './sidebarcategories/model.js';
 export { default as sidebarCategorySettings } from './sidebarcategories/settings.js';
 export { default as sidebarCategoryConfig } from './sidebarcategories/config.js';
+
+//Sidebar Items
+export { default as SidebarItem } from './sidebaritems/model.js';
+export { default as sidebarItemSettings } from './sidebaritems/settings.js';
+export { default as sidebarItemConfig } from './sidebaritems/config.js';

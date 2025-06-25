@@ -5,6 +5,7 @@ type SidebarItemType = {
 	path: string;
 	startOfSection?: boolean;
 	sectionTitle?: string;
+	isLocked?: boolean;
 	permission?: {
 		hide?: boolean;
 		key?: string;
@@ -610,8 +611,8 @@ const sidebar: SidebarItemType[] = [
 	{
 		title: 'Sidebar Categories',
 		href: '/sidebarcategories',
-		icon: 'sidbarcategories',
-		path: 'sidbarcategories',
+		icon: 'sidebarcategories',
+		path: 'sidebarcategories',
 	},
 
 	{
