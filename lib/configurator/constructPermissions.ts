@@ -9,12 +9,12 @@ type Permission = {
 
 const constructPermissions = (id: string): Permission => {
 	return {
-		create: `add_${id}`,
-		read: `view_${id}`,
-		view: `view_${id}`,
-		edit: `edit_${id}`,
-		update: `edit_${id}`,
-		delete: `delete_${id}`,
+		create: `create-${id}`,
+		read: `view-${id}`,
+		view: `view-${id}`,
+		edit: `edit-${id}`,
+		update: `edit-${id}`,
+		delete: `delete-${id}`,
 	};
 };
 

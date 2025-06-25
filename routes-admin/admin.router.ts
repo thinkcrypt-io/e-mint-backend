@@ -102,6 +102,9 @@ import {
 	npmLibrarySettings,
 	blogConfig,
 	adminRoleCOnfig,
+	SidebarCategory,
+	sidebarCategorySettings,
+	sidebarCategoryConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -487,6 +490,16 @@ router.use(
 		Model: NpmLibrary,
 		settings: npmLibrarySettings,
 		permission: 'email',
+	})
+);
+
+router.use(
+	'/sidebarcategories',
+	defineRoutes({
+		Model: SidebarCategory,
+		settings: sidebarCategorySettings,
+		permission: 'email',
+		frontendConfig: sidebarCategoryConfig,
 	})
 );
 

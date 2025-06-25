@@ -599,6 +599,20 @@ const sidebar: SidebarItemType[] = [
 			options: ['create', 'view', 'edit', 'delete'],
 		},
 	},
+	{
+		startOfSection: true,
+		sectionTitle: 'Admin Settings',
+		title: 'Sidebar Item',
+		href: '/sidebaritems',
+		icon: 'sidebaritems',
+		path: 'sidebaritems',
+	},
+	{
+		title: 'Sidebar Categories',
+		href: '/sidebarcategories',
+		icon: 'sidbarcategories',
+		path: 'sidbarcategories',
+	},
 
 	{
 		startOfSection: true,

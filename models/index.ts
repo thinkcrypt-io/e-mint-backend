@@ -280,3 +280,8 @@ export { default as clickSettings } from './click/settings.js';
 //NPM Library
 export { default as NpmLibrary } from './npm-library/model.js';
 export { default as npmLibrarySettings } from './npm-library/settings.js';
+
+//Sidebar Categories
+export { default as SidebarCategory } from './sidebarcategories/model.js';
+export { default as sidebarCategorySettings } from './sidebarcategories/settings.js';
+export { default as sidebarCategoryConfig } from './sidebarcategories/config.js';
