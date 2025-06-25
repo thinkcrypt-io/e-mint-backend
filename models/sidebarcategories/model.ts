@@ -7,7 +7,6 @@ const schema = new Schema<any>(
 			required: [true, 'Category Name is required'],
 			trim: true,
 			maxlength: [200, 'Name cannot exceed 200 characters'],
-			minlength: [10, 'Name must be at least 10 characters'],
 		},
 		description: {
 			type: String,
@@ -17,7 +16,6 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 			maxlength: [100, 'Short name cannot exceed 100 characters'],
-			minlength: [5, 'Short name must be at least 3 characters'],
 		},
 		priority: {
 			type: Number,
@@ -43,7 +41,6 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 			maxlength: [500, 'Notes cannot exceed 500 characters'],
-			minlength: [10, 'Notes must be at least 10 characters'],
 		},
 	},
 	{
