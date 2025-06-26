@@ -16,7 +16,7 @@ const tableFields = ['name', 'href', 'category', 'priority', 'isActive', 'permis
 const formFields = [
 	{
 		sectionTitle: 'Sidebr Item',
-		fields: ['name', ['permission', 'category'], ['isActive', 'priority']],
+		fields: ['name', 'href', ['permission', 'category'], ['isActive', 'priority']],
 	},
 	{
 		sectionTitle: 'Icons',
