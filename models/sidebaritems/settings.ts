@@ -86,7 +86,7 @@ const settings: SettingsType<any> = {
 			type: 'data-menu',
 			tableType: 'string',
 			tableKey: 'category.name',
-			model: 'categorys',
+			model: 'sidebarcategories',
 			default: true,
 			sort: true,
 		},
