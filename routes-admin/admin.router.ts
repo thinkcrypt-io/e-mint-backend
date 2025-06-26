@@ -105,6 +105,9 @@ import {
 	SidebarCategory,
 	sidebarCategorySettings,
 	sidebarCategoryConfig,
+	SidebarItem,
+	sidebarItemSettings,
+	sidebarItemConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -500,6 +503,16 @@ router.use(
 		settings: sidebarCategorySettings,
 		permission: 'email',
 		frontendConfig: sidebarCategoryConfig,
+	})
+);
+
+router.use(
+	'/sidebaritems',
+	defineRoutes({
+		Model: SidebarItem,
+		settings: sidebarItemSettings,
+		permission: 'email',
+		frontendConfig: sidebarItemConfig,
 	})
 );
 
