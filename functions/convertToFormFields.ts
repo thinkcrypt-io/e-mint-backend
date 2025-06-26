@@ -54,6 +54,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig.model && { model: fieldConfig.model }),
 							...(fieldConfig.dataModel && { dataModel: fieldConfig.model }),
 							...(fieldConfig.options && { dataModel: fieldConfig.options }),
+
 							span: 1,
 							endOfSection: lastElement && lastSubIndex,
 							...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
@@ -66,6 +67,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig.menuKey && { menuKey: fieldConfig.menuKey }),
 							...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 							...(fieldConfig.folder && { folder: fieldConfig.folder }),
+							...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 						});
 					}
 				});
@@ -100,6 +102,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig.menuKey && { menuKey: fieldConfig.menuKey }),
 						...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 						...(fieldConfig.folder && { folder: fieldConfig.folder }),
+						...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 						endOfSection: lastElement,
 					});
 				}
