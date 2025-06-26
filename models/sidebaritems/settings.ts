@@ -89,6 +89,7 @@ const settings: SettingsType<any> = {
 			model: 'sidebarcategories',
 			default: true,
 			sort: true,
+			addItem: true,
 		},
 	},
 	tooltip: {
