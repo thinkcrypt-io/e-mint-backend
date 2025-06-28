@@ -4,9 +4,15 @@ import mongoose from 'mongoose';
 const getSum = (model: mongoose.Model<any>) => {
 	return async (req: any, res: any): Promise<Response> => {
 		const field = req.params.field || 'total';
+		const ids = req.query.ids ? req.query.ids.split(',') : [];
 
 		try {
 			let query: any = req?.queryHelper || {};
+
+			// If ids are provided, filter by those specific ids
+			if (ids.length > 0) {
+				query._id = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
+			}
 
 			const result = await model.aggregate([
 				{
