@@ -2,6 +2,7 @@ import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
 	name: {
+		unique: true,
 		title: 'Name',
 		type: 'string',
 		sort: false,
@@ -84,6 +85,10 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			displayValue: {
+				true: 'Active',
+				false: 'Disabled',
+			},
 		},
 	},
 	notes: {

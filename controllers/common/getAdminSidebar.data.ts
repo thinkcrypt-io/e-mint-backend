@@ -28,8 +28,6 @@ const getSidebar = () => {
 				.populate({ path: 'category', select: 'name priority isActive' })
 				.sort({ priority: -1 }); // Sort by item priority first (descending - higher priority first)
 
-			console.log('Sidebar Item Data', sidebarData);
-
 			// Group items by category and sort categories by priority
 			const categorizedItems = sidebarData.reduce((acc: any, item: any) => {
 				// Skip if category is not active
@@ -53,7 +51,14 @@ const getSidebar = () => {
 				(a: any, b: any) => (b.category.priority || 0) - (a.category.priority || 0)
 			);
 
-			const structuredSidebar: SidebarItemType[] = [];
+			const structuredSidebar: SidebarItemType[] = [
+				{
+					title: 'Dashboard',
+					href: '/',
+					icon: 'dashboard',
+					path: 'dashboard',
+				},
+			];
 
 			sortedCategories.forEach((categoryGroup: any, categoryIndex: number) => {
 				const { category, items } = categoryGroup;

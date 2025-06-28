@@ -117,7 +117,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	isActive: {
-		title: 'Is active',
+		title: 'Is Active',
 		type: 'boolean',
 		sort: true,
 		search: false,
@@ -129,6 +129,19 @@ const settings: SettingsType<any> = {
 			title: 'Filter by Is active',
 		},
 		schema: {
+			label: 'Status',
+			type: 'select',
+			options: [
+				{
+					value: true,
+					label: 'Active',
+				},
+				{
+					value: false,
+					label: 'Disabled',
+				},
+			],
+			tableType: 'checkbox',
 			default: true,
 			sort: true,
 			displayValue: {
@@ -138,7 +151,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	permissionProtected: {
-		title: 'Permission Protected',
+		title: 'Permission Required',
 		type: 'boolean',
 		sort: true,
 		edit: true,
