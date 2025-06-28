@@ -3,6 +3,7 @@ import SidebarCategory from '../sidebarcategories/model.js';
 
 const settings: SettingsType<any> = {
 	name: {
+		unique: true,
 		title: 'Title',
 		type: 'string',
 		sort: false,
@@ -126,6 +127,22 @@ const settings: SettingsType<any> = {
 			type: 'boolean',
 			label: 'Is active',
 			title: 'Filter by Is active',
+		},
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	permissionProtected: {
+		title: 'Permission Protected',
+		type: 'boolean',
+		sort: true,
+		edit: true,
+		filter: {
+			name: 'permissionProtected',
+			type: 'boolean',
+			label: 'Permission protected',
+			title: 'Filter by Permission protected',
 		},
 		schema: {
 			default: true,

@@ -108,6 +108,7 @@ import {
 	SidebarItem,
 	sidebarItemSettings,
 	sidebarItemConfig,
+	adminProtect,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -441,7 +442,7 @@ router.use(
 	})
 );
 
-router.get('/sidebar/:platform/:page', getAdminSidebar());
+router.get('/sidebar/:platform/:type', getAdminSidebar());
 router.get('/permissionlist', getAdminPermissionList());
 
 router.use(
@@ -498,6 +499,7 @@ router.use(
 
 router.use(
 	'/sidebarcategories',
+	adminProtect,
 	defineRoutes({
 		Model: SidebarCategory,
 		settings: sidebarCategorySettings,

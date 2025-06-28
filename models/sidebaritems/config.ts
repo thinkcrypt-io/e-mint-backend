@@ -8,15 +8,29 @@ const fields = [
 	'tooltip',
 	'priority',
 	'isActive',
+	'permissionProtected',
 	'permission',
 ];
 
-const tableFields = ['name', 'href', 'category', 'priority', 'isActive', 'permission'];
+const tableFields = [
+	'name',
+	'href',
+	'category',
+	'priority',
+	'isActive',
+	'permissionProtected',
+	'permission',
+];
 
 const formFields = [
 	{
 		sectionTitle: 'Sidebr Item',
-		fields: ['name', 'href', ['permission', 'category'], ['isActive', 'priority']],
+		fields: [
+			'name',
+			['href', 'category'],
+			['permissionProtected', 'permission'],
+			['isActive', 'priority'],
+		],
 	},
 	{
 		sectionTitle: 'Icons',

@@ -43,6 +43,10 @@ const schema = new Schema<any>(
 			type: Boolean,
 			default: true,
 		},
+		permissionProtected: {
+			type: Boolean,
+			default: false,
+		},
 		permission: {
 			type: String,
 			required: true,
