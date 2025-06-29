@@ -116,6 +116,7 @@ import {
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
+import deleteMedia from './file/deleteMedia.controller.js';
 
 const router = express.Router();
 
@@ -528,6 +529,9 @@ router.use(
 		settings: adminFileSettings,
 		permission: 'email',
 		frontendConfig: adminFileConfig,
+		replaceController: {
+			delete: deleteMedia(AdminFile),
+		},
 	})
 );
 

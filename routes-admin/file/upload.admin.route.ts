@@ -63,9 +63,13 @@ router.delete('/:key', async (req: Request, res: Response) => {
 			Key: req.params.key,
 		};
 
-		s3.deleteObject(params, function (err, data) {
+		s3.deleteObject(params, async function (err, data) {
 			if (err) return res.status(500).json({ message: err });
-			if (data) return res.status(200).json({ message: 'File deleted successfully' });
+			if (data) {
+				const deleted = await File.findOneAndDelete({ key: req.params.key });
+				if (deleted) return res.status(200).json({ message: 'File deleted successfully' });
+				else return res.status(404).json({ message: 'File not found in database' });
+			}
 		});
 	} catch (e: any) {
 		console.error(e.message);
@@ -85,7 +89,7 @@ router.post('/', protect, uploadFile.single('image'), async (req: any, res: Resp
 
 		const s3 = new AWS.S3();
 
-		const fileName = `${req?.file?.originalname}_${Date.now()}`;
+		const fileName = `${Date.now()}_${req?.file?.originalname}`;
 
 		const data = await sharp(req?.file?.path)
 			.webp({ quality: 50, force: true, alphaQuality: 80 })
