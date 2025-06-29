@@ -239,7 +239,7 @@ const meetingSettings: SettingsType<any> = {
 		type: 'string',
 		edit: true,
 
-		schema: { displayInTable: true, type: 'string' },
+		schema: { displayInTable: true, type: 'time' },
 	},
 	duration: {
 		title: 'Duration',
