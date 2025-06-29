@@ -67,3 +67,6 @@ export { default as getAdminSidebar } from './getAdminSidebar.data.js';
 
 //28
 export { default as getAdminPermissionList } from './getAdminPermissionList.js';
+
+//29
+export { default as getDistinctFields } from './getDistinctFields.controller.js';

@@ -4,7 +4,8 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import File from '../../models/file/adminFile.model.js';
-import { adminProtect as protect } from '../../middleware/index.js';
+import { paginate, adminProtect as protect } from '../../middleware/index.js';
+import { getDistinctFields } from '../../imports.js';
 
 const router = express.Router();
 
@@ -24,11 +25,22 @@ const uploadVideo = multer({
 	},
 });
 
-router.get('/', protect, async (req: Request, res: Response) => {
+router.get('/', protect, paginate, async (req: any, res: Response) => {
 	try {
-		const type = req.query.type || 'image';
-		const files = await File.find({ fileType: type }).sort('-createdAt');
-		return res.status(200).json({ message: 'Files fetched successfully', doc: files });
+		const { sort, limit = 10, skip = 0, fields, page }: any = req.meta;
+		const { type = 'image', folder } = req.query;
+		let query: any = { fileType: type };
+		if (folder) query.folder = folder;
+
+		const doc = await File.find(query).sort('-createdAt').limit(limit).skip(skip);
+
+		const count: number = await File.countDocuments(query);
+
+		req.meta.docsInPage = doc.length;
+		req.meta.totalDocs = count;
+		req.meta.totalPages = Math.ceil(count / limit);
+
+		return res.status(200).json({ message: 'Files fetched successfully', doc, ...req.meta });
 	} catch (e: any) {
 		console.error(e.message);
 		return res.status(500).json({ message: e.message });
@@ -241,5 +253,7 @@ router.post('/video', protect, uploadVideo.single('image'), async (req: Request,
 		return res.status(500).json({ message: e.message });
 	}
 });
+
+router.get('/get/distinct/:key', protect, getDistinctFields({ model: File }));
 
 export default router;

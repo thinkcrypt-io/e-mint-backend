@@ -18,6 +18,7 @@ import {
 	getDocumentByCode,
 	getDocumentBySlug,
 	getConfig,
+	getDistinctFields,
 } from '../../controllers/index.js';
 
 import {
@@ -51,6 +52,7 @@ type ControllerOptions = {
 	filter?: any;
 	schema?: any;
 	config?: any;
+	distinct?: any;
 };
 
 // Initialize a new router
@@ -128,6 +130,7 @@ const defineRoutes = ({
 		export: [protect, filter(config.FILTER_OPTIONS), ...(injectMiddleware?.export || [])],
 		// Middleware for filtering documents
 		filter: [protect, ...(injectMiddleware?.filter || [])],
+		distinct: [protect, filter(config.FILTER_OPTIONS), ...(injectMiddleware?.distinct || [])],
 	};
 
 	//GENERIC_ROUTES
@@ -228,6 +231,13 @@ const defineRoutes = ({
 		'/get/sum/:field',
 		...middlewares.count,
 		replaceController?.sum || getSum(config.MODEL)
+	);
+
+	//Get distinct values for a field
+	router.get(
+		'/get/distinct/:key',
+		...middlewares.distinct,
+		replaceController?.distinct || getDistinctFields({ model: config.MODEL })
 	);
 
 	return router;
