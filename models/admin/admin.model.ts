@@ -133,6 +133,7 @@ const schema = new Schema<AdminType>(
 			npmlibraries: [String],
 			sidebarcategories: [String],
 			sidebaritems: [String],
+			files: [String],
 		},
 	},
 

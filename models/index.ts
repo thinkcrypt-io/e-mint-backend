@@ -81,6 +81,11 @@ export { default as adminRoleSettings } from './admin/adminRole.settings.js';
 export { default as adminRoleCOnfig } from './admin/adminRole.config.js';
 export { default as adminSettings } from './admin/admin.settings.js';
 
+//File
+export { default as AdminFile } from './file/adminFile.model.js';
+export { default as adminFileSettings } from './file/adminFile.settings.js';
+export { default as adminFileConfig } from './file/adminFile.config.js';
+
 //Subscription
 export { default as Subscription } from './subscription/subscription.model.js';
 export { subscriptionSettings } from './subscription/subscription.model.js';

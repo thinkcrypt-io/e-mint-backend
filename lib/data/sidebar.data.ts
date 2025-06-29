@@ -211,6 +211,19 @@ const sidebar: SidebarItemType[] = [
 			options: ['create', 'view', 'edit', 'delete'],
 		},
 	},
+	{
+		startOfSection: true,
+		sectionTitle: 'Media',
+		title: 'Files',
+		href: '/files',
+		icon: 'files',
+		path: 'files',
+		permission: {
+			key: 'files',
+			label: 'Files',
+			options: ['create', 'view', 'edit', 'delete'],
+		},
+	},
 
 	{
 		startOfSection: true,

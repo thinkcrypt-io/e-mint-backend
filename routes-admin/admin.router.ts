@@ -109,6 +109,9 @@ import {
 	sidebarItemSettings,
 	sidebarItemConfig,
 	adminProtect,
+	AdminFile,
+	adminFileConfig,
+	adminFileSettings,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -515,6 +518,16 @@ router.use(
 		settings: sidebarItemSettings,
 		permission: 'email',
 		frontendConfig: sidebarItemConfig,
+	})
+);
+
+router.use(
+	'/files',
+	defineRoutes({
+		Model: AdminFile,
+		settings: adminFileSettings,
+		permission: 'email',
+		frontendConfig: adminFileConfig,
 	})
 );
 
