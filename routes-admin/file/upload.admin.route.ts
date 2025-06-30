@@ -258,6 +258,154 @@ router.post('/video', protect, uploadVideo.single('image'), async (req: Request,
 	}
 });
 
+router.get('/get/sum/s3', async (req: Request, res: Response) => {
+	try {
+		if (!process.env.S3_BUCKET_NAME) {
+			return res.status(400).json({ message: 'S3_BUCKET_NAME environment variable is not set' });
+		}
+
+		AWS.config.update({
+			region: process.env.AWS_REGION,
+			accessKeyId: process.env.AWS_ACCESS_KEY,
+			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+		});
+
+		const cloudwatch = new AWS.CloudWatch();
+
+		const params: AWS.CloudWatch.GetMetricStatisticsInput = {
+			Namespace: 'AWS/S3',
+			MetricName: 'BucketSizeBytes',
+			Dimensions: [
+				{
+					Name: 'BucketName',
+					Value: process.env.S3_BUCKET_NAME,
+				},
+				{
+					Name: 'StorageType',
+					Value: 'StandardStorage',
+				},
+			],
+			StartTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+			EndTime: new Date(),
+			Period: 86400, // 1 day in seconds
+			Statistics: ['Average'],
+		};
+
+		cloudwatch.getMetricStatistics(
+			params,
+			(err: AWS.AWSError | null, data: AWS.CloudWatch.GetMetricStatisticsOutput) => {
+				if (err) {
+					console.error('CloudWatch error:', err);
+					return res.status(500).json({ message: err.message });
+				}
+
+				// Get the latest datapoint
+				const latestDatapoint = data.Datapoints?.sort(
+					(a: any, b: any) => new Date(b.Timestamp!).getTime() - new Date(a.Timestamp!).getTime()
+				)[0];
+
+				const totalBytes = latestDatapoint?.Average || 0;
+
+				return res.status(200).json({
+					message: 'Storage fetched successfully',
+					total: totalBytes,
+					timestamp: latestDatapoint?.Timestamp,
+				});
+			}
+		);
+	} catch (e: any) {
+		console.error(e.message);
+		return res.status(500).json({ message: e.message });
+	}
+});
+
+router.get('/get/sum/awsbill', async (req: Request, res: Response) => {
+	try {
+		AWS.config.update({
+			region: process.env.AWS_REGION,
+			accessKeyId: process.env.AWS_ACCESS_KEY,
+			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+		});
+
+		const costExplorer = new AWS.CostExplorer({ region: 'us-east-1' }); // Cost Explorer only works in us-east-1
+
+		// Get current month start and end dates
+		const now = new Date();
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+		const params: AWS.CostExplorer.GetCostAndUsageRequest = {
+			TimePeriod: {
+				Start: startOfMonth.toISOString().split('T')[0], // YYYY-MM-DD format
+				End: endOfMonth.toISOString().split('T')[0],
+			},
+			Granularity: 'MONTHLY',
+			Metrics: ['BlendedCost', 'UnblendedCost'],
+			GroupBy: [
+				{
+					Type: 'DIMENSION',
+					Key: 'SERVICE',
+				},
+			],
+		};
+
+		costExplorer.getCostAndUsage(
+			params,
+			(err: AWS.AWSError | null, data: AWS.CostExplorer.GetCostAndUsageResponse) => {
+				if (err) {
+					console.error('Cost Explorer error:', err);
+					return res.status(500).json({ message: err.message });
+				}
+
+				const result = data.ResultsByTime?.[0];
+
+				// Calculate total cost across all services
+				let totalBlendedCost = 0;
+				let totalUnblendedCost = 0;
+				let currency = 'USD';
+
+				// Get breakdown by service
+				const serviceBreakdown =
+					result?.Groups?.map(group => {
+						const serviceName = group.Keys?.[0] || 'Unknown';
+						const blended = parseFloat(group.Metrics?.BlendedCost?.Amount || '0');
+						const unblended = parseFloat(group.Metrics?.UnblendedCost?.Amount || '0');
+
+						totalBlendedCost += blended;
+						totalUnblendedCost += unblended;
+
+						if (group.Metrics?.BlendedCost?.Unit) {
+							currency = group.Metrics.BlendedCost.Unit;
+						}
+
+						return {
+							service: serviceName,
+							blended,
+							unblended,
+						};
+					}) || [];
+
+				return res.status(200).json({
+					message: 'Total AWS cost fetched successfully',
+					period: {
+						start: startOfMonth.toISOString().split('T')[0],
+						end: endOfMonth.toISOString().split('T')[0],
+					},
+					totalCost: {
+						blended: totalBlendedCost,
+						unblended: totalUnblendedCost,
+						currency,
+					},
+					serviceBreakdown,
+				});
+			}
+		);
+	} catch (e: any) {
+		console.error(e.message);
+		return res.status(500).json({ message: e.message });
+	}
+});
+
 router.get('/get/distinct/:key', protect, getDistinctFields({ model: File }));
 
 export default router;
