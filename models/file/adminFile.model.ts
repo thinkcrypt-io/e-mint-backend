@@ -57,5 +57,24 @@ const schema = new Schema<any>(
 	}
 );
 
+// Virtual for formatted file size
+schema.virtual('fileSize').get(function () {
+	if (!this.size) return '0 B';
+
+	const bytes: any = this.size;
+	const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+	if (bytes === 0) return '0 B';
+
+	const i = Math.floor(Math.log(bytes) / Math.log(1024));
+	const size = bytes / Math.pow(1024, i);
+
+	return Math.round(size * 100) / 100 + ' ' + sizes[i];
+});
+
+// Ensure virtual fields are serialized
+schema.set('toJSON', { virtuals: true });
+schema.set('toObject', { virtuals: true });
+
 const AdminFile = mongoose.model<any>('AdminFile', schema);
 export default AdminFile;

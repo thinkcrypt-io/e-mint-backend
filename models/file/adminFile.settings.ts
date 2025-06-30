@@ -68,6 +68,7 @@ const settings: SettingsType<any> = {
 			label: 'Folder',
 			title: 'Filter by Folder',
 			category: 'distinct',
+			key: 'folder',
 		},
 
 		schema: {
@@ -91,10 +92,20 @@ const settings: SettingsType<any> = {
 	type: {
 		title: 'Media Type',
 		type: 'string',
-		sort: false,
+		sort: true,
 		search: true,
 		edit: true,
 		required: true,
+
+		filter: {
+			type: 'multi-select',
+			name: 'type',
+			field: 'type_in',
+			label: 'Media Type',
+			title: 'Filter by Media Type',
+			category: 'distinct',
+			key: 'type',
+		},
 
 		schema: {
 			default: true,
@@ -112,8 +123,8 @@ const settings: SettingsType<any> = {
 			name: 'fileType',
 			field: 'fileType_in',
 			type: 'multi-select',
-			label: 'FileType',
-			title: 'Filter by FileType',
+			label: 'File Type',
+			title: 'Filter by File Type',
 			options: [
 				{
 					label: 'Image',
@@ -162,23 +173,24 @@ const settings: SettingsType<any> = {
 		},
 	},
 	size: {
-		title: 'File Size (KB)',
+		title: 'Size',
 		type: 'number',
-		sort: false,
-		search: false,
-		edit: true,
-
 		schema: {
 			default: true,
 			sort: true,
+		},
+	},
+	fileSize: {
+		title: 'Size (KB)',
+		type: 'string',
+		schema: {
+			default: true,
 		},
 	},
 	createdAt: {
 		title: 'Created at',
 		type: 'date',
 		sort: true,
-		search: false,
-		edit: true,
 		filter: {
 			name: 'createdAt',
 			type: 'date',
@@ -187,7 +199,7 @@ const settings: SettingsType<any> = {
 		},
 		schema: {
 			type: 'date',
-			tableType: 'string',
+			tableType: 'date-only',
 		},
 	},
 };

@@ -1,6 +1,7 @@
 const fields = [
 	'name',
 	'url',
+	'fileSize',
 	'size',
 	'folder',
 	'key',
@@ -14,6 +15,7 @@ const fields = [
 const tableFields = [
 	'name',
 	'url',
+	'fileSize',
 	'size',
 	'folder',
 	'key',
@@ -26,8 +28,8 @@ const tableFields = [
 
 const formFields = [
 	{
-		sectionTitle: 'Sample',
-		fields: ['sample', 'sample', ['sample', 'sample']],
+		sectionTitle: 'Change Folder',
+		fields: ['folder'],
 	},
 ];
 
