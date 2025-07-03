@@ -55,7 +55,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 	'options.create': {
-		title: 'Options.create',
+		title: 'Create',
 		type: 'boolean',
 		sort: true,
 		search: false,
@@ -64,10 +64,14 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			displayValue: {
+				true: 'Active',
+				false: 'Disabled',
+			},
 		},
 	},
 	'options.view': {
-		title: 'Options.view',
+		title: 'View',
 		type: 'boolean',
 		sort: true,
 		search: false,
@@ -76,10 +80,14 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			displayValue: {
+				true: 'Active',
+				false: 'Disabled',
+			},
 		},
 	},
 	'options.edit': {
-		title: 'Options.edit',
+		title: 'Update',
 		type: 'boolean',
 		sort: true,
 		search: false,
@@ -88,10 +96,14 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			displayValue: {
+				true: 'Active',
+				false: 'Disabled',
+			},
 		},
 	},
 	'options.delete': {
-		title: 'Options.delete',
+		title: 'Delete',
 		type: 'boolean',
 		sort: true,
 		search: false,
@@ -100,6 +112,10 @@ const settings: SettingsType<any> = {
 		schema: {
 			default: true,
 			sort: true,
+			displayValue: {
+				true: 'Active',
+				false: 'Disabled',
+			},
 		},
 	},
 	createdAt: {

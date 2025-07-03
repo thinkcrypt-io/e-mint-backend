@@ -21,10 +21,10 @@ const schema = new Schema<any>(
 			default: true,
 		},
 		options: {
-			create: Boolean,
-			view: Boolean,
-			edit: Boolean,
-			delete: Boolean,
+			create: { type: Boolean, default: false },
+			view: { type: Boolean, default: false },
+			edit: { type: Boolean, default: false },
+			delete: { type: Boolean, default: false },
 		},
 	},
 	{
