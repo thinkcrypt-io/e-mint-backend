@@ -22,6 +22,7 @@ const getSidebar = () => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { type } = req.params;
+			const permissions = req?.permissions || [];
 			const sidebarData = await SidebarItem.find({
 				isActive: true,
 			})
@@ -80,7 +81,11 @@ const getSidebar = () => {
 						sidebarItem.sectionTitle = category.name;
 					}
 
-					structuredSidebar.push(sidebarItem);
+					if (!item?.permissionProtected) structuredSidebar.push(sidebarItem);
+					else {
+						if (permissions.includes('*')) structuredSidebar.push(sidebarItem);
+						else if (permissions.includes(item?.permission)) structuredSidebar.push(sidebarItem);
+					}
 				});
 			});
 

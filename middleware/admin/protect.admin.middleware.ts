@@ -18,11 +18,13 @@ const adminProtect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
-		req.user = await Admin.findById(decoded?._id).select('-password');
+		req.user = await Admin.findById(decoded?._id).select('-password').populate('role');
 
 		if (!req.user) {
 			return res.status(401).json({ message: 'User was not found' });
 		}
+
+		req.permissions = req.user?.role?.permissions || [];
 
 		next();
 	} catch (e: any) {

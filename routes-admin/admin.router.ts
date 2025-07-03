@@ -446,7 +446,7 @@ router.use(
 	})
 );
 
-router.get('/sidebar/:platform/:type', getAdminSidebar());
+router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
 router.get('/permissionlist', getAdminPermissionList());
 
 router.use(
@@ -503,7 +503,7 @@ router.use(
 
 router.use(
 	'/sidebarcategories',
-	adminProtect,
+
 	defineRoutes({
 		Model: SidebarCategory,
 		settings: sidebarCategorySettings,
