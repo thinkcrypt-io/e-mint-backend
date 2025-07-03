@@ -81,18 +81,22 @@ const getSidebar = () => {
 						sidebarItem.sectionTitle = category.name;
 					}
 
+					// If not permissionProtected, add item directly
 					if (!item?.permissionProtected) structuredSidebar.push(sidebarItem);
+					// If permissionProtected, check permissions
 					else {
+						// If user has all permissions or specific permission, add item
 						if (permissions.includes('*')) structuredSidebar.push(sidebarItem);
+						// If user has specific permission, add item
 						else if (permissions.includes(item?.permission)) structuredSidebar.push(sidebarItem);
 					}
 				});
 			});
 
-			if (type == 'server') {
-				return res.status(200).json(structuredSidebar);
-			}
+			// Add sidebar items from DB
+			if (type == 'server') return res.status(200).json(structuredSidebar);
 
+			// Add the default sidebar items
 			return res.status(200).json(sidebar);
 		} catch (e: any) {
 			console.error(e.message);
