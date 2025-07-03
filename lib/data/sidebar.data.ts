@@ -627,6 +627,12 @@ const sidebar: SidebarItemType[] = [
 		icon: 'sidebarcategories',
 		path: 'sidebarcategories',
 	},
+	{
+		title: 'Permissions',
+		href: '/permissions',
+		icon: 'permissions',
+		path: 'permissions',
+	},
 
 	{
 		startOfSection: true,

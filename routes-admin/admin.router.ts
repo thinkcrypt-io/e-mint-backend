@@ -112,6 +112,9 @@ import {
 	AdminFile,
 	adminFileConfig,
 	adminFileSettings,
+	Permission,
+	permissionSettings,
+	permissionConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -532,6 +535,16 @@ router.use(
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
+	})
+);
+
+router.use(
+	'/permissions',
+	defineRoutes({
+		Model: Permission,
+		settings: permissionSettings,
+		permission: 'email',
+		frontendConfig: permissionConfig,
 	})
 );
 

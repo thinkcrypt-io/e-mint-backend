@@ -109,6 +109,11 @@ export { default as Asset } from './asset/asset.model.js';
 export { default as AssetType } from './asset/asset.types.js';
 export { default as assetSettings } from './asset/asset.settings.js';
 
+//Permission
+export { default as Permission } from './permissions/model.js';
+export { default as permissionSettings } from './permissions/settings.js';
+export { default as permissionConfig } from './permissions/config.js';
+
 //Payment Account
 export * from './payment-account/index.js';
 
