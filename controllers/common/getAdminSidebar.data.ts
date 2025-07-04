@@ -56,7 +56,7 @@ const getSidebar = () => {
 				{
 					title: 'Dashboard',
 					href: '/',
-					icon: 'dashboard',
+					icon: 'layout-dashboard',
 					path: 'dashboard',
 				},
 			];
@@ -71,7 +71,7 @@ const getSidebar = () => {
 					const sidebarItem: SidebarItemType = {
 						title: item.name,
 						href: `/${item.href}`,
-						icon: item.icon || 'default',
+						icon: item.icon || 'circle-question-mark',
 						path: item.href.replace('/', '') || item.name.toLowerCase().replace(/\s+/g, ''),
 					};
 
