@@ -3,7 +3,7 @@ const fields = [
 	'description',
 	'href',
 	'icon',
-	'iconDark',
+	// 'iconDark',
 	'category',
 	'tooltip',
 	'priority',
@@ -34,7 +34,7 @@ const formFields = [
 	},
 	{
 		sectionTitle: 'Icons',
-		fields: ['icon', 'iconDark'],
+		fields: ['icon'],
 	},
 	{
 		sectionTitle: 'Description',
