@@ -19,6 +19,7 @@ import {
 	getDocumentBySlug,
 	getConfig,
 	getDistinctFields,
+	getPageRoute,
 } from '../../controllers/index.js';
 
 import {
@@ -205,6 +206,9 @@ const defineRoutes = ({
 			'/get/config',
 			replaceController?.config || getConfig({ config: frontendConfig, schema: config.SCHEMA })
 		);
+
+	frontendConfig &&
+		router.get('/get/route', replaceController?.config || getPageRoute({ config: frontendConfig }));
 
 	//Export as CSV and PDF
 	router.post(

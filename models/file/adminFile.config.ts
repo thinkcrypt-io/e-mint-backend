@@ -33,10 +33,26 @@ const formFields = [
 	},
 ];
 
+const route = {
+	title: 'File Management',
+	path: 'files',
+
+	menu: [
+		{ type: 'view-server-modal', title: 'View' },
+		{ type: 'view-item', title: 'Go To Post' },
+		{
+			title: 'Update Information',
+			type: 'edit-server-modal',
+		},
+		{ type: 'delete', title: 'Delete' },
+	],
+};
+
 const config = {
 	fields,
 	table: tableFields,
 	form: formFields,
+	route: route,
 };
 
 export default config;

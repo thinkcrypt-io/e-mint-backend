@@ -70,3 +70,6 @@ export { default as getAdminPermissionList } from './getAdminPermissionList.js';
 
 //29
 export { default as getDistinctFields } from './getDistinctFields.controller.js';
+
+//30
+export { default as getPageRoute } from './getPageRoute.controller.js';
