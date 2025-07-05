@@ -35,10 +35,27 @@ const formFields = [
 	},
 ];
 
+const route = {
+	title: 'Page Route Management',
+	subTitle: 'Manage your page routes and their configurations',
+	path: 'pages',
+
+	menu: [
+		{ type: 'view-server-modal', title: 'View' },
+		{ type: 'view-item', title: 'Go To Post' },
+		{
+			title: 'Update Information',
+			type: 'edit-server-modal',
+		},
+		{ type: 'delete', title: 'Delete' },
+	],
+};
+
 const config = {
 	fields,
 	table: tableFields,
 	form: formFields,
+	route,
 };
 
 export default config;
