@@ -4,8 +4,8 @@ const fields = [
 	'path',
 	'export',
 	'showAddButton',
-	'button.title',
-	'button.isModal',
+	'buttonTitle',
+	'buttonIsModal',
 	'createdAt',
 	'updatedAt',
 ];
@@ -16,8 +16,8 @@ const tableFields = [
 	'path',
 	'export',
 	'showAddButton',
-	'button.title',
-	'button.isModal',
+	'buttonTitle',
+	'buttonIsModal',
 	'createdAt',
 ];
 
@@ -30,7 +30,7 @@ const formFields = [
 		sectionTitle: 'Header Buttons',
 		fields: [
 			['showAddButton', 'export'],
-			['button.title', 'button.isModal'],
+			['buttonTitle', 'buttonIsModal'],
 		],
 	},
 ];

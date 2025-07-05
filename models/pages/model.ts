@@ -13,10 +13,9 @@ const schema = new Schema<any>(
 		},
 		export: { type: Boolean, default: false },
 		showAddButton: { type: Boolean, default: false },
-		button: {
-			title: { type: String, default: '', trim: true },
-			isModal: { type: Boolean, default: false },
-		},
+
+		buttonTitle: { type: String, default: '', trim: true },
+		buttonIsModal: { type: Boolean, default: false },
 	},
 	{
 		timestamps: true,

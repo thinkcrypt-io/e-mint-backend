@@ -61,7 +61,7 @@ const settings: SettingsType<any> = {
 
 		schema: {},
 	},
-	'button.title': {
+	buttonTitle: {
 		title: 'Create Button Title',
 		type: 'string',
 		sort: false,
@@ -70,7 +70,7 @@ const settings: SettingsType<any> = {
 		trim: true,
 		schema: {},
 	},
-	'button.isModal': {
+	buttonIsModal: {
 		title: 'Pop Up Create Button',
 		type: 'boolean',
 		sort: true,
