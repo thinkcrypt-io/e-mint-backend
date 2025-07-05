@@ -40,6 +40,11 @@ const route = {
 	subTitle: 'Manage your page routes and their configurations',
 	path: 'pages',
 
+	button: {
+		title: 'New Route',
+		isModal: true,
+	},
+
 	menu: [
 		{ type: 'view-server-modal', title: 'View' },
 		{ type: 'view-item', title: 'Go To Post' },
