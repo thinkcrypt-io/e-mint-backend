@@ -300,3 +300,8 @@ export { default as sidebarCategoryConfig } from './sidebarcategories/config.js'
 export { default as SidebarItem } from './sidebaritems/model.js';
 export { default as sidebarItemSettings } from './sidebaritems/settings.js';
 export { default as sidebarItemConfig } from './sidebaritems/config.js';
+
+//Pages
+export { default as Page } from './pages/model.js';
+export { default as pageSettings } from './pages/settings.js';
+export { default as pageConfig } from './pages/config.js';
