@@ -310,3 +310,8 @@ export { default as pageConfig } from './pages/config.js';
 export { default as Domain } from './domains/model.js';
 export { default as domainSettings } from './domains/settings.js';
 export { default as domainConfig } from './domains/config.js';
+
+//Socials
+export { default as Social } from './socials/model.js';
+export { default as socialSettings } from './socials/settings.js';
+export { default as socialConfig } from './socials/config.js';

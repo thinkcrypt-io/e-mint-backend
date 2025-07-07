@@ -121,11 +121,15 @@ import {
 	Domain,
 	domainSettings,
 	domainConfig,
+	Social,
+	socialSettings,
+	socialConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
+import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
 
 const router = express.Router();
 
@@ -141,6 +145,8 @@ router.use('/upload', uploadRoute);
 router.use('/purchasedthemes', purchasedThemeRoute);
 
 router.use('/sms', smsRoute);
+
+router.post('/whatsapp/send', sendWhatsapp);
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
 router.use(
@@ -572,6 +578,16 @@ router.use(
 		settings: domainSettings,
 		permission: 'email',
 		frontendConfig: domainConfig,
+	})
+);
+
+router.use(
+	'/socials',
+	defineRoutes({
+		Model: Social,
+		settings: socialSettings,
+		permission: 'email',
+		frontendConfig: socialConfig,
 	})
 );
 
