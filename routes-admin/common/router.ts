@@ -64,6 +64,7 @@ type RouteOptions = {
 	injectMiddleware?: ControllerOptions;
 	replaceController?: ControllerOptions;
 	frontendConfig?: any;
+	route?: string; // Optional route name for frontend configuration
 };
 
 const defineRoutes = ({
@@ -73,6 +74,7 @@ const defineRoutes = ({
 	injectMiddleware,
 	replaceController,
 	frontendConfig,
+	route,
 }: RouteOptions) => {
 	const router = express.Router();
 	// Construct configuration and permissions
@@ -208,7 +210,10 @@ const defineRoutes = ({
 		);
 
 	frontendConfig &&
-		router.get('/get/route', replaceController?.config || getPageRoute({ config: frontendConfig }));
+		router.get(
+			'/get/route',
+			replaceController?.config || getPageRoute({ config: frontendConfig, route })
+		);
 
 	//Export as CSV and PDF
 	router.post(

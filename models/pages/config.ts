@@ -60,7 +60,7 @@ const config = {
 	fields,
 	table: tableFields,
 	form: formFields,
-	route,
+	// route,
 };
 
 export default config;

@@ -305,3 +305,8 @@ export { default as sidebarItemConfig } from './sidebaritems/config.js';
 export { default as Page } from './pages/model.js';
 export { default as pageSettings } from './pages/settings.js';
 export { default as pageConfig } from './pages/config.js';
+
+//Domains
+export { default as Domain } from './domains/model.js';
+export { default as domainSettings } from './domains/settings.js';
+export { default as domainConfig } from './domains/config.js';

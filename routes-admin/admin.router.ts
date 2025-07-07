@@ -118,6 +118,9 @@ import {
 	Page,
 	pageSettings,
 	pageConfig,
+	Domain,
+	domainSettings,
+	domainConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -558,6 +561,17 @@ router.use(
 		settings: pageSettings,
 		permission: 'email',
 		frontendConfig: pageConfig,
+		route: 'pages',
+	})
+);
+
+router.use(
+	'/domains',
+	defineRoutes({
+		Model: Domain,
+		settings: domainSettings,
+		permission: 'email',
+		frontendConfig: domainConfig,
 	})
 );
 
