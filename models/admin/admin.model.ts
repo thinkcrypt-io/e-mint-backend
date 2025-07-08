@@ -102,6 +102,7 @@ const schema = new Schema<AdminType>(
 			invoices: [String],
 			socials: [String],
 			leaves: [String],
+			metas: [String],
 			softwares: [String],
 			repos: [String],
 			teams: [String],

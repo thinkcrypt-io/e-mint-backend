@@ -124,6 +124,9 @@ import {
 	Social,
 	socialSettings,
 	socialConfig,
+	Meta,
+	metaSettings,
+	metaConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -588,6 +591,16 @@ router.use(
 		settings: socialSettings,
 		permission: 'email',
 		frontendConfig: socialConfig,
+	})
+);
+
+router.use(
+	'/metas',
+	defineRoutes({
+		Model: Meta,
+		settings: metaSettings,
+		permission: 'metas',
+		frontendConfig: metaConfig,
 	})
 );
 

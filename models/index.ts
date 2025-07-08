@@ -315,3 +315,8 @@ export { default as domainConfig } from './domains/config.js';
 export { default as Social } from './socials/model.js';
 export { default as socialSettings } from './socials/settings.js';
 export { default as socialConfig } from './socials/config.js';
+
+//SEO/Meta
+export { default as Meta } from './metas/model.js';
+export { default as metaSettings } from './metas/settings.js';
+export { default as metaConfig } from './metas/config.js';
