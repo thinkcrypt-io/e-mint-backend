@@ -56,6 +56,15 @@ type ControllerOptions = {
 	distinct?: any;
 };
 
+// Enhanced types for dynamic routes
+type CustomRoute = {
+	path: string;
+	method: 'get' | 'post' | 'put' | 'delete' | 'patch';
+	controller: any;
+	middlewares?: any[];
+	description?: string;
+};
+
 // Initialize a new router
 type RouteOptions = {
 	Model: mongoose.Model<any>;
@@ -64,6 +73,7 @@ type RouteOptions = {
 	injectMiddleware?: ControllerOptions;
 	replaceController?: ControllerOptions;
 	frontendConfig?: any;
+	customRoutes?: CustomRoute[];
 	route?: string; // Optional route name for frontend configuration
 };
 
@@ -75,6 +85,7 @@ const defineRoutes = ({
 	replaceController,
 	frontendConfig,
 	route,
+	customRoutes = [], // Default to empty array
 }: RouteOptions) => {
 	const router = express.Router();
 	// Construct configuration and permissions
@@ -248,6 +259,55 @@ const defineRoutes = ({
 		...middlewares.distinct,
 		replaceController?.distinct || getDistinctFields({ model: config.MODEL })
 	);
+
+	customRoutes.forEach((customRoute: CustomRoute) => {
+		const {
+			path,
+			method,
+			controller,
+			middlewares: customMiddlewares = [],
+			description,
+		} = customRoute;
+
+		const fullPath = path;
+
+		// Log route registration for debugging
+		console.log(
+			`📍 Registering custom route: ${method.toUpperCase()} ${fullPath}${description ? ` - ${description}` : ''}`
+		);
+
+		// Determine middlewares to apply
+		let routeMiddlewares = [];
+
+		// if (!skipDefaultMiddlewares) {
+		// 	// Apply basic protection if not skipped
+		// 	routeMiddlewares.push(protect);
+		// }
+
+		// Add custom middlewares
+		routeMiddlewares.push(...customMiddlewares);
+
+		// Register the route based on HTTP method
+		switch (method) {
+			case 'get':
+				router.get(fullPath, ...routeMiddlewares, controller);
+				break;
+			case 'post':
+				router.post(fullPath, ...routeMiddlewares, controller);
+				break;
+			case 'put':
+				router.put(fullPath, ...routeMiddlewares, controller);
+				break;
+			case 'delete':
+				router.delete(fullPath, ...routeMiddlewares, controller);
+				break;
+			case 'patch':
+				router.patch(fullPath, ...routeMiddlewares, controller);
+				break;
+			default:
+				console.warn(`⚠️ Unsupported HTTP method: ${method} for route: ${fullPath}`);
+		}
+	});
 
 	return router;
 };

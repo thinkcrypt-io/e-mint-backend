@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { addSequentialCodeMiddleware, generateSlug } from '../../lib';
+import { addSequentialCodeMiddleware, generateSlug } from '../../lib/index.js';
 
 const schema = new Schema<any>(
 	{},

@@ -18,6 +18,7 @@ const COMMON_TEMPLATES = {
 	sample_hotel_confirmation: 4,
 	sample_order_confirmation: 3,
 	sample_shipping_confirmation: 3,
+	thinkcrypt_general: 0,
 };
 
 const validateTemplateParameters = (templateName: string, parameters: any[]) => {
@@ -41,8 +42,8 @@ const sendWhatsapp = async (req: any, res: Response) => {
 	try {
 		const {
 			to,
-			templateName = 'hello_world',
-			templateLanguage = 'en_US',
+			templateName = 'thinkcrypt_general',
+			templateLanguage = 'en',
 			message,
 			type = 'template',
 			parameters = [],
@@ -57,7 +58,7 @@ const sendWhatsapp = async (req: any, res: Response) => {
 		}
 
 		// WhatsApp API configuration
-		const WHATSAPP_API_URL = 'https://graph.facebook.com/v22.0/684240418111408/messages';
+		const WHATSAPP_API_URL = 'https://graph.facebook.com/v22.0/697616256766978/messages';
 		const ACCESS_TOKEN =
 			process.env.WHATSAPP_ACCESS_TOKEN ||
 			'EAAur1XMfJ3YBPEgsm6Bd3rH9Ffv0M0d6VAFBBQJZBVnZBZCij8zZBQW2UfJVxtNZA3Pn0xTRdWN8fJO0WH2n1DZBBKL4KZCvfj2c4dKcUn8l9ZBmvE8akI8KisUKt7p2z99sZB8EdxZBUJ81ps8pZBTMbcLGFHN8ty5FphKVD7PmPZCS4ZAxOhGePc24TNZAeZB70jvS191RZCnOreoyVe3KxZAx3ucaaZBZBcNnIRVmsJQTdyci9zd9apOmgZDZD';
@@ -86,7 +87,7 @@ const sendWhatsapp = async (req: any, res: Response) => {
 
 			messageData.type = 'template';
 			messageData.template = {
-				name: templateName,
+				name: templateName, // Use the template name provided in the request
 				language: {
 					code: templateLanguage,
 				},
@@ -215,6 +216,7 @@ const sendWhatsapp = async (req: any, res: Response) => {
 			if (errorMessage?.includes('Template name does not exist')) {
 				return res.status(404).json({
 					success: false,
+					msg: e.response?.data?.error?.message,
 					message: `Template "Name" does not exist in your WhatsApp Business account`,
 					suggestion:
 						'Please create the template in Meta Business Manager or use an existing template name',
