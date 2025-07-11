@@ -101,7 +101,7 @@ const settings: SettingsType<any> = {
 		schema: {
 			type: 'data-menu',
 			tableType: 'string',
-			tableKey: 'folder.name',
+			tableKey: 'fileFolder.name',
 			model: 'folders',
 			default: true,
 			sort: true,
