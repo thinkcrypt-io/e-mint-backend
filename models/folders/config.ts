@@ -1,20 +1,28 @@
-const fields = ['sample'];
+const fields = ['name', 'description', 'parent', 'isActive', 'priority', 'slug', 'createdAt'];
 
-const tableFields = ['sample'];
+const tableFields = ['name', 'parent', 'isActive', 'priority', 'slug', 'createdAt'];
 
 const formFields = [
 	{
-		sectionTitle: 'Sample',
-		fields: ['sample', 'sample', ['sample', 'sample']],
+		sectionTitle: 'Folder Details',
+		fields: ['name', 'slug', ['isActive', 'parent']],
+	},
+	{
+		sectionTitle: 'Description',
+		fields: ['description'],
+	},
+	{
+		sectionTitle: 'Organization & Display',
+		fields: ['priority'],
 	},
 ];
 
 const route = {
-	title: 'Route Title',
-	subTitle: 'Route Subtitle',
-	path: 'blogs',
+	title: 'Folders',
+	subTitle: 'Manage your folders',
+	path: 'folders',
 	button: {
-		title: 'New Blog',
+		title: 'New Folder',
 		isModal: true,
 	},
 	export: true,

@@ -47,4 +47,4 @@ schema.pre('save', function (next) {
 	next();
 });
 
-export default mongoose.model<any>('Template', schema);
+export default mongoose.model<any>('Folder', schema);

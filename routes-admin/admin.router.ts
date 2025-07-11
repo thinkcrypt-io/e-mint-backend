@@ -130,6 +130,9 @@ import {
 	imageSettings,
 	imageConfig,
 	customQuery,
+	Folder,
+	folderSettings,
+	folderConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -567,6 +570,16 @@ router.use(
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
+	})
+);
+
+router.use(
+	'/folders',
+	defineRoutes({
+		Model: Folder,
+		settings: folderSettings,
+		permission: 'image',
+		frontendConfig: folderConfig,
 	})
 );
 
