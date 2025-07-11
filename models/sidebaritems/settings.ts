@@ -48,7 +48,7 @@ const settings: SettingsType<any> = {
 		edit: true,
 		trim: true,
 		schema: {
-			type: 'icon',
+			type: 'string',
 		},
 	},
 	iconDark: {
