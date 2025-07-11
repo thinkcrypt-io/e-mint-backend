@@ -97,16 +97,6 @@ const settings: SettingsType<any> = {
 		edit: true,
 		required: true,
 
-		filter: {
-			type: 'multi-select',
-			name: 'type',
-			field: 'type_in',
-			label: 'Media Type',
-			title: 'Filter by Media Type',
-			category: 'distinct',
-			key: 'type',
-		},
-
 		schema: {
 			default: true,
 			sort: true,
@@ -119,27 +109,6 @@ const settings: SettingsType<any> = {
 		search: true,
 		edit: true,
 
-		// filter: {
-		// 	name: 'fileType',
-		// 	field: 'fileType_in',
-		// 	type: 'multi-select',
-		// 	label: 'File Type',
-		// 	title: 'Filter by File Type',
-		// 	options: [
-		// 		{
-		// 			label: 'Image',
-		// 			value: 'image',
-		// 		},
-		// 		{
-		// 			label: 'Document',
-		// 			value: 'document',
-		// 		},
-		// 		{
-		// 			label: 'Video',
-		// 			value: 'video',
-		// 		},
-		// 	],
-		// },
 		schema: {
 			default: true,
 			sort: true,
