@@ -1,0 +1,66 @@
+const fields = [
+	'name',
+	// 'url',
+	'fileSize',
+	'size',
+	'folder',
+	'key',
+	'type',
+	'fileType',
+	'bucket',
+	'isActive',
+	'createdAt',
+];
+
+const tableFields = [
+	'name',
+	// 'url',
+	'fileSize',
+	'size',
+	'folder',
+	'key',
+	'type',
+	'fileType',
+	'bucket',
+	'isActive',
+	'createdAt',
+];
+
+const formFields = [
+	{
+		sectionTitle: 'Update Name',
+		fields: ['name'],
+	},
+	{
+		sectionTitle: 'Change Folder',
+		fields: ['folder'],
+	},
+	{
+		sectionTitle: 'View Status',
+		fields: ['isActive'],
+	},
+];
+
+const route = {
+	title: 'Media Management (Images)',
+	path: 'images',
+
+	menu: [
+		{ type: 'view-server-modal', title: 'View' },
+		{ type: 'view-item', title: 'Go To Post' },
+		{
+			title: 'Update Information',
+			type: 'edit-server-modal',
+		},
+		{ type: 'delete', title: 'Delete' },
+	],
+};
+
+const config = {
+	fields,
+	table: tableFields,
+	form: formFields,
+	route: route,
+};
+
+export default config;

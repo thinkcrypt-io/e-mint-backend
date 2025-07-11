@@ -127,6 +127,9 @@ import {
 	Meta,
 	metaSettings,
 	metaConfig,
+	imageSettings,
+	imageConfig,
+	customQuery,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -547,6 +550,20 @@ router.use(
 		settings: adminFileSettings,
 		permission: 'email',
 		frontendConfig: adminFileConfig,
+		replaceController: {
+			delete: deleteMedia(AdminFile),
+		},
+	})
+);
+
+router.use(
+	'/images',
+	defineRoutes({
+		Model: AdminFile,
+		settings: imageSettings,
+		permission: 'email',
+		frontendConfig: imageConfig,
+		injectMiddleware: { getAll: customQuery({ query: { fileType: 'image' } }) },
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
