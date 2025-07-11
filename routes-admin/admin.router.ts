@@ -563,7 +563,7 @@ router.use(
 		settings: imageSettings,
 		permission: 'image',
 		frontendConfig: imageConfig,
-		injectMiddleware: { getAll: customQuery({ query: { fileType: 'image' } }) },
+		injectMiddleware: { getAll: [customQuery({ query: { fileType: 'image' } })] },
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
