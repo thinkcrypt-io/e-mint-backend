@@ -561,7 +561,7 @@ router.use(
 	defineRoutes({
 		Model: AdminFile,
 		settings: imageSettings,
-		permission: 'email',
+		permission: 'image',
 		frontendConfig: imageConfig,
 		injectMiddleware: { getAll: customQuery({ query: { fileType: 'image' } }) },
 		replaceController: {
