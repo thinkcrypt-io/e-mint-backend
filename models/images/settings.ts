@@ -64,16 +64,16 @@ const settings: SettingsType<any> = {
 			select: 'name isActive priority',
 		},
 
-		filter: {
-			name: 'fileFolder',
-			field: 'fileFolder_in',
-			type: 'multi-select',
-			category: 'model',
-			model: Folder,
-			key: 'name',
-			label: 'Folder',
-			title: 'Filter by Folder',
-		},
+		// filter: {
+		// 	name: 'fileFolder',
+		// 	field: 'fileFolder_in',
+		// 	type: 'multi-select',
+		// 	category: 'model',
+		// 	model: Folder,
+		// 	key: 'name',
+		// 	label: 'Folder',
+		// 	title: 'Filter by Folder',
+		// },
 
 		schema: {
 			type: 'data-menu',
