@@ -86,6 +86,11 @@ export { default as AdminFile } from './file/adminFile.model.js';
 export { default as adminFileSettings } from './file/adminFile.settings.js';
 export { default as adminFileConfig } from './file/adminFile.config.js';
 
+//Folders
+export { default as Folder } from './folders/model.js';
+export { default as folderSettings } from './folders/settings.js';
+export { default as folderConfig } from './folders/config.js';
+
 //Admin Images
 export { default as imageSettings } from './images/settings.js';
 export { default as imageConfig } from './images/config.js';

@@ -5,7 +5,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import File from '../../models/file/adminFile.model.js';
 import { paginate, adminProtect as protect } from '../../middleware/index.js';
-import { getDistinctFields } from '../../imports.js';
+import { Folder, getDistinctFields } from '../../imports.js';
 
 const router = express.Router();
 
@@ -110,15 +110,28 @@ router.post('/', protect, uploadFile.single('image'), async (req: any, res: Resp
 				// Add the size to the response
 				data.size = metadata.ContentLength;
 
+				const folder = req?.body?.folder || 'default';
+
+				let findFolder = await Folder.findOne({ slug: folder });
+
+				if (!findFolder) {
+					const newFolder = new Folder({
+						name: folder,
+						slug: folder,
+					});
+					findFolder = await newFolder.save();
+				}
+
 				const newFile = new File({
 					name: data.Key,
 					url: data.Location,
 					key: data.Key,
 					type: req?.file?.mimetype,
 					fileType: 'image',
+					fileFolder: findFolder._id,
 					bucket: data.Bucket,
 					size: data.size,
-					folder: (req as any)?.body?.folder,
+					folder: folder,
 				});
 
 				const saved = await newFile.save();

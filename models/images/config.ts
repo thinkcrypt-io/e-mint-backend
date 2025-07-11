@@ -3,7 +3,7 @@ const fields = [
 	// 'url',
 	'fileSize',
 	'size',
-	'folder',
+	'fileFolder',
 	'key',
 	'type',
 	'fileType',
@@ -17,7 +17,7 @@ const tableFields = [
 	// 'url',
 	'fileSize',
 	'size',
-	'folder',
+	'fileFolder',
 	'key',
 	'type',
 	'fileType',
@@ -33,7 +33,7 @@ const formFields = [
 	},
 	{
 		sectionTitle: 'Change Folder',
-		fields: ['folder'],
+		fields: ['fileFolder'],
 	},
 	{
 		sectionTitle: 'View Status',

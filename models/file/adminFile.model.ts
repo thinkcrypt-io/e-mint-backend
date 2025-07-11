@@ -27,6 +27,10 @@ const schema = new Schema<any>(
 			required: true,
 			default: 'default',
 		},
+		fileFolder: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Folder',
+		},
 		key: {
 			type: String,
 			trim: true,

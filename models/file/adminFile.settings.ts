@@ -1,4 +1,4 @@
-import { SettingsType } from '../../imports.js';
+import { Folder, SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
 	name: {
@@ -72,6 +72,36 @@ const settings: SettingsType<any> = {
 		},
 
 		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	fileFolder: {
+		title: 'Folder',
+		type: 'string',
+		sort: true,
+		edit: true,
+		populate: {
+			path: 'fileFolder',
+			select: 'name isActive priority',
+		},
+
+		filter: {
+			name: 'fileFolder',
+			field: 'fileFolder_in',
+			type: 'multi-select',
+			category: 'model',
+			model: Folder,
+			key: 'name',
+			label: 'Folder',
+			title: 'Filter by Folder',
+		},
+
+		schema: {
+			type: 'data-menu',
+			tableType: 'string',
+			tableKey: 'folder.name',
+			model: 'folders',
 			default: true,
 			sort: true,
 		},
