@@ -111,6 +111,21 @@ const schema = new Schema<any>(
 			type: String,
 			trim: true,
 		},
+		privacy: {
+			type: String,
+			enum: ['public', 'private', 'only-me'],
+			default: 'private',
+		},
+		addedBy: {
+			type: Schema.Types.ObjectId,
+			ref: 'Admin',
+		},
+		access: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: 'Admin',
+			},
+		],
 	},
 	{
 		timestamps: true,

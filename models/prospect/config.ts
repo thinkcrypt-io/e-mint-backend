@@ -77,6 +77,10 @@ const formFields = [
 		sectionTitle: 'Other Information',
 		fields: ['note', 'tags'],
 	},
+	{
+		sectionTitle: 'Privacy & Access',
+		fields: ['privacy', 'access'],
+	},
 ];
 
 const route = {

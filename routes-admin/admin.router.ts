@@ -644,6 +644,7 @@ router.use(
 		settings: prospectSettings,
 		permission: 'prospects',
 		frontendConfig: prospectConfig,
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 

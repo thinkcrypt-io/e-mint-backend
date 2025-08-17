@@ -1,5 +1,22 @@
 import { SettingsType } from '../../imports.js';
 
+import Admin from '../admin/admin.model.js';
+
+const privacyOptions = [
+	{
+		value: 'public',
+		label: 'Public',
+	},
+	{
+		value: 'private',
+		label: 'Private',
+	},
+	{
+		value: 'only-me',
+		label: 'Only Me',
+	},
+];
+
 const settings: SettingsType<any> = {
 	code: {
 		title: 'Code',
@@ -600,6 +617,75 @@ const settings: SettingsType<any> = {
 		schema: {
 			type: 'date-only',
 			tableType: 'string',
+		},
+	},
+	addedBy: {
+		edit: true,
+		title: 'Added By',
+		type: 'string',
+		sort: true,
+		filter: {
+			name: 'addedBy',
+			field: 'addedBy_in',
+			type: 'multi-select',
+			label: 'Added By',
+			title: 'Sort by added by',
+			category: 'model',
+			model: Admin,
+			key: 'name',
+		},
+
+		populate: {
+			path: 'addedBy',
+			select: 'name email',
+		},
+
+		schema: {
+			displayInTable: true,
+			tableKey: 'addedBy.name',
+		},
+	},
+	privacy: {
+		title: 'Privacy',
+		type: 'string',
+		edit: true,
+		sort: true,
+		required: true,
+		filter: {
+			name: 'privacy',
+			field: 'privacy_in',
+			type: 'multi-select',
+			label: 'Privacy',
+			title: 'Sort By Privacy',
+			options: privacyOptions,
+		},
+		schema: {
+			type: 'select',
+			options: privacyOptions,
+			sort: true,
+			default: true,
+		},
+	},
+	access: {
+		edit: true,
+		title: 'Access',
+		type: 'array-string',
+
+		sort: true,
+		filter: {
+			name: 'access',
+			field: 'access_in',
+			type: 'multi-select',
+			label: 'Access',
+			title: 'Sort by access',
+			category: 'model',
+			model: Admin,
+			key: 'name',
+		},
+		schema: {
+			type: 'data-tag',
+			model: 'admins',
+			modelAddOn: 'email',
 		},
 	},
 };
