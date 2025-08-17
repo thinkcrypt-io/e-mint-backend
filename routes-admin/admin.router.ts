@@ -133,6 +133,9 @@ import {
 	Folder,
 	folderSettings,
 	folderConfig,
+	Prospect,
+	prospectSettings,
+	prospectConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -631,6 +634,16 @@ router.use(
 		settings: metaSettings,
 		permission: 'metas',
 		frontendConfig: metaConfig,
+	})
+);
+
+router.use(
+	'/prospects',
+	defineRoutes({
+		Model: Prospect,
+		settings: prospectSettings,
+		permission: 'prospects',
+		frontendConfig: prospectConfig,
 	})
 );
 

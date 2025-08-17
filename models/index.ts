@@ -329,3 +329,8 @@ export { default as socialConfig } from './socials/config.js';
 export { default as Meta } from './metas/model.js';
 export { default as metaSettings } from './metas/settings.js';
 export { default as metaConfig } from './metas/config.js';
+
+//Prospect
+export { default as Prospect } from './prospect/model.js';
+export { default as prospectSettings } from './prospect/settings.js';
+export { default as prospectConfig } from './prospect/config.js';
