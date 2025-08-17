@@ -344,8 +344,8 @@ const settings: SettingsType<any> = {
 			title: 'Filter by Estimated start date',
 		},
 		schema: {
-			type: 'date-only',
-			tableType: 'string',
+			type: 'date',
+			tableType: 'date-only',
 			sort: true,
 			default: true,
 		},
