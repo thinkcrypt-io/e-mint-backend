@@ -24,12 +24,10 @@ const schema = new Schema<any>(
 		project: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Project',
-			required: true,
 		},
 		client: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Client',
-			required: true,
 		},
 		category: {
 			type: String,
