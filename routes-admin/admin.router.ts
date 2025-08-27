@@ -136,6 +136,12 @@ import {
 	Prospect,
 	prospectSettings,
 	prospectConfig,
+	Hosting,
+	hostingSettings,
+	hostingConfig,
+	URL,
+	urlSettings,
+	urlConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -645,6 +651,26 @@ router.use(
 		permission: 'prospects',
 		frontendConfig: prospectConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/hostings',
+	defineRoutes({
+		Model: Hosting,
+		settings: hostingSettings,
+		permission: 'hostings',
+		frontendConfig: hostingConfig,
+	})
+);
+
+router.use(
+	'/urls',
+	defineRoutes({
+		Model: URL,
+		settings: urlSettings,
+		permission: 'urls',
+		frontendConfig: urlConfig,
 	})
 );
 

@@ -334,3 +334,13 @@ export { default as metaConfig } from './metas/config.js';
 export { default as Prospect } from './prospect/model.js';
 export { default as prospectSettings } from './prospect/settings.js';
 export { default as prospectConfig } from './prospect/config.js';
+
+//Hostings
+export { default as Hosting } from './hosting/model.js';
+export { default as hostingSettings } from './hosting/settings.js';
+export { default as hostingConfig } from './hosting/config.js';
+
+//URLS
+export { default as URL } from './url/model.js';
+export { default as urlSettings } from './url/settings.js';
+export { default as urlConfig } from './url/config.js';

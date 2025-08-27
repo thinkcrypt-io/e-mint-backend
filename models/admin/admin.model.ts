@@ -142,6 +142,10 @@ const schema = new Schema<AdminType>(
 			sidebaritems: [String],
 			files: [String],
 			prospects: [String],
+
+			//
+			hostings: [String],
+			urls: [String],
 		},
 	},
 
