@@ -54,6 +54,8 @@ const settings: SettingsType<any> = {
 					value: false,
 				},
 			],
+			tableType: 'checkbox',
+
 			displayValue: {
 				true: 'Active',
 				false: 'Inactive',
