@@ -41,9 +41,9 @@ const schema = new Schema<any>(
 schema.pre<any>(
 	'save',
 	addSequentialCodeMiddleware({
-		slug: 'blog',
+		slug: 'hosting',
 		prefix: 'HST',
-		initialValue: 1,
+		initialValue: 16,
 		padding: 4,
 	})
 );

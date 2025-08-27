@@ -1,11 +1,24 @@
 import mongoose, { Schema } from 'mongoose';
-import { addSequentialCodeMiddleware, generateSlug } from '../../lib/index.js';
+import { addSequentialCodeMiddleware } from '../../lib/index.js';
 
 const schema = new Schema<any>(
 	{
+		code: {
+			type: String,
+			trim: true,
+		},
 		name: {
 			type: String,
 			required: true,
+			trim: true,
+		},
+		url: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		connectedDomain: {
+			type: String,
 			trim: true,
 		},
 		project: {
@@ -23,21 +36,17 @@ const schema = new Schema<any>(
 			required: true,
 			enum: ['frontend', 'backend', 'admin', 'other'],
 		},
-		status: {
-			type: String,
-			enum: ['live', 'inactive', 'maintenance'],
-			default: 'live',
-		},
-		hostingPlatform: {
-			type: String,
-			trim: true,
+		isActive: {
+			type: Boolean,
+			default: true,
 			required: true,
 		},
-		// hostingPlatformAccoung: {
-		// 	type: String,
-		// 	trim: true,
-		// 	required: true,
-		// },
+
+		hosting: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Hosting',
+		},
+
 		gitRepo: {
 			type: String,
 			trim: true,
@@ -51,10 +60,7 @@ const schema = new Schema<any>(
 			trim: true,
 			default: 'main',
 		},
-		cPanelInformation: {
-			type: String,
-			trim: true,
-		},
+
 		version: {
 			type: String,
 			trim: true,
@@ -65,7 +71,7 @@ const schema = new Schema<any>(
 			enum: ['production', 'staging', 'demo', 'test'],
 			required: true,
 		},
-		description: {
+		note: {
 			type: String,
 			trim: true,
 		},
@@ -76,34 +82,16 @@ const schema = new Schema<any>(
 	}
 );
 
-//For adding a slug to the document, comment out if not needed or the doc has no slug field
-// Pre-save middleware
-schema.pre('save', function (next) {
-	const doc = this as any;
-
-	if (!doc.slug && doc.name) this.slug = generateSlug(doc.name);
-
-	if (!doc.metaTitle) {
-		this.metaTitle = doc.name ? doc.name.substring(0, 60) : '';
-	}
-
-	if (!doc.metaDescription) {
-		this.metaDescription = doc.excerpt ? doc.excerpt.substring(0, 160) : '';
-	}
-
-	next();
-});
-
 // For adding a code to the document, comment out if not needed or the doc has no code field
 // Pre-save hook to auto-increment the document code
 schema.pre<any>(
 	'save',
 	addSequentialCodeMiddleware({
-		slug: 'blog',
-		prefix: 'TBG',
-		initialValue: 5,
+		slug: 'url',
+		prefix: 'URL',
+		initialValue: 0,
 		padding: 4,
 	})
 );
 
-export default mongoose.model<any>('Template', schema);
+export default mongoose.model<any>('Url', schema);
