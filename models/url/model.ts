@@ -66,8 +66,7 @@ const schema = new Schema<any>(
 		},
 		environment: {
 			type: String,
-			enum: ['production', 'staging', 'demo', 'test'],
-			required: true,
+			enum: ['development', 'staging', 'production', 'demo', 'test', 'live', 'maintenance'],
 		},
 		note: {
 			type: String,

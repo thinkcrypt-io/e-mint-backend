@@ -64,7 +64,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
-		required: true,
+
 		populate: {
 			path: 'project',
 			select: 'name',
@@ -93,7 +93,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
-		required: true,
+
 		populate: {
 			path: 'client',
 			select: 'name',
@@ -286,7 +286,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: true,
 		edit: true,
-		required: true,
+
 		filter: {
 			name: 'environment',
 			field: 'environment_in',
@@ -295,13 +295,18 @@ const settings: SettingsType<any> = {
 			title: 'Filter by Environment',
 			options: [
 				{
-					label: 'Production',
-					value: 'production',
+					label: 'Development',
+					value: 'development',
 				},
 				{
 					label: 'Staging',
 					value: 'staging',
 				},
+				{
+					label: 'Production',
+					value: 'production',
+				},
+
 				{
 					label: 'Demo',
 					value: 'demo',
@@ -309,6 +314,14 @@ const settings: SettingsType<any> = {
 				{
 					label: 'Test',
 					value: 'test',
+				},
+				{
+					label: 'Live',
+					value: 'live',
+				},
+				{
+					label: 'Maintenance',
+					value: 'maintenance',
 				},
 			],
 		},
@@ -316,13 +329,18 @@ const settings: SettingsType<any> = {
 			type: 'select',
 			options: [
 				{
-					label: 'Production',
-					value: 'production',
+					label: 'Development',
+					value: 'development',
 				},
 				{
 					label: 'Staging',
 					value: 'staging',
 				},
+				{
+					label: 'Production',
+					value: 'production',
+				},
+
 				{
 					label: 'Demo',
 					value: 'demo',
@@ -330,6 +348,14 @@ const settings: SettingsType<any> = {
 				{
 					label: 'Test',
 					value: 'test',
+				},
+				{
+					label: 'Live',
+					value: 'live',
+				},
+				{
+					label: 'Maintenance',
+					value: 'maintenance',
 				},
 			],
 		},
