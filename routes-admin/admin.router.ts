@@ -142,6 +142,9 @@ import {
 	URL,
 	urlSettings,
 	urlConfig,
+	Model,
+	modelSettings,
+	modelConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -671,6 +674,16 @@ router.use(
 		settings: urlSettings,
 		permission: 'urls',
 		frontendConfig: urlConfig,
+	})
+);
+
+router.use(
+	'/models',
+	defineRoutes({
+		Model: Model,
+		settings: modelSettings,
+		permission: 'models',
+		frontendConfig: modelConfig,
 	})
 );
 

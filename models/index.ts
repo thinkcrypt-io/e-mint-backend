@@ -344,3 +344,8 @@ export { default as hostingConfig } from './hosting/config.js';
 export { default as URL } from './url/model.js';
 export { default as urlSettings } from './url/settings.js';
 export { default as urlConfig } from './url/config.js';
+
+//Model
+export { default as Model } from './models/model.js';
+export { default as modelSettings } from './models/settings.js';
+export { default as modelConfig } from './models/config.js';
