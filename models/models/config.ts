@@ -1,11 +1,10 @@
-const fields = ['code', 'name', 'route', 'isActive', 'description', 'createdAt'];
-
-const tableFields = ['code', 'name', 'route', 'isActive', 'createdAt'];
+const fields = ['code', 'name', 'modelName', 'route', 'isActive', 'description', 'createdAt'];
+const tableFields = ['code', 'name', 'modelName', 'route', 'isActive', 'createdAt'];
 
 const formFields = [
 	{
 		sectionTitle: 'Model Information',
-		fields: ['name', ['route', 'isActive']],
+		fields: ['name', ['modelName', 'route'], 'isActive'],
 	},
 	{
 		sectionTitle: 'Additional Information',
@@ -18,7 +17,7 @@ const route = {
 	subTitle: 'Manage Database Models',
 	path: 'models',
 	button: {
-		title: 'New Model',
+		title: 'Add Model',
 		isModal: true,
 	},
 	export: true,
@@ -30,6 +29,7 @@ const route = {
 			title: 'Edit Details',
 			type: 'edit-server-modal',
 		},
+		{ type: 'delete', title: 'Delete' },
 	],
 };
 

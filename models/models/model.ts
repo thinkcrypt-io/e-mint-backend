@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { addSequentialCodeMiddleware, generateSlug } from '../../lib/index.js';
+import { addSequentialCodeMiddleware } from '../../lib/index.js';
 
 const schema = new Schema<any>(
 	{
@@ -8,9 +8,13 @@ const schema = new Schema<any>(
 			required: true,
 			trim: true,
 		},
-		route: {
+		modelName: {
 			type: String,
 			required: true,
+			trim: true,
+		},
+		route: {
+			type: String,
 			trim: true,
 			lowercase: true,
 			unique: true,

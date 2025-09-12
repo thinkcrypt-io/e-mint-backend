@@ -2,12 +2,26 @@ import { SettingsType } from '../../imports.js';
 
 const settings: SettingsType<any> = {
 	name: {
-		title: 'Name',
+		title: 'Title',
 		type: 'string',
 		sort: false,
 		search: true,
 		edit: true,
 		required: true,
+		trim: true,
+		schema: {
+			default: true,
+			sort: true,
+		},
+	},
+	modelName: {
+		title: 'Model Name',
+		type: 'string',
+		sort: false,
+		search: true,
+		edit: true,
+		required: true,
+		unique: true,
 		trim: true,
 		schema: {
 			default: true,
@@ -20,7 +34,7 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: true,
 		edit: true,
-		required: true,
+
 		trim: true,
 		schema: {
 			default: true,
