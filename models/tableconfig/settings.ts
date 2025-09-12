@@ -47,7 +47,7 @@ const settings: SettingsType<any> = {
 		search: false,
 		edit: true,
 		schema: {
-			type: 'tag',
+			type: 'case-tag',
 		},
 	},
 	model: {
