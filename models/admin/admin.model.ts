@@ -148,6 +148,8 @@ const schema = new Schema<AdminType>(
 			urls: [String],
 			models: [String],
 			tableconfigs: [String],
+			fieldconfigs: [String],
+			formconfigs: [String],
 		},
 	},
 

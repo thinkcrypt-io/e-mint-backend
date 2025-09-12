@@ -148,6 +148,9 @@ import {
 	TableConfig,
 	tableConfigSettings,
 	tableConfigConfig,
+	FieldConfig,
+	fieldConfigSettings,
+	fieldConfigConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -698,6 +701,28 @@ router.use(
 		permission: 'models',
 		frontendConfig: tableConfigConfig,
 		route: 'tableconfigs',
+	})
+);
+
+router.use(
+	'/fieldconfigs',
+	defineRoutes({
+		Model: FieldConfig,
+		settings: fieldConfigSettings,
+		permission: 'models',
+		frontendConfig: fieldConfigConfig,
+		route: 'fieldconfigs',
+	})
+);
+
+router.use(
+	'/formconfigs',
+	defineRoutes({
+		Model: FieldConfig,
+		settings: fieldConfigSettings,
+		permission: 'models',
+		frontendConfig: fieldConfigConfig,
+		route: 'fieldconfigs',
 	})
 );
 

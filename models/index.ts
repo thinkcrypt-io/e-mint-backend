@@ -354,3 +354,8 @@ export { default as modelConfig } from './models/config.js';
 export { default as TableConfig } from './tableconfig/model.js';
 export { default as tableConfigSettings } from './tableconfig/settings.js';
 export { default as tableConfigConfig } from './tableconfig/config.js';
+
+//FieldConfig
+export { default as FieldConfig } from './fieldconfig/model.js';
+export { default as fieldConfigSettings } from './fieldconfig/settings.js';
+export { default as fieldConfigConfig } from './fieldconfig/config.js';
