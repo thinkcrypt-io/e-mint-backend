@@ -3,6 +3,7 @@ import convertType from './convertType.js';
 import convertToTableFields from '../../functions/convertToTableFields.js';
 import convertToViewFields from '../../functions/convertToViewFields.js';
 import { convertToFormFields } from '../../functions/index.js';
+import { TableConfig } from '../../imports.js';
 
 type ConfigType = {
 	table: string[];
@@ -10,7 +11,15 @@ type ConfigType = {
 	form: { sectionTitle: string; fields: (string | string[])[] }[];
 };
 
-const getConfig = ({ config, schema }: { config?: ConfigType; schema: any }) => {
+const getConfig = ({
+	config,
+	schema,
+	route,
+}: {
+	config?: ConfigType;
+	schema: any;
+	route?: string;
+}) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			if (!config) {
@@ -63,9 +72,13 @@ const getConfig = ({ config, schema }: { config?: ConfigType; schema: any }) => 
 					})),
 				};
 
-				const tableFields = convertToTableFields({
+				let tableFields = [];
+
+				const tableConfig: any = await TableConfig.findOne({ path: route }).lean();
+
+				tableFields = convertToTableFields({
 					schema: schm,
-					fields: filteredConfig?.table,
+					fields: route && tableConfig?.fields ? tableConfig.fields : filteredConfig?.table,
 				});
 
 				const viewFields = convertToViewFields({

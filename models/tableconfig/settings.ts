@@ -42,11 +42,13 @@ const settings: SettingsType<any> = {
 	},
 	fields: {
 		title: 'Fields',
-		type: 'array',
+		type: 'array-string',
 		sort: false,
 		search: false,
 		edit: true,
-		schema: {},
+		schema: {
+			type: 'tag',
+		},
 	},
 	model: {
 		title: 'Model',
