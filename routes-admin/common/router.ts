@@ -217,7 +217,8 @@ const defineRoutes = ({
 	frontendConfig &&
 		router.get(
 			'/get/config',
-			replaceController?.config || getConfig({ config: frontendConfig, schema: config.SCHEMA })
+			replaceController?.config ||
+				getConfig({ config: frontendConfig, schema: config.SCHEMA, route })
 		);
 
 	frontendConfig &&
