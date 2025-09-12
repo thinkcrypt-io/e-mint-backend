@@ -147,6 +147,7 @@ const schema = new Schema<AdminType>(
 			hostings: [String],
 			urls: [String],
 			models: [String],
+			tableconfigs: [String],
 		},
 	},
 
