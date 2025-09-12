@@ -145,6 +145,9 @@ import {
 	Model,
 	modelSettings,
 	modelConfig,
+	TableConfig,
+	tableConfigSettings,
+	tableConfigConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -684,6 +687,17 @@ router.use(
 		settings: modelSettings,
 		permission: 'models',
 		frontendConfig: modelConfig,
+	})
+);
+
+router.use(
+	'/tableconfigs',
+	defineRoutes({
+		Model: TableConfig,
+		settings: tableConfigSettings,
+		permission: 'models',
+		frontendConfig: tableConfigConfig,
+		route: 'tableconfigs',
 	})
 );
 

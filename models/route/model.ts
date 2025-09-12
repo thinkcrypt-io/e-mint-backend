@@ -2,7 +2,13 @@ import mongoose, { Schema } from 'mongoose';
 import { addSequentialCodeMiddleware, generateSlug } from '../../lib/index.js';
 
 const schema = new Schema<any>(
-	{},
+	{
+		name: { type: String, required: true, trim: true },
+		path: { type: String, required: true, trim: true, lowercase: true },
+		description: { type: String, default: '', trim: true },
+		slug: { type: String, unique: true, trim: true, lowercase: true },
+		model: { type: String, required: true, trim: true },
+	},
 	{
 		timestamps: true,
 		versionKey: false,
@@ -14,15 +20,7 @@ const schema = new Schema<any>(
 schema.pre('save', function (next) {
 	const doc = this as any;
 
-	if (!doc.slug && doc.name) this.slug = generateSlug(doc.name);
-
-	if (!doc.metaTitle) {
-		this.metaTitle = doc.name ? doc.name.substring(0, 60) : '';
-	}
-
-	if (!doc.metaDescription) {
-		this.metaDescription = doc.excerpt ? doc.excerpt.substring(0, 160) : '';
-	}
+	if (!doc.slug && doc.path) this.slug = generateSlug(doc.path);
 
 	next();
 });
@@ -32,11 +30,11 @@ schema.pre('save', function (next) {
 schema.pre<any>(
 	'save',
 	addSequentialCodeMiddleware({
-		slug: 'blog',
-		prefix: 'TBG',
-		initialValue: 5,
+		slug: 'route',
+		prefix: 'RTE',
+		initialValue: 1,
 		padding: 4,
 	})
 );
 
-export default mongoose.model<any>('Template', schema);
+export default mongoose.model<any>('Table', schema);

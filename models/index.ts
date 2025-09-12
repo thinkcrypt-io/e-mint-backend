@@ -349,3 +349,8 @@ export { default as urlConfig } from './url/config.js';
 export { default as Model } from './models/model.js';
 export { default as modelSettings } from './models/settings.js';
 export { default as modelConfig } from './models/config.js';
+
+//TableConfig
+export { default as TableConfig } from './tableconfig/model.js';
+export { default as tableConfigSettings } from './tableconfig/settings.js';
+export { default as tableConfigConfig } from './tableconfig/config.js';
