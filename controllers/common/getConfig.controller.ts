@@ -3,7 +3,7 @@ import convertType from './convertType.js';
 import convertToTableFields from '../../functions/convertToTableFields.js';
 import convertToViewFields from '../../functions/convertToViewFields.js';
 import { convertToFormFields } from '../../functions/index.js';
-import { TableConfig } from '../../imports.js';
+import { FieldConfig, TableConfig } from '../../imports.js';
 
 type ConfigType = {
 	table: string[];
@@ -81,10 +81,17 @@ const getConfig = ({
 					fields: route && tableConfig?.fields ? tableConfig.fields : filteredConfig?.table,
 				});
 
+				const fieldConfig: any = await FieldConfig.findOne({ path: route }).lean();
+
 				const viewFields = convertToViewFields({
 					schema: schm,
-					fields: filteredConfig?.fields,
+					fields: route && fieldConfig?.fields ? fieldConfig.fields : filteredConfig?.fields,
 				});
+
+				// const viewFields = convertToViewFields({
+				// 	schema: schm,
+				// 	fields: filteredConfig?.fields,
+				// });
 
 				const formFields = convertToFormFields({
 					schema: schm,
