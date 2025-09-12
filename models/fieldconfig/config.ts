@@ -20,7 +20,7 @@ const formFields = [
 const route = {
 	title: 'View Config',
 	subTitle: 'Manage the view configuration, what fields to show in a table and in what order',
-	path: 'tableconfigs',
+	path: 'fieldconfigs',
 	button: {
 		title: 'Add Item',
 		isModal: true,
