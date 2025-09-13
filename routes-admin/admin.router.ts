@@ -151,6 +151,7 @@ import {
 	FieldConfig,
 	fieldConfigSettings,
 	fieldConfigConfig,
+	doesModelExist,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -690,6 +691,8 @@ router.use(
 		settings: modelSettings,
 		permission: 'models',
 		frontendConfig: modelConfig,
+		route: 'models',
+		injectMiddleware: { post: [doesModelExist] },
 	})
 );
 

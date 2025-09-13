@@ -43,4 +43,6 @@ export { default as isDeleteAllowed } from './isDeletePossible.middleware.js';
 
 export { default as notAllowed } from './notAllowed.middleware.js';
 
+export { default as doesModelExist } from './doesModelExist.middleware.js';
+
 export * from './admin/index.js';
