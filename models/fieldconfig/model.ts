@@ -6,7 +6,11 @@ const schema = new Schema<any>(
 		description: { type: String, default: '', trim: true },
 		path: { type: String, required: true, trim: true, lowercase: true, unique: true },
 		fields: { type: Array, default: [] },
-		model: { type: String, trim: true },
+		model: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Model',
+			required: true,
+		},
 	},
 	{
 		timestamps: true,

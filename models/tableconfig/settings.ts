@@ -53,12 +53,20 @@ const settings: SettingsType<any> = {
 	model: {
 		title: 'Model',
 		type: 'string',
-		sort: false,
-		search: true,
+		sort: true,
+		search: false,
 		edit: true,
-		trim: true,
+		required: true,
+		populate: {
+			path: 'model',
+			select: 'name modelName route',
+		},
+
 		schema: {
-			sort: true,
+			type: 'data-menu',
+			tableType: 'string',
+			tableKey: 'model.modelName',
+			model: 'models',
 		},
 	},
 	createdAt: {
