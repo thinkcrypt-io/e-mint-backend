@@ -75,21 +75,21 @@ export { default as shopSettings } from './shop/shop.settings.js';
 export { purchaseSettings, Purchase } from './purchase/index.js';
 
 //Admin Role & User
-export { default as Admin } from './admin/admin.model.js';
-export { default as AdminRole } from './admin/adminRole.model.js';
-export { default as adminRoleSettings } from './admin/adminRole.settings.js';
-export { default as adminRoleCOnfig } from './admin/adminRole.config.js';
-export { default as adminSettings } from './admin/admin.settings.js';
+export { default as Admin } from '../library/models/admin/model.js';
+export { default as AdminRole } from '../library/models/admin-role/model.js';
+export { default as adminRoleSettings } from '../library/models/admin-role/settings.js';
+export { default as adminRoleCOnfig } from '../library/models/admin-role/config.js';
+export { default as adminSettings } from '../library/models/admin/settings.js';
 
 //File
-export { default as AdminFile } from './file/adminFile.model.js';
-export { default as adminFileSettings } from './file/adminFile.settings.js';
-export { default as adminFileConfig } from './file/adminFile.config.js';
+export { default as AdminFile } from '../library/models/admin-file/model.js';
+export { default as adminFileSettings } from '../library/models/admin-file/settings.js';
+export { default as adminFileConfig } from '../library/models/admin-file/config.js';
 
 //Folders
-export { default as Folder } from './folders/model.js';
-export { default as folderSettings } from './folders/settings.js';
-export { default as folderConfig } from './folders/config.js';
+export { default as Folder } from '../library/models/folders/model.js';
+export { default as folderSettings } from '../library/models/folders/settings.js';
+export { default as folderConfig } from '../library/models/folders/config.js';
 
 //Admin Images
 export { default as imageSettings } from './images/settings.js';
@@ -301,19 +301,19 @@ export { default as NpmLibrary } from './npm-library/model.js';
 export { default as npmLibrarySettings } from './npm-library/settings.js';
 
 //Sidebar Categories
-export { default as SidebarCategory } from './sidebarcategories/model.js';
-export { default as sidebarCategorySettings } from './sidebarcategories/settings.js';
-export { default as sidebarCategoryConfig } from './sidebarcategories/config.js';
+export { default as SidebarCategory } from '../library/models/sidebarcategories/model.js';
+export { default as sidebarCategorySettings } from '../library/models/sidebarcategories/settings.js';
+export { default as sidebarCategoryConfig } from '../library/models/sidebarcategories/config.js';
 
 //Sidebar Items
-export { default as SidebarItem } from './sidebaritems/model.js';
-export { default as sidebarItemSettings } from './sidebaritems/settings.js';
-export { default as sidebarItemConfig } from './sidebaritems/config.js';
+export { default as SidebarItem } from '../library/models/sidebaritems/model.js';
+export { default as sidebarItemSettings } from '../library/models/sidebaritems/settings.js';
+export { default as sidebarItemConfig } from '../library/models/sidebaritems/config.js';
 
 //Pages
-export { default as Page } from './pages/model.js';
-export { default as pageSettings } from './pages/settings.js';
-export { default as pageConfig } from './pages/config.js';
+export { default as Page } from '../library/models/pages/model.js';
+export { default as pageSettings } from '../library/models/pages/settings.js';
+export { default as pageConfig } from '../library/models/pages/config.js';
 
 //Domains
 export { default as Domain } from './domains/model.js';
@@ -351,11 +351,11 @@ export { default as modelSettings } from './models/settings.js';
 export { default as modelConfig } from './models/config.js';
 
 //TableConfig
-export { default as TableConfig } from './tableconfig/model.js';
-export { default as tableConfigSettings } from './tableconfig/settings.js';
-export { default as tableConfigConfig } from './tableconfig/config.js';
+export { default as TableConfig } from '../library/models/tableconfig/model.js';
+export { default as tableConfigSettings } from '../library/models/tableconfig/settings.js';
+export { default as tableConfigConfig } from '../library/models/tableconfig/config.js';
 
 //FieldConfig
-export { default as FieldConfig } from './fieldconfig/model.js';
-export { default as fieldConfigSettings } from './fieldconfig/settings.js';
-export { default as fieldConfigConfig } from './fieldconfig/config.js';
+export { default as FieldConfig } from '../library/models/fieldconfig/model.js';
+export { default as fieldConfigSettings } from '../library/models/fieldconfig/settings.js';
+export { default as fieldConfigConfig } from '../library/models/fieldconfig/config.js';

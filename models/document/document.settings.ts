@@ -1,5 +1,5 @@
 import { SettingsType } from '../../lib/types/settings.types.js';
-import Admin from '../admin/admin.model.js';
+import Admin from '../../library/models/admin/model.js';
 import Client from '../client/client.model.js';
 import Project from '../project/project.model.js';
 import Software from '../software/software.model.js';

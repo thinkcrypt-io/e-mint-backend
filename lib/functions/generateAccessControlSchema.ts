@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import Admin from '../../models/admin/admin.model.js';
+import Admin from '../../library/models/admin/model.js';
 import { SettingsType } from '../types/settings.types.js';
 
 const privacyOptions = [

@@ -1,4 +1,4 @@
-import { SettingsType } from '../../imports.js';
+import { SettingsType } from '../../../imports.js';
 import SidebarCategory from '../sidebarcategories/model.js';
 
 const settings: SettingsType<any> = {

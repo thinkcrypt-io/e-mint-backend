@@ -1,5 +1,5 @@
 import { SettingsType } from '../../imports.js';
-import Admin from '../admin/admin.model.js';
+import Admin from '../../library/models/admin/model.js';
 
 const leaveTypeOptions = [
 	{
