@@ -68,9 +68,22 @@ const settings: SettingsType<any> = {
 			default: true,
 		},
 	},
+	key: {
+		title: 'Key',
+		type: 'string',
+		sort: false,
+		search: false,
+		edit: true,
+		required: true,
+		trim: true,
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
 	value: {
 		title: 'Value',
-		type: 'number',
+		type: 'string',
 		sort: false,
 		search: false,
 		edit: true,
