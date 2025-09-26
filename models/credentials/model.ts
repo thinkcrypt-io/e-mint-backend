@@ -90,13 +90,13 @@ schema.pre<any>('save', function (next) {
 schema.pre<any>('save', async function (next) {
 	try {
 		if (this.isNew) {
-			let counter = await Counter.findOne({ slug: 'document' });
-			if (!counter) counter = new Counter({ sequenceValue: 40, slug: 'document' });
+			let counter = await Counter.findOne({ slug: 'credential' });
+			if (!counter) counter = new Counter({ sequenceValue: 40, slug: 'credential' });
 
 			counter.sequenceValue += 1;
 			await counter.save();
 
-			this.code = `DOC-` + counter.sequenceValue.toString().padStart(4, '0');
+			this.code = `CRD-` + counter.sequenceValue.toString().padStart(4, '0');
 		}
 
 		next();
