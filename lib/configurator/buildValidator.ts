@@ -46,12 +46,12 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 				break;
 		}
 
-		if (min) base = base.min(min);
-		if (max) base = base.max(max);
-		if (trim) base = base.trim();
-		if (!required) base = base.allow('');
+		if (min) base = base?.min(min);
+		if (max) base = base?.max(max);
+		// if (trim) base = base?.trim();
+		if (!required) base = base?.allow('');
 
-		insert[key] = base.messages(error(title || ''));
+		insert[key] = base?.messages(error(title || ''));
 		if (required) insert[key] = insert[key].required();
 		update[key] = base.messages(error(title || ''));
 		if (!edit) delete update[key];
