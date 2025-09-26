@@ -34,6 +34,10 @@ const schema = new Schema<any>(
 		value: {
 			type: String,
 			trim: true,
+		},
+		pass: {
+			type: String,
+			trim: true,
 			required: true,
 		},
 		key: {
