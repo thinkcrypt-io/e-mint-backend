@@ -738,6 +738,7 @@ router.use(
 		Model: Credential,
 		settings: credentialSettings,
 		permission: 'credentials',
+		route: 'credentials',
 		frontendConfig: credentialConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
