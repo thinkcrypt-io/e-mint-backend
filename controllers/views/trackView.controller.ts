@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { getLocationFromIP } from './index.js';
 import { View } from '../../models/index.js';
 import { ViewType } from '../../models/views/model.js';
-import parseBrowserInfo from './parseBrowserInfo.function.js';
+import parseBrowserInfo from '../../library/functions/parseBrowserInfo.function.js';
 
 export const trackView = async (req: Request, res: Response) => {
 	try {

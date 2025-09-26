@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import Model from '../../../models/admin/admin.model.js';
+import Model from '../../../library/models/admin/model.js';
 import { getErrorMessage } from '../../../imports.js';
 
 const updateAdminPreferences = async (req: any, res: Response): Promise<Response> => {

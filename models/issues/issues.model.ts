@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
-import Admin from '../admin/admin.model.js';
-import sendMail from '../../controllers/mail/sendMail.controller.js';
+import Admin from '../../library/models/admin/model.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 import Counter from '../counter/counter.model.js';
 
 const schema = new Schema<any>(

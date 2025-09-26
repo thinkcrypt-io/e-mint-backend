@@ -152,6 +152,9 @@ import {
 	fieldConfigSettings,
 	fieldConfigConfig,
 	doesModelExist,
+	Credential,
+	credentialSettings,
+	credentialConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -175,6 +178,9 @@ router.use('/purchasedthemes', purchasedThemeRoute);
 router.use('/sms', smsRoute);
 
 router.post('/whatsapp/send', sendWhatsapp);
+
+router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
+router.get('/permissionlist', getAdminPermissionList());
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
 router.use(
@@ -489,9 +495,6 @@ router.use(
 	})
 );
 
-router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
-router.get('/permissionlist', getAdminPermissionList());
-
 router.use(
 	'/blogs',
 	defineRoutes({
@@ -726,6 +729,17 @@ router.use(
 		permission: 'models',
 		frontendConfig: fieldConfigConfig,
 		route: 'fieldconfigs',
+	})
+);
+
+router.use(
+	'/credentials',
+	defineRoutes({
+		Model: Credential,
+		settings: credentialSettings,
+		permission: 'credentials',
+		frontendConfig: credentialConfig,
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
 );
 

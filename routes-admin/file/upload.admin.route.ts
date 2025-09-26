@@ -3,9 +3,10 @@ import AWS from 'aws-sdk';
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-import File from '../../models/file/adminFile.model.js';
+import File from '../../library/models/admin-file/model.js';
+import Folder from '../../library/models/folders/model.js';
 import { paginate, adminProtect as protect } from '../../middleware/index.js';
-import { Folder, getDistinctFields } from '../../imports.js';
+import { getDistinctFields } from '../../imports.js';
 
 const router = express.Router();
 

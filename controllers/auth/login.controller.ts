@@ -2,7 +2,7 @@ import Joi from 'joi';
 import User from '../../models/user/user.model.js';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
-import sendMail from '../mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 import geoip from 'geoip-lite';
 import { Shop } from '../../models/index.js';
 import { UAParser } from 'ua-parser-js';

@@ -8,7 +8,7 @@ import {
 	Subscription,
 	UserSubscription,
 } from '../../imports.js';
-import sendMail from '../mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 import { log } from 'console';
 
 const userShopRegisterController = async (req: any, res: Response): Promise<Response> => {

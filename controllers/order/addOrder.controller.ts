@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { OrderType, Product, Order, Payment, User, Customer } from '../../imports.js';
-import sendMail from '../mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 
 const addOrder = async (req: any, res: Response): Promise<Response> => {
 	const {

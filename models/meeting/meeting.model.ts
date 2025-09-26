@@ -2,7 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import MeetingType from './meeting.types.js';
 import { Admin, Counter, REGEX } from '../../imports.js';
 import { ACCESS_CONTROL } from '../../lib/index.js';
-import sendMail from '../../controllers/mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 
 const statusEmun = [
 	'draft',

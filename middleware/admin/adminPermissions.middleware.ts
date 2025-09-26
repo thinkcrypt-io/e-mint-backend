@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import Role from '../../models/admin/adminRole.model.js';
+import Role from '../../library/models/admin-role/model.js';
 
 const adminPermissions = (permissions: string[]) => {
 	return async (req: any, res: Response, next: NextFunction) => {

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import sidebar from '../../lib/data/sidebar.data.js';
+import sidebar from '../../library/data/sidebar.data.js';
 import { SidebarItem } from '../../imports.js';
 
 type SidebarItemType = {

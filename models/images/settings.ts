@@ -1,5 +1,5 @@
 import { SettingsType } from '../../imports.js';
-import Folder from '../folders/model.js';
+import Folder from '../../library/models/folders/model.js';
 
 const settings: SettingsType<any> = {
 	name: {
