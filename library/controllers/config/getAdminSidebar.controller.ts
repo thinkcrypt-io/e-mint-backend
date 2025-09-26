@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import sidebar from '../../library/data/sidebar.data.js';
-import { SidebarItem } from '../../imports.js';
+import { sidebarData as sidebar } from '../../data/_index.js';
+import SidebarItem from '../../models/sidebaritems/model.js';
 
 type SidebarItemType = {
 	title: string;

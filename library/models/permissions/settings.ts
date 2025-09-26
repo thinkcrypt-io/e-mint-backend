@@ -1,4 +1,4 @@
-import { SettingsType } from '../../imports.js';
+import { SettingsType } from '../../types/_index.js';
 
 const settings: SettingsType<any> = {
 	name: {

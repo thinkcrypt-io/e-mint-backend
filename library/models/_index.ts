@@ -40,3 +40,8 @@ export { default as adminFileConfig } from './admin-file/config.js';
 export { default as Folder } from './folders/model.js';
 export { default as folderSettings } from './folders/settings.js';
 export { default as folderConfig } from './folders/config.js';
+
+//Permissions
+export { default as Permission } from './permissions/model.js';
+export { default as permissionSettings } from './permissions/settings.js';
+export { default as permissionConfig } from './permissions/config.js';

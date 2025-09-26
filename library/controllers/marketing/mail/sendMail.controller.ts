@@ -23,7 +23,7 @@ const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendM
 		});
 
 		const mailOptions: any = {
-			from: `${title || 'MINT'} <${process.env.MAIL_ADDRESS}>`,
+			from: `${title || process.env.MAIL_TITLE || 'MINT'} <${process.env.MAIL_ADDRESS}>`,
 			to: to,
 			...(cc && { cc: cc }),
 			...(bcc && { bcc: bcc }),
@@ -31,8 +31,6 @@ const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendM
 			text: body,
 			...(attachment && { attachments: [{ fileName: 'Attachment', path: attachment }] }),
 		};
-
-		console.log('Mail Options:', mailOptions);
 
 		transporter.sendMail(mailOptions, function (error, info) {
 			if (error) {

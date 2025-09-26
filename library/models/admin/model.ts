@@ -149,6 +149,8 @@ const schema = new Schema<AdminType>(
 			tableconfigs: [String],
 			fieldconfigs: [String],
 			formconfigs: [String],
+
+			credentials: [String],
 		},
 	},
 

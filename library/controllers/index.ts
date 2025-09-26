@@ -5,3 +5,5 @@ export * from './aggregate/_index.js';
 export * from './bulk/_index.js';
 export * from './queryhelper/_index.js';
 export * from './auth/_index.js';
+export * from './upload/_index.js';
+export * from './marketing/_index.js';

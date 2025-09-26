@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import sidebar from '../../lib/data/sidebar.data.js';
-import { Permission } from '../../imports.js';
+import sidebar from '../../data/sidebar.data.js';
+import { Permission } from '../../models/_index.js';
 
 type PermissionField = {
 	label: string;

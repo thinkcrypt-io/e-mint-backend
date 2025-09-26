@@ -1,7 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
 import Counter from '../counter/counter.model.js';
-import Admin from '../../library/models/admin/model.js';
-import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 
 const schema = new Schema<any>(
 	{
@@ -17,7 +15,32 @@ const schema = new Schema<any>(
 			min: 3,
 			max: 50,
 		},
+		platform: {
+			type: String,
+			trim: true,
+		},
+		url: {
+			type: String,
+			trim: true,
+		},
+		userid: {
+			type: String,
+			trim: true,
+		},
+		category: {
+			type: String,
+			enum: ['password', 'api-key', 'env', 'token', 'other'],
+		},
+		value: {
+			type: Number,
+			trim: true,
+			required: true,
+		},
 		description: {
+			type: String,
+			trim: true,
+		},
+		note: {
 			type: String,
 			trim: true,
 		},
@@ -25,25 +48,6 @@ const schema = new Schema<any>(
 			type: Schema.Types.ObjectId,
 			ref: 'Client',
 		},
-		docUrl: {
-			type: String,
-			trim: true,
-		},
-		fileUrl: {
-			type: String,
-			trim: true,
-		},
-		category: {
-			type: String,
-			trim: true,
-			lowercase: true,
-		},
-		direction: {
-			type: String,
-			trim: true,
-			enum: ['inbound', 'outbound', 'internal', 'other'],
-		},
-		tags: [String],
 
 		project: {
 			type: Schema.Types.ObjectId,
@@ -95,5 +99,5 @@ schema.pre<any>('save', async function (next) {
 	}
 });
 
-const Doc = mongoose.model<any>('Document', schema);
-export default Doc;
+const Credential = mongoose.model<any>('Credential', schema);
+export default Credential;

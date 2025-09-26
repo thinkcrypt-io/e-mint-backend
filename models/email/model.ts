@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import sendMail from '../../controllers/mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 
 const schema = new mongoose.Schema(
 	{

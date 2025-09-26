@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import Order from '../../models/order/order.model.js';
 import Product from '../../models/products/products.model.js';
-import sendMail from '../mail/sendMail.controller.js';
+import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
 import sendSMS from '../util/sendSms.controller.js';
 import { Shop } from '../../imports.js';
 

@@ -119,9 +119,9 @@ export { default as AssetType } from './asset/asset.types.js';
 export { default as assetSettings } from './asset/asset.settings.js';
 
 //Permission
-export { default as Permission } from './permissions/model.js';
-export { default as permissionSettings } from './permissions/settings.js';
-export { default as permissionConfig } from './permissions/config.js';
+export { default as Permission } from '../library/models/permissions/model.js';
+export { default as permissionSettings } from '../library/models/permissions/settings.js';
+export { default as permissionConfig } from '../library/models/permissions/config.js';
 
 //Payment Account
 export * from './payment-account/index.js';
@@ -359,3 +359,8 @@ export { default as tableConfigConfig } from '../library/models/tableconfig/conf
 export { default as FieldConfig } from '../library/models/fieldconfig/model.js';
 export { default as fieldConfigSettings } from '../library/models/fieldconfig/settings.js';
 export { default as fieldConfigConfig } from '../library/models/fieldconfig/config.js';
+
+//Credentials
+export { default as Credential } from './credentials/model.js';
+export { default as credentialSettings } from './credentials/settings.js';
+export { default as credentialConfig } from './credentials/config.js';
