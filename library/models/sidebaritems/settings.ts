@@ -57,7 +57,6 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: true,
 		edit: true,
-		trim: true,
 		schema: {
 			type: 'image',
 		},
@@ -99,7 +98,6 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: true,
 		edit: true,
-		trim: true,
 		schema: {
 			type: 'textarea',
 		},
