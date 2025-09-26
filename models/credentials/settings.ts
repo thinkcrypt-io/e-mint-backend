@@ -68,13 +68,38 @@ const settings: SettingsType<any> = {
 			default: true,
 		},
 	},
-	value: {
-		title: 'Value',
-		type: 'number',
+	pass: {
+		title: 'Password',
+		type: 'string',
+		sort: false,
+		search: true,
+		edit: true,
+		trim: true,
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
+	key: {
+		title: 'Key',
+		type: 'string',
 		sort: false,
 		search: false,
 		edit: true,
 		required: true,
+		trim: true,
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
+	value: {
+		title: 'Value',
+		type: 'string',
+		sort: false,
+		search: false,
+		edit: true,
+
 		trim: true,
 		schema: {
 			sort: true,

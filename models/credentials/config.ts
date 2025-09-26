@@ -2,6 +2,8 @@ const fields = [
 	'code',
 	'name',
 	'userid',
+	'pass',
+	'key',
 	'value',
 	'category',
 
@@ -22,6 +24,8 @@ const tableFields = [
 	'code',
 	'name',
 	'userid',
+	'pass',
+	'key',
 	'value',
 	'category',
 	'platform',
@@ -34,7 +38,13 @@ const tableFields = [
 const formFields = [
 	{
 		sectionTitle: 'Credential Details',
-		fields: [['name', 'category'], ['userid', 'value'], ['platform', 'url'], 'description'],
+		fields: [
+			['name', 'category'],
+			['userid', 'pass'],
+			['key', 'value'],
+			['platform', 'url'],
+			'description',
+		],
 	},
 	{
 		sectionTitle: 'Additional Information',

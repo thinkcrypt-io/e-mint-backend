@@ -32,9 +32,17 @@ const schema = new Schema<any>(
 			enum: ['password', 'api-key', 'env', 'token', 'other'],
 		},
 		value: {
-			type: Number,
+			type: String,
+			trim: true,
+		},
+		pass: {
+			type: String,
 			trim: true,
 			required: true,
+		},
+		key: {
+			type: String,
+			trim: true,
 		},
 		description: {
 			type: String,
