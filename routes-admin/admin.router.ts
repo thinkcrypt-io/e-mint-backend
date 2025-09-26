@@ -549,11 +549,11 @@ router.use(
 
 router.use(
 	'/sidebarcategories',
-
 	defineRoutes({
 		Model: SidebarCategory,
 		settings: sidebarCategorySettings,
-		permission: 'email',
+		permission: 'sidebarcategories',
+		route: 'sidebarcategories',
 		frontendConfig: sidebarCategoryConfig,
 	})
 );
@@ -563,7 +563,8 @@ router.use(
 	defineRoutes({
 		Model: SidebarItem,
 		settings: sidebarItemSettings,
-		permission: 'email',
+		permission: 'sidebaritems',
+		route: 'sidebaritems',
 		frontendConfig: sidebarItemConfig,
 	})
 );
@@ -573,7 +574,8 @@ router.use(
 	defineRoutes({
 		Model: AdminFile,
 		settings: adminFileSettings,
-		permission: 'email',
+		permission: 'files',
+		route: 'files',
 		frontendConfig: adminFileConfig,
 		replaceController: {
 			delete: deleteMedia(AdminFile),
@@ -587,6 +589,7 @@ router.use(
 		Model: AdminFile,
 		settings: imageSettings,
 		permission: 'image',
+		route: 'images',
 		frontendConfig: imageConfig,
 		injectMiddleware: { getAll: [customQuery({ query: { fileType: 'image' } })] },
 		replaceController: {
@@ -600,7 +603,8 @@ router.use(
 	defineRoutes({
 		Model: Folder,
 		settings: folderSettings,
-		permission: 'image',
+		permission: 'folders',
+		route: 'folders',
 		frontendConfig: folderConfig,
 	})
 );
@@ -610,7 +614,8 @@ router.use(
 	defineRoutes({
 		Model: Permission,
 		settings: permissionSettings,
-		permission: 'email',
+		permission: 'permissions',
+		route: 'permissions',
 		frontendConfig: permissionConfig,
 	})
 );
@@ -620,7 +625,7 @@ router.use(
 	defineRoutes({
 		Model: Page,
 		settings: pageSettings,
-		permission: 'email',
+		permission: 'pages',
 		frontendConfig: pageConfig,
 		route: 'pages',
 	})
@@ -631,7 +636,8 @@ router.use(
 	defineRoutes({
 		Model: Domain,
 		settings: domainSettings,
-		permission: 'email',
+		permission: 'domains',
+		route: 'domains',
 		frontendConfig: domainConfig,
 	})
 );
@@ -641,7 +647,8 @@ router.use(
 	defineRoutes({
 		Model: Social,
 		settings: socialSettings,
-		permission: 'email',
+		permission: 'socials',
+		route: 'socials',
 		frontendConfig: socialConfig,
 	})
 );
@@ -652,6 +659,7 @@ router.use(
 		Model: Meta,
 		settings: metaSettings,
 		permission: 'metas',
+		route: 'metas',
 		frontendConfig: metaConfig,
 	})
 );
@@ -662,6 +670,7 @@ router.use(
 		Model: Prospect,
 		settings: prospectSettings,
 		permission: 'prospects',
+		route: 'prospects',
 		frontendConfig: prospectConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	})
@@ -673,6 +682,7 @@ router.use(
 		Model: Hosting,
 		settings: hostingSettings,
 		permission: 'hostings',
+		route: 'hostings',
 		frontendConfig: hostingConfig,
 	})
 );
@@ -683,6 +693,7 @@ router.use(
 		Model: URL,
 		settings: urlSettings,
 		permission: 'urls',
+		route: 'urls',
 		frontendConfig: urlConfig,
 	})
 );
