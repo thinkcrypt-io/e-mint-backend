@@ -320,7 +320,13 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: false,
 		edit: true,
-		schema: {},
+		schema: {
+			type: 'data-tag',
+			viewType: 'data-array-tag',
+			model: 'admins',
+			modelAddOn: 'email',
+			tooltip: 'Users who can access this document',
+		},
 	},
 	createdAt: {
 		title: 'Created at',
