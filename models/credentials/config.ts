@@ -63,7 +63,7 @@ const formFields = [
 const route = {
 	title: 'Credentials',
 	subTitle: 'Manage your credentials',
-	path: 'credential',
+	path: 'credentials',
 	button: {
 		title: 'New Credential',
 		isModal: true,
