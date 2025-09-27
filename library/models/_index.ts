@@ -45,3 +45,8 @@ export { default as folderConfig } from './folders/config.js';
 export { default as Permission } from './permissions/model.js';
 export { default as permissionSettings } from './permissions/settings.js';
 export { default as permissionConfig } from './permissions/config.js';
+
+//Form Fields
+export { default as FormField } from './formfields/model.js';
+export { default as formFieldSettings } from './formfields/settings.js';
+export { default as formFieldConfig } from './formfields/config.js';
