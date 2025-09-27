@@ -40,6 +40,7 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
+	//
 	fields: {
 		title: 'Fields',
 		type: 'array-string',
