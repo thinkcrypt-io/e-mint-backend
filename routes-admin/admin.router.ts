@@ -161,6 +161,8 @@ import { getAdminPermissionList, getAdminSidebar, trackView } from '../controlle
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
 import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
+import { listAllCollections } from '../library/index.js';
+import { FormField, formFieldConfig, formFieldSettings } from '../library/models/_index.js';
 
 const router = express.Router();
 
@@ -176,6 +178,9 @@ router.use('/upload', uploadRoute);
 router.use('/purchasedthemes', purchasedThemeRoute);
 
 router.use('/sms', smsRoute);
+
+router.get('/mongoose/list', listAllCollections);
+router.get('/model/:id/:type', getModelKeys);
 
 router.post('/whatsapp/send', sendWhatsapp);
 
@@ -235,8 +240,6 @@ router.use(
 		permission: 'jobapplications',
 	})
 );
-
-router.get('/model/:id/:type', getModelKeys);
 
 router.use(
 	'/meetings',
@@ -718,6 +721,17 @@ router.use(
 		permission: 'models',
 		frontendConfig: tableConfigConfig,
 		route: 'tableconfigs',
+	})
+);
+
+router.use(
+	'/formfields',
+	defineRoutes({
+		Model: FormField,
+		settings: formFieldSettings,
+		permission: 'models',
+		frontendConfig: formFieldConfig,
+		route: 'formfields',
 	})
 );
 
