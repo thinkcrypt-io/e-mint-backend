@@ -53,9 +53,9 @@ const listRegisteredSchemas = async (req: Request, res: Response) => {
 
 		return res.status(200).json({
 			doc: models
-				.map(model => ({
-					_id: model.modelName,
-					name: model.modelName,
+				.map((model: any) => ({
+					_id: model?.modelName,
+					name: model?.modelName,
 				}))
 				.sort((a, b) => a.name.localeCompare(b.name)),
 			totalDocs: models.length,
