@@ -4,7 +4,7 @@ const tableFields = ['name', 'path', 'model'];
 
 const formFields = [
 	{
-		sectionTitle: 'Table Config Basic',
+		sectionTitle: 'Form Config Basic',
 		fields: ['name', ['path', 'model']],
 	},
 	{
@@ -18,11 +18,11 @@ const formFields = [
 ];
 
 const route = {
-	title: 'Table Config',
-	subTitle: 'Manage the table configuration, what fields to show in a table and in what order',
-	path: 'tableconfigs',
+	title: 'Form Configs',
+	subTitle: 'Manage the form configuration, what fields to show in a form and in what order',
+	path: 'formconfigs',
 	button: {
-		title: 'Add Item',
+		title: 'Add Form',
 		isModal: true,
 	},
 	export: true,
