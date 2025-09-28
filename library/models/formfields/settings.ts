@@ -47,7 +47,7 @@ const settings: SettingsType<any> = {
 		search: false,
 		edit: true,
 		schema: {
-			type: 'model-fields',
+			type: 'form-fields',
 		},
 	},
 	model: {
