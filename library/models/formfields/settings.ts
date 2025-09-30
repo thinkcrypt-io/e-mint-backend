@@ -40,11 +40,10 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
-	fields: {
+	formFields: {
 		title: 'Fields',
 		type: 'array',
 		sort: false,
-
 		search: false,
 		edit: true,
 		schema: {
@@ -57,7 +56,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
-		// required: true,
+
 		populate: {
 			path: 'model',
 			select: 'name modelName route',
@@ -71,7 +70,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 
-	schema: {
+	sch: {
 		title: 'Schema',
 		type: 'string',
 		sort: true,
