@@ -16,10 +16,13 @@ const schema = new Schema<any>(
 				},
 			],
 		},
+		schema: {
+			type: String,
+			required: true,
+		},
 		model: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Model',
-			required: true,
 		},
 	},
 	{

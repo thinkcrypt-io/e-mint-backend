@@ -56,7 +56,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
-		required: true,
+		// required: true,
 		populate: {
 			path: 'model',
 			select: 'name modelName route',
@@ -66,6 +66,20 @@ const settings: SettingsType<any> = {
 			type: 'data-menu',
 			tableType: 'string',
 			tableKey: 'model.modelName',
+			model: 'models',
+		},
+	},
+
+	schema: {
+		title: 'Schema',
+		type: 'string',
+		sort: true,
+		search: false,
+		edit: true,
+		required: true,
+		schema: {
+			type: 'data-menu',
+			tableType: 'string',
 			model: 'models',
 		},
 	},
