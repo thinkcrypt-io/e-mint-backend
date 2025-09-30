@@ -81,6 +81,7 @@ const settings: SettingsType<any> = {
 			type: 'data-menu',
 			tableType: 'string',
 			model: 'models',
+			dataKey: 'name',
 		},
 	},
 	createdAt: {
