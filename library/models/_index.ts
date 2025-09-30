@@ -50,3 +50,8 @@ export { default as permissionConfig } from './permissions/config.js';
 export { default as FormField } from './formfields/model.js';
 export { default as formFieldSettings } from './formfields/settings.js';
 export { default as formFieldConfig } from './formfields/config.js';
+
+//Configs
+export { default as Config } from './configs/model.js';
+export { default as configSettings } from './configs/settings.js';
+export { default as configConfig } from './configs/config.js';
