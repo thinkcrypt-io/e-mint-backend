@@ -42,8 +42,9 @@ const settings: SettingsType<any> = {
 	},
 	fields: {
 		title: 'Fields',
-		type: 'array-string',
+		type: 'array',
 		sort: false,
+
 		search: false,
 		edit: true,
 		schema: {
@@ -76,6 +77,7 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
+		unique: true,
 		required: true,
 		schema: {
 			type: 'data-menu',
