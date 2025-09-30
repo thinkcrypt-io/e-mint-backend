@@ -24,4 +24,4 @@ const schema = new Schema<any>(
 	}
 );
 
-export default mongoose.model<any>('FormField', schema);
+export default mongoose.model<any>('Config', schema);
