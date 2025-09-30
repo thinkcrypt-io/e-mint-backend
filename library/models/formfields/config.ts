@@ -1,11 +1,21 @@
-const fields = ['name', 'description', 'path', 'fields', 'model', '_id', 'createdAt', 'updatedAt'];
+const fields = [
+	'name',
+	'description',
+	'path',
+	'fields',
+	'schema',
+	'model',
+	'_id',
+	'createdAt',
+	'updatedAt',
+];
 
-const tableFields = ['name', 'path', 'model'];
+const tableFields = ['name', 'path', 'schema', 'model'];
 
 const formFields = [
 	{
 		sectionTitle: 'Form Config Basic',
-		fields: ['name', ['path', 'model']],
+		fields: ['name', ['path', 'schema']],
 	},
 	{
 		sectionTitle: 'Select Fields',
