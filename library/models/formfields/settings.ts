@@ -80,7 +80,7 @@ const settings: SettingsType<any> = {
 		schema: {
 			type: 'data-menu',
 			tableType: 'string',
-			model: 'models',
+			model: 'mongoose/list',
 			dataKey: 'name',
 		},
 	},
