@@ -162,7 +162,14 @@ import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
 import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
 import { listAllCollections } from '../library/index.js';
-import { FormField, formFieldConfig, formFieldSettings } from '../library/models/_index.js';
+import {
+	Config,
+	configConfig,
+	configSettings,
+	FormField,
+	formFieldConfig,
+	formFieldSettings,
+} from '../library/models/_index.js';
 
 const router = express.Router();
 
@@ -732,6 +739,17 @@ router.use(
 		permission: 'models',
 		frontendConfig: formFieldConfig,
 		route: 'formfields',
+	})
+);
+
+router.use(
+	'/configs',
+	defineRoutes({
+		Model: Config,
+		settings: configSettings,
+		permission: 'models',
+		frontendConfig: configConfig,
+		route: 'configs',
 	})
 );
 
