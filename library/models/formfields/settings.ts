@@ -50,25 +50,25 @@ const settings: SettingsType<any> = {
 			type: 'form-fields',
 		},
 	},
-	model: {
-		title: 'Model',
-		type: 'string',
-		sort: true,
-		search: false,
-		edit: true,
+	// model: {
+	// 	title: 'Model',
+	// 	type: 'string',
+	// 	sort: true,
+	// 	search: false,
+	// 	edit: true,
 
-		populate: {
-			path: 'model',
-			select: 'name modelName route',
-		},
+	// 	populate: {
+	// 		path: 'model',
+	// 		select: 'name modelName route',
+	// 	},
 
-		schema: {
-			type: 'data-menu',
-			tableType: 'string',
-			tableKey: 'model.modelName',
-			model: 'models',
-		},
-	},
+	// 	schema: {
+	// 		type: 'data-menu',
+	// 		tableType: 'string',
+	// 		tableKey: 'model.modelName',
+	// 		model: 'models',
+	// 	},
+	// },
 
 	sch: {
 		title: 'Schema',

@@ -4,13 +4,13 @@ const fields = [
 	'path',
 	'formFields',
 	'sch',
-	'model',
+
 	'_id',
 	'createdAt',
 	'updatedAt',
 ];
 
-const tableFields = ['name', 'path', 'sch', 'model'];
+const tableFields = ['name', 'path', 'sch'];
 
 const formFields = [
 	{
