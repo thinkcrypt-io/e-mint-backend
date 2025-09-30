@@ -40,38 +40,37 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
-	fields: {
+	formFields: {
 		title: 'Fields',
-		type: 'array',
+		type: 'number',
 		sort: false,
-
 		search: false,
 		edit: true,
 		schema: {
 			type: 'form-fields',
 		},
 	},
-	model: {
-		title: 'Model',
-		type: 'string',
-		sort: true,
-		search: false,
-		edit: true,
-		// required: true,
-		populate: {
-			path: 'model',
-			select: 'name modelName route',
-		},
+	// model: {
+	// 	title: 'Model',
+	// 	type: 'string',
+	// 	sort: true,
+	// 	search: false,
+	// 	edit: true,
 
-		schema: {
-			type: 'data-menu',
-			tableType: 'string',
-			tableKey: 'model.modelName',
-			model: 'models',
-		},
-	},
+	// 	populate: {
+	// 		path: 'model',
+	// 		select: 'name modelName route',
+	// 	},
 
-	schema: {
+	// 	schema: {
+	// 		type: 'data-menu',
+	// 		tableType: 'string',
+	// 		tableKey: 'model.modelName',
+	// 		model: 'models',
+	// 	},
+	// },
+
+	sch: {
 		title: 'Schema',
 		type: 'string',
 		sort: true,

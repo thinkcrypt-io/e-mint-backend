@@ -2,7 +2,7 @@ const fields = [
 	'name',
 	'description',
 	'path',
-	'fields',
+	'formFields',
 	'schema',
 	'model',
 	'_id',
@@ -19,7 +19,7 @@ const formFields = [
 	},
 	{
 		sectionTitle: 'Select Fields',
-		fields: ['fields'],
+		fields: ['formFields'],
 	},
 	{
 		sectionTitle: 'Other Details',
