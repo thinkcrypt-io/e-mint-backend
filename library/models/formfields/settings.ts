@@ -42,7 +42,7 @@ const settings: SettingsType<any> = {
 	},
 	fields: {
 		title: 'Fields',
-		type: 'array-string',
+		type: 'array',
 		sort: false,
 		search: false,
 		edit: true,

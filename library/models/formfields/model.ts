@@ -12,7 +12,7 @@ const schema = new Schema<any>(
 					sectionTitle: String,
 					description: String,
 					collapsible: Boolean,
-					fields: Array,
+					fields: Schema.Types.Mixed,
 				},
 			],
 		},
