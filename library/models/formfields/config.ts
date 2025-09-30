@@ -3,19 +3,19 @@ const fields = [
 	'description',
 	'path',
 	'formFields',
-	'schema',
+	'sch',
 	'model',
 	'_id',
 	'createdAt',
 	'updatedAt',
 ];
 
-const tableFields = ['name', 'path', 'schema', 'model'];
+const tableFields = ['name', 'path', 'sch', 'model'];
 
 const formFields = [
 	{
 		sectionTitle: 'Form Config Basic',
-		fields: ['name', ['path', 'schema']],
+		fields: ['name', ['path', 'sch']],
 	},
 	{
 		sectionTitle: 'Select Fields',
@@ -30,7 +30,7 @@ const formFields = [
 const route = {
 	title: 'Form Configs',
 	subTitle: 'Manage the form configuration, what fields to show in a form and in what order',
-	path: 'formconfigs',
+	path: 'formfields',
 	button: {
 		title: 'Add Form',
 		isModal: true,

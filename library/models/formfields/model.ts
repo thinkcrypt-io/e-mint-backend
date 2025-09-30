@@ -7,27 +7,13 @@ const schema = new Schema<any>(
 		path: { type: String, required: true, trim: true, lowercase: true, unique: true },
 		formFields: {
 			required: true,
-			type: [
-				{
-					sectionTitle: String,
-					description: String,
-					collapsible: Boolean,
-					fields: [{}],
-					// fields: {
-					// 	type: [Schema.Types.Mixed], // Allow mixed types (strings and arrays)
-					// 	required: true,
-					// },
-				},
-			],
+			strict: false,
+			type: [{}],
 		},
-		schema: {
+		sch: {
 			type: String,
-			required: [true, 'Schema is required'],
+			required: true,
 		},
-		// model: {
-		// 	type: mongoose.Schema.Types.ObjectId,
-		// 	ref: 'Model',
-		// },
 	},
 	{
 		timestamps: true,
