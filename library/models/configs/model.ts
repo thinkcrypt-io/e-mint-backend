@@ -7,6 +7,7 @@ const schema = new Schema<any>(
 		path: { type: String, required: true, trim: true, lowercase: true, unique: true },
 		tableFields: { type: Array, default: [] },
 		viewFields: { type: Array, default: [] },
+		idDisabled: { type: Boolean, default: false },
 		formFields: {
 			required: true,
 			strict: false,

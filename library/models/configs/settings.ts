@@ -107,11 +107,19 @@ const settings: SettingsType<any> = {
 			dataKey: 'name',
 		},
 	},
+	isDisabled: {
+		title: 'Disable Configuration',
+		type: 'boolean',
+		edit: true,
+		schema: {
+			sort: true,
+			default: true,
+		},
+	},
 	createdAt: {
 		title: 'Created at',
 		type: 'date',
 		sort: true,
-		search: false,
 		edit: true,
 		filter: {
 			name: 'createdAt',
@@ -119,6 +127,16 @@ const settings: SettingsType<any> = {
 			label: 'Created at',
 			title: 'Filter by Created at',
 		},
+		schema: {
+			type: 'date',
+			tableType: 'date-only',
+		},
+	},
+	updatedAt: {
+		title: 'Updated At',
+		type: 'date',
+		sort: true,
+		edit: true,
 		schema: {
 			type: 'date',
 			tableType: 'date-only',
