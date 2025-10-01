@@ -69,7 +69,17 @@ app.use('/', (req, res, next) => {
 	next();
 });
 
-app.use('/admin/api', adminRouter);
+const logger = async (req: any, res: any, next: any) => {
+	try {
+		const destPath = req.path.split('/').filter((p: string) => p);
+		req.destPath = destPath?.[0];
+		next();
+	} catch (e) {
+		next();
+	}
+};
+
+app.use('/admin/api', logger, adminRouter);
 app.use('/user-api', userRouter);
 app.use('/app-api/', appRouter);
 app.use('/api', sellerApi);

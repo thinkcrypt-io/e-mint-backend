@@ -1,6 +1,7 @@
 const fields = [
 	'name',
 	'description',
+	'isDisabled',
 	'path',
 	'formFields',
 	'sch',
@@ -11,12 +12,15 @@ const fields = [
 	'updatedAt',
 ];
 
-const tableFields = ['name', 'path', 'sch'];
+const tableFields = ['name', 'path', 'isDisabled', 'sch'];
 
 const formFields = [
 	{
 		sectionTitle: 'Form Config Basic',
-		fields: ['name', ['path', 'sch']],
+		fields: [
+			['name', 'isDisabled'],
+			['path', 'sch'],
+		],
 	},
 	{
 		sectionTitle: 'Form Fields',

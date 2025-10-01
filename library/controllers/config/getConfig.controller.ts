@@ -6,7 +6,7 @@ import {
 	convertToFormFields,
 } from '../../functions/_index.js';
 
-import { Config, FieldConfig, TableConfig } from '../../models/_index.js';
+import { Config } from '../../models/_index.js';
 
 type ConfigType = {
 	table: string[];
@@ -25,36 +25,54 @@ const getConfig = ({
 }) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			if (!config) {
+			let keys: string[] = [];
+			const settings = schema?.settings || {};
+			const schm = Object.keys(settings).reduce(
+				(acc, key) => {
+					keys.push(key);
+					const constructSchema = {
+						label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
+						type: settings[key]?.schema?.type
+							? settings[key].schema.type
+							: convertType(settings[key].type),
+						isRequired: settings[key]?.required,
+						displayInTable: true,
+						renderCondition: settings[key]?.schema?.renderCondition
+							? settings[key].schema.renderCondition.toString()
+							: undefined,
+						...settings[key]?.schema,
+					};
+
+					acc[key] = constructSchema;
+
+					return acc;
+				},
+				{} as Record<string, any>
+			);
+
+			const getRoute = route || req?.destPath;
+			const configuration: any = await Config.findOne({ path: getRoute }).lean();
+
+			if (configuration && !configuration.isDisabled) {
+				const table = convertToTableFields({
+					schema: schm,
+					fields: configuration?.tableFields,
+				});
+
+				const view = convertToViewFields({
+					schema: schm,
+					fields: configuration?.viewFields,
+				});
+
+				const form = convertToFormFields({
+					schema: schm,
+					layout: configuration?.formFields,
+				});
+
+				return res.status(200).json({ table, view, form, schema: schm });
+			} else if (!config) {
 				return res.status(400).json({ message: 'Configuration not provided' });
 			} else {
-				let keys: string[] = [];
-				const settings = schema?.settings || {};
-				const schm = Object.keys(settings).reduce(
-					(acc, key) => {
-						keys.push(key);
-						const constructSchema = {
-							label: settings[key]?.schema?.label
-								? settings[key].schema.label
-								: settings[key].title,
-							type: settings[key]?.schema?.type
-								? settings[key].schema.type
-								: convertType(settings[key].type),
-							isRequired: settings[key]?.required,
-							displayInTable: true,
-							renderCondition: settings[key]?.schema?.renderCondition
-								? settings[key].schema.renderCondition.toString()
-								: undefined,
-							...settings[key]?.schema,
-						};
-
-						acc[key] = constructSchema;
-
-						return acc;
-					},
-					{} as Record<string, any>
-				);
-
 				const filteredConfig = {
 					...config,
 					schema: schm,
@@ -75,26 +93,19 @@ const getConfig = ({
 					})),
 				};
 
-				let tableFields = [];
-
-				const configuration: any = await Config.findOne({ path: route }).lean();
-
-				tableFields = convertToTableFields({
+				const tableFields = convertToTableFields({
 					schema: schm,
-					fields:
-						route && configuration?.tableFields ? configuration.tableFields : filteredConfig?.table,
+					fields: filteredConfig?.table,
 				});
 
 				const viewFields = convertToViewFields({
 					schema: schm,
-					fields:
-						route && configuration?.viewFields ? configuration.viewFields : filteredConfig?.fields,
+					fields: filteredConfig?.fields,
 				});
 
 				const formFields = convertToFormFields({
 					schema: schm,
-					layout:
-						route && configuration?.formFields ? configuration.formFields : filteredConfig?.fields,
+					layout: filteredConfig?.form,
 				});
 
 				return res
