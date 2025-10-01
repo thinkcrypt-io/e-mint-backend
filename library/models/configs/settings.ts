@@ -114,6 +114,10 @@ const settings: SettingsType<any> = {
 		schema: {
 			sort: true,
 			default: true,
+			displayValue: {
+				true: 'Yes',
+				false: 'No',
+			},
 		},
 	},
 	createdAt: {
