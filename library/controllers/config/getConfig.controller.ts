@@ -50,7 +50,8 @@ const getConfig = ({
 				{} as Record<string, any>
 			);
 
-			const configuration: any = await Config.findOne({ path: route }).lean();
+			const getRoute = route || req?.destPath;
+			const configuration: any = await Config.findOne({ path: getRoute }).lean();
 
 			if (configuration && !configuration.isDisabled) {
 				const table = convertToTableFields({
