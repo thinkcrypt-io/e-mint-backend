@@ -46,7 +46,7 @@ const settings: SettingsType<any> = {
 		sort: false,
 		search: false,
 		edit: true,
-		required: true,
+		// required: true,
 		schema: {
 			type: 'model-fields',
 		},
@@ -55,7 +55,7 @@ const settings: SettingsType<any> = {
 		title: 'View Fields',
 		type: 'array-string',
 		sort: false,
-		required: true,
+		// required: true,
 		search: false,
 		edit: true,
 		schema: {
