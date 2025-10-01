@@ -47,7 +47,7 @@ const formFields = [
 const route = {
 	title: 'Form Configs',
 	subTitle: 'Manage the form configuration, what fields to show in a form and in what order',
-	path: 'formfields',
+	path: 'configs',
 	button: {
 		title: 'Add Form',
 		isModal: true,
