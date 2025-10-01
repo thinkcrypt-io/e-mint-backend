@@ -151,6 +151,7 @@ const schema = new Schema<AdminType>(
 			formconfigs: [String],
 
 			credentials: [String],
+			configs: [String],
 		},
 	},
 
