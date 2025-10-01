@@ -6,7 +6,7 @@ import {
 	convertToFormFields,
 } from '../../functions/_index.js';
 
-import { FieldConfig, TableConfig } from '../../models/_index.js';
+import { Config, FieldConfig, TableConfig } from '../../models/_index.js';
 
 type ConfigType = {
 	table: string[];
@@ -77,28 +77,24 @@ const getConfig = ({
 
 				let tableFields = [];
 
-				const tableConfig: any = await TableConfig.findOne({ path: route }).lean();
+				const configuration: any = await Config.findOne({ path: route }).lean();
 
 				tableFields = convertToTableFields({
 					schema: schm,
-					fields: route && tableConfig?.fields ? tableConfig.fields : filteredConfig?.table,
+					fields:
+						route && configuration?.tableFields ? configuration.tableFields : filteredConfig?.table,
 				});
-
-				const fieldConfig: any = await FieldConfig.findOne({ path: route }).lean();
 
 				const viewFields = convertToViewFields({
 					schema: schm,
-					fields: route && fieldConfig?.fields ? fieldConfig.fields : filteredConfig?.fields,
+					fields:
+						route && configuration?.viewFields ? configuration.viewFields : filteredConfig?.fields,
 				});
-
-				// const viewFields = convertToViewFields({
-				// 	schema: schm,
-				// 	fields: filteredConfig?.fields,
-				// });
 
 				const formFields = convertToFormFields({
 					schema: schm,
-					layout: filteredConfig?.form,
+					layout:
+						route && configuration?.formFields ? configuration.formFields : filteredConfig?.fields,
 				});
 
 				return res

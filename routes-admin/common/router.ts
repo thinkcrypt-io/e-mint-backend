@@ -17,10 +17,11 @@ import {
 	deleteDocument,
 	getDocumentByCode,
 	getDocumentBySlug,
-	getConfig,
 	getDistinctFields,
 	getPageRoute,
 } from '../../controllers/index.js';
+
+import { getConfig } from '../../library/controllers/index.js';
 
 import {
 	adminProtect as protect,
