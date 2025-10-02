@@ -169,6 +169,9 @@ import {
 	FormField,
 	formFieldConfig,
 	formFieldSettings,
+	Setting,
+	settingConfig,
+	settingSettings,
 } from '../library/models/_index.js';
 
 const router = express.Router();
@@ -784,6 +787,17 @@ router.use(
 		route: 'credentials',
 		frontendConfig: credentialConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	})
+);
+
+router.use(
+	'/settings',
+	defineRoutes({
+		Model: Setting,
+		settings: settingSettings,
+		permission: 'models',
+		route: 'settings',
+		frontendConfig: settingConfig,
 	})
 );
 

@@ -55,3 +55,8 @@ export { default as formFieldConfig } from './formfields/config.js';
 export { default as Config } from './configs/model.js';
 export { default as configSettings } from './configs/settings.js';
 export { default as configConfig } from './configs/config.js';
+
+//Settings
+export { default as Setting } from './settings/model.js';
+export { default as settingSettings } from './settings/settings.js';
+export { default as settingConfig } from './settings/config.js';
