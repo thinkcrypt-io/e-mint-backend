@@ -33,7 +33,7 @@ const formFields = [
 
 const route = {
 	title: 'Settings',
-	path: 'settings',
+	path: 'setting',
 	button: {
 		title: 'Add Setting',
 		isModal: true,

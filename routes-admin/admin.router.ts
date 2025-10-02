@@ -791,7 +791,7 @@ router.use(
 );
 
 router.use(
-	'/settings',
+	'/setting',
 	defineRoutes({
 		Model: Setting,
 		settings: settingSettings,
