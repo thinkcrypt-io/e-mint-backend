@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt, { compare, hash } from 'bcrypt';
+import settings from './settings';
 
 export type AdminType = {
 	name: string;
@@ -152,6 +153,7 @@ const schema = new Schema<AdminType>(
 
 			credentials: [String],
 			configs: [String],
+			settings: [String],
 		},
 	},
 
