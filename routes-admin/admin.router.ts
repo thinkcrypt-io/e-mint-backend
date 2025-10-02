@@ -796,7 +796,7 @@ router.use(
 		Model: Setting,
 		settings: settingSettings,
 		permission: 'models',
-		route: 'settings',
+		route: 'setting',
 		frontendConfig: settingConfig,
 	})
 );
