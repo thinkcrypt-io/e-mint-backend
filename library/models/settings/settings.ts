@@ -41,7 +41,7 @@ const settings: SettingsType<any> = {
 		},
 	},
 
-	formFields: {
+	fields: {
 		title: 'Settings Fields',
 		type: 'array',
 		sort: false,
