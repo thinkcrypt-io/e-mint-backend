@@ -791,12 +791,12 @@ router.use(
 );
 
 router.use(
-	'/settings',
+	'/setting',
 	defineRoutes({
 		Model: Setting,
 		settings: settingSettings,
 		permission: 'models',
-		route: 'settings',
+		route: 'setting',
 		frontendConfig: settingConfig,
 	})
 );
