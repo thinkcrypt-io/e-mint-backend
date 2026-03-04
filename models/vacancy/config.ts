@@ -33,7 +33,7 @@ const formFields = [
 	},
 	{
 		sectionTitle: 'Description',
-		fields: ['description'],
+		fields: ['description', 'status'],
 	},
 ];
 
