@@ -15,7 +15,7 @@ const schema = new Schema<any>(
 		metaTitle: { type: String },
 		metaDescription: { type: String },
 		status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
-		deadline: { type: Date, required: true },
+		endDate: { type: Date, required: true },
 	},
 	{
 		timestamps: true,

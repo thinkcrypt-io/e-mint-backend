@@ -142,6 +142,7 @@ const schema = new Schema<AdminType>(
 			sidebaritems: [String],
 			files: [String],
 			prospects: [String],
+			vacancies: [String],
 
 			//
 			hostings: [String],
@@ -159,7 +160,7 @@ const schema = new Schema<AdminType>(
 
 	{
 		timestamps: true,
-	}
+	},
 );
 
 schema.methods.checkPassword = async function (password: string) {
@@ -187,7 +188,7 @@ schema.methods.generateAuthToken = function (this: any): string {
 			role: this.role,
 			phone: this.phone,
 		},
-		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542',
 	);
 
 	return token;
