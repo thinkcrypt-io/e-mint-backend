@@ -155,6 +155,9 @@ import {
 	Credential,
 	credentialSettings,
 	credentialConfig,
+	Vacancy,
+	vacancySettings,
+	vacancyConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -200,7 +203,7 @@ router.get('/permissionlist', getAdminPermissionList());
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
 router.use(
 	'/fgroups',
-	defineRoutes({ Model: FacebookGroups, settings: facebookGroupsSettings, permission: 'lead' })
+	defineRoutes({ Model: FacebookGroups, settings: facebookGroupsSettings, permission: 'lead' }),
 );
 
 router.use('/admins', defineRoutes({ Model: Admin, settings: adminSettings, permission: 'admin' }));
@@ -211,16 +214,16 @@ router.use(
 		settings: adminRoleSettings,
 		permission: 'adminroles',
 		frontendConfig: adminRoleCOnfig,
-	})
+	}),
 );
 router.use(
 	'/repos',
-	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' })
+	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' }),
 );
 
 router.use(
 	'/clients',
-	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' })
+	defineRoutes({ Model: Client, settings: clientSettings, permission: 'client' }),
 );
 
 router.use(
@@ -230,7 +233,7 @@ router.use(
 		settings: docSettings,
 		permission: 'documents',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -239,7 +242,7 @@ router.use(
 		Model: JobPost,
 		settings: jobPostSettings,
 		permission: 'jobposts',
-	})
+	}),
 );
 
 router.use(
@@ -248,7 +251,7 @@ router.use(
 		Model: JobApplication,
 		settings: jobApplicationSettings,
 		permission: 'jobapplications',
-	})
+	}),
 );
 
 router.use(
@@ -258,7 +261,7 @@ router.use(
 		settings: meetingSettings,
 		permission: 'meetings',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -268,7 +271,7 @@ router.use(
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -278,7 +281,7 @@ router.use(
 		settings: employeeSettings,
 		permission: 'employee',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -288,7 +291,7 @@ router.use(
 		settings: leaveSettings,
 		permission: 'leaves',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -298,7 +301,7 @@ router.use(
 		settings: softwareSettings,
 		permission: 'softwares',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -307,7 +310,7 @@ router.use(
 		Model: TeamMember,
 		settings: teamMemberSettings,
 		permission: 'teams',
-	})
+	}),
 );
 
 router.use(
@@ -316,7 +319,7 @@ router.use(
 		Model: Portfolio,
 		settings: portfolioSettings,
 		permission: 'portfolios',
-	})
+	}),
 );
 
 router.use(
@@ -325,7 +328,7 @@ router.use(
 		Model: Service,
 		settings: serviceSettings,
 		permission: 'services',
-	})
+	}),
 );
 
 router.use(
@@ -334,7 +337,7 @@ router.use(
 		Model: Issue,
 		settings: issueSettings,
 		permission: 'issues',
-	})
+	}),
 );
 
 router.use(
@@ -343,7 +346,7 @@ router.use(
 		Model: Resource,
 		settings: resourceSettings,
 		permission: 'resources',
-	})
+	}),
 );
 
 router.use(
@@ -353,7 +356,7 @@ router.use(
 		settings: maintenanceSettings,
 		permission: 'maintenances',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -363,7 +366,7 @@ router.use(
 		settings: adminExpenseSettings,
 		permission: 'expenses',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -372,7 +375,7 @@ router.use(
 		Model: Component,
 		settings: componentSettings,
 		permission: 'components',
-	})
+	}),
 );
 
 router.use(
@@ -381,7 +384,7 @@ router.use(
 		Model: Prop,
 		settings: propSettings,
 		permission: 'props',
-	})
+	}),
 );
 
 router.use(
@@ -390,7 +393,7 @@ router.use(
 		Model: PlannedModel,
 		settings: plannedModelSettings,
 		permission: 'plans',
-	})
+	}),
 );
 router.use(
 	'/plannedprojects',
@@ -398,7 +401,7 @@ router.use(
 		Model: PlannedProject,
 		settings: plannedProjectSettings,
 		permission: 'plans',
-	})
+	}),
 );
 router.use(
 	'/plannedfeatures',
@@ -406,7 +409,7 @@ router.use(
 		Model: PlannedFeature,
 		settings: plannedFeatureSettings,
 		permission: 'plans',
-	})
+	}),
 );
 router.use(
 	'/plannedpages',
@@ -414,7 +417,7 @@ router.use(
 		Model: PlannedPage,
 		settings: plannedPageSettings,
 		permission: 'plans',
-	})
+	}),
 );
 
 router.use(
@@ -423,7 +426,7 @@ router.use(
 		Model: ModelAttributes,
 		settings: modelAttributesSettings,
 		permission: 'plans',
-	})
+	}),
 );
 
 router.use(
@@ -432,7 +435,7 @@ router.use(
 		Model: BillSubscription,
 		settings: billSubscriptionSettings,
 		permission: 'subscriptions',
-	})
+	}),
 );
 
 router.use(
@@ -441,7 +444,7 @@ router.use(
 		Model: TCClient,
 		settings: tcClientSettings,
 		permission: 'website',
-	})
+	}),
 );
 
 router.use(
@@ -451,7 +454,7 @@ router.use(
 		settings: billSettings,
 		permission: 'bill',
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -460,7 +463,7 @@ router.use(
 		Model: Email,
 		settings: emailSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -469,7 +472,7 @@ router.use(
 		Model: Offer,
 		settings: offerSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -478,7 +481,7 @@ router.use(
 		Model: Feature,
 		settings: featureSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -487,7 +490,7 @@ router.use(
 		Model: Solution,
 		settings: solutionSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -496,7 +499,7 @@ router.use(
 		Model: TechStack,
 		settings: techStackSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -505,7 +508,7 @@ router.use(
 		Model: ServiceCategory,
 		settings: serviceCategorySettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -515,7 +518,7 @@ router.use(
 		settings: blogSettings,
 		permission: 'email',
 		frontendConfig: blogConfig,
-	})
+	}),
 );
 
 router.use(
@@ -524,7 +527,7 @@ router.use(
 		Model: Author,
 		settings: authorSettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -536,7 +539,7 @@ router.use(
 		replaceController: {
 			post: trackView,
 		},
-	})
+	}),
 );
 
 router.use(
@@ -548,7 +551,7 @@ router.use(
 		replaceController: {
 			post: trackClick,
 		},
-	})
+	}),
 );
 
 router.use(
@@ -557,7 +560,7 @@ router.use(
 		Model: NpmLibrary,
 		settings: npmLibrarySettings,
 		permission: 'email',
-	})
+	}),
 );
 
 router.use(
@@ -568,7 +571,7 @@ router.use(
 		permission: 'sidebarcategories',
 		route: 'sidebarcategories',
 		frontendConfig: sidebarCategoryConfig,
-	})
+	}),
 );
 
 router.use(
@@ -579,7 +582,7 @@ router.use(
 		permission: 'sidebaritems',
 		route: 'sidebaritems',
 		frontendConfig: sidebarItemConfig,
-	})
+	}),
 );
 
 router.use(
@@ -593,7 +596,18 @@ router.use(
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
-	})
+	}),
+);
+
+router.use(
+	'/vacancies',
+	defineRoutes({
+		Model: Vacancy,
+		settings: vacancySettings,
+		permission: 'vacancy',
+		route: 'vacancies',
+		frontendConfig: vacancyConfig,
+	}),
 );
 
 router.use(
@@ -608,7 +622,7 @@ router.use(
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
-	})
+	}),
 );
 
 router.use(
@@ -619,7 +633,7 @@ router.use(
 		permission: 'folders',
 		route: 'folders',
 		frontendConfig: folderConfig,
-	})
+	}),
 );
 
 router.use(
@@ -630,7 +644,7 @@ router.use(
 		permission: 'permissions',
 		route: 'permissions',
 		frontendConfig: permissionConfig,
-	})
+	}),
 );
 
 router.use(
@@ -641,7 +655,7 @@ router.use(
 		permission: 'pages',
 		frontendConfig: pageConfig,
 		route: 'pages',
-	})
+	}),
 );
 
 router.use(
@@ -652,7 +666,7 @@ router.use(
 		permission: 'domains',
 		route: 'domains',
 		frontendConfig: domainConfig,
-	})
+	}),
 );
 
 router.use(
@@ -663,7 +677,7 @@ router.use(
 		permission: 'socials',
 		route: 'socials',
 		frontendConfig: socialConfig,
-	})
+	}),
 );
 
 router.use(
@@ -674,7 +688,7 @@ router.use(
 		permission: 'metas',
 		route: 'metas',
 		frontendConfig: metaConfig,
-	})
+	}),
 );
 
 router.use(
@@ -686,7 +700,7 @@ router.use(
 		route: 'prospects',
 		frontendConfig: prospectConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -697,7 +711,7 @@ router.use(
 		permission: 'hostings',
 		route: 'hostings',
 		frontendConfig: hostingConfig,
-	})
+	}),
 );
 
 router.use(
@@ -708,7 +722,7 @@ router.use(
 		permission: 'urls',
 		route: 'urls',
 		frontendConfig: urlConfig,
-	})
+	}),
 );
 
 router.use(
@@ -720,7 +734,7 @@ router.use(
 		frontendConfig: modelConfig,
 		route: 'models',
 		injectMiddleware: { post: [doesModelExist] },
-	})
+	}),
 );
 
 router.use(
@@ -731,7 +745,7 @@ router.use(
 		permission: 'models',
 		frontendConfig: tableConfigConfig,
 		route: 'tableconfigs',
-	})
+	}),
 );
 
 router.use(
@@ -742,7 +756,7 @@ router.use(
 		permission: 'models',
 		frontendConfig: formFieldConfig,
 		route: 'formfields',
-	})
+	}),
 );
 
 router.use(
@@ -753,7 +767,7 @@ router.use(
 		permission: 'models',
 		frontendConfig: configConfig,
 		route: 'configs',
-	})
+	}),
 );
 
 router.use(
@@ -764,7 +778,7 @@ router.use(
 		permission: 'models',
 		frontendConfig: fieldConfigConfig,
 		route: 'fieldconfigs',
-	})
+	}),
 );
 
 router.use(
@@ -775,7 +789,7 @@ router.use(
 		permission: 'models',
 		frontendConfig: fieldConfigConfig,
 		route: 'fieldconfigs',
-	})
+	}),
 );
 
 router.use(
@@ -787,7 +801,7 @@ router.use(
 		route: 'credentials',
 		frontendConfig: credentialConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
-	})
+	}),
 );
 
 router.use(
@@ -798,7 +812,7 @@ router.use(
 		permission: 'models',
 		route: 'setting',
 		frontendConfig: settingConfig,
-	})
+	}),
 );
 
 export default router;

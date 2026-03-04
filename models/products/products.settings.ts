@@ -41,7 +41,6 @@ const settings: any = {
 		title: 'Name',
 		edit: true,
 		search: true,
-		unique: true,
 	},
 	description: {
 		type: 'string',

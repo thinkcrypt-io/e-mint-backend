@@ -70,6 +70,8 @@ router
 	.get(...commonMiddleware, getAllDocuments(config.QUERY_OPTIONS))
 	.post(...postMiddleware, createDocument(config.MODEL));
 
+// router.post('/steadfast', ...postMiddleware, createDocument(config.MODEL, true));
+
 router
 	.route('/:id')
 	.get(...getByIdMiddleware, getDocumentById(config.QUERY_OPTIONS))

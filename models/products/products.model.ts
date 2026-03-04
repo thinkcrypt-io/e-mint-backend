@@ -23,6 +23,7 @@ const schema = new Schema<any>(
 		image: {
 			type: String,
 		},
+
 		images: [String],
 		category: {
 			type: Schema.Types.ObjectId,
