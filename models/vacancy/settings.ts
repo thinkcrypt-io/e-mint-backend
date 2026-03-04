@@ -66,7 +66,9 @@ const settings: SettingsType<any> = {
 		search: true,
 		edit: true,
 		required: true,
-		schema: {},
+		schema: {
+			type: 'textarea',
+		},
 	},
 	code: {
 		title: 'Code',

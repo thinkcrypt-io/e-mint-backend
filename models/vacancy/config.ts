@@ -3,7 +3,7 @@ const fields = [
 	'name',
 	'position',
 	'status',
-	'deadline',
+	'endDate',
 	'department',
 	'type',
 	'location',
@@ -15,7 +15,7 @@ const tableFields = [
 	'name',
 	'position',
 	'status',
-	'deadline',
+	'endDate',
 	'department',
 	'type',
 	'location',
@@ -25,7 +25,7 @@ const tableFields = [
 const formFields = [
 	{
 		sectionTitle: 'Job Details',
-		fields: ['name', ['position', 'location'], ['department', 'type'], ['status', 'deadline']],
+		fields: ['name', ['position', 'location'], ['department', 'type'], ['status', 'endDate']],
 	},
 	{
 		sectionTitle: 'Additional Info',
