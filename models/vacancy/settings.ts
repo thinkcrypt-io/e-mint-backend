@@ -59,6 +59,17 @@ const settings: SettingsType<any> = {
 			sort: true,
 		},
 	},
+	description: {
+		title: 'Description',
+		type: 'string',
+		sort: false,
+		search: false,
+		edit: true,
+		required: false,
+		schema: {
+			type: 'editor',
+		},
+	},
 	excerpt: {
 		title: 'Excerpt',
 		type: 'string',

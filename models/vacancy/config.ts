@@ -31,6 +31,10 @@ const formFields = [
 		sectionTitle: 'Additional Info',
 		fields: ['excerpt'],
 	},
+	{
+		sectionTitle: 'Description',
+		fields: ['description'],
+	},
 ];
 
 const route = {
