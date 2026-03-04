@@ -21,6 +21,7 @@ import getOrderTotal from '../controllers/order/getOrderTotal.js';
 import addOrder from '../controllers/order/addOrder.controller.js';
 import getSum from '../controllers/common/getSum.controller.js';
 import cancelOrder from '../controllers/order/cancelOrder.controller.js';
+// import createSteadfastDelivery from '../controllers/order/createSteadfastDelivery.controller.js';
 
 // Initialize a new router
 const router = express.Router();
@@ -80,6 +81,9 @@ router.put(
 router.put('/copy/:id', protect, duplicateDocument(config.DUPLICATE_OPTIONS));
 
 router.post('/cart-total', protect, getOrderTotal);
+
+// Steadfast delivery endpoint
+// router.post('/steadfast-delivery', protect, hasPermission(['add_order']), createSteadfastDelivery);
 
 // Export the router
 export default router;

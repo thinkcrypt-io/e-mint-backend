@@ -37,6 +37,9 @@ const settings: any = {
 		type: 'uri',
 		title: 'Order Items',
 		sort: true,
+		populate: {
+			path: 'items',
+		},
 		// filter: {
 		// 	name: 'items',
 		// 	field: 'items_in',

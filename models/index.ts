@@ -364,3 +364,8 @@ export { default as fieldConfigConfig } from '../library/models/fieldconfig/conf
 export { default as Credential } from './credentials/model.js';
 export { default as credentialSettings } from './credentials/settings.js';
 export { default as credentialConfig } from './credentials/config.js';
+
+//Vacancies
+export { default as Vacancy } from './vacancy/model.js';
+export { default as vacancySettings } from './vacancy/settings.js';
+export { default as vacancyConfig } from './vacancy/config.js';
