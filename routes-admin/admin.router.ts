@@ -158,6 +158,7 @@ import {
 	Vacancy,
 	vacancySettings,
 	vacancyConfig,
+	adminInvoiceConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
@@ -270,6 +271,8 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
+		route: 'sidebarcategories',
+		frontendConfig: adminInvoiceConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
 	}),
 );

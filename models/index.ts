@@ -191,6 +191,7 @@ export { default as MeetingType } from './meeting/meeting.types.js';
 
 //Admin Invoice
 export { default as AdminInvoice, adminInvoiceSettings } from './payment/adminInvoice.model.js';
+export { default as adminInvoiceConfig } from './payment/adminInvoice.config.js';
 
 //Leave
 export { default as Leave } from './employee/leave.model.js';
