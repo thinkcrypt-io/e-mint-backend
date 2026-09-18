@@ -306,6 +306,10 @@ export { default as SidebarCategory } from '../library/models/sidebarcategories/
 export { default as sidebarCategorySettings } from '../library/models/sidebarcategories/settings.js';
 export { default as sidebarCategoryConfig } from '../library/models/sidebarcategories/config.js';
 
+export { default as PaymentMethod } from '../library/models/paymentmethod/model.js';
+export { default as paymentMethodSettings } from '../library/models/paymentmethod/settings.js';
+export { default as paymentMethodConfig } from '../library/models/paymentmethod/config.js';
+
 //Sidebar Items
 export { default as SidebarItem } from '../library/models/sidebaritems/model.js';
 export { default as sidebarItemSettings } from '../library/models/sidebaritems/settings.js';
@@ -370,3 +374,8 @@ export { default as credentialConfig } from './credentials/config.js';
 export { default as Vacancy } from './vacancy/model.js';
 export { default as vacancySettings } from './vacancy/settings.js';
 export { default as vacancyConfig } from './vacancy/config.js';
+
+//Content
+export { default as Content } from './content/model.js';
+export { default as contentSettings } from './content/settings.js';
+export { default as contentConfig } from './content/config.js';

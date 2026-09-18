@@ -1,32 +1,42 @@
-const fields = ['sample'];
+const fields = ['name', 'title', 'slug', 'contentType', 'status', 'content.data', 'tags', 'isActive', 'createdAt'];
 
-const tableFields = ['sample'];
+const tableFields = ['name', 'contentType', 'status', 'slug', 'createdAt'];
 
-const formFields = [
+const formFields: any = [
 	{
-		sectionTitle: 'Sample',
-		fields: ['sample', 'sample', ['sample', 'sample']],
+		sectionTitle: 'Content Details',
+		fields: ['name', 'title', ['slug', 'contentType'], 'status'],
+	},
+	{
+		sectionTitle: 'Data',
+		fields: ['content.data'],
+	},
+	{
+		sectionTitle: 'Additional Info',
+		collapsible: true,
+		fields: ['tags', 'isActive'],
 	},
 ];
 
-const route = {
-	title: 'Route Title',
-	subTitle: 'Route Subtitle',
-	path: 'blogs',
+const route: any = {
+	title: 'Content',
+	subTitle: 'Site content and settings documents, looked up by slug',
+	path: 'contents',
 	button: {
-		title: 'New Blog',
+		title: 'New Content',
 		isModal: true,
+		layout: formFields,
 	},
+	fields: tableFields,
 	export: true,
 
 	menu: [
-		{ type: 'view-server-modal', title: 'View' },
-		{ type: 'view-item', title: 'Go To Post' },
+		{ type: 'view-modal', title: 'View', fields },
 		{
-			title: 'Edit Details',
-			type: 'edit-server-modal',
+			type: 'edit-modal',
+			title: 'Edit',
+			layout: formFields,
 		},
-
 		{ type: 'delete', title: 'Delete' },
 	],
 };

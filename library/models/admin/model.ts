@@ -14,6 +14,9 @@ export type AdminType = {
 	github?: string;
 	preferences?: any;
 	role: Schema.Types.ObjectId;
+	/** URL of this admin's own signature image, used on invoice/bill/receipt
+	 *  PDFs they download with "Include signature" checked. */
+	signature?: string;
 	generateAuthToken?: () => string;
 };
 
@@ -43,6 +46,8 @@ const schema = new Schema<AdminType>(
 		},
 
 		phone: { type: String, trim: true },
+
+		signature: { type: String, trim: true },
 
 		role: {
 			type: mongoose.Schema.Types.ObjectId,

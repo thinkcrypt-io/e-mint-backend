@@ -4,6 +4,7 @@ export const fields = [
 	'description',
 	'items',
 	'status',
+	'docType',
 	'client',
 	'clientEmail',
 	'clientPhone',
@@ -13,10 +14,20 @@ export const fields = [
 	'dueDate',
 	'subTotal',
 	'tax',
+	'shipping',
+	'others',
 	'currency',
 	'total',
+	'paymentMethod',
+	'amountInWords',
+	'bank.accountName',
+	'bank.accountNo',
+	'bank.bankName',
+	'bank.branch',
 	'access',
 	'note',
+	'authorizedBy',
+	'billFromOverride',
 	'addedBy',
 	'createdAt',
 ];
@@ -24,6 +35,7 @@ export const tableFields = [
 	'code',
 	'name',
 	'status',
+	'docType',
 	'currency',
 	'total',
 	'issueDate',
@@ -35,7 +47,7 @@ export const tableFields = [
 export const formFields: any = [
 	{
 		sectionTitle: 'Invoice Details',
-		fields: ['name', 'status', ['issueDate', 'dueDate']],
+		fields: ['name', ['status', 'docType'], ['issueDate', 'dueDate']],
 	},
 	{
 		sectionTitle: 'Items',
@@ -49,7 +61,21 @@ export const formFields: any = [
 	// },
 	{
 		sectionTitle: 'Price & Total',
-		fields: [['subTotal', 'tax'], 'currency', 'total'],
+		fields: [
+			['subTotal', 'tax'],
+			['shipping', 'others'],
+			'currency',
+			'total',
+			'paymentMethod',
+			'amountInWords',
+		],
+	},
+	{
+		sectionTitle: 'Bank Details',
+		fields: [
+			['bank.accountName', 'bank.accountNo'],
+			['bank.bankName', 'bank.branch'],
+		],
 	},
 	{
 		sectionTitle: 'Client/Project',
@@ -58,7 +84,7 @@ export const formFields: any = [
 	{
 		sectionTitle: 'For Internal Use',
 		collapsible: true,
-		fields: ['note', 'access'],
+		fields: ['note', 'access', 'authorizedBy', 'billFromOverride'],
 	},
 ];
 

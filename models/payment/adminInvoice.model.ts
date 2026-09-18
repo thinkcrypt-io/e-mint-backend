@@ -1,5 +1,6 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { Admin, Client, Counter, Project, SettingsType, Software } from '../../imports.js';
+import { loadBillingProfile } from '../../lib/billingProfile.js';
 
 const invoiceStatus = [
 	{ label: 'Draft', value: 'draft' },
@@ -10,6 +11,12 @@ const invoiceStatus = [
 	{ label: 'Overdue', value: 'overdue' },
 ];
 
+const docTypeOptions = [
+	{ label: 'Bill', value: 'bill' },
+	{ label: 'Invoice', value: 'invoice' },
+	{ label: 'Receipt', value: 'receipt' },
+];
+
 const InvoiceItemSchema = new Schema(
 	{
 		name: { type: String, required: true },
@@ -17,6 +24,19 @@ const InvoiceItemSchema = new Schema(
 		quantity: { type: Number, required: true },
 		rate: { type: Number, required: true },
 		total: { type: Number, required: true },
+	},
+	{ _id: false }
+);
+
+// Snapshot of the bank account quoted on this document — deliberately not a
+// ref, so a reissued PDF keeps showing the account that was actually quoted
+// even if the billing profile's default bank changes later.
+const InvoiceBankSchema = new Schema(
+	{
+		accountName: { type: String },
+		accountNo: { type: String },
+		bankName: { type: String },
+		branch: { type: String },
 	},
 	{ _id: false }
 );
@@ -41,6 +61,19 @@ const schema = new Schema<Type>(
 			required: true,
 			default: 'draft',
 		},
+		docType: {
+			type: String,
+			enum: ['bill', 'invoice', 'receipt'],
+			required: true,
+			default: 'invoice',
+		},
+		paymentMethod: { type: String, default: 'Bank Transfer' },
+		bank: { type: InvoiceBankSchema },
+		shipping: { type: Number },
+		others: { type: Number },
+		amountInWords: { type: String }, // manual override; auto-computation is a later work order
+		authorizedBy: { type: String },
+		billFromOverride: { type: String },
 		access: [{ type: Schema.Types.ObjectId, ref: 'Admin' }],
 		currency: { type: String, required: true, defualt: 'BDT' },
 		addedBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
@@ -60,7 +93,9 @@ schema.pre<any>('save', function (next) {
 	next();
 });
 
-// Pre-save hook to auto-increment the invoice number
+// Pre-save hook to auto-increment the invoice number. Bills, invoices and
+// receipts all draw from this one Counter{slug:'invoice'} — do not split it
+// per docType, live invoice codes depend on this sequence staying single.
 schema.pre<any>('save', async function (next) {
 	try {
 		if (this.isNew) {
@@ -70,7 +105,18 @@ schema.pre<any>('save', async function (next) {
 			counter.sequenceValue += 1;
 			await counter.save();
 
-			this.code = `INV-` + counter.sequenceValue.toString().padStart(4, '0');
+			// One prefix for all three docTypes — a bill that later becomes an
+			// invoice and then a receipt keeps the reference it was issued with,
+			// because the code is only ever set here, on creation.
+			let prefix = 'INV-';
+			try {
+				const profile = await loadBillingProfile();
+				prefix = profile.codePrefix?.document || 'INV-';
+			} catch {
+				prefix = 'INV-';
+			}
+
+			this.code = prefix + counter.sequenceValue.toString().padStart(4, '0');
 		}
 
 		next();
@@ -100,6 +146,19 @@ type Type = {
 		total: number;
 	};
 	status: 'draft' | 'sent' | 'paid' | 'partial' | 'cancelled' | 'overdue';
+	docType: 'bill' | 'invoice' | 'receipt';
+	paymentMethod?: string;
+	bank?: {
+		accountName?: string;
+		accountNo?: string;
+		bankName?: string;
+		branch?: string;
+	};
+	shipping?: number;
+	others?: number;
+	amountInWords?: string;
+	authorizedBy?: string;
+	billFromOverride?: string;
 	currency: string;
 	addedBy?: Types.ObjectId;
 	access?: Types.ObjectId[];
@@ -322,6 +381,92 @@ export const adminInvoiceSettings: SettingsType<any> = {
 			default: 'true',
 			sort: true,
 		},
+	},
+	docType: {
+		title: 'Document Type',
+		type: 'string',
+		sort: true,
+		edit: true,
+		required: true,
+		filter: {
+			name: 'docType',
+			field: 'docType_in',
+			type: 'multi-select',
+			label: 'Document Type',
+			title: 'Sort by Document Type',
+			options: docTypeOptions,
+		},
+		schema: {
+			displayInTable: true,
+			type: 'select',
+			options: docTypeOptions,
+			default: true,
+			sort: true,
+		},
+	},
+	paymentMethod: {
+		title: 'Payment Method',
+		type: 'string',
+		edit: true,
+		schema: { displayInTable: false },
+	},
+	// `bank` is a single embedded snapshot, not a repeating list, so it is
+	// exposed as a flat group of dot-path fields (see `inventory.location` in
+	// products.settings.ts for the same pattern) rather than a
+	// section-data-array, which is built for arrays like `items` above.
+	'bank.accountName': {
+		title: 'Bank Account Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	'bank.accountNo': {
+		title: 'Bank Account No.',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	'bank.bankName': {
+		title: 'Bank Name',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	'bank.branch': {
+		title: 'Bank Branch',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	shipping: {
+		title: 'Shipping',
+		type: 'number',
+		edit: true,
+		schema: { displayInTable: false },
+	},
+	others: {
+		title: 'Others',
+		type: 'number',
+		edit: true,
+		schema: { displayInTable: false },
+	},
+	amountInWords: {
+		title: 'Amount In Words',
+		type: 'string',
+		edit: true,
+		schema: { type: 'textarea', helperText: 'Optional manual override; leave blank to auto-compute.' },
+	},
+	authorizedBy: {
+		title: 'Authorized By',
+		type: 'string',
+		edit: true,
+		schema: {},
+	},
+	billFromOverride: {
+		title: 'Bill From Override',
+		type: 'string',
+		edit: true,
+		schema: { type: 'textarea', helperText: 'Rare: overrides the "Bill From" block for this document only.' },
 	},
 	access: {
 		title: 'Access',
