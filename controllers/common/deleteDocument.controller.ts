@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
+import recordHistory from '../../library/functions/recordHistory.function.js';
 
 const deleteDocument = (model: mongoose.Model<any>) => {
 	return async (req: GetByIdRequestType, res: Response): Promise<Response> => {
@@ -20,6 +21,10 @@ const deleteDocument = (model: mongoose.Model<any>) => {
 			if (!data) {
 				return res.status(404).json({ message: 'Document Not Found' });
 			}
+
+			// `findByIdAndDelete` hands back the document as it was, which is the
+			// only chance to record what was removed — after this it is gone.
+			recordHistory({ req, action: 'delete', model: model.modelName, doc: data });
 
 			// Respond with a success message if deletion was successful.
 			return res.status(200).json({ message: `Document Deleted Successfully`, id: id });

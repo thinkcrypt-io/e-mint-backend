@@ -56,6 +56,11 @@ export { default as Config } from './configs/model.js';
 export { default as configSettings } from './configs/settings.js';
 export { default as configConfig } from './configs/config.js';
 
+//History (audit trail)
+export { default as History } from './history/model.js';
+export { default as historySettings } from './history/settings.js';
+export { default as historyConfig } from './history/config.js';
+
 //Settings
 export { default as Setting } from './settings/model.js';
 export { default as settingSettings } from './settings/settings.js';

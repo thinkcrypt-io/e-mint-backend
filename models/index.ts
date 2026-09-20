@@ -91,6 +91,11 @@ export { default as Folder } from '../library/models/folders/model.js';
 export { default as folderSettings } from '../library/models/folders/settings.js';
 export { default as folderConfig } from '../library/models/folders/config.js';
 
+//History (audit trail)
+export { default as History } from '../library/models/history/model.js';
+export { default as historySettings } from '../library/models/history/settings.js';
+export { default as historyConfig } from '../library/models/history/config.js';
+
 //Admin Images
 export { default as imageSettings } from './images/settings.js';
 export { default as imageConfig } from './images/config.js';

@@ -133,6 +133,9 @@ import {
 	Folder,
 	folderSettings,
 	folderConfig,
+	History,
+	historySettings,
+	historyConfig,
 	Prospect,
 	prospectSettings,
 	prospectConfig,
@@ -186,6 +189,7 @@ import {
 	settingConfig,
 	settingSettings,
 } from '../library/models/_index.js';
+import { getDocumentHistory } from '../library/controllers/history/_index.js';
 
 const router = express.Router();
 
@@ -684,6 +688,30 @@ router.use(
 		permission: 'folders',
 		route: 'folders',
 		frontendConfig: folderConfig,
+	}),
+);
+
+// The audit trail. `settings` marks no field as editable, so the generic
+// update route has nothing it is allowed to write — the log is append-only as
+// far as the API is concerned, and entries are created by recordHistory()
+// inside the CRUD controllers rather than by anything routed here.
+router.use(
+	'/history',
+	defineRoutes({
+		Model: History,
+		settings: historySettings,
+		permission: 'history',
+		route: 'history',
+		frontendConfig: historyConfig,
+		customRoutes: [
+			{
+				path: '/g/document/:id',
+				method: 'get',
+				controller: getDocumentHistory,
+				middlewares: [adminProtect],
+				description: "One record's own activity timeline, newest first",
+			},
+		],
 	}),
 );
 

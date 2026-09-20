@@ -25,6 +25,7 @@ type Config = {
 	EDITS: {
 		model: mongoose.Model<any>;
 		allowEdits: string[];
+		settings: Record<string, any>;
 	};
 	FILTER_LIST: {
 		filters: Filter[];
@@ -99,6 +100,9 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 		EDITS: {
 			model: model,
 			allowEdits: configKeys.filter(key => config[key].edit) || [],
+			// Carried through so the history log can title a changed field the way
+			// the UI does ('Business Name', not 'businessName').
+			settings: config,
 		},
 		FILTER_LIST: {
 			filters: configKeys.filter(key => config[key].filter).map(key => config[key].filter) || [],

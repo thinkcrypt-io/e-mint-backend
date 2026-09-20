@@ -9,6 +9,7 @@ type SidebarItemType = {
 	path: string;
 	startOfSection?: boolean;
 	sectionTitle?: string;
+	sectionIcon?: string;
 	isLocked?: boolean;
 	permission?: {
 		hide?: boolean;
@@ -26,7 +27,7 @@ const getSidebar = () => {
 			const sidebarData = await SidebarItem.find({
 				isActive: true,
 			})
-				.populate({ path: 'category', select: 'name priority isActive' })
+				.populate({ path: 'category', select: 'name priority isActive icon' })
 				.sort({ priority: -1 }); // Sort by item priority first (descending - higher priority first)
 
 			// Group items by category and sort categories by priority
@@ -79,6 +80,7 @@ const getSidebar = () => {
 					if (itemIndex === 0) {
 						sidebarItem.startOfSection = true;
 						sidebarItem.sectionTitle = category.name;
+						sidebarItem.sectionIcon = category.icon || 'folder';
 					}
 
 					// If not permissionProtected, add item directly
