@@ -174,6 +174,7 @@ import downloadInvoicePdf from './invoice/downloadInvoicePdf.controller.js';
 import getPublicInvoice from './invoice/getPublicInvoice.controller.js';
 import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
 import { listAllCollections } from '../library/index.js';
+import adminInvitationRoute from './admin-invitation/adminInvitation.route.js';
 import {
 	Config,
 	configConfig,
@@ -189,6 +190,7 @@ import {
 const router = express.Router();
 
 router.use('/auth', adminAuthRoute);
+router.use('/admin-invitations', adminInvitationRoute);
 router.use('/shops', adminShopRoute);
 router.use('/sellers', adminSellerRoute);
 router.use('/packages', packagesRoute);

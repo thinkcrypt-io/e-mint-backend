@@ -114,6 +114,24 @@ const settings: SettingsType<any> = {
 		min: 8,
 		exclude: true,
 	},
+
+	invitationStatus: {
+		sort: true,
+		title: 'Invitation Status',
+		type: 'text',
+		schema: {
+			displayInTable: true,
+		},
+		filter: {
+			name: 'invitationStatus',
+			field: 'invitationStatus_in',
+			type: 'multi-select',
+			label: 'Invitation Status',
+			title: 'Filter by invitation status',
+			category: 'distinct',
+			key: 'invitationStatus',
+		},
+	},
 };
 
 export default settings;

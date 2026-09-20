@@ -23,6 +23,12 @@ export type AdminType = {
 	modalLayout?: 'modal' | 'drawer';
 	resetPasswordToken?: string;
 	resetPasswordExpires?: Date;
+	/** Lifecycle of an admin created via the invite flow: 'pending' until the
+	 *  invitee accepts, 'cancelled' if the invite is withdrawn while still
+	 *  pending, 'accepted' once they've set their own name/phone/password. */
+	invitationStatus?: 'pending' | 'accepted' | 'cancelled';
+	invitationToken?: string;
+	invitationExpires?: Date;
 	generateAuthToken?: () => string;
 };
 
@@ -31,7 +37,16 @@ const schema = new Schema<AdminType>(
 		name: {
 			type: String,
 			trim: true,
-			required: [true, 'Name is required'],
+			// Optional for a pending or cancelled invite (the invitee may never
+			// have chosen a name) — required once accepted, and for every admin
+			// created the old direct way (invitationStatus left at its
+			// 'accepted' default).
+			required: [
+				function (this: any) {
+					return this.invitationStatus === 'accepted';
+				},
+				'Name is required',
+			],
 		},
 
 		username: {
@@ -87,6 +102,15 @@ const schema = new Schema<AdminType>(
 
 		resetPasswordToken: { type: String, select: false },
 		resetPasswordExpires: { type: Date, select: false },
+
+		invitationStatus: {
+			type: String,
+			enum: ['pending', 'accepted', 'cancelled'],
+			default: 'accepted',
+		},
+		invitationToken: { type: String, select: false },
+		invitationExpires: { type: Date, select: false },
+
 		preferences: {
 			categories: [String],
 			items: [String],
@@ -190,10 +214,10 @@ schema.methods.checkPassword = async function (password: string) {
 };
 
 schema.pre<any>('save', async function (next) {
-	// if the password is not modified, skip this middleware
+	// A pending invite is created with no password at all — nothing to hash
+	// yet (the invitee sets one on accept, which re-triggers this hook).
+	if (!this.isModified('password') || !this.password) return next();
 	const salt = await bcrypt.genSalt(10);
-	if (!this.isModified('password')) return next();
-	// hash the password
 	const hashedPassword = await hash(this.password, salt);
 	this.password = hashedPassword;
 	next();
