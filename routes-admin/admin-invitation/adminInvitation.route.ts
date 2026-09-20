@@ -10,10 +10,13 @@ import { adminProtect as protect, adminPermissions as hasPermission } from '../.
 
 const router = express.Router();
 
-// Authenticated: managing invitations from the admin panel. Resend/cancel are
-// PUT (not POST) so the admins table's generic "update-api" row-action menu
+// Authenticated: managing invitations from the admin panel.
+// Resend is PUT so the admins table's generic "update-api" row-action menu
 // item (useUpdateByIdMutation, which always PUTs `${path}/${id}`) can drive
-// them by passing `${admin._id}/resend` / `${admin._id}/cancel` as the `id`.
+// it by passing `${admin._id}/resend` as the `id`.
+// Cancel is DELETE so the table's "delete" row-action (the same confirmation
+// UI as every other delete, useDeleteByIdMutation, which always DELETEs
+// `${path}/${id}`) can drive it the same way with `${admin._id}/cancel`.
 router.post('/invite', protect, hasPermission(['create-admin-invitation']), inviteAdminController);
 router.put(
 	'/:id/resend',
@@ -21,7 +24,7 @@ router.put(
 	hasPermission(['edit-admin-invitation']),
 	resendInvitationController
 );
-router.put(
+router.delete(
 	'/:id/cancel',
 	protect,
 	hasPermission(['delete-admin-invitation']),
