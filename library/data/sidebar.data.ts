@@ -463,6 +463,20 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Website Settings',
+		// Site content and settings documents, looked up by slug — the
+		// `billing-profile` document lives here, which is what supplies the
+		// company name, address and web address printed on invoices.
+		title: 'Content',
+		href: '/contents',
+		icon: 'blog',
+		path: 'contents',
+		permission: {
+			key: 'content',
+			label: 'Site Content',
+			options: ['create', 'view', 'edit', 'delete'],
+		},
+	},
+	{
 		title: 'Featured Projects',
 		href: '/portfolios',
 		icon: 'customer',

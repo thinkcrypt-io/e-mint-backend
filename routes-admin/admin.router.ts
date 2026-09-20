@@ -171,6 +171,7 @@ import { getAdminPermissionList, getAdminSidebar, trackView } from '../controlle
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
 import downloadInvoicePdf from './invoice/downloadInvoicePdf.controller.js';
+import getPublicInvoice from './invoice/getPublicInvoice.controller.js';
 import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
 import { listAllCollections } from '../library/index.js';
 import {
@@ -288,6 +289,13 @@ router.use(
 				controller: downloadInvoicePdf,
 				middlewares: [adminProtect],
 				description: 'Download an invoice/bill/receipt as PDF',
+			},
+			{
+				path: '/public/:id',
+				method: 'get',
+				controller: getPublicInvoice,
+				middlewares: [],
+				description: 'Public read-only view of an invoice/bill/receipt (no auth) — the shareable client link',
 			},
 		],
 	}),

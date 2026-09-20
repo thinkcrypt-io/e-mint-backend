@@ -417,6 +417,13 @@ const meetingSettings: SettingsType<any> = {
 		type: 'string',
 		schema: { type: 'file' },
 	},
+	attachments: {
+		title: 'Attachments',
+		edit: true,
+
+		type: 'array-string',
+		schema: { type: 'file-array' },
+	},
 	fileUrl: {
 		title: 'File Url',
 		type: 'uri',

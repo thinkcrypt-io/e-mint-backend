@@ -42,7 +42,7 @@ export * from './theme/index.js';
 export { default as updatePreference } from './updatePreference.contoller.js';
 
 //20
-export { default as getSchema } from './getSchema.controller.js';
+export { default as getSchema } from '../../library/controllers/config/getSchema.controller.js';
 
 //21
 export { default as getModelKeys } from './getModelKeys.controller.js';
@@ -60,7 +60,7 @@ export { default as getDocumentBySlug } from './getBySlug.controller.js';
 export { default as getConfig } from './getConfig.controller.js';
 
 //26
-export { default as convertType } from './convertType.js';
+export { default as convertType } from '../../library/functions/convertType.js';
 
 //27
 export { default as getAdminSidebar } from './getAdminSidebar.data.js';
