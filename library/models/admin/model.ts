@@ -14,6 +14,15 @@ export type AdminType = {
 	github?: string;
 	preferences?: any;
 	role: Schema.Types.ObjectId;
+	/** URL of this admin's own signature image, used on invoice/bill/receipt
+	 *  PDFs they download with "Include signature" checked. */
+	signature?: string;
+	/** Desktop layout for create/edit forms: a centered dialog, or a panel
+	 *  sliding in from the right. Mobile always uses the bottom sheet
+	 *  regardless of this. Per-admin, set from the admin's own Settings page. */
+	modalLayout?: 'modal' | 'drawer';
+	resetPasswordToken?: string;
+	resetPasswordExpires?: Date;
 	generateAuthToken?: () => string;
 };
 
@@ -44,6 +53,14 @@ const schema = new Schema<AdminType>(
 
 		phone: { type: String, trim: true },
 
+		signature: { type: String, trim: true },
+
+		modalLayout: {
+			type: String,
+			enum: ['modal', 'drawer'],
+			default: 'drawer',
+		},
+
 		role: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'AdminRole',
@@ -67,6 +84,9 @@ const schema = new Schema<AdminType>(
 			minlength: 8,
 			maxlength: 1024,
 		},
+
+		resetPasswordToken: { type: String, select: false },
+		resetPasswordExpires: { type: Date, select: false },
 		preferences: {
 			categories: [String],
 			items: [String],

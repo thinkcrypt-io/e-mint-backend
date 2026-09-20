@@ -158,11 +158,20 @@ import {
 	Vacancy,
 	vacancySettings,
 	vacancyConfig,
+	adminInvoiceConfig,
+	Content,
+	contentSettings,
+	contentConfig,
+	PaymentMethod,
+	paymentMethodSettings,
+	paymentMethodConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
+import downloadInvoicePdf from './invoice/downloadInvoicePdf.controller.js';
+import getPublicInvoice from './invoice/getPublicInvoice.controller.js';
 import sendWhatsapp from '../controllers/common/sendWhatsapp.controller.js';
 import { listAllCollections } from '../library/index.js';
 import {
@@ -270,7 +279,25 @@ router.use(
 		Model: AdminInvoice,
 		settings: adminInvoiceSettings,
 		permission: 'invoices',
+		route: 'invoices',
+		frontendConfig: adminInvoiceConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+		customRoutes: [
+			{
+				path: '/:id/pdf',
+				method: 'get',
+				controller: downloadInvoicePdf,
+				middlewares: [adminProtect],
+				description: 'Download an invoice/bill/receipt as PDF',
+			},
+			{
+				path: '/public/:id',
+				method: 'get',
+				controller: getPublicInvoice,
+				middlewares: [],
+				description: 'Public read-only view of an invoice/bill/receipt (no auth) — the shareable client link',
+			},
+		],
 	}),
 );
 
@@ -607,6 +634,28 @@ router.use(
 		permission: 'vacancy',
 		route: 'vacancies',
 		frontendConfig: vacancyConfig,
+	}),
+);
+
+router.use(
+	'/contents',
+	defineRoutes({
+		Model: Content,
+		settings: contentSettings,
+		permission: 'content',
+		route: 'contents',
+		frontendConfig: contentConfig,
+	}),
+);
+
+router.use(
+	'/paymentmethods',
+	defineRoutes({
+		Model: PaymentMethod,
+		settings: paymentMethodSettings,
+		permission: 'paymentmethods',
+		route: 'paymentmethods',
+		frontendConfig: paymentMethodConfig,
 	}),
 );
 

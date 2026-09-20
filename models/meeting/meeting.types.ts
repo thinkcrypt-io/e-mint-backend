@@ -68,6 +68,7 @@ type MeetingType = DocumentBaseType & {
 
 	// Attachments and recording details
 	file: String;
+	attachments?: String[];
 	fileUrl?: String;
 	recordingUrl: { type: String };
 

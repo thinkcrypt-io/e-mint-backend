@@ -11,6 +11,123 @@ import { getDistinctFields } from '../../imports.js';
 const router = express.Router();
 
 const uploadFile = multer({ dest: 'from/' });
+const uploadMultipleFiles = multer({ dest: 'from/', limits: { fileSize: 10 * 1024 * 1024 } });
+
+const getS3 = (): AWS.S3 => {
+	AWS.config.update({
+		region: process.env.AWS_REGION,
+		accessKeyId: process.env.AWS_ACCESS_KEY,
+		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+		signatureVersion: 'v4',
+	});
+	return new AWS.S3();
+};
+
+// Shared per-file pipeline: convert to webp, upload to S3, resolve/create the target
+// Folder, and save the File document. Used by both the single-file and multi-file routes.
+const processAndUploadImage = async (
+	file: Express.Multer.File,
+	folder: string
+): Promise<any> => {
+	const s3 = getS3();
+
+	const fileName = `${Date.now()}_${file.originalname}`;
+
+	const data = await sharp(file.path).webp({ quality: 50, force: true, alphaQuality: 80 }).toBuffer();
+
+	const params: any = {
+		Bucket: process.env.S3_BUCKET_NAME,
+		Body: data,
+		Key: fileName,
+	};
+
+	const uploaded: any = await s3.upload(params).promise();
+
+	const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
+	uploaded.size = metadata.ContentLength;
+
+	let findFolder = await Folder.findOne({ slug: folder });
+
+	if (!findFolder) {
+		const newFolder = new Folder({ name: folder, slug: folder });
+		findFolder = await newFolder.save();
+	}
+
+	const newFile = new File({
+		name: uploaded.Key,
+		url: uploaded.Location,
+		key: uploaded.Key,
+		type: file.mimetype,
+		fileType: 'image',
+		fileFolder: findFolder._id,
+		bucket: uploaded.Bucket,
+		size: uploaded.size,
+		folder: folder,
+	});
+
+	return newFile.save();
+};
+
+// Makes the (near-)white paper background behind a signature transparent,
+// scaling alpha by pixel luminance so dark ink stays opaque and white
+// background disappears, with a soft falloff at the anti-aliased edges.
+const stripWhiteBackground = async (imagePath: string): Promise<Buffer> => {
+	const { data, info } = await sharp(imagePath)
+		.ensureAlpha()
+		.raw()
+		.toBuffer({ resolveWithObject: true });
+
+	const { width, height, channels } = info;
+
+	for (let i = 0; i < data.length; i += channels) {
+		const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+		const alpha = 255 - luminance;
+		data[i + 3] = Math.min(data[i + 3], Math.round(alpha));
+	}
+
+	return sharp(data, { raw: { width, height, channels } })
+		.webp({ quality: 90, alphaQuality: 100 })
+		.toBuffer();
+};
+
+// Uploads a signature image straight to S3 without creating a File/media-library
+// record — signatures are personal to the admin account and shouldn't show up
+// in the shared media library or be reusable as generic uploads.
+router.post(
+	'/signature',
+	protect,
+	uploadFile.single('image'),
+	async (req: any, res: Response) => {
+		try {
+			if (!req.file) {
+				return res.status(400).json({ message: 'No image file uploaded' });
+			}
+
+			const s3 = getS3();
+			const fileName = `signatures/${req.user._id}_${Date.now()}.webp`;
+
+			const data = await stripWhiteBackground(req.file.path);
+
+			const uploaded: any = await s3
+				.upload({
+					Bucket: process.env.S3_BUCKET_NAME!,
+					Body: data,
+					Key: fileName,
+				})
+				.promise();
+
+			return res.status(200).json({
+				message: 'Signature uploaded successfully',
+				data: { url: uploaded.Location, key: uploaded.Key },
+			});
+		} catch (e: any) {
+			console.error(e.message);
+			return res.status(500).json({ message: e.message });
+		} finally {
+			if (req?.file?.path) fs.unlink(req.file.path, () => {});
+		}
+	}
+);
 
 const uploadVideo = multer({
 	dest: 'from/',
@@ -81,76 +198,60 @@ router.delete('/:key', async (req: Request, res: Response) => {
 // uploads a file to s3
 router.post('/', protect, uploadFile.single('image'), async (req: any, res: Response) => {
 	try {
-		AWS.config.update({
-			region: process.env.AWS_REGION,
-			accessKeyId: process.env.AWS_ACCESS_KEY,
-			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-			signatureVersion: 'v4',
-		});
-
-		const s3 = new AWS.S3();
-
-		const fileName = `${Date.now()}_${req?.file?.originalname}`;
-
-		const data = await sharp(req?.file?.path)
-			.webp({ quality: 50, force: true, alphaQuality: 80 })
-			.toBuffer();
-
-		var params: any = {
-			Bucket: process.env.S3_BUCKET_NAME,
-			Body: data,
-			Key: fileName,
-		};
-
-		s3.upload(params, async (err: any, data: any): Promise<any> => {
-			if (err) return res.status(500).json({ message: err.message });
-			if (data) {
-				// Get metadata of the uploaded file
-				const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
-
-				// Add the size to the response
-				data.size = metadata.ContentLength;
-
-				const folder = req?.body?.folder || 'default';
-
-				let findFolder = await Folder.findOne({ slug: folder });
-
-				if (!findFolder) {
-					const newFolder = new Folder({
-						name: folder,
-						slug: folder,
-					});
-					findFolder = await newFolder.save();
-				}
-
-				const newFile = new File({
-					name: data.Key,
-					url: data.Location,
-					key: data.Key,
-					type: req?.file?.mimetype,
-					fileType: 'image',
-					fileFolder: findFolder._id,
-					bucket: data.Bucket,
-					size: data.size,
-					folder: folder,
-				});
-
-				const saved = await newFile.save();
-
-				return res
-					.status(200)
-					.json({ message: 'File uploaded successfully', data: saved, file: data });
-			}
-		});
-
-		if (req?.file?.path) {
-			fs.unlinkSync(req.file.path);
+		if (!req.file) {
+			return res.status(400).json({ message: 'No image file uploaded' });
 		}
+
+		const folder = req?.body?.folder || 'default';
+		const saved = await processAndUploadImage(req.file, folder);
+
+		return res.status(200).json({ message: 'File uploaded successfully', data: saved });
 	} catch (e: any) {
 		console.error(e.message);
 		return res.status(500).json({ message: e.message });
+	} finally {
+		if (req?.file?.path) fs.unlink(req.file.path, () => {});
 	}
 });
+
+// uploads multiple images to s3, partial success allowed
+router.post(
+	'/multiple',
+	protect,
+	uploadMultipleFiles.array('images', 20),
+	async (req: any, res: Response) => {
+		try {
+			const files = (req.files as Express.Multer.File[]) || [];
+			const folder = req?.body?.folder || 'default';
+
+			const results = await Promise.all(
+				files.map(async (file) => {
+					try {
+						const saved = await processAndUploadImage(file, folder);
+						return { originalName: file.originalname, ok: true, data: saved };
+					} catch (e: any) {
+						return { originalName: file.originalname, ok: false, error: e.message };
+					} finally {
+						if (file.path) fs.unlink(file.path, () => {});
+					}
+				})
+			);
+
+			const uploaded = results.filter((r) => r.ok).length;
+			const failed = results.length - uploaded;
+
+			return res.status(200).json({
+				message: `${uploaded} file(s) uploaded, ${failed} failed`,
+				uploaded,
+				failed,
+				results,
+			});
+		} catch (e: any) {
+			console.error(e.message);
+			return res.status(500).json({ message: e.message });
+		}
+	}
+);
 
 router.post('/file', protect, uploadFile.single('file'), async (req: Request, res: Response) => {
 	try {

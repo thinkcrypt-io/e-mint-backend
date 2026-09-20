@@ -3,7 +3,7 @@ import Admin from '../../../library/models/admin/model.js';
 import { Response } from 'express';
 
 const adminUpdateSelf = async (req: any, res: Response): Promise<Response> => {
-	const allowEdits = ['name', 'phone', 'username'];
+	const allowEdits = ['name', 'phone', 'username', 'signature', 'modalLayout'];
 	try {
 		const id: string = req.user._id;
 		const data: any = await Admin.findById(id);

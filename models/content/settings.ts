@@ -1,5 +1,140 @@
 import { SettingsType } from '../../imports.js';
 
-const settings: SettingsType<any> = {};
+const contentTypeOptions = [
+	{ label: 'Page', value: 'page' },
+	{ label: 'Blog', value: 'blog' },
+	{ label: 'Article', value: 'article' },
+	{ label: 'Product', value: 'product' },
+	{ label: 'Service', value: 'service' },
+	{ label: 'Portfolio', value: 'portfolio' },
+	{ label: 'Testimonial', value: 'testimonial' },
+	{ label: 'Team', value: 'team' },
+	{ label: 'FAQ', value: 'faq' },
+	{ label: 'News', value: 'news' },
+	{ label: 'Event', value: 'event' },
+	{ label: 'Gallery', value: 'gallery' },
+	{ label: 'Video', value: 'video' },
+	{ label: 'Document', value: 'document' },
+	{ label: 'Banner', value: 'banner' },
+	{ label: 'Popup', value: 'popup' },
+	{ label: 'Footer', value: 'footer' },
+	{ label: 'Header', value: 'header' },
+	{ label: 'Sidebar', value: 'sidebar' },
+	{ label: 'Widget', value: 'widget' },
+	{ label: 'Form', value: 'form' },
+	{ label: 'Custom', value: 'custom' },
+];
+
+const statusOptions = [
+	{ label: 'Draft', value: 'draft' },
+	{ label: 'Published', value: 'published' },
+	{ label: 'Scheduled', value: 'scheduled' },
+	{ label: 'Archived', value: 'archived' },
+	{ label: 'Trash', value: 'trash' },
+];
+
+const settings: SettingsType<any> = {
+	name: {
+		title: 'Name',
+		type: 'string',
+		sort: true,
+		search: true,
+		edit: true,
+		required: true,
+		trim: true,
+		schema: { displayInTable: true, isRequired: true, sort: true, default: true },
+	},
+	title: {
+		title: 'Title',
+		type: 'string',
+		search: true,
+		edit: true,
+		trim: true,
+		schema: { sort: true },
+	},
+	slug: {
+		title: 'Slug',
+		type: 'string',
+		search: true,
+		edit: true,
+		trim: true,
+		schema: {
+			displayInTable: true,
+			type: 'slug',
+			helperText: 'Used to look up this document by code, e.g. "billing-profile". Auto-generated from Name if left blank.',
+			default: true,
+		},
+	},
+	contentType: {
+		title: 'Content Type',
+		type: 'string',
+		sort: true,
+		edit: true,
+		required: true,
+		filter: {
+			name: 'contentType',
+			field: 'contentType_in',
+			type: 'multi-select',
+			label: 'Content Type',
+			title: 'Filter by Content Type',
+			options: contentTypeOptions,
+		},
+		schema: {
+			displayInTable: true,
+			type: 'select',
+			options: contentTypeOptions,
+			default: true,
+			sort: true,
+		},
+	},
+	'content.data': {
+		title: 'Content Data',
+		type: 'object',
+		edit: true,
+		schema: {
+			type: 'object',
+			helperText: 'Raw JSON payload for this content document.',
+		},
+	},
+	tags: {
+		title: 'Tags',
+		type: 'array',
+		edit: true,
+		schema: { type: 'tag' },
+	},
+	status: {
+		title: 'Status',
+		type: 'string',
+		sort: true,
+		edit: true,
+		required: true,
+		filter: {
+			name: 'status',
+			field: 'status_in',
+			type: 'multi-select',
+			label: 'Status',
+			title: 'Filter by Status',
+			options: statusOptions,
+		},
+		schema: {
+			displayInTable: true,
+			type: 'select',
+			options: statusOptions,
+			default: true,
+			sort: true,
+		},
+	},
+	isActive: {
+		title: 'Active',
+		type: 'boolean',
+		edit: true,
+		schema: { type: 'checkbox' },
+	},
+	createdAt: {
+		title: 'Created At',
+		type: 'date',
+		schema: { displayInTable: true, type: 'date', tableType: 'date-only' },
+	},
+};
 
 export default settings;

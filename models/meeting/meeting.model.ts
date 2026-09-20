@@ -81,6 +81,7 @@ const MinutesSchema = new Schema<any>(
 
 		// Attachments and recording details
 		file: { type: String },
+		attachments: [String],
 		fileUrl: { type: String },
 		recordingUrl: { type: String },
 

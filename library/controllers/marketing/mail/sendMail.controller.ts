@@ -8,9 +8,10 @@ type SendMailProps = {
 	cc?: string;
 	bcc?: string;
 	attachment?: string;
+	html?: string;
 };
 
-const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendMailProps) => {
+const sendMail = async ({ to, subject, body, title, cc, bcc, attachment, html }: SendMailProps) => {
 	try {
 		var transporter = nodemailer.createTransport({
 			host: process.env.MAIL_HOST,
@@ -29,6 +30,7 @@ const sendMail = async ({ to, subject, body, title, cc, bcc, attachment }: SendM
 			...(bcc && { bcc: bcc }),
 			subject: subject,
 			text: body,
+			...(html && { html }),
 			...(attachment && { attachments: [{ fileName: 'Attachment', path: attachment }] }),
 		};
 
