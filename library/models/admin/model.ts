@@ -21,6 +21,8 @@ export type AdminType = {
 	 *  sliding in from the right. Mobile always uses the bottom sheet
 	 *  regardless of this. Per-admin, set from the admin's own Settings page. */
 	modalLayout?: 'modal' | 'drawer';
+	resetPasswordToken?: string;
+	resetPasswordExpires?: Date;
 	generateAuthToken?: () => string;
 };
 
@@ -82,6 +84,9 @@ const schema = new Schema<AdminType>(
 			minlength: 8,
 			maxlength: 1024,
 		},
+
+		resetPasswordToken: { type: String, select: false },
+		resetPasswordExpires: { type: Date, select: false },
 		preferences: {
 			categories: [String],
 			items: [String],
