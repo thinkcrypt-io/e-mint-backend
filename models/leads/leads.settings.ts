@@ -340,7 +340,7 @@ const settings: SettingsType<Type> = {
 		title: 'Follow Ups',
 		type: 'array',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	source: {
@@ -432,7 +432,7 @@ const settings: SettingsType<Type> = {
 		title: 'Notes',
 		type: 'array-string',
 		schema: {
-			type: 'tags',
+			type: 'tag',
 		},
 	},
 	isDeleted: {
