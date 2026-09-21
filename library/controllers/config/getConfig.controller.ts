@@ -32,6 +32,11 @@ const getConfig = ({
 					keys.push(key);
 					const constructSchema = {
 						label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
+						// The name is what a row *is* — every other column describes it.
+						// Defaulted here rather than repeated across ~80 settings files,
+						// and a model that disagrees can set `bold: false` in its schema
+						// (the spread below wins over this).
+						bold: key === 'name',
 						type: settings[key]?.schema?.type
 							? settings[key].schema.type
 							: convertType(settings[key].type),

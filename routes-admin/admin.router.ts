@@ -168,8 +168,41 @@ import {
 	PaymentMethod,
 	paymentMethodSettings,
 	paymentMethodConfig,
+	HerokuAccount,
+	herokuSettings,
+	herokuConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
+import { adminPermissions } from '../middleware/index.js';
+import {
+	verifyHerokuKey,
+	createHerokuAccount,
+	updateHerokuKey,
+	getHerokuAccount,
+	getHerokuActivity,
+	getHerokuBilling,
+	getHerokuUsage,
+	getHerokuApps,
+	getHerokuApp,
+	getHerokuAppResources,
+	getHerokuConfigVars,
+	updateHerokuConfigVars,
+	downloadHerokuConfigVars,
+	getHerokuReleases,
+	getHerokuCurrentRelease,
+	rollbackHerokuRelease,
+	redeployHerokuApp,
+	getHerokuBuilds,
+	createHerokuBuild,
+	getHerokuDynos,
+	restartHerokuApp,
+	restartHerokuDyno,
+	updateHerokuFormation,
+	setHerokuMaintenance,
+	renameHerokuApp,
+	destroyHerokuApp,
+	getHerokuLogs,
+} from '../controllers/heroku/index.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
@@ -880,6 +913,222 @@ router.use(
 		route: 'credentials',
 		frontendConfig: credentialConfig,
 		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+	}),
+);
+
+router.use(
+	'/herokus',
+	defineRoutes({
+		Model: HerokuAccount,
+		settings: herokuSettings,
+		permission: 'heroku',
+		route: 'herokus',
+		frontendConfig: herokuConfig,
+		replaceController: { post: createHerokuAccount },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+		customRoutes: [
+			{
+				path: '/verify',
+				method: 'post',
+				controller: verifyHerokuKey,
+				middlewares: [adminProtect, adminPermissions(['create-heroku'])],
+				description: 'Pre-flight check a Heroku API key before connecting an account',
+			},
+			{
+				path: '/:id/key',
+				method: 'put',
+				controller: updateHerokuKey,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Rotate a stored Heroku account key',
+			},
+			{
+				path: '/:id/account',
+				method: 'get',
+				controller: getHerokuAccount,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Live Heroku account snapshot + rate limit',
+			},
+			{
+				path: '/:id/apps',
+				method: 'get',
+				controller: getHerokuApps,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'List apps visible to a Heroku account',
+			},
+			{
+				path: '/:id/apps/:app',
+				method: 'get',
+				controller: getHerokuApp,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'One Heroku app detail',
+			},
+			{
+				path: '/:id/apps/:app/config-vars',
+				method: 'get',
+				controller: getHerokuConfigVars,
+				middlewares: [adminProtect, adminPermissions(['view-heroku-config'])],
+				description: 'Read an app config vars',
+			},
+			{
+				path: '/:id/apps/:app/config-vars/download',
+				method: 'get',
+				controller: downloadHerokuConfigVars,
+				// No dedicated 'download' slot on the Permission model (create/view/edit/
+				// delete only), so 'create-heroku-config' stands in. The verb itself cannot
+				// be relabelled — getAdminPermissionList builds each label as
+				// `"<Verb> " + permission.name` — so the seeded Permission doc is named
+				// 'Heroku Config Download' and the Role UI reads "Create Heroku Config
+				// Download".
+				middlewares: [adminProtect, adminPermissions(['create-heroku-config'])],
+				description: 'Download an app config vars as .env or .json',
+			},
+			{
+				path: '/:id/apps/:app/config-vars',
+				method: 'patch',
+				controller: updateHerokuConfigVars,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku-config'])],
+				description: 'Set or delete app config vars (restarts the app)',
+			},
+
+			//Account-level reads
+			{
+				path: '/:id/billing',
+				method: 'get',
+				controller: getHerokuBilling,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Heroku invoices for an account or team',
+			},
+			{
+				path: '/:id/usage',
+				method: 'get',
+				controller: getHerokuUsage,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Monthly dyno and add-on usage',
+			},
+			{
+				path: '/:id/activity',
+				method: 'get',
+				controller: getHerokuActivity,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Audit feed for an account, optionally one app',
+			},
+
+			//Deploys
+			{
+				path: '/:id/apps/:app/current-release',
+				method: 'get',
+				controller: getHerokuCurrentRelease,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'The release currently serving traffic',
+			},
+			{
+				path: '/:id/apps/:app/releases',
+				method: 'get',
+				controller: getHerokuReleases,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Release history, Range-paginated',
+			},
+			{
+				path: '/:id/apps/:app/releases/:version/rollback',
+				method: 'post',
+				controller: rollbackHerokuRelease,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Re-release the slug behind a past release',
+			},
+			{
+				path: '/:id/apps/:app/redeploy',
+				method: 'post',
+				controller: redeployHerokuApp,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Re-release the current slug',
+			},
+			{
+				path: '/:id/apps/:app/builds',
+				method: 'get',
+				controller: getHerokuBuilds,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Build history',
+			},
+			{
+				path: '/:id/apps/:app/builds',
+				method: 'post',
+				controller: createHerokuBuild,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Build and release from a source tarball URL',
+			},
+
+			//Dynos and scaling
+			{
+				path: '/:id/apps/:app/dynos',
+				method: 'get',
+				controller: getHerokuDynos,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Formation and running dynos',
+			},
+			{
+				path: '/:id/apps/:app/restart',
+				method: 'post',
+				controller: restartHerokuApp,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Restart every dyno',
+			},
+			{
+				path: '/:id/apps/:app/dynos/:dyno/restart',
+				method: 'post',
+				controller: restartHerokuDyno,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Restart one dyno',
+			},
+			{
+				path: '/:id/apps/:app/formation',
+				method: 'patch',
+				controller: updateHerokuFormation,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Scale process types (bills immediately)',
+			},
+
+			//App administration
+			{
+				path: '/:id/apps/:app/maintenance',
+				method: 'patch',
+				controller: setHerokuMaintenance,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Toggle maintenance mode',
+			},
+			{
+				path: '/:id/apps/:app/rename',
+				method: 'patch',
+				controller: renameHerokuApp,
+				middlewares: [adminProtect, adminPermissions(['edit-heroku'])],
+				description: 'Rename an app (breaks its old URL and git remote)',
+			},
+			{
+				path: '/:id/apps/:app',
+				method: 'delete',
+				controller: destroyHerokuApp,
+				middlewares: [adminProtect, adminPermissions(['delete-heroku'])],
+				description: 'Permanently delete an app — requires a typed confirmation',
+			},
+
+			//Resources and logs
+			{
+				path: '/:id/apps/:app/resources',
+				method: 'get',
+				controller: getHerokuAppResources,
+				middlewares: [adminProtect, adminPermissions(['view-heroku'])],
+				description: 'Add-ons, domains and collaborators',
+			},
+			{
+				// `view-heroku-config`, not `view-heroku`: applications print tokens and
+				// connection strings to stdout routinely, so reading logs is reading
+				// secrets. Same privilege as the config vars themselves.
+				path: '/:id/apps/:app/logs',
+				method: 'get',
+				controller: getHerokuLogs,
+				middlewares: [adminProtect, adminPermissions(['view-heroku-config'])],
+				description: 'Recent log lines',
+			},
+		],
 	}),
 );
 

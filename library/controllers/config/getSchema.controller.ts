@@ -10,6 +10,11 @@ const getSchema = ({ settings }: { settings: any }) => {
 					keys.push(key);
 					const constructSchema = {
 						label: settings[key]?.schema?.label ? settings[key].schema.label : settings[key].title,
+						// The name is what a row *is* — every other column describes it,
+						// so it carries the row's weight. Defaulted here rather than
+						// repeated across ~80 settings files; a model that disagrees sets
+						// `bold: false` in its schema (the spread below wins over this).
+						bold: key === 'name',
 						type: settings[key]?.schema?.type
 							? settings[key].schema.type
 							: convertType(settings[key].type),

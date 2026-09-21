@@ -20,6 +20,7 @@ const createTableField = ({ key, field }: { key: string; field: any }): any => {
 		...(field?.copy && { copy: field.copy }),
 		...(field?.tooltip && { tooltip: field.tooltip }),
 		...(field?.displayValue && { displayValue: field.displayValue }),
+		...(field?.bold && { bold: true }),
 	};
 };
 

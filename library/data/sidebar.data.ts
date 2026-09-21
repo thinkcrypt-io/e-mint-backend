@@ -5,6 +5,7 @@ type SidebarItemType = {
 	path: string;
 	startOfSection?: boolean;
 	sectionTitle?: string;
+	sectionIcon?: string;
 	isLocked?: boolean;
 	permission?: {
 		hide?: boolean;
@@ -29,6 +30,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Analytics',
+		sectionIcon: 'bar-chart-3',
 		title: 'Page Views',
 		href: '/views',
 		icon: 'analytics',
@@ -54,6 +56,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Shop Management',
+		sectionIcon: 'store',
 		title: 'Shops',
 		href: '/shops',
 		icon: 'shop',
@@ -89,6 +92,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Data Management',
+		sectionIcon: 'database',
 		title: 'Products',
 		href: '/products',
 		icon: 'product',
@@ -120,6 +124,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Theme',
+		sectionIcon: 'palette',
 		title: 'Themes',
 		href: '/themes',
 		icon: 'product',
@@ -143,6 +148,7 @@ const sidebar: SidebarItemType[] = [
 	},
 	{
 		sectionTitle: 'Sales Management',
+		sectionIcon: 'trending-up',
 		startOfSection: true,
 		title: 'Leads',
 		href: '/leads',
@@ -179,6 +185,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Project Management',
+		sectionIcon: 'folder-kanban',
 		title: 'Projects',
 		href: '/projects',
 		icon: 'project',
@@ -214,6 +221,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Media',
+		sectionIcon: 'image',
 		title: 'Files',
 		href: '/files',
 		icon: 'files',
@@ -228,6 +236,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Admin Management',
+		sectionIcon: 'shield',
 		title: 'Admin List',
 		href: '/admins',
 		icon: 'customer',
@@ -297,6 +306,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Career',
+		sectionIcon: 'briefcase',
 		title: 'Job Posts',
 		href: '/jobposts',
 		icon: 'customer',
@@ -321,6 +331,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Accounts',
+		sectionIcon: 'wallet',
 		title: 'Invoices',
 		href: '/invoices',
 		icon: 'invoice',
@@ -367,6 +378,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'HR',
+		sectionIcon: 'users-round',
 		title: 'Employees',
 		href: '/employees',
 		icon: 'employee',
@@ -391,6 +403,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Framework Doc',
+		sectionIcon: 'book-open',
 		title: 'Components',
 		href: '/components',
 		icon: 'customer',
@@ -415,6 +428,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Planning',
+		sectionIcon: 'clipboard-list',
 		title: 'Project Planning',
 		href: '/plannedprojects',
 		icon: 'customer',
@@ -463,6 +477,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Website Settings',
+		sectionIcon: 'settings',
 		// Site content and settings documents, looked up by slug — the
 		// `billing-profile` document lives here, which is what supplies the
 		// company name, address and web address printed on invoices.
@@ -535,6 +550,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Website Components',
+		sectionIcon: 'puzzle',
 		title: 'Service Offers',
 		href: '/offers',
 		icon: 'customer',
@@ -582,6 +598,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'TC Blog',
+		sectionIcon: 'rss',
 		title: 'Blog',
 		href: '/blogs',
 		icon: 'blog',
@@ -606,6 +623,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Resources',
+		sectionIcon: 'folder-open',
 		title: 'Dev Resources',
 		href: '/resources',
 		icon: 'settings-fill',
@@ -630,6 +648,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Admin Settings',
+		sectionIcon: 'sliders-horizontal',
 		title: 'Sidebar Item',
 		href: '/sidebaritems',
 		icon: 'sidebaritems',
@@ -651,6 +670,7 @@ const sidebar: SidebarItemType[] = [
 	{
 		startOfSection: true,
 		sectionTitle: 'Account Settings',
+		sectionIcon: 'settings-2',
 		title: 'Settings',
 		href: '/settings',
 		icon: 'settings-fill',

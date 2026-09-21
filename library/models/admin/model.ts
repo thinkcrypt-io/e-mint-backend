@@ -199,6 +199,14 @@ const schema = new Schema<AdminType>(
 			credentials: [String],
 			configs: [String],
 			settings: [String],
+			setting: [String],
+
+			servicecategories: [String],
+			contents: [String],
+			paymentmethods: [String],
+			history: [String],
+			formfields: [String],
+			herokus: [String],
 		},
 	},
 

@@ -375,6 +375,12 @@ export { default as Credential } from './credentials/model.js';
 export { default as credentialSettings } from './credentials/settings.js';
 export { default as credentialConfig } from './credentials/config.js';
 
+//Heroku
+export { default as HerokuAccount } from './heroku/model.js';
+export { default as HerokuActivity } from './heroku/activity.model.js';
+export { default as herokuSettings } from './heroku/settings.js';
+export { default as herokuConfig } from './heroku/config.js';
+
 //Vacancies
 export { default as Vacancy } from './vacancy/model.js';
 export { default as vacancySettings } from './vacancy/settings.js';
