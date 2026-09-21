@@ -59,6 +59,47 @@ const schema = new Schema<ProjectType>(
 			type: String,
 			trim: true,
 		},
+
+		/**
+		 * Where this repo is deployed, linked to the console that manages it.
+		 *
+		 * `hostingServer` above is a free-text note and stays — it predates this
+		 * and holds things like "VPS at Hetzner" that have no console. These
+		 * fields are the machine-readable version: set only when the repo is
+		 * linked to an account this admin actually manages.
+		 */
+		hostedPlatform: {
+			type: String,
+			enum: ['vercel', 'heroku'],
+		},
+		/**
+		 * `refPath` rather than a fixed `ref`: the account lives in a different
+		 * collection per platform, and hardcoding one would make the other
+		 * silently unpopulatable.
+		 */
+		hostingAccount: {
+			type: Schema.Types.ObjectId,
+			refPath: 'hostingAccountModel',
+		},
+		hostingAccountModel: {
+			type: String,
+			enum: ['VercelAccount', 'HerokuAccount'],
+		},
+		/** Vercel project id, or Heroku app id. */
+		hostedProjectId: {
+			type: String,
+			trim: true,
+		},
+		/**
+		 * The name the platform's own URLs use — a Heroku app name, a Vercel
+		 * project name. Stored alongside the id because the console routes are
+		 * built from it and a link should survive the account record being
+		 * unreachable.
+		 */
+		hostedProjectName: {
+			type: String,
+			trim: true,
+		},
 		description: {
 			type: String,
 			trim: true,

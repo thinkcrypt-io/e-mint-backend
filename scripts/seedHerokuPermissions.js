@@ -44,13 +44,19 @@ const permissions = [
 	{
 		name: 'Heroku Config Vars',
 		description:
-			'Read and download a connected Heroku app’s live config vars. "Create" here means Download.',
+			'Read, download and change a connected Heroku app’s live config vars. "Create" here means Download.',
 		key: 'heroku-config',
 		isActive: true,
 		options: {
 			create: true,
 			view: true,
-			edit: false,
+			// Must stay true. PATCH /herokus/:id/apps/:app/config-vars guards on
+			// 'edit-heroku-config', and getAdminPermissionList builds the Role UI
+			// from these options — with edit:false the string exists on the route
+			// but can never be granted, so config var writes 403 for every role
+			// except the '*' super admin, silently. Adding the route without
+			// flipping this is the bug that shipped the first time.
+			edit: true,
 			delete: false,
 		},
 	},

@@ -226,6 +226,64 @@ const settings: SettingsType<Type> = {
 		type: 'string',
 	},
 
+	/**
+	 * The hosting link, written as a set by the repo page's Link dialog rather
+	 * than field by field: a platform without an account, or an account without
+	 * a project, is a half-link that no screen can do anything with. All five
+	 * are `edit: true` so one generic PUT can carry the whole set.
+	 */
+	hostedPlatform: {
+		edit: true,
+		title: 'Hosted On',
+		type: 'string',
+		filter: {
+			name: 'hostedPlatform',
+			field: 'hostedPlatform_in',
+			type: 'multi-select',
+			label: 'Hosted On',
+			title: 'Filter by Platform',
+			options: [
+				{ label: 'Vercel', value: 'vercel' },
+				{ label: 'Heroku', value: 'heroku' },
+			],
+		},
+		schema: {
+			type: 'select',
+			options: [
+				{ label: 'Vercel', value: 'vercel' },
+				{ label: 'Heroku', value: 'heroku' },
+			],
+		},
+	},
+	hostingAccount: {
+		edit: true,
+		title: 'Hosting Account',
+		type: 'string',
+		// Populated through `hostingAccountModel`, so there is no single `ref`
+		// to name here — the repo page reads the label and email off the
+		// populated document.
+		populate: {
+			path: 'hostingAccount',
+			select: 'label userEmail accountEmail code',
+		},
+	},
+	hostingAccountModel: {
+		edit: true,
+		title: 'Hosting Account Type',
+		type: 'string',
+	},
+	hostedProjectId: {
+		edit: true,
+		title: 'Hosted Project ID',
+		type: 'string',
+	},
+	hostedProjectName: {
+		edit: true,
+		title: 'Hosted Project',
+		type: 'string',
+		search: true,
+	},
+
 	createdAt: {
 		title: 'Created At',
 		type: 'string',

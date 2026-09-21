@@ -207,6 +207,7 @@ const schema = new Schema<AdminType>(
 			history: [String],
 			formfields: [String],
 			herokus: [String],
+			vercels: [String],
 		},
 	},
 

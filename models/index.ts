@@ -381,6 +381,12 @@ export { default as HerokuActivity } from './heroku/activity.model.js';
 export { default as herokuSettings } from './heroku/settings.js';
 export { default as herokuConfig } from './heroku/config.js';
 
+//Vercel
+export { default as VercelAccount } from './vercel/model.js';
+export { default as VercelActivity } from './vercel/activity.model.js';
+export { default as vercelSettings } from './vercel/settings.js';
+export { default as vercelConfig } from './vercel/config.js';
+
 //Vacancies
 export { default as Vacancy } from './vacancy/model.js';
 export { default as vacancySettings } from './vacancy/settings.js';

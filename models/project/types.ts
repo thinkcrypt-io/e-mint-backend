@@ -19,6 +19,11 @@ type ProjectType = DocumentBaseType & {
 	githubUrl?: string;
 	domain?: string;
 	hostingServer?: string;
+	hostedPlatform?: 'vercel' | 'heroku';
+	hostingAccount?: Types.ObjectId;
+	hostingAccountModel?: 'VercelAccount' | 'HerokuAccount';
+	hostedProjectId?: string;
+	hostedProjectName?: string;
 	description?: string;
 	status?: string;
 	technologies?: string[];

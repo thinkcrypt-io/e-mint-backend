@@ -1,4 +1,7 @@
 import { herokuClient } from './client.js';
+// Shared with the Vercel environment download — the rules it encodes are
+// dotenv's, not Heroku's, and one copy of them is the point.
+import { escapeEnvValue } from '../dotenv/escape.js';
 
 export type ConfigVars = Record<string, string | null>;
 
@@ -39,34 +42,6 @@ const sortedEntries = (vars: ConfigVars): [string, string][] =>
 		.sort()
 		.map(key => [key, vars[key] == null ? '' : String(vars[key])] as [string, string]);
 
-/**
- * Quoted only when it has to be, and single-quoted by preference.
- *
- * dotenv's two quoting modes are not symmetrical, which is the whole reason
- * this is more than a one-liner (verified against dotenv 16.4.5, the version
- * installed here):
- *
- * - Single quotes are fully literal. A `"`, a `#`, a backslash and even a real
- *   newline all survive untouched. Only a `'` cannot appear inside.
- * - Double quotes unescape `\n` and `\r` — and *nothing else*. In particular
- *   `\"` is NOT unescaped, so a `"` inside a double-quoted value comes back
- *   with its backslash still attached.
- *
- * So single quotes are the default, and double quotes are the fallback for the
- * one case they cannot express. A value containing both `'` and `"` lands in
- * the double-quoted branch and survives only because dotenv's matcher is greedy
- * to the last quote on the line — true for the cases tested, but incidental
- * rather than guaranteed. `toJsonFile` is lossless for every input, and is what
- * the UI should point at when a value is unusual.
- */
-const escapeEnvValue = (value: string): string => {
-	if (value === '') return '';
-	if (!/[\s"'#\\]/.test(value)) return value;
-
-	if (!value.includes("'")) return `'${value}'`;
-
-	return `"${value.replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
-};
 
 export const toEnvFile = (app: string, vars: ConfigVars): string => {
 	const header = [

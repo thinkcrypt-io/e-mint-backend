@@ -171,6 +171,9 @@ import {
 	HerokuAccount,
 	herokuSettings,
 	herokuConfig,
+	VercelAccount,
+	vercelSettings,
+	vercelConfig,
 } from '../imports.js';
 import hasAccess from './middlewares/hasAccess.middleware.js';
 import { adminPermissions } from '../middleware/index.js';
@@ -203,6 +206,39 @@ import {
 	destroyHerokuApp,
 	getHerokuLogs,
 } from '../controllers/heroku/index.js';
+
+import {
+	verifyVercelToken,
+	createVercelAccount,
+	updateVercelToken,
+	getVercelAccount,
+	getVercelTeams,
+	getVercelActivity,
+	getVercelUsage,
+	getVercelAccountResources,
+	getVercelProjects,
+	getVercelProject,
+	createVercelProject,
+	updateVercelProject,
+	deleteVercelProject,
+	getVercelProjectResources,
+	getVercelEnv,
+	updateVercelEnv,
+	downloadVercelEnv,
+	revealVercelEnv,
+	getVercelDeployments,
+	getVercelDeployment,
+	createVercelDeployment,
+	promoteVercelDeployment,
+	cancelVercelDeployment,
+	deleteVercelDeployment,
+	getVercelBuildLogs,
+	getVercelDomains,
+	addVercelDomain,
+	verifyVercelDomain,
+	removeVercelDomain,
+} from '../controllers/vercel/index.js';
+import { setRepoHosting } from '../controllers/repo/index.js';
 import { getAdminPermissionList, getAdminSidebar, trackView } from '../controllers/index.js';
 import trackClick from '../controllers/views/trackClick.controller.js';
 import deleteMedia from './file/deleteMedia.controller.js';
@@ -266,7 +302,20 @@ router.use(
 );
 router.use(
 	'/repos',
-	defineRoutes({ Model: Project, settings: projectSettings, permission: 'adminrole' }),
+	defineRoutes({
+		Model: Project,
+		settings: projectSettings,
+		permission: 'adminrole',
+		customRoutes: [
+			{
+				path: '/:id/hosting',
+				method: 'put',
+				controller: setRepoHosting,
+				middlewares: [adminProtect, adminPermissions(['edit-adminrole'])],
+				description: 'Link a repo to a Vercel or Heroku project, or clear the link',
+			},
+		],
+	}),
 );
 
 router.use(
@@ -1127,6 +1176,242 @@ router.use(
 				controller: getHerokuLogs,
 				middlewares: [adminProtect, adminPermissions(['view-heroku-config'])],
 				description: 'Recent log lines',
+			},
+		],
+	}),
+);
+
+router.use(
+	'/vercels',
+	defineRoutes({
+		Model: VercelAccount,
+		settings: vercelSettings,
+		permission: 'vercel',
+		route: 'vercels',
+		frontendConfig: vercelConfig,
+		replaceController: { post: createVercelAccount },
+		injectMiddleware: { getAll: [hasAccess()], getById: [hasAccess()], export: [hasAccess()] },
+		// Every route below accepts an optional `?team=`, falling back to the
+		// account's defaultTeamId. On a personal account both are empty, and an
+		// absent teamId is the correct scope rather than a fallback.
+		customRoutes: [
+			{
+				path: '/verify',
+				method: 'post',
+				controller: verifyVercelToken,
+				middlewares: [adminProtect, adminPermissions(['create-vercel'])],
+				description: 'Pre-flight check a Vercel API token before connecting an account',
+			},
+			{
+				path: '/:id/key',
+				method: 'put',
+				controller: updateVercelToken,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Rotate a stored Vercel account token',
+			},
+
+			//Account-level reads
+			{
+				path: '/:id/account',
+				method: 'get',
+				controller: getVercelAccount,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Live Vercel account snapshot, teams and rate budget',
+			},
+			{
+				path: '/:id/teams',
+				method: 'get',
+				controller: getVercelTeams,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Teams this token can see; empty on a personal account',
+			},
+			{
+				path: '/:id/activity',
+				method: 'get',
+				controller: getVercelActivity,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Audit feed for a Vercel account or one of its projects',
+			},
+			{
+				path: '/:id/usage',
+				method: 'get',
+				controller: getVercelUsage,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Build counts and build minutes derived from the deployment list',
+			},
+			{
+				path: '/:id/resources',
+				method: 'get',
+				controller: getVercelAccountResources,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Account resource rollup: which project uses what, and what nothing uses',
+			},
+
+			//Projects
+			{
+				path: '/:id/projects',
+				method: 'get',
+				controller: getVercelProjects,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'List projects visible to a Vercel account',
+			},
+			{
+				path: '/:id/projects',
+				method: 'post',
+				controller: createVercelProject,
+				middlewares: [adminProtect, adminPermissions(['create-vercel'])],
+				description: 'Create a Vercel project, optionally linked to a git repository',
+			},
+			{
+				path: '/:id/projects/:project',
+				method: 'get',
+				controller: getVercelProject,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'One Vercel project detail',
+			},
+			{
+				path: '/:id/projects/:project',
+				method: 'patch',
+				controller: updateVercelProject,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Update a project build configuration',
+			},
+			{
+				path: '/:id/projects/:project',
+				method: 'delete',
+				controller: deleteVercelProject,
+				middlewares: [adminProtect, adminPermissions(['delete-vercel'])],
+				description: 'Delete a Vercel project; refused outright for a shop storefront',
+			},
+			{
+				path: '/:id/projects/:project/resources',
+				method: 'get',
+				controller: getVercelProjectResources,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Stores, integrations, domains and drains used by one project',
+			},
+
+			//Environment variables. These are live secrets, so they sit behind
+			//their own permission key rather than the general view-vercel one.
+			{
+				path: '/:id/projects/:project/env',
+				method: 'get',
+				controller: getVercelEnv,
+				middlewares: [adminProtect, adminPermissions(['view-vercel-env'])],
+				description: 'Read a project environment variables',
+			},
+			{
+				path: '/:id/projects/:project/env/download',
+				method: 'get',
+				controller: downloadVercelEnv,
+				// No dedicated 'download' slot on the Permission model (create/view/
+				// edit/delete only), so 'create-vercel-env' stands in. The verb itself
+				// cannot be relabelled — getAdminPermissionList builds each label as
+				// `"<Verb> " + permission.name` — so the seeded Permission doc is named
+				// 'Vercel Env Download' and the Role UI reads "Create Vercel Env
+				// Download".
+				middlewares: [adminProtect, adminPermissions(['create-vercel-env'])],
+				description: 'Download a project environment as .env (per target) or .json',
+			},
+			{
+				path: '/:id/projects/:project/env/:envId',
+				method: 'get',
+				controller: revealVercelEnv,
+				// Same gate as reading the list: this is the only endpoint that
+				// returns a plaintext value, one variable at a time.
+				middlewares: [adminProtect, adminPermissions(['view-vercel-env'])],
+				description: 'Reveal one environment variable value',
+			},
+			{
+				path: '/:id/projects/:project/env',
+				method: 'post',
+				controller: updateVercelEnv,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel-env'])],
+				description: 'Commit a staged batch of environment changes',
+			},
+
+			//Deployments
+			{
+				path: '/:id/projects/:project/deployments',
+				method: 'get',
+				controller: getVercelDeployments,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'List deployments for a project',
+			},
+			{
+				path: '/:id/projects/:project/deploy',
+				method: 'post',
+				controller: createVercelDeployment,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Deploy a git ref, or redeploy an existing deployment',
+			},
+			{
+				path: '/:id/projects/:project/promote/:deployment',
+				method: 'post',
+				controller: promoteVercelDeployment,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Promote an existing deployment to production (the rollback path)',
+			},
+			{
+				path: '/:id/deployments/:deployment',
+				method: 'get',
+				controller: getVercelDeployment,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'One deployment, with its checks and aliases',
+			},
+			{
+				path: '/:id/deployments/:deployment/cancel',
+				method: 'patch',
+				controller: cancelVercelDeployment,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Cancel a running build',
+			},
+			{
+				path: '/:id/deployments/:deployment',
+				method: 'delete',
+				controller: deleteVercelDeployment,
+				middlewares: [adminProtect, adminPermissions(['delete-vercel'])],
+				description: 'Delete a deployment; refused for the live production one',
+			},
+			{
+				path: '/:id/deployments/:deployment/events',
+				method: 'get',
+				controller: getVercelBuildLogs,
+				// Build output routinely contains environment values, tokens and
+				// connection strings, so reading it is reading the environment.
+				// Gated on view-vercel-env, not view-vercel, for that reason.
+				middlewares: [adminProtect, adminPermissions(['view-vercel-env'])],
+				description: 'Build logs for one deployment',
+			},
+
+			//Domains
+			{
+				path: '/:id/projects/:project/domains',
+				method: 'get',
+				controller: getVercelDomains,
+				middlewares: [adminProtect, adminPermissions(['view-vercel'])],
+				description: 'Project domains, with the DNS records for unverified ones',
+			},
+			{
+				path: '/:id/projects/:project/domains',
+				method: 'post',
+				controller: addVercelDomain,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Attach a domain to a project',
+			},
+			{
+				path: '/:id/projects/:project/domains/:domain/verify',
+				method: 'post',
+				controller: verifyVercelDomain,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Ask Vercel to re-check a domain verification record',
+			},
+			{
+				path: '/:id/projects/:project/domains/:domain',
+				method: 'delete',
+				controller: removeVercelDomain,
+				middlewares: [adminProtect, adminPermissions(['edit-vercel'])],
+				description: 'Detach a domain from a project',
 			},
 		],
 	}),
