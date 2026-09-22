@@ -22,13 +22,15 @@ const adminForgotPasswordController = async (req: RequestType, res: Response): P
 		const { email } = req.body;
 		const admin = (await Admin.findOne({ email })) as any;
 
-		// Always respond with the same message whether or not the email is
-		// registered, so this endpoint can't be used to enumerate admin emails.
-		if (!admin || !admin.isActive) {
-			return res.status(200).json({
-				message: 'If that email is registered, a password reset link has been sent.',
+		if (!admin)
+			return res.status(400).json({
+				message: 'This email is not registered',
 			});
-		}
+
+		if (!admin.isActive)
+			return res.status(400).json({
+				message: 'This account has been disabled. Please contact your system admin.',
+			});
 
 		const rawToken = crypto.randomBytes(32).toString('hex');
 		const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
