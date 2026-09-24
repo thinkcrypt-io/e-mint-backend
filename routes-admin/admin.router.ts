@@ -259,6 +259,9 @@ import {
 	settingSettings,
 } from '../library/models/_index.js';
 import { getDocumentHistory } from '../library/controllers/history/_index.js';
+import builderRouter from '../library/controllers/builder/_index.js';
+import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
+import { accessUsersRouter, notificationsRouter } from '../library/controllers/notifications/_index.js';
 
 const router = express.Router();
 
@@ -280,6 +283,8 @@ router.get('/mongoose/list', listAllCollections);
 router.get('/model/:id/:type', getModelKeys);
 
 router.post('/whatsapp/send', sendWhatsapp);
+
+router.use('/builder', builderRouter);
 
 router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
 router.get('/permissionlist', getAdminPermissionList());
@@ -1427,5 +1432,13 @@ router.use(
 		frontendConfig: settingConfig,
 	}),
 );
+
+// The signed-in admin's notifications, and who a record can be shared with.
+router.use('/notifications', notificationsRouter);
+router.use('/access-users', accessUsersRouter);
+
+// Models built in the model builder. Last, so it only ever sees paths no code
+// route answered — and a built model can't take a name one of them uses.
+router.use(dynamicModelsDispatcher);
 
 export default router;

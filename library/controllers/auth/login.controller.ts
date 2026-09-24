@@ -18,7 +18,8 @@ const loginController = ({ model, checkActive = true }: { model: any; checkActiv
 			const { email, password }: Body = req.body;
 
 			if (error) return res.status(400).json({ message: error.details[0].message });
-			let user = (await model.findOne({ email })) as any;
+			// The password is select: false on the model; only login reads it.
+			let user = (await model.findOne({ email }).select('+password')) as any;
 
 			if (!user)
 				return res.status(400).json({

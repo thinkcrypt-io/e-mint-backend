@@ -31,8 +31,7 @@ const getPageRoute = ({ config, route }: { config?: ConfigType; route?: string }
 				};
 				return res.status(200).json(routeConfig);
 			} else {
-				const pageConfig = config?.route;
-				return res.status(200).json(pageConfig);
+				return res.status(200).json(config.route);
 			}
 		} catch (e: any) {
 			console.error(e.message);

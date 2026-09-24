@@ -81,9 +81,11 @@ const getConfig = ({
 				const filteredConfig = {
 					...config,
 					schema: schm,
-					fields: config.fields.filter(field => keys.includes(field)),
-					table: config.table.filter(field => keys.includes(field)),
-					form: config.form.map(section => ({
+					fields: (config.fields || []).filter(field => keys.includes(field)),
+					table: (config.table || []).filter(field => keys.includes(field)),
+					// A published config may hold only some sections (a view, say), so
+					// each list defaults to empty rather than assuming the file's shape.
+					form: (config.form || []).map(section => ({
 						...section,
 						fields: section.fields
 							.map(f => {
@@ -98,6 +100,8 @@ const getConfig = ({
 					})),
 				};
 
+				// `config` is already the resolved one — the published RouteConfig
+				// when there is one — so its `table` is the builder's column order.
 				const tableFields = convertToTableFields({
 					schema: schm,
 					fields: filteredConfig?.table,

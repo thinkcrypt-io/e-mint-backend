@@ -98,6 +98,9 @@ const schema = new Schema<AdminType>(
 			type: String,
 			minlength: 8,
 			maxlength: 1024,
+			// Never returned by a query, a populate or a list — login asks for it
+			// explicitly with .select('+password').
+			select: false,
 		},
 
 		resetPasswordToken: { type: String, select: false },
@@ -193,6 +196,7 @@ const schema = new Schema<AdminType>(
 			urls: [String],
 			models: [String],
 			tableconfigs: [String],
+			filterconfigs: [String],
 			fieldconfigs: [String],
 			formconfigs: [String],
 

@@ -18,7 +18,9 @@ const createDocument = (model: mongoose.Model<any>) => {
 		} catch (e: any) {
 			console.error(e);
 			const message = getErrorMessage(e);
-			return res.status(500).json({ message });
+			// A value the model refuses is the request's fault, not the server's.
+			const invalid = e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError;
+			return res.status(invalid ? 400 : 500).json({ message });
 		}
 	};
 };

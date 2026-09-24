@@ -16,8 +16,9 @@ const createDocument = (model: mongoose.Model<any>) => {
 			});
 		} catch (e: any) {
 			console.log(e?.message);
-
-			return res.status(500).json({ message: e?.message || 'Internal Server Error' });
+			// A value the model refuses (outside its allowed values, the wrong type) is the request's fault.
+			const invalid = e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError;
+			return res.status(invalid ? 400 : 500).json({ message: e?.message || 'Internal Server Error' });
 		}
 	};
 };

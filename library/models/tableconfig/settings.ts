@@ -6,7 +6,7 @@ const settings: SettingsType<any> = {
 		type: 'string',
 		sort: false,
 		search: true,
-		unique: true,
+		// Not unique: `path` is the key, and two routes can share a page title.
 		edit: true,
 		required: true,
 		trim: true,
@@ -56,7 +56,6 @@ const settings: SettingsType<any> = {
 		sort: true,
 		search: false,
 		edit: true,
-		required: true,
 		populate: {
 			path: 'model',
 			select: 'name modelName route',
@@ -67,6 +66,22 @@ const settings: SettingsType<any> = {
 			tableType: 'string',
 			tableKey: 'model.modelName',
 			model: 'models',
+		},
+	},
+	showExport: {
+		title: 'Export button',
+		type: 'boolean',
+		edit: true,
+		schema: {
+			tableType: 'boolean',
+		},
+	},
+	showAddButton: {
+		title: 'Add button',
+		type: 'boolean',
+		edit: true,
+		schema: {
+			tableType: 'boolean',
 		},
 	},
 	createdAt: {

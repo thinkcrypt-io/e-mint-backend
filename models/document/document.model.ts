@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import Counter from '../counter/counter.model.js';
 import Admin from '../../library/models/admin/model.js';
 import sendMail from '../../library/controllers/marketing/mail/sendMail.controller.js';
+import { accessNotifications } from '../../library/functions/notifications.function.js';
 
 const schema = new Schema<any>(
 	{
@@ -94,6 +95,9 @@ schema.pre<any>('save', async function (next) {
 		next();
 	}
 });
+
+// People given access to a private document are notified, with a link to it.
+schema.plugin(accessNotifications, { route: 'documents', noun: 'Document', displayField: 'name' });
 
 const Doc = mongoose.model<any>('Document', schema);
 export default Doc;

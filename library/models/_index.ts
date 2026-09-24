@@ -6,6 +6,11 @@ export { default as TableConfig } from './tableconfig/model.js';
 export { default as tableConfigSettings } from './tableconfig/settings.js';
 export { default as tableConfigConfig } from './tableconfig/config.js';
 
+//FilterConfig
+export { default as FilterConfig } from './filterconfigs/model.js';
+export { default as filterConfigSettings } from './filterconfigs/settings.js';
+export { default as filterConfigConfig } from './filterconfigs/config.js';
+
 //FieldConfig
 export { default as FieldConfig } from './fieldconfig/model.js';
 export { default as fieldConfigSettings } from './fieldconfig/settings.js';

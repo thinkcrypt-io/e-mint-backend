@@ -1,6 +1,11 @@
 import { Response } from 'express';
 import { Filter, FilterResponse } from '../../types/_index.js';
 import mongoose from 'mongoose';
+import { getActiveConfig } from '../../functions/resolveRoute.function.js';
+import {
+	filterRouteKey,
+	resolveFilterModel,
+} from '../../functions/routeRegistry.function.js';
 
 const getFilters = ({
 	filters,
@@ -11,36 +16,48 @@ const getFilters = ({
 	role?: string;
 	baseModel: mongoose.Model<any>;
 }) => {
-	return async (req: any, res: Response): Promise<Response> => {
+	const handler = async (req: any, res: Response): Promise<Response> => {
 		try {
 			let query: any = (req as any).queryHelper || {};
 
+			// The active RouteConfig's filters (published, with its source on DB)
+			// replace the settings filters outright — including an empty list, which is how a route is told to
+			// show no filters at all. With no published config the settings still
+			// apply, so a route nobody has configured behaves as it always did.
+			const route = filterRouteKey(req);
+			const published = route ? await getActiveConfig(route) : null;
+			const source: any[] = Array.isArray(published?.data?.filters)
+				? published!.data.filters
+				: filters;
+
 			let filtersToSend: FilterResponse[] = [];
 
-			for (const filter of filters) {
+			for (const filter of source) {
 				const { key, model, category, roles, ...rest } = filter;
-				let newFilter = { ...rest };
+				let newFilter: any = { ...rest };
 
-				if (filter?.roles && !filter.roles.includes(role)) {
+				if (roles?.length && !roles.includes(role)) {
 					continue; // Skip this iteration if the user's role is not included in the roles array
 				}
 
-				if (filter?.category === 'model') {
-					const myModel = filter?.model || baseModel;
-					const modelData = await myModel.find(query).sort('name');
-					newFilter.options = modelData.map((item: any) => ({
-						value: item._id,
-						label: item[filter.key],
-					}));
-				}
+				if (category === 'model' || category === 'distinct') {
+					const myModel = resolveFilterModel(model, baseModel);
 
-				if (filter?.category === 'distinct') {
-					const myModel = filter?.model || baseModel;
-					const modelData = await myModel.distinct(filter?.key);
-					newFilter.options = modelData.map((item: any) => ({
-						value: item,
-						label: item,
-					}));
+					if (!myModel) {
+						newFilter.options = [];
+					} else if (category === 'model') {
+						const modelData = await myModel.find(query).sort('name');
+						newFilter.options = modelData.map((item: any) => ({
+							value: item._id,
+							label: item[key as string],
+						}));
+					} else {
+						const modelData = await myModel.distinct(key as string);
+						newFilter.options = modelData.map((item: any) => ({
+							value: item,
+							label: item,
+						}));
+					}
 				}
 
 				if (!newFilter.field) {
@@ -56,6 +73,10 @@ const getFilters = ({
 			return res.status(500).json({ message: e.message });
 		}
 	};
+
+	// Read by `collectFilterRoutes`, which walks the router stack to find every
+	// route's settings filters — for seeding, and for the editor's defaults.
+	return Object.assign(handler, { filterSource: { filters, role, baseModel } });
 };
 
 export default getFilters;

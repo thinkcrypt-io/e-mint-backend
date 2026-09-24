@@ -18,7 +18,8 @@ const adminLoginController = async (req: RequestType, res: Response): Promise<Re
 		const { email, password }: Body = req.body;
 
 		if (error) return res.status(400).json({ message: error.details[0].message });
-		let user = (await Admin.findOne({ email })) as any;
+		// The password is select: false on the model; only login reads it.
+		let user = (await Admin.findOne({ email }).select('+password')) as any;
 
 		if (!user)
 			return res.status(400).json({
