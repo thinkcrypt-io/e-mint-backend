@@ -1,14 +1,17 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 import { formulaPipeline } from '../../library/functions/formula.function.js';
+import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
 	select?: string;
 	allowEdits: string[];
+	/** Titles the changed fields in the history entries, as in updateDocument. */
+	settings?: Record<string, any>;
 };
 
-const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
+const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { ids, updates, type: keyType = 'string' } = req.body;
@@ -40,7 +43,11 @@ const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
 
 			let result;
 
-			console.log('keyType:', keyType);
+			// `updateMany` returns counts, not documents, so snapshot the records
+			// first — each one gets its own history entry with a before/after diff,
+			// exactly as if it had been edited on its own.
+			const scope = { _id: { $in: ids }, store: req.store };
+			const before = await model.find(scope).lean();
 
 			if (keyType === 'array') {
 				result = await model.updateMany(
@@ -63,6 +70,24 @@ const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
 			if (result.modifiedCount === 0) {
 				return res.status(404).json({ message: 'No documents found or updated' });
 			}
+
+			const beforeById = new Map(before.map((doc: any) => [String(doc._id), doc]));
+			const fields = [...updateKeys, ...(req.formulas || []).map((f: any) => f.key)];
+			const after = await model.find(scope);
+			after.forEach((doc: any) =>
+				recordHistory({
+					req,
+					action: 'update',
+					model: model.modelName,
+					doc,
+					changes: diffFields({
+						before: beforeById.get(String(doc._id)) || {},
+						after: doc.toObject(),
+						fields,
+						settings,
+					}),
+				})
+			);
 
 			return res.status(200).json({ message: 'Batch Update Completed', result });
 		} catch (e: any) {

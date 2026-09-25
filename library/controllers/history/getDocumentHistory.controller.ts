@@ -17,14 +17,28 @@ const getDocumentHistory = async (req: any, res: Response): Promise<Response> =>
 			return res.status(400).json({ message: 'Invalid Document ID' });
 		}
 
-		const limit = Math.min(Number(req.query.limit) || 50, 200);
+		// The view page's History tab loads more by raising `limit` (one query,
+		// so a refetch after an edit returns the whole visible trail fresh), hence
+		// the high ceiling. `page` is there for callers that want real paging.
+		const limit = Math.min(Number(req.query.limit) || 50, 1000);
+		const page = Math.max(Number(req.query.page) || 1, 1);
 
-		const doc = await History.find({ document: id })
-			.sort({ createdAt: -1 })
-			.limit(limit)
-			.populate('user', 'name email');
+		const [doc, totalDocs] = await Promise.all([
+			History.find({ document: id })
+				.sort({ createdAt: -1 })
+				.skip((page - 1) * limit)
+				.limit(limit)
+				.populate('user', 'name email'),
+			History.countDocuments({ document: id }),
+		]);
 
-		return res.status(200).json({ doc, docsInPage: doc.length });
+		return res.status(200).json({
+			doc,
+			docsInPage: doc.length,
+			totalDocs,
+			page,
+			totalPages: Math.ceil(totalDocs / limit),
+		});
 	} catch (e: any) {
 		console.error(e?.message);
 		return res.status(500).json({ message: e?.message || 'Internal Server Error' });

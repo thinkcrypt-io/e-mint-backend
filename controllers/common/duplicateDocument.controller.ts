@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
+import recordHistory from '../../library/functions/recordHistory.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -20,7 +21,11 @@ const duplicateDocument = ({ model, unique = '' }: any) => {
 
 			let data = await model.findOne(queryHelper).lean();
 
-			//const data = await query.exec();
+			// Checked before use: it used to be read (and crash on) first, and
+			// only tested for afterwards.
+			if (!data) {
+				return res.status(404).json({ message: 'Document Not Found' });
+			}
 
 			const { ...rest } = data;
 
@@ -40,9 +45,8 @@ const duplicateDocument = ({ model, unique = '' }: any) => {
 
 			const saved = await newDocument.save();
 
-			if (!data) {
-				return res.status(404).json({ message: 'Document Not Found' });
-			}
+			// A copy is a new record as far as its history is concerned.
+			recordHistory({ req, action: 'create', model: model.modelName, doc: saved });
 
 			return res.status(200).json('saved');
 		} catch (e: any) {
