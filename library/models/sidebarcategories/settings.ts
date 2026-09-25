@@ -63,12 +63,16 @@ const settings: SettingsType<any> = {
 		trim: true,
 		schema: {},
 	},
+	// A Lucide icon name ('folder', 'users') — the sidebar draws it with
+	// DynamicIcon. It was typed 'uri' with an image input, which rejected every
+	// name the sidebar can actually use.
 	icon: {
 		title: 'Icon',
-		type: 'uri',
+		type: 'string',
 		edit: true,
+		trim: true,
 		schema: {
-			type: 'image',
+			type: 'icon',
 		},
 	},
 	isActive: {
