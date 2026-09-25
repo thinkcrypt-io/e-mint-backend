@@ -410,6 +410,32 @@ export const getBuilderModelFields = async (req: any, res: Response): Promise<Re
 	}
 };
 
+/**
+ * GET /builder/backlinks/:name — routes whose model has a field referencing
+ * model `name` (e.g. Blog.author → Author): what a view tab or related list
+ * on that model's detail page can list.
+ */
+export const getBuilderBacklinks = async (req: any, res: Response): Promise<Response> => {
+	try {
+		const name = req.params.name;
+		if (!mongoose.models[name]) return fail(res, 404, `Model '${name}' not found`);
+		const doc = collectResourceRoutes(req.app)
+			.map(e => ({
+				route: e.route,
+				model: e.source.Model.modelName,
+				fields: listModelFields(e.source.Model)
+					.filter(f => f.ref === name)
+					.map(f => f.key),
+			}))
+			.filter(r => r.fields.length)
+			.sort((a, b) => a.route.localeCompare(b.route));
+		return res.status(200).json({ doc });
+	} catch (e: any) {
+		console.error(e.message);
+		return res.status(500).json({ message: e.message });
+	}
+};
+
 /** GET /builder/state — the global source switch. */
 export const getBuilderState = async (req: any, res: Response): Promise<Response> => {
 	try {

@@ -34,7 +34,7 @@ import {
 import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
-import getViewDocument from '../../library/controllers/builder/viewDocument.controller.js';
+import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
 import {
 	resolveRoute,
 	resourceRouteKey,
@@ -230,6 +230,12 @@ const defineRoutes = ({
 
 	// One record laid out by the route's `view` config, with the records it
 	// references and the ones that reference it. 404 without a view config.
+	// One page of a view tab: records of another route that reference this one.
+	router.get(
+		'/get/view/:id/tab/:index',
+		...middlewares.getById,
+		R((c, r) => getViewTab({ resolved: r, Model }))
+	);
 	router.get(
 		'/get/view/:id',
 		...middlewares.getById,

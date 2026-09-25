@@ -110,6 +110,16 @@ const viewSectionSchema = Joi.object({
 	fields: Joi.array().items(viewItemSchema).required(),
 });
 
+// A tab on the detail page, after Overview: another route's records that
+// reference this one (e.g. an author's blogs), paged.
+const viewTabSchema = Joi.object({
+	related: Joi.string().required(),
+	foreignField: Joi.string().required(),
+	title: Joi.string().allow(''),
+	columns: Joi.array().items(Joi.string()).min(1).required(),
+	pageSize: Joi.number().integer().min(5).max(100),
+});
+
 export const configDraftSchema = Joi.object({
 	fields: Joi.array().items(Joi.string()),
 	table: Joi.array().items(Joi.string()),
@@ -118,6 +128,7 @@ export const configDraftSchema = Joi.object({
 	// as a config file's `route`.
 	route: Joi.object().unknown(true),
 	view: Joi.array().items(viewSectionSchema),
+	viewTabs: Joi.array().items(viewTabSchema),
 	filters: Joi.array().items(filterSchema),
 });
 

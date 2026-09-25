@@ -18,12 +18,17 @@ import { resolveRoute, ResolvedRoute } from '../../functions/resolveRoute.functi
  * hide it (`exclude`). A related list is only filled in for someone who could
  * read that route anyway.
  *
- * 404 when the route has no `view` config, so the admin falls back to the
- * layout it had before.
+ * `viewTabs` (also in the config) are related lists shown as tabs after the
+ * Overview — e.g. an author's blogs. This response carries each tab's title
+ * and count; `getViewTab` pages through one.
+ *
+ * 404 when the route has neither, so the admin falls back to the layout it
+ * had before.
  */
 
 const SENSITIVE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|hash/i;
 const MAX_RELATED = 50;
+const MAX_TAB_PAGE = 100;
 
 // Rebuilt when a model-builder route is added, changed or removed.
 let registry: { version: number; map: Map<string, ResourceRouteEntry> } | null = null;
@@ -73,20 +78,88 @@ const refModelOf = (model: mongoose.Model<any>, path: string): mongoose.Model<an
 const routeForModel = (app: any, modelName: string) =>
 	[...resources(app).values()].find(e => e.source.Model.modelName === modelName);
 
+type RelatedItem = { related: string; foreignField: string; title?: string; columns?: string[] };
+
+/**
+ * Records of another route that point at record `id` through `foreignField`:
+ * filtered to the columns that may be shown, to what the reader may see in
+ * that route (its view permission, its record access), and populated so a
+ * reference column shows a name rather than an id.
+ */
+const relatedPage = async (
+	req: any,
+	item: RelatedItem,
+	id: string,
+	canRead: (e: ResourceRouteEntry) => boolean,
+	{ limit, page = 1, rows: wantRows = true }: { limit: number; page?: number; rows?: boolean }
+) => {
+	const entry = resources(req.app).get(item.related);
+	if (!entry || !item.foreignField) return null;
+	const Related = entry.source.Model;
+	if (!Related.schema.path(item.foreignField)) return null;
+	const relatedResolved = await resolveOther(entry);
+	const columns: string[] = (item.columns || []).filter(readable(Related, relatedResolved.settings));
+	const allowed = canRead(entry);
+	let rows: any[] = [];
+	let total = 0;
+	if (allowed) {
+		const filter: any = {
+			[item.foreignField]: id,
+			...(isAccessRestricted(Related) && accessRule(req.user?._id)),
+		};
+		const populate = (relatedResolved.built.QUERY_OPTIONS.populate || []).filter((p: any) =>
+			columns.includes(typeof p === 'string' ? p : p?.path)
+		);
+		[rows, total] = await Promise.all([
+			wantRows && columns.length
+				? Related.find(filter)
+						.select(columns.join(' '))
+						.populate(populate)
+						.sort('-createdAt')
+						.skip((page - 1) * limit)
+						.limit(limit)
+						.lean()
+				: Promise.resolve([]),
+			Related.countDocuments(filter),
+		]);
+	}
+	return {
+		title: item.title || labelOf({}, item.related),
+		route: item.related,
+		foreignField: item.foreignField,
+		allowed,
+		total,
+		columns: columns.map(k => ({
+			key: k,
+			label: labelOf(relatedResolved.settings, k),
+			instance: instanceOf(Related, k),
+		})),
+		rows,
+	};
+};
+
+const permissionsOf = async (req: any) => {
+	const role: any = await Role.findById(req.user?.role).select('permissions').lean();
+	const permissions: string[] = role?.permissions || [];
+	return (entry: ResourceRouteEntry) =>
+		permissions.includes('*') || permissions.includes(`view-${entry.source.permission}`);
+};
+
 const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: mongoose.Model<any> }) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const layout: any[] = resolved.frontendConfig?.view;
-			if (!Array.isArray(layout) || !layout.length)
+			const view = resolved.frontendConfig?.view;
+			const layout: any[] = Array.isArray(view) ? view : [];
+			const tabItems: RelatedItem[] = Array.isArray(resolved.frontendConfig?.viewTabs)
+				? resolved.frontendConfig.viewTabs
+				: [];
+			if (!layout.length && !tabItems.length)
 				return res.status(404).json({ message: 'This route has no view config' });
 
 			const { id } = req.params;
 			if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'Invalid id' });
 
-			const role: any = await Role.findById(req.user?.role).select('permissions').lean();
-			const permissions: string[] = role?.permissions || [];
-			const canRead = (entry: ResourceRouteEntry) =>
-				permissions.includes('*') || permissions.includes(`view-${entry.source.permission}`);
+			const canRead = await permissionsOf(req);
 
 			// Referenced records: populate each ref field with only the fields the
 			// view asks for, after filtering them.
@@ -129,46 +202,9 @@ const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: 
 					}
 
 					if (item?.related) {
-						const entry = resources(req.app).get(item.related);
-						if (!entry || !item.foreignField) continue;
-						const Related = entry.source.Model;
-						const relatedResolved = await resolveOther(entry);
-						const columns: string[] = (item.columns || []).filter(
-							readable(Related, relatedResolved.settings)
-						);
-						const allowed = canRead(entry);
-						let rows: any[] = [];
-						let total = 0;
-						if (allowed && columns.length) {
-							const limit = Math.min(Math.max(Number(item.limit) || 10, 1), MAX_RELATED);
-							const filter: any = {
-								[item.foreignField]: id,
-								...(isAccessRestricted(Related) && accessRule(req.user?._id)),
-							};
-							// Populate only the related route's own populates that feed a
-							// chosen column, so a reference shows its name, not an id.
-							const populate = (relatedResolved.built.QUERY_OPTIONS.populate || []).filter(
-								(p: any) => columns.includes(typeof p === 'string' ? p : p?.path)
-							);
-							[rows, total] = await Promise.all([
-								Related.find(filter).select(columns.join(' ')).populate(populate).sort('-createdAt').limit(limit).lean(),
-								Related.countDocuments(filter),
-							]);
-						}
-						items.push({
-							kind: 'related',
-							title: item.title || labelOf({}, item.related),
-							route: item.related,
-							foreignField: item.foreignField,
-							allowed,
-							total,
-							columns: columns.map(k => ({
-								key: k,
-								label: labelOf(relatedResolved.settings, k),
-								instance: instanceOf(Related, k),
-							})),
-							rows,
-						});
+						const limit = Math.min(Math.max(Number(item.limit) || 10, 1), MAX_RELATED);
+						const related = await relatedPage(req, item, id, canRead, { limit });
+						if (related) items.push({ kind: 'related', ...related });
 					}
 				}
 				sections.push({
@@ -191,7 +227,52 @@ const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: 
 				.lean();
 			if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-			return res.status(200).json({ doc, sections });
+			// Tabs: titles and counts only — each tab's rows load when it's opened.
+			const tabs = (
+				await Promise.all(
+					tabItems.map(async (item, index) => {
+						const t = await relatedPage(req, item, id, canRead, { limit: 1, rows: false });
+						return t && { index, title: t.title, route: t.route, allowed: t.allowed, total: t.total };
+					})
+				)
+			).filter(Boolean);
+
+			return res.status(200).json({ doc, sections, tabs });
+		} catch (e: any) {
+			console.error(e.message);
+			return res.status(500).json({ message: e.message });
+		}
+	};
+};
+
+/**
+ * GET /<route>/get/view/:id/tab/:index?page=&limit= — one page of a view tab's
+ * related records. The record itself must be readable by the caller (the
+ * route's record access applies), so a tab can't list what hangs off a record
+ * they can't open.
+ */
+export const getViewTab = ({ resolved, Model }: { resolved: ResolvedRoute; Model: mongoose.Model<any> }) => {
+	return async (req: any, res: Response): Promise<Response> => {
+		try {
+			const { id } = req.params;
+			if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'Invalid id' });
+			const item = (resolved.frontendConfig?.viewTabs || [])[Number(req.params.index)];
+			if (!item) return res.status(404).json({ message: 'No such tab' });
+
+			const exists = await Model.exists({ ...(req.queryHelper || {}), _id: id });
+			if (!exists) return res.status(404).json({ message: 'Document not found' });
+
+			const limit = Math.min(Math.max(Number(req.query.limit) || Number(item.pageSize) || 20, 1), MAX_TAB_PAGE);
+			const page = Math.max(Number(req.query.page) || 1, 1);
+			const tab = await relatedPage(req, item, id, await permissionsOf(req), { limit, page });
+			if (!tab) return res.status(404).json({ message: 'This tab’s link is no longer valid' });
+
+			return res.status(200).json({
+				...tab,
+				page,
+				limit,
+				totalPages: Math.max(1, Math.ceil(tab.total / limit)),
+			});
 		} catch (e: any) {
 			console.error(e.message);
 			return res.status(500).json({ message: e.message });

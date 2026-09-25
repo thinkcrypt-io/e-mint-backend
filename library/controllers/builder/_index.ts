@@ -10,6 +10,7 @@ import {
 	getBuilderVersions,
 	restoreBuilderVersion,
 	getBuilderModelFields,
+	getBuilderBacklinks,
 	getBuilderState,
 	setBuilderState,
 	setBuilderSource,
@@ -68,6 +69,7 @@ router.get('/routes', ...view, getBuilderRoutes);
 router.get('/route', ...view, getBuilderRoute);
 router.get('/versions', ...view, getBuilderVersions);
 router.get('/model/:name', ...view, getBuilderModelFields);
+router.get('/backlinks/:name', ...view, getBuilderBacklinks);
 router.get('/state', ...view, getBuilderState);
 router.get('/compare', ...view, compareBuilderRoute);
 
