@@ -2,6 +2,8 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
+import { FieldInfo, checkFormula, format, parse } from '../../functions/formula.function.js';
+import { rulesSchema } from '../../functions/formRules.function.js';
 
 /**
  * What a draft may contain, and the safety rules that keep a published
@@ -114,11 +116,15 @@ const viewSectionSchema = Joi.object({
 // reference this one (e.g. an author's blogs), paged.
 const viewTabSchema = Joi.object({
 	related: Joi.string().required(),
-	foreignField: Joi.string().required(),
+	// Linked either way: their field points at this record, or this record's field holds them.
+	foreignField: Joi.string(),
+	localField: Joi.string(),
 	title: Joi.string().allow(''),
+	description: Joi.string().allow('').max(300),
+	display: Joi.string().valid('table', 'cards'),
 	columns: Joi.array().items(Joi.string()).min(1).required(),
 	pageSize: Joi.number().integer().min(5).max(100),
-});
+}).xor('foreignField', 'localField');
 
 export const configDraftSchema = Joi.object({
 	fields: Joi.array().items(Joi.string()),
@@ -129,6 +135,8 @@ export const configDraftSchema = Joi.object({
 	route: Joi.object().unknown(true),
 	view: Joi.array().items(viewSectionSchema),
 	viewTabs: Joi.array().items(viewTabSchema),
+	// Conditional form fields: { field: rule } — shown only while the rule holds.
+	formRules: rulesSchema,
 	filters: Joi.array().items(filterSchema),
 });
 
@@ -158,8 +166,57 @@ export const lockedKeys = (model: mongoose.Model<any> | undefined, codeSettings:
 /** Kept for callers that ask which fields can't be removed: the same fields. */
 export const keptKeys = lockedKeys;
 
+const isFormula = (f: any) => f?.schema?.type === 'formula';
+
+/** A formula written out tidily (`total-paid` → `total - paid`) — as typed when it doesn't parse, so checkSettings can say why. */
+const tidy = (src: any) => {
+	const text = typeof src === 'string' ? src.trim() : '';
+	try {
+		return text ? format(parse(text)) : '';
+	} catch {
+		return text;
+	}
+};
+
+/**
+ * A formula field is calculated, never typed: stored as a number, not
+ * editable, not required, and drawn as a number in tables and views.
+ */
+export const withFormulaFields = (data: any) => {
+	if (!Array.isArray(data?.fields) || !data.fields.some(isFormula)) return data;
+	return {
+		...data,
+		fields: data.fields.map((f: any) =>
+			isFormula(f)
+				? {
+						...f,
+						type: 'number',
+						edit: false,
+						required: false,
+						schema: {
+							...f.schema,
+							formula: tidy(f.schema.formula),
+							isRequired: false,
+							tableType: 'number',
+							viewType: 'number',
+						},
+				  }
+				: f
+		),
+	};
+};
+
+/** What a formula may use: the other fields, and whether each holds a number. */
+export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): FieldInfo[] =>
+	fields.map((f: any) => {
+		const path: any = model?.schema?.path(f.key);
+		const numeric = isFormula(f) || f.type === 'number' || path?.instance === 'Number';
+		return { key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) };
+	});
+
 /** A settings draft with its system fields exactly as generated — changed ones restored, missing ones added back. */
-export const withSystemFields = (data: any, model: mongoose.Model<any> | undefined, codeSettings: Record<string, any>) => {
+export const withSystemFields = (dataIn: any, model: mongoose.Model<any> | undefined, codeSettings: Record<string, any>) => {
+	const data = withFormulaFields(dataIn);
 	const keys = lockedKeys(model, codeSettings);
 	if (!keys.length || !Array.isArray(data?.fields)) return data;
 	const generated = new Map(settingsToData(codeSettings).fields.map((f: any) => [f.key, f]));
@@ -223,6 +280,15 @@ export const checkSettings = ({
 			if (field.edit && !code.edit) problems.push(`'${key}' is sensitive and can't be made editable.`);
 			if (code.exclude && !field.exclude) problems.push(`'${key}' is sensitive and must stay excluded.`);
 			if (field.search && !code.search) problems.push(`'${key}' is sensitive and can't be made searchable.`);
+		}
+
+		if (isFormula(field)) {
+			const path: any = model?.schema?.path(key);
+			if (path && path.instance !== 'Number')
+				problems.push(`'${key}' can't be a formula: the model stores it as ${String(path.instance).toLowerCase()}, not a number.`);
+			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be a formula.`);
+			const checked = checkFormula(field.schema?.formula || '', formulaFieldInfo(data.fields, model), key);
+			if (!checked.ok) problems.push(`'${key}' formula: ${checked.errors.map(e => e.message).join('; ')}`);
 		}
 
 		// '+field' in a populate select forces a `select: false` field (a

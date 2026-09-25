@@ -7,6 +7,7 @@ import {
 } from '../../functions/_index.js';
 
 import { Config } from '../../models/_index.js';
+import { rulesOf, withRenderIf } from '../../functions/formRules.function.js';
 
 type ConfigType = {
 	table: string[];
@@ -112,8 +113,9 @@ const getConfig = ({
 					fields: filteredConfig?.fields,
 				});
 
+				// Conditional fields: the config's formRules over the settings' renderIf.
 				const formFields = convertToFormFields({
-					schema: schm,
+					schema: withRenderIf(schm, rulesOf(settings, config)),
 					layout: filteredConfig?.form,
 				});
 

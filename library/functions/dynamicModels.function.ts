@@ -13,6 +13,7 @@ import {
 import { invalidateRoute } from './resolveRoute.function.js';
 import { ACCESS_KEYS, PRIVACY_OPTIONS, PRIVACY_VALUES, recordAccessMiddleware } from './recordAccess.function.js';
 import { accessNotifications } from './notifications.function.js';
+import { format as formatFormula, parse as parseFormula } from './formula.function.js';
 
 /**
  * Models built in the model builder (ModelDefinition documents), made real:
@@ -41,6 +42,8 @@ export const FIELD_KINDS = [
 	'email',
 	'url',
 	'number',
+	// A number calculated from the record's other number fields (`formula`) — never typed.
+	'formula',
 	'boolean',
 	'date',
 	'select',
@@ -65,7 +68,16 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula'];
+/** A formula written out tidily, or as typed when it doesn't parse (the builder says why). */
+export const tidyFormula = (src: any) => {
+	const text = typeof src === 'string' ? src.trim() : '';
+	try {
+		return text ? formatFormula(parseFormula(text)) : '';
+	} catch {
+		return text;
+	}
+};
 /** Kinds whose text length can be limited. */
 export const LENGTH_KINDS: FieldKind[] = ['text', 'email', 'url', 'textarea', 'editor'];
 
@@ -129,6 +141,8 @@ export type ModelFieldDef = {
 	showInTable?: boolean;
 	searchable?: boolean;
 	helper?: string;
+	/** A formula kind's calculation, e.g. `total - paid` (formula.function.ts). */
+	formula?: string;
 };
 
 export type ModelDef = {
@@ -311,6 +325,10 @@ export const buildSchema = (def: ModelDef) => {
 			case 'textarea':
 			case 'editor':
 				p = { type: String };
+				break;
+			case 'formula':
+				// Calculated on save (formula.function.ts); never required or typed.
+				p = { type: Number, default: null };
 				break;
 			case 'number':
 				p = { type: Number, set: blankToUndefined };
@@ -519,6 +537,17 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 			case 'number':
 				s.type = 'number';
 				s.schema.type = 'number';
+				sortable(true);
+				break;
+			case 'formula':
+				// Read-only: calculated from other number fields on every save.
+				Object.assign(s, { type: 'number', edit: false });
+				delete s.required;
+				delete s.schema.isRequired;
+				s.schema.type = 'formula';
+				s.schema.formula = tidyFormula(f.formula);
+				s.schema.tableType = 'number';
+				s.schema.viewType = 'number';
 				sortable(true);
 				break;
 			case 'boolean':

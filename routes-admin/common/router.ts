@@ -35,6 +35,8 @@ import { constructPermissions, constructConfig, SettingsType } from '../../impor
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
+import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
+import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import {
 	resolveRoute,
 	resourceRouteKey,
@@ -137,12 +139,53 @@ const defineRoutes = ({
 		(make: (built: any, resolved: ResolvedRoute) => any) => (req: any, res: any, next: any) =>
 			make(req.resolvedRoute.built, req.resolvedRoute)(req, res, next);
 
+	// Formula fields are calculated, never sent: drop them from what came in
+	// (before validation, which would refuse a read-only field) and hand the
+	// route's formulas to the controller that saves.
+	const formulas = (req: any, _res: any, next: any) => {
+		req.formulas = formulasOf(req.resolvedRoute?.settings);
+		if (req.formulas.length) {
+			stripFormulaKeys(req.body, req.formulas);
+			stripFormulaKeys(req.body?.updates, req.formulas);
+		}
+		next();
+	};
+
+	// Conditional form fields (formRules.function.ts): a field hidden by its
+	// rule for the values being saved is dropped from the body — and, on create,
+	// isn't required. An update reads the rules against the record as it will be.
+	const formRules = async (req: any, _res: any, next: any) => {
+		try {
+			const rules = rulesOf(req.resolvedRoute?.settings, req.resolvedRoute?.frontendConfig);
+			req.formHidden = [];
+			if (Object.keys(rules).length && req.body && typeof req.body === 'object') {
+				const current = req.params?.id && mongoose.isValidObjectId(req.params.id) ? await Model.findById(req.params.id).lean() : null;
+				req.formHidden = hiddenFields(rules, { ...(current || {}), ...req.body });
+				for (const key of req.formHidden) delete req.body[key];
+			}
+			next();
+		} catch (e) {
+			next(e);
+		}
+	};
+	/** A validator with the hidden fields made optional. */
+	const relaxed = (schema: any, hidden: string[] = []) =>
+		hidden.reduce((s, key) => {
+			try {
+				return s.fork([key], (f: any) => f.optional());
+			} catch {
+				return s; // not in this validator
+			}
+		}, schema);
+
 	//Define the middlewares
 	const middlewares = {
 		//Middleware for creating a new category
 		post: [
 			protect,
-			R(c => validate(c.VALIDATORS.POST)),
+			formulas,
+			formRules,
+			R(c => (req: any, res: any, next: any) => validate(relaxed(c.VALIDATORS.POST, req.formHidden))(req, res, next)),
 			R(c => ifExists(c.EXIST_OPTIONS)),
 			hasPermission([permissions.create]),
 			...(injectMiddleware?.post || []),
@@ -158,6 +201,8 @@ const defineRoutes = ({
 		//Middleware for updating a category
 		update: [
 			protect,
+			formulas,
+			formRules,
 			R(c => validate(c.VALIDATORS.UPDATE)),
 			hasPermission([permissions.update]),
 			...(injectMiddleware?.update || []),
@@ -165,6 +210,7 @@ const defineRoutes = ({
 		//Middleware for updating many categories
 		updateMany: [
 			protect,
+			formulas,
 			hasPermission([permissions.update]),
 			...(injectMiddleware?.updateMany || []),
 		],
@@ -267,7 +313,10 @@ const defineRoutes = ({
 		...middlewares.count,
 		replaceController?.count || getCount(config.MODEL)
 	);
-	router.get('/get/schema', replaceController?.schema || R(c => getSchema(c.SCHEMA)));
+	router.get(
+		'/get/schema',
+		replaceController?.schema || R((c, r) => getSchema({ ...c.SCHEMA, formRules: r.frontendConfig?.formRules }))
+	);
 	// Registered for every route, not only those with a config file: a
 	// RouteConfig published in the builder makes any route a generic page.
 	// With neither, these answer exactly as an unregistered path did.

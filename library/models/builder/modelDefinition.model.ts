@@ -30,6 +30,8 @@ const fieldSchema = new Schema<any>(
 		showInTable: { type: Boolean, default: true },
 		searchable: { type: Boolean },
 		helper: { type: String, trim: true },
+		/** For the formula kind: the calculation, e.g. `total - paid`. */
+		formula: { type: String, trim: true },
 	},
 	{ _id: false, minimize: false }
 );

@@ -53,6 +53,7 @@ const KIND_GUIDE: Record<string, string> = {
 	video: 'an uploaded video',
 	reference: 'a link to ONE record of another model (ref = its model name) — e.g. an order’s customer',
 	references: 'links to SEVERAL records of another model',
+	formula: 'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`',
 };
 
 const fieldProps = {
@@ -75,6 +76,11 @@ const fieldProps = {
 			properties: { value: { type: 'string' }, label: { type: 'string' } },
 			required: ['value'],
 		},
+	},
+	formula: {
+		type: 'string',
+		description:
+			'For kind "formula" only: the calculation using other number/formula field keys, numbers, + - * / %, brackets and round(x, digits), floor, ceil, abs, min, max. E.g. "total - paid" or "round(price * qty, 2)".',
 	},
 	ref: { type: 'string', description: `For reference/references: a model name from the list given, or "${SELF}" for this model` },
 	min: { type: 'number', description: 'Number: minimum. Text: minimum length.' },
@@ -218,6 +224,7 @@ const normalize = (input: any, targets: Set<string>) => {
 				if (typeof f?.[p] === 'boolean') out[p] = f[p];
 			for (const p of ['min', 'max']) if (typeof f?.[p] === 'number') out[p] = f[p];
 			if (f?.helper) out.helper = String(f.helper).slice(0, 200);
+			if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
 			if (Array.isArray(f?.options) && f.options.length) {
 				const seen = new Set<string>();
 				out.options = f.options

@@ -5,6 +5,7 @@ import {
 	collectFilterRoutes,
 	collectResourceRoutes,
 	configToData,
+	dataToSettings,
 	FilterRouteEntry,
 	listModelFields,
 	ResourceRouteEntry,
@@ -14,6 +15,7 @@ import {
 } from '../../functions/routeRegistry.function.js';
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { PROTECTED_ROUTES, checkSettings, validateDraft, withSystemFields } from './validate.js';
+import { formulaPipeline, formulasOf } from '../../functions/formula.function.js';
 
 type Kind = 'settings' | 'config';
 const KINDS: Kind[] = ['settings', 'config'];
@@ -267,6 +269,14 @@ export const discardBuilderDraft = async (req: any, res: Response): Promise<Resp
  * route never ends up with new settings and an old config because the second
  * one failed.
  */
+/** A settings copy's formulas, to tell whether a publish changed any. */
+const formulaSignature = (data: any) =>
+	JSON.stringify(
+		(data?.fields || [])
+			.filter((f: any) => f?.schema?.type === 'formula')
+			.map((f: any) => [f.key, f.schema.formula])
+	);
+
 export const publishBuilderRoute = async (req: any, res: Response): Promise<Response> => {
 	try {
 		const route = String(req.body?.route || '').trim();
@@ -286,7 +296,9 @@ export const publishBuilderRoute = async (req: any, res: Response): Promise<Resp
 		}
 
 		const published: any[] = [];
+		let recalculated: number | undefined;
 		for (const { k, doc } of pending) {
+			const before = k === 'settings' ? formulaSignature(doc.data) : '';
 			doc.data = checked.get(k);
 			doc.draft = null;
 			doc.version = (doc.version || 0) + 1;
@@ -303,10 +315,17 @@ export const publishBuilderRoute = async (req: any, res: Response): Promise<Resp
 				publishedBy: req.user?._id,
 			});
 			published.push({ kind: k, version: doc.version });
+
+			// A formula added or changed: every existing record's value, recalculated in the database.
+			if (k === 'settings' && formulaSignature(doc.data) !== before) {
+				const formulas = formulasOf(dataToSettings(doc.data));
+				const model = codeFor(req.app, route).model;
+				if (formulas.length && model) recalculated = (await model.updateMany({}, formulaPipeline(formulas))).modifiedCount;
+			}
 		}
 
 		invalidateRoute(route);
-		return res.status(200).json({ message: 'Published', published });
+		return res.status(200).json({ message: 'Published', published, ...(recalculated !== undefined && { recalculated }) });
 	} catch (e: any) {
 		console.error(e.message);
 		return res.status(500).json({ message: e.message });

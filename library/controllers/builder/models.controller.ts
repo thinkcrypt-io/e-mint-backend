@@ -9,6 +9,8 @@ import Counter from '../../../models/counter/counter.model.js';
 import { configToData, listModelFields, settingsToData } from '../../functions/routeRegistry.function.js';
 import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
+import { fieldsOfRule } from '../../functions/formRules.function.js';
+import { checkFormula, formulaPipeline, formulasOf } from '../../functions/formula.function.js';
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
 import {
@@ -35,6 +37,7 @@ import {
 	nextCode,
 	singular,
 	syncDynamicModels,
+	tidyFormula,
 } from '../../functions/dynamicModels.function.js';
 
 /**
@@ -83,6 +86,7 @@ const fieldSchema = Joi.object({
 	showInTable: Joi.boolean(),
 	searchable: Joi.boolean(),
 	helper: Joi.string().allow('').max(200),
+	formula: Joi.string().allow('').max(500),
 });
 
 const bodySchema = Joi.object({
@@ -136,6 +140,24 @@ const check = async (req: any, body: any, selfName: string) => {
 			else if (f.ref !== selfName && !targets.has(f.ref)) problems.push(`${name}: ${f.ref} isn't a model with an admin route`);
 		} else delete f.ref;
 		if (!ENUM_KINDS.includes(f.kind) || !f.options?.length) delete f.options;
+		if (f.kind === 'formula') {
+			// Calculated, never typed: not required, not unique, no default.
+			delete f.required;
+			delete f.unique;
+			f.formula = tidyFormula(f.formula);
+			const checked = checkFormula(
+				f.formula || '',
+				value.fields.map((x: any) => ({
+					key: x.key,
+					label: x.label,
+					numeric: x.kind === 'number' || x.kind === 'formula',
+					...(x.kind === 'formula' && { formula: x.formula }),
+				})),
+				f.key
+			);
+			if (!f.formula) problems.push(`${name}: write its formula`);
+			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
+		} else delete f.formula;
 		if (f.kind === 'number' && f.options?.some((o: any) => !Number.isFinite(Number(o.value))))
 			problems.push(`${name}: the allowed values of a number must be numbers`);
 		// The default as the field stores it; one outside the allowed values would fail every create.
@@ -234,11 +256,11 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
-const MODEL_OWNED = ['value', 'options', 'helperText'];
+const MODEL_OWNED = ['value', 'options', 'helperText', 'formula'];
 
 /**
  * How a model change applies to a settings and a config object: a field added
@@ -316,6 +338,16 @@ const makePatchers = async (
 		const out = { ...data };
 		const strip = (list: any) => (Array.isArray(list) ? list.filter((k: any) => typeof k !== 'string' || !removed.has(k)) : list);
 		if (Array.isArray(out.fields)) out.fields = insertBeforeCreated(strip(out.fields), added, (k: any) => k);
+		// A condition on a removed field would hide its field for good: the rule goes, the field shows.
+		if (out.formRules && typeof out.formRules === 'object') {
+			const kept = Object.fromEntries(
+				Object.entries(out.formRules).filter(
+					([k, rule]: [string, any]) => !removed.has(k) && ![...fieldsOfRule(rule)].some(f => removed.has(f))
+				)
+			);
+			if (Object.keys(kept).length) out.formRules = kept;
+			else delete out.formRules;
+		}
 		if (Array.isArray(out.table))
 			out.table = insertBeforeCreated(
 				strip(out.table),
@@ -761,6 +793,18 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 					.updateMany({ privacy: { $nin: ['private', 'only-me', 'public'] } }, { $set: { privacy: 'public' } })
 			).modifiedCount;
 
+		// A formula field added or changed: every existing record's value, recalculated in the database.
+		let recalculated: number | undefined;
+		const formulaSig = (d: ModelDef) =>
+			JSON.stringify(d.fields.filter(f => f.kind === 'formula').map(f => [f.key, f.formula]));
+		if (formulaSig(before) !== formulaSig(after)) {
+			const formulas = formulasOf((await generated(req.app, after)).settingsObj);
+			if (formulas.length)
+				recalculated = (
+					await mongoose.connection.collection(after.collectionName).updateMany({}, formulaPipeline(formulas))
+				).modifiedCount;
+		}
+
 		const sidebarItem = await upsertSidebar(doc, sidebar?.category);
 		if (String(sidebarItem || '') !== String(doc.sidebarItem || ''))
 			await ModelDefinition.updateOne({ _id: doc._id }, sidebarItem ? { $set: { sidebarItem } } : { $unset: { sidebarItem: 1 } });
@@ -768,7 +812,9 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 		await Permission.updateOne({ key: after.permission }, { $set: { name: after.title } });
 
 		const warnings = await syncIndexes(after);
-		return res.status(200).json({ doc: await withCount({ ...after, sidebarItem }), warnings, codesAssigned, madePublic });
+		return res
+			.status(200)
+			.json({ doc: await withCount({ ...after, sidebarItem }), warnings, codesAssigned, madePublic, ...(recalculated !== undefined && { recalculated }) });
 	} catch (e: any) {
 		console.error(e.message);
 		return fail(res, 500, e.message);

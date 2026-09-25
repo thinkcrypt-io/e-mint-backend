@@ -1,5 +1,6 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
+import { formulaPipeline } from '../../library/functions/formula.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -54,6 +55,10 @@ const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
 					{ multi: true }
 				);
 			}
+
+			// Formula fields of the records just changed, recalculated in the database.
+			if (req.formulas?.length)
+				await model.updateMany({ _id: { $in: ids }, store: req.store }, formulaPipeline(req.formulas));
 
 			if (result.modifiedCount === 0) {
 				return res.status(404).json({ message: 'No documents found or updated' });

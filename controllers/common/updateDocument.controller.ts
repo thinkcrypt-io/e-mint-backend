@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
+import { applyFormulas } from '../../library/functions/formula.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -38,8 +39,13 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			const before = data.toObject();
 
 			updates.forEach((update: any) => (data[update] = req.body[update]));
+			// Formula fields, from the record as it now stands.
+			applyFormulas(data, req.formulas);
+			// Fields hidden by the form's conditions aren't required (formRules.function.ts).
+			const hidden: string[] = req.formHidden || [];
+			if (hidden.length) await data.validate({ pathsToSkip: hidden });
 
-			const saved = await data.save();
+			const saved = await data.save(hidden.length ? { validateBeforeSave: false } : undefined);
 
 			recordHistory({
 				req,
@@ -51,7 +57,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 					after: saved.toObject(),
 					// Only what this request actually submitted: comparing every path
 					// would report timestamps and defaults as user edits.
-					fields: updates,
+					fields: [...updates, ...(req.formulas || []).map((f: any) => f.key)],
 					settings,
 				}),
 			});
