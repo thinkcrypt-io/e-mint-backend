@@ -57,8 +57,30 @@ export const FIELD_KINDS = [
 	'video',
 	'reference',
 	'references',
+	// A group of fields of its own (`fields`), stored as one object: an address, a billing block.
+	'section',
+	// Rows of the same fields (`fields`), stored as a list: an invoice's items.
+	'sectionlist',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
+
+/** Kinds made of fields of their own. */
+export const SECTION_KINDS: FieldKind[] = ['section', 'sectionlist'];
+/** What a section's own fields can be — no links, no nested sections. */
+export const SUB_KINDS: FieldKind[] = [
+	'text',
+	'textarea',
+	'email',
+	'url',
+	'color',
+	'number',
+	'formula',
+	'boolean',
+	'date',
+	'select',
+	'image',
+	'file',
+];
 
 /** Kinds whose value is short text — the ones that can name a record. */
 export const TEXT_KINDS: FieldKind[] = ['text', 'email', 'url', 'select'];
@@ -68,7 +90,7 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'section', 'sectionlist'];
 /** A formula written out tidily, or as typed when it doesn't parse (the builder says why). */
 export const tidyFormula = (src: any) => {
 	const text = typeof src === 'string' ? src.trim() : '';
@@ -78,6 +100,24 @@ export const tidyFormula = (src: any) => {
 		return text;
 	}
 };
+/**
+ * What a formula may use among `fields` (formula.function.ts FieldInfo): the
+ * number fields; a section list itself (count) and its rows' values
+ * (`items.total`, for sum / avg); a section's values as `address.zip`.
+ */
+export const formulaInfoOf = (fields: ModelFieldDef[] = []) =>
+	fields.flatMap(x => {
+		const numeric = (k: FieldKind) => k === 'number' || k === 'formula';
+		if (x.kind === 'sectionlist')
+			return [
+				{ key: x.key, label: x.label, numeric: false, list: true },
+				...(x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y.kind), inList: x.key })),
+			];
+		if (x.kind === 'section')
+			return (x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y.kind) }));
+		return [{ key: x.key, label: x.label, numeric: numeric(x.kind), ...(x.kind === 'formula' && { formula: x.formula }) }];
+	});
+
 /** Kinds whose text length can be limited. */
 export const LENGTH_KINDS: FieldKind[] = ['text', 'email', 'url', 'textarea', 'editor'];
 
@@ -143,6 +183,10 @@ export type ModelFieldDef = {
 	helper?: string;
 	/** A formula kind's calculation, e.g. `total - paid` (formula.function.ts). */
 	formula?: string;
+	/** A section's own fields (SUB_KINDS only). */
+	fields?: ModelFieldDef[];
+	/** A section list's add button, e.g. "Add item". */
+	addLabel?: string;
 };
 
 export type ModelDef = {
@@ -298,10 +342,11 @@ export const nextCode = async (def: Pick<ModelDef, 'name' | 'code'>) => {
 	return prefix ? `${prefix.toUpperCase()}-${digits}` : digits;
 };
 
-export const buildSchema = (def: ModelDef) => {
+/** The Mongoose paths for a list of fields — a model's, or a section's own. */
+const pathsOf = (fields: ModelFieldDef[]) => {
 	const paths: Record<string, any> = {};
 
-	for (const f of def.fields) {
+	for (const f of fields) {
 		const label = f.label || humanize(f.key);
 		const required = f.required ? [true, `${label} is required`] : undefined;
 		let p: any;
@@ -356,6 +401,12 @@ export const buildSchema = (def: ModelDef) => {
 			case 'references':
 				p = { type: [{ type: Schema.Types.ObjectId, ref: f.ref }], set: idsOnly, default: undefined };
 				break;
+			case 'section':
+				p = { type: new Schema(pathsOf(f.fields || []), { _id: false, minimize: false }), default: undefined };
+				break;
+			case 'sectionlist':
+				p = { type: [new Schema(pathsOf(f.fields || []), { _id: false })], default: undefined };
+				break;
 		}
 
 		// A single value limited to a list: blank means "not set", not a value outside it.
@@ -381,6 +432,11 @@ export const buildSchema = (def: ModelDef) => {
 
 		paths[f.key] = p;
 	}
+	return paths;
+};
+
+export const buildSchema = (def: ModelDef) => {
+	const paths = pathsOf(def.fields);
 
 	if (def.code?.enabled) paths.code = { type: String, trim: true, unique: true, sparse: true };
 
@@ -607,6 +663,34 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 					};
 				break;
 			}
+			case 'section':
+				s.type = 'object';
+				s.schema.type = 'section-object';
+				s.schema.dataModel = dataModelOf(f.fields);
+				s.schema.tableType = 'section-object';
+				s.schema.viewType = 'section-object';
+				break;
+			case 'sectionlist': {
+				s.type = 'array-object';
+				const dataModel = dataModelOf(f.fields);
+				const texts = (f.fields || []).filter(x => ['text', 'email', 'url', 'select', 'textarea'].includes(x.kind));
+				s.schema.type = 'section-data-array';
+				s.schema.section = {
+					title,
+					// The form lists the rows as a table, number columns added up.
+					table: true,
+					addBtnText: f.addLabel || 'Add row',
+					display: {
+						title: texts[0]?.key,
+						description: texts[1]?.key,
+						image: (f.fields || []).find(x => x.kind === 'image')?.key,
+					},
+					dataModel,
+				};
+				s.schema.tableType = 'data-array-count';
+				s.schema.viewType = 'section-data-array';
+				break;
+			}
 		}
 
 		// Limited to a list: picked from it in the form, and filtered by it.
@@ -637,6 +721,41 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 
 	return settings;
 };
+
+/** The input type a section's own field gets in the form. */
+const SUB_INPUT: Partial<Record<FieldKind, string>> = {
+	text: 'text',
+	textarea: 'textarea',
+	email: 'email',
+	url: 'text',
+	color: 'color',
+	number: 'number',
+	formula: 'formula',
+	boolean: 'checkbox',
+	date: 'date',
+	select: 'select',
+	image: 'image',
+	file: 'file',
+};
+
+/**
+ * A section's fields as the form draws them (and formula.function.ts reads
+ * them): `{ name, label, type, isRequired, options, formula }`.
+ */
+export const dataModelOf = (fields: ModelFieldDef[] = []) =>
+	fields.map(x => {
+		const allowed = enumOf(x);
+		return {
+			name: x.key,
+			label: x.label || humanize(x.key),
+			type: SUB_INPUT[x.kind] || 'text',
+			kind: x.kind,
+			...(x.required && x.kind !== 'formula' && { isRequired: true }),
+			...(x.helper && { helper: x.helper }),
+			...(allowed && { options: allowed.map((v, i) => ({ value: v, label: x.options![i].label || humanize(String(v)) })) }),
+			...(x.kind === 'formula' && { formula: tidyFormula(x.formula) }),
+		};
+	});
 
 /** The owner, privacy and access fields of an access-restricted model. */
 export const accessSettings = (def: ModelDef) => ({

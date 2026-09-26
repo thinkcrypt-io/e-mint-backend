@@ -18,6 +18,9 @@ import {
 	ENUM_KINDS,
 	FIELD_KINDS,
 	NO_DEFAULT_KINDS,
+	SECTION_KINDS,
+	SUB_KINDS,
+	formulaInfoOf,
 	REFERENCE_KINDS,
 	defaultOf,
 	enumOf,
@@ -58,7 +61,7 @@ const SELF = '__self__';
 const fail = (res: Response, status: number, message: string, problems?: string[]) =>
 	res.status(status).json({ message, ...(problems && { problems }) });
 
-const fieldSchema = Joi.object({
+const subFieldBase = {
 	key: Joi.string()
 		.pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/)
 		.max(40)
@@ -87,6 +90,19 @@ const fieldSchema = Joi.object({
 	searchable: Joi.boolean(),
 	helper: Joi.string().allow('').max(200),
 	formula: Joi.string().allow('').max(500),
+};
+
+/** A section's own field: the same, minus links and nested sections. */
+const subFieldSchema = Joi.object({ ...subFieldBase, kind: Joi.string().valid(...SUB_KINDS).required() });
+
+const fieldSchema = Joi.object({
+	...subFieldBase,
+	fields: Joi.array()
+		.items(subFieldSchema)
+		.unique((a: any, b: any) => a.key.toLowerCase() === b.key.toLowerCase())
+		.max(40)
+		.messages({ 'array.unique': 'Two fields of a section have the same key' }),
+	addLabel: Joi.string().allow('').max(40),
 });
 
 const bodySchema = Joi.object({
@@ -127,34 +143,18 @@ const check = async (req: any, body: any, selfName: string) => {
 	const problems: string[] = [];
 	const targets = new Set((await linkTargets(req.app)).map(t => t.name));
 
-	for (const f of value.fields) {
-		const name = f.label || f.key;
-		if (value.access?.enabled && ACCESS_KEYS.includes(f.key))
-			problems.push(`${name}: “${f.key}” is used by access control — rename the field, or turn access off`);
+	/** The checks every field gets — a model's, or a section's own (`scope`: the fields its formulas may use). */
+	const checkField = (f: any, name: string, scope: any[]) => {
 		if (SENSITIVE.test(f.key)) problems.push(`${name}: fields that hold secrets can't be built here`);
 		if (['select', 'multiselect'].includes(f.kind) && !f.options?.length)
 			problems.push(`${name}: add at least one allowed value`);
-		if (REFERENCE_KINDS.includes(f.kind)) {
-			if (f.ref === SELF) f.ref = selfName;
-			if (!f.ref) problems.push(`${name}: pick the model it links to`);
-			else if (f.ref !== selfName && !targets.has(f.ref)) problems.push(`${name}: ${f.ref} isn't a model with an admin route`);
-		} else delete f.ref;
 		if (!ENUM_KINDS.includes(f.kind) || !f.options?.length) delete f.options;
 		if (f.kind === 'formula') {
 			// Calculated, never typed: not required, not unique, no default.
 			delete f.required;
 			delete f.unique;
 			f.formula = tidyFormula(f.formula);
-			const checked = checkFormula(
-				f.formula || '',
-				value.fields.map((x: any) => ({
-					key: x.key,
-					label: x.label,
-					numeric: x.kind === 'number' || x.kind === 'formula',
-					...(x.kind === 'formula' && { formula: x.formula }),
-				})),
-				f.key
-			);
+			const checked = checkFormula(f.formula || '', formulaInfoOf(scope), f.key);
 			if (!f.formula) problems.push(`${name}: write its formula`);
 			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
 		} else delete f.formula;
@@ -173,6 +173,38 @@ const check = async (req: any, body: any, selfName: string) => {
 			}
 		}
 		if (typeof f.min === 'number' && typeof f.max === 'number' && f.min > f.max) problems.push(`${name}: min is above max`);
+	};
+
+	for (const f of value.fields) {
+		const name = f.label || f.key;
+		if (SECTION_KINDS.includes(f.kind)) {
+			if (!f.fields?.length) problems.push(`${name}: add at least one field to the section`);
+			for (const x of f.fields || []) {
+				// A row's formula uses the other values of the same row.
+				checkField(x, `${name} › ${x.label || x.key}`, f.fields);
+				delete x.unique;
+				delete x.index;
+			}
+			delete f.unique;
+			delete f.default;
+			delete f.options;
+			delete f.formula;
+			if (f.kind !== 'sectionlist') delete f.addLabel;
+			if (value.access?.enabled && ACCESS_KEYS.includes(f.key))
+				problems.push(`${name}: “${f.key}” is used by access control — rename the field, or turn access off`);
+			delete f.ref;
+			continue;
+		}
+		delete f.fields;
+		delete f.addLabel;
+		if (value.access?.enabled && ACCESS_KEYS.includes(f.key))
+			problems.push(`${name}: “${f.key}” is used by access control — rename the field, or turn access off`);
+		if (REFERENCE_KINDS.includes(f.kind)) {
+			if (f.ref === SELF) f.ref = selfName;
+			if (!f.ref) problems.push(`${name}: pick the model it links to`);
+			else if (f.ref !== selfName && !targets.has(f.ref)) problems.push(`${name}: ${f.ref} isn't a model with an admin route`);
+		} else delete f.ref;
+		checkField(f, name, value.fields);
 		if (f.unique && (['boolean', 'editor', 'textarea'].includes(f.kind) || ARRAY_KINDS.includes(f.kind)))
 			problems.push(`${name}: this kind of field can't be unique`);
 	}
@@ -256,11 +288,11 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
-const MODEL_OWNED = ['value', 'options', 'helperText', 'formula'];
+const MODEL_OWNED = ['value', 'options', 'helperText', 'formula', 'dataModel', 'section'];
 
 /**
  * How a model change applies to a settings and a config object: a field added
@@ -796,7 +828,11 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 		// A formula field added or changed: every existing record's value, recalculated in the database.
 		let recalculated: number | undefined;
 		const formulaSig = (d: ModelDef) =>
-			JSON.stringify(d.fields.filter(f => f.kind === 'formula').map(f => [f.key, f.formula]));
+			JSON.stringify(
+				d.fields
+					.filter(f => f.kind === 'formula' || SECTION_KINDS.includes(f.kind))
+					.map(f => [f.key, f.formula, (f.fields || []).filter(x => x.kind === 'formula').map(x => [x.key, x.formula])])
+			);
 		if (formulaSig(before) !== formulaSig(after)) {
 			const formulas = formulasOf((await generated(req.app, after)).settingsObj);
 			if (formulas.length)

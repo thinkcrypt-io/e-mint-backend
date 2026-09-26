@@ -2,7 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
-import { FieldInfo, checkFormula, format, parse } from '../../functions/formula.function.js';
+import { FieldInfo, checkFormula, format, parse, sectionFieldInfo } from '../../functions/formula.function.js';
 import { rulesSchema } from '../../functions/formRules.function.js';
 
 /**
@@ -208,10 +208,13 @@ export const withFormulaFields = (data: any) => {
 
 /** What a formula may use: the other fields, and whether each holds a number. */
 export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): FieldInfo[] =>
-	fields.map((f: any) => {
+	fields.flatMap((f: any) => {
+		// A list of rows is only usable through sum() / avg() / count(); a section's values as `section.value`.
+		const inside = sectionFieldInfo(f.key, f);
+		if (inside.some(x => x.list)) return inside;
 		const path: any = model?.schema?.path(f.key);
 		const numeric = isFormula(f) || f.type === 'number' || path?.instance === 'Number';
-		return { key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) };
+		return [{ key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) }, ...inside];
 	});
 
 /** A settings draft with its system fields exactly as generated — changed ones restored, missing ones added back. */

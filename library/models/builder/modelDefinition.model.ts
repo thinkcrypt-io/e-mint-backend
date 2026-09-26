@@ -32,6 +32,10 @@ const fieldSchema = new Schema<any>(
 		helper: { type: String, trim: true },
 		/** For the formula kind: the calculation, e.g. `total - paid`. */
 		formula: { type: String, trim: true },
+		/** For section kinds: the section's own fields, shaped like these (no links or nested sections). */
+		fields: { type: [Schema.Types.Mixed], default: undefined },
+		/** For a section list: its add button's text. */
+		addLabel: { type: String, trim: true },
 	},
 	{ _id: false, minimize: false }
 );
