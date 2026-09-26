@@ -53,8 +53,15 @@ const KIND_GUIDE: Record<string, string> = {
 	video: 'an uploaded video',
 	reference: 'a link to ONE record of another model (ref = its model name) — e.g. an order’s customer',
 	references: 'links to SEVERAL records of another model',
-	formula: 'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`',
+	formula:
+		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee',
+	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
+	sectionlist:
+		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };
+
+/** What a section's own fields can be (a subset of the kinds, no links or nested sections). */
+const SUB_KIND_LIST = ['text', 'textarea', 'email', 'url', 'color', 'number', 'formula', 'boolean', 'date', 'select', 'image', 'file'];
 
 const fieldProps = {
 	key: { type: 'string', description: 'camelCase, starts with a letter; letters, digits and _ only' },
@@ -88,6 +95,29 @@ const fieldProps = {
 	showInTable: { type: 'boolean', description: 'Shown as a table column by default' },
 	searchable: { type: 'boolean', description: 'Matched by the table search box' },
 	helper: { type: 'string', description: 'Short help text under the input' },
+};
+
+/** A section's own field: the same, minus links, lists of values and nesting. */
+const subFieldProps = {
+	key: fieldProps.key,
+	label: fieldProps.label,
+	kind: { type: 'string', enum: SUB_KIND_LIST },
+	required: fieldProps.required,
+	options: (fieldProps as any).options,
+	formula: {
+		type: 'string',
+		description: 'For kind "formula": calculated from the other number fields of the same row/section, e.g. "quantity * rate".',
+	},
+	helper: fieldProps.helper,
+};
+
+const sectionProps = {
+	fields: {
+		type: 'array',
+		description: 'For section / sectionlist only: the section’s own fields (a row’s fields for a sectionlist).',
+		items: { type: 'object', required: ['key', 'label', 'kind'], properties: subFieldProps },
+	},
+	addLabel: { type: 'string', description: 'For sectionlist: the add-row button, e.g. "Add item"' },
 };
 
 const TOOL: Anthropic.Tool = {
@@ -125,7 +155,7 @@ const TOOL: Anthropic.Tool = {
 			fields: {
 				type: 'array',
 				description: 'The fields, in the order the form and detail page should show them.',
-				items: { type: 'object', required: ['key', 'label', 'kind'], properties: fieldProps },
+				items: { type: 'object', required: ['key', 'label', 'kind'], properties: { ...fieldProps, ...sectionProps } },
 			},
 			table: {
 				type: 'array',
@@ -198,7 +228,9 @@ ${targets.length ? targets.map(t => `  - ${t.name}${t.title ? ` (${t.title})` : 
 - With access on, "privacy", "access" and "addedBy" are added automatically — don't add them as fields, and don't list them in form/table/view.
 - Honour what the user asks for: "only visible to the creator", "shareable", "confidential" mean access on.
 - Sidebar categories: ${categories.map(c => c.name).join(', ') || '(none)'}.
-- Write labels and the summary in the language of the request.`;
+- For line items or other repeating rows (an invoice’s or order’s items), use a sectionlist with its row fields, a row formula for the line total, and a record formula that adds them up, e.g. subtotal = sum(items.total).
+- Write labels and the summary in the language of the request.
+- Always reply by calling build_model — never with plain text, not even to ask a question. When something is unclear, make a sensible assumption and mention it in the summary.`;
 
 /** Loose AI output -> a body the model checks accept; obvious slips fixed rather than bounced. */
 const normalize = (input: any, targets: Set<string>) => {
@@ -212,38 +244,50 @@ const normalize = (input: any, targets: Set<string>) => {
 		return /^[a-zA-Z]/.test(key) ? key : key ? `f${key}` : '';
 	};
 	const selfName = String(input?.name || '');
+	/** One field; `sub` for a section's own, which can't link or nest. */
+	const mapField = (f: any, sub = false): any => {
+		const allowed: readonly string[] = sub ? SUB_KIND_LIST : FIELD_KINDS;
+		const kind = allowed.includes(f?.kind) ? f.kind : 'text';
+		const out: any = {
+			key: /^[a-zA-Z][a-zA-Z0-9_]*$/.test(f?.key || '') ? f.key : toKey(f?.key || f?.label),
+			label: String(f?.label || '').slice(0, 80),
+			kind,
+		};
+		for (const p of ['required', 'unique', 'index', 'showInTable', 'searchable'])
+			if (typeof f?.[p] === 'boolean') out[p] = f[p];
+		for (const p of ['min', 'max']) if (typeof f?.[p] === 'number') out[p] = f[p];
+		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
+		if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
+		if (Array.isArray(f?.options) && f.options.length) {
+			const seen = new Set<string>();
+			out.options = f.options
+				.map((o: any) => (typeof o === 'object' ? o : { value: o }))
+				.map((o: any) => ({ value: String(o?.value ?? '').trim().slice(0, 80), label: String(o?.label ?? '').slice(0, 80) }))
+				.filter((o: any) => o.value && !seen.has(o.value) && seen.add(o.value));
+		}
+		if (f?.default !== undefined && f?.default !== null && f?.default !== '') out.default = f.default;
+		if (kind === 'section' || kind === 'sectionlist') {
+			const seen = new Set<string>();
+			out.fields = (Array.isArray(f?.fields) ? f.fields : [])
+				.map((x: any) => mapField(x, true))
+				.filter((x: any) => x.key && !RESERVED_KEYS.includes(x.key) && !seen.has(x.key.toLowerCase()) && seen.add(x.key.toLowerCase()));
+			if (kind === 'sectionlist' && f?.addLabel) out.addLabel = String(f.addLabel).slice(0, 40);
+			delete out.unique;
+			delete out.default;
+		}
+		if (kind === 'reference' || kind === 'references') {
+			const ref = String(f?.ref || '');
+			out.ref = !ref || ref === selfName || ref === SELF ? SELF : ref;
+			if (out.ref !== SELF && !targets.has(out.ref)) {
+				// Named a model that doesn't exist: an honest text field beats a broken link.
+				out.kind = kind === 'reference' ? 'text' : 'tags';
+				delete out.ref;
+			}
+		}
+		return out;
+	};
 	const fields = (Array.isArray(input?.fields) ? input.fields : [])
-		.map((f: any) => {
-			const kind = (FIELD_KINDS as readonly string[]).includes(f?.kind) ? f.kind : 'text';
-			const out: any = {
-				key: /^[a-zA-Z][a-zA-Z0-9_]*$/.test(f?.key || '') ? f.key : toKey(f?.key || f?.label),
-				label: String(f?.label || '').slice(0, 80),
-				kind,
-			};
-			for (const p of ['required', 'unique', 'index', 'showInTable', 'searchable'])
-				if (typeof f?.[p] === 'boolean') out[p] = f[p];
-			for (const p of ['min', 'max']) if (typeof f?.[p] === 'number') out[p] = f[p];
-			if (f?.helper) out.helper = String(f.helper).slice(0, 200);
-			if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
-			if (Array.isArray(f?.options) && f.options.length) {
-				const seen = new Set<string>();
-				out.options = f.options
-					.map((o: any) => (typeof o === 'object' ? o : { value: o }))
-					.map((o: any) => ({ value: String(o?.value ?? '').trim().slice(0, 80), label: String(o?.label ?? '').slice(0, 80) }))
-					.filter((o: any) => o.value && !seen.has(o.value) && seen.add(o.value));
-			}
-			if (f?.default !== undefined && f?.default !== null && f?.default !== '') out.default = f.default;
-			if (kind === 'reference' || kind === 'references') {
-				const ref = String(f?.ref || '');
-				out.ref = !ref || ref === selfName || ref === SELF ? SELF : ref;
-				if (out.ref !== SELF && !targets.has(out.ref)) {
-					// Named a model that doesn't exist: an honest text field beats a broken link.
-					out.kind = kind === 'reference' ? 'text' : 'tags';
-					delete out.ref;
-				}
-			}
-			return out;
-		})
+		.map((f: any) => mapField(f))
 		.filter((f: any) => f.key && !RESERVED_KEYS.includes(f.key))
 		// Access control brings these itself.
 		.filter((f: any) => !(input?.access?.enabled && ['privacy', 'access', 'addedBy'].includes(f.key)));
@@ -406,18 +450,32 @@ export const aiBuildModel = async (req: any, res: Response): Promise<Response> =
 
 		let lastProblems: string[] = [];
 		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-			const reply = await client.messages.create({
-				model: MODEL(),
-				max_tokens: 8000,
-				system: systemPrompt(targets, categories),
-				tools: [TOOL],
-				tool_choice: { type: 'tool', name: TOOL.name },
-				messages,
-			});
-			const call = reply.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-			if (!call) return fail(res, 502, 'Claude didn’t return a model — try rewording the request');
+			// Forced tool_choice ('tool' / 'any') is refused by current models: the
+			// system prompt asks for build_model, and a text reply gets one nudge.
+			// Thinking is always on and counts toward max_tokens, so there's room
+			// for it — streamed, so a long answer doesn't hit the HTTP timeout.
+			const reply = await client.messages
+				.stream({
+					model: MODEL(),
+					max_tokens: 32000,
+					system: systemPrompt(targets, categories),
+					tools: [TOOL],
+					tool_choice: { type: 'auto' },
+					messages,
+				})
+				.finalMessage();
+			if (reply.stop_reason === 'refusal') return fail(res, 422, 'Claude declined this request — try describing the model differently');
 			if (reply.stop_reason === 'max_tokens')
 				return fail(res, 502, 'The model came out too large — ask for fewer fields, or build it in two passes');
+			const call = reply.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
+			if (!call) {
+				if (attempt === MAX_ATTEMPTS - 1) return fail(res, 502, 'Claude didn’t return a model — try rewording the request');
+				messages.push(
+					{ role: 'assistant', content: reply.content },
+					{ role: 'user', content: 'Please call build_model now with your design, making sensible assumptions for anything unclear.' }
+				);
+				continue;
+			}
 
 			const input: any = call.input;
 			const body = normalize(input, targetNames);

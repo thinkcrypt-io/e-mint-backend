@@ -15,7 +15,7 @@ import {
 } from '../../functions/routeRegistry.function.js';
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { PROTECTED_ROUTES, checkSettings, validateDraft, withSystemFields } from './validate.js';
-import { formulaPipeline, formulasOf } from '../../functions/formula.function.js';
+import { formulaPipeline, formulasOf, subFieldsOf } from '../../functions/formula.function.js';
 
 type Kind = 'settings' | 'config';
 const KINDS: Kind[] = ['settings', 'config'];
@@ -269,12 +269,15 @@ export const discardBuilderDraft = async (req: any, res: Response): Promise<Resp
  * route never ends up with new settings and an old config because the second
  * one failed.
  */
-/** A settings copy's formulas, to tell whether a publish changed any. */
+/** A settings copy's formulas — a section's row formulas too — to tell whether a publish changed any. */
 const formulaSignature = (data: any) =>
 	JSON.stringify(
-		(data?.fields || [])
-			.filter((f: any) => f?.schema?.type === 'formula')
-			.map((f: any) => [f.key, f.schema.formula])
+		(data?.fields || []).flatMap((f: any) => [
+			...(f?.schema?.type === 'formula' ? [[f.key, f.schema.formula]] : []),
+			...subFieldsOf(f)
+				.filter((x: any) => x.type === 'formula')
+				.map((x: any) => [`${f.key}.${x.name}`, x.formula]),
+		])
 	);
 
 export const publishBuilderRoute = async (req: any, res: Response): Promise<Response> => {

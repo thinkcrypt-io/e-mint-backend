@@ -2,7 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
-import { FieldInfo, checkFormula, format, parse, sectionFieldInfo } from '../../functions/formula.function.js';
+import { FieldInfo, checkFormula, format, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
 import { rulesSchema } from '../../functions/formRules.function.js';
 
 /**
@@ -292,6 +292,29 @@ export const checkSettings = ({
 			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be a formula.`);
 			const checked = checkFormula(field.schema?.formula || '', formulaFieldInfo(data.fields, model), key);
 			if (!checked.ok) problems.push(`'${key}' formula: ${checked.errors.map(e => e.message).join('; ')}`);
+		}
+
+		// A section's own fields: each must be a path the model stores under it
+		// (a sub-schema drops anything else), and a row formula must check out
+		// against the other values of its row.
+		const subs = subFieldsOf(field);
+		if (subs.length) {
+			const path: any = model?.schema?.path(key);
+			const sub: any = path?.schema;
+			for (const x of subs) {
+				const stored: any = sub?.path(x.name);
+				if (sub && !stored) problems.push(`'${key}.${x.name}' isn't stored by the model — its rows hold ${Object.keys(sub.paths).filter(k => k !== '_id').join(', ')}.`);
+				if (x.type === 'formula') {
+					if (stored && stored.instance !== 'Number')
+						problems.push(`'${key}.${x.name}' can't be a formula: the model stores it as ${String(stored.instance).toLowerCase()}, not a number.`);
+					const checked = checkFormula(
+						x.formula || '',
+						subs.map((y: any) => ({ key: y.name, label: y.label, numeric: y.type === 'number' || y.type === 'formula', ...(y.type === 'formula' && { formula: y.formula }) })),
+						x.name
+					);
+					if (!checked.ok) problems.push(`'${key}.${x.name}' formula: ${checked.errors.map(e => e.message).join('; ')}`);
+				}
+			}
 		}
 
 		// '+field' in a populate select forces a `select: false` field (a
