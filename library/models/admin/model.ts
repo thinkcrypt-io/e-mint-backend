@@ -21,6 +21,10 @@ export type AdminType = {
 	 *  sliding in from the right. Mobile always uses the bottom sheet
 	 *  regardless of this. Per-admin, set from the admin's own Settings page. */
 	modalLayout?: 'modal' | 'drawer';
+	/** Colour theme of the admin panel, by id (admin src/theme/palettes.ts).
+	 *  Per-admin, chosen from the user menu → Themes. Each theme has its own
+	 *  light and dark palette; light/dark itself stays a per-browser toggle. */
+	theme?: string;
 	resetPasswordToken?: string;
 	resetPasswordExpires?: Date;
 	/** Lifecycle of an admin created via the invite flow: 'pending' until the
@@ -74,6 +78,15 @@ const schema = new Schema<AdminType>(
 			type: String,
 			enum: ['modal', 'drawer'],
 			default: 'drawer',
+		},
+
+		// Not an enum: the themes are defined in the admin, and an id the admin
+		// no longer knows simply falls back to the default look there.
+		theme: {
+			type: String,
+			trim: true,
+			maxlength: 40,
+			default: 'default',
 		},
 
 		role: {

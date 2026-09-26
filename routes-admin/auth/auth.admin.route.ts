@@ -6,6 +6,7 @@ import {
 	updateAdminPreferences,
 	adminForgotPasswordController,
 	adminResetPasswordController,
+	adminChangePasswordController,
 } from './controllers/index.js';
 import { adminProtect } from '../../imports.js';
 
@@ -21,5 +22,7 @@ router.put('/', adminProtect, adminUpdateSelfCongroller);
 // bare `PUT /` route above was the only one wired, so self-edit 404'd.
 router.put('/update/self', adminProtect, adminUpdateSelfCongroller);
 router.put('/update/preferences', adminProtect, updateAdminPreferences);
+// The admin app's "Change Password" (useUpdatePasswordMutation) — had no route and 404'd.
+router.put('/change-password', adminProtect, adminChangePasswordController);
 
 export default router;

@@ -4,3 +4,4 @@ export { default as adminUpdateSelfCongroller } from './adminUpdateSelf.controll
 export { default as updateAdminPreferences } from './updateAdminPrferences.controller.js';
 export { default as adminForgotPasswordController } from './adminForgotPassword.controller.js';
 export { default as adminResetPasswordController } from './adminResetPassword.controller.js';
+export { default as adminChangePasswordController } from './adminChangePassword.controller.js';
