@@ -4,9 +4,15 @@ import moment from 'moment';
 type QueryType = {
 	allowSort?: string[];
 	allowSearch?: string[];
+	/** Fields that aren't sortable but can still be matched by value (=, _in, _ne). */
+	allowFilter?: string[];
 };
 
-const filter = ({ allowSort = [], allowSearch = [] }: QueryType) => {
+// The list's own parameters — never read as a field of the same name.
+const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip'];
+const MATCH_OPS = ['in', 'ne'];
+
+const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryType) => {
 	return (req: Request, res: Response, next: NextFunction): any => {
 		try {
 			// Define the allowed operators for the MongoDB query.
@@ -34,8 +40,10 @@ const filter = ({ allowSort = [], allowSearch = [] }: QueryType) => {
 
 			for (const key in req.query) {
 				const [field, operator] = key.split('_');
+				const matchable =
+					allowFilter.includes(field) && !RESERVED.includes(field) && (!operator || MATCH_OPS.includes(operator));
 
-				if (allowSort.includes(field) && req.query[key]) {
+				if ((allowSort.includes(field) || matchable) && req.query[key]) {
 					if (field.endsWith('At') || field.endsWith('Date') || field === 'date') {
 						query[field] = getDate({ key, value: req.query[key] });
 					} else {

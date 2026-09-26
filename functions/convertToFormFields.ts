@@ -70,6 +70,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 							...(fieldConfig.folder && { folder: fieldConfig.folder }),
 							...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
+							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 						});
 					}
 				});
@@ -108,6 +109,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 						...(fieldConfig.folder && { folder: fieldConfig.folder }),
 						...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
+						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 						endOfSection: lastElement,
 					});
 				}

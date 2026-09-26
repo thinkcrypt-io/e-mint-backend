@@ -13,6 +13,7 @@ type Config = {
 	FILTER_OPTIONS: {
 		allowSort: string[];
 		allowSearch: string[];
+		allowFilter: string[];
 	};
 	EXIST_OPTIONS: {
 		model: mongoose.Model<any>;
@@ -34,6 +35,9 @@ type Config = {
 	};
 	SCHEMA: any;
 };
+
+// Same as the route builder's: fields named like a secret.
+const SENSITIVE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|hash/i;
 
 type ConstructConfigParams = {
 	model: any;
@@ -73,6 +77,10 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 		FILTER_OPTIONS: {
 			allowSort: configKeys.filter(key => config[key].sort) || [],
 			allowSearch: configKeys.filter(key => config[key].search) || [],
+			// Matched by value (`?client=…`, `?isActive=true`, `?status_in=a,b`) — what a
+			// record picker narrows its options with. Never a hidden field or a secret:
+			// a filter on one would tell its value away.
+			allowFilter: configKeys.filter(key => !config[key].exclude && !SENSITIVE.test(key)),
 		},
 		EXIST_OPTIONS: {
 			model: model,
