@@ -35,6 +35,7 @@ import { constructPermissions, constructConfig, SettingsType } from '../../impor
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
+import getStats from '../../library/controllers/aggregate/getStats.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import {
@@ -231,6 +232,15 @@ const defineRoutes = ({
 		// Middleware for filtering documents
 		filter: [protect, ...(injectMiddleware?.filter || [])],
 		distinct: [protect, R(c => filter(c.FILTER_OPTIONS)), ...(injectMiddleware?.distinct || [])],
+		// Dashboard numbers: what the list would return (filters, read permission,
+		// access), with no search box — its empty match would leave out records
+		// that have none of the searchable fields.
+		stats: [
+			protect,
+			R(c => filter({ ...c.FILTER_OPTIONS, allowSearch: [] })),
+			hasPermission([permissions.read]),
+			...(injectMiddleware?.getAll || []),
+		],
 	};
 
 	//GENERIC_ROUTES
@@ -372,6 +382,9 @@ const defineRoutes = ({
 		...middlewares.count,
 		replaceController?.sum || getSum(config.MODEL)
 	);
+
+	// A dashboard widget's number, series or breakdown (getStats.controller.ts).
+	router.get('/get/stats', ...middlewares.stats, getStats(config.MODEL));
 
 	//Get distinct values for a field
 	router.get(

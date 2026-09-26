@@ -260,6 +260,7 @@ import {
 } from '../library/models/_index.js';
 import { getDocumentHistory } from '../library/controllers/history/_index.js';
 import builderRouter from '../library/controllers/builder/_index.js';
+import dashboardRouter from '../library/controllers/dashboard/_index.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import { accessUsersRouter, notificationsRouter } from '../library/controllers/notifications/_index.js';
 
@@ -285,6 +286,7 @@ router.get('/model/:id/:type', getModelKeys);
 router.post('/whatsapp/send', sendWhatsapp);
 
 router.use('/builder', builderRouter);
+router.use('/dashboard', dashboardRouter);
 
 router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
 router.get('/permissionlist', getAdminPermissionList());
