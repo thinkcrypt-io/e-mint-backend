@@ -78,6 +78,8 @@ const settings: SettingsType<any> = {
 		schema: {
 			sort: true,
 			default: true,
+			// Dots with an eye to reveal, in the form, the table and the view.
+			type: 'password',
 		},
 	},
 	key: {
