@@ -613,3 +613,69 @@ export const compareBuilderRoute = async (req: any, res: Response): Promise<Resp
 		return res.status(500).json({ message: e.message });
 	}
 };
+
+/* ------------------------------------------ used by the feature builder */
+
+/** The config a route runs on now: its published copy, or what its code / model generates. */
+export const effectiveConfig = async (app: any, route: string) => {
+	const doc: any = await RouteConfig.findOne({ route }, { data: 1 }).lean();
+	return doc?.data || codeFor(app, route).config || null;
+};
+
+/** The settings a route runs on now, as RouteSettings data. */
+export const effectiveSettings = async (app: any, route: string) => {
+	const doc: any = await RouteSettings.findOne({ route }, { data: 1 }).lean();
+	return doc?.data || codeFor(app, route).settings || null;
+};
+
+/** Does `route` exist as an admin route, and what model is behind it. */
+export const routeModel = (app: any, route: string) => codeFor(app, route).model || null;
+
+/**
+ * Changes a route's config and publishes it straight away — the feature
+ * builder's tabs and page layouts. `patch` gets a copy of what's live and
+ * returns the new config; it's checked like a builder publish, becomes the
+ * next version with a snapshot, and an open draft gets the same change so
+ * publishing it later doesn't undo this one. Returns what to put back to undo.
+ */
+export const publishConfigPatch = async (
+	req: any,
+	route: string,
+	patch: (data: any) => any,
+	note: string
+): Promise<{ undo: () => Promise<void> }> => {
+	const code = codeFor(req.app, route);
+	if (!code.model) throw Object.assign(new Error(`No admin route '${route}'`), { status: 404 });
+	if (PROTECTED_ROUTES.has(route)) throw Object.assign(new Error(`'${route}' can't be changed from the builder`), { status: 400 });
+
+	const doc: any = await RouteConfig.findOne({ route });
+	const before = doc ? { data: doc.data, draft: doc.draft, version: doc.version } : null;
+	const current = structuredClone(doc?.data || code.config || {});
+	const { problems, value } = check(req, route, 'config', patch(current));
+	if (problems) throw Object.assign(new Error(`The ${route} page config has problems: ${problems.join('; ')}`), { status: 400, problems });
+
+	let draft = doc?.draft || null;
+	if (draft) {
+		const patched = check(req, route, 'config', patch(structuredClone(draft)));
+		if (!patched.problems) draft = patched.value;
+	}
+	const version = (doc?.version || 0) + 1;
+	await RouteConfig.findOneAndUpdate(
+		{ route },
+		{
+			$set: { model: code.model.modelName, data: value, draft, version, publishedAt: new Date(), publishedBy: req.user?._id },
+			$setOnInsert: { source: 'inherit' },
+		},
+		{ upsert: true }
+	);
+	await RouteVersion.create({ route, kind: 'config', version, data: value, note, publishedBy: req.user?._id });
+	invalidateRoute(route);
+
+	return {
+		undo: async () => {
+			if (before) await RouteConfig.updateOne({ route }, { $set: before });
+			else await RouteConfig.deleteOne({ route });
+			invalidateRoute(route);
+		},
+	};
+};

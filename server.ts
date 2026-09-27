@@ -17,6 +17,7 @@ import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
 import staffApi from './staff/router.js';
+import mcpRouter from './library/controllers/mcp/mcp.router.js';
 
 //User Routes
 
@@ -37,6 +38,8 @@ app.use(
 const allowedOrigins = ['http://localhost:3000', 'http://example.com', 'http://localhost:3001'];
 
 app.use(cors());
+// Before the request logger: a connector's URL can carry its API key (/mcp/emk_…).
+app.use('/mcp', mcpRouter);
 app.use(morgan('combined'));
 app.use(requestIp.mw());
 

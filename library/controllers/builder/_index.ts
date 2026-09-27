@@ -28,6 +28,16 @@ import {
 } from './models.controller.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { aiBuildModel } from './ai.controller.js';
+import {
+	aiPlanFeature,
+	buildFeaturePlan,
+	checkFeaturePlan,
+	createApiKey,
+	getFeatureCatalog,
+	listApiKeys,
+	listFeatures,
+	revokeApiKey,
+} from './features.controller.js';
 
 /**
  * /admin/api/builder — the route builder's API.
@@ -64,6 +74,18 @@ router.post('/models/ai', ...edit, aiBuildModel);
 router.post('/models', ...edit, createModel);
 router.put('/models/:id', ...edit, updateModel);
 router.delete('/models/:id', ...edit, deleteModel);
+
+// Features: several models and their links, planned and built together (features.service.ts).
+router.get('/features', ...view, listFeatures);
+router.get('/features/catalog', ...view, getFeatureCatalog);
+router.post('/features/plan', ...edit, checkFeaturePlan);
+router.post('/features/ai', ...edit, aiPlanFeature);
+router.post('/features/build', ...edit, buildFeaturePlan);
+
+// Keys AI clients connect to /mcp with (library/controllers/mcp).
+router.get('/api-keys', ...edit, listApiKeys);
+router.post('/api-keys', ...edit, createApiKey);
+router.delete('/api-keys/:id', ...edit, revokeApiKey);
 
 router.get('/routes', ...view, getBuilderRoutes);
 router.get('/route', ...view, getBuilderRoute);

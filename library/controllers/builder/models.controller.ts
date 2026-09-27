@@ -61,6 +61,23 @@ const SELF = '__self__';
 const fail = (res: Response, status: number, message: string, problems?: string[]) =>
 	res.status(status).json({ message, ...(problems && { problems }) });
 
+/** A refusal with a status and the problems behind it — thrown by the *Core functions, answered by the handlers. */
+export class BuildError extends Error {
+	status: number;
+	problems?: string[];
+	constructor(status: number, message: string, problems?: string[]) {
+		super(message);
+		this.status = status;
+		this.problems = problems;
+	}
+}
+
+const answer = (res: Response, e: any) => {
+	if (e instanceof BuildError) return fail(res, e.status, e.message, e.problems);
+	console.error(e?.message);
+	return fail(res, 500, e?.message || 'Something went wrong');
+};
+
 const subFieldBase = {
 	key: Joi.string()
 		.pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/)
@@ -136,12 +153,13 @@ const bodySchema = Joi.object({
 }).options({ stripUnknown: true });
 
 /** Joi-valid body -> definition fields, plus the checks Joi can't express. */
-const check = async (req: any, body: any, selfName: string) => {
+const check = async (req: any, body: any, selfName: string, extraTargets: string[] = []) => {
 	const { value, error } = bodySchema.validate(body, { abortEarly: false });
 	if (error) return { problems: error.details.map(d => d.message.replace(/"/g, '')) };
 
 	const problems: string[] = [];
-	const targets = new Set((await linkTargets(req.app)).map(t => t.name));
+	// `extraTargets`: models planned alongside this one (a feature build) that don't exist yet.
+	const targets = new Set([...(await linkTargets(req.app)).map(t => t.name), ...extraTargets]);
 
 	/** The checks every field gets — a model's, or a section's own (`scope`: the fields its formulas may use). */
 	const checkField = (f: any, name: string, scope: any[]) => {
@@ -235,9 +253,10 @@ const draftDef = (value: any, a: Availability): ModelDef => ({
 });
 
 /** What a definition generates: its settings and config, as RouteSettings / RouteConfig data. */
-const generated = async (app: any, def: ModelDef) => {
+const generated = async (app: any, def: ModelDef, extraDefs: ModelDef[] = []) => {
 	const saved: ModelDef[] = (await ModelDefinition.find({ name: { $ne: def.name } }).lean()) as any;
-	const settings = generateSettings(def, makeTargetLookup(app, [...saved, def]));
+	const extras = extraDefs.filter(d => d.name !== def.name && !saved.some(x => x.name === d.name));
+	const settings = generateSettings(def, makeTargetLookup(app, [...saved, ...extras, def]));
 	return {
 		settingsObj: settings,
 		settings: settingsToData(settings),
@@ -608,14 +627,24 @@ export type PreviewResult =
  * are patched for the change instead of generated afresh. The AI builder
  * shares it.
  */
-export const buildPreview = async (req: any, body: any): Promise<PreviewResult> => {
-	const availability = await checkAvailability(req.app, body?.name || singular(body?.title), body?.route);
+export const buildPreview = async (
+	req: any,
+	body: any,
+	opts: { extraDefs?: ModelDef[]; availability?: Availability } = {}
+): Promise<PreviewResult> => {
+	const extraDefs = opts.extraDefs || [];
+	const availability = opts.availability || (await checkAvailability(req.app, body?.name || singular(body?.title), body?.route));
 	if (!availability) return { message: 'The model name must start with a letter (e.g. “Invoice”)', problems: [] };
-	const { value, problems } = await check(req, body, availability.name);
+	const { value, problems } = await check(
+		req,
+		body,
+		availability.name,
+		extraDefs.map(d => d.name)
+	);
 	if (problems?.length) return { message: 'The model isn’t valid', problems };
 
 	const def = draftDef(value, availability);
-	const fresh = await generated(req.app, def);
+	const fresh = await generated(req.app, def, extraDefs);
 	let settings = fresh.settings;
 	let config: any = fresh.config;
 
@@ -670,23 +699,32 @@ export const getModel = async (req: any, res: Response): Promise<Response> => {
 	}
 };
 
-/** POST /builder/models */
-export const createModel = async (req: any, res: Response): Promise<Response> => {
+/**
+ * Creates a model from a definition body — the wizard's, or one step of a
+ * feature build (featureBuilder.function.ts), which passes `availability` so
+ * the name it planned with is the one registered. Throws BuildError.
+ */
+export const createModelCore = async (
+	req: any,
+	input: any,
+	opts: { availability?: Availability; note?: string } = {}
+): Promise<{ doc: any; availability: Availability; warnings: string[] }> => {
 	let created: any = null;
 	try {
-		const availability = await checkAvailability(req.app, req.body?.name || singular(req.body?.title), req.body?.route);
-		if (!availability) return fail(res, 400, 'The model name must start with a letter (e.g. “Invoice”)');
+		const availability =
+			opts.availability || (await checkAvailability(req.app, input?.name || singular(input?.title), input?.route));
+		if (!availability) throw new BuildError(400, 'The model name must start with a letter (e.g. “Invoice”)');
 
-		const { value, problems } = await check(req, req.body, availability.name);
-		if (problems?.length) return fail(res, 400, 'The model isn’t valid', problems);
+		const { value, problems } = await check(req, input, availability.name);
+		if (problems?.length) throw new BuildError(400, 'The model isn’t valid', problems);
 
 		// Settings and config edited in the wizard are checked before anything
 		// is written, and published as version 1 once the model exists.
 		const copies =
-			req.body?.settings || req.body?.config
-				? await checkCopies(req.app, draftDef(value, availability), req.body?.settings, req.body?.config)
+			input?.settings || input?.config
+				? await checkCopies(req.app, draftDef(value, availability), input?.settings, input?.config)
 				: { problems: [] as string[] };
-		if (copies.problems.length) return fail(res, 400, 'The pages aren’t valid', copies.problems);
+		if (copies.problems.length) throw new BuildError(400, 'The pages aren’t valid', copies.problems);
 
 		// Its own permission, unless a code route already uses that key.
 		let permission = availability.route;
@@ -696,7 +734,7 @@ export const createModel = async (req: any, res: Response): Promise<Response> =>
 			...value,
 			displayField: value.displayField || undefined,
 			name: availability.name,
-			requestedName: req.body?.name || req.body?.title,
+			requestedName: input?.name || input?.title,
 			route: availability.route,
 			collectionName: availability.collectionName,
 			permission,
@@ -710,7 +748,8 @@ export const createModel = async (req: any, res: Response): Promise<Response> =>
 		if (error) {
 			await ModelDefinition.deleteOne({ _id: created._id });
 			await syncDynamicModels({ app: req.app, force: true });
-			return fail(res, 400, `The model couldn’t be registered: ${error}`);
+			created = null;
+			throw new BuildError(400, `The model couldn’t be registered: ${error}`);
 		}
 
 		await Permission.findOneAndUpdate(
@@ -745,34 +784,43 @@ export const createModel = async (req: any, res: Response): Promise<Response> =>
 				kind,
 				version: 1,
 				data,
-				note: 'Created with the model wizard',
+				note: opts.note || 'Created with the model wizard',
 				publishedBy: req.user?._id,
 			});
 		}
 		invalidateRoute(created.route);
 
 		const warnings = await syncIndexes(created.toObject());
-		return res.status(201).json({ doc: await withCount({ ...created.toObject(), sidebarItem }), availability, warnings });
+		return { doc: await withCount({ ...created.toObject(), sidebarItem }), availability, warnings };
 	} catch (e: any) {
-		console.error(e.message);
-		if (created) {
+		if (created && !(e instanceof BuildError)) {
 			await ModelDefinition.deleteOne({ _id: created._id }).catch(() => {});
 			await syncDynamicModels({ app: req.app, force: true }).catch(() => {});
 		}
-		return fail(res, 500, e.message);
+		throw e;
 	}
 };
 
-/** PUT /builder/models/:id — name, route and collection stay as they are. */
-export const updateModel = async (req: any, res: Response): Promise<Response> => {
+/** POST /builder/models */
+export const createModel = async (req: any, res: Response): Promise<Response> => {
 	try {
-		if (!mongoose.isValidObjectId(req.params.id)) return fail(res, 400, 'Invalid id');
-		const doc: any = await ModelDefinition.findById(req.params.id);
-		if (!doc) return fail(res, 404, 'Model not found');
+		return res.status(201).json(await createModelCore(req, req.body));
+	} catch (e: any) {
+		return answer(res, e);
+	}
+};
+
+
+/** Changes a saved model (name, route and collection stay as they are). Throws BuildError. */
+export const updateModelCore = async (req: any, id: any, input: any, opts: { note?: string } = {}) => {
+	{
+		if (!mongoose.isValidObjectId(id)) throw new BuildError(400, 'Invalid id');
+		const doc: any = await ModelDefinition.findById(id);
+		if (!doc) throw new BuildError(404, 'Model not found');
 		const before: ModelDef = doc.toObject();
 
-		const { value, problems } = await check(req, req.body, before.name);
-		if (problems?.length) return fail(res, 400, 'The model isn’t valid', problems);
+		const { value, problems } = await check(req, input, before.name);
+		if (problems?.length) throw new BuildError(400, 'The model isn’t valid', problems);
 
 		// Snapshot what's being replaced, so a change can be looked up later.
 		await RouteVersion.create({
@@ -780,7 +828,7 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 			kind: 'model',
 			version: before.version || 1,
 			data: before,
-			note: 'Before a model builder change',
+			note: opts.note || 'Before a model builder change',
 			publishedBy: req.user?._id,
 		});
 
@@ -799,7 +847,7 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 			// Put the working definition back rather than leave a model with no route.
 			await ModelDefinition.replaceOne({ _id: doc._id }, { ...before, version: (before.version || 1) + 2 });
 			await syncDynamicModels({ app: req.app, force: true });
-			return fail(res, 400, `The change couldn’t be applied, so nothing was changed: ${error}`);
+			throw new BuildError(400, `The change couldn’t be applied, so nothing was changed: ${error}`);
 		}
 
 		const after: ModelDef = doc.toObject();
@@ -848,14 +896,27 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
 		await Permission.updateOne({ key: after.permission }, { $set: { name: after.title } });
 
 		const warnings = await syncIndexes(after);
-		return res
-			.status(200)
-			.json({ doc: await withCount({ ...after, sidebarItem }), warnings, codesAssigned, madePublic, ...(recalculated !== undefined && { recalculated }) });
-	} catch (e: any) {
-		console.error(e.message);
-		return fail(res, 500, e.message);
+		return {
+			doc: await withCount({ ...after, sidebarItem }),
+			before,
+			warnings,
+			codesAssigned,
+			madePublic,
+			...(recalculated !== undefined && { recalculated }),
+		};
 	}
 };
+
+/** PUT /builder/models/:id — name, route and collection stay as they are. */
+export const updateModel = async (req: any, res: Response): Promise<Response> => {
+	try {
+		const { before, ...result } = await updateModelCore(req, req.params.id, req.body);
+		return res.status(200).json(result);
+	} catch (e: any) {
+		return answer(res, e);
+	}
+};
+
 
 /**
  * DELETE /builder/models/:id?dropData=true
@@ -864,15 +925,15 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
  * sidebar item. The records stay in their collection unless `dropData` —
  * which is why the name stays taken until they're gone.
  */
-export const deleteModel = async (req: any, res: Response): Promise<Response> => {
-	try {
-		if (!mongoose.isValidObjectId(req.params.id)) return fail(res, 400, 'Invalid id');
-		const def: any = await ModelDefinition.findById(req.params.id).lean();
-		if (!def) return fail(res, 404, 'Model not found');
+export const deleteModelCore = async (req: any, id: any, { dropData = false, ignoreLinks = false } = {}) => {
+	{
+		if (!mongoose.isValidObjectId(id)) throw new BuildError(400, 'Invalid id');
+		const def: any = await ModelDefinition.findById(id).lean();
+		if (!def) throw new BuildError(404, 'Model not found');
 
-		const linking = await ModelDefinition.find({ 'fields.ref': def.name, _id: { $ne: def._id } }, { title: 1 }).lean();
+		const linking = ignoreLinks ? [] : await ModelDefinition.find({ 'fields.ref': def.name, _id: { $ne: def._id } }, { title: 1 }).lean();
 		if (linking.length)
-			return fail(res, 409, 'Other models link to this one', linking.map((d: any) => `${d.title} links to it — remove that field first`));
+			throw new BuildError(409, 'Other models link to this one', linking.map((d: any) => `${d.title} links to it — remove that field first`));
 
 		await ModelDefinition.deleteOne({ _id: def._id });
 		await Promise.all([
@@ -883,16 +944,20 @@ export const deleteModel = async (req: any, res: Response): Promise<Response> =>
 			def.sidebarItem ? SidebarItem.deleteOne({ _id: def.sidebarItem }) : null,
 		]);
 
-		const dropData = req.query.dropData === 'true';
 		if (dropData) {
 			await Counter.deleteOne({ slug: `model-${def.name}` });
 			await mongoose.connection.db?.dropCollection(def.collectionName).catch(() => {});
 		}
 
 		await syncDynamicModels({ app: req.app, force: true });
-		return res.status(200).json({ message: dropData ? 'Model and records deleted' : 'Model deleted; its records were kept' });
+		return { message: dropData ? 'Model and records deleted' : 'Model deleted; its records were kept' };
+	}
+};
+
+export const deleteModel = async (req: any, res: Response): Promise<Response> => {
+	try {
+		return res.status(200).json(await deleteModelCore(req, req.params.id, { dropData: req.query.dropData === 'true' }));
 	} catch (e: any) {
-		console.error(e.message);
-		return fail(res, 500, e.message);
+		return answer(res, e);
 	}
 };

@@ -27,7 +27,7 @@ import { buildPreview, checkCopies } from './models.controller.js';
  * model.
  */
 
-const MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
+export const MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
 const MAX_ATTEMPTS = 3;
 const MAX_PROMPT = 4000;
 const SELF = '__self__';
@@ -35,7 +35,7 @@ const SELF = '__self__';
 const fail = (res: Response, status: number, message: string, problems?: string[]) =>
 	res.status(status).json({ message, ...(problems && { problems }) });
 
-const KIND_GUIDE: Record<string, string> = {
+export const KIND_GUIDE: Record<string, string> = {
 	text: 'a short single line — names, titles, phone numbers, SKUs',
 	textarea: 'several lines of plain text — notes, addresses',
 	editor: 'formatted rich text — descriptions, articles',
@@ -61,9 +61,9 @@ const KIND_GUIDE: Record<string, string> = {
 };
 
 /** What a section's own fields can be (a subset of the kinds, no links or nested sections). */
-const SUB_KIND_LIST = ['text', 'textarea', 'email', 'url', 'color', 'number', 'formula', 'boolean', 'date', 'select', 'image', 'file'];
+export const SUB_KIND_LIST = ['text', 'textarea', 'email', 'url', 'color', 'number', 'formula', 'boolean', 'date', 'select', 'image', 'file'];
 
-const fieldProps = {
+export const fieldProps = {
 	key: { type: 'string', description: 'camelCase, starts with a letter; letters, digits and _ only' },
 	label: { type: 'string', description: 'Human label, e.g. "Due date"' },
 	kind: { type: 'string', enum: [...FIELD_KINDS] },
@@ -98,7 +98,7 @@ const fieldProps = {
 };
 
 /** A section's own field: the same, minus links, lists of values and nesting. */
-const subFieldProps = {
+export const subFieldProps = {
 	key: fieldProps.key,
 	label: fieldProps.label,
 	kind: { type: 'string', enum: SUB_KIND_LIST },
@@ -111,7 +111,7 @@ const subFieldProps = {
 	helper: fieldProps.helper,
 };
 
-const sectionProps = {
+export const sectionProps = {
 	fields: {
 		type: 'array',
 		description: 'For section / sectionlist only: the section’s own fields (a row’s fields for a sectionlist).',
@@ -120,7 +120,7 @@ const sectionProps = {
 	addLabel: { type: 'string', description: 'For sectionlist: the add-row button, e.g. "Add item"' },
 };
 
-const TOOL: Anthropic.Tool = {
+export const TOOL: Anthropic.Tool = {
 	name: 'build_model',
 	description:
 		'Define a new admin data model and its page: the fields, the create/edit form, the table columns, the detail view, and the filters.',
@@ -233,7 +233,7 @@ ${targets.length ? targets.map(t => `  - ${t.name}${t.title ? ` (${t.title})` : 
 - Always reply by calling build_model — never with plain text, not even to ask a question. When something is unclear, make a sensible assumption and mention it in the summary.`;
 
 /** Loose AI output -> a body the model checks accept; obvious slips fixed rather than bounced. */
-const normalize = (input: any, targets: Set<string>) => {
+export const normalize = (input: any, targets: Set<string>) => {
 	const toKey = (v: any) => {
 		const words = String(v || '')
 			.replace(/[^a-zA-Z0-9]+/g, ' ')
@@ -319,7 +319,7 @@ const normalize = (input: any, targets: Set<string>) => {
 };
 
 /** Filters for the keys asked for, in that order: the generated ones where there are, otherwise the natural chip for the kind. */
-const buildFilters = (keys: string[], def: any, generatedFilters: any[]) => {
+export const buildFilters = (keys: string[], def: any, generatedFilters: any[]) => {
 	const out: any[] = [];
 	for (const key of [...new Set(keys)]) {
 		const gen = generatedFilters.find(f => f.name === key);
@@ -340,7 +340,7 @@ const buildFilters = (keys: string[], def: any, generatedFilters: any[]) => {
 };
 
 /** The AI's page layout laid over the generated config; anything it got wrong falls back to what's generated. */
-const applyLayout = (input: any, def: any, settings: any, config: any) => {
+export const applyLayout = (input: any, def: any, settings: any, config: any) => {
 	const keys = new Set<string>((settings?.fields || []).map((f: any) => f.key));
 	const own = def.fields.map((f: any) => f.key);
 	const out = { ...config, route: { ...(config.route || {}) } };

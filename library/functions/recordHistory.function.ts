@@ -12,6 +12,7 @@ import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 const SKIP_MODELS = new Set([
 	'History',
 	'DeletedRecord',
+	'ApiKey',
 	'View',
 	'Views',
 	'ClickEvent',
