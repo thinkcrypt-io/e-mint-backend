@@ -9,7 +9,7 @@ type QueryType = {
 };
 
 // The list's own parameters — never read as a field of the same name.
-const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip'];
+const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip', 'archived'];
 const MATCH_OPS = ['in', 'ne'];
 
 const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryType) => {
@@ -64,6 +64,12 @@ const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryTyp
 					}
 				}
 			}
+
+			// Archived rows (bulk Archive sets `archivedAt`) stay out of lists,
+			// counts and exports; `?archived=only` lists just them, `=all` both.
+			const archived = (req as any).query?.archived;
+			if (archived === 'only') query.archivedAt = { $ne: null };
+			else if (archived !== 'all') query.archivedAt = null;
 
 			(req as any).queryHelper = query;
 			// (req as any).meta.allowSort = allowSort;

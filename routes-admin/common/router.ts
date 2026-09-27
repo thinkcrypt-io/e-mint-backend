@@ -36,6 +36,18 @@ import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
 import getStats from '../../library/controllers/aggregate/getStats.controller.js';
+import getTotals from '../../library/controllers/aggregate/getTotals.controller.js';
+import {
+	bulkArchive,
+	bulkDelete,
+	bulkDuplicate,
+	bulkRestore,
+	bulkStatus,
+	mergePreview,
+	mergeRecords,
+} from '../../library/controllers/bulk/bulkActions.controller.js';
+import exportRows from '../../library/controllers/export/exportRows.controller.js';
+import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import {
@@ -227,8 +239,14 @@ const defineRoutes = ({
 		copy: [protect, hasPermission([permissions.create]), ...(injectMiddleware?.copy || [])],
 		// Middleware for getting the count of categories
 		count: [protect, ...(injectMiddleware?.count || [])],
-		// Middleware for exporting category data
-		export: [protect, R(c => filter(c.FILTER_OPTIONS)), ...(injectMiddleware?.export || [])],
+		// Middleware for exporting category data. Read permission: exporting a
+		// route is reading it (this used to let any signed-in admin export anything).
+		export: [
+			protect,
+			R(c => filter(c.FILTER_OPTIONS)),
+			hasPermission([permissions.read]),
+			...(injectMiddleware?.export || []),
+		],
 		// Middleware for filtering documents
 		filter: [protect, ...(injectMiddleware?.filter || [])],
 		distinct: [protect, R(c => filter(c.FILTER_OPTIONS)), ...(injectMiddleware?.distinct || [])],
@@ -385,6 +403,27 @@ const defineRoutes = ({
 
 	// A dashboard widget's number, series or breakdown (getStats.controller.ts).
 	router.get('/get/stats', ...middlewares.stats, getStats(config.MODEL));
+
+	// Totals of the rows ticked in the table — "View total" (getTotals.controller.ts).
+	router.post('/get/totals', ...middlewares.stats, getTotals(config.MODEL));
+
+	// Bulk actions on the ticked rows (bulkActions.controller.ts): the route's
+	// permission for the action, and the list's access rules in queryHelper.
+	// On access-restricted routes deleting and merging are the owner's alone.
+	const bulk = (perm: string) => [protect, hasPermission([perm]), ...(injectMiddleware?.getAll || [])];
+	const bulkOpts = { Model: config.MODEL, ownerOnly: !!injectMiddleware?.delete };
+	router.post('/bulk/delete', ...bulk(permissions.delete), bulkDelete(bulkOpts));
+	router.post('/bulk/restore', ...bulk(permissions.delete), bulkRestore(bulkOpts));
+	router.post('/bulk/duplicate', ...bulk(permissions.create), bulkDuplicate(bulkOpts));
+	router.post('/bulk/archive', ...bulk(permissions.update), bulkArchive(bulkOpts));
+	router.post('/bulk/status', ...bulk(permissions.update), bulkStatus(bulkOpts));
+	router.post('/bulk/merge/preview', ...bulk(permissions.delete), mergePreview(bulkOpts));
+	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
+
+	// The table as a CSV / Excel / PDF file, and records as PDF pages — what
+	// the list's filters and access let the admin see.
+	router.post('/export/rows', ...middlewares.export, exportRows(config.MODEL));
+	router.post('/export/records', ...middlewares.export, exportRecordsPdf(config.MODEL));
 
 	//Get distinct values for a field
 	router.get(
