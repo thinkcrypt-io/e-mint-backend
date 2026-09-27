@@ -12,6 +12,7 @@ import YAML from 'yamljs';
 
 import adminRouter from './routes-admin/admin.router.js';
 import { syncDynamicModels } from './library/functions/dynamicModels.function.js';
+import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
@@ -97,6 +98,8 @@ app.use((req, res, next) => {
 const port: string | number = process.env.PORT || 5000;
 
 app.listen(port, () => console.log(`Server running on Port: ${port}`));
+
+scheduleTrashPurge();
 
 // Compile the models built in the model builder now rather than on the first
 // admin request, so code models that link to them can populate straight away.

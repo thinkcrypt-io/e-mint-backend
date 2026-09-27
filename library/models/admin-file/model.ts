@@ -54,12 +54,30 @@ const schema = new Schema<any>(
 			type: Number,
 			trim: true,
 		},
+		width: {
+			type: Number,
+		},
+		height: {
+			type: Number,
+		},
+		// Trash (media manager) — see the Folder model for how trashRoot works.
+		trashedAt: {
+			type: Date,
+			default: null,
+		},
+		trashRoot: {
+			type: mongoose.Schema.Types.ObjectId,
+			default: null,
+		},
 	},
 
 	{
 		timestamps: true,
 	}
 );
+
+schema.index({ fileFolder: 1, trashedAt: 1 });
+schema.index({ key: 1 });
 
 // Virtual for formatted file size
 schema.virtual('fileSize').get(function () {

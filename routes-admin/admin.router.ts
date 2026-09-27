@@ -9,6 +9,7 @@ import {
 	customerRoute,
 	themeRouter,
 	uploadRoute,
+	mediaRoute,
 	purchasedThemeRoute,
 	smsRoute,
 } from './index.js';
@@ -276,6 +277,7 @@ router.use('/products', productRoute);
 router.use('/customers', customerRoute);
 router.use('/themes', themeRouter);
 router.use('/upload', uploadRoute);
+router.use('/media', mediaRoute);
 router.use('/purchasedthemes', purchasedThemeRoute);
 
 router.use('/sms', smsRoute);
@@ -715,6 +717,7 @@ router.use(
 		permission: 'files',
 		route: 'files',
 		frontendConfig: adminFileConfig,
+		injectMiddleware: { getAll: [customQuery({ query: { trashedAt: null } })] },
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},
@@ -762,7 +765,7 @@ router.use(
 		permission: 'image',
 		route: 'images',
 		frontendConfig: imageConfig,
-		injectMiddleware: { getAll: [customQuery({ query: { fileType: 'image' } })] },
+		injectMiddleware: { getAll: [customQuery({ query: { fileType: 'image', trashedAt: null } })] },
 		replaceController: {
 			delete: deleteMedia(AdminFile),
 		},

@@ -30,6 +30,17 @@ const schema = new Schema<any>(
 			unique: true,
 			trim: true,
 		},
+		// Trash (media manager). `trashRoot` is the id of the item the user actually
+		// trashed: that folder itself, or the ancestor folder it went to the trash with.
+		// Restore and purge act on everything sharing a trashRoot.
+		trashedAt: {
+			type: Date,
+			default: null,
+		},
+		trashRoot: {
+			type: Schema.Types.ObjectId,
+			default: null,
+		},
 	},
 	{
 		timestamps: true,
@@ -46,5 +57,7 @@ schema.pre('save', function (next) {
 
 	next();
 });
+
+schema.index({ parent: 1, trashedAt: 1 });
 
 export default mongoose.model<any>('Folder', schema);

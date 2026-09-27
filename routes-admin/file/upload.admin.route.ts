@@ -7,21 +7,13 @@ import File from '../../library/models/admin-file/model.js';
 import Folder from '../../library/models/folders/model.js';
 import { paginate, adminProtect as protect } from '../../middleware/index.js';
 import { getDistinctFields } from '../../imports.js';
+import { getS3, resolveUploadFolder } from './media.helpers.js';
 
 const router = express.Router();
 
 const uploadFile = multer({ dest: 'from/' });
 const uploadMultipleFiles = multer({ dest: 'from/', limits: { fileSize: 10 * 1024 * 1024 } });
 
-const getS3 = (): AWS.S3 => {
-	AWS.config.update({
-		region: process.env.AWS_REGION,
-		accessKeyId: process.env.AWS_ACCESS_KEY,
-		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-		signatureVersion: 'v4',
-	});
-	return new AWS.S3();
-};
 
 // Shared per-file pipeline: convert to webp, upload to S3, resolve/create the target
 // Folder, and save the File document. Used by both the single-file and multi-file routes.
@@ -33,7 +25,9 @@ const processAndUploadImage = async (
 
 	const fileName = `${Date.now()}_${file.originalname}`;
 
-	const data = await sharp(file.path).webp({ quality: 50, force: true, alphaQuality: 80 }).toBuffer();
+	const { data, info } = await sharp(file.path)
+		.webp({ quality: 50, force: true, alphaQuality: 80 })
+		.toBuffer({ resolveWithObject: true });
 
 	const params: any = {
 		Bucket: process.env.S3_BUCKET_NAME,
@@ -46,12 +40,7 @@ const processAndUploadImage = async (
 	const metadata = await s3.headObject({ Bucket: params.Bucket, Key: params.Key }).promise();
 	uploaded.size = metadata.ContentLength;
 
-	let findFolder = await Folder.findOne({ slug: folder });
-
-	if (!findFolder) {
-		const newFolder = new Folder({ name: folder, slug: folder });
-		findFolder = await newFolder.save();
-	}
+	const findFolder = await resolveUploadFolder(folder);
 
 	const newFile = new File({
 		name: uploaded.Key,
@@ -62,7 +51,9 @@ const processAndUploadImage = async (
 		fileFolder: findFolder._id,
 		bucket: uploaded.Bucket,
 		size: uploaded.size,
-		folder: folder,
+		width: info?.width,
+		height: info?.height,
+		folder: findFolder.slug || folder,
 	});
 
 	return newFile.save();
@@ -147,7 +138,7 @@ router.get('/', protect, paginate, async (req: any, res: Response) => {
 	try {
 		const { sort, limit = 10, skip = 0, fields, page }: any = req.meta;
 		const { type = 'image', folder } = req.query;
-		let query: any = { fileType: type };
+		let query: any = { fileType: type, trashedAt: null };
 		if (folder) query.folder = folder;
 
 		const doc = await File.find(query).sort('-createdAt').limit(limit).skip(skip);
