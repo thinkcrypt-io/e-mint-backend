@@ -47,6 +47,7 @@ import {
 	mergeRecords,
 } from '../../library/controllers/bulk/bulkActions.controller.js';
 import exportRows from '../../library/controllers/export/exportRows.controller.js';
+import { importRows, importTemplate } from '../../library/controllers/bulk/importRows.controller.js';
 import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
@@ -419,6 +420,12 @@ const defineRoutes = ({
 	router.post('/bulk/status', ...bulk(permissions.update), bulkStatus(bulkOpts));
 	router.post('/bulk/merge/preview', ...bulk(permissions.delete), mergePreview(bulkOpts));
 	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
+
+	// Bulk upload from a CSV, Excel or JSON file (importRows.controller.ts):
+	// the create permission; checked row by row like the create form, saved
+	// only when every row passes.
+	router.get('/bulk/import/template', protect, hasPermission([permissions.create]), importTemplate(config.MODEL));
+	router.post('/bulk/import', protect, hasPermission([permissions.create]), importRows(config.MODEL));
 
 	// The table as a CSV / Excel / PDF file, and records as PDF pages — what
 	// the list's filters and access let the admin see.
