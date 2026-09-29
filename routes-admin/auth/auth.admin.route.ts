@@ -10,12 +10,15 @@ import {
 } from './controllers/index.js';
 import { adminProtect } from '../../imports.js';
 import twoFactorRouter from '../../library/controllers/twoFactor/twoFactor.router.js';
+import sessionsRouter from '../../library/controllers/sessions/sessions.router.js';
 
 const router = express.Router();
 
 router.post('/login', adminLoginController);
 // Two-factor sign-in (the second step after /login) and its settings.
 router.use('/2fa', twoFactorRouter);
+// Signed-in devices: list, sign out one / the others / here (Logout); everyone's for super admins.
+router.use('/sessions', sessionsRouter);
 router.post('/forgot-password', adminForgotPasswordController);
 router.post('/reset-password/:token', adminResetPasswordController);
 router.get('/self', adminProtect, adminGetSelfController);

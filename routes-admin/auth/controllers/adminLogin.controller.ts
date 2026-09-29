@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { Admin, validatorHelper as vh, getErrorMessage } from '../../../imports.js';
 import { startLogin } from '../../../library/controllers/twoFactor/twoFactor.service.js';
+import { issueSession } from '../../../library/functions/sessions.function.js';
 
 type Body = {
 	email: string;
@@ -40,9 +41,8 @@ const adminLoginController = async (req: RequestType, res: Response): Promise<Re
 		// (POST /auth/2fa/login/*), which hands out the token.
 		if (user.twoFactorEnabled) return res.status(200).json({ twoFactor: await startLogin(user) });
 
-		const token: string = user?.generateAuthToken();
-
-		return res.status(200).json({ token: `Bearer ${token}` });
+		// A session per sign-in (device, last active), so it can be signed out alone.
+		return res.status(200).json({ token: await issueSession(user, req, 'password') });
 	} catch (e: any) {
 		const message = getErrorMessage(e);
 		return res.status(500).send({ message });

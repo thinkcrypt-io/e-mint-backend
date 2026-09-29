@@ -11,6 +11,7 @@ import Admin from '../../models/admin/model.js';
 import Passkey from '../../models/twoFactor/passkey.model.js';
 import TwoFactorChallenge from '../../models/twoFactor/challenge.model.js';
 import sendMail from '../marketing/mail/sendMail.controller.js';
+import { issueSession } from '../../functions/sessions.function.js';
 
 /**
  * Two-factor sign-in for admins.
@@ -156,9 +157,9 @@ const wrong = async (challenge: any, message: string, field: 'codeAttempts' | nu
 };
 
 /** Ends a sign-in: the ticket can't be used again, and the session token. */
-const finish = async (admin: any, challenge: any) => {
+const finish = async (req: any, admin: any, challenge: any, method: string) => {
 	await TwoFactorChallenge.deleteOne({ _id: challenge._id });
-	return { token: `Bearer ${admin.generateAuthToken()}` };
+	return { token: await issueSession(admin, req, method) };
 };
 
 /* ---------------------------------------------------------- email codes */
@@ -193,7 +194,7 @@ export const sendLoginCode = async (ticket: any) => {
 
 const normalizeBackup = (code: any) => String(code || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-export const verifyLoginCode = async (ticket: any, method: any, code: any) => {
+export const verifyLoginCode = async (req: any, ticket: any, method: any, code: any) => {
 	const { admin, challenge } = await openTicket(ticket);
 
 	if (method === 'email') {
@@ -203,7 +204,7 @@ export const verifyLoginCode = async (ticket: any, method: any, code: any) => {
 		if (challenge.codeAttempts >= MAX_CODE_ATTEMPTS) throw new TwoFactorError(400, 'Too many tries for this code — send a new one.', 'code_expired');
 		if (digits.length !== 6 || !safeEqual(hmac(`${challenge.ticket}:${digits}`), challenge.codeHash))
 			return wrong(challenge, 'That code isn’t right. Check the latest email and try again.', 'codeAttempts');
-		return finish(admin, challenge);
+		return finish(req, admin, challenge, 'email-code');
 	}
 
 	if (method === 'backup') {
@@ -219,7 +220,7 @@ export const verifyLoginCode = async (ticket: any, method: any, code: any) => {
 		if (!spent.modifiedCount) return wrong(challenge, 'That backup code was already used.');
 		const left = (withCodes.twoFactorBackupCodes || []).filter((c: any) => !c.usedAt).length - 1;
 		notify(admin, 'A backup code was used to sign in', `A backup code was just used to sign in to your MINT account. You have ${left} left${left <= 3 ? ' — make new ones in Settings → Two-factor authentication' : ''}.`);
-		return finish(admin, challenge);
+		return finish(req, admin, challenge, 'backup-code');
 	}
 
 	throw new TwoFactorError(400, 'Choose email or backup code');
@@ -298,7 +299,7 @@ export const loginPasskeyVerify = async (req: any, ticket: any, response: any) =
 	key.counter = result.authenticationInfo?.newCounter ?? key.counter;
 	key.lastUsedAt = new Date();
 	await key.save();
-	return finish(admin, challenge);
+	return finish(req, admin, challenge, 'passkey');
 };
 
 /** Settings → Add passkey, step 1: what the browser should create. */

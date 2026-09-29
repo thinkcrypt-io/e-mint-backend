@@ -1,6 +1,7 @@
 import { Admin } from '../../imports.js';
 import { NextFunction, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { REVOKED_CODE, isRevoked, sessionIdOf, touchSession } from '../../library/functions/sessions.function.js';
 
 const adminProtect = async (
 	req: any,
@@ -17,6 +18,17 @@ const adminProtect = async (
 			token,
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
+
+		// A signed-out session (a revoked device, or Logout): refused with a
+		// code the admin app recognises, so that browser signs itself out.
+		const sid = sessionIdOf(decoded, token);
+		if (await isRevoked(sid)) {
+			return res.status(401).json({
+				message: 'This session was signed out. Sign in again.',
+				code: REVOKED_CODE,
+			});
+		}
+		req.sessionId = sid;
 
 		req.user = await Admin.findById(decoded?._id).select('-password').populate('role');
 
@@ -51,6 +63,9 @@ const adminProtect = async (
 		}
 
 		req.permissions = req.user?.role?.permissions || [];
+
+		// "Last active" for Signed-in devices; throttled, doesn't hold the request.
+		touchSession(req, req.user._id, sid);
 
 		next();
 	} catch (e: any) {

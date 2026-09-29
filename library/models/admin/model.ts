@@ -37,7 +37,7 @@ export type AdminType = {
 	twoFactorEmail?: boolean;
 	twoFactorBackupCodes?: { hash: string; usedAt?: Date }[];
 	twoFactorUpdatedAt?: Date;
-	generateAuthToken?: () => string;
+	generateAuthToken?: (sid?: string) => string;
 };
 
 const schema = new Schema<AdminType>(
@@ -267,7 +267,13 @@ schema.pre<any>('save', async function (next) {
 	next();
 });
 
-schema.methods.generateAuthToken = function (this: any): string {
+/**
+ * The login token. `sid` names its AdminSession (library/functions/
+ * sessions.function.ts `issueSession`), which is how one device's token can
+ * be signed out without the others — use issueSession rather than calling
+ * this directly.
+ */
+schema.methods.generateAuthToken = function (this: any, sid?: string): string {
 	const token = jwt.sign(
 		{
 			_id: this._id,
@@ -275,6 +281,7 @@ schema.methods.generateAuthToken = function (this: any): string {
 			email: this.email,
 			role: this.role,
 			phone: this.phone,
+			...(sid && { sid }),
 		},
 		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542',
 	);

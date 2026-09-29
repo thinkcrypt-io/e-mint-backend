@@ -58,7 +58,7 @@ const handle =
 /* -------------------------------------------------------------- sign-in */
 
 router.post('/login/email', handle(req => sendLoginCode(req.body?.ticket)));
-router.post('/login/verify', handle(req => verifyLoginCode(req.body?.ticket, req.body?.method, req.body?.code)));
+router.post('/login/verify', handle(req => verifyLoginCode(req, req.body?.ticket, req.body?.method, req.body?.code)));
 router.post('/login/passkey/options', handle(req => loginPasskeyOptions(req, req.body?.ticket)));
 router.post('/login/passkey/verify', handle(req => loginPasskeyVerify(req, req.body?.ticket, req.body?.response)));
 

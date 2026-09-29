@@ -2,6 +2,7 @@ import Joi from 'joi';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { Admin, validatorHelper as vh, getErrorMessage } from '../../../imports.js';
+import { issueSession } from '../../../library/functions/sessions.function.js';
 
 type Body = {
 	name: string;
@@ -41,9 +42,7 @@ const acceptInvitationController = async (req: RequestType, res: Response): Prom
 		admin.invitationExpires = undefined;
 		await admin.save();
 
-		const token_: string = admin.generateAuthToken();
-
-		return res.status(200).json({ message: 'Welcome aboard', token: `Bearer ${token_}` });
+		return res.status(200).json({ message: 'Welcome aboard', token: await issueSession(admin, req, 'invitation') });
 	} catch (e: any) {
 		const message = getErrorMessage(e);
 		return res.status(500).send({ message });
