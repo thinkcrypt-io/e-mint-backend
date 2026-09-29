@@ -2,6 +2,7 @@ import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { Admin, validatorHelper as vh, getErrorMessage } from '../../../imports.js';
+import { startLogin } from '../../../library/controllers/twoFactor/twoFactor.service.js';
 
 type Body = {
 	email: string;
@@ -34,6 +35,10 @@ const adminLoginController = async (req: RequestType, res: Response): Promise<Re
 		const validPassword = await bcrypt.compare(password, user.password);
 
 		if (!validPassword) return res.status(400).json({ message: 'Incorrect password' });
+
+		// Two-factor on: the password only earns a ticket for the second step
+		// (POST /auth/2fa/login/*), which hands out the token.
+		if (user.twoFactorEnabled) return res.status(200).json({ twoFactor: await startLogin(user) });
 
 		const token: string = user?.generateAuthToken();
 

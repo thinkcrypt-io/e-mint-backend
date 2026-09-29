@@ -41,6 +41,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.128.0",
+		"@simplewebauthn/server": "^9.0.3",
 		"@vercel/sdk": "^1.1.0",
 		"aws-sdk": "^2.1603.0",
 		"axios": "^1.10.0",

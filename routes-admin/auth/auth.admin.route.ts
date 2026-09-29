@@ -9,10 +9,13 @@ import {
 	adminChangePasswordController,
 } from './controllers/index.js';
 import { adminProtect } from '../../imports.js';
+import twoFactorRouter from '../../library/controllers/twoFactor/twoFactor.router.js';
 
 const router = express.Router();
 
 router.post('/login', adminLoginController);
+// Two-factor sign-in (the second step after /login) and its settings.
+router.use('/2fa', twoFactorRouter);
 router.post('/forgot-password', adminForgotPasswordController);
 router.post('/reset-password/:token', adminResetPasswordController);
 router.get('/self', adminProtect, adminGetSelfController);

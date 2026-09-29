@@ -33,6 +33,10 @@ export type AdminType = {
 	invitationStatus?: 'pending' | 'accepted' | 'cancelled';
 	invitationToken?: string;
 	invitationExpires?: Date;
+	twoFactorEnabled?: boolean;
+	twoFactorEmail?: boolean;
+	twoFactorBackupCodes?: { hash: string; usedAt?: Date }[];
+	twoFactorUpdatedAt?: Date;
 	generateAuthToken?: () => string;
 };
 
@@ -126,6 +130,20 @@ const schema = new Schema<AdminType>(
 		},
 		invitationToken: { type: String, select: false },
 		invitationExpires: { type: Date, select: false },
+
+		// Two-factor sign-in (library/controllers/twoFactor). With it on, a
+		// correct password only earns a short 2FA ticket; the token comes after
+		// an email code, a passkey (the Passkey collection) or a backup code.
+		twoFactorEnabled: { type: Boolean, default: false },
+		/** The email-code method; on by default when 2FA is turned on. */
+		twoFactorEmail: { type: Boolean, default: true },
+		/** sha256 of each single-use backup code — never returned by a query. */
+		twoFactorBackupCodes: {
+			type: [{ _id: false, hash: String, usedAt: Date }],
+			select: false,
+			default: undefined,
+		},
+		twoFactorUpdatedAt: { type: Date },
 
 		preferences: {
 			categories: [String],
