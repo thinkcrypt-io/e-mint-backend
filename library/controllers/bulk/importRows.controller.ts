@@ -23,9 +23,17 @@ import { hiddenFields, rulesOf } from '../../functions/formRules.function.js';
  *
  * All or nothing: nothing is saved unless every row passes, and if a save
  * still fails half way the rows already saved are removed again.
+ *
+ * The route's `bulkUpload` config can be `true` or options (uploadOptions):
+ * other names a file's columns go by, cell values that mean "no value" in
+ * number, date and yes/no columns (and a yes/no field ticked where one was
+ * found), the fields that together
+ * identify a record (a row matching one is refused) and a larger row limit.
  */
 
 const MAX_ROWS = 2000;
+const MAX_ROWS_LIMIT = 50000;
+const SAVE_BATCH = 100;
 const MAX_ERRORS = 200;
 const SKIP = new Set(['_id', 'id', '__v', 'createdAt', 'updatedAt', 'addedBy', 'archivedAt', 'archivedBy']);
 const LOOKUP = ['name', 'title', 'code', 'email', 'slug', 'invoiceId', 'label', 'username'];
@@ -36,6 +44,27 @@ type Column = { key: string; label: string; type: string; required: boolean; ref
 const fail = (res: Response, status: number, message: string, extra: any = {}) => res.status(status).json({ message, ...extra });
 const norm = (s: any) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const blank = (v: any) => v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+
+/* ---------------------------------------------------------------- options */
+
+type UploadOptions = { maxRows: number; columns: [string, string][]; missing: Set<string>; missingFlag?: string; matchOn: string[] };
+
+/** The route config's `bulkUpload` block, with anything unusable dropped. */
+const uploadOptions = (req: any, Model: mongoose.Model<any>): UploadOptions => {
+	const raw = req.resolvedRoute?.frontendConfig?.route?.bulkUpload;
+	const o: any = raw && typeof raw === 'object' ? raw : {};
+	const has = (k: any) => typeof k === 'string' && !!Model.schema.path(k);
+	const n = Number(o.maxRows);
+	return {
+		maxRows: Number.isInteger(n) && n > 0 ? Math.min(n, MAX_ROWS_LIMIT) : MAX_ROWS,
+		columns: Object.entries(o.columns && typeof o.columns === 'object' ? o.columns : {})
+			.filter(([h, k]) => norm(h) && has(k))
+			.map(([h, k]) => [h.trim(), k as string]),
+		missing: new Set((Array.isArray(o.missing) ? o.missing : []).map((c: any) => String(c).trim()).filter(Boolean)),
+		missingFlag: has(o.missingFlag) && (Model.schema.path(o.missingFlag) as any).instance === 'Boolean' ? o.missingFlag : undefined,
+		matchOn: (Array.isArray(o.matchOn) ? o.matchOn : []).filter(has),
+	};
+};
 
 /* ---------------------------------------------------------------- columns */
 
@@ -247,14 +276,21 @@ type Checked = { rows: any[]; hidden: string[][]; problems: Problem[]; ignored: 
 
 const check = async (req: any, Model: mongoose.Model<any>, format: string, content: any): Promise<Checked> => {
 	const { headers, rows: raw }: { headers: string[]; rows: any[] } = await parse(format, content);
+	const options = uploadOptions(req, Model);
 	if (!raw.length) throw new Error('The file has no rows. The first row should be the column names, then one row per record.');
-	if (raw.length > MAX_ROWS) throw new Error(`At most ${MAX_ROWS.toLocaleString()} rows at a time — this file has ${raw.length.toLocaleString()}`);
+	if (raw.length > options.maxRows)
+		throw new Error(`At most ${options.maxRows.toLocaleString()} rows at a time — this file has ${raw.length.toLocaleString()}`);
 
 	const columns = columnsOf(req, Model);
 	const byName = new Map<string, Column>();
 	for (const c of columns) {
 		byName.set(norm(c.key), c);
 		if (!byName.has(norm(c.label))) byName.set(norm(c.label), c);
+	}
+	// The route's other names for a column ("rme_size_grp" → sizeBand).
+	for (const [header, key] of options.columns) {
+		const c = columns.find(col => col.key === key);
+		if (c && !byName.has(norm(header))) byName.set(norm(header), c);
 	}
 	const match = new Map<string, Column>();
 	const ignored: string[] = [];
@@ -281,10 +317,20 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 	const used = [...new Set(match.values())];
 
 	// 1. Values → the types their fields want.
+	const flagCol = options.missingFlag ? columns.find(c => c.key === options.missingFlag) : undefined;
+	const valueKinds = new Set(used.filter(c => !c.list && ['Number', 'Date', 'Boolean'].includes((Model.schema.path(c.key) as any)?.instance)).map(c => c.key));
 	const rows: any[] = raw.map((r: any, i: number) => {
 		const out: any = {};
+		let missing = false;
 		for (const [header, col] of match) {
 			if (out[col.key] !== undefined || blank(r[header])) continue;
+			// A "no value" code (a suppressed "C") reads as empty — only in number,
+			// date and yes/no columns, where it can't be a real value (a text or
+			// linked column may hold "C" itself: Manufacturing's industry code).
+			if (valueKinds.has(col.key) && options.missing.has(String(r[header]).trim())) {
+				missing = true;
+				continue;
+			}
 			try {
 				const v = coerce(r[header], col, Model.schema.path(col.key));
 				if (v !== undefined) out[col.key] = v;
@@ -292,9 +338,11 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 				add({ row: i + 2, field: col.label, message: e.message });
 			}
 		}
+		if (missing && flagCol && out[flagCol.key] === undefined) out[flagCol.key] = true;
 		stripFormulaKeys(out, formulas);
 		return out;
 	});
+	if (flagCol && !used.includes(flagCol) && rows.some(r => r[flagCol.key])) used.push(flagCol);
 
 	// 2. Links: an id, or a record found by its name / code / title / email.
 	for (const col of used.filter(c => c.ref)) {
@@ -309,7 +357,15 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 		if (!wanted.size) continue;
 		const ids = [...wanted].filter(v => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(v));
 		const names = [...wanted].filter(v => !ids.includes(v));
-		const fields = LOOKUP.filter(f => Ref.schema.path(f));
+		// Its usual naming fields, and any unique text field (an industry's code).
+		const fields = [
+			...new Set([
+				...LOOKUP.filter(f => Ref.schema.path(f)),
+				...Object.entries<any>(Ref.schema.paths)
+					.filter(([k, p]) => p?.instance === 'String' && p?.options?.unique && !k.includes('.') && p?.options?.select !== false)
+					.map(([k]) => k),
+			]),
+		];
 		const or: any[] = [];
 		if (ids.length) or.push({ _id: { $in: ids } });
 		if (names.length) fields.forEach(f => or.push({ [f]: { $in: names } }));
@@ -370,6 +426,32 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 		if (!values.length) continue;
 		const taken = new Set((await Model.find({ [key]: { $in: values } }).distinct(key)).map((v: any) => String(v).toLowerCase()));
 		rows.forEach((r, i) => !blank(r[key]) && taken.has(String(r[key]).toLowerCase()) && add({ row: i + 2, field: col.label, message: `“${r[key]}” already exists` }));
+	}
+
+	// 3b. Fields that together identify a record (year + industry + size band +
+	// measure): a row matching a saved record, or an earlier row, is refused —
+	// so a file uploaded twice doesn't double the data.
+	if (options.matchOn.length) {
+		const keyOf = (r: any) => (options.matchOn.some(k => blank(r[k])) ? null : options.matchOn.map(k => String(r[k]).toLowerCase()).join('\u0000'));
+		const names = options.matchOn.map(k => columns.find(c => c.key === k)?.label || settings[k]?.title || k).join(' + ');
+		const seen = new Map<string, number>();
+		const keys = rows.map(keyOf);
+		keys.forEach((k, i) => {
+			if (k === null) return;
+			if (seen.has(k)) add({ row: i + 2, message: `Same ${names} as row ${seen.get(k)}` });
+			else seen.set(k, i + 2);
+		});
+		if (seen.size) {
+			// Narrow by each field's values, then compare whole keys.
+			const query: any = {};
+			for (const k of options.matchOn) query[k] = { $in: [...new Set(rows.map(r => r[k]).filter(v => !blank(v)))] };
+			const saved = new Set<string>();
+			for await (const d of Model.find(query, options.matchOn.join(' ')).lean().cursor()) {
+				const k = keyOf(d);
+				if (k !== null) saved.add(k);
+			}
+			keys.forEach((k, i) => k !== null && saved.has(k) && add({ row: i + 2, message: `A record with this ${names} already exists` }));
+		}
 	}
 
 	// 4. What the create form's save checks: hidden fields, the validator, the model.
@@ -434,7 +516,12 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 
 export const importTemplate = (Model: mongoose.Model<any>) => (req: any, res: Response) => {
 	try {
-		return res.status(200).json({ columns: columnsOf(req, Model), maxRows: MAX_ROWS });
+		const { maxRows, columns: aliases, missing } = uploadOptions(req, Model);
+		const columns = columnsOf(req, Model).map(c => {
+			const also = aliases.filter(([, k]) => k === c.key).map(([h]) => h);
+			return also.length ? { ...c, also } : c;
+		});
+		return res.status(200).json({ columns, maxRows, ...(missing.size && { missing: [...missing] }) });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not read this route’s fields');
 	}
@@ -468,23 +555,29 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 	if (dryRun) return res.status(200).json(summary);
 	if (problems.length) return fail(res, 400, `Nothing was imported — ${badRows} of ${total} rows have problems`, { ...summary, stage: 'check' });
 
-	// Save in order, through the model (its hooks number codes, set slugs…).
+	// Save through the model (its hooks number codes, set slugs…), a batch at a
+	// time so a large file doesn't take one round trip per row.
 	const created: any[] = [];
 	const formulas = formulasOf(req.resolvedRoute?.settings);
-	for (let i = 0; i < rows.length; i++) {
-		try {
-			const doc = new Model({ ...rows[i], addedBy: req.user?._id });
-			applyFormulas(doc, formulas);
-			const skip = hidden[i];
-			if (skip.length) await doc.validate({ pathsToSkip: skip });
-			created.push(await doc.save(skip.length ? { validateBeforeSave: false } : undefined));
-		} catch (e: any) {
+	const saveRow = async (i: number) => {
+		const doc = new Model({ ...rows[i], addedBy: req.user?._id });
+		applyFormulas(doc, formulas);
+		const skip = hidden[i];
+		if (skip.length) await doc.validate({ pathsToSkip: skip });
+		created.push(await doc.save(skip.length ? { validateBeforeSave: false } : undefined));
+	};
+	for (let start = 0; start < rows.length; start += SAVE_BATCH) {
+		const batch = rows.slice(start, start + SAVE_BATCH).map((_, j) => start + j);
+		const results = await Promise.allSettled(batch.map(saveRow));
+		const failed = results.findIndex(r => r.status === 'rejected');
+		if (failed !== -1) {
 			// All or nothing: take back what this import already saved.
 			if (created.length) await Model.deleteMany({ _id: { $in: created.map(d => d._id) } }).catch(() => undefined);
-			return fail(res, 400, `Nothing was imported — row ${i + 2} failed to save`, {
+			const e: any = (results[failed] as PromiseRejectedResult).reason;
+			return fail(res, 400, `Nothing was imported — row ${batch[failed] + 2} failed to save`, {
 				...summary,
 				stage: 'save',
-				problems: [{ row: i + 2, message: e?.message || 'Could not save' }],
+				problems: [{ row: batch[failed] + 2, message: e?.message || 'Could not save' }],
 			});
 		}
 	}

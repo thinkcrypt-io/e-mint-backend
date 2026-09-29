@@ -1,5 +1,8 @@
 import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Admin } from '../../../imports.js';
+import { isSecretPath, listModelFields } from '../../functions/routeRegistry.function.js';
+import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { ApiKey } from '../../models/builder/_index.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
@@ -7,7 +10,7 @@ import { BuildError } from '../builder/models.controller.js';
 import { hashKey } from '../builder/features.controller.js';
 import { buildFeature, modelCatalog, planFeature, planProblems, FeaturePlan, Step } from '../builder/features.service.js';
 import { FEATURE_SCHEMA, catalogText, planFromAi, platformGuide } from '../builder/features.schema.js';
-import { effectiveConfig, effectiveSettings, publishConfigPatch, routeModel } from '../builder/builder.controller.js';
+import { effectiveConfig, effectiveSettings, publishConfigPatch, routeModel, routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 
 /**
@@ -41,7 +44,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, form or detail layout. Never build without the user's go-ahead.`;
+Use update_page for later changes to a page's columns, form or detail layout, or to turn its Bulk upload on. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -61,8 +64,10 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 	return { user, permissions: user.role?.permissions || [], key };
 };
 
-const can = (c: Caller, scope: 'read' | 'build') => {
+const can = (c: Caller, scope: Scope) => {
 	if (!c.key.scopes?.includes(scope)) return `This key doesn't have the “${scope}” scope`;
+	// Records: each page's own view permission, checked by the tool.
+	if (scope === 'data') return null;
 	const need = scope === 'read' ? ['view-builder', 'edit-builder'] : ['edit-builder'];
 	if (!c.permissions.includes('*') && !need.some(p => c.permissions.includes(p)))
 		return `${c.user.name || 'The key’s owner'} doesn't have the builder permission (${need.join(' or ')})`;
@@ -71,11 +76,13 @@ const can = (c: Caller, scope: 'read' | 'build') => {
 
 /* --------------------------------------------------------------- tools */
 
+type Scope = 'read' | 'build' | 'data';
+
 type ToolDef = {
 	name: string;
 	title: string;
 	description: string;
-	scope: 'read' | 'build';
+	scope: Scope;
 	inputSchema: any;
 	annotations: Record<string, boolean>;
 	run: (req: any, args: any, caller: Caller) => Promise<{ text: string; data?: any; isError?: boolean }>;
@@ -106,6 +113,138 @@ const planText = (plan: FeaturePlan) => {
 	if (plan.problems.length) out.push('', '## Problems', ...plan.problems.map(p => `- ${p}`));
 	out.push('', plan.ok ? 'The plan is valid. Walk the user through it step by step before building.' : 'Fix the problems and check again.');
 	return out.join('\n');
+};
+
+/**
+ * update_page's `bulkUpload`, tidied: false (off), true (on), or the options
+ * the importer reads (importRows.controller.ts `uploadOptions`). Field keys
+ * go through `known`, which collects the unknown ones. A string is a problem.
+ */
+const bulkUploadOf = (v: any, known: (k: any) => boolean): any => {
+	if (v === false || v === null) return false;
+	if (v === true) return true;
+	if (typeof v !== 'object' || Array.isArray(v)) return 'bulkUpload must be true, false or an options object';
+	const out: any = {};
+	if (v.title) out.title = String(v.title).slice(0, 60);
+	if (v.maxRows !== undefined) {
+		const n = Number(v.maxRows);
+		if (!Number.isInteger(n) || n < 1 || n > 50000) return 'bulkUpload.maxRows must be a whole number from 1 to 50000';
+		out.maxRows = n;
+	}
+	if (v.columns !== undefined) {
+		if (typeof v.columns !== 'object' || Array.isArray(v.columns)) return 'bulkUpload.columns must map a file’s column names to field keys';
+		const entries = Object.entries(v.columns).filter(([h, k]) => String(h).trim() && known(k));
+		if (entries.length) out.columns = Object.fromEntries(entries.map(([h, k]) => [String(h).trim(), k]));
+	}
+	if (v.missing !== undefined) {
+		const codes = (Array.isArray(v.missing) ? v.missing : [v.missing]).map((c: any) => String(c).trim()).filter(Boolean);
+		if (codes.length) out.missing = [...new Set(codes)].slice(0, 20);
+	}
+	if (v.missingFlag) {
+		if (!out.missing) return 'bulkUpload.missingFlag needs missing codes to react to';
+		if (known(v.missingFlag)) out.missingFlag = v.missingFlag;
+	}
+	if (v.matchOn !== undefined) {
+		const list = (Array.isArray(v.matchOn) ? v.matchOn : []).filter(known);
+		if (list.length) out.matchOn = [...new Set(list)];
+	}
+	return Object.keys(out).length ? out : true;
+};
+
+/* -------------------------------------------------------- query_records */
+
+const MAX_RECORDS = 500;
+const NAMING = ['name', 'title', 'label', 'code', 'email', 'slug'];
+const OPS: Record<string, string> = { gt: '$gt', gte: '$gte', lt: '$lt', lte: '$lte', ne: '$ne', in: '$in', nin: '$nin' };
+
+/** A model's naming fields: the usual ones and its unique text fields (an industry's code). */
+const namingFields = (Model: mongoose.Model<any>) => [
+	...new Set([
+		...NAMING.filter(f => Model.schema.path(f)),
+		...Object.entries<any>(Model.schema.paths)
+			.filter(([k, p]) => p?.instance === 'String' && p?.options?.unique && !k.includes('.') && !isSecretPath(k, p))
+			.map(([k]) => k),
+	]),
+];
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Linked records named by id, or by name / code / title (any case) → their ids. */
+const refIds = async (Ref: mongoose.Model<any>, values: any[]) => {
+	const ids = values.filter(v => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v))).map(String);
+	const names = values.filter(v => !ids.includes(String(v))).map(v => String(v).trim()).filter(Boolean);
+	if (!names.length) return ids;
+	const or = namingFields(Ref).flatMap(f => names.map(n => ({ [f]: new RegExp(`^${escapeRe(n)}$`, 'i') })));
+	const found = or.length ? await Ref.find({ $or: or }, { _id: 1 }).limit(1000).lean() : [];
+	return [...ids, ...found.map((d: any) => String(d._id))];
+};
+
+/**
+ * Reads the records of one page for the user's AI: the same records the
+ * key's owner may see in the admin table (view-<route>; archived rows hidden),
+ * never secret-named or hidden fields, linked records shown by their names.
+ * Pages with per-record access (owner / private / shared) are refused for now.
+ */
+const queryRecords = async (req: any, args: any, caller: Caller) => {
+	const route = String(args?.route || '').trim();
+	const Model: mongoose.Model<any> | null = route ? routeModel(req.app, route) : null;
+	const permission = route ? routePermission(req.app, route) : null;
+	if (!Model || !permission) return { text: `No table page at /${route}. Call list_models for routes.`, isError: true };
+	if (PROTECTED_ROUTES.has(route)) return { text: `/${route} controls access — its records can't be read here.`, isError: true };
+	if (!caller.permissions.includes('*') && !caller.permissions.includes(`view-${permission}`))
+		return { text: `${caller.user.name || 'The key’s owner'} can't view /${route} (needs view-${permission}).`, isError: true };
+	if (isAccessRestricted(Model)) return { text: `/${route} has per-record access (owner, private, shared) — its records can't be read over MCP yet.`, isError: true };
+
+	const settings = await effectiveSettings(req.app, route);
+	const excluded = new Set((settings?.fields || []).filter((f: any) => f.exclude).map((f: any) => f.key));
+	const fields = listModelFields(Model).filter(f => !f.key.includes('.') && !excluded.has(f.key) && f.key !== '__v');
+	const byKey = new Map(fields.map(f => [f.key, f]));
+	for (const k of ['createdAt', 'updatedAt']) if (Model.schema.path(k) && !byKey.has(k)) byKey.set(k, { key: k, instance: 'Date' } as any);
+
+	/* The filter: field → value, list of values, or { gte, lte, ne, in… }. */
+	const query: any = { archivedAt: null };
+	const unknown: string[] = [];
+	for (const [key, raw] of Object.entries<any>(args?.filter && typeof args.filter === 'object' ? args.filter : {})) {
+		const f: any = byKey.get(key);
+		if (!f) {
+			unknown.push(key);
+			continue;
+		}
+		const Ref = f.ref && mongoose.models[f.ref] ? mongoose.models[f.ref] : null;
+		const values = async (v: any) => (Ref ? refIds(Ref, [].concat(v)) : [].concat(v));
+		if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+			const cond: any = {};
+			for (const [op, v] of Object.entries<any>(raw)) {
+				if (!OPS[op]) return { text: `Unknown operator “${op}” on ${key} — use ${Object.keys(OPS).join(', ')}`, isError: true };
+				cond[OPS[op]] = op === 'in' || op === 'nin' ? await values(v) : Ref ? (await values(v))[0] ?? null : v;
+			}
+			query[key] = cond;
+		} else if (Array.isArray(raw)) query[key] = { $in: await values(raw) };
+		else query[key] = Ref ? { $in: await values(raw) } : raw;
+	}
+
+	const want = Array.isArray(args?.fields) ? args.fields.filter((k: any) => byKey.has(k)) : [...byKey.keys()];
+	const limit = Math.min(Math.max(parseInt(args?.limit, 10) || 100, 1), MAX_RECORDS);
+	const page = Math.max(parseInt(args?.page, 10) || 1, 1);
+	const sortKey = String(args?.sort || '-createdAt');
+	const sort = byKey.has(sortKey.replace(/^-/, '')) ? { [sortKey.replace(/^-/, '')]: sortKey.startsWith('-') ? -1 : 1 } : { createdAt: -1 };
+
+	let find = Model.find(query).select(want.join(' ')).sort(sort as any).skip((page - 1) * limit).limit(limit);
+	for (const k of want) {
+		const f: any = byKey.get(k);
+		if (f?.ref && mongoose.models[f.ref]) find = find.populate({ path: k, select: namingFields(mongoose.models[f.ref]).join(' ') || '_id' });
+	}
+	let rows: any[];
+	let total: number;
+	try {
+		[rows, total] = await Promise.all([find.lean(), Model.countDocuments(query)]);
+	} catch (e: any) {
+		return { text: `A filter doesn’t fit its field: ${e.message}`, isError: true };
+	}
+	const pages = Math.ceil(total / limit) || 1;
+	const head = `/${route}: ${total.toLocaleString()} record${total === 1 ? '' : 's'} match${page < pages ? ` — page ${page} of ${pages}, ${rows.length} shown (ask for page ${page + 1})` : `, ${rows.length} on this page`}.`;
+	const notes = unknown.length ? `\nIgnored filters (not fields of this page): ${unknown.join(', ')}` : '';
+	return { text: `${head}${notes}\n${JSON.stringify(rows)}`, data: { route, total, page, pages, limit, records: rows } };
 };
 
 const TOOLS: ToolDef[] = [
@@ -181,6 +320,27 @@ const TOOLS: ToolDef[] = [
 		},
 	},
 	{
+		name: 'query_records',
+		title: 'Read records',
+		description:
+			'Reads the records of one table page, as its admin table would show them to the key’s owner (archived rows hidden, secret fields never included). Linked records come back with their names. Filter by field: a value, a list of values, or operators {gte, lte, gt, lt, ne, in, nin}; a linked field can be filtered by the linked record’s name or code (e.g. {"industry": "Mining"}). Up to 500 records per page — ask for the next page for more. Read-only; needs the key’s “data” scope.',
+		scope: 'data',
+		inputSchema: {
+			type: 'object',
+			required: ['route'],
+			properties: {
+				route: { type: 'string', description: 'The page’s route, e.g. "surveyfigures" (list_models shows them)' },
+				filter: { type: 'object', description: 'Field key → value, [values] or {gte, lte, gt, lt, ne, in, nin}' },
+				fields: { type: 'array', items: { type: 'string' }, description: 'Only these fields (default: all readable ones)' },
+				sort: { type: 'string', description: 'A field key, "-" first for descending, e.g. "-year"' },
+				limit: { type: 'integer', minimum: 1, maximum: MAX_RECORDS },
+				page: { type: 'integer', minimum: 1 },
+			},
+		},
+		annotations: { readOnlyHint: true, openWorldHint: false },
+		run: queryRecords,
+	},
+	{
 		name: 'plan_feature',
 		title: 'Check a feature plan',
 		description:
@@ -222,7 +382,7 @@ const TOOLS: ToolDef[] = [
 		name: 'update_page',
 		title: 'Change a page layout',
 		description:
-			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, or add-button title. Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
+			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, or Bulk upload (on/off and its options). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -233,6 +393,24 @@ const TOOLS: ToolDef[] = [
 				form: (FEATURE_SCHEMA as any).properties.steps.items.properties.form,
 				view: (FEATURE_SCHEMA as any).properties.steps.items.properties.view,
 				buttonTitle: { type: 'string' },
+				bulkUpload: {
+					description:
+						'The table’s Bulk upload (Excel, CSV or JSON files, every row checked, all or nothing): false to turn it off, true to turn it on, or options — `columns` maps a file’s column names to field keys ({"rme_size_grp": "sizeBand"}); `missing` lists cell values read as empty in number, date and yes/no columns (["C", ".."]); `missingFlag` is a yes/no field ticked on rows that had one; `matchOn` lists fields that together identify a record, so a row matching an existing record (or another row) is refused; `maxRows` (up to 50000, default 2000); `title` names the menu item.',
+					anyOf: [
+						{ type: 'boolean' },
+						{
+							type: 'object',
+							properties: {
+								title: { type: 'string' },
+								maxRows: { type: 'integer', minimum: 1, maximum: 50000 },
+								columns: { type: 'object', additionalProperties: { type: 'string' } },
+								missing: { type: 'array', items: { type: 'string' } },
+								missingFlag: { type: 'string' },
+								matchOn: { type: 'array', items: { type: 'string' } },
+							},
+						},
+					],
+				},
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -244,6 +422,11 @@ const TOOLS: ToolDef[] = [
 			const keys = new Set<string>([...(settings?.fields || []).map((f: any) => f.key), 'createdAt']);
 			const bad: string[] = [];
 			const known = (k: any) => (typeof k === 'string' && keys.has(k) ? true : (bad.push(String(k)), false));
+			let upload: any;
+			if (args?.bulkUpload !== undefined) {
+				upload = bulkUploadOf(args.bulkUpload, known);
+				if (typeof upload === 'string') return { text: upload, isError: true };
+			}
 			try {
 				await publishConfigPatch(
 					req,
@@ -270,6 +453,10 @@ const TOOLS: ToolDef[] = [
 								}))
 								.filter((s: any) => s.fields.length);
 						if (args.buttonTitle) next.route = { ...(next.route || {}), button: { ...(next.route?.button || {}), title: String(args.buttonTitle).slice(0, 60) } };
+						if (upload !== undefined) {
+							const { bulkUpload, ...rest } = next.route || {};
+							next.route = upload ? { ...rest, bulkUpload: upload } : rest;
+						}
 						return next;
 					},
 					'Changed by an AI client over MCP'

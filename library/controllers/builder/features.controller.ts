@@ -170,7 +170,9 @@ Answer by calling propose_feature once with the whole plan — never with plain 
 /* ---------------------------------------------------------- API keys */
 
 export const hashKey = (secret: string) => crypto.createHash('sha256').update(secret).digest('hex');
-const SCOPES = ['read', 'build'];
+/** read: the models · build: build and change pages · data: read records (MCP query_records), only when asked for. */
+const SCOPES = ['read', 'build', 'data'];
+const DEFAULT_SCOPES = ['read', 'build'];
 
 /** GET /builder/api-keys — the signed-in admin's keys (all keys for a '*' role). */
 export const listApiKeys = async (req: any, res: Response) => {
@@ -191,7 +193,7 @@ export const createApiKey = async (req: any, res: Response) => {
 	try {
 		const name = String(req.body?.name || '').trim().slice(0, 80);
 		if (!name) return fail(res, 400, 'Name the key (e.g. “Claude Desktop”)');
-		const scopes = (Array.isArray(req.body?.scopes) ? req.body.scopes : SCOPES).filter((s: any) => SCOPES.includes(s));
+		const scopes = (Array.isArray(req.body?.scopes) ? req.body.scopes : DEFAULT_SCOPES).filter((s: any) => SCOPES.includes(s));
 		if (!scopes.length) return fail(res, 400, 'Pick at least one scope');
 		const days = Number(req.body?.expiresInDays);
 		const secret = `emk_${crypto.randomBytes(24).toString('base64url')}`;

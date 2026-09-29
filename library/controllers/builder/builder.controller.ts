@@ -631,6 +631,9 @@ export const effectiveSettings = async (app: any, route: string) => {
 /** Does `route` exist as an admin route, and what model is behind it. */
 export const routeModel = (app: any, route: string) => codeFor(app, route).model || null;
 
+/** The permission id a defineRoutes route checks (`view-<id>` to read it), or null for other routes. */
+export const routePermission = (app: any, route: string): string | null => getRegistry(app).resources.get(route)?.source.permission || null;
+
 /**
  * Changes a route's config and publishes it straight away — the feature
  * builder's tabs and page layouts. `patch` gets a copy of what's live and

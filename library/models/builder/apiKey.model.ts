@@ -12,7 +12,7 @@ const schema = new Schema<any>(
 		// The first characters of the secret, shown so a key can be recognised.
 		prefix: { type: String, required: true },
 		hash: { type: String, required: true, unique: true, select: false },
-		scopes: { type: [String], enum: ['read', 'build'], default: ['read', 'build'] },
+		scopes: { type: [String], enum: ['read', 'build', 'data'], default: ['read', 'build'] },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
 		lastUsedAt: { type: Date },
 		expiresAt: { type: Date },
