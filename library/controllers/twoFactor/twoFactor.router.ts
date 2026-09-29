@@ -5,7 +5,12 @@ import Passkey from '../../models/twoFactor/passkey.model.js';
 import { adminProtect } from '../../../imports.js';
 import {
 	TwoFactorError,
+	cancelPasskeyLink,
 	checkPassword,
+	createPasskeyLink,
+	finishPasskeyLink,
+	openPasskeyLink,
+	passkeyLinkStatus,
 	loginPasskeyOptions,
 	loginPasskeyVerify,
 	makeBackupCodes,
@@ -27,6 +32,10 @@ import {
  *   POST /login/passkey/options  { ticket }            → WebAuthn request options
  *   POST /login/passkey/verify   { ticket, response }  → { token }
  *
+ * A passkey on another device, from the phone that scanned the QR (the link token):
+ *   POST /passkey-link/open      { token }             → who it's for + WebAuthn creation options
+ *   POST /passkey-link/finish    { token, response, name } → the passkey, added
+ *
  * Settings, for the signed-in admin's own account:
  *   GET    /                     status: on/off, email, passkeys, backup codes left
  *   POST   /enable   { password } → turns it on, email codes on, 10 backup codes (shown once)
@@ -36,6 +45,9 @@ import {
  *   POST   /passkeys/options      → WebAuthn creation options
  *   POST   /passkeys { response, name } → the passkey, added
  *   PATCH  /passkeys/:id { name } · DELETE /passkeys/:id
+ *   POST   /passkeys/link { password } → a 10-minute QR link for another device
+ *   GET    /passkeys/link/:id    its status (waiting / opened / added / expired)
+ *   DELETE /passkeys/link/:id    cancel it
  *
  * While 2FA is on, email codes or at least one passkey must stay available.
  */
@@ -61,6 +73,10 @@ router.post('/login/email', handle(req => sendLoginCode(req.body?.ticket)));
 router.post('/login/verify', handle(req => verifyLoginCode(req, req.body?.ticket, req.body?.method, req.body?.code)));
 router.post('/login/passkey/options', handle(req => loginPasskeyOptions(req, req.body?.ticket)));
 router.post('/login/passkey/verify', handle(req => loginPasskeyVerify(req, req.body?.ticket, req.body?.response)));
+
+/* A passkey on another device: the phone that scanned the QR (no session, the link token). */
+router.post('/passkey-link/open', handle(req => openPasskeyLink(req, req.body?.token)));
+router.post('/passkey-link/finish', handle(req => finishPasskeyLink(req, req.body?.token, req.body?.response, req.body?.name)));
 
 /* ------------------------------------------------------------- settings */
 
@@ -140,6 +156,17 @@ router.post(
 		return { backupCodes: plain, status: await statusFor(admin._id) };
 	})
 );
+
+// On another device: a QR link (with the password), its status for polling, cancel.
+router.post(
+	'/passkeys/link',
+	handle(async req => {
+		const admin = await checkPassword(req.user._id, req.body?.password);
+		return createPasskeyLink(req, admin);
+	})
+);
+router.get('/passkeys/link/:id', handle(req => passkeyLinkStatus(req.user, req.params.id)));
+router.delete('/passkeys/link/:id', handle(req => cancelPasskeyLink(req.user, req.params.id)));
 
 router.post('/passkeys/options', handle(req => registerPasskeyOptions(req, req.user)));
 router.post('/passkeys', handle(req => registerPasskeyVerify(req, req.user, req.body?.response, req.body?.name)));

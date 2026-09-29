@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Admin from '../../models/admin/model.js';
 import AdminSession from '../../models/sessions/adminSession.model.js';
 import { adminProtect } from '../../../imports.js';
-import { revokeSessions } from '../../functions/sessions.function.js';
+import { placeName, revokeSessions, withPlaces } from '../../functions/sessions.function.js';
 
 /**
  * /admin/api/auth/sessions — where an admin is signed in, and signing out.
@@ -52,6 +52,11 @@ const view = (s: any, currentSid?: string) => ({
 	os: s.os || 'Unknown OS',
 	deviceType: s.deviceType || 'unknown',
 	ip: s.lastIp || s.ip || '',
+	/** Where it is now ("Dhaka, Bangladesh"), and where it signed in from when that differs. */
+	location: placeName(s.lastLocation || s.location),
+	countryCode: (s.lastLocation || s.location)?.countryCode || null,
+	signInIp: s.ip || '',
+	signInLocation: placeName(s.location),
 	signedInAt: s.createdAt,
 	lastActiveAt: s.lastActiveAt || s.createdAt,
 	online: !!s.lastActiveAt && Date.now() - new Date(s.lastActiveAt).getTime() < ONLINE_MS && !s.revokedAt,
@@ -68,7 +73,7 @@ const view = (s: any, currentSid?: string) => ({
 router.get(
 	'/',
 	handle(async req => {
-		const docs = await AdminSession.find({ admin: req.user._id, revokedAt: null }).sort({ lastActiveAt: -1 }).limit(100).lean();
+		const docs = await withPlaces(await AdminSession.find({ admin: req.user._id, revokedAt: null }).sort({ lastActiveAt: -1 }).limit(100).lean());
 		// The current device first, then by last activity.
 		const list = docs.map(s => view(s, req.sessionId)).sort((a, b) => Number(b.current) - Number(a.current));
 		return { doc: list };
@@ -132,7 +137,15 @@ router.get(
 		if (search) {
 			const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 			const admins = await Admin.find({ $or: [{ name: re }, { email: re }] }, { _id: 1 }).limit(500).lean();
-			filter.$or = [{ admin: { $in: admins.map((a: any) => a._id) } }, { browser: re }, { os: re }, { lastIp: re }, { ip: re }];
+			filter.$or = [
+				{ admin: { $in: admins.map((a: any) => a._id) } },
+				{ browser: re },
+				{ os: re },
+				{ lastIp: re },
+				{ ip: re },
+				{ 'lastLocation.city': re },
+				{ 'lastLocation.country': re },
+			];
 		}
 
 		const [docs, total, active, online] = await Promise.all([
@@ -147,6 +160,7 @@ router.get(
 			AdminSession.countDocuments({ revokedAt: null }),
 			AdminSession.distinct('admin', { revokedAt: null, lastActiveAt: { $gte: new Date(Date.now() - ONLINE_MS) } }),
 		]);
+		await withPlaces(docs);
 		return {
 			doc: docs.map(s => view(s, req.sessionId)),
 			total,

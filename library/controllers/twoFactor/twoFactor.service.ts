@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import {
@@ -219,7 +220,7 @@ export const verifyLoginCode = async (req: any, ticket: any, method: any, code: 
 		);
 		if (!spent.modifiedCount) return wrong(challenge, 'That backup code was already used.');
 		const left = (withCodes.twoFactorBackupCodes || []).filter((c: any) => !c.usedAt).length - 1;
-		notify(admin, 'A backup code was used to sign in', `A backup code was just used to sign in to your MINT account. You have ${left} left${left <= 3 ? ' — make new ones in Settings → Two-factor authentication' : ''}.`);
+		notify(admin, 'A backup code was used to sign in', `A backup code was just used to sign in to your MINT account. You have ${left} left${left <= 3 ? ' — make new ones in Settings → Sign-in & security' : ''}.`);
 		return finish(req, admin, challenge, 'backup-code');
 	}
 
@@ -302,11 +303,11 @@ export const loginPasskeyVerify = async (req: any, ticket: any, response: any) =
 	return finish(req, admin, challenge, 'passkey');
 };
 
-/** Settings → Add passkey, step 1: what the browser should create. */
-export const registerPasskeyOptions = async (req: any, admin: any) => {
+/** What the browser should create for `admin` — any authenticator, never one already added. */
+const creationOptions = async (req: any, admin: any) => {
 	const keys = await Passkey.find({ admin: admin._id }).lean();
 	const { rpID, rpName } = relyingParty(req);
-	const options = await generateRegistrationOptions({
+	return generateRegistrationOptions({
 		rpName,
 		rpID,
 		userID: String(admin._id),
@@ -318,34 +319,22 @@ export const registerPasskeyOptions = async (req: any, admin: any) => {
 		authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
 		excludeCredentials: keys.map((k: any) => ({ id: fromB64url(k.credentialId), type: 'public-key', ...(k.transports?.length && { transports: k.transports }) })),
 	});
-	await TwoFactorChallenge.deleteMany({ admin: admin._id, purpose: 'register' });
-	await TwoFactorChallenge.create({
-		admin: admin._id,
-		purpose: 'register',
-		challenge: options.challenge,
-		expiresAt: new Date(Date.now() + REGISTER_TTL_MS),
-	});
-	return options;
 };
 
-/** Settings → Add passkey, step 2: check what the browser made and keep it. */
-export const registerPasskeyVerify = async (req: any, admin: any, response: any, name: any) => {
-	const pending: any = await TwoFactorChallenge.findOne({ admin: admin._id, purpose: 'register' }).sort({ createdAt: -1 });
-	if (!pending || pending.expiresAt < new Date()) throw new TwoFactorError(400, 'That took too long — add the passkey again.');
+/** Checks what the browser made against the challenge it was given, and keeps it. */
+const savePasskey = async (req: any, admin: any, response: any, name: any, expectedChallenge: string, how = '') => {
 	const { rpID, origins } = relyingParty(req);
 	let result: any;
 	try {
 		result = await verifyRegistrationResponse({
 			response,
-			expectedChallenge: pending.challenge,
+			expectedChallenge,
 			expectedOrigin: origins,
 			expectedRPID: rpID,
 			requireUserVerification: false,
 		});
 	} catch (e: any) {
 		throw new TwoFactorError(400, `The passkey couldn’t be added: ${e?.message || 'try again'}`);
-	} finally {
-		await TwoFactorChallenge.deleteOne({ _id: pending._id });
 	}
 	if (!result?.verified || !result.registrationInfo) throw new TwoFactorError(400, 'The passkey couldn’t be checked — try again.');
 	const info = result.registrationInfo;
@@ -361,8 +350,131 @@ export const registerPasskeyVerify = async (req: any, admin: any, response: any,
 		deviceType: info.credentialDeviceType,
 		backedUp: info.credentialBackedUp,
 	});
-	notify(admin, 'A passkey was added to your account', `A passkey named “${doc.name}” was added to your MINT account.`);
-	return publicPasskey(doc);
+	notify(admin, 'A passkey was added to your account', `A passkey named “${doc.name}” was added to your MINT account${how}.`);
+	return doc;
+};
+
+/** Settings → Add passkey (this device), step 1: what the browser should create. */
+export const registerPasskeyOptions = async (req: any, admin: any) => {
+	const options = await creationOptions(req, admin);
+	await TwoFactorChallenge.deleteMany({ admin: admin._id, purpose: 'register' });
+	await TwoFactorChallenge.create({
+		admin: admin._id,
+		purpose: 'register',
+		challenge: options.challenge,
+		expiresAt: new Date(Date.now() + REGISTER_TTL_MS),
+	});
+	return options;
+};
+
+/** Settings → Add passkey (this device), step 2: check what the browser made and keep it. */
+export const registerPasskeyVerify = async (req: any, admin: any, response: any, name: any) => {
+	const pending: any = await TwoFactorChallenge.findOne({ admin: admin._id, purpose: 'register' }).sort({ createdAt: -1 });
+	if (!pending || pending.expiresAt < new Date()) throw new TwoFactorError(400, 'That took too long — add the passkey again.');
+	try {
+		return publicPasskey(await savePasskey(req, admin, response, name, pending.challenge));
+	} finally {
+		await TwoFactorChallenge.deleteOne({ _id: pending._id });
+	}
+};
+
+/* ------------------------------------------- a passkey on another device */
+
+/**
+ * Add a passkey on your phone (or any other device) by QR code.
+ *
+ * Settings makes a **link** (with the password): a random token, stored only
+ * as its hash, for 10 minutes and one passkey. The QR holds
+ * `<admin site>/passkey/add#<token>` — after the `#`, so the token never
+ * reaches a server log or a Referer. The phone opens it, is given creation
+ * options for this admin, makes the passkey in its own keychain (iCloud
+ * Keychain, Google Password Manager), and sends it back with the token. The
+ * computer that showed the QR polls the link's status: waiting → opened (on
+ * "Safari on iPhone") → added.
+ *
+ * Whoever holds the QR can add a passkey to the account — hence the
+ * password, the short life, single use and the security email.
+ */
+const LINK_TTL_MS = 10 * 60 * 1000;
+const hashToken = (token: any) => crypto.createHash('sha256').update(String(token || '')).digest('hex');
+
+/** The admin site's address for the link — the page that asked, if it's allowed, else ADMIN_FRONTEND_URL. */
+const siteOrigin = (req: any) => {
+	const { origins } = relyingParty(req);
+	const origin = String(req.headers?.origin || '');
+	return origins.includes(origin) ? origin : origins[0] || 'http://localhost:3000';
+};
+
+const linkView = (l: any) => ({
+	_id: String(l._id),
+	status: l.linkStatus || 'waiting',
+	device: l.linkDevice || null,
+	passkey: l.linkPasskey ? { _id: String(l.linkPasskey), name: l.linkPasskeyName } : null,
+	expiresAt: l.expiresAt,
+});
+
+export const createPasskeyLink = async (req: any, admin: any) => {
+	const token = crypto.randomBytes(24).toString('base64url');
+	// One open link per admin: a new QR replaces the last.
+	await TwoFactorChallenge.deleteMany({ admin: admin._id, purpose: 'link' });
+	const link: any = await TwoFactorChallenge.create({
+		admin: admin._id,
+		purpose: 'link',
+		ticket: hashToken(token),
+		linkStatus: 'waiting',
+		expiresAt: new Date(Date.now() + LINK_TTL_MS),
+	});
+	return { ...linkView(link), url: `${siteOrigin(req)}/passkey/add#${token}` };
+};
+
+export const passkeyLinkStatus = async (admin: any, id: any) => {
+	const link: any = mongoose.isValidObjectId(id) ? await TwoFactorChallenge.findOne({ _id: id, admin: admin._id, purpose: 'link' }).lean() : null;
+	if (!link || link.expiresAt < new Date()) return { _id: String(id), status: 'expired', device: null, passkey: null, expiresAt: link?.expiresAt || null };
+	return linkView(link);
+};
+
+export const cancelPasskeyLink = async (admin: any, id: any) => {
+	if (mongoose.isValidObjectId(id)) await TwoFactorChallenge.deleteOne({ _id: id, admin: admin._id, purpose: 'link', linkStatus: { $ne: 'added' } });
+	return { message: 'Cancelled' };
+};
+
+const openLink = async (token: any) => {
+	const link: any = await TwoFactorChallenge.findOne({ ticket: hashToken(token), purpose: 'link' });
+	if (!link || link.expiresAt < new Date() || link.linkStatus === 'added')
+		throw new TwoFactorError(410, 'This QR code has expired or was already used. Make a new one in Settings → Sign-in & security.', 'link_expired');
+	const admin: any = await Admin.findById(link.admin);
+	if (!admin || admin.isActive === false || admin.isDeleted === true) throw new TwoFactorError(410, 'This account can’t add passkeys.', 'link_expired');
+	return { link, admin };
+};
+
+/** The phone opened the link: who it's for, and what to create. */
+export const openPasskeyLink = async (req: any, token: any) => {
+	const { link, admin } = await openLink(token);
+	const options = await creationOptions(req, admin);
+	const ua = String(req.headers?.['user-agent'] || '');
+	const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+	const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : '';
+	const device = os ? `${browser} on ${os}` : browser;
+	link.challenge = options.challenge;
+	link.linkStatus = 'opened';
+	link.linkDevice = device;
+	await link.save();
+	return { admin: { name: admin.name, email: maskEmail(admin.email) }, suggestedName: device, options, expiresAt: link.expiresAt };
+};
+
+/** The phone made the passkey: check it and keep it; the link is spent. */
+export const finishPasskeyLink = async (req: any, token: any, response: any, name: any) => {
+	const { link, admin } = await openLink(token);
+	if (!link.challenge) throw new TwoFactorError(400, 'Open the link again to start over.');
+	const doc = await savePasskey(req, admin, response, name || link.linkDevice, link.challenge, ' from another device, by QR code');
+	link.linkStatus = 'added';
+	link.linkPasskey = doc._id;
+	link.linkPasskeyName = doc.name;
+	link.challenge = undefined;
+	// Kept a little longer so the computer showing the QR sees "added".
+	link.expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+	await link.save();
+	return { passkey: publicPasskey(doc) };
 };
 
 export const publicPasskey = (k: any) => ({

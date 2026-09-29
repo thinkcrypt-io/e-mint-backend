@@ -10,6 +10,13 @@ import mongoose, { Schema } from 'mongoose';
  * Revoking sets `revokedAt` here and adds the sid to BlacklistedToken, which
  * is what every request is checked against.
  */
+export type Place = { ip?: string; city?: string; region?: string; country?: string; countryCode?: string; local?: boolean };
+
+const placeSchema = new Schema<Place>(
+	{ ip: String, city: String, region: String, country: String, countryCode: String, local: Boolean },
+	{ _id: false }
+);
+
 export type AdminSessionType = {
 	admin: Schema.Types.ObjectId;
 	sid: string;
@@ -22,6 +29,9 @@ export type AdminSessionType = {
 	ip?: string;
 	lastIp?: string;
 	lastActiveAt?: Date;
+	/** Where `ip` (the sign-in) is, and where `lastIp` is — "Dhaka, Bangladesh". */
+	location?: Place;
+	lastLocation?: Place;
 	revokedAt?: Date;
 	revokedBy?: Schema.Types.ObjectId;
 	revokeReason?: string;
@@ -39,6 +49,8 @@ const schema = new Schema<AdminSessionType>(
 		ip: { type: String },
 		lastIp: { type: String },
 		lastActiveAt: { type: Date, index: true },
+		location: { type: placeSchema },
+		lastLocation: { type: placeSchema },
 		revokedAt: { type: Date, default: null, index: true },
 		revokedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
 		revokeReason: { type: String },
