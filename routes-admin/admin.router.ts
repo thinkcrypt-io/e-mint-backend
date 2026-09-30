@@ -1,3 +1,5 @@
+import systemStatus from '../controllers/status/systemStatus.controller.js';
+import { reportIssue, myReportedIssues } from '../controllers/issues/reportIssue.controller.js';
 import express from 'express';
 import {
 	adminAuthRoute,
@@ -291,6 +293,8 @@ router.use('/builder', builderRouter);
 router.use('/dashboard', dashboardRouter);
 
 router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
+// The admin's System Status page — public, just up/down and timings.
+router.get('/status', systemStatus);
 router.get('/permissionlist', getAdminPermissionList());
 
 router.use('/leads', defineRoutes({ Model: Lead, settings: leadSettings, permission: 'lead' }));
@@ -461,6 +465,24 @@ router.use(
 		Model: Issue,
 		settings: issueSettings,
 		permission: 'issues',
+		// The Report issue page: any signed-in admin, no issues permission needed.
+		// Two segments for the list, as `/:id` is registered before custom routes.
+		customRoutes: [
+			{
+				path: '/report',
+				method: 'post',
+				controller: reportIssue,
+				middlewares: [adminProtect],
+				description: 'Report a problem (any signed-in admin); lands on Issues as an open bug',
+			},
+			{
+				path: '/report/mine',
+				method: 'get',
+				controller: myReportedIssues,
+				middlewares: [adminProtect],
+				description: 'The signed-in admin’s own reported issues',
+			},
+		],
 	}),
 );
 
