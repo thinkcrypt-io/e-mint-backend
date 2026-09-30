@@ -53,6 +53,20 @@ export const getFormation = async (token: string, app: string): Promise<HerokuFo
 };
 
 /**
+ * The dyno sizes an app actually runs on — each process type scaled above
+ * zero, e.g. `['Basic']` or `['Standard-1X', 'Standard-2X']`. Empty when
+ * nothing is scaled up. Heroku spells sizes either way round (`standard-1X`,
+ * `Standard-1X`), so the first letter is capitalised for display.
+ */
+export const runningSizes = (formation: HerokuFormation[]): string[] => [
+	...new Set(
+		formation
+			.filter(f => f.quantity > 0 && f.size)
+			.map(f => f.size.charAt(0).toUpperCase() + f.size.slice(1))
+	),
+];
+
+/**
  * PATCH /apps/{app}/formation — scale process types.
  *
  * Scaling up past the free allowance costs money immediately, and scaling a

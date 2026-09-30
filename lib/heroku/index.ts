@@ -28,6 +28,7 @@ export type { HerokuRelease, HerokuBuild } from './deploys.js';
 export {
 	listDynos,
 	getFormation,
+	runningSizes,
 	updateFormation,
 	restartAll,
 	restartOne,

@@ -24,6 +24,9 @@ export const CACHE_TTL = {
 	apps: 60,
 	app: 30,
 	formation: 10,
+	// The apps table's Dyno column: one formation call per app, so held longer
+	// than `formation`. A scale through this admin clears it (see invalidate).
+	dynoSize: 300,
 	dynos: 10,
 	releases: 15,
 	builds: 15,
