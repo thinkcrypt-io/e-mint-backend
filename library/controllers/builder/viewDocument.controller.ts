@@ -88,6 +88,9 @@ type RelatedItem = {
 	description?: string;
 	columns?: string[];
 	display?: 'table' | 'cards';
+	/** View tabs only: the add button (on unless false) and its text. */
+	allowAdd?: boolean;
+	addLabel?: string;
 };
 
 const IMAGE_TYPES = ['image', 'image-text', 'imageKey'];
@@ -132,7 +135,7 @@ const relatedPage = async (
 	req: any,
 	item: RelatedItem,
 	id: string,
-	canRead: (e: ResourceRouteEntry) => boolean,
+	canRead: (e: ResourceRouteEntry, verb?: 'view' | 'create') => boolean,
 	{
 		limit,
 		page = 1,
@@ -213,11 +216,36 @@ const relatedPage = async (
 	};
 };
 
+/** Whether the caller may `verb` (view by default) in a route — the same names the route's own endpoints check. */
 const permissionsOf = async (req: any) => {
 	const role: any = await Role.findById(req.user?.role).select('permissions').lean();
 	const permissions: string[] = role?.permissions || [];
-	return (entry: ResourceRouteEntry) =>
-		permissions.includes('*') || permissions.includes(`view-${entry.source.permission}`);
+	return (entry: ResourceRouteEntry, verb: 'view' | 'create' = 'view') =>
+		permissions.includes('*') || permissions.includes(`${verb}-${entry.source.permission}`);
+};
+
+/**
+ * A tab's add button: creates one of the tab's records already linked to this
+ * one. Only when their field points here (`foreignField`) — the new record
+ * carries the link itself. A `localField` tab would also have to edit this
+ * record, so it has none. `allowed` is the caller's create permission on
+ * that route; the button still shows without it, disabled.
+ */
+const addButtonOf = (
+	req: any,
+	item: RelatedItem,
+	can: (e: ResourceRouteEntry, verb?: 'view' | 'create') => boolean
+) => {
+	if (!item.foreignField || item.allowAdd === false) return null;
+	const entry = resources(req.app).get(item.related);
+	const path: any = entry?.source.Model.schema.path(item.foreignField);
+	if (!entry || !path) return null;
+	return {
+		label: item.addLabel?.trim() || '',
+		field: item.foreignField,
+		many: path.instance === 'Array',
+		allowed: can(entry, 'create'),
+	};
 };
 
 const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: mongoose.Model<any> }) => {
@@ -353,7 +381,8 @@ export const getViewTab = ({ resolved, Model }: { resolved: ResolvedRoute; Model
 
 			const limit = Math.min(Math.max(Number(req.query.limit) || Number(item.pageSize) || 20, 1), MAX_TAB_PAGE);
 			const page = Math.max(Number(req.query.page) || 1, 1);
-			const tab = await relatedPage(req, item, id, await permissionsOf(req), {
+			const can = await permissionsOf(req);
+			const tab = await relatedPage(req, item, id, can, {
 				limit,
 				page,
 				parent,
@@ -363,6 +392,7 @@ export const getViewTab = ({ resolved, Model }: { resolved: ResolvedRoute; Model
 
 			return res.status(200).json({
 				...tab,
+				add: addButtonOf(req, item, can),
 				page,
 				limit,
 				totalPages: Math.max(1, Math.ceil(tab.total / limit)),

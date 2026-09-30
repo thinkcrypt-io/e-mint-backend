@@ -124,6 +124,10 @@ const viewTabSchema = Joi.object({
 	display: Joi.string().valid('table', 'cards'),
 	columns: Joi.array().items(Joi.string()).min(1).required(),
 	pageSize: Joi.number().integer().min(5).max(100),
+	// An add button on the tab (default on): creates one of `related` already
+	// linked to this record. Only for `foreignField` tabs — see getViewTab.
+	allowAdd: Joi.boolean(),
+	addLabel: Joi.string().allow('').max(60),
 }).xor('foreignField', 'localField');
 
 export const configDraftSchema = Joi.object({
