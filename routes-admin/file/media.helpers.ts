@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import File from '../../library/models/admin-file/model.js';
 import Folder from '../../library/models/folders/model.js';
 import { generateSlug } from '../../library/models/_functions/_index.js';
+import { runUnscoped } from '../../library/functions/tenantScope.function.js';
 
 export const getS3 = (): AWS.S3 => {
 	AWS.config.update({
@@ -19,7 +20,9 @@ export const getS3 = (): AWS.S3 => {
 // the object once no remaining File document references it.
 export const deleteS3ObjectIfUnused = async (key: string, bucket?: string) => {
 	if (!key) return;
-	const stillUsed = await File.exists({ key });
+	// Across every scope (docs/multi-tenancy): a File in one tenant project must
+	// never be a way to delete an object another project or the super admin uses.
+	const stillUsed = await runUnscoped(() => File.exists({ key }));
 	if (stillUsed) return;
 	await getS3()
 		.deleteObject({ Bucket: bucket || process.env.S3_BUCKET_NAME!, Key: key })

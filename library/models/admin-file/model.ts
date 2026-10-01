@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 const schema = new Schema<any>(
 	{
@@ -97,6 +98,9 @@ schema.virtual('fileSize').get(function () {
 // Ensure virtual fields are serialized
 schema.set('toJSON', { virtuals: true });
 schema.set('toObject', { virtuals: true });
+
+// A tenant project's files and folders carry its ids (docs/multi-tenancy WO-09).
+schema.plugin(tenantScoped);
 
 const AdminFile = mongoose.model<any>('AdminFile', schema);
 export default AdminFile;

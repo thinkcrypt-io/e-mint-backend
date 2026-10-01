@@ -1,0 +1,38 @@
+// Project media without uploading to S3: folders, browse, file list, admin-only routes refused,
+// isolation from other projects and from the super admin. Uses projects.mjs's state.
+import { call, ok, done, load } from './lib.mjs';
+const s = load();
+const P = (pid, path) => `/tenant/api/p/${pid}${path}`;
+let r = await call('POST', P(s.crm, '/media/folders'), { name: 'Logos' }, s.pat);
+ok('create a folder in the project', r.status === 200 || r.status === 201, `${r.status} ${r.body?.message || ''}`);
+r = await call('POST', P(s.crm, '/media/folders'), { name: 'Logos' }, s.pat);
+ok('same name in the same place is renamed (Logos (2))', r.status === 201 && r.body?.doc?.name === 'Logos (2)', r.body?.doc?.name);
+r = await call('POST', P(s.site, '/media/folders'), { name: 'Logos' }, s.pat);
+ok('another project gets its own plain “Logos”', r.status === 201 && r.body?.doc?.name === 'Logos', r.body?.doc?.name);
+r = await call('POST', P(s.crm, '/media/folders/ensure-path'), { path: ['default'] }, s.pat);
+ok("a project's own 'default' folder", r.status === 200 || r.status === 201, `${r.status} ${r.body?.message || ''}`);
+r = await call('GET', P(s.crm, '/media/browse'), null, s.pat);
+const names = JSON.stringify(r.body);
+ok('browse shows the project folders', r.status === 200 && names.includes('Logos'), r.status);
+r = await call('GET', P(s.crm, '/media/tree'), null, s.pat);
+ok('tree', r.status === 200, r.status);
+r = await call('GET', P(s.crm, '/upload'), null, s.pat);
+ok('upload list (empty)', r.status === 200, r.status);
+r = await call('GET', P(s.crm, '/files/get/distinct/folder'), null, s.pat);
+ok('files distinct folders', r.status === 200, r.status);
+r = await call('POST', P(s.crm, '/files'), { name: 'x', key: 'someone-elses-key', url: 'https://x' }, s.pat);
+ok('creating File records directly refused', r.status === 405, r.status);
+r = await call('DELETE', P(s.crm, '/upload/some-s3-key'), null, s.pat);
+ok('S3 delete-by-key not available in projects', r.status === 404, r.status);
+r = await call('GET', P(s.crm, '/upload/get/sum/awsbill'), null, s.pat);
+ok('AWS bill not available in projects', r.status === 404, r.status);
+r = await call('GET', P(s.crm, '/media/browse'), null, s.other);
+ok("another org can't browse it", r.status === 404, r.status);
+const admin = (await call('POST', '/admin/api/auth/login', { email: 'admin@example.com', password: 'tenancy-dev-pass-1' })).body.token;
+r = await call('GET', '/admin/api/media/browse', null, admin);
+ok("super admin's media doesn't show tenant folders", r.status === 200 && !JSON.stringify(r.body).includes('Logos'), r.status);
+r = await call('DELETE', '/admin/api/upload/anything', null);
+ok('admin S3 delete needs sign-in', r.status === 401, r.status);
+r = await call('GET', '/tenant/api/org/permissions', null, s.pat);
+ok('role permissions list project models', r.status === 200 && Array.isArray(r.body?.projects) && JSON.stringify(r.body).includes('view-invoices'), r.status);
+done();

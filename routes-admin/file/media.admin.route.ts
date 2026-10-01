@@ -6,8 +6,13 @@ import sharp from 'sharp';
 import File from '../../library/models/admin-file/model.js';
 import Folder from '../../library/models/folders/model.js';
 // adminPermissions checks the AdminRole an admin actually references (the plain
-// hasPermission middleware reads the older Role collection).
-import { adminProtect as protect, adminPermissions as hasPermission } from '../../middleware/index.js';
+// hasPermission middleware reads the older Role collection). Inside a tenant
+// project the same routes serve its members (docs/multi-tenancy WO-09).
+import {
+	adminOrTenantProtect as protect,
+	adminOrTenantPermissions as hasPermission,
+} from '../../middleware/tenant/dual.middleware.js';
+import { runUnscoped } from '../../library/functions/tenantScope.function.js';
 import {
 	getS3,
 	deleteS3ObjectIfUnused,
@@ -568,7 +573,8 @@ router.post('/purge', ...remove, async (req: any, res: Response) => {
 // Sweep every 6 hours (and once shortly after boot): anything in the trash
 // longer than TRASH_DAYS is deleted forever.
 export const scheduleTrashPurge = () => {
-	const sweep = async () => {
+	// Every scope's trash — the super admin's and each tenant project's.
+	const sweep = () => runUnscoped(async () => {
 		try {
 			const cutoff = new Date(Date.now() - TRASH_DAYS * 24 * 60 * 60 * 1000);
 			const [f1, f2] = await Promise.all([
@@ -583,7 +589,7 @@ export const scheduleTrashPurge = () => {
 		} catch (e: any) {
 			console.error(`Media trash purge: ${e.message}`);
 		}
-	};
+	});
 	setTimeout(sweep, 60 * 1000);
 	setInterval(sweep, 6 * 60 * 60 * 1000);
 };

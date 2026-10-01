@@ -267,3 +267,37 @@ lists the model, admin built-in nav 404, super admin sees no tenant models or
 records, model delete, project delete needs force then removes routes. Tenant
 history entries carry the org (3) and the super admin's list has 0.
 projects.mjs 15/15. Unit tests 8/8. Route parity: 0 problems.
+
+## 2026-10-02 — WO-09 Project media, permission list (+ an admin security fix)
+- **Security fix (separate commit `0ba84c5`)**: `DELETE /admin/api/upload/:key`
+  deleted any S3 object and its File record with no sign-in, and
+  `/upload/get/sum/s3` and `/get/sum/awsbill` were open too. All now require
+  adminProtect. Found while reading the upload router for tenancy.
+- `middleware/tenant/dual.middleware.ts`: `adminOrTenantProtect`,
+  `adminOrTenantPermissions`, `adminOnlyRoute` — outside a tenant scope
+  exactly the admin guards; inside one (set server-side by the project
+  router) the already-signed-in member and the org role's permissions.
+- `upload.admin.route.ts` and `media.admin.route.ts` use the dual guards;
+  signature upload, S3 delete-by-key and the AWS sums are `adminOnlyRoute`
+  (404 in projects). The media trash purge job runs `runUnscoped` (every
+  scope's trash).
+- `AdminFile` (`adminfiles`) and `Folder` use `tenantScoped`; Folder `slug`
+  is unique per scope (compound index — a project gets its own `default`
+  upload folder). `migrateTenantIndexes.js` drops `folders.slug_1` and adds
+  the compound index.
+- `deleteS3ObjectIfUnused` checks references **across every scope**
+  (`runUnscoped`) — a tenant's File can't be used to delete an object another
+  scope uses. `POST /tenant/api/p/:id/files` is refused (uploads create files).
+- Project router mounts `/upload`, `/media`, `/files` (defineRoutes over
+  AdminFile with tenant auth, live files only, media delete).
+- `GET /tenant/api/org/permissions` also lists each project's models with
+  their `view-/create-/edit-/delete-<route>` keys (for the roles screen).
+- Not done: tenant notifications (only per-record access sends them, which
+  tenants don't have — D12).
+- Verified: `scripts/tenancy-smoke/media.mjs` 15/15 (folders per project,
+  auto-renamed duplicates, own `default` folder, browse/tree/list, direct
+  File create 405, S3 delete/bill 404 in projects, other org 404, super admin
+  doesn't see tenant folders, admin S3 delete needs sign-in, permissions list
+  has `view-invoices`); projects 15/15, models 30/30, admin 12/12; route parity
+  0 problems. No real S3 upload was made (the scratch server uses the real
+  bucket from .env).

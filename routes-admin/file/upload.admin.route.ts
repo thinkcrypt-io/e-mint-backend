@@ -5,7 +5,9 @@ import multer from 'multer';
 import sharp from 'sharp';
 import File from '../../library/models/admin-file/model.js';
 import Folder from '../../library/models/folders/model.js';
-import { paginate, adminProtect as protect } from '../../middleware/index.js';
+import { paginate } from '../../middleware/index.js';
+// Admin-only outside a tenant project; inside one, the project's member (docs/multi-tenancy WO-09).
+import { adminOrTenantProtect as protect, adminOnlyRoute } from '../../middleware/tenant/dual.middleware.js';
 import { getDistinctFields } from '../../imports.js';
 import { getS3, resolveUploadFolder } from './media.helpers.js';
 
@@ -86,6 +88,7 @@ const stripWhiteBackground = async (imagePath: string): Promise<Buffer> => {
 // in the shared media library or be reusable as generic uploads.
 router.post(
 	'/signature',
+	adminOnlyRoute,
 	protect,
 	uploadFile.single('image'),
 	async (req: any, res: Response) => {
@@ -157,7 +160,7 @@ router.get('/', protect, paginate, async (req: any, res: Response) => {
 });
 
 // Signed in only: this deletes the S3 object and its File record (it used to answer anyone).
-router.delete('/:key', protect, async (req: Request, res: Response) => {
+router.delete('/:key', adminOnlyRoute, protect, async (req: Request, res: Response) => {
 	try {
 		AWS.config.update({
 			region: process.env.AWS_REGION,
@@ -365,7 +368,7 @@ router.post('/video', protect, uploadVideo.single('image'), async (req: Request,
 	}
 });
 
-router.get('/get/sum/s3', protect, async (req: Request, res: Response) => {
+router.get('/get/sum/s3', adminOnlyRoute, protect, async (req: Request, res: Response) => {
 	try {
 		if (!process.env.S3_BUCKET_NAME) {
 			return res.status(400).json({ message: 'S3_BUCKET_NAME environment variable is not set' });
@@ -426,7 +429,7 @@ router.get('/get/sum/s3', protect, async (req: Request, res: Response) => {
 	}
 });
 
-router.get('/get/sum/awsbill', protect, async (req: Request, res: Response) => {
+router.get('/get/sum/awsbill', adminOnlyRoute, protect, async (req: Request, res: Response) => {
 	try {
 		AWS.config.update({
 			region: process.env.AWS_REGION,

@@ -7,6 +7,8 @@ import OrganizationRole from '../../library/models/tenancy/organizationRole.mode
 import OrganizationInvitation from '../../library/models/tenancy/organizationInvitation.model.js';
 import TenantUser from '../../library/models/tenancy/tenantUser.model.js';
 import TenantProject from '../../library/models/tenancy/tenantProject.model.js';
+import ModelDefinition from '../../library/models/builder/modelDefinition.model.js';
+import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../library/models/tenancy/organization.model.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
 import { deliver, shell, p } from '../../library/controllers/twoFactor/twoFactor.service.js';
@@ -276,7 +278,36 @@ inOrg.get(
 	})
 );
 
-inOrg.get('/permissions', handle(async () => ({ organization: ORG_PERMISSIONS })));
+/**
+ * What a role can be given: the organization keys, and each project's models
+ * (view-/create-/edit-/delete-<route> — a key applies in every project that
+ * has that route).
+ */
+inOrg.get(
+	'/permissions',
+	handle(async req => {
+		const projects: any[] = await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false } }, { name: 1 }).lean();
+		const models = await Promise.all(
+			projects.map(p =>
+				runInScope({ organization: req.organization._id, project: p._id }, () =>
+					ModelDefinition.find({}, { name: 1, title: 1, route: 1 }).sort({ title: 1 }).lean()
+				)
+			)
+		);
+		return {
+			organization: ORG_PERMISSIONS,
+			projects: projects.map((p, i) => ({
+				_id: String(p._id),
+				name: p.name,
+				models: (models[i] as any[]).map(m => ({
+					title: m.title,
+					route: m.route,
+					keys: ['view', 'create', 'edit', 'delete'].map(a => `${a}-${m.route}`),
+				})),
+			})),
+		};
+	})
+);
 
 inOrg.post(
 	'/roles',

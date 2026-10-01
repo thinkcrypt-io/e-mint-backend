@@ -11,7 +11,18 @@ import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.func
 import defineRoutes from '../routes-admin/common/router.js';
 import SidebarCategory from '../library/models/sidebarcategories/model.js';
 import SidebarItem from '../library/models/sidebaritems/model.js';
-import { sidebarCategorySettings, sidebarCategoryConfig, sidebarItemSettings, sidebarItemConfig } from '../library/models/_index.js';
+import {
+	sidebarCategorySettings,
+	sidebarCategoryConfig,
+	sidebarItemSettings,
+	sidebarItemConfig,
+	adminFileSettings,
+	adminFileConfig,
+} from '../library/models/_index.js';
+import AdminFile from '../library/models/admin-file/model.js';
+import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
+import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
+import { customQuery } from '../middleware/index.js';
 
 /**
  * /tenant/api/p/:projectId — everything inside one project (docs/multi-tenancy WO-09).
@@ -26,6 +37,8 @@ import { sidebarCategorySettings, sidebarCategoryConfig, sidebarItemSettings, si
  *   /sidebar/:platform/:type      the project's sidebar, filtered by role
  *   /sidebarcategories, /sidebaritems   the sidebar builder's CRUD            build
  *   /dashboard                    the dashboard builder                       read; build to change
+ *   /upload, /media, /files       uploads and the media manager over the project's own files
+ *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
  */
 const router = express.Router({ mergeParams: true });
@@ -78,6 +91,26 @@ router.use(
 router.use(
 	'/sidebaritems',
 	defineRoutes({ Model: SidebarItem, settings: sidebarItemSettings, permission: 'sidebaritems', frontendConfig: sidebarItemConfig, auth })
+);
+
+// Files: the same routers as the super admin's, confined to the project's
+// files by the scope (File and Folder are tenantScoped). Creating File records
+// directly isn't needed — uploads make them.
+router.use('/upload', uploadRoute);
+router.use('/media', mediaRoute);
+router.post('/files', (_req: any, res: any) => res.status(405).json({ message: 'Upload files instead' }));
+router.use(
+	'/files',
+	defineRoutes({
+		Model: AdminFile,
+		settings: adminFileSettings,
+		permission: 'files',
+		route: 'files',
+		frontendConfig: adminFileConfig,
+		injectMiddleware: { getAll: [customQuery({ query: { trashedAt: null } })] },
+		replaceController: { delete: deleteMedia(AdminFile) },
+		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: tenantPermissions },
+	})
 );
 
 // The project's built models, last: anything not answered above.

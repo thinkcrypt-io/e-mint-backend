@@ -31,6 +31,8 @@ const PLAN = [
 	{ collection: 'routesettings', drop: ['route_1'], create: [[{ organization: 1, project: 1, route: 1 }, { unique: true }]] },
 	{ collection: 'routeconfigs', drop: ['route_1'], create: [[{ organization: 1, project: 1, route: 1 }, { unique: true }]] },
 	{ collection: 'dashboardconfigs', drop: ['key_1'], create: [[{ organization: 1, project: 1, key: 1 }, { unique: true }]] },
+	// WO-09: media folders' slugs are unique per scope (a project's 'default' upload folder).
+	{ collection: 'folders', drop: ['slug_1'], create: [[{ organization: 1, project: 1, slug: 1 }, { unique: true }]] },
 ];
 
 // Lookups the plugin adds to every query.
@@ -46,6 +48,8 @@ const SCOPE_INDEXES = [
 	'builtfeatures',
 	'histories',
 	'deletedrecords',
+	'adminfiles',
+	'folders',
 ];
 
 const describe = idx => `${idx.name}${idx.unique ? ' (unique)' : ''}`;
