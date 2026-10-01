@@ -124,4 +124,28 @@ and projects.
 - **Customer** — a tenant's own end user, signing in to the tenant's website through the public API / widget.
 
 ## 5. Where things are
-Filled in as work orders land — see `CHANGELOG.md` for the exact files.
+
+**Backend**
+| Area | Files |
+|---|---|
+| Scope (the isolation) | `library/functions/tenantScope.function.ts` (+ `test/tenantScope.test.ts`) |
+| Tenant models | `library/models/tenancy/` — TenantUser, Organization, OrganizationRole/Member/Invitation, TenantProject, ProjectCustomer, WebsiteEvent, oversight.settings |
+| Permissions, helpers | `library/functions/tenantPermissions.function.ts`, `tenancy.function.ts`, `tenantNav.function.ts`, `projectHooks.function.ts`, `rateLimit.function.ts` |
+| Model registry per project | `library/functions/dynamicModels.function.ts` (Registry per scope, internalModelName), `routeRegistry.function.ts` (per-scope mounts, scopedModel) |
+| Sessions / 2FA for both kinds | `library/functions/sessions.function.ts` (makeSessions), `library/controllers/twoFactor/*` (makeTwoFactor, makeTwoFactorRouter) |
+| Tenant API | `routes-tenant/` — tenant.router, auth/, org/, projects/, project.router (`/p/:projectId`), analytics.router, mcp.router (`/tenant/mcp`) |
+| Guards | `middleware/tenant/protect.tenant.middleware.ts`, `dual.middleware.ts` |
+| Public API, widget, tracker | `routes-public/` (`/public`) |
+| Website kit | `library/functions/websiteKit.function.ts` |
+| Super-admin oversight | `routes-admin/admin.router.ts` (`/organizations`, `/tenant-users`, `/tenant-projects`) |
+| Scripts | `migrateTenantIndexes.js`, `seedTenancyDev.js` (local only), `seedTenancyAdmin.js`, `tenancy-smoke/` (run-all.sh) |
+
+**Admin repo (both panels)**
+| Area | Files |
+|---|---|
+| Panel mode, API base, page paths | `src/components/library/config/lib/constants/panel.ts` |
+| Tenant UI building blocks | `src/components/library/tenant/` |
+| Tenant API hooks | `src/components/library/store/services/tenantApi.ts` |
+| Pages | `/auth/register` (TenantRegister), `/auth/accept-invitation` (TenantAcceptInvitation), `/projects`, `/org/{members,roles,settings,new}`, `/t/[slug]`, `/public-api`, `/analytics`, `/docs/tenancy` |
+
+Deploying: `DEPLOY.md`.

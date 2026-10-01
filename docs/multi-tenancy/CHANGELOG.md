@@ -513,3 +513,19 @@ re-run with the pane visible.
 - Verified: `scripts/tenancy-smoke/oversight.mjs` 16/16; the full smoke suite
   (admin, tenant-auth, projects, models, media, mcp, public, website, analytics,
   oversight) green; route parity 73 routes / 301 responses, 0 problems.
+
+## 2026-10-02 — WO-15/19 UI, WO-17 guide and tests, deploy notes
+- Admin repo (`faa3c7a`, `c367429`): `/analytics` (stat tiles vs previous
+  period, page views per day, top pages/referrers/devices/countries/clicks/
+  events), `/public-api` (per model switch, actions, who may call it,
+  endpoints, widget/tracker/site API snippets), Edit on project cards (name,
+  description, domains), `/docs/tenancy` guide in GUIDES with "How this works"
+  links on the tenant pages (`tenant/GuideLink`). `next build` passes for both
+  panels.
+- Backend: `scripts/tenancy-smoke/run-all.sh` — all 11 scripts green (org-2 by
+  hand); `DEPLOY.md` (Heroku vars, the index migration, the oversight seed,
+  the tenant panel's Vercel env); README §5 "Where things are".
+- Still to do after deploying (DEPLOY.md §3): a browser click-through of the
+  tenant panel. Follow-ups (WORK_ORDERS): per-record access for tenant models,
+  plans/limits, custom domains, OAuth for MCP, tenant data export, deleting an
+  organization, tenant notifications.

@@ -17,7 +17,15 @@ Then, from this folder:
 | `node admin.mjs` | admin login, sessions, 2FA (unchanged by tenancy) | turns 2FA on and off again |
 | `node tenant-auth.mjs` | register, login, 2FA, sessions, passwords, cross-kind tokens | |
 | `node org-1.mjs` then `node org-2.mjs <nina> <editor> <existing>` | organizations, roles, invitations | org-2 takes the three invitation tokens from the server's dev mail log (`[mail → …] …/accept-invitation/<token>`) |
-| `node projects.mjs` then `node models.mjs` | projects; the tenant model registry (same model names in two orgs, isolation, codes, populate, builder guards, sidebar, super admin unaffected, forced delete) | models.mjs uses projects.mjs's state |
+| `node projects.mjs` then `node models.mjs` | projects; the tenant model registry (same model names in two orgs, isolation, codes, populate, builder guards, sidebar, super admin unaffected, forced delete) | the scripts below use projects.mjs's state |
+| `node media.mjs` | project uploads/media manager, admin-only S3 routes refused | no real upload (the bucket is real) |
+| `node mcp.mjs` | tenant MCP keys, tools, builds in the project, key isolation | |
+| `node public.mjs` | public API, customers, owner-only records, widget.js | |
+| `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
+| `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
+| `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |
+
+`./run-all.sh` runs them all in order (exit 1 on any FAIL).
 
 Accounts are made up (`@example.com`); mail to example.com is printed in the
 server log in development.

@@ -24,11 +24,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 12 | Panel mode, per-request API base, token, route guard — BLOCKER | admin | M | done |
 | 13 | Tenant auth pages (register questionnaire, login, 2FA, invite accept) | admin | M | done |
 | 14 | Organization console (switcher, projects, members, roles, account) | admin | L | done (click-through pending a visible browser) |
-| 15 | Project workspace (sidebar, builders, dashboard, MCP, public API) | admin | L | in progress — sidebar, builders, /t tables wired; MCP + public API panels pending WO-10/11 |
+| 15 | Project workspace (sidebar, builders, dashboard, MCP, public API) | admin | L | done (click-through pending a visible browser) |
 | 16 | Super-admin oversight pages (organizations, tenant users, projects) | both | M | done (seed pending on the shared DB) |
-| 17 | Isolation tests, parity check, guide | both | M | todo |
+| 17 | Isolation tests, parity check, guide | both | M | done |
 | 18 | Website projects: website kit (settings, pages, SEO, contents) + site API | backend | L | done |
-| 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | backend done; UI in progress |
+| 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | done |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17. (12–15 need 05–09; 18–19 need 08 and 11.)
