@@ -19,6 +19,7 @@ import sellerApi from './seller-api/sellerApi.js';
 import staffApi from './staff/router.js';
 import mcpRouter from './library/controllers/mcp/mcp.router.js';
 import tenantRouter from './routes-tenant/tenant.router.js';
+import tenantMcpRouter from './routes-tenant/mcp.router.js';
 
 //User Routes
 
@@ -41,6 +42,8 @@ const allowedOrigins = ['http://localhost:3000', 'http://example.com', 'http://l
 app.use(cors());
 // Before the request logger: a connector's URL can carry its API key (/mcp/emk_…).
 app.use('/mcp', mcpRouter);
+// A tenant project's MCP (docs/multi-tenancy WO-10) — also before the logger, for keys in the URL.
+app.use('/tenant/mcp', tenantMcpRouter);
 app.use(morgan('combined'));
 app.use(requestIp.mw());
 

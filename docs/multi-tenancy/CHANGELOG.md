@@ -359,3 +359,30 @@ created through the tenant API from the panel tab; `/t/deals` loads its route
 and config. **Not verified**: clicking through tables/forms/builders in the
 tenant panel — the browser pane went hidden and the page stopped rendering;
 re-run with the pane visible.
+
+## 2026-10-02 — WO-10 Tenant MCP
+- `library/controllers/mcp/mcp.router.ts`: `makeMcpRouter(authenticate)`; the
+  `Caller` now carries `page(route)`/`link(path)` (the links tools return),
+  `allows(permission)`, `builder(scope)` and an optional tenant `scope` — the
+  whole JSON-RPC batch runs `runInScope(scope)` when present. The default
+  export is the admins' `/mcp`, unchanged (admin role, `view-/edit-builder`,
+  admin URLs).
+- `routes-tenant/mcp.router.ts` at **`/tenant/mcp`** (and `/tenant/mcp/emk_…`,
+  mounted before the request logger like `/mcp`): the key is looked up across
+  scopes (`runUnscoped`) and must have an organization and a project; it acts
+  as the member who made it with their organization role (`build` for the
+  read/build scopes, `view-<route>`/`data:*` for `query_records`); refused when
+  the member left, the organization is off, or the project is deleted or
+  archived. Links point at the tenant panel (`/t/<route>`).
+- Keys are made in the project (`/tenant/api/p/:id/builder/api-keys`,
+  `manage-api-keys`); they're ApiKey documents stamped with the project's ids,
+  so the admin `/mcp` (no scope → `organization: null`) never finds them, and
+  `/tenant/mcp` refuses admin keys (no project).
+- Admin repo: the Connect your AI page shows `/tenant/mcp` in the tenant panel.
+- Verified: `scripts/tenancy-smoke/mcp.mjs` 19/19 — create a key (secret once,
+  listed only in its project), initialize, tools/list, list_models (only the
+  project's models), plan_feature + build_feature (Ticket → the project's
+  Client, link `/t/tickets`), records readable through query_records, the
+  model absent from the org's other project, a project key → 401 on `/mcp`, an
+  admin key → 401 on `/tenant/mcp`, the admin MCP lists no tenant models or
+  internal names, revoke → 401.

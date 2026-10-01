@@ -19,7 +19,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 07 | Projects API | backend | S | done |
 | 08 | Tenant model registry (compile/mount per project) — BLOCKER | backend | L | done |
 | 09 | Project router `/tenant/api/p/:projectId` (builder, sidebar, dashboard, media) | backend | L | done (notifications: follow-up, D12) |
-| 10 | Tenant MCP `/tenant/mcp` + project API keys | backend | M | todo |
+| 10 | Tenant MCP `/tenant/mcp` + project API keys | backend | M | done |
 | 11 | Public API per model + project customers + login widget | backend | L | todo |
 | 12 | Panel mode, per-request API base, token, route guard — BLOCKER | admin | M | done |
 | 13 | Tenant auth pages (register questionnaire, login, 2FA, invite accept) | admin | M | done |

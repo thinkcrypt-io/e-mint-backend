@@ -12,6 +12,7 @@ import { buildFeature, modelCatalog, planFeature, planProblems, FeaturePlan, Ste
 import { FEATURE_SCHEMA, catalogText, planFromAi, platformGuide } from '../builder/features.schema.js';
 import { effectiveConfig, effectiveSettings, publishConfigPatch, routeModel, routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
+import { runInScope, TenantScope } from '../../functions/tenantScope.function.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -48,7 +49,23 @@ Use update_page for later changes to a page's columns, form or detail layout, or
 
 /* ---------------------------------------------------------------- auth */
 
-type Caller = { user: any; permissions: string[]; key: any };
+/**
+ * Who a request acts as. `page`/`link` make the links tools hand back (the
+ * admin panel's, or the tenant panel's); `allows` is the permission rule (the
+ * admin role's, or the organization role's); `scope` runs the request inside a
+ * tenant project (docs/multi-tenancy WO-10).
+ */
+type Caller = {
+	user: any;
+	permissions: string[];
+	key: any;
+	page: (route: string) => string;
+	link: (path: string) => string;
+	allows: (permission: string) => boolean;
+	/** The builder permission, for the read and build scopes. */
+	builder: (scope: 'read' | 'build') => boolean;
+	scope?: TenantScope;
+};
 
 const authenticate = async (req: Request): Promise<Caller | { error: string }> => {
 	const header = String(req.headers.authorization || '');
@@ -61,16 +78,24 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 	if (!user || user.isActive === false || user.isDeleted === true) return { error: 'The admin who made this key no longer has access' };
 	if (!key.lastUsedAt || Date.now() - key.lastUsedAt.getTime() > 60_000)
 		await ApiKey.updateOne({ _id: key._id }, { $set: { lastUsedAt: new Date() } });
-	return { user, permissions: user.role?.permissions || [], key };
+	const permissions: string[] = user.role?.permissions || [];
+	const has = (p: string) => permissions.includes('*') || permissions.includes(p);
+	return {
+		user,
+		permissions,
+		key,
+		page: route => adminUrl(`/${route}`),
+		link: path => adminUrl(path),
+		allows: has,
+		builder: scope => (scope === 'read' ? has('view-builder') || has('edit-builder') : has('edit-builder')),
+	};
 };
 
 const can = (c: Caller, scope: Scope) => {
 	if (!c.key.scopes?.includes(scope)) return `This key doesn't have the “${scope}” scope`;
 	// Records: each page's own view permission, checked by the tool.
 	if (scope === 'data') return null;
-	const need = scope === 'read' ? ['view-builder', 'edit-builder'] : ['edit-builder'];
-	if (!c.permissions.includes('*') && !need.some(p => c.permissions.includes(p)))
-		return `${c.user.name || 'The key’s owner'} doesn't have the builder permission (${need.join(' or ')})`;
+	if (!c.builder(scope)) return `${c.user.name || 'The key’s owner'} doesn't have the builder permission`;
 	return null;
 };
 
@@ -191,7 +216,7 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 	const permission = route ? routePermission(req.app, route) : null;
 	if (!Model || !permission) return { text: `No table page at /${route}. Call list_models for routes.`, isError: true };
 	if (PROTECTED_ROUTES.has(route)) return { text: `/${route} controls access — its records can't be read here.`, isError: true };
-	if (!caller.permissions.includes('*') && !caller.permissions.includes(`view-${permission}`))
+	if (!caller.allows(`view-${permission}`))
 		return { text: `${caller.user.name || 'The key’s owner'} can't view /${route} (needs view-${permission}).`, isError: true };
 	if (isAccessRestricted(Model)) return { text: `/${route} has per-record access (owner, private, shared) — its records can't be read over MCP yet.`, isError: true };
 
@@ -277,7 +302,7 @@ const TOOLS: ToolDef[] = [
 		scope: 'read',
 		inputSchema: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
 		annotations: { readOnlyHint: true, openWorldHint: false },
-		run: async (req, args) => {
+		run: async (req, args, caller) => {
 			const name = String(args?.name || '').toLowerCase();
 			const catalog = await modelCatalog(req.app);
 			const m = catalog.find(c => c.name.toLowerCase() === name || c.title.toLowerCase() === name || c.route === name);
@@ -287,7 +312,7 @@ const TOOLS: ToolDef[] = [
 			const data = {
 				...m,
 				page: {
-					url: adminUrl(`/${m.route}`),
+					url: caller.page(m.route),
 					table: config?.table || [],
 					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField })),
 				},
@@ -366,7 +391,7 @@ const TOOLS: ToolDef[] = [
 				const r = await buildFeature(req, planFromAi(args?.feature), { source: 'mcp', apiKey: caller.key });
 				const lines = [
 					`Built “${r.feature.title}”.`,
-					...r.created.map(c => `- New: ${c.title} — ${adminUrl(`/${c.route}`)} (model: ${adminUrl(`/model-builder/${c.id}`)})`),
+					...r.created.map(c => `- New: ${c.title} — ${caller.page(c.route)} (model: ${caller.link(`/model-builder/${c.id}`)})`),
 					...r.updated.map(u => `- Changed: ${u.title} — added ${u.added.join(', ') || 'nothing'}${u.changed.length ? `; changed ${u.changed.join(', ')}` : ''}`),
 					...r.tabs.map(t => `- Tab “${t.title}” on the ${t.page} page`),
 					...r.warnings.map(w => `- Note: ${w}`),
@@ -414,7 +439,7 @@ const TOOLS: ToolDef[] = [
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-		run: async (req, args) => {
+		run: async (req, args, caller) => {
 			const route = String(args?.route || '').trim();
 			if (!route || !routeModel(req.app, route)) return { text: `No page at /${route}. Call list_models for routes.`, isError: true };
 			if (PROTECTED_ROUTES.has(route)) return { text: `/${route} controls access and can't be changed here.`, isError: true };
@@ -465,7 +490,7 @@ const TOOLS: ToolDef[] = [
 				return { text: e?.message || 'Could not change the page', isError: true };
 			}
 			return {
-				text: `Updated /${route}: ${adminUrl(`/${route}`)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}`,
+				text: `Updated /${route}: ${caller.page(route)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}`,
 			};
 		},
 	},
@@ -528,8 +553,10 @@ const handle = async (req: any, msg: any, caller: Caller) => {
 	}
 };
 
-const post = async (req: any, res: Response) => {
-	const caller = await authenticate(req);
+type Authenticate = (req: Request) => Promise<Caller | { error: string }>;
+
+const makePost = (authenticateWith: Authenticate) => async (req: any, res: Response) => {
+	const caller = await authenticateWith(req);
 	if ('error' in caller) {
 		res.setHeader('WWW-Authenticate', 'Bearer realm="e-mint", error="invalid_token"');
 		return res.status(401).json(rpcError(null, -32001, caller.error));
@@ -543,23 +570,36 @@ const post = async (req: any, res: Response) => {
 	const messages = batch ? body : [body];
 	if (!messages.length) return res.status(400).json(rpcError(null, -32600, 'Empty batch'));
 
-	const replies = [];
-	for (const m of messages) {
-		const r = await handle(req, m, caller);
-		if (r) replies.push(r);
-	}
+	const answer = async () => {
+		const replies = [];
+		for (const m of messages) {
+			const r = await handle(req, m, caller);
+			if (r) replies.push(r);
+		}
+		return replies;
+	};
+	// A tenant key works inside its project only: every query the tools make is scoped.
+	const replies = caller.scope ? await runInScope(caller.scope, answer) : await answer();
 	if (!replies.length) return res.status(202).end();
 	return res.status(200).json(batch ? replies : replies[0]);
 };
 
 const notAllowed = (req: Request, res: Response) => res.status(405).set('Allow', 'POST').json(rpcError(null, -32000, 'Use POST — this server has no event stream'));
 
-const router = express.Router();
-router.post('/', post);
-router.post('/:key', post);
-router.get('/', notAllowed);
-router.get('/:key', notAllowed);
-router.delete('/', notAllowed);
-router.delete('/:key', notAllowed);
+/** The MCP endpoint over one way of authenticating: the admins' (/mcp) or tenant projects' (/tenant/mcp). */
+export const makeMcpRouter = (authenticateWith: Authenticate) => {
+	const post = makePost(authenticateWith);
+	const router = express.Router();
+	router.post('/', post);
+	router.post('/:key', post);
+	router.get('/', notAllowed);
+	router.get('/:key', notAllowed);
+	router.delete('/', notAllowed);
+	router.delete('/:key', notAllowed);
+	return router;
+};
 
-export default router;
+export type { Caller };
+export { hashKey };
+
+export default makeMcpRouter(authenticate);
