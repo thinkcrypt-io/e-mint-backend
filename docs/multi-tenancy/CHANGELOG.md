@@ -301,3 +301,61 @@ projects.mjs 15/15. Unit tests 8/8. Route parity: 0 problems.
   has `view-invoices`); projects 15/15, models 30/30, admin 12/12; route parity
   0 problems. No real S3 upload was made (the scratch server uses the real
   bucket from .env).
+
+## 2026-10-02 — WO-12…15 Tenant panel (admin repo, commits 6c5d5d4, e7cdba2)
+**Panel mode** (`admin/src/components/library/config/lib/constants/panel.ts`):
+`PANEL`/`IS_TENANT_PANEL` from `NEXT_PUBLIC_PANEL`; `BACKEND`; the open
+project in localStorage (`mint:tenant-project`; switching reloads);
+`apiBase(path)`/`apiUrl(path)` — account paths (`auth|org|projects|invitations`)
+at the tenant API root, everything else at `/p/<projectId>`; `pagePath(route)`
+— tenant tables at **`/t/<route>`** (the panels are one app: a project route
+named like an admin page — `/invoices`, `/clients` — would open that page). The
+token name defaults to `MINT_TENANT_TOKEN` in the tenant panel.
+- `mainApi` uses a per-request baseQuery over `apiUrl`; media uploads/downloads
+  too (`pages/media/utils.ts`). `SessionGuard` also signs out on
+  `ORG_ACCESS_REVOKED`.
+- `src/components/library/tenant/`: `useWorkspace` (self → organization,
+  organizations, role, permissions, projects, open project, stale project),
+  `openProject`/`leaveProject`, `can` (mirror of backend `grants`),
+  `WorkspaceSwitcher` (navbar: projects, all projects, organizations, new
+  organization; switching org trades the token), `PanelGuard` (tenant panel:
+  admin-only pages → home, a stale project is forgotten; admin panel: `/org`,
+  `/t` → home), `ProjectsBoard` (home with no project, and `/projects`; new
+  App/Website dialog, archive/restore, delete with type-to-confirm when it has
+  data), `onboarding.ts` (answer lists, in step with the backend enums),
+  `pages.ts` (ADMIN_ONLY_PAGES, TENANT_ONLY_PAGES).
+- Pages: `/auth/register` → two-step sign-up (account + organization, then
+  business questions) in the tenant panel; login footer links to it;
+  `/auth/accept-invitation/[token]` → tenant flow; `/org/members`,
+  `/org/roles`, `/org/settings`, `/org/new`; `/t/[slug]` table page; `/`
+  without a project → ProjectsBoard, with one and no dashboard → an empty state
+  linking to the dashboard builder; `/projects` → ProjectsBoard.
+- Links that built `/<route>` now use `pagePath` (create/edit pages, table
+  heading crumbs and row menu, create/editor navs, dashboard widgets, record
+  view crumbs).
+- Tenant polish: footer without Support/Status/Report Issue; sidebar brand =
+  organization name; Settings hides the signature card; "Build a feature" and
+  "Build with AI" hidden in projects (empty features list points to Connect
+  your AI); notifications bell hidden.
+- `next.config.mjs`: `distDir` from `NEXT_DIST_DIR` (both panels in dev).
+  `.claude/launch.json`: `tenant` (:3001 → backend-test :5001/tenant/api) and
+  `admin-test` (:3002 → :5001/admin/api).
+
+**Backend for the panel**: `GET /tenant/api/sidebar/:platform/:type` (Home +
+Organization section, no project); the project sidebar = project sections
+(hrefs `/t/<route>`) + `tenantNav` (Build: Models, Pages, Sidebar, Dashboard,
+Media, Connect AI; Organization: Projects, Members, Roles, Settings — each per
+permission). `buildSidebar(permissions, can)` extracted from getAdminSidebar
+(a section title now goes on the first *visible* item — it used to vanish when
+the first item was permission-hidden).
+
+**Verified in the browser** (tenant panel :3001): sign-up with the questions
+(answers stored on the organization), landing on the organization home with
+the Organization sidebar and switcher, creating a project from the dialog
+(opens it: Build + Organization sidebar, empty dashboard), the model builder
+inside the project (0 models). Admin-test (:3002): login, self, sidebar,
+builder/models, notifications — all at `/admin/api`, 200. A model + record
+created through the tenant API from the panel tab; `/t/deals` loads its route
+and config. **Not verified**: clicking through tables/forms/builders in the
+tenant panel — the browser pane went hidden and the page stopped rendering;
+re-run with the pane visible.

@@ -6,7 +6,8 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
 import { publicProject, isId } from '../library/functions/tenancy.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
-import { getAdminSidebar } from '../library/controllers/config/_index.js';
+import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
+import { tenantNav } from '../library/functions/tenantNav.function.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import defineRoutes from '../routes-admin/common/router.js';
 import SidebarCategory from '../library/models/sidebarcategories/model.js';
@@ -76,11 +77,20 @@ router.use(
 
 router.use('/dashboard', makeDashboardRouter({ read: [], edit: build }));
 
-// Only the project's own items ('server'); the other types are the admin panel's built-in navigation.
-const sidebar = getAdminSidebar((permissions, key) => grants(permissions, [key]));
-router.get('/sidebar/:platform/:type', (req: any, res: any) =>
-	req.params.type === 'server' ? sidebar(req, res) : res.status(404).json({ message: 'Not found' })
-);
+// The project's own sections, then the tenant panel's fixed ones (tenantNav).
+// Only 'server' — the other types are the admin panel's built-in navigation.
+router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
+	if (req.params.type !== 'server') return res.status(404).json({ message: 'Not found' });
+	try {
+		const items = await buildSidebar(req.permissions || [], (permissions, key) => grants(permissions, [key]));
+		// The tenant panel serves project tables under /t/<route> (admin panel.ts pagePath).
+		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));
+		return res.status(200).json([...project, ...tenantNav(req.permissions || [], { inProject: true })]);
+	} catch (e: any) {
+		console.error('tenant sidebar:', e?.message);
+		return res.status(500).json({ message: 'Something went wrong' });
+	}
+});
 
 // The sidebar builder: building is what edits the project's sidebar.
 const auth = { protect: (_req: any, _res: any, next: any) => next(), hasPermission: () => tenantPermissions(['build']) };

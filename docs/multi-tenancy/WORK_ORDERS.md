@@ -21,10 +21,10 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 09 | Project router `/tenant/api/p/:projectId` (builder, sidebar, dashboard, media) | backend | L | done (notifications: follow-up, D12) |
 | 10 | Tenant MCP `/tenant/mcp` + project API keys | backend | M | todo |
 | 11 | Public API per model + project customers + login widget | backend | L | todo |
-| 12 | Panel mode, per-request API base, token, route guard — BLOCKER | admin | M | todo |
-| 13 | Tenant auth pages (register questionnaire, login, 2FA, invite accept) | admin | M | todo |
-| 14 | Organization console (switcher, projects, members, roles, account) | admin | L | todo |
-| 15 | Project workspace (sidebar, builders, dashboard, MCP, public API) | admin | L | todo |
+| 12 | Panel mode, per-request API base, token, route guard — BLOCKER | admin | M | done |
+| 13 | Tenant auth pages (register questionnaire, login, 2FA, invite accept) | admin | M | done |
+| 14 | Organization console (switcher, projects, members, roles, account) | admin | L | done (click-through pending a visible browser) |
+| 15 | Project workspace (sidebar, builders, dashboard, MCP, public API) | admin | L | in progress — sidebar, builders, /t tables wired; MCP + public API panels pending WO-10/11 |
 | 16 | Super-admin oversight pages (organizations, tenant users, projects) | both | M | todo |
 | 17 | Isolation tests, parity check, guide | both | M | todo |
 | 18 | Website projects: website kit (settings, pages, SEO, contents) + site API | backend | L | todo |
