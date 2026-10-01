@@ -42,6 +42,11 @@ export const STEP_SCHEMA = {
 		// create
 		name: { type: 'string', description: 'create: singular PascalCase model name, e.g. "LeaveRequest"' },
 		title: { type: 'string', description: 'create: plural page title, e.g. "Leave requests"' },
+		route: {
+			type: 'string',
+			description:
+				'create: optional admin route (and API path) when the user names one, e.g. "web-contents" — lowercase letters, digits and hyphens. Left out, it comes from the name ("leaverequests").',
+		},
 		description: { type: 'string', description: 'create: one line shown under the page title' },
 		displayField: buildModel.properties.displayField,
 		code: buildModel.properties.code,
@@ -159,6 +164,7 @@ export const planFromAi = (input: any) => {
 			...(Array.isArray(s?.filters) && { filters: s.filters }),
 			...(Array.isArray(s?.form) && { form: s.form }),
 			...(Array.isArray(s?.view) && { view: s.view }),
+			...(s?.route && { route: s.route }),
 			...(s?.buttonTitle && { buttonTitle: s.buttonTitle }),
 			...(s?.sidebarCategory && { sidebarCategory: s.sidebarCategory }),
 			...(tabs && { tabs }),
