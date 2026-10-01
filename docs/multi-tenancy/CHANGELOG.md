@@ -101,3 +101,48 @@ agent must know. Keep entries factual; decisions live in README.md.
   enable → backup codes, login → ticket, wrong code refused, backup code →
   token, 9 codes left, 2FA disable, logout, revoked token → 401
   SESSION_REVOKED, other session still valid: **12/12 pass**.
+
+## 2026-10-02 — WO-05 Tenant auth API
+- `server.ts`: `app.use('/tenant/api', logger, tenantRouter)`;
+  `routes-tenant/tenant.router.ts` mounts `/auth`.
+- `routes-tenant/auth/auth.router.ts`: register (Joi; account + organization
+  + onboarding answers in one call; rolls back the user if the organization
+  fails), login (one message for unknown email / wrong password; 2FA ticket),
+  `/2fa` (= `makeTwoFactorRouter(tenantTwoFactor, tenantProtectAccount)`),
+  `/sessions` (`addOwnSessionRoutes` over `tenantSessions`), self,
+  update/self (+ `PUT /`), update/preferences (dots in keys → `_`),
+  change-password (signs out other devices), forgot-password (same answer
+  for unknown emails; link to `TENANT_FRONTEND_URL`/auth/reset-password/…),
+  reset-password (single use; signs out every device), logout.
+  `tenantTwoFactor` = `makeTwoFactor` over TenantUser / TenantPasskey /
+  TenantTwoFactorChallenge with ticket salt `tenant-two-factor-ticket`, origins
+  `TENANT_WEBAUTHN_ORIGIN` or `TENANT_FRONTEND_URL` (default
+  http://localhost:3001); a finished 2FA sign-in opens `pickOrganization`.
+- `middleware/tenant/protect.tenant.middleware.ts`: `tenantProtect` (needs
+  the token's organization and an active membership — else 401
+  `ORG_ACCESS_REVOKED` / 403 `NO_ORGANIZATION`) and `tenantProtectAccount`
+  (no organization needed). Sets req.user/organization/member/role/permissions.
+- `middleware/admin/protect.admin.middleware.ts`: refuses any token with a
+  `kind` claim (tenant/customer tokens share the signing key).
+- `library/functions/tenantPermissions.function.ts`: ORG_PERMISSIONS
+  (manage-organization, manage-members, manage-roles, create-projects,
+  manage-projects, build, manage-api-keys, data:*, data:view), system role
+  defaults (owner `*`, admin `*`, member `data:*` + `create-projects`),
+  `seedOrgRoles`, `grants`, `tenantPermissions([...])`, `ownerOnly`.
+- `library/functions/tenancy.function.ts`: `TenancyError`, `handle`,
+  `slugify`/`uniqueSlug`, `createOrganization` (roles + owner membership;
+  cleans up on failure), `pickOrganization`, `publicUser`,
+  `publicOrganization`, `publicProject`, `selfPayload`.
+- `library/functions/rateLimit.function.ts`: in-process limiter (tenant auth:
+  30 per 15 min per IP).
+- `TenantUser`: bcrypt pre-save hook, `checkPassword`.
+- `twoFactor.service.ts` now exports its mail helpers `deliver`, `shell`, `p`.
+- Verified on :5001 (scratch DB): 27/27 checks — register, duplicate email,
+  invalid onboarding answer, self (org, owner role, onboarding kept, no
+  secrets), tenant token → 401 on the admin API and admin token → 401 on the
+  tenant API, wrong password, login token claims (kind/org/sid), 2FA enable →
+  ticket → a tenant ticket is 410 on the admin 2FA → backup code → token in
+  the same org, disable, sessions list/sign out others/revoked → 401, update
+  self ignores unknown fields, change password (needs current), forgot
+  password same answer, bad reset token, logout. Plus: reset link from the dev
+  mail log → password changed → link refused the second time → login OK.

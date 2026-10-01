@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 /**
  * A person signed up to the tenant platform (docs/multi-tenancy, D1) — never
@@ -43,6 +44,17 @@ const schema = new Schema<any>(
 	},
 	{ timestamps: true, minimize: false }
 );
+
+schema.pre<any>('save', async function (next) {
+	// An invited person's account is made with no password until they set one.
+	if (!this.isModified('password') || !this.password) return next();
+	this.password = await bcrypt.hash(this.password, await bcrypt.genSalt(10));
+	next();
+});
+
+schema.methods.checkPassword = function (this: any, password: string) {
+	return !!this.password && bcrypt.compare(String(password || ''), this.password);
+};
 
 /**
  * The login token for one organization. Use issueTenantSession (sessions)

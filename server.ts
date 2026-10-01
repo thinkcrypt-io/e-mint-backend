@@ -18,6 +18,7 @@ import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
 import staffApi from './staff/router.js';
 import mcpRouter from './library/controllers/mcp/mcp.router.js';
+import tenantRouter from './routes-tenant/tenant.router.js';
 
 //User Routes
 
@@ -85,6 +86,8 @@ const logger = async (req: any, res: any, next: any) => {
 };
 
 app.use('/admin/api', logger, adminRouter);
+// The tenant platform (docs/multi-tenancy): tenant users, organizations, projects.
+app.use('/tenant/api', logger, tenantRouter);
 app.use('/user-api', userRouter);
 app.use('/app-api/', appRouter);
 app.use('/api', sellerApi);

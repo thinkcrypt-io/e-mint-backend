@@ -19,6 +19,10 @@ const adminProtect = async (
 			process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
 		) as any;
 
+		// Tenant (and public-API customer) tokens carry a `kind` and are signed
+		// with the same key: never an admin, whatever their `_id` happens to be.
+		if (decoded?.kind) return res.status(401).json({ message: 'Not authorized, token failed' });
+
 		// A signed-out session (a revoked device, or Logout): refused with a
 		// code the admin app recognises, so that browser signs itself out.
 		const sid = sessionIdOf(decoded, token);

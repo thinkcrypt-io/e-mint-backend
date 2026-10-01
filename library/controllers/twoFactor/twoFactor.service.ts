@@ -78,7 +78,7 @@ export const maskEmail = (email = '') => {
 const TEST_DOMAIN = /@(example\.(com|org|net)|[^@]+\.(test|invalid|localhost))$/i;
 
 /** Mail, or — in development, to a reserved test domain — the server log. */
-const deliver = async (to: string, subject: string, text: string, html?: string) => {
+export const deliver = async (to: string, subject: string, text: string, html?: string) => {
 	if (process.env.NODE_ENV !== 'production' && TEST_DOMAIN.test(to)) {
 		console.log(`[2FA mail → ${to}] ${subject}\n${text}`);
 		return;
@@ -86,14 +86,14 @@ const deliver = async (to: string, subject: string, text: string, html?: string)
 	await sendMail({ to, subject, title: 'MINT', body: text, ...(html && { html }) });
 };
 
-const shell = (heading: string, body: string) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif;">
+export const shell = (heading: string, body: string) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;"><tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;">
 <tr><td style="background:#111827;padding:24px 32px;"><span style="font-size:18px;font-weight:700;letter-spacing:0.04em;color:#fff;">MINT</span></td></tr>
 <tr><td style="padding:32px;"><h1 style="margin:0 0 16px;font-size:19px;color:#111827;">${heading}</h1>${body}</td></tr>
 </table></td></tr></table></body></html>`;
 
-const p = (text: string) => `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#4b5563;">${text}</p>`;
+export const p = (text: string) => `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#4b5563;">${text}</p>`;
 
 /** A security notice: 2FA turned on/off, a passkey added, a backup code used. */
 export const notify = (admin: any, subject: string, line: string) =>
