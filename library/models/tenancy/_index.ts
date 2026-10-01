@@ -10,3 +10,4 @@ export { default as OrganizationRole, SYSTEM_ROLES } from './organizationRole.mo
 export { default as OrganizationMember } from './organizationMember.model.js';
 export { default as OrganizationInvitation } from './organizationInvitation.model.js';
 export { default as TenantProject, PROJECT_TYPES } from './tenantProject.model.js';
+export { default as ProjectCustomer, CUSTOMER_TOKEN_KIND } from './projectCustomer.model.js';

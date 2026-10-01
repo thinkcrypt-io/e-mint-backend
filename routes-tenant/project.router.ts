@@ -21,6 +21,8 @@ import {
 	adminFileConfig,
 } from '../library/models/_index.js';
 import AdminFile from '../library/models/admin-file/model.js';
+import ProjectCustomer from '../library/models/tenancy/projectCustomer.model.js';
+import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
 import { customQuery } from '../middleware/index.js';
@@ -120,6 +122,21 @@ router.use(
 		injectMiddleware: { getAll: [customQuery({ query: { trashedAt: null } })] },
 		replaceController: { delete: deleteMedia(AdminFile) },
 		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: tenantPermissions },
+	})
+);
+
+// The project's customers — people signed up through its public API or login
+// widget (routes-public). Created by signing up, never here.
+router.post('/customers', (_req: any, res: any) => res.status(405).json({ message: 'Customers sign up through your site' }));
+router.use(
+	'/customers',
+	defineRoutes({
+		Model: ProjectCustomer,
+		settings: projectCustomerSettings,
+		permission: 'customers',
+		route: 'customers',
+		frontendConfig: projectCustomerConfig,
+		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: () => tenantPermissions(['build']) },
 	})
 );
 

@@ -386,3 +386,52 @@ re-run with the pane visible.
   model absent from the org's other project, a project key → 401 on `/mcp`, an
   admin key → 401 on `/tenant/mcp`, the admin MCP lists no tenant models or
   internal names, revoke → 401.
+
+## 2026-10-02 — WO-11 Public API, project customers, login widget
+- `ModelDefinition.publicApi { enabled, actions[list|get|create|update|delete],
+  auth none|customer, ownerOnly }`; Joi `PUBLIC_API` in models.controller;
+  `PUT /builder/models/:id/public-api` (projects only — 404 for the super
+  admin; owner-only needs `auth: customer`; at least one action when on;
+  bumps the version so the model recompiles). A model with its public API on
+  gets a `customer` path (ref ProjectCustomer, indexed) — not in its settings,
+  so the panels' tables ignore it.
+- `library/models/tenancy/projectCustomer.model.ts` (`projectcustomers`,
+  tenantScoped, unique {organization, project, email}, bcrypt, tokens
+  `{_id, kind:'customer', project, v}` for 30 days, `tokenVersion` to sign every
+  device out) + `projectCustomer.settings.ts` (Customers table; password and
+  tokenVersion excluded).
+- `routes-public/` mounted at **`/public`** (CORS open app-wide; `Cross-Origin-
+  Resource-Policy: cross-origin` so other sites can load the widget):
+  `GET /public/widget.js` (routes-public/widget.ts — `[data-mint-login]` card,
+  `window.MintAuth { ready, user, token, fetch, signIn, signUp, signOut,
+  onChange }`, token per project in localStorage, inline styles, light/dark);
+  `/public/api/:publicSlug` → the project (active, org active) in its scope:
+  `GET /` (public models + fields), `/auth/register|login|me|logout-everywhere`,
+  and per model list (page, limit ≤ 100, sort, `?field=value` filters on
+  simple kinds) / get / create / update / delete — only enabled actions (else
+  404), `auth: customer` → 401 `customer_required` without a token of this
+  project, owner-only → stamped and filtered by the customer, only the model's
+  fields in and out (+ _id, code, createdAt, updatedAt), references populated
+  by their display field, formulas stripped from input and computed from the
+  route's (published or generated) settings, Mongoose validation → 400.
+  Rate limits: 300/min per IP on the API, 40/15 min on customer auth.
+- Project router: `/customers` (defineRoutes over ProjectCustomer, `build`;
+  POST refused — customers sign up themselves).
+- Project delete now also removes its customers, folders and files (S3 objects
+  only when no scope references them).
+- `TENANT_RESERVED_ROUTES` narrowed to the tenant API's own paths (+ action
+  words) — the admin's page names (orders, payments, users…) are free for
+  projects, whose tables live at /t/<route>.
+- `handle` (tenancy.function) keeps a status the handler set (201 on create).
+- Verified: `scripts/tenancy-smoke/public.mjs` (all pass) — public slug,
+  Products open list/get, owner-only without customer auth refused, Orders for
+  customers + owner-only, platform models 404 on public-api, public info, list
+  sorted with only model fields, get, disabled action 404, model without API
+  404, unknown project 404, sign-up/login/wrong password/me, 401 without a
+  customer, create with the formula computed (37.5) not taken from input, model
+  validation 400, populated item, another customer sees 0 / can't open or
+  delete, update recalculates (50), sign out everywhere, customer token → 401 on
+  the tenant and admin APIs, tenant Customers table (no passwords, not in the
+  other project), internal fields kept in the panel, widget.js served with
+  CORP cross-origin. Full suite (admin, tenant-auth, projects, models, media,
+  mcp, public) and route parity (0 problems) re-run green.

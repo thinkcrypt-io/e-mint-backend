@@ -175,7 +175,10 @@ const RESERVED_ROUTES = new Set([
  * (routes-tenant/project.router.ts) or the tenant panel shows as a page.
  */
 const TENANT_RESERVED_ROUTES = new Set([
-	...RESERVED_ROUTES,
+	// Only the tenant API's own paths (and action words): project tables live
+	// at /t/<route> in the tenant panel, so the admin's page names are free.
+	'api', 'auth', 'builder', 'model-builder', 'docs', 'view', 'views', 'dashboard', 'settings', 'notifications',
+	'access-users', 'new', 'edit', 'create', 'test', 'error', 'not-found',
 	'org', 'projects', 'invitations', 'p', 'sidebar', 'sidebarcategories', 'sidebaritems', 'upload', 'uploads', 'media',
 	'files', 'permissionlist', 'analytics', 'api-keys', 'public', 'mcp', 'site', 'track', 'customers', 'members', 'roles',
 	'sidebar-builder', 'dashboard-builder', 'account', 'switch',
@@ -226,6 +229,8 @@ export type ModelDef = {
 	code?: { enabled?: boolean; prefix?: string; padding?: number; start?: number };
 	/** Per-record access (recordAccess.function.ts): an owner, a privacy and an access list on every record. */
 	access?: { enabled?: boolean; default?: string };
+	/** Tenant projects: the model's public API (routes-public). */
+	publicApi?: { enabled?: boolean; actions?: string[]; auth?: 'none' | 'customer'; ownerOnly?: boolean };
 	fields: ModelFieldDef[];
 	active?: boolean;
 	version?: number;
@@ -483,6 +488,10 @@ export const buildSchema = (def: ModelDef) => {
 		paths.access = { type: [{ type: Schema.Types.ObjectId, ref: 'Admin' }], set: idsOnly, default: undefined };
 		paths.addedBy = { type: Schema.Types.ObjectId, ref: 'Admin', set: idOnly };
 	}
+
+	// A public API's records can belong to the project customer who made them
+	// (owner-only). Not in the model's settings, so the panels' tables ignore it.
+	if (def.publicApi?.enabled) paths.customer = { type: Schema.Types.ObjectId, ref: 'ProjectCustomer', index: true };
 
 	// Indexes are synced explicitly (syncIndexes) after a change, where a
 	// failure — duplicates under a new unique field — can be reported back.

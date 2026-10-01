@@ -67,6 +67,18 @@ const schema = new Schema<any>(
 			enabled: { type: Boolean, default: false },
 			default: { type: String, enum: ['private', 'only-me', 'public'], default: 'private' },
 		},
+		/**
+		 * The model's public API for a tenant project's own site or app
+		 * (docs/multi-tenancy WO-11): /public/api/<project>/<route>. Which actions
+		 * answer, whether they need a signed-in customer of the project, and
+		 * whether each customer only reaches their own records.
+		 */
+		publicApi: {
+			enabled: { type: Boolean, default: false },
+			actions: { type: [String], enum: ['list', 'get', 'create', 'update', 'delete'], default: undefined },
+			auth: { type: String, enum: ['none', 'customer'], default: 'none' },
+			ownerOnly: { type: Boolean, default: false },
+		},
 		fields: { type: [fieldSchema], default: [] },
 		active: { type: Boolean, default: true },
 		/** Bumped on every change; a process rebuilds its copy when it differs. */

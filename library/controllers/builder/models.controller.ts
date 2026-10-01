@@ -124,6 +124,14 @@ const fieldSchema = Joi.object({
 	addLabel: Joi.string().allow('').max(40),
 });
 
+/** A tenant project model's public API (docs/multi-tenancy WO-11). */
+const PUBLIC_API = Joi.object({
+	enabled: Joi.boolean().required(),
+	actions: Joi.array().items(Joi.string().valid('list', 'get', 'create', 'update', 'delete')).unique().max(5).default([]),
+	auth: Joi.string().valid('none', 'customer').default('none'),
+	ownerOnly: Joi.boolean().default(false),
+});
+
 const bodySchema = Joi.object({
 	name: Joi.string().trim().max(60),
 	route: Joi.string().trim().allow('').max(60),
@@ -143,6 +151,7 @@ const bodySchema = Joi.object({
 		enabled: Joi.boolean(),
 		default: Joi.string().valid(...PRIVACY_VALUES),
 	}),
+	publicApi: PUBLIC_API,
 	fields: Joi.array()
 		.items(fieldSchema)
 		.unique((a: any, b: any) => a.key.toLowerCase() === b.key.toLowerCase())
@@ -964,6 +973,32 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 export const deleteModel = async (req: any, res: Response): Promise<Response> => {
 	try {
 		return res.status(200).json(await deleteModelCore(req, req.params.id, { dropData: req.query.dropData === 'true' }));
+	} catch (e: any) {
+		return answer(res, e);
+	}
+};
+
+/**
+ * PUT /builder/models/:id/public-api — a tenant project model's public API:
+ * on/off, which actions, open or for signed-in customers, owner-only. Only in
+ * a project (the platform's models have no public API). Owner-only needs
+ * signed-in customers; writes without them would be anyone's.
+ */
+export const updatePublicApi = async (req: any, res: Response): Promise<Response> => {
+	try {
+		if (!currentScope()) return fail(res, 404, 'Not found');
+		const { value, error } = PUBLIC_API.validate(req.body || {}, { stripUnknown: true });
+		if (error) return fail(res, 400, error.details[0].message.replace(/"/g, ''));
+		if (value.ownerOnly && value.auth !== 'customer') return fail(res, 400, 'Owner-only records need signed-in customers (auth: customer)');
+		if (value.enabled && !value.actions.length) return fail(res, 400, 'Choose at least one action, or turn the public API off');
+		const def: any = mongoose.isValidObjectId(req.params.id) ? await ModelDefinition.findById(req.params.id) : null;
+		if (!def) return fail(res, 404, 'Model not found');
+		def.publicApi = value;
+		def.version = (def.version || 1) + 1;
+		def.updatedBy = req.user?._id;
+		await def.save();
+		await syncDynamicModels({ app: req.app, force: true });
+		return res.status(200).json({ publicApi: def.publicApi });
 	} catch (e: any) {
 		return answer(res, e);
 	}

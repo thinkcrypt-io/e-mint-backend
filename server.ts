@@ -20,6 +20,7 @@ import staffApi from './staff/router.js';
 import mcpRouter from './library/controllers/mcp/mcp.router.js';
 import tenantRouter from './routes-tenant/tenant.router.js';
 import tenantMcpRouter from './routes-tenant/mcp.router.js';
+import publicRouter from './routes-public/index.js';
 
 //User Routes
 
@@ -91,6 +92,8 @@ const logger = async (req: any, res: any, next: any) => {
 app.use('/admin/api', logger, adminRouter);
 // The tenant platform (docs/multi-tenancy): tenant users, organizations, projects.
 app.use('/tenant/api', logger, tenantRouter);
+// Tenant projects' public APIs and the customer login widget (docs/multi-tenancy WO-11).
+app.use('/public', publicRouter);
 app.use('/user-api', userRouter);
 app.use('/app-api/', appRouter);
 app.use('/api', sellerApi);

@@ -12,6 +12,10 @@ import RouteVersion from '../../library/models/builder/routeVersion.model.js';
 import DashboardConfig from '../../library/models/builder/dashboardConfig.model.js';
 import ApiKey from '../../library/models/builder/apiKey.model.js';
 import BuiltFeature from '../../library/models/builder/feature.model.js';
+import ProjectCustomer from '../../library/models/tenancy/projectCustomer.model.js';
+import AdminFile from '../../library/models/admin-file/model.js';
+import Folder from '../../library/models/folders/model.js';
+import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js';
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
 import { tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
@@ -64,7 +68,7 @@ const loadProject = async (req: any) => {
 };
 
 /** The project's own documents in the builder collections (all scoped). */
-const SCOPED = [ModelDefinition, RouteSettings, RouteConfig, RouteVersion, SidebarItem, SidebarCategory, DashboardConfig, ApiKey, BuiltFeature];
+const SCOPED = [ModelDefinition, RouteSettings, RouteConfig, RouteVersion, SidebarItem, SidebarCategory, DashboardConfig, ApiKey, BuiltFeature, ProjectCustomer, Folder];
 
 router.get(
 	'/',
@@ -147,9 +151,14 @@ router.put(
 
 /** Every document and collection the project holds. */
 const removeEverything = async (organization: any, projectId: any) => {
-	await runInScope({ organization, project: projectId }, async () => {
+	// Its uploaded files: the records, then each S3 object no other scope uses.
+	const files: any[] = await runInScope({ organization, project: projectId }, async () => {
+		const list = await AdminFile.find({}, { key: 1, bucket: 1 }).lean();
+		await AdminFile.deleteMany({});
 		for (const Model of SCOPED) await (Model as any).deleteMany({});
+		return list;
 	});
+	for (const f of files) await deleteS3ObjectIfUnused(f.key, f.bucket).catch((e: any) => console.error('project delete, S3:', e?.message));
 	// Its built models' data: t_<projectId>_<route> (README, Naming).
 	const db = mongoose.connection.db!;
 	const prefix = `t_${projectId}_`;

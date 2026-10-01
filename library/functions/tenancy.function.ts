@@ -28,7 +28,8 @@ export const handle =
 	async (req: any, res: any) => {
 		try {
 			const out = await fn(req, res);
-			if (!res.headersSent) res.status(200).json(out);
+			// 200 unless the handler chose another (201 for a created record).
+			if (!res.headersSent) res.json(out);
 		} catch (e: any) {
 			const status = e?.status || (e?.name === 'ValidationError' ? 400 : 500);
 			if (status === 500) console.error('tenancy:', e);

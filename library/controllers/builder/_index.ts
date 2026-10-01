@@ -25,6 +25,7 @@ import {
 	previewModel,
 	updateModel,
 	deleteModel,
+	updatePublicApi,
 } from './models.controller.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { aiBuildModel } from './ai.controller.js';
@@ -89,6 +90,8 @@ export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
 	router.post('/models', ...edit, createModel);
 	router.put('/models/:id', ...edit, updateModel);
 	router.delete('/models/:id', ...edit, deleteModel);
+	// A tenant project model's public API (routes-public). 404 outside a project.
+	router.put('/models/:id/public-api', ...edit, updatePublicApi);
 
 	// Features: several models and their links, planned and built together (features.service.ts).
 	router.get('/features', ...view, listFeatures);
