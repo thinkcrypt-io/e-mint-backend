@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * One published version of a RouteSettings or RouteConfig, kept so any
@@ -19,5 +20,8 @@ const schema = new Schema<any>(
 );
 
 schema.index({ route: 1, kind: 1, version: -1 });
+
+// Tenant documents carry organization/project; every query is confined to its scope (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('RouteVersion', schema, 'routeversions');

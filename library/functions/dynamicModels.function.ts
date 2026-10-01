@@ -1,4 +1,5 @@
 import express from 'express';
+import { withoutScope } from './tenantScope.function.js';
 import mongoose, { Schema } from 'mongoose';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import Counter from '../../models/counter/counter.model.js';
@@ -985,7 +986,11 @@ export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boo
 	if (running) return running;
 	if (!force && Date.now() - checkedAt < TTL_MS) return;
 
-	running = (async () => {
+	// The super admin's registry: tenant projects' models are compiled by
+	// tenantModels.function.ts. Run without the caller's scope — a sync can be
+	// triggered from inside a tenant request, whose scope would hide every
+	// super-admin definition (and unmount its route).
+	running = withoutScope(() => (async () => {
 		try {
 			const defs: ModelDef[] = (await ModelDefinition.find({}).lean()) as any;
 			checkedAt = Date.now();
@@ -1031,7 +1036,7 @@ export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boo
 		} finally {
 			running = null;
 		}
-	})();
+	})());
 
 	return running;
 };

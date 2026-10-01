@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * A feature built in one go — several models, the fields added to existing
@@ -20,5 +21,8 @@ const schema = new Schema<any>(
 	},
 	{ timestamps: true, versionKey: false, minimize: false }
 );
+
+// Tenant documents carry organization/project; every query is confined to its scope (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('BuiltFeature', schema, 'builtfeatures');

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * A Mongoose model built in the admin's model builder instead of in code.
@@ -43,11 +44,11 @@ const fieldSchema = new Schema<any>(
 const schema = new Schema<any>(
 	{
 		/** The registered Mongoose model name, e.g. 'Invoice' or 'Invoice2'. */
-		name: { type: String, required: true, unique: true, trim: true },
+		name: { type: String, required: true, trim: true },
 		/** What was asked for, when `name` had to differ because it was taken. */
 		requestedName: { type: String, trim: true },
 		/** The admin route (and API path), e.g. 'invoices'. */
-		route: { type: String, required: true, unique: true, trim: true, lowercase: true },
+		route: { type: String, required: true, trim: true, lowercase: true },
 		collectionName: { type: String, required: true, unique: true, trim: true },
 		title: { type: String, required: true, trim: true },
 		description: { type: String, trim: true },
@@ -76,5 +77,12 @@ const schema = new Schema<any>(
 	},
 	{ timestamps: true, versionKey: false, minimize: false }
 );
+
+// Tenant documents carry organization/project; every query is confined to its scope (docs/multi-tenancy).
+schema.plugin(tenantScoped);
+// Names and routes are unique per scope (the super admin's, or one project's);
+// a tenant model is compiled under an internal name (D6). Collections are global.
+schema.index({ organization: 1, project: 1, name: 1 }, { unique: true });
+schema.index({ organization: 1, project: 1, route: 1 }, { unique: true });
 
 export default mongoose.model<any>('ModelDefinition', schema, 'modeldefinitions');

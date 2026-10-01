@@ -1,6 +1,9 @@
 module.exports = {
-	preset: 'ts-jest',
 	testEnvironment: 'node',
+
+	// Transpile only: type-checking every suite against mongoose's types runs
+	// jest out of memory. `npx tsc --noEmit` is the type check.
+	transform: { '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true }] },
 
 	// The source is ESM, so relative imports carry a `.js` extension that points
 	// at the compiled output — which ts-jest, resolving the `.ts` sources, cannot

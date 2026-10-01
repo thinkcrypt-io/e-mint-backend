@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * The envelope RouteSettings and RouteConfig share: a published copy the API
@@ -11,11 +12,11 @@ import { Schema } from 'mongoose';
  * before they're written, which Mongoose's schema couldn't express anyway.
  * `minimize: false` keeps an empty object an object rather than dropping it.
  */
-export const draftableSchema = () =>
-	new Schema<any>(
+export const draftableSchema = () => {
+	const schema = new Schema<any>(
 		{
 			// The admin path, exactly as the admin requests `${route}/get/...`.
-			route: { type: String, required: true, trim: true, unique: true },
+			route: { type: String, required: true, trim: true },
 			// The base model's modelName.
 			model: { type: String, trim: true },
 			data: { type: Schema.Types.Mixed, default: null },
@@ -35,3 +36,9 @@ export const draftableSchema = () =>
 		},
 		{ timestamps: true, versionKey: false, minimize: false }
 	);
+	// One copy per route per scope: the super admin's, and each tenant project's
+	// (docs/multi-tenancy). Every query is confined to its scope.
+	schema.plugin(tenantScoped);
+	schema.index({ organization: 1, project: 1, route: 1 }, { unique: true });
+	return schema;
+};

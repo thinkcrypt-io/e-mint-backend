@@ -4,6 +4,7 @@ import RouteSettings from '../models/builder/routeSettings.model.js';
 import RouteConfig from '../models/builder/routeConfig.model.js';
 import BuilderState from '../models/builder/builderState.model.js';
 import { ADMIN_API_PREFIX, dataToSettings } from './routeRegistry.function.js';
+import { scopeKey } from './tenantScope.function.js';
 
 /**
  * Which settings and config an admin route runs on right now: the published
@@ -27,6 +28,9 @@ export type Kind = 'settings' | 'config';
 type Source = 'inherit' | 'db' | 'code';
 type Published = { data: any; version: number; source: Source } | null;
 
+/** Cache keys carry the scope (tenancy): 'admin|invoices', 'p:<id>|invoices'. */
+const scoped = (key: string) => `${scopeKey()}|${key}`;
+
 const settingsCache = new Map<string, { at: number; value: Published }>();
 const configCache = new Map<string, { at: number; value: Published }>();
 // constructConfig builds Joi validators — worth keeping per published version.
@@ -37,11 +41,13 @@ const load = async (
 	model: mongoose.Model<any>,
 	key: string
 ): Promise<Published> => {
-	const hit = cache.get(key);
+	// A tenant project and the super admin can both have a route of this name.
+	const cacheKey = scoped(key);
+	const hit = cache.get(cacheKey);
 	if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
 	const doc: any = await model.findOne({ route: key }, { data: 1, version: 1, source: 1 }).lean();
 	const value = doc?.data ? { data: doc.data, version: doc.version || 0, source: doc.source || 'inherit' } : null;
-	cache.set(key, { at: Date.now(), value });
+	cache.set(cacheKey, { at: Date.now(), value });
 	return value;
 };
 
@@ -88,14 +94,19 @@ export const invalidateRoute = (key?: string) => {
 		builtCache.clear();
 		return;
 	}
-	settingsCache.delete(key);
-	configCache.delete(key);
-	for (const k of builtCache.keys()) if (k.startsWith(`${key}@`)) builtCache.delete(k);
+	settingsCache.delete(scoped(key));
+	configCache.delete(scoped(key));
+	for (const k of builtCache.keys()) if (k.startsWith(`${scoped(key)}@`)) builtCache.delete(k);
 };
+
+/** Where a tenant project's routes are mounted (routes-tenant/project.router.ts). */
+const TENANT_PROJECT_PREFIX = /^\/tenant\/api\/p\/[^/]+\/(.+)$/;
 
 /** The route key for a request inside a defineRoutes router: its mount path. */
 export const resourceRouteKey = (req: any): string | null => {
 	const base: string = req?.baseUrl || '';
+	const tenant = base.match(TENANT_PROJECT_PREFIX);
+	if (tenant) return tenant[1] || null;
 	if (!base.startsWith(`${ADMIN_API_PREFIX}/`)) return null;
 	return base.slice(ADMIN_API_PREFIX.length + 1) || null;
 };
@@ -134,7 +145,7 @@ export const resolveRoute = async (key: string | null, code: CodeRoute): Promise
 	let resolved = codeResolved;
 
 	if (settings) {
-		const cacheKey = `${key}@${settings.version}`;
+		const cacheKey = `${scoped(key)}@${settings.version}`;
 		let entry = builtCache.get(cacheKey);
 		// A model built in the model builder is recompiled when it changes, so
 		// the same published version can meet a new Model: rebuild for it.

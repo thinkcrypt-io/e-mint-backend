@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * A key an AI client (Claude, ChatGPT, Cursor…) connects to the MCP endpoint
@@ -20,5 +21,8 @@ const schema = new Schema<any>(
 	},
 	{ timestamps: true, versionKey: false }
 );
+
+// Tenant documents carry organization/project; every query is confined to its scope (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('ApiKey', schema, 'apikeys');

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 const schema = new Schema<any>(
 	{
@@ -57,5 +58,8 @@ const schema = new Schema<any>(
 		versionKey: false,
 	}
 );
+
+// Tenant documents carry organization/project; every query is confined to its scope (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('SidebarItem', schema);
