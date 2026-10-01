@@ -25,7 +25,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 13 | Tenant auth pages (register questionnaire, login, 2FA, invite accept) | admin | M | done |
 | 14 | Organization console (switcher, projects, members, roles, account) | admin | L | done (click-through pending a visible browser) |
 | 15 | Project workspace (sidebar, builders, dashboard, MCP, public API) | admin | L | in progress — sidebar, builders, /t tables wired; MCP + public API panels pending WO-10/11 |
-| 16 | Super-admin oversight pages (organizations, tenant users, projects) | both | M | todo |
+| 16 | Super-admin oversight pages (organizations, tenant users, projects) | both | M | done (seed pending on the shared DB) |
 | 17 | Isolation tests, parity check, guide | both | M | todo |
 | 18 | Website projects: website kit (settings, pages, SEO, contents) + site API | backend | L | done |
 | 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | backend done; UI in progress |

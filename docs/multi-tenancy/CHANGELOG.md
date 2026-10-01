@@ -490,3 +490,26 @@ re-run with the pane visible.
 - Tenant sidebar: an **Audience** section — Analytics (websites, view-analytics),
   Public API and Customers (build). Project delete also removes its events.
 - Verified: `scripts/tenancy-smoke/analytics.mjs` 21/21.
+
+## 2026-10-02 — WO-16 Super-admin oversight
+- `library/models/tenancy/oversight.settings.ts`: settings + configs for
+  `organizations` (owner, plan, active, the sign-up answers as dotted
+  `onboarding.*` fields with industry/heard-from filters; detail page with an
+  "About the business" section and a Projects tab over `tenant-projects`),
+  `tenant-users` (password, backup codes, reset token excluded) and
+  `tenant-projects` (organization, kind, public slug, domains, active).
+- `routes-admin/admin.router.ts`: `/organizations`, `/tenant-users`,
+  `/tenant-projects` via defineRoutes; create, delete and copy answer 404
+  (`notAllowed`) — tenants are made by signing up. Switching an organization or
+  user off signs them out on their next request (tenantProtect); a project off
+  = archived.
+- Admin `preferences` keys: organizations, tenant-users, tenant-projects.
+- `scripts/seedTenancyAdmin.js`: permissions (view/edit) and a "Tenants"
+  sidebar section with the three tables. **Run on the scratch DB only** — on
+  the shared database it's a deploy step (`npm run build && node
+  scripts/seedTenancyAdmin.js`).
+- The admin panel's generic `[slug]` page serves the three tables; nothing
+  admin-side had to be written.
+- Verified: `scripts/tenancy-smoke/oversight.mjs` 16/16; the full smoke suite
+  (admin, tenant-auth, projects, models, media, mcp, public, website, analytics,
+  oversight) green; route parity 73 routes / 301 responses, 0 problems.

@@ -1,0 +1,42 @@
+// The super admin's view of the tenant platform (WO-16). Uses projects.mjs's state; needs seedTenancyAdmin.js on the scratch DB.
+import { call, ok, done, load } from './lib.mjs';
+const s = load();
+const admin = (await call('POST', '/admin/api/auth/login', { email: 'admin@example.com', password: 'tenancy-dev-pass-1' })).body.token;
+
+let r = await call('GET', '/admin/api/organizations?limit=100', null, admin);
+ok('organizations listed', r.status === 200 && r.body?.doc?.length > 0, r.status);
+const initech = r.body.doc.find(o => /^Initech/.test(o.name) && o.owner?.name === 'Pat Projects');
+ok('owner populated', !!initech?.owner?.name, JSON.stringify(initech?.owner));
+r = await call('GET', '/admin/api/organizations/get/config', null, admin);
+ok('organizations page config', r.status === 200 && !!r.body);
+r = await call('GET', `/admin/api/organizations/get/view/${initech._id}`, null, admin);
+ok('organization detail with its sign-up answers section', r.status === 200 && JSON.stringify(r.body).includes('About the business'), r.status);
+ok('…and a Projects tab', JSON.stringify(r.body?.tabs || []).includes('Projects'), JSON.stringify(r.body?.tabs));
+r = await call('GET', `/admin/api/organizations/get/view/${initech._id}/tab/0`, null, admin);
+ok('the tab lists its projects', r.status === 200 && JSON.stringify(r.body).includes('CRM'), r.status);
+r = await call('GET', '/admin/api/tenant-users?limit=200', null, admin);
+ok('tenant users listed, no secrets', r.status === 200 && r.body?.doc?.length > 0 && !JSON.stringify(r.body).includes('password') && !JSON.stringify(r.body).includes('twoFactorBackupCodes'));
+r = await call('GET', '/admin/api/tenant-projects?limit=200&type_in=website', null, admin);
+ok('tenant projects filtered by kind', r.status === 200 && r.body.doc.every(p => p.type === 'website'), r.body?.doc?.length);
+r = await call('POST', '/admin/api/organizations', { name: 'Made by admin', slug: 'x', owner: '000000000000000000000000' }, admin);
+ok("organizations can't be created here", r.status === 404);
+r = await call('DELETE', `/admin/api/organizations/${initech._id}`, null, admin);
+ok("…or deleted", r.status === 404);
+// Switching off
+r = await call('PUT', `/admin/api/organizations/${initech._id}`, { isActive: false }, admin);
+ok('switch the organization off', r.status === 200, `${r.status} ${r.body?.message || ''}`);
+r = await call('GET', '/tenant/api/org', null, s.pat);
+ok('its members are signed out of it', r.status === 401 && r.body?.code === 'ORG_ACCESS_REVOKED', `${r.status} ${r.body?.code}`);
+r = await call('PUT', `/admin/api/organizations/${initech._id}`, { isActive: true }, admin);
+r = await call('GET', '/tenant/api/org', null, s.pat);
+ok('switched back on, they’re back', r.status === 200);
+const pat = (await call('GET', '/admin/api/tenant-users?limit=200', null, admin)).body.doc.find(u => u.name === 'Pat Projects' && /pat/.test(u.email));
+r = await call('PUT', `/admin/api/tenant-users/${pat._id}`, { isActive: false }, admin);
+r = await call('GET', '/tenant/api/auth/self', null, s.pat);
+ok('a switched-off tenant user is refused', r.status === 401, r.status);
+await call('PUT', `/admin/api/tenant-users/${pat._id}`, { isActive: true }, admin);
+r = await call('GET', '/admin/api/sidebar/crm/server', null, admin);
+ok('the Tenants section in the admin sidebar', JSON.stringify(r.body).includes('/organizations') && JSON.stringify(r.body).includes('Tenants'));
+r = await call('GET', '/tenant/api/p/' + s.crm + '/organizations', null, s.pat);
+ok("tenants can't reach the oversight tables", r.status === 404);
+done();

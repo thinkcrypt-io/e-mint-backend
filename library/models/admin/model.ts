@@ -244,6 +244,10 @@ const schema = new Schema<AdminType>(
 			formfields: [String],
 			herokus: [String],
 			vercels: [String],
+			// The tenant platform (docs/multi-tenancy WO-16).
+			organizations: [String],
+			'tenant-users': [String],
+			'tenant-projects': [String],
 		},
 	},
 

@@ -274,6 +274,15 @@ import { getDocumentHistory } from '../library/controllers/history/_index.js';
 import builderRouter from '../library/controllers/builder/_index.js';
 import dashboardRouter from '../library/controllers/dashboard/_index.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
+import { Organization, TenantUser, TenantProject } from '../library/models/tenancy/_index.js';
+import {
+	organizationSettings,
+	organizationConfig,
+	tenantUserSettings,
+	tenantUserConfig,
+	tenantProjectSettings,
+	tenantProjectConfig,
+} from '../library/models/tenancy/oversight.settings.js';
 import { accessUsersRouter, notificationsRouter } from '../library/controllers/notifications/_index.js';
 
 const router = express.Router();
@@ -1516,6 +1525,23 @@ router.use(
 		route: 'setting',
 		frontendConfig: settingConfig,
 	}),
+);
+
+// The tenant platform, from the super admin's side (docs/multi-tenancy WO-16):
+// read, filter, switch off. Tenants are made by signing up, never here, and
+// deleting one isn't a table action.
+const oversight = { post: notAllowed, delete: notAllowed, copy: notAllowed };
+router.use(
+	'/organizations',
+	defineRoutes({ Model: Organization, settings: organizationSettings, permission: 'organizations', route: 'organizations', frontendConfig: organizationConfig, replaceController: oversight }),
+);
+router.use(
+	'/tenant-users',
+	defineRoutes({ Model: TenantUser, settings: tenantUserSettings, permission: 'tenant-users', route: 'tenant-users', frontendConfig: tenantUserConfig, replaceController: oversight }),
+);
+router.use(
+	'/tenant-projects',
+	defineRoutes({ Model: TenantProject, settings: tenantProjectSettings, permission: 'tenant-projects', route: 'tenant-projects', frontendConfig: tenantProjectConfig, replaceController: oversight }),
 );
 
 // The signed-in admin's notifications, and who a record can be shared with.
