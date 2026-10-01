@@ -226,6 +226,10 @@ export { default as serviceSettings } from './services/service.settings.js';
 export { default as Issue } from './issues/issues.model.js';
 export { default as issueSettings } from './issues/issues.settings.js';
 
+//Support tickets
+export { default as SupportTicket } from './support-tickets/supportTicket.model.js';
+export { default as supportTicketSettings } from './support-tickets/supportTicket.settings.js';
+
 //Maintenance
 export { default as Maintenance } from './maintenance/maintenance.model.js';
 export { default as maintenanceSettings } from './maintenance/maintenance.settings.js';

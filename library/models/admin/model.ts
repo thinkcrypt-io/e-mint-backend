@@ -189,6 +189,7 @@ const schema = new Schema<AdminType>(
 			portfolios: [String],
 			services: [String],
 			issues: [String],
+			'support-tickets': [String],
 			maintenances: [String],
 			resources: [String],
 			components: [String],

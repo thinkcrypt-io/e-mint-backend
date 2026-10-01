@@ -1,5 +1,12 @@
 import systemStatus from '../controllers/status/systemStatus.controller.js';
 import { reportIssue, myReportedIssues } from '../controllers/issues/reportIssue.controller.js';
+import {
+	openTicket,
+	myTickets,
+	getThread,
+	replyToThread,
+	setThreadStatus,
+} from '../controllers/support/supportTickets.controller.js';
 import express from 'express';
 import {
 	adminAuthRoute,
@@ -50,6 +57,8 @@ import {
 	serviceSettings,
 	Issue,
 	issueSettings,
+	SupportTicket,
+	supportTicketSettings,
 	Maintenance,
 	maintenanceSettings,
 	AdminExpense,
@@ -481,6 +490,55 @@ router.use(
 				controller: myReportedIssues,
 				middlewares: [adminProtect],
 				description: 'The signed-in admin’s own reported issues',
+			},
+		],
+	}),
+);
+
+router.use(
+	'/support-tickets',
+	defineRoutes({
+		Model: SupportTicket,
+		settings: supportTicketSettings,
+		permission: 'support-tickets',
+		// The Support page: any signed-in admin opens tickets and talks in their
+		// own threads; the team (edit-support-tickets) answers everyone's. Two
+		// segments each, as `/:id` is registered before custom routes.
+		customRoutes: [
+			{
+				path: '/open',
+				method: 'post',
+				controller: openTicket,
+				middlewares: [adminProtect],
+				description: 'Open a support ticket (any signed-in admin)',
+			},
+			{
+				path: '/open/mine',
+				method: 'get',
+				controller: myTickets,
+				middlewares: [adminProtect],
+				description: 'The signed-in admin’s own support tickets',
+			},
+			{
+				path: '/thread/:id',
+				method: 'get',
+				controller: getThread,
+				middlewares: [adminProtect],
+				description: 'A ticket and its replies (its requester or the support team)',
+			},
+			{
+				path: '/thread/:id/reply',
+				method: 'post',
+				controller: replyToThread,
+				middlewares: [adminProtect],
+				description: 'Reply in a ticket’s thread (its requester or the support team)',
+			},
+			{
+				path: '/thread/:id/status',
+				method: 'post',
+				controller: setThreadStatus,
+				middlewares: [adminProtect],
+				description: 'Close or reopen a ticket; the support team can set any status',
 			},
 		],
 	}),
