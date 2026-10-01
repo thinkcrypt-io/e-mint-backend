@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 /**
  * A copy of a record taken just before a bulk delete or a merge removed it,
@@ -22,5 +23,8 @@ const schema = new Schema<any>(
 );
 
 schema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
+
+// A tenant project's entries carry its ids and stay out of the super admin's lists (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('DeletedRecord', schema, 'deletedrecords');

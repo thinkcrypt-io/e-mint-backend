@@ -46,61 +46,83 @@ import {
  * publishing settings changes what the admin API accepts and returns, which
  * is a bigger power than editing a table's columns. A role with '*' has both.
  */
-const router = express.Router();
+type Guards = {
+	view: any[];
+	edit: any[];
+	/** MCP keys. */
+	keys: any[];
+	/**
+	 * A tenant project's builder (docs/multi-tenancy WO-09): no "Build with AI"
+	 * on the platform's key (D10) and no global/per-route source switches —
+	 * a project's routes have no code files to switch to.
+	 */
+	tenant?: boolean;
+};
 
-const view = [adminProtect, adminPermissions(['view-builder'])];
-const edit = [adminProtect, adminPermissions(['edit-builder'])];
+const notForProjects = (_req: any, res: any) =>
+	res.status(403).json({ message: 'Not available in projects — connect your own AI through MCP instead.' });
 
-// Built models come and go at runtime; make sure this process has them before
-// any route is looked up.
-router.use(async (req: any, res: any, next: any) => {
-	try {
-		await syncDynamicModels({ app: req.app });
-		next();
-	} catch (e) {
-		next(e);
-	}
+export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
+	const router = express.Router();
+	const platformOnly = tenant ? [notForProjects] : [];
+
+	// Built models come and go at runtime; make sure this process has them before
+	// any route is looked up.
+	router.use(async (req: any, res: any, next: any) => {
+		try {
+			await syncDynamicModels({ app: req.app });
+			next();
+		} catch (e) {
+			next(e);
+		}
+	});
+
+	// The model builder. Registered before '/model/:name' only for readability —
+	// the paths don't overlap.
+	router.get('/models', ...view, listModels);
+	router.get('/models/options', ...view, getModelOptions);
+	router.get('/models/check', ...view, checkModelName);
+	router.get('/models/:id', ...view, getModel);
+	router.post('/models/preview', ...edit, previewModel);
+	// A draft from a description, by Claude — nothing is saved (ai.controller.ts).
+	router.post('/models/ai', ...edit, ...platformOnly, aiBuildModel);
+	router.post('/models', ...edit, createModel);
+	router.put('/models/:id', ...edit, updateModel);
+	router.delete('/models/:id', ...edit, deleteModel);
+
+	// Features: several models and their links, planned and built together (features.service.ts).
+	router.get('/features', ...view, listFeatures);
+	router.get('/features/catalog', ...view, getFeatureCatalog);
+	router.post('/features/plan', ...edit, checkFeaturePlan);
+	router.post('/features/ai', ...edit, ...platformOnly, aiPlanFeature);
+	router.post('/features/build', ...edit, buildFeaturePlan);
+
+	// Keys AI clients connect to /mcp with (library/controllers/mcp).
+	router.get('/api-keys', ...keys, listApiKeys);
+	router.post('/api-keys', ...keys, createApiKey);
+	router.delete('/api-keys/:id', ...keys, revokeApiKey);
+
+	router.get('/routes', ...view, getBuilderRoutes);
+	router.get('/route', ...view, getBuilderRoute);
+	router.get('/versions', ...view, getBuilderVersions);
+	router.get('/model/:name', ...view, getBuilderModelFields);
+	router.get('/backlinks/:name', ...view, getBuilderBacklinks);
+	router.get('/state', ...view, getBuilderState);
+	router.get('/compare', ...view, compareBuilderRoute);
+
+	router.put('/draft', ...edit, saveBuilderDraft);
+	router.delete('/draft', ...edit, discardBuilderDraft);
+	router.post('/publish', ...edit, publishBuilderRoute);
+	router.post('/reset', ...edit, resetBuilderRoute);
+	router.post('/restore', ...edit, restoreBuilderVersion);
+	router.put('/state', ...edit, ...platformOnly, setBuilderState);
+	router.put('/source', ...edit, ...platformOnly, setBuilderSource);
+
+	return router;
+};
+
+export default makeBuilderRouter({
+	view: [adminProtect, adminPermissions(['view-builder'])],
+	edit: [adminProtect, adminPermissions(['edit-builder'])],
+	keys: [adminProtect, adminPermissions(['edit-builder'])],
 });
-
-// The model builder. Registered before '/model/:name' only for readability —
-// the paths don't overlap.
-router.get('/models', ...view, listModels);
-router.get('/models/options', ...view, getModelOptions);
-router.get('/models/check', ...view, checkModelName);
-router.get('/models/:id', ...view, getModel);
-router.post('/models/preview', ...edit, previewModel);
-// A draft from a description, by Claude — nothing is saved (ai.controller.ts).
-router.post('/models/ai', ...edit, aiBuildModel);
-router.post('/models', ...edit, createModel);
-router.put('/models/:id', ...edit, updateModel);
-router.delete('/models/:id', ...edit, deleteModel);
-
-// Features: several models and their links, planned and built together (features.service.ts).
-router.get('/features', ...view, listFeatures);
-router.get('/features/catalog', ...view, getFeatureCatalog);
-router.post('/features/plan', ...edit, checkFeaturePlan);
-router.post('/features/ai', ...edit, aiPlanFeature);
-router.post('/features/build', ...edit, buildFeaturePlan);
-
-// Keys AI clients connect to /mcp with (library/controllers/mcp).
-router.get('/api-keys', ...edit, listApiKeys);
-router.post('/api-keys', ...edit, createApiKey);
-router.delete('/api-keys/:id', ...edit, revokeApiKey);
-
-router.get('/routes', ...view, getBuilderRoutes);
-router.get('/route', ...view, getBuilderRoute);
-router.get('/versions', ...view, getBuilderVersions);
-router.get('/model/:name', ...view, getBuilderModelFields);
-router.get('/backlinks/:name', ...view, getBuilderBacklinks);
-router.get('/state', ...view, getBuilderState);
-router.get('/compare', ...view, compareBuilderRoute);
-
-router.put('/draft', ...edit, saveBuilderDraft);
-router.delete('/draft', ...edit, discardBuilderDraft);
-router.post('/publish', ...edit, publishBuilderRoute);
-router.post('/reset', ...edit, resetBuilderRoute);
-router.post('/restore', ...edit, restoreBuilderVersion);
-router.put('/state', ...edit, setBuilderState);
-router.put('/source', ...edit, setBuilderSource);
-
-export default router;

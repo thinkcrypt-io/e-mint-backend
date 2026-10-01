@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { tenantScoped } from '../../functions/tenantScope.function.js';
 
 export const HISTORY_ACTIONS = ['create', 'update', 'delete'] as const;
 
@@ -69,5 +70,8 @@ const schema = new Schema<any>(
 // and one record's own timeline.
 schema.index({ createdAt: -1 });
 schema.index({ document: 1, createdAt: -1 });
+
+// A tenant project's entries carry its ids and stay out of the super admin's lists (docs/multi-tenancy).
+schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('History', schema);

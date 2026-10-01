@@ -198,3 +198,72 @@ agent must know. Keep entries factual; decisions live in README.md.
   delete. DB: the two live projects each have their section and dashboard,
   the deleted one left nothing, and the super-admin
   `GET /admin/api/sidebarcategories` sees 0 of them.
+
+## 2026-10-02 — WO-08 Tenant model registry, WO-09 project router (core)
+**Registry — one per scope, same code** (`library/functions/dynamicModels.function.ts`):
+- State (compiled models, failures, mounts, last check, running sync) lives
+  in a `Registry` per `scopeKey()` — `admin`, or `p:<projectId>`. Every
+  existing caller (`syncDynamicModels`, `compiledModel`, `compileError`,
+  `isBuiltModel`, the dispatcher) gets the current scope's.
+- `internalModelName(name)` → `T<projectId>_<Name>` in a project scope. A
+  tenant def compiles under it, with its references remapped to internal
+  names; Counter slugs use it too (`counterSlugFor`) so codes number per
+  project (INV-0001 in two projects).
+- `checkAvailability` in a project: names/routes only against the project's
+  definitions + `TENANT_RESERVED_ROUTES`; collection `t_<projectId>_<route>`.
+- `makeTargetLookup`/`linkTargets` in a project: only its own models (no code
+  models — D6).
+- `mount` passes `auth: { protect: pass-through, hasPermission:
+  tenantPermissions }` for tenant routes; per-record access is off for them.
+- `forgetProjectModels(projectId)` (registered on `projectHooks.onRemoved`)
+  deletes the project's compiled Mongoose models and its route map.
+- The super admin's sync still runs `withoutScope`.
+
+**Route registry** (`routeRegistry.function.ts`): `dynamicMounts` is a
+per-scope facade (has/get/keys/entries/size/iterate) and
+`getDynamicVersion`/`setDynamicMount` are per scope; `forgetScopeMounts`.
+`collectRoutes`/`collectResourceRoutes` don't walk the app's code routes in a
+tenant scope. New `scopedModel(name)` / `scopedModelNames()` (a project sees
+only `T<itsId>_*` models), `displayModelName` (drops the prefix), and
+`resolveFilterModel` uses `scopedModel` (a published filter can't name
+`Admin`).
+
+**Shared code made tenant-safe**
+- `routes-admin/common/router.ts` `defineRoutes`: optional `auth` ({ protect,
+  hasPermission }); default adminProtect/adminPermissions unchanged.
+- `builder.controller.ts`: model lists/lookups via `scopedModelNames`/
+  `scopedModel` (no inspecting platform or other projects' models).
+- `models.controller.ts`: in a project no global `Permission` docs are
+  created/renamed/deleted (permissions are role keys); per-record access
+  refused (D12); counter slug via `counterSlugFor`; preview model list scoped.
+- `viewDocument.controller.ts`: resource-registry and code-config caches per
+  scope.
+- `library/controllers/builder/_index.ts` → `makeBuilderRouter({ view, edit,
+  keys, tenant })`; for tenants `/models/ai`, `/features/ai`, `/state`,
+  `/source` answer 403 (D10). `dashboard/_index.ts` →
+  `makeDashboardRouter({ read, edit })`. Default exports = the admin's.
+- `getAdminSidebar(can?)`: the permission rule is injectable (tenants pass
+  `grants`).
+- `History` and `DeletedRecord` now use `tenantScoped` (tenant record
+  history and undo snapshots stay out of the super admin's lists).
+- `createDocument` message uses `displayModelName`.
+
+**Project router** `routes-tenant/project.router.ts` at
+`/tenant/api/p/:projectId`: tenantProtect → project in the token's org
+(archived: read-only) → `runInScope` → `/builder` (build; MCP keys:
+manage-api-keys), `/dashboard` (read; build to change),
+`/sidebar/:platform/server` (role-filtered; other types 404),
+`/sidebarcategories` + `/sidebaritems` (defineRoutes, build), then the
+project's built models via `dynamicModelsDispatcher`.
+
+**Verified** (scratch server :5001; scripts now in `scripts/tenancy-smoke/`):
+models.mjs 30/30 — two organizations each create `Client` + `Invoice` at the
+same routes (collections `t_<id>_invoices`), a second `Client` → `Client2`,
+records with codes per project and populated references, no cross-org or
+cross-project reads, config served, builder lists only the project's models,
+platform/other-project models 404 on inspection, route builder lists only
+project routes, AI and global switch 403, admin code routes 404, sidebar
+lists the model, admin built-in nav 404, super admin sees no tenant models or
+records, model delete, project delete needs force then removes routes. Tenant
+history entries carry the org (3) and the super admin's list has 0.
+projects.mjs 15/15. Unit tests 8/8. Route parity: 0 problems.

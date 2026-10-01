@@ -4,6 +4,7 @@ import { accessRule, isAccessRestricted } from '../../functions/recordAccess.fun
 import Role from '../../models/admin-role/model.js';
 import constructConfig from '../../../lib/configurator/constructConfig.js';
 import { collectResourceRoutes, getDynamicVersion, ResourceRouteEntry } from '../../functions/routeRegistry.function.js';
+import { scopeKey } from '../../functions/tenantScope.function.js';
 import { resolveRoute, ResolvedRoute } from '../../functions/resolveRoute.function.js';
 
 /**
@@ -30,24 +31,30 @@ const SENSITIVE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|has
 const MAX_RELATED = 50;
 const MAX_TAB_PAGE = 100;
 
-// Rebuilt when a model-builder route is added, changed or removed.
-let registry: { version: number; map: Map<string, ResourceRouteEntry> } | null = null;
+// Rebuilt when a model-builder route is added, changed or removed. Per scope:
+// a tenant project's routes are its own (docs/multi-tenancy).
+const registries = new Map<string, { version: number; map: Map<string, ResourceRouteEntry> }>();
 const resources = (app: any) => {
-	if (registry?.version !== getDynamicVersion())
+	const key = scopeKey();
+	let registry = registries.get(key);
+	if (registry?.version !== getDynamicVersion()) {
 		registry = { version: getDynamicVersion(), map: new Map(collectResourceRoutes(app).map(e => [e.route, e])) };
+		registries.set(key, registry);
+	}
 	return registry.map;
 };
 
 // Keyed by the Model too: a built model is recompiled when it changes.
 const codeBuilt = new Map<string, { Model: any; built: any }>();
 const resolveOther = (entry: ResourceRouteEntry): Promise<ResolvedRoute> => {
-	let hit = codeBuilt.get(entry.route);
+	const key = `${scopeKey()}|${entry.route}`;
+	let hit = codeBuilt.get(key);
 	if (!hit || hit.Model !== entry.source.Model) {
 		hit = {
 			Model: entry.source.Model,
 			built: constructConfig({ model: entry.source.Model, config: entry.source.settings, options: { role: 'admin' } }),
 		};
-		codeBuilt.set(entry.route, hit);
+		codeBuilt.set(key, hit);
 	}
 	return resolveRoute(entry.route, { ...entry.source, built: hit.built });
 };

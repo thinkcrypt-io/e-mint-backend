@@ -44,6 +44,8 @@ const SCOPE_INDEXES = [
 	'dashboardconfigs',
 	'apikeys',
 	'builtfeatures',
+	'histories',
+	'deletedrecords',
 ];
 
 const describe = idx => `${idx.name}${idx.unique ? ' (unique)' : ''}`;

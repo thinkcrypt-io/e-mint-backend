@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { displayModelName } from '../../library/functions/routeRegistry.function.js';
 import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
 import recordHistory from '../../library/functions/recordHistory.function.js';
@@ -18,7 +19,7 @@ const createDocument = (model: mongoose.Model<any>) => {
 			recordHistory({ req, action: 'create', model: model.modelName, doc: saved });
 
 			return res.status(201).json({
-				message: `${model.modelName} with id: ${saved._id} added successfully`,
+				message: `${displayModelName(model.modelName)} with id: ${saved._id} added successfully`,
 				doc: saved,
 			});
 		} catch (e: any) {

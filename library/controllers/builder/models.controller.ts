@@ -6,13 +6,14 @@ import Permission from '../../models/permissions/model.js';
 import SidebarItem from '../../models/sidebaritems/model.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import Counter from '../../../models/counter/counter.model.js';
-import { configToData, listModelFields, settingsToData } from '../../functions/routeRegistry.function.js';
+import { configToData, listModelFields, scopedModelNames, settingsToData } from '../../functions/routeRegistry.function.js';
 import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
 import { fieldsOfRule } from '../../functions/formRules.function.js';
 import { checkFormula, formulaPipeline, formulasOf } from '../../functions/formula.function.js';
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
+import { currentScope } from '../../functions/tenantScope.function.js';
 import {
 	ARRAY_KINDS,
 	ENUM_KINDS,
@@ -30,6 +31,7 @@ import {
 	ModelDef,
 	buildSchema,
 	checkAvailability,
+	counterSlugFor,
 	compileError,
 	compiledModel,
 	displayFieldOf,
@@ -158,6 +160,8 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 	if (error) return { problems: error.details.map(d => d.message.replace(/"/g, '')) };
 
 	const problems: string[] = [];
+	// Per-record access is built on admin accounts; tenant models don't have it yet (docs/multi-tenancy D12).
+	if (currentScope() && value.access?.enabled) problems.push('Per-record access isn’t available in projects yet');
 	// `extraTargets`: models planned alongside this one (a feature build) that don't exist yet.
 	const targets = new Set([...(await linkTargets(req.app)).map(t => t.name), ...extraTargets]);
 
@@ -665,7 +669,7 @@ export const buildPreview = async (
 		config,
 		generated: { settings: fresh.settings, config: fresh.config },
 		fields: listModelFields({ schema: buildSchema(def) } as any),
-		models: [...new Set([...mongoose.modelNames(), def.name])].sort(),
+		models: [...new Set([...scopedModelNames(), def.name])].sort(),
 	};
 };
 
@@ -726,9 +730,11 @@ export const createModelCore = async (
 				: { problems: [] as string[] };
 		if (copies.problems.length) throw new BuildError(400, 'The pages aren’t valid', copies.problems);
 
-		// Its own permission, unless a code route already uses that key.
+		// Its own permission, unless a code route already uses that key. A tenant
+		// project's permissions are its organization roles' (view-<route> …), not Permission docs.
 		let permission = availability.route;
-		for (let n = 2; await Permission.exists({ key: permission }); n++) permission = `${availability.route}-${n}`;
+		if (!currentScope())
+			for (let n = 2; await Permission.exists({ key: permission }); n++) permission = `${availability.route}-${n}`;
 
 		created = await ModelDefinition.create({
 			...value,
@@ -752,17 +758,18 @@ export const createModelCore = async (
 			throw new BuildError(400, `The model couldn’t be registered: ${error}`);
 		}
 
-		await Permission.findOneAndUpdate(
-			{ key: permission },
-			{
-				name: value.title,
-				description: `Records of the ${value.title} model (built in the model builder)`,
-				key: permission,
-				isActive: true,
-				options: { create: true, view: true, edit: true, delete: true },
-			},
-			{ upsert: true, setDefaultsOnInsert: true }
-		);
+		if (!currentScope())
+			await Permission.findOneAndUpdate(
+				{ key: permission },
+				{
+					name: value.title,
+					description: `Records of the ${value.title} model (built in the model builder)`,
+					key: permission,
+					isActive: true,
+					options: { create: true, view: true, edit: true, delete: true },
+				},
+				{ upsert: true, setDefaultsOnInsert: true }
+			);
 		const sidebarItem = await upsertSidebar(created, value.sidebar?.category);
 		if (sidebarItem) await ModelDefinition.updateOne({ _id: created._id }, { $set: { sidebarItem } });
 
@@ -893,7 +900,7 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 		if (String(sidebarItem || '') !== String(doc.sidebarItem || ''))
 			await ModelDefinition.updateOne({ _id: doc._id }, sidebarItem ? { $set: { sidebarItem } } : { $unset: { sidebarItem: 1 } });
 		else if (sidebarItem) await SidebarItem.updateOne({ _id: sidebarItem }, { $set: { name: after.title } });
-		await Permission.updateOne({ key: after.permission }, { $set: { name: after.title } });
+		if (!currentScope()) await Permission.updateOne({ key: after.permission }, { $set: { name: after.title } });
 
 		const warnings = await syncIndexes(after);
 		return {
@@ -940,12 +947,12 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 			RouteSettings.deleteOne({ route: def.route }),
 			RouteConfig.deleteOne({ route: def.route }),
 			RouteVersion.deleteMany({ route: def.route }),
-			Permission.deleteOne({ key: def.permission }),
+			currentScope() ? null : Permission.deleteOne({ key: def.permission }),
 			def.sidebarItem ? SidebarItem.deleteOne({ _id: def.sidebarItem }) : null,
 		]);
 
 		if (dropData) {
-			await Counter.deleteOne({ slug: `model-${def.name}` });
+			await Counter.deleteOne({ slug: counterSlugFor(def.name) });
 			await mongoose.connection.db?.dropCollection(def.collectionName).catch(() => {});
 		}
 

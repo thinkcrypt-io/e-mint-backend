@@ -24,11 +24,11 @@ import {
 import { getConfig } from '../../library/controllers/index.js';
 
 import {
-	adminProtect as protect,
+	adminProtect,
 	validate,
 	paginate,
 	filter,
-	adminPermissions as hasPermission,
+	adminPermissions,
 	ifExists,
 } from '../../middleware/index.js';
 import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
@@ -98,6 +98,13 @@ type RouteOptions = {
 	frontendConfig?: any;
 	customRoutes?: CustomRoute[];
 	route?: string; // Optional route name for frontend configuration
+	/**
+	 * Who may call the route: adminProtect and the admin role's permissions by
+	 * default. A tenant project's built models pass their own (the request is
+	 * already signed in and scoped; permissions are the organization role's —
+	 * docs/multi-tenancy WO-08).
+	 */
+	auth?: { protect: any; hasPermission: (permissions: string[]) => any };
 };
 
 const defineRoutes = ({
@@ -109,8 +116,11 @@ const defineRoutes = ({
 	frontendConfig,
 	route,
 	customRoutes = [], // Default to empty array
+	auth,
 }: RouteOptions) => {
 	const router = express.Router();
+	const protect = auth?.protect || adminProtect;
+	const hasPermission = auth?.hasPermission || adminPermissions;
 	// Construct configuration and permissions
 	const config = constructConfig({
 		model: Model,

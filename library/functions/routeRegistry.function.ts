@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { currentScope, scopeKey } from './tenantScope.function.js';
 
 /**
  * Glue between what each admin route was built with in code — its settings
@@ -69,13 +70,41 @@ export const mountPath = (layer: any): string | null => {
  * `dynamicVersion` changes whenever the map does; callers that cache what the
  * collectors return key their cache on it.
  */
-export const dynamicMounts = new Map<string, any>();
-let dynamicVersion = 0;
-export const getDynamicVersion = () => dynamicVersion;
+/*
+ * Per scope (docs/multi-tenancy, WO-08): the super admin's built routes, and
+ * each tenant project's. `dynamicMounts` reads and writes the current scope's
+ * map, so its callers need no tenant code; a tenant project only ever sees its
+ * own routes.
+ */
+const mountsByScope = new Map<string, Map<string, any>>();
+const versionByScope = new Map<string, number>();
+const scopeMounts = () => {
+	const key = scopeKey();
+	let map = mountsByScope.get(key);
+	if (!map) mountsByScope.set(key, (map = new Map()));
+	return map;
+};
+
+export const dynamicMounts = {
+	has: (route: string) => scopeMounts().has(route),
+	get: (route: string) => scopeMounts().get(route),
+	keys: () => scopeMounts().keys(),
+	entries: () => scopeMounts().entries(),
+	get size() {
+		return scopeMounts().size;
+	},
+	[Symbol.iterator]: () => scopeMounts()[Symbol.iterator](),
+};
+export const getDynamicVersion = () => versionByScope.get(scopeKey()) || 0;
 export const setDynamicMount = (route: string, router: any | null) => {
-	if (router) dynamicMounts.set(route, router);
-	else dynamicMounts.delete(route);
-	dynamicVersion++;
+	if (router) scopeMounts().set(route, router);
+	else scopeMounts().delete(route);
+	versionByScope.set(scopeKey(), getDynamicVersion() + 1);
+};
+/** Forgets a deleted tenant project's routes (projectHooks.removed). */
+export const forgetScopeMounts = (key: string) => {
+	mountsByScope.delete(key);
+	versionByScope.delete(key);
 };
 
 export type RouteEntry<T> = {
@@ -126,7 +155,8 @@ const collectRoutes = <T>(app: any, suffix: RegExp, marker: string): RouteEntry<
 		}
 	};
 
-	walk(app?._router?.stack, '');
+	// A tenant project sees only its own built routes, never the platform's code routes.
+	if (!currentScope()) walk(app?._router?.stack, '');
 	for (const [route, router] of dynamicMounts) walk(router.stack, `${ADMIN_API_PREFIX}/${route}`);
 
 	return [...found.values()].sort((a, b) => a.route.localeCompare(b.route));
@@ -179,7 +209,7 @@ export const collectResourceRoutes = (app: any): ResourceRouteEntry[] => {
 		}
 	};
 
-	walk(app?._router?.stack, '');
+	if (!currentScope()) walk(app?._router?.stack, '');
 	for (const [route, router] of dynamicMounts)
 		if (!found.has(route)) found.set(route, { route, source: router.routeSource });
 
@@ -257,7 +287,34 @@ export const resolveFilterModel = (
 ): mongoose.Model<any> | null => {
 	if (!model) return baseModel;
 	if (typeof model !== 'string') return model;
-	return mongoose.models[model] || null;
+	return scopedModel(model);
+};
+
+/**
+ * A Mongoose model by name, as the current scope may see it. A tenant project
+ * reaches only its own built models (`T<projectId>_<Name>` — docs/multi-tenancy
+ * D6), by internal or plain name; anything else — the platform's models,
+ * another project's — is null. The super admin sees every model.
+ */
+export const scopedModel = (name: string): mongoose.Model<any> | null => {
+	const s = currentScope();
+	if (!s) return mongoose.models[name] || null;
+	if (!s.project) return null;
+	const prefix = `T${s.project}_`;
+	const internal = name.startsWith(prefix) ? name : `${prefix}${name}`;
+	return mongoose.models[internal] || null;
+};
+
+/** A model's name as people read it: a tenant model's internal `T<projectId>_` prefix dropped. */
+export const displayModelName = (name = '') => name.replace(/^T[0-9a-f]{24}_/, '');
+
+/** Model names the current scope may see (a tenant project: its own, internal names). */
+export const scopedModelNames = (): string[] => {
+	const s = currentScope();
+	if (!s) return Object.keys(mongoose.models).sort();
+	if (!s.project) return [];
+	const prefix = `T${s.project}_`;
+	return Object.keys(mongoose.models).filter(n => n.startsWith(prefix)).sort();
 };
 
 export type ModelField = {

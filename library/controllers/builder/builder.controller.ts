@@ -11,6 +11,8 @@ import {
 	ResourceRouteEntry,
 	settingsToData,
 	dynamicMounts,
+	scopedModel,
+	scopedModelNames,
 	getDynamicVersion,
 } from '../../functions/routeRegistry.function.js';
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
@@ -173,7 +175,7 @@ export const getBuilderRoute = async (req: any, res: Response): Promise<Response
 			config: envelope(config, 'config'),
 			global,
 			fields: listModelFields(code.model),
-			models: Object.keys(mongoose.models).sort(),
+			models: scopedModelNames(),
 		});
 	} catch (e: any) {
 		console.error(e.message);
@@ -423,7 +425,7 @@ export const restoreBuilderVersion = async (req: any, res: Response): Promise<Re
 /** GET /builder/model/:name — a model's fields, for relation and option pickers. */
 export const getBuilderModelFields = async (req: any, res: Response): Promise<Response> => {
 	try {
-		const model = mongoose.models[req.params.name];
+		const model = scopedModel(req.params.name);
 		if (!model) return fail(res, 404, `Model '${req.params.name}' not found`);
 		return res.status(200).json({ model: model.modelName, fields: listModelFields(model) });
 	} catch (e: any) {
@@ -440,13 +442,14 @@ export const getBuilderModelFields = async (req: any, res: Response): Promise<Re
 export const getBuilderBacklinks = async (req: any, res: Response): Promise<Response> => {
 	try {
 		const name = req.params.name;
-		if (!mongoose.models[name]) return fail(res, 404, `Model '${name}' not found`);
+		const target = scopedModel(name);
+		if (!target) return fail(res, 404, `Model '${name}' not found`);
 		const doc = collectResourceRoutes(req.app)
 			.map(e => ({
 				route: e.route,
 				model: e.source.Model.modelName,
 				fields: listModelFields(e.source.Model)
-					.filter(f => f.ref === name)
+					.filter(f => f.ref === target.modelName)
 					.map(f => f.key),
 			}))
 			.filter(r => r.fields.length)

@@ -1,0 +1,86 @@
+import express from 'express';
+import TenantProject from '../library/models/tenancy/tenantProject.model.js';
+import { tenantProtect } from '../middleware/tenant/protect.tenant.middleware.js';
+import { grants, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
+import { runInScope } from '../library/functions/tenantScope.function.js';
+import { publicProject, isId } from '../library/functions/tenancy.function.js';
+import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
+import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
+import { getAdminSidebar } from '../library/controllers/config/_index.js';
+import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
+import defineRoutes from '../routes-admin/common/router.js';
+import SidebarCategory from '../library/models/sidebarcategories/model.js';
+import SidebarItem from '../library/models/sidebaritems/model.js';
+import { sidebarCategorySettings, sidebarCategoryConfig, sidebarItemSettings, sidebarItemConfig } from '../library/models/_index.js';
+
+/**
+ * /tenant/api/p/:projectId — everything inside one project (docs/multi-tenancy WO-09).
+ *
+ * Signed in (tenantProtect), the project must belong to the token's
+ * organization, and the rest of the request runs in the project's scope
+ * (tenantScope): every builder collection query only sees this project's
+ * documents and every insert carries its ids. The paths mirror the admin
+ * API's, so the admin app's library components work unchanged:
+ *
+ *   /builder/*                    models, features, route builder, MCP keys    build / manage-api-keys
+ *   /sidebar/:platform/:type      the project's sidebar, filtered by role
+ *   /sidebarcategories, /sidebaritems   the sidebar builder's CRUD            build
+ *   /dashboard                    the dashboard builder                       read; build to change
+ *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
+ */
+const router = express.Router({ mergeParams: true });
+
+router.use(tenantProtect);
+
+// The project, in this organization, active.
+router.use(async (req: any, res: any, next: any) => {
+	try {
+		const id = req.params.projectId;
+		const project: any = isId(id) ? await TenantProject.findOne({ _id: id, organization: req.organization._id }).lean() : null;
+		if (!project) return res.status(404).json({ message: 'Project not found' });
+		if (project.isActive === false && req.method !== 'GET')
+			return res.status(400).json({ message: 'This project is archived — restore it to make changes.' });
+		req.project = project;
+		runInScope({ organization: req.organization._id, project: project._id }, () => next());
+	} catch (e) {
+		next(e);
+	}
+});
+
+router.get('/', (req: any, res: any) => res.status(200).json(publicProject(req.project)));
+
+const build = [tenantPermissions(['build'])];
+
+router.use(
+	'/builder',
+	makeBuilderRouter({
+		view: build,
+		edit: build,
+		keys: [tenantPermissions(['manage-api-keys'])],
+		tenant: true,
+	})
+);
+
+router.use('/dashboard', makeDashboardRouter({ read: [], edit: build }));
+
+// Only the project's own items ('server'); the other types are the admin panel's built-in navigation.
+const sidebar = getAdminSidebar((permissions, key) => grants(permissions, [key]));
+router.get('/sidebar/:platform/:type', (req: any, res: any) =>
+	req.params.type === 'server' ? sidebar(req, res) : res.status(404).json({ message: 'Not found' })
+);
+
+// The sidebar builder: building is what edits the project's sidebar.
+const auth = { protect: (_req: any, _res: any, next: any) => next(), hasPermission: () => tenantPermissions(['build']) };
+router.use(
+	'/sidebarcategories',
+	defineRoutes({ Model: SidebarCategory, settings: sidebarCategorySettings, permission: 'sidebarcategories', frontendConfig: sidebarCategoryConfig, auth })
+);
+router.use(
+	'/sidebaritems',
+	defineRoutes({ Model: SidebarItem, settings: sidebarItemSettings, permission: 'sidebaritems', frontendConfig: sidebarItemConfig, auth })
+);
+
+// The project's built models, last: anything not answered above.
+router.use(dynamicModelsDispatcher);
+
+export default router;

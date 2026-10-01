@@ -1,5 +1,7 @@
 import express from 'express';
-import { withoutScope } from './tenantScope.function.js';
+import { currentScope, scopeKey, withoutScope } from './tenantScope.function.js';
+import { tenantPermissions } from './tenantPermissions.function.js';
+import { projectHooks } from './projectHooks.function.js';
 import mongoose, { Schema } from 'mongoose';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import Counter from '../../models/counter/counter.model.js';
@@ -9,6 +11,7 @@ import {
 	collectResourceRoutes,
 	dynamicMounts,
 	mountPath,
+	forgetScopeMounts,
 	setDynamicMount,
 } from './routeRegistry.function.js';
 import { invalidateRoute } from './resolveRoute.function.js';
@@ -167,6 +170,27 @@ const RESERVED_ROUTES = new Set([
 	'clickevents', 'modelattributes', 'plannedmodels', 'plannedpages', 'plannedprojects', 'plannedfeatures',
 ]);
 
+/**
+ * A tenant project's route names that its own API already uses
+ * (routes-tenant/project.router.ts) or the tenant panel shows as a page.
+ */
+const TENANT_RESERVED_ROUTES = new Set([
+	...RESERVED_ROUTES,
+	'org', 'projects', 'invitations', 'p', 'sidebar', 'sidebarcategories', 'sidebaritems', 'upload', 'uploads', 'media',
+	'files', 'permissionlist', 'analytics', 'api-keys', 'public', 'mcp', 'site', 'track', 'customers', 'members', 'roles',
+	'sidebar-builder', 'dashboard-builder', 'account', 'switch',
+]);
+
+/**
+ * A tenant model's Mongoose name (docs/multi-tenancy D6): `T<projectId>_<Name>`
+ * inside a project's scope, the name itself for the super admin. Names are
+ * global per connection; this keeps every project's apart from the platform's.
+ */
+export const internalModelName = (name: string) => {
+	const s = currentScope();
+	return s?.project ? `T${s.project}_${name}` : name;
+};
+
 export type ModelFieldDef = {
 	key: string;
 	label?: string;
@@ -288,14 +312,20 @@ export const checkAvailability = async (
 
 	const defs = await ModelDefinition.find(excludeId ? { _id: { $ne: excludeId } } : {}, { name: 1, route: 1, collectionName: 1 }).lean();
 	const own = excludeId ? await ModelDefinition.findById(excludeId, { name: 1 }).lean() : null;
+	// A tenant project checks its own names and routes only; its collections
+	// are named t_<projectId>_<route>, which can't meet the platform's.
+	const tenant = currentScope();
+	const collectionOf = (route: string) => (tenant?.project ? `t_${tenant.project}_${route}` : route);
 	const names = new Set(
-		mongoose
-			.modelNames()
-			.filter(n => n !== (own as any)?.name)
+		(tenant ? [] : mongoose.modelNames().filter(n => n !== (own as any)?.name))
 			.concat(defs.map((d: any) => d.name))
 			.map(n => n.toLowerCase())
 	);
-	const routes = new Set([...adminMounts(app), ...RESERVED_ROUTES, ...defs.map((d: any) => d.route)]);
+	const routes = new Set(
+		tenant
+			? [...TENANT_RESERVED_ROUTES, ...defs.map((d: any) => d.route)]
+			: [...adminMounts(app), ...RESERVED_ROUTES, ...defs.map((d: any) => d.route)]
+	);
 	const collections = new Set(
 		((await mongoose.connection.db?.listCollections({}, { nameOnly: true }).toArray()) || []).map((c: any) =>
 			c.name.toLowerCase()
@@ -309,9 +339,9 @@ export const checkAvailability = async (
 		const route = n === 1 ? baseRoute : `${baseRoute}${n}`;
 		const nameTaken = names.has(name.toLowerCase());
 		const routeTaken = routes.has(route) || dynamicMounts.has(route);
-		const collectionTaken = collections.has(route);
+		const collectionTaken = collections.has(collectionOf(route).toLowerCase());
 		if (!nameTaken && !routeTaken && !collectionTaken)
-			return { requested, name, route, collectionName: route, changed: n > 1, reasons };
+			return { requested, name, route, collectionName: collectionOf(route), changed: n > 1, reasons };
 		if (n === 1) {
 			if (nameTaken) reasons.push(`A model named ${name} already exists`);
 			if (routeTaken) reasons.push(`/${route} is already an admin route`);
@@ -328,7 +358,9 @@ const idsOnly = (v: any) =>
 	Array.isArray(v) ? v.map(x => (x && typeof x === 'object' && x._id ? x._id : x)).filter(x => x !== '' && x != null) : v;
 const idOnly = (v: any) => blankToUndefined(v && typeof v === 'object' && v._id ? v._id : v);
 
-const codeCounterSlug = (name: string) => `model-${name}`;
+const codeCounterSlug = (name: string) => `model-${internalModelName(name)}`;
+/** The Counter slug a built model's codes are numbered with (per project for tenants). */
+export const counterSlugFor = codeCounterSlug;
 
 /** The next code for a built model: atomic, so two creates never share one. */
 export const nextCode = async (def: Pick<ModelDef, 'name' | 'code'>) => {
@@ -893,30 +925,57 @@ export const generateConfig = (def: ModelDef) => {
 
 /* ---------------------------------------------------- registry and sync */
 
-type Compiled = { def: ModelDef; Model: mongoose.Model<any>; stamp: string };
-const compiled = new Map<string, Compiled>(); // by model name
-const failures = new Map<string, string>(); // by model name
-const mounts = new Map<string, any>(); // route -> wrapper router
+type Compiled = { def: ModelDef; Model: mongoose.Model<any>; stamp: string; modelName: string };
+
+/**
+ * One registry per scope (docs/multi-tenancy WO-08): the super admin's, and
+ * each tenant project's, keyed by `scopeKey()`. A project's registry is built
+ * the first time one of its requests needs it, and dropped when the project
+ * is deleted (`forgetProjectModels`).
+ */
+type Registry = {
+	compiled: Map<string, Compiled>; // by plain model name
+	failures: Map<string, string>; // by plain model name
+	mounts: Map<string, any>; // route -> wrapper router
+	checkedAt: number;
+	running: Promise<void> | null;
+};
+const registries = new Map<string, Registry>();
+const reg = (): Registry => {
+	const key = scopeKey();
+	let r = registries.get(key);
+	if (!r) registries.set(key, (r = { compiled: new Map(), failures: new Map(), mounts: new Map(), checkedAt: 0, running: null }));
+	return r;
+};
 let appRef: any = null;
-let checkedAt = 0;
-let running: Promise<void> | null = null;
 
 const stampOf = (def: any) => `${def.version || 0}:${new Date(def.updatedAt || 0).getTime()}:${def.active !== false}`;
 
 /** The compile error for a definition, if its last compile failed. */
-export const compileError = (name: string) => failures.get(name) || null;
-export const compiledModel = (name: string) => compiled.get(name)?.Model || null;
-export const isBuiltModel = (name: string) => compiled.has(name);
+export const compileError = (name: string) => reg().failures.get(name) || null;
+export const compiledModel = (name: string) => reg().compiled.get(name)?.Model || null;
+export const isBuiltModel = (name: string) => reg().compiled.has(name);
+
+/** A deleted tenant project: its models, routes and registry are forgotten. */
+export const forgetProjectModels = (projectId: any) => {
+	const key = `p:${projectId}`;
+	const r = registries.get(key);
+	if (r) for (const c of r.compiled.values()) if (mongoose.models[c.modelName]) mongoose.deleteModel(c.modelName);
+	registries.delete(key);
+	forgetScopeMounts(key);
+};
 
 /** What a reference to `modelName` needs: its admin route and display field. */
 export const makeTargetLookup = (app: any, defs: ModelDef[]) => {
 	const byName = new Map(defs.map(d => [d.name, d]));
 	const codeRoutes = new Map<string, { route: string; Model: mongoose.Model<any>; title?: string }>();
-	for (const e of collectResourceRoutes(app)) {
-		const name = e.source.Model?.modelName;
-		if (name && !byName.has(name) && !codeRoutes.has(name))
-			codeRoutes.set(name, { route: e.route, Model: e.source.Model, title: e.source.frontendConfig?.route?.title });
-	}
+	// Tenant models link only to their own project's models (D6).
+	if (!currentScope())
+		for (const e of collectResourceRoutes(app)) {
+			const name = e.source.Model?.modelName;
+			if (name && !byName.has(name) && !codeRoutes.has(name))
+				codeRoutes.set(name, { route: e.route, Model: e.source.Model, title: e.source.frontendConfig?.route?.title });
+		}
 	return (ref?: string): TargetInfo | null => {
 		if (!ref) return null;
 		const d = byName.get(ref);
@@ -927,13 +986,14 @@ export const makeTargetLookup = (app: any, defs: ModelDef[]) => {
 	};
 };
 
-/** Every model a field can link to: code models with an admin route, and built ones. */
+/** Every model a field can link to: code models with an admin route, and built ones (a tenant: its project's). */
 export const linkTargets = async (app: any) => {
 	await syncDynamicModels({ app });
 	const defs: ModelDef[] = (await ModelDefinition.find({}).lean()) as any;
 	const lookup = makeTargetLookup(app, defs);
 	const names = new Set<string>();
-	for (const e of collectResourceRoutes(app)) if (e.source.Model?.modelName) names.add(e.source.Model.modelName);
+	if (!currentScope())
+		for (const e of collectResourceRoutes(app)) if (e.source.Model?.modelName) names.add(e.source.Model.modelName);
 	defs.forEach(d => names.add(d.name));
 	return [...names]
 		.map(name => ({ name, ...lookup(name)! }))
@@ -942,103 +1002,127 @@ export const linkTargets = async (app: any) => {
 };
 
 const compile = (def: ModelDef) => {
-	const existing = mongoose.models[def.name];
-	if (existing && !compiled.has(def.name))
+	const r = reg();
+	const modelName = internalModelName(def.name);
+	const existing = mongoose.models[modelName];
+	if (existing && !r.compiled.has(def.name))
 		throw new Error(`A model in code is already registered as ${def.name}`);
-	if (existing) mongoose.deleteModel(def.name);
-	const Model = mongoose.model(def.name, buildSchema(def), def.collectionName);
-	compiled.set(def.name, { def, Model, stamp: stampOf(def) });
-	failures.delete(def.name);
+	if (existing) mongoose.deleteModel(modelName);
+	// A tenant's references name models of its own project: point them at their internal names.
+	const schemaDef = currentScope()
+		? { ...def, fields: def.fields.map(f => (f.ref ? { ...f, ref: internalModelName(f.ref) } : f)) }
+		: def;
+	const Model = mongoose.model(modelName, buildSchema(schemaDef), def.collectionName);
+	r.compiled.set(def.name, { def, Model, stamp: stampOf(def), modelName });
+	r.failures.delete(def.name);
 	return Model;
 };
 
+/**
+ * A tenant project's routes are already signed in and scoped by the project
+ * router (routes-tenant/project.router.ts); their permissions are the
+ * organization role's.
+ */
+const tenantAuth = { protect: (_req: any, _res: any, next: any) => next(), hasPermission: tenantPermissions };
+
 const mount = (def: ModelDef, Model: mongoose.Model<any>, lookup: ReturnType<typeof makeTargetLookup>) => {
+	const tenant = !!currentScope();
 	const router = defineRoutes({
 		Model,
 		settings: generateSettings(def, lookup),
 		permission: def.permission,
 		frontendConfig: generateConfig(def),
 		route: def.route,
+		...(tenant && { auth: tenantAuth }),
 		// Restricted records: only the owner, the people given access, or everyone when public.
-		...(def.access?.enabled && { injectMiddleware: recordAccessMiddleware(Model) }),
+		...(def.access?.enabled && !tenant && { injectMiddleware: recordAccessMiddleware(Model) }),
 	});
 	const wrapper = express.Router();
 	wrapper.use(`/${def.route}`, router);
-	mounts.set(def.route, wrapper);
+	reg().mounts.set(def.route, wrapper);
 	setDynamicMount(def.route, router);
 	invalidateRoute(def.route);
 };
 
 const unmount = (route: string) => {
-	if (!mounts.has(route) && !dynamicMounts.has(route)) return;
-	mounts.delete(route);
+	const r = reg();
+	if (!r.mounts.has(route) && !dynamicMounts.has(route)) return;
+	r.mounts.delete(route);
 	setDynamicMount(route, null);
 	invalidateRoute(route);
 };
 
 /**
  * Brings this process's compiled models and routes in line with the
- * definitions. Cheap when nothing changed: one small query, at most every
- * 10 seconds unless `force`.
+ * definitions — the super admin's, or (inside a tenant project's scope) that
+ * project's. Cheap when nothing changed: one small query, at most every 10
+ * seconds unless `force`.
  */
 export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boolean } = {}) => {
 	if (app) appRef = app;
-	if (running) return running;
-	if (!force && Date.now() - checkedAt < TTL_MS) return;
+	const tenant = currentScope();
+	// Organization-level tenant work has no models of its own.
+	if (tenant && !tenant.project) return;
 
-	// The super admin's registry: tenant projects' models are compiled by
-	// tenantModels.function.ts. Run without the caller's scope — a sync can be
-	// triggered from inside a tenant request, whose scope would hide every
-	// super-admin definition (and unmount its route).
-	running = withoutScope(() => (async () => {
-		try {
-			const defs: ModelDef[] = (await ModelDefinition.find({}).lean()) as any;
-			checkedAt = Date.now();
-			let changed = false;
+	const run = () => {
+		const r = reg();
+		if (r.running) return r.running;
+		if (!force && Date.now() - r.checkedAt < TTL_MS) return;
 
-			// 1. Compile what's new or changed; a disabled model stays compiled so
-			//    links to it still populate — it only loses its route.
-			const live = new Set(defs.map(d => d.name));
-			for (const def of defs) {
-				if (compiled.get(def.name)?.stamp === stampOf(def)) continue;
-				changed = true;
-				try {
-					compile(def);
-				} catch (e: any) {
-					failures.set(def.name, e.message);
-					console.error(`Model builder: ${def.name} not compiled — ${e.message}`);
-				}
-			}
-			for (const [name, c] of compiled)
-				if (!live.has(name)) {
-					changed = true;
-					compiled.delete(name);
-					if (mongoose.models[name]) mongoose.deleteModel(name);
-					unmount(c.def.route);
-				}
+		r.running = (async () => {
+			try {
+				const defs: ModelDef[] = (await ModelDefinition.find({}).lean()) as any;
+				r.checkedAt = Date.now();
+				let changed = false;
 
-			// 2. Routes. Any change can alter another model's links (a target's
-			//    display field or route), so every route is rebuilt together.
-			if (changed || defs.some(d => d.active !== false && !mounts.has(d.route) && compiled.has(d.name))) {
-				const lookup = makeTargetLookup(appRef, defs);
+				// 1. Compile what's new or changed; a disabled model stays compiled so
+				//    links to it still populate — it only loses its route.
+				const live = new Set(defs.map(d => d.name));
 				for (const def of defs) {
-					const c = compiled.get(def.name);
-					if (c && def.active !== false) {
-						try {
-							mount(def, c.Model, lookup);
-						} catch (e: any) {
-							failures.set(def.name, e.message);
-							unmount(def.route);
-						}
-					} else unmount(def.route);
+					if (r.compiled.get(def.name)?.stamp === stampOf(def)) continue;
+					changed = true;
+					try {
+						compile(def);
+					} catch (e: any) {
+						r.failures.set(def.name, e.message);
+						console.error(`Model builder: ${def.name} not compiled — ${e.message}`);
+					}
 				}
-			}
-		} finally {
-			running = null;
-		}
-	})());
+				for (const [name, c] of r.compiled)
+					if (!live.has(name)) {
+						changed = true;
+						r.compiled.delete(name);
+						if (mongoose.models[c.modelName]) mongoose.deleteModel(c.modelName);
+						unmount(c.def.route);
+					}
 
-	return running;
+				// 2. Routes. Any change can alter another model's links (a target's
+				//    display field or route), so every route is rebuilt together.
+				if (changed || defs.some(d => d.active !== false && !r.mounts.has(d.route) && r.compiled.has(d.name))) {
+					const lookup = makeTargetLookup(appRef, defs);
+					for (const def of defs) {
+						const c = r.compiled.get(def.name);
+						if (c && def.active !== false) {
+							try {
+								mount(def, c.Model, lookup);
+							} catch (e: any) {
+								r.failures.set(def.name, e.message);
+								unmount(def.route);
+							}
+						} else unmount(def.route);
+					}
+				}
+			} finally {
+				r.running = null;
+			}
+		})();
+		return r.running;
+	};
+
+	// The super admin's registry runs without the caller's scope — a sync can
+	// be triggered from inside a tenant request, whose scope would hide every
+	// super-admin definition (and unmount its routes).
+	return tenant ? run() : withoutScope(run);
 };
 
 /**
@@ -1052,7 +1136,10 @@ export const dynamicModelsDispatcher = async (req: any, res: any, next: any) => 
 		return next(e);
 	}
 	const segment = String(req.path || '').split('/')[1];
-	const wrapper = segment && mounts.get(segment.toLowerCase());
+	const wrapper = segment && reg().mounts.get(segment.toLowerCase());
 	if (!wrapper) return next();
 	return wrapper(req, res, next);
 };
+
+// A deleted tenant project's compiled models and routes go with it.
+projectHooks.onRemoved(forgetProjectModels);

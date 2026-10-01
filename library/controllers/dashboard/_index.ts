@@ -7,10 +7,12 @@ import { getDashboard, resetDashboard, saveDashboard } from './dashboard.control
  * them (each widget's data is then fetched under their own permissions);
  * changing them is the builder's power.
  */
-const router = express.Router();
+export const makeDashboardRouter = ({ read, edit }: { read: any[]; edit: any[] }) => {
+	const router = express.Router();
+	router.get('/', ...read, getDashboard);
+	router.put('/', ...read, ...edit, saveDashboard);
+	router.delete('/', ...read, ...edit, resetDashboard);
+	return router;
+};
 
-router.get('/', adminProtect, getDashboard);
-router.put('/', adminProtect, adminPermissions(['edit-builder']), saveDashboard);
-router.delete('/', adminProtect, adminPermissions(['edit-builder']), resetDashboard);
-
-export default router;
+export default makeDashboardRouter({ read: [adminProtect], edit: [adminPermissions(['edit-builder'])] });

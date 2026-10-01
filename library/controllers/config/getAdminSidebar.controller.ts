@@ -19,7 +19,11 @@ type SidebarItemType = {
 	};
 };
 
-const getSidebar = () => {
+/** Whether a permission list includes `key` — the admin's rule; tenants pass their role's (docs/multi-tenancy). */
+type Can = (permissions: string[], key: string) => boolean;
+const adminCan: Can = (permissions, key) => permissions.includes('*') || permissions.includes(key);
+
+const getSidebar = (can: Can = adminCan) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { type } = req.params;
@@ -87,10 +91,8 @@ const getSidebar = () => {
 					if (!item?.permissionProtected) structuredSidebar.push(sidebarItem);
 					// If permissionProtected, check permissions
 					else {
-						// If user has all permissions or specific permission, add item
-						if (permissions.includes('*')) structuredSidebar.push(sidebarItem);
-						// If user has specific permission, add item
-						else if (permissions.includes(item?.permission)) structuredSidebar.push(sidebarItem);
+						// If user has all permissions or this one, add item
+						if (can(permissions, item?.permission)) structuredSidebar.push(sidebarItem);
 					}
 				});
 			});
