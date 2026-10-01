@@ -146,3 +146,32 @@ agent must know. Keep entries factual; decisions live in README.md.
   self ignores unknown fields, change password (needs current), forgot
   password same answer, bad reset token, logout. Plus: reset link from the dev
   mail log → password changed → link refused the second time → login OK.
+
+## 2026-10-02 — WO-06 Organizations
+- `routes-tenant/org/org.router.ts` at `/tenant/api/org`: list mine, create
+  (you own it; ≤ 20 owned), switch (new session in that org; the session it
+  came from is signed out; `lastOrganization` updated), overview + counts,
+  update (name, logo, onboarding — manage-organization), members (list,
+  change role — manage-members; owner's role fixed; the owner role can't be
+  given, only transferred), remove (manage-members) / leave (`me`; the owner
+  can't), transfer-ownership (owner; the old owner becomes Admin), roles
+  (list with member counts, create, update — owner/admin keep `*`, delete —
+  not system roles, not in use, not on a pending invitation), permissions
+  list, invitations (list pending, create/re-send — one open invitation per
+  email, 7-day link, rate-limited; resend ≥ 1 min apart; cancel).
+- `invitationsRouter` at `/tenant/api/invitations`: `GET /:token` (email,
+  organization, role, whether the account exists) and `POST /:token/accept`
+  (existing account: its password; new: name, phone, password) → token in
+  that organization. Links are single use; only the sha256 is stored.
+- A removed member's token gets 401 `ORG_ACCESS_REVOKED` on every route
+  (the tenant panel signs out; signing in again opens another organization
+  or none).
+- Dev mail log label is now `[mail → …]` (was `[2FA mail → …]`).
+- Verified on :5001: 12/12 (part 1: overview, update, system roles, custom
+  role, unknown permission refused, invitations incl. role checks and
+  listing without token hashes) + 28/28 (part 2: invitation info, accept
+  new/existing, single use, membership role, two orgs + switch + old token
+  signed out, no switching into foreign orgs, Member can't invite or edit the
+  org, role change, owner role fixed, role in use not deletable, remove →
+  ORG_ACCESS_REVOKED, leave, owner can't leave, transfer ownership, only the
+  owner transfers).

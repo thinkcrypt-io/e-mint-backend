@@ -15,7 +15,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 03 | Scope context + `tenantScoped` plugin + index migration — BLOCKER | backend | L | done (migration `--apply` pending, WO-08) |
 | 04 | Session and two-factor services made model-agnostic | backend | M | done |
 | 05 | Tenant auth API (register + onboarding, login, 2FA, sessions, passwords) | backend | M | done |
-| 06 | Organizations: members, roles, invitations, switch | backend | M | todo |
+| 06 | Organizations: members, roles, invitations, switch | backend | M | done |
 | 07 | Projects API | backend | S | todo |
 | 08 | Tenant model registry (compile/mount per project) — BLOCKER | backend | L | todo |
 | 09 | Project router `/tenant/api/p/:projectId` (builder, sidebar, dashboard, media) | backend | L | todo |

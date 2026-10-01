@@ -80,7 +80,7 @@ const TEST_DOMAIN = /@(example\.(com|org|net)|[^@]+\.(test|invalid|localhost))$/
 /** Mail, or — in development, to a reserved test domain — the server log. */
 export const deliver = async (to: string, subject: string, text: string, html?: string) => {
 	if (process.env.NODE_ENV !== 'production' && TEST_DOMAIN.test(to)) {
-		console.log(`[2FA mail → ${to}] ${subject}\n${text}`);
+		console.log(`[mail → ${to}] ${subject}\n${text}`);
 		return;
 	}
 	await sendMail({ to, subject, title: 'MINT', body: text, ...(html && { html }) });
