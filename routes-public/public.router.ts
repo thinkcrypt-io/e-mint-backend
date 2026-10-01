@@ -18,6 +18,8 @@ import { getActiveSettings } from '../library/functions/resolveRoute.function.js
 import { dataToSettings } from '../library/functions/routeRegistry.function.js';
 import { applyFormulas, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
+import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenancy/websiteEvent.model.js';
+import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 
 /**
@@ -183,6 +185,103 @@ router.post(
 		const customer = await signedIn(req);
 		await ProjectCustomer.updateOne({ _id: customer._id }, { $inc: { tokenVersion: 1 } });
 		return { message: 'Signed out everywhere' };
+	})
+);
+
+/* ------------------------------------------------- analytics (websites) */
+
+const BOT = /bot|crawl|spider|slurp|preview|headless|lighthouse|pingdom|monitor|curl|wget|python|axios|node-fetch/i;
+const trackLimit = rateLimit({ name: 'public-track', windowMs: 60 * 1000, max: 120 });
+
+/** The site the event came from is one of the project's domains (any, when it lists none). */
+const fromOwnSite = (req: any) => {
+	const domains: string[] = req.project.domains || [];
+	if (!domains.length) return true;
+	const source = String(req.headers.origin || req.headers.referer || '');
+	let host = '';
+	try {
+		host = new URL(source).host.toLowerCase();
+	} catch {
+		return false;
+	}
+	if (process.env.NODE_ENV !== 'production' && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return true;
+	const bare = host.replace(/^www\./, '');
+	return domains.some(d => {
+		const dom = d.toLowerCase().replace(/^www\./, '');
+		return bare === dom || bare.endsWith(`.${dom}`);
+	});
+};
+
+const clip = (v: any, n: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined);
+const hostOf = (url?: string) => {
+	try {
+		return url ? new URL(url).host.toLowerCase().replace(/^www\./, '') : '';
+	} catch {
+		return '';
+	}
+};
+/** A custom event's properties: a flat object of short values, at most 20. */
+const smallProps = (p: any) => {
+	if (!p || typeof p !== 'object' || Array.isArray(p)) return undefined;
+	const out: any = {};
+	for (const [k, v] of Object.entries(p).slice(0, 20))
+		if (['string', 'number', 'boolean'].includes(typeof v)) out[String(k).slice(0, 40)] = typeof v === 'string' ? v.slice(0, 200) : v;
+	return Object.keys(out).length ? out : undefined;
+};
+
+router.post(
+	'/track',
+	trackLimit,
+	// sendBeacon posts text/plain (a JSON content type would need a preflight it can't make).
+	express.text({ type: 'text/plain', limit: '64kb' }),
+	handle(async (req, res) => {
+		res.status(202);
+		if (req.project.type !== 'website') return { ok: false };
+		const ua = String(req.headers['user-agent'] || '');
+		if (BOT.test(ua) || !fromOwnSite(req)) return { ok: true }; // quietly dropped
+		let body: any = req.body;
+		if (typeof body === 'string') {
+			try {
+				body = JSON.parse(body);
+			} catch {
+				return { ok: false };
+			}
+		}
+		const events = Array.isArray(body?.events) ? body.events.slice(0, 20) : [];
+		if (!events.length) return { ok: true };
+		const { browser, os, deviceType } = parseUserAgent(ua);
+		const place: any = await locate(clientIp(req)).catch(() => null);
+		const ownHost = String(req.headers.origin ? hostOf(String(req.headers.origin)) : '');
+		const docs = events
+			.filter((e: any) => EVENT_TYPES.includes(e?.type))
+			.map((e: any) => {
+				const refHost = hostOf(e.referrer);
+				return {
+					type: e.type,
+					name: clip(e.name, 120),
+					path: clip(e.path, 500),
+					title: clip(e.title, 300),
+					referrer: clip(e.referrer, 1000),
+					referrerHost: refHost && refHost !== ownHost ? refHost : '',
+					utmSource: clip(e.utmSource, 120),
+					utmMedium: clip(e.utmMedium, 120),
+					utmCampaign: clip(e.utmCampaign, 120),
+					sessionId: clip(body.sessionId, 64),
+					visitorId: clip(body.visitorId, 64),
+					device: (DEVICE_TYPES as readonly string[]).includes(deviceType) ? deviceType : 'other',
+					os: clip(os, 40),
+					browser: clip(browser, 40),
+					country: place && !place.local ? clip(place.country, 80) : undefined,
+					countryCode: place && !place.local ? clip(place.countryCode, 4) : undefined,
+					city: place && !place.local ? clip(place.city, 80) : undefined,
+					...(e.type === 'click' && e.element && {
+						element: { tag: clip(e.element.tag, 20), text: clip(e.element.text, 200), href: clip(e.element.href, 1000), id: clip(e.element.id, 120) },
+					}),
+					...(e.type === 'event' && { props: smallProps(e.props) }),
+				};
+			});
+		if (docs.length) await WebsiteEvent.insertMany(docs);
+		return { ok: true, recorded: docs.length };
 	})
 );
 

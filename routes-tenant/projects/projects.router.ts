@@ -13,6 +13,7 @@ import DashboardConfig from '../../library/models/builder/dashboardConfig.model.
 import ApiKey from '../../library/models/builder/apiKey.model.js';
 import BuiltFeature from '../../library/models/builder/feature.model.js';
 import ProjectCustomer from '../../library/models/tenancy/projectCustomer.model.js';
+import WebsiteEvent from '../../library/models/tenancy/websiteEvent.model.js';
 import AdminFile from '../../library/models/admin-file/model.js';
 import Folder from '../../library/models/folders/model.js';
 import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js';
@@ -70,7 +71,7 @@ const loadProject = async (req: any) => {
 };
 
 /** The project's own documents in the builder collections (all scoped). */
-const SCOPED = [ModelDefinition, RouteSettings, RouteConfig, RouteVersion, SidebarItem, SidebarCategory, DashboardConfig, ApiKey, BuiltFeature, ProjectCustomer, Folder];
+const SCOPED = [ModelDefinition, RouteSettings, RouteConfig, RouteVersion, SidebarItem, SidebarCategory, DashboardConfig, ApiKey, BuiltFeature, ProjectCustomer, Folder, WebsiteEvent];
 
 router.get(
 	'/',

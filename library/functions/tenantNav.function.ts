@@ -14,8 +14,19 @@ const section = (title: string, icon: string, items: Omit<SidebarItemType, 'path
 		...(i === 0 && { startOfSection: true, sectionTitle: title, sectionIcon: icon }),
 	}));
 
-export const tenantNav = (permissions: string[], { inProject }: { inProject: boolean }): SidebarItemType[] => {
+export const tenantNav = (
+	permissions: string[],
+	{ inProject, projectType }: { inProject: boolean; projectType?: 'app' | 'website' }
+): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
+	// A website: its analytics; any project: the customers of its public API.
+	const audience = inProject
+		? section('Audience', 'users-round', [
+				...(projectType === 'website' && can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
+				...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
+				...(can('build') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
+		  ])
+		: [];
 	const build = inProject && can('build')
 		? section('Build', 'hammer', [
 				{ title: 'Models', href: '/model-builder', icon: 'boxes' },
@@ -32,5 +43,5 @@ export const tenantNav = (permissions: string[], { inProject }: { inProject: boo
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
 		...(can('manage-organization') ? [{ title: 'Settings', href: '/org/settings', icon: 'settings' }] : []),
 	]);
-	return [...build, ...org];
+	return [...audience, ...build, ...org];
 };

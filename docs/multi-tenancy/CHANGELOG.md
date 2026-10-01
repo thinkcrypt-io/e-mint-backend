@@ -465,3 +465,28 @@ re-run with the pane visible.
   contents in order with card rows, draft page 404, page without SEO, per-model
   filter, writes 404, /site 404 for an app project. projects.mjs updated (a
   website project now counts its 4 kit models).
+
+## 2026-10-02 — WO-19 Website analytics (backend)
+- `library/models/tenancy/websiteEvent.model.ts` (`websiteevents`, tenantScoped,
+  TTL 400 days, indexes {project, createdAt}, {project, type, path, createdAt}):
+  type pageview|click|event, name, path, title, referrer, referrerHost, utm*,
+  sessionId, visitorId, device, os, browser, country/code, city, element, props.
+- `routes-public/track.ts` → `GET /public/track.js`: page views on load and on
+  client-side navigation, outbound-link and `[data-track]` clicks,
+  `MintAnalytics.track(name, props)` / `.pageview()`; no cookies (visitor id in
+  localStorage, session id in sessionStorage); batches via sendBeacon
+  (text/plain); off with `data-no-track` or Do Not Track.
+- `POST /public/api/:slug/track` (website projects; 120/min per IP): parses
+  text/plain or JSON, drops bots and events from sites not in the project's
+  `domains` (www. and subdomains match; localhost in development; any site when
+  no domains are set), ≤ 20 events a batch, device/browser/OS from the UA,
+  place from `locate()` (GEOIP), referrerHost blank for internal/direct, custom
+  props flattened (≤ 20 short values). Answers 202.
+- `routes-tenant/analytics.router.ts` at `/tenant/api/p/:id/analytics`
+  (`view-analytics`): `/summary` (page views, visitors, sessions, pages per
+  session, bounce rate, and the previous period), `/timeseries` (every day in
+  the range), `/top?dim=paths|referrers|devices|browsers|os|countries|clicks|events`.
+  Range defaults to 30 days, at most 400.
+- Tenant sidebar: an **Audience** section — Analytics (websites, view-analytics),
+  Public API and Customers (build). Project delete also removes its events.
+- Verified: `scripts/tenancy-smoke/analytics.mjs` 21/21.

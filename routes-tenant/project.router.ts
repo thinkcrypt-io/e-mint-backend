@@ -22,6 +22,7 @@ import {
 } from '../library/models/_index.js';
 import AdminFile from '../library/models/admin-file/model.js';
 import ProjectCustomer from '../library/models/tenancy/projectCustomer.model.js';
+import analyticsRouter from './analytics.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -87,7 +88,7 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const items = await buildSidebar(req.permissions || [], (permissions, key) => grants(permissions, [key]));
 		// The tenant panel serves project tables under /t/<route> (admin panel.ts pagePath).
 		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));
-		return res.status(200).json([...project, ...tenantNav(req.permissions || [], { inProject: true })]);
+		return res.status(200).json([...project, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);
 		return res.status(500).json({ message: 'Something went wrong' });
@@ -139,6 +140,9 @@ router.use(
 		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: () => tenantPermissions(['build']) },
 	})
 );
+
+// A website project's analytics (events from /public/track.js).
+router.use('/analytics', analyticsRouter);
 
 // The project's built models, last: anything not answered above.
 router.use(dynamicModelsDispatcher);

@@ -28,7 +28,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 16 | Super-admin oversight pages (organizations, tenant users, projects) | both | M | todo |
 | 17 | Isolation tests, parity check, guide | both | M | todo |
 | 18 | Website projects: website kit (settings, pages, SEO, contents) + site API | backend | L | done |
-| 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | todo |
+| 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | backend done; UI in progress |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17. (12–15 need 05–09; 18–19 need 08 and 11.)
