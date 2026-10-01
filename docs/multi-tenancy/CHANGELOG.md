@@ -435,3 +435,33 @@ re-run with the pane visible.
   other project), internal fields kept in the panel, widget.js served with
   CORP cross-origin. Full suite (admin, tenant-auth, projects, models, media,
   mcp, public) and route parity (0 problems) re-run green.
+
+## 2026-10-02 — WO-18 Website projects
+- `library/functions/websiteKit.function.ts`: `WEBSITE_KIT` — one feature plan
+  built with `buildFeature` (all or nothing) when a **website** project is
+  created (`projectHooks.onCreated`, registered by importing the module from the
+  projects router):
+  - `SiteSettings` `/site-settings` — AGS GlobalSettings (site name, logo,
+    favicon, footer, colours, font, contact, map, socials, default SEO,
+    feature switches).
+  - `WebPage` `/pages` — name, path (unique), status (draft/published/
+    archived), template, parent (self), showInMenu, priority.
+  - `PageSeo` `/seo` — AGS Seo: page (→ WebPage, required), title, description,
+    image, keywords, tags, canonical, noIndex.
+  - `WebContent` `/web-contents` — the AGS Content model (the same fields,
+    form sections and table as the super-admin WebContent built earlier),
+    except AGS's fixed `pageName` list became a `page` reference (→ WebPage)
+    — the link on the "many" side, so a page's detail shows its contents tab.
+    `articles` (AGS Article) is left out — no such model in a project.
+  - The four models' public API starts as list/get, open (the site reads them).
+- Site API (routes-public, website projects only — 404 otherwise):
+  `GET /public/api/:slug/site` (first settings record + menu of published,
+  in-menu pages by priority) and `GET /public/api/:slug/pages/by-path?path=/x`
+  (a published page, its SEO, its visible published contents by priority).
+  Both read the kit routes; a site that removed them uses the per-model API.
+- Verified: `scripts/tenancy-smoke/website.mjs` all pass — kit models and their
+  read-only public API, Website sidebar section links `/t/...`, unique paths,
+  /site settings + menu order, a page with SEO and only visible published
+  contents in order with card rows, draft page 404, page without SEO, per-model
+  filter, writes 404, /site 404 for an app project. projects.mjs updated (a
+  website project now counts its 4 kit models).

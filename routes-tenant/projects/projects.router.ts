@@ -21,6 +21,8 @@ import { tenantPermissions } from '../../library/functions/tenantPermissions.fun
 import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { TenancyError, handle, isId, publicProject, uniqueSlug } from '../../library/functions/tenancy.function.js';
 import { projectHooks } from '../../library/functions/projectHooks.function.js';
+// Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
+import '../../library/functions/websiteKit.function.js';
 
 /**
  * /tenant/api/projects — the organization's projects (docs/multi-tenancy WO-07).

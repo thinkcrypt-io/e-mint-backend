@@ -186,6 +186,67 @@ router.post(
 	})
 );
 
+/* --------------------------------------------- the site API (websites) */
+
+/**
+ * For website projects (WO-18): the site in one or two calls instead of
+ * stitching the kit's models together. Read-only, published records only.
+ *
+ *   GET /site                      the site settings (first record) and its menu
+ *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
+ *                                  published contents in priority order
+ *
+ * Built on the kit's models (website kit routes); a site that renamed or
+ * removed them gets 404 here and can use the per-model routes instead.
+ */
+const kitModel = async (req: any, route: string) => {
+	await syncDynamicModels({ app: req.app });
+	const def: any = (await publicDefs()).get(route);
+	return def ? { def, Model: compiledModel(def.name) } : null;
+};
+
+const menuOf = async (req: any) => {
+	const pages = await kitModel(req, 'pages');
+	if (!pages?.Model) return [];
+	const list: any[] = await pages.Model.find({ status: 'published', showInMenu: { $ne: false } }, { name: 1, path: 1, parent: 1, priority: 1 })
+		.sort({ priority: -1, name: 1 })
+		.lean();
+	return list.map(p => ({ _id: String(p._id), name: p.name, path: p.path, parent: p.parent ? String(p.parent) : null }));
+};
+
+router.get(
+	'/site',
+	handle(async req => {
+		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		const settings = await kitModel(req, 'site-settings');
+		const doc = settings?.Model ? await settings.Model.findOne({}).sort({ createdAt: 1 }).lean() : null;
+		return { settings: doc ? shape(doc, settings!.def) : null, menu: await menuOf(req) };
+	})
+);
+
+router.get(
+	'/pages/by-path',
+	handle(async req => {
+		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		const path = String(req.query.path || '/').trim() || '/';
+		const [pages, seo, contents] = await Promise.all([kitModel(req, 'pages'), kitModel(req, 'seo'), kitModel(req, 'web-contents')]);
+		if (!pages?.Model) throw new TenancyError(404, 'Not found');
+		const page: any = await pages.Model.findOne({ path, status: 'published' }).lean();
+		if (!page) throw new TenancyError(404, 'No published page at that path');
+		const [seoDoc, blocks]: any = await Promise.all([
+			seo?.Model ? seo.Model.findOne({ page: page._id }).lean() : null,
+			contents?.Model
+				? contents.Model.find({ page: page._id, status: 'published', isVisible: { $ne: false } }).sort({ priority: -1, createdAt: 1 }).lean()
+				: [],
+		]);
+		return {
+			page: shape(page, pages.def),
+			seo: seoDoc ? shape(seoDoc, seo!.def) : null,
+			contents: (blocks || []).map((b: any) => shape(b, contents!.def)),
+		};
+	})
+);
+
 /* ------------------------------------------------------- model routes */
 
 const SYSTEM_OUT = ['_id', 'code', 'createdAt', 'updatedAt'];
