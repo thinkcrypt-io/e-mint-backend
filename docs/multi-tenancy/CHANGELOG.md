@@ -175,3 +175,26 @@ agent must know. Keep entries factual; decisions live in README.md.
   org, role change, owner role fixed, role in use not deletable, remove →
   ORG_ACCESS_REVOKED, leave, owner can't leave, transfer ownership, only the
   owner transfers).
+
+## 2026-10-02 — WO-07 Projects API
+- `routes-tenant/projects/projects.router.ts` at `/tenant/api/projects`
+  (tenantProtect): list (active; `?archived=1` for all; each with its model
+  count), create (create-projects; type app|website; slug unique per org,
+  `publicSlug` = `<org slug>-<project slug>` globally unique; domains
+  validated; ≤ 100 active per org), get, update (manage-projects; incl.
+  archive via `isActive:false`), delete (empty projects; with models only
+  `?force=1` by the owner). Every lookup is confined to `req.organization`.
+- Create seeds, inside the project's scope, a sidebar section ("Pages", or
+  "Website" for websites) and an empty dashboard; then runs
+  `projectHooks.created` (a throw removes the whole project).
+- Delete removes the project's documents from every scoped collection
+  (`runInScope` + deleteMany), drops its `t_<projectId>_*` collections, then
+  runs `projectHooks.removed`.
+- `library/functions/projectHooks.function.ts`: `onCreated` / `onRemoved`
+  registry (WO-08 registry cleanup and WO-18 website kit register there).
+- Verified on :5001: 15/15 — create app/website, duplicate names → `crm-2`,
+  bad domain/type refused, list + counts, self lists projects, another org
+  gets 404 on get/edit and sees none, archive hides, `?archived=1` shows,
+  delete. DB: the two live projects each have their section and dashboard,
+  the deleted one left nothing, and the super-admin
+  `GET /admin/api/sidebarcategories` sees 0 of them.
