@@ -156,7 +156,8 @@ router.get('/', protect, paginate, async (req: any, res: Response) => {
 	}
 });
 
-router.delete('/:key', async (req: Request, res: Response) => {
+// Signed in only: this deletes the S3 object and its File record (it used to answer anyone).
+router.delete('/:key', protect, async (req: Request, res: Response) => {
 	try {
 		AWS.config.update({
 			region: process.env.AWS_REGION,
@@ -364,7 +365,7 @@ router.post('/video', protect, uploadVideo.single('image'), async (req: Request,
 	}
 });
 
-router.get('/get/sum/s3', async (req: Request, res: Response) => {
+router.get('/get/sum/s3', protect, async (req: Request, res: Response) => {
 	try {
 		if (!process.env.S3_BUCKET_NAME) {
 			return res.status(400).json({ message: 'S3_BUCKET_NAME environment variable is not set' });
@@ -425,7 +426,7 @@ router.get('/get/sum/s3', async (req: Request, res: Response) => {
 	}
 });
 
-router.get('/get/sum/awsbill', async (req: Request, res: Response) => {
+router.get('/get/sum/awsbill', protect, async (req: Request, res: Response) => {
 	try {
 		AWS.config.update({
 			region: process.env.AWS_REGION,
