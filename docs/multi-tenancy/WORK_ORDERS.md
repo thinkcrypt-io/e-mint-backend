@@ -13,7 +13,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 01 | Plan & docs | backend | S | done |
 | 02 | Identity & organization models | backend | M | done |
 | 03 | Scope context + `tenantScoped` plugin + index migration — BLOCKER | backend | L | done (migration `--apply` pending, WO-08) |
-| 04 | Session and two-factor services made model-agnostic | backend | M | todo |
+| 04 | Session and two-factor services made model-agnostic | backend | M | done |
 | 05 | Tenant auth API (register + onboarding, login, 2FA, sessions, passwords) | backend | M | todo |
 | 06 | Organizations: members, roles, invitations, switch | backend | M | todo |
 | 07 | Projects API | backend | S | todo |

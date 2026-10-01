@@ -66,3 +66,38 @@ agent must know. Keep entries factual; decisions live in README.md.
   (5 s timeouts — pre-existing, not tenancy).
 - Super admin unchanged: `node scripts/checkRouteParity.js` → 70 routes, 289
   responses, 26 expected differences, **0 problems**.
+
+## 2026-10-02 — WO-04 Sessions and two-factor for either kind of account
+- Schemas became factories: `makeSessionSchema(userRef)` (adminSession.model),
+  `makeBlacklistSchema(userRef, sessionRef)`, `makePasskeySchema(userRef)`,
+  `makeChallengeSchema(userRef, passkeyRef)`. New tenant collections:
+  `TenantSession` (`tenantsessions`), `TenantBlacklistedToken`
+  (`tenantblacklistedtokens`) — models/sessions/tenantSession.model.ts;
+  `TenantPasskey` (`tenantpasskeys`), `TenantTwoFactorChallenge`
+  (`tenanttwofactorchallenges`) — models/twoFactor/tenant.models.ts. In tenant
+  collections the `admin` field holds the TenantUser id (kept so one service
+  serves both).
+- `sessions.function.ts`: `makeSessions({ Session, Blacklist })` →
+  `{ Session, issueSession(user, req, method, org?), isRevoked, touchSession,
+  revokeSessions, withPlaces }`; `adminSessions` (the old named exports are its
+  members) and `tenantSessions`. `issueSession` passes `org` to
+  `user.generateAuthToken(sid, org)`.
+- `sessions.router.ts`: `addOwnSessionRoutes(router, service)` (list, current,
+  others, one) — the admin router uses it with `adminSessions`; the tenant API
+  will with `tenantSessions`. Everyone's-sessions routes stay admin-only.
+- `twoFactor.service.ts`: `makeTwoFactor({ User, Passkey, Challenge,
+  ticketSalt, issue, origins, rpName })`; `adminTwoFactor` (ticket salt
+  unchanged, so admin tickets behave exactly as before) and the old named
+  exports. Pure helpers (`TwoFactorError`, `notify`, `maskEmail`,
+  `makeBackupCodes`, `publicPasskey`) stay module-level.
+- `twoFactor.router.ts`: `makeTwoFactorRouter(service, protect)`; default
+  export = the admins' router (unchanged paths).
+- Dev tooling: `scripts/seedTenancyDev.js` (LOCAL ONLY — refuses a non-local
+  URI; test super admin `admin@example.com` / `tenancy-dev-pass-1`), launch
+  config `backend-test` (backend on :5001 against
+  `mongodb://127.0.0.1:27999/emint_tenancy_dev`; start a scratch
+  `mongod --port 27999` first).
+- Verified on :5001 (scratch DB) — admin login, self, sessions list, 2FA
+  enable → backup codes, login → ticket, wrong code refused, backup code →
+  token, 9 codes left, 2FA disable, logout, revoked token → 401
+  SESSION_REVOKED, other session still valid: **12/12 pass**.

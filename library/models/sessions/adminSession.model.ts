@@ -37,26 +37,33 @@ export type AdminSessionType = {
 	revokeReason?: string;
 };
 
-const schema = new Schema<AdminSessionType>(
-	{
-		admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true, index: true },
-		sid: { type: String, required: true, unique: true },
-		method: { type: String, default: 'password' },
-		browser: { type: String },
-		os: { type: String },
-		deviceType: { type: String, enum: ['desktop', 'mobile', 'tablet', 'unknown'], default: 'unknown' },
-		userAgent: { type: String, maxlength: 500 },
-		ip: { type: String },
-		lastIp: { type: String },
-		lastActiveAt: { type: Date, index: true },
-		location: { type: placeSchema },
-		lastLocation: { type: placeSchema },
-		revokedAt: { type: Date, default: null, index: true },
-		revokedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
-		revokeReason: { type: String },
-	},
-	{ timestamps: true }
-);
+/**
+ * The session schema, for admins (here) and for tenant users
+ * (tenantSession.model.ts — docs/multi-tenancy WO-04). In a tenant collection
+ * `admin` holds the TenantUser's id: the field keeps its name so one sessions
+ * service (sessions.function.ts `makeSessions`) serves both.
+ */
+export const makeSessionSchema = (userRef: string) =>
+	new Schema<AdminSessionType>(
+		{
+			admin: { type: Schema.Types.ObjectId, ref: userRef, required: true, index: true },
+			sid: { type: String, required: true, unique: true },
+			method: { type: String, default: 'password' },
+			browser: { type: String },
+			os: { type: String },
+			deviceType: { type: String, enum: ['desktop', 'mobile', 'tablet', 'unknown'], default: 'unknown' },
+			userAgent: { type: String, maxlength: 500 },
+			ip: { type: String },
+			lastIp: { type: String },
+			lastActiveAt: { type: Date, index: true },
+			location: { type: placeSchema },
+			lastLocation: { type: placeSchema },
+			revokedAt: { type: Date, default: null, index: true },
+			revokedBy: { type: Schema.Types.ObjectId, ref: userRef },
+			revokeReason: { type: String },
+		},
+		{ timestamps: true }
+	);
 
-const AdminSession = mongoose.model<AdminSessionType>('AdminSession', schema);
+const AdminSession = mongoose.model<AdminSessionType>('AdminSession', makeSessionSchema('Admin'));
 export default AdminSession;

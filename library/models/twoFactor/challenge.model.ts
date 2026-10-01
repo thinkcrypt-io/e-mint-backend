@@ -32,25 +32,27 @@ export type TwoFactorChallengeType = {
 	expiresAt: Date;
 };
 
-const schema = new Schema<TwoFactorChallengeType>(
-	{
-		admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true, index: true },
-		purpose: { type: String, enum: ['login', 'register', 'link'], required: true },
-		ticket: { type: String, index: true },
-		codeHash: { type: String },
-		codeExpiresAt: { type: Date },
-		codeSentAt: { type: Date },
-		codeAttempts: { type: Number, default: 0 },
-		attempts: { type: Number, default: 0 },
-		challenge: { type: String },
-		linkStatus: { type: String, enum: ['waiting', 'opened', 'added'] },
-		linkDevice: { type: String },
-		linkPasskey: { type: Schema.Types.ObjectId, ref: 'Passkey' },
-		linkPasskeyName: { type: String },
-		expiresAt: { type: Date, required: true, index: { expires: 0 } },
-	},
-	{ timestamps: true }
-);
+export const makeChallengeSchema = (userRef: string, passkeyRef: string) =>
+	new Schema<TwoFactorChallengeType>(
+		{
+			admin: { type: Schema.Types.ObjectId, ref: userRef, required: true, index: true },
+			purpose: { type: String, enum: ['login', 'register', 'link'], required: true },
+			ticket: { type: String, index: true },
+			codeHash: { type: String },
+			codeExpiresAt: { type: Date },
+			codeSentAt: { type: Date },
+			codeAttempts: { type: Number, default: 0 },
+			attempts: { type: Number, default: 0 },
+			challenge: { type: String },
+			linkStatus: { type: String, enum: ['waiting', 'opened', 'added'] },
+			linkDevice: { type: String },
+			linkPasskey: { type: Schema.Types.ObjectId, ref: passkeyRef },
+			linkPasskeyName: { type: String },
+			expiresAt: { type: Date, required: true, index: { expires: 0 } },
+		},
+		{ timestamps: true }
 
-const TwoFactorChallenge = mongoose.model<TwoFactorChallengeType>('TwoFactorChallenge', schema);
+	);
+
+const TwoFactorChallenge = mongoose.model<TwoFactorChallengeType>('TwoFactorChallenge', makeChallengeSchema('Admin', 'Passkey'));
 export default TwoFactorChallenge;

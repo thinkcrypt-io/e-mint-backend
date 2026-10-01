@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Admin from '../../models/admin/model.js';
 import AdminSession from '../../models/sessions/adminSession.model.js';
 import { adminProtect } from '../../../imports.js';
-import { placeName, revokeSessions, withPlaces } from '../../functions/sessions.function.js';
+import { adminSessions, placeName, revokeSessions, SessionService, withPlaces } from '../../functions/sessions.function.js';
 
 /**
  * /admin/api/auth/sessions — where an admin is signed in, and signing out.
@@ -70,46 +70,55 @@ const view = (s: any, currentSid?: string) => ({
 
 /* ------------------------------------------------------------- your own */
 
-router.get(
-	'/',
-	handle(async req => {
-		const docs = await withPlaces(await AdminSession.find({ admin: req.user._id, revokedAt: null }).sort({ lastActiveAt: -1 }).limit(100).lean());
-		// The current device first, then by last activity.
-		const list = docs.map(s => view(s, req.sessionId)).sort((a, b) => Number(b.current) - Number(a.current));
-		return { doc: list };
-	})
-);
+/**
+ * Your own devices: list, sign out here, everywhere else, or one. Shared by the
+ * admin API (below) and the tenant API (routes-tenant — over TenantSession),
+ * mounted after that API's protect middleware.
+ */
+export const addOwnSessionRoutes = (r: express.Router, service: SessionService) => {
+	r.get(
+		'/',
+		handle(async req => {
+			const docs = await service.withPlaces(await service.Session.find({ admin: req.user._id, revokedAt: null }).sort({ lastActiveAt: -1 }).limit(100).lean());
+			// The current device first, then by last activity.
+			const list = docs.map(s => view(s, req.sessionId)).sort((a, b) => Number(b.current) - Number(a.current));
+			return { doc: list };
+		})
+	);
 
-/** This device — Logout. A token from before sessions may have no row yet; it's blacklisted all the same. */
-router.delete(
-	'/current',
-	handle(async req => {
-		const row: any = await AdminSession.findOne({ sid: req.sessionId }).lean();
-		await revokeSessions([row || { sid: req.sessionId, admin: req.user._id }], req.user._id, 'Signed out');
-		return { message: 'Signed out' };
-	})
-);
+	/** This device — Logout. A token from before sessions may have no row yet; it's blacklisted all the same. */
+	r.delete(
+		'/current',
+		handle(async req => {
+			const row: any = await service.Session.findOne({ sid: req.sessionId }).lean();
+			await service.revokeSessions([row || { sid: req.sessionId, admin: req.user._id }], req.user._id, 'Signed out');
+			return { message: 'Signed out' };
+		})
+	);
 
-router.delete(
-	'/others',
-	handle(async req => {
-		const others = await AdminSession.find({ admin: req.user._id, revokedAt: null, sid: { $ne: req.sessionId } }).lean();
-		const count = await revokeSessions(others, req.user._id, 'Signed out from another device');
-		return { message: `Signed out of ${count} other device${count === 1 ? '' : 's'}`, count };
-	})
-);
+	r.delete(
+		'/others',
+		handle(async req => {
+			const others = await service.Session.find({ admin: req.user._id, revokedAt: null, sid: { $ne: req.sessionId } }).lean();
+			const count = await service.revokeSessions(others, req.user._id, 'Signed out from another device');
+			return { message: `Signed out of ${count} other device${count === 1 ? '' : 's'}`, count };
+		})
+	);
 
-router.delete(
-	'/:id',
-	handle(async (req, res) => {
-		if (req.params.id === 'all') return res.status(404).json({ message: 'Not found' });
-		if (!mongoose.isValidObjectId(req.params.id)) throw fail(404, 'Session not found');
-		const row: any = await AdminSession.findOne({ _id: req.params.id, admin: req.user._id }).lean();
-		if (!row) throw fail(404, 'Session not found');
-		await revokeSessions([row], req.user._id, row.sid === req.sessionId ? 'Signed out' : 'Signed out from another device');
-		return { message: 'Signed out', current: row.sid === req.sessionId };
-	})
-);
+	r.delete(
+		'/:id',
+		handle(async (req, res) => {
+			if (req.params.id === 'all') return res.status(404).json({ message: 'Not found' });
+			if (!mongoose.isValidObjectId(req.params.id)) throw fail(404, 'Session not found');
+			const row: any = await service.Session.findOne({ _id: req.params.id, admin: req.user._id }).lean();
+			if (!row) throw fail(404, 'Session not found');
+			await service.revokeSessions([row], req.user._id, row.sid === req.sessionId ? 'Signed out' : 'Signed out from another device');
+			return { message: 'Signed out', current: row.sid === req.sessionId };
+		})
+	);
+};
+
+addOwnSessionRoutes(router, adminSessions);
 
 /* ------------------------------------------------------------ everyone's */
 

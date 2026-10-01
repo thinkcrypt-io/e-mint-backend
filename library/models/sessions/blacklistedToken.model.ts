@@ -17,16 +17,18 @@ export type BlacklistedTokenType = {
 	reason?: string;
 };
 
-const schema = new Schema<BlacklistedTokenType>(
-	{
-		sid: { type: String, required: true, unique: true },
-		admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true, index: true },
-		session: { type: Schema.Types.ObjectId, ref: 'AdminSession' },
-		revokedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
-		reason: { type: String },
-	},
-	{ timestamps: true }
-);
+/** For admins (here) and tenant users (tenantSession.model.ts), like the session schema. */
+export const makeBlacklistSchema = (userRef: string, sessionRef: string) =>
+	new Schema<BlacklistedTokenType>(
+		{
+			sid: { type: String, required: true, unique: true },
+			admin: { type: Schema.Types.ObjectId, ref: userRef, required: true, index: true },
+			session: { type: Schema.Types.ObjectId, ref: sessionRef },
+			revokedBy: { type: Schema.Types.ObjectId, ref: userRef },
+			reason: { type: String },
+		},
+		{ timestamps: true }
+	);
 
-const BlacklistedToken = mongoose.model<BlacklistedTokenType>('BlacklistedToken', schema);
+const BlacklistedToken = mongoose.model<BlacklistedTokenType>('BlacklistedToken', makeBlacklistSchema('Admin', 'AdminSession'));
 export default BlacklistedToken;

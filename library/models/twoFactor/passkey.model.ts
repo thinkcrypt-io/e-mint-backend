@@ -24,20 +24,23 @@ export type PasskeyType = {
 	lastUsedAt?: Date;
 };
 
-const schema = new Schema<PasskeyType>(
-	{
-		admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true, index: true },
-		name: { type: String, trim: true, maxlength: 60, default: 'Passkey' },
-		credentialId: { type: String, required: true, unique: true },
-		publicKey: { type: String, required: true, select: false },
-		counter: { type: Number, default: 0 },
-		transports: { type: [String], default: undefined },
-		deviceType: { type: String },
-		backedUp: { type: Boolean },
-		lastUsedAt: { type: Date },
-	},
-	{ timestamps: true }
-);
+export const makePasskeySchema = (userRef: string) =>
+	new Schema<PasskeyType>(
+		{
+			admin: { type: Schema.Types.ObjectId, ref: userRef, required: true, index: true },
+			name: { type: String, trim: true, maxlength: 60, default: 'Passkey' },
+			credentialId: { type: String, required: true, unique: true },
+			publicKey: { type: String, required: true, select: false },
+			counter: { type: Number, default: 0 },
+			transports: { type: [String], default: undefined },
+			deviceType: { type: String },
+			backedUp: { type: Boolean },
+			lastUsedAt: { type: Date },
+		},
+		{ timestamps: true }
 
-const Passkey = mongoose.model<PasskeyType>('Passkey', schema);
+	);
+
+/** For admins (here) and tenant users (tenant.models.ts): `admin` holds the user's id. */
+const Passkey = mongoose.model<PasskeyType>('Passkey', makePasskeySchema('Admin'));
 export default Passkey;
