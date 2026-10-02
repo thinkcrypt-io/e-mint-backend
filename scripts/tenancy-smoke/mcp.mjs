@@ -25,6 +25,8 @@ ok('tools/list', r.body?.result?.tools?.length >= 7, r.body?.result?.tools?.leng
 let res = await tool(key, 'list_models', {});
 const listed = JSON.stringify(res);
 ok('list_models: only the project’s models', listed.includes('Invoice') && listed.includes('Client') && !listed.includes('"Admin"') && !listed.includes('Heroku'), res?.content?.[0]?.text?.slice(0, 120));
+res = await tool(key, 'describe_platform', {});
+ok('describe_platform: names are the project’s own', /Names belong to this project only/.test(res?.content?.[0]?.text || ''), res?.content?.[0]?.text?.slice(0, 80));
 const plan = {
 	title: 'Support desk', summary: 'Tickets linked to clients.', sidebarCategory: 'Pages',
 	steps: [{ action: 'create', name: 'Ticket', title: 'Tickets', rationale: 'Track client requests.', displayField: 'subject',

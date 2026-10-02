@@ -628,3 +628,31 @@ Decisions D14–D17 (README).
 - Verified: smoke suite all green; headless browser — sign-up lands on
   `/dashboard`, landing header flips Sign in/Sign up ↔ Dashboard, sidebar shows
   Files → Media library and opens `/images`, tenant Settings has no Form layout.
+
+## 2026-10-02 — Model names are the project's own
+- **Cause** of "a model named Client already exists" in projects: databases
+  older than multi-tenancy keep the global unique indexes on
+  `modeldefinitions.name/route` (and route/key/slug on routesettings,
+  routeconfigs, dashboardconfigs, folders) until `migrateTenantIndexes.js`
+  runs, so a project's `Client` hit the platform's `Client`, or another
+  project's. The scratch DB was created with the scoped indexes, so local
+  tests never saw it.
+- **Fix**: `ensureTenantIndexes()` (library/functions/tenantIndexes.function.ts)
+  runs after the DB connects (server.ts): creates the scoped unique index, then
+  drops the global one. Verified on a throwaway DB seeded with the old indexes:
+  before → E11000 on `{name: "Client"}`; after → two projects' Client both save,
+  a second Client in one project is still refused; a second run is a no-op.
+- **Mongoose names**: tenant models are `T<projectId>_<Name>`; four places
+  looked a model up by its plain name (`mongoose.models['Client']`), which in a
+  project is the platform's model — bulk import links, MCP query_records
+  filters/populate, dashboard stats labels, the record view's related lists.
+  All now go through `scopedModel()`. Smoke: import links "Acme Ltd" to the
+  project's own Client.
+- **Names vs addresses**: in a project, `checkAvailability` numbers the name
+  and the address apart — a name is numbered only when the project already has
+  it; an address only when it's one of the project's own (`/customers`…). A
+  Customer model stays `Customer` at `/customers2`. Smoke checks it.
+- **MCP**: in a project, `describe_platform` says names belong to the project,
+  to name models plainly and never prefix or number them to dodge a clash.
+- Smoke suite all green (after a backend restart — repeated runs hit the
+  sign-up rate limit, 429).

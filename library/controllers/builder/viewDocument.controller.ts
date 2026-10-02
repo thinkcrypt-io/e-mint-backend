@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { accessRule, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import Role from '../../models/admin-role/model.js';
 import constructConfig from '../../../lib/configurator/constructConfig.js';
-import { collectResourceRoutes, getDynamicVersion, ResourceRouteEntry } from '../../functions/routeRegistry.function.js';
+import { collectResourceRoutes, getDynamicVersion, ResourceRouteEntry, scopedModel } from '../../functions/routeRegistry.function.js';
 import { scopeKey } from '../../functions/tenantScope.function.js';
 import { resolveRoute, ResolvedRoute } from '../../functions/resolveRoute.function.js';
 
@@ -79,7 +79,7 @@ const labelOf = (settings: Record<string, any>, key: string) =>
 const refModelOf = (model: mongoose.Model<any>, path: string): mongoose.Model<any> | null => {
 	const type: any = model.schema.path(path);
 	const ref = type?.options?.ref || type?.caster?.options?.ref;
-	return typeof ref === 'string' ? mongoose.models[ref] || null : null;
+	return typeof ref === 'string' ? scopedModel(ref) : null;
 };
 
 const routeForModel = (app: any, modelName: string) =>

@@ -1,4 +1,5 @@
 import { RESERVED_KEYS } from '../../functions/dynamicModels.function.js';
+import { currentScope } from '../../functions/tenantScope.function.js';
 import { KIND_GUIDE, TOOL, fieldProps, normalize, sectionProps } from './ai.controller.js';
 import { MAX_STEPS } from './features.service.js';
 
@@ -109,6 +110,16 @@ export const catalogText = (catalog: CatalogEntry[]) =>
 		)
 		.join('\n');
 
+/**
+ * In a tenant project, names are the project's alone (internally
+ * `T<projectId>_<Name>`, collection `t_<projectId>_<route>`), so the AI should
+ * name models plainly and never dodge a clash that can't happen.
+ */
+const projectNaming = () =>
+	currentScope()?.project
+		? `- Names belong to this project only. Name models plainly for the business — Client, Invoice, Booking, Customer. The platform and other projects may have models with the same names; they never clash with this project's. A name is taken only if list_models shows it here. Never add prefixes, project names or numbers to avoid a clash — plan_feature reports the name and address each model will really get.\n`
+		: '';
+
 /** How to design a feature here — the system prompt's rules, and the MCP `describe_platform` answer. */
 export const platformGuide = () => `This admin panel (Express + Mongoose + a generated admin UI) builds data models from definitions: each model gets a database collection, a REST API, a table page with filters, a create/edit form, a detail page and a sidebar entry.
 
@@ -124,7 +135,7 @@ ${Object.entries(KIND_GUIDE)
 
 Rules:
 - Reuse what exists: link to an existing model instead of creating a copy of it (never create a model whose name is taken). Check the model list first.
-- Put a link on the "many" side as a single reference (LeaveRequest.employee → Employee), not as a list on the "one" side.
+${projectNaming()}- Put a link on the "many" side as a single reference (LeaveRequest.employee → Employee), not as a list on the "one" side.
 - Keys are camelCase, unique, and never one of: ${RESERVED_KEYS.join(', ')}. _id, createdAt, updatedAt (and "code" when codes are on) are automatic.
 - Never store secrets (passwords, tokens, API keys, OTPs, hashes).
 - Use select (with options) for known sets of values, with a sensible default (status "draft").

@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
+import { scopedModel } from '../../functions/routeRegistry.function.js';
 import ExcelJS from 'exceljs';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { applyFormulas, formulasOf, stripFormulaKeys } from '../../functions/formula.function.js';
@@ -346,12 +347,9 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 
 	// 2. Links: an id, or a record found by its name / code / title / email.
 	for (const col of used.filter(c => c.ref)) {
-		let Ref: mongoose.Model<any>;
-		try {
-			Ref = mongoose.model(col.ref!);
-		} catch {
-			continue;
-		}
+		// The linked model as this scope sees it: in a project, its own `T<projectId>_<Name>`, never the platform's.
+		const Ref = scopedModel(col.ref!);
+		if (!Ref) continue;
 		const wanted = new Set<string>();
 		rows.forEach(r => [].concat(r[col.key] ?? []).forEach((v: any) => wanted.add(String(v))));
 		if (!wanted.size) continue;

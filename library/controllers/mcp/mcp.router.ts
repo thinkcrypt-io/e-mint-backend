@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Admin } from '../../../imports.js';
-import { isSecretPath, listModelFields } from '../../functions/routeRegistry.function.js';
+import { isSecretPath, listModelFields, scopedModel } from '../../functions/routeRegistry.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { ApiKey } from '../../models/builder/_index.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
@@ -235,7 +235,8 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 			unknown.push(key);
 			continue;
 		}
-		const Ref = f.ref && mongoose.models[f.ref] ? mongoose.models[f.ref] : null;
+		// A definition names its link targets plainly ('Client'); in a project that's its own model, never the platform's.
+		const Ref = f.ref ? scopedModel(f.ref) : null;
 		const values = async (v: any) => (Ref ? refIds(Ref, [].concat(v)) : [].concat(v));
 		if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
 			const cond: any = {};
@@ -257,7 +258,8 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 	let find = Model.find(query).select(want.join(' ')).sort(sort as any).skip((page - 1) * limit).limit(limit);
 	for (const k of want) {
 		const f: any = byKey.get(k);
-		if (f?.ref && mongoose.models[f.ref]) find = find.populate({ path: k, select: namingFields(mongoose.models[f.ref]).join(' ') || '_id' });
+		const Ref = f?.ref ? scopedModel(f.ref) : null;
+		if (Ref) find = find.populate({ path: k, select: namingFields(Ref).join(' ') || '_id' });
 	}
 	let rows: any[];
 	let total: number;

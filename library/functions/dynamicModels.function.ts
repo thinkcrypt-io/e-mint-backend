@@ -339,10 +339,29 @@ export const checkAvailability = async (
 	defs.forEach((d: any) => collections.add(d.collectionName.toLowerCase()));
 
 	const reasons: string[] = [];
+	const nameFree = (name: string) => !names.has(name.toLowerCase());
+	const routeFree = (route: string) =>
+		!routes.has(route) && !dynamicMounts.has(route) && !collections.has(collectionOf(route).toLowerCase());
+
+	if (tenant) {
+		// In a project the name and the address are numbered apart: only the
+		// project's own models can take a name, so a `Customer` stays Customer
+		// even though /customers is the project's sign-in customers (it gets
+		// /customers2). The Mongoose name is T<projectId>_<name> either way.
+		let name: string | null = null;
+		let route: string | null = null;
+		for (let n = 1; n < 200 && !name; n++) if (nameFree(n === 1 ? base : `${base}${n}`)) name = n === 1 ? base : `${base}${n}`;
+		for (let n = 1; n < 200 && !route; n++) if (routeFree(n === 1 ? baseRoute : `${baseRoute}${n}`)) route = n === 1 ? baseRoute : `${baseRoute}${n}`;
+		if (!name || !route) return null;
+		if (name !== base) reasons.push(`This project already has a model named ${base}`);
+		if (route !== baseRoute) reasons.push(`/${baseRoute} is one of the project's own addresses`);
+		return { requested, name, route, collectionName: collectionOf(route), changed: name !== base || route !== baseRoute, reasons };
+	}
+
 	for (let n = 1; n < 200; n++) {
 		const name = n === 1 ? base : `${base}${n}`;
 		const route = n === 1 ? baseRoute : `${baseRoute}${n}`;
-		const nameTaken = names.has(name.toLowerCase());
+		const nameTaken = !nameFree(name);
 		const routeTaken = routes.has(route) || dynamicMounts.has(route);
 		const collectionTaken = collections.has(collectionOf(route).toLowerCase());
 		if (!nameTaken && !routeTaken && !collectionTaken)

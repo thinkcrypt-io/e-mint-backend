@@ -26,12 +26,18 @@ ok('B: Invoice too', r.status === 201, r.body?.message);
 r = await call('POST', P(s.crm, '/builder/models'), { ...client }, s.pat);
 ok('A: a second Client gets a new name', r.status === 201 && r.body?.doc?.name === 'Client2', r.body?.doc?.name);
 const client2Id = r.body?.doc?._id;
+// /customers is the project's own sign-in customers: a Customer model keeps its name, only its address moves.
+r = await call('POST', P(s.crm, '/builder/models'), { name: 'Customer', title: 'Customers', fields: [{ key: 'name', label: 'Name', kind: 'text' }] }, s.pat);
+ok('Customer keeps its name; address /customers2', r.status === 201 && r.body?.doc?.name === 'Customer' && r.body?.doc?.route === 'customers2', `${r.status} ${r.body?.doc?.name} ${r.body?.doc?.route} ${r.body?.message || ''}`);
 // Records
 r = await call('POST', P(s.crm, '/clients'), { name: 'Acme Ltd', email: 'acme@example.com' }, s.pat);
 ok('A: create a client record', r.status === 200 || r.status === 201, `${r.status} ${r.body?.message || ''}`);
 const acme = r.body?._id || r.body?.doc?._id;
 r = await call('POST', P(s.crm, '/invoices'), { title: 'First invoice', amount: 120, client: acme }, s.pat);
 ok('A: create an invoice', r.status === 200 || r.status === 201, `${r.status} ${r.body?.message || ''}`);
+// A link by name finds the project's own Client (T<projectId>_Client), not the platform's code model of the same name.
+r = await call('POST', P(s.crm, '/invoices/bulk/import'), { format: 'json', content: JSON.stringify([{ title: 'Imported', client: 'Acme Ltd' }]), dryRun: true }, s.pat);
+ok("import links to the project's own Client by name", r.status === 200 && r.body?.preview?.[0]?.client === String(acme), `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
 r = await call('GET', P(s.crm, '/invoices?limit=10'), null, s.pat);
 ok('A: list invoices — code INV-0001', r.status === 200 && r.body?.doc?.length === 1 && r.body.doc[0].code === 'INV-0001', `${r.status} ${JSON.stringify(r.body?.doc?.[0]?.code)}`);
 const invId = r.body?.doc?.[0]?._id;
@@ -51,7 +57,7 @@ ok("A's other project doesn't have A's models", r.status === 404, r.status);
 r = await call('GET', P(s.crm, '/invoices/get/config'), null, s.pat);
 ok('table config served', r.status === 200 && !!r.body, r.status);
 r = await call('GET', P(s.crm, '/builder/models'), null, s.pat);
-ok('builder lists the project models only', r.status === 200 && (r.body?.doc || r.body)?.length === 3, JSON.stringify((r.body?.doc || r.body || []).map?.(d => d.name)));
+ok('builder lists the project models only', r.status === 200 && (r.body?.doc || r.body)?.map?.(d => d.name).sort().join() === 'Client,Client2,Customer,Invoice', JSON.stringify((r.body?.doc || r.body || []).map?.(d => d.name)));
 r = await call('GET', P(s.crm, '/builder/model/Admin'), null, s.pat);
 ok("platform models can't be inspected", r.status === 404, r.status);
 r = await call('GET', P(s.crm, `/builder/model/T${ops}_Invoice`), null, s.pat);

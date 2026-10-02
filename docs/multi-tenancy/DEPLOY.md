@@ -14,16 +14,15 @@ against production yet (all were verified on a scratch database).
    | `TENANT_FRONTEND_URL` | `https://app.mintapp.shop` | links in emails (reset password, invitations), MCP links |
    | `TENANT_WEBAUTHN_ORIGIN` | `https://app.mintapp.shop` | passkeys for tenant users (comma-separated list allowed; defaults to TENANT_FRONTEND_URL) |
    | `TENANT_WEBAUTHN_RP_NAME` | `MINT` | the name shown when saving a passkey |
-3. Index migration — **after** the new code is live:
-   ```
-   node scripts/migrateTenantIndexes.js          # dry run: what it will change
-   node scripts/migrateTenantIndexes.js --apply
-   ```
-   Drops the single-field unique indexes (`modeldefinitions` name/route,
+3. Index migration — **automatic**: on boot the server swaps the old
+   single-field unique indexes (`modeldefinitions` name/route,
    `routesettings`/`routeconfigs` route, `dashboardconfigs` key, `folders` slug)
-   after creating the compound per-scope ones. Until it runs, two projects (or a
-   project and the super admin) can't both have a model/route of the same name,
-   and a second project's `default` upload folder fails.
+   for compound per-scope ones (`library/functions/tenantIndexes.function.ts`;
+   the log says `Tenancy: <collection> — … now unique per project`). Index
+   changes only, no documents touched; a no-op once done. Without it a project's
+   `Client` collides with the platform's, or another project's, and a second
+   project's `default` upload folder fails. To look first (dry run) or run it by
+   hand: `node scripts/migrateTenantIndexes.js [--apply]`.
 4. Super-admin pages: `npm run build && node scripts/seedTenancyAdmin.js`
    (permissions + the "Tenants" sidebar section).
 

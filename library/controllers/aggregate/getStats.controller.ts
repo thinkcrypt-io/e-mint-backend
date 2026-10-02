@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
+import { scopedModel } from '../../functions/routeRegistry.function.js';
 
 /**
  * GET /<route>/get/stats — what a dashboard widget shows: one number, a series
@@ -230,9 +231,10 @@ const getStats = (Model: mongoose.Model<any>) => {
 			// A linked record's key is its id: name it by its own display field.
 			const ref = isArray ? byPath.caster?.options?.ref || byPath.options?.type?.[0]?.ref : byPath.options?.ref;
 			const labels = new Map<string, string>();
-			if (ref && mongoose.models[ref]) {
+			const Ref = ref ? scopedModel(ref) : null;
+			if (Ref) {
 				const ids = top.map((r: any) => r._id).filter((id: any) => mongoose.isValidObjectId(id));
-				const docs: any[] = await mongoose.models[ref].find({ _id: { $in: ids } }).select(LABEL_KEYS.join(' ')).lean();
+				const docs: any[] = await Ref.find({ _id: { $in: ids } }).select(LABEL_KEYS.join(' ')).lean();
 				for (const d of docs) labels.set(String(d._id), String(LABEL_KEYS.map(k => d[k]).find(v => v !== undefined && v !== '') ?? d._id));
 			}
 			const points = top.map((r: any) => {
