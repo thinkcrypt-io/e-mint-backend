@@ -1,6 +1,9 @@
 import { Schema } from 'mongoose';
 import Notification from '../models/notifications/notification.model.js';
 import Admin from '../models/admin/model.js';
+import TenantUser from '../models/tenancy/tenantUser.model.js';
+import { notifyTenant, projectHrefFor } from './tenantNotify.function.js';
+import { runUnscoped } from './tenantScope.function.js';
 
 /**
  * Notifications, and the one kind sent today: "you were given access to a
@@ -40,6 +43,8 @@ type AccessOptions = {
 	noun: string;
 	/** The field that names a record. */
 	displayField?: string;
+	/** A tenant project's model (WO-37): its people are TenantUsers, told in their own notifications. */
+	tenant?: { organization: any; project: any };
 };
 
 const ids = (list: any) => (Array.isArray(list) ? list.map((x: any) => String(x?._id || x)).filter(Boolean) : []);
@@ -47,7 +52,7 @@ const ids = (list: any) => (Array.isArray(list) ? list.map((x: any) => String(x?
 /** Who could see the record, by id — beyond its owner and "everyone" when public. */
 const grantees = (privacy: string, access: any) => (privacy === 'private' ? ids(access) : []);
 
-export const accessNotifications = (schema: Schema, { route, noun, displayField }: AccessOptions) => {
+export const accessNotifications = (schema: Schema, { route, noun, displayField, tenant }: AccessOptions) => {
 	schema.post('init', function (this: any) {
 		this.$locals.accessBefore = grantees(this.privacy, this.access);
 	});
@@ -68,9 +73,28 @@ export const accessNotifications = (schema: Schema, { route, noun, displayField 
 		const doc = this;
 		// After the response is on its way: the save doesn't wait on it.
 		setImmediate(async () => {
-			const actor: any = owner ? await Admin.findById(owner).select('name').lean().catch(() => null) : null;
 			const name = displayField && doc.get?.(displayField);
 			const label = typeof name === 'string' && name.trim() ? `${noun} “${name.trim()}”` : noun.toLowerCase();
+			if (tenant) {
+				const actor: any = owner ? await runUnscoped(() => TenantUser.findById(owner).select('name').lean()).catch(() => null) : null;
+				const href = await projectHrefFor(tenant.project, `/${route}/${doc._id}`).catch(() => '');
+				return notifyTenant(
+					fresh.map(recipient => ({
+						recipient,
+						organization: tenant.organization,
+						project: tenant.project,
+						actor: owner || undefined,
+						actorName: actor?.name,
+						type: 'access-granted',
+						title: `${actor?.name || 'Someone'} shared ${label} with you`,
+						message: doc.code ? `${noun} ${doc.code}` : undefined,
+						href,
+						route,
+						record: doc._id,
+					}))
+				);
+			}
+			const actor: any = owner ? await Admin.findById(owner).select('name').lean().catch(() => null) : null;
 			await notify(
 				fresh.map(recipient => ({
 					recipient,

@@ -526,9 +526,14 @@ export const buildSchema = (def: ModelDef) => {
 	if (restricted) {
 		schema.index({ addedBy: 1 });
 		schema.index({ access: 1 });
-		// Notifications are the super-admin panel's (tenant projects have none yet).
-		if (!currentScope())
-			schema.plugin(accessNotifications, { route: def.route, noun: humanize(def.name), displayField: displayFieldOf(def) });
+		// Who a record is shared with hears about it — an admin, or a project's people (WO-37).
+		const scope = currentScope();
+		schema.plugin(accessNotifications, {
+			route: def.route,
+			noun: humanize(def.name),
+			displayField: displayFieldOf(def),
+			...(scope?.project && { tenant: { organization: scope.organization, project: scope.project } }),
+		});
 	}
 
 	if (def.code?.enabled)

@@ -1,3 +1,4 @@
+import { recordProjectEvent } from '../../functions/recordHistory.function.js';
 import mongoose from 'mongoose';
 import { Feature, ModelDefinition } from '../../models/builder/_index.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
@@ -645,6 +646,16 @@ export const buildFeature = async (
 			result: { created: result.created, updated: result.updated, tabs: result.tabs, category: result.category },
 			createdBy: req.user?._id,
 			apiKey: opts.apiKey?._id,
+		});
+		const builtTitles = result.created.map(c => c.title).join(', ');
+		recordProjectEvent({
+			req,
+			action: 'create',
+			model: 'Feature',
+			modelPath: 'model-builder/features',
+			document: result.feature._id,
+			name: plan.title,
+			text: `built “${plan.title || 'a feature'}”${builtTitles ? ` — ${builtTitles}` : ''}${opts.source === 'mcp' ? ' (with AI)' : ''}`,
 		});
 		return result;
 	} catch (e: any) {

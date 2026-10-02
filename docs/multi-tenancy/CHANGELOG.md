@@ -783,3 +783,40 @@ Decisions D14–D17 (README).
   needed. A background tab was seen requesting /auth/login in a loop once —
   not reproduced; watch for it.
 
+## 2026-10-03 — WO-35 New-project wizard
+- A new project opens on `/<project>/get-started` (admin `app/get-started`,
+  'get-started' in PROJECT_PAGES; ProjectsBoard → openProject(slug,
+  '/get-started')). The empty project dashboard links to it.
+- App: starter templates — `library/functions/starterTemplates.function.ts`
+  (Clients & invoices with line items and formulas, Projects & tasks, Leads
+  pipeline, Products & stock), `GET /builder/starters`, `POST
+  /builder/starters/:key` (build permission; planFromAi + buildFeature, all
+  or nothing; a taken name refuses the whole template) — or the model wizard,
+  or Connect AI.
+- Website: brand (name, logo, favicon, colour → Site settings), home page
+  (published `/`, its SEO and a `hero` block — updated when they exist),
+  go live (domain if manage-projects, GA4 → /site-config), then links to AI
+  and the overview.
+- Guide: /user-docs/projects#get-started.
+- Verified: smoke (models.mjs: 9 starter checks incl. invoice totals/codes);
+  full suite green; admin and backend typecheck.
+
+## 2026-10-03 — WO-36 History in every project, WO-37 notifications
+- History: `routes-tenant/history.router.ts` (GET /history ?model&action&user
+  &from&to&search&page&limit up to 1000; /history/facets;
+  /history/g/document/:id for the record page's History tab) — view-history.
+  `recordHistory` keeps project models' plain names; old entries are cleaned
+  on read. `recordProjectEvent` (projects only) logs model built/changed/
+  deleted, feature and template builds, public API on/off, site setup saves.
+  Admin `app/activity` (filters, by day, before → after, Open), sidebar
+  Activity → History, guide /user-docs/projects#history.
+- Notifications: `TenantNotification`, `tenantNotify.function.ts`,
+  `/tenant/api/notifications`; events in org.router (invitation to an
+  existing account, joined, member changed), the access plugin for project
+  models (record shared), public.router (site-created record, customer
+  sign-up → projectAudience). Admin: bell + /notifications in the tenant
+  panel, icons per type, organization name on each; guide
+  /user-docs/account#notifications.
+- Verified: activity.mjs (25 checks) in run-all.sh, full suite green; headless
+  browser: History page and the bell render in a project.
+

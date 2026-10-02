@@ -8,6 +8,7 @@ import { BuildError } from './models.controller.js';
 import { MODEL } from './ai.controller.js';
 import { buildFeature, modelCatalog, planFeature, planProblems } from './features.service.js';
 import { FEATURE_SCHEMA, catalogText, planFromAi, platformGuide } from './features.schema.js';
+import { STARTERS, starterList } from '../../functions/starterTemplates.function.js';
 
 /**
  * /admin/api/builder/features — the feature wizard's API — and
@@ -49,6 +50,21 @@ export const checkFeaturePlan = async (req: any, res: Response) => {
 export const buildFeaturePlan = async (req: any, res: Response) => {
 	try {
 		const result = await buildFeature(req, req.body?.plan, { source: 'wizard' });
+		return res.status(201).json(result);
+	} catch (e) {
+		return answer(res, e);
+	}
+};
+
+/** GET /builder/starters — the starter templates a new project can begin with (WO-35). */
+export const listStarters = async (_req: any, res: Response) => res.status(200).json({ doc: starterList() });
+
+/** POST /builder/starters/:key — builds one, all or nothing, like any feature. */
+export const buildStarter = async (req: any, res: Response) => {
+	try {
+		const starter = STARTERS.find(s => s.key === req.params.key);
+		if (!starter) return res.status(404).json({ message: 'No such template' });
+		const result = await buildFeature(req, planFromAi(starter.plan), { source: 'wizard' });
 		return res.status(201).json(result);
 	} catch (e) {
 		return answer(res, e);

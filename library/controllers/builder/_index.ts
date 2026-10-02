@@ -37,6 +37,8 @@ import {
 	getFeatureCatalog,
 	listApiKeys,
 	listFeatures,
+	listStarters,
+	buildStarter,
 	revokeApiKey,
 } from './features.controller.js';
 
@@ -99,6 +101,9 @@ export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
 	router.post('/features/plan', ...edit, checkFeaturePlan);
 	router.post('/features/ai', ...edit, ...platformOnly, aiPlanFeature);
 	router.post('/features/build', ...edit, buildFeaturePlan);
+	// Starter templates for a new project's Get started page (WO-35).
+	router.get('/starters', ...view, listStarters);
+	router.post('/starters/:key', ...edit, buildStarter);
 
 	// Keys AI clients connect to /mcp with (library/controllers/mcp).
 	router.get('/api-keys', ...keys, listApiKeys);

@@ -26,8 +26,8 @@ changed. Never leave work done but untracked here.
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
-admin `main` `007fa59`). **Open (user's requests, 2026-10-02):** WO-35 new-project wizard, WO-36
-history, WO-37 notifications (WO-34 and the invitation bug are done, uncommitted). See the Status table.
+admin `main` `007fa59`). **Open:** nothing numbered. WO-33/34 pushed (backend `c08dce26`, admin `742eb55`);
+WO-35–37 done, uncommitted — the user is testing them. Next candidates: Known gaps, Follow-ups. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -101,9 +101,9 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 32 | Public API page: API reference + request tester | admin | M | done |
 | 33 | **A website built by an AI through the MCP, managed from the panel** | both | L | done |
 | 34 | **Website workspace: site setup page (tags, pixels, head code, headers, redirects, robots/sitemap, domains), website overview on the home dashboard** + bugs (kit `page` field vs paging, Home → another project's dashboard) | both | L | done |
-| 35 | **New-project wizard: app → build your first model; website → name, logo, favicon** | admin | M | next |
-| 36 | **History in every project** (who changed what, per project) | both | M | next |
-| 37 | **Notifications for every tenant user** (bell, per project and organization) | both | M | next |
+| 35 | **New-project wizard: app → build your first model; website → name, logo, favicon** | both | M | done |
+| 36 | **History in every project** (who changed what, per project) | both | M | done |
+| 37 | **Notifications for every tenant user** (bell, per project and organization) | both | M | done |
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
@@ -561,18 +561,39 @@ configuration a website must have."
   the website dashboard, guide sections in /user-docs/websites. Smoke: 13
   checks in website-mcp.mjs.
 
-## WO-35 — New-project wizard (M) — next
+## WO-35 — New-project wizard (M) — done
 After creating a project: an app gets "build your first model" (the model
 wizard or Connect AI); a website gets name, logo, favicon (and colours) into
 its Site settings, then its first page. Skippable; shown once.
+**Built:** admin `app/get-started` (app: starter templates + model wizard +
+Connect AI; website: brand → home page with hero block and SEO → domain and
+GA4 → done); ProjectsBoard opens a new project there; empty dashboard links
+it. Backend `library/functions/starterTemplates.function.ts` (4 starters,
+AI-plan shape) + `GET/POST /builder/starters[/:key]`. Smoke in models.mjs.
 
-## WO-36 — History in every project (M) — next
+## WO-36 — History in every project (M) — done
 Who created, changed, archived or deleted what, in each project (the admin
 panel's history, scoped); a History page per project and on each record.
+**Built:** `routes-tenant/history.router.ts` at /p/:id/history (list with
+model/action/user/date/search filters, /facets, /g/document/:id), view-history
+(Records: View). recordHistory stores the plain model name (displayModelName);
+older entries are cleaned when read. `recordProjectEvent` logs model
+create/change/delete, feature/template builds (features.service), public API
+switches, site setup saves. Admin `app/activity` (the super admin owns /history),
+sidebar Activity → History. Smoke: activity.mjs.
 
-## WO-37 — Notifications for tenant users (M) — next
+## WO-37 — Notifications for tenant users (M) — done
 A bell for every user: invitations, records shared with them (D19 access),
 mentions/assignments, project events; per project and organization; read state.
+**Built:** `TenantNotification` (one person's list across organizations, a
+year's TTL), `tenantNotify.function.ts` (notifyTenant, projectAudience,
+projectHrefFor, later), `/tenant/api/notifications` (same shape as the admin's:
+list/count/read/read-all/delete). Sent for: invitation to an existing
+account, invitee joined (to the inviter), role/projects changed, record shared
+(the D19 access plugin now runs in projects), a record created through the
+public API and a customer sign-up (to everyone who can see it). Admin: the
+bell and /notifications in the tenant panel ('notifications' left
+ADMIN_ONLY_PAGES; ACCOUNT_PATH has it). Not yet: mentions/assignments.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

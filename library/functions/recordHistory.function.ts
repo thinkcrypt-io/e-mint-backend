@@ -1,4 +1,6 @@
 import History from '../models/history/model.js';
+import { displayModelName } from './routeRegistry.function.js';
+import { currentScope } from './tenantScope.function.js';
 import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 
 /**
@@ -169,6 +171,8 @@ export const recordHistory = ({ req, action, model, doc, changes = [] }: RecordA
 		if (action === 'update' && changes.length === 0) return;
 
 		const userName = req?.user?.name || req?.user?.username || 'Someone';
+		// Inside a project the model is `T<projectId>_Client`: kept and shown as `Client` (WO-36).
+		model = displayModelName(model);
 		const text = buildHistoryText({ userName, action, model, doc, changes });
 
 		History.create({
@@ -184,6 +188,41 @@ export const recordHistory = ({ req, action, model, doc, changes = [] }: RecordA
 			changes,
 			shop: req?.shop,
 		}).catch((e: any) => console.error('History write failed:', e?.message));
+	} catch (e: any) {
+		console.error('History write failed:', e?.message);
+	}
+};
+
+/**
+ * A project-level event for its History (WO-36): a model built or deleted,
+ * the public API or the site setup changed. `text` follows the person's name
+ * ("built the model Clients"). Only inside a tenant project; never throws.
+ */
+export const recordProjectEvent = ({
+	req,
+	action = 'update',
+	model,
+	modelPath = '',
+	document,
+	name = '',
+	text,
+	changes = [],
+}: {
+	req: any;
+	action?: HistoryAction;
+	model: string;
+	modelPath?: string;
+	document: any;
+	name?: string;
+	text: string;
+	changes?: HistoryChange[];
+}): void => {
+	try {
+		if (!currentScope()?.project || !document) return;
+		const userName = req?.user?.name || 'Someone';
+		History.create({ user: req?.user?._id, userName, action, model, modelPath, document, documentName: name, text: `${userName} ${text}`, changes }).catch((e: any) =>
+			console.error('History write failed:', e?.message)
+		);
 	} catch (e: any) {
 		console.error('History write failed:', e?.message);
 	}

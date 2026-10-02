@@ -92,5 +92,28 @@ r = await call('DELETE', `/tenant/api/projects/${ops}?force=1`, null, s.other);
 ok('owner force-deletes it', r.status === 200, r.body?.message);
 r = await call('GET', P(ops, '/invoices'), null, s.other);
 ok('…its routes are gone', r.status === 404);
+
+// WO-35: starter templates for a new project's Get started page
+{
+	const np = await call('POST', '/tenant/api/projects', { name: 'Starter test', type: 'app' }, s.pat);
+	const pid = np.body?._id;
+	let x = await call('GET', P(pid, '/builder/starters'), null, s.pat);
+	ok('starters listed', x.status === 200 && x.body?.doc?.length === 4 && x.body.doc.every(t => t.key && t.title && t.models?.length && !t.plan), JSON.stringify(x.body?.doc?.map(t => t.key)));
+	x = await call('POST', P(pid, '/builder/starters/clients-invoices'), null, s.pat);
+	ok('build a starter: clients & invoices', x.status === 201 && x.body?.created?.map(c => c.route).join() === 'clients,invoices', `${x.status} ${x.body?.message || ''} ${JSON.stringify(x.body?.created?.map(c => c.route))}`);
+	const c = await call('POST', P(pid, '/clients'), { name: 'Acme' }, s.pat);
+	const cid = c.body?._id || c.body?.doc?._id;
+	x = await call('POST', P(pid, '/invoices'), { client: cid, items: [{ item: 'Design', quantity: 2, rate: 50 }, { item: 'Hosting', quantity: 1, rate: 20 }], paid: 30 }, s.pat);
+	const inv = x.body?.doc || x.body;
+	ok('the template works: totals and a code', x.status === 201 && inv?.total === 120 && inv?.due === 90 && /^INV-/.test(inv?.code || ''), JSON.stringify({ s: x.status, total: inv?.total, due: inv?.due, code: inv?.code, m: x.body?.message }));
+	x = await call('POST', P(pid, '/builder/starters/clients-invoices'), null, s.pat);
+	ok('the same starter again is refused (names taken), nothing half-built', x.status === 400, `${x.status} ${x.body?.message || ''}`);
+	x = await call('POST', P(pid, '/builder/starters/nope'), null, s.pat);
+	ok('an unknown starter is 404', x.status === 404);
+	for (const key of ['projects-tasks', 'leads', 'products']) {
+		x = await call('POST', P(pid, `/builder/starters/${key}`), null, s.pat);
+		ok(`starter ${key} builds`, x.status === 201, `${x.status} ${x.body?.message || ''} ${JSON.stringify(x.body?.problems || '')}`);
+	}
+}
 console.log('ops', ops);
 done();

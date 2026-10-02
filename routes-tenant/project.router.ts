@@ -24,6 +24,7 @@ import AdminFile from '../library/models/admin-file/model.js';
 import ProjectCustomer from '../library/models/tenancy/projectCustomer.model.js';
 import analyticsRouter from './analytics.router.js';
 import siteRouter from './site.router.js';
+import historyRouter from './history.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -156,6 +157,8 @@ router.use(
 router.use('/analytics', analyticsRouter);
 // …and its setup: tags, code, SEO, redirects, headers, domains (WO-34).
 router.use('/', siteRouter);
+// What happened in the project: records, models, the public API, the site setup (WO-36).
+router.use('/history', historyRouter);
 
 // Who a restricted model's records can be shared with (per-record access, D19):
 // the organization's members who can open this project. Shaped like a list

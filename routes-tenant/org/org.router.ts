@@ -22,6 +22,7 @@ import {
 	tenantPermissions,
 } from '../../library/functions/tenantPermissions.function.js';
 import { rateLimit } from '../../library/functions/rateLimit.function.js';
+import { later, notifyTenant } from '../../library/functions/tenantNotify.function.js';
 import {
 	TenancyError,
 	createOrganization,
@@ -228,8 +229,28 @@ inOrg.put(
 			member.role = (await loadRole(req, body.role))._id;
 		}
 		const access = await checkAccess(req, body);
+		const roleChanged = member.isModified('role');
 		if (access) Object.assign(member, access);
+		const accessChanged = member.isModified('allProjects') || member.isModified('projects');
 		await member.save();
+		// Tell them (WO-37): their new role, or the projects they can now open.
+		if (roleChanged || accessChanged)
+			later(async () => {
+				const role: any = roleChanged ? await OrganizationRole.findById(member.role, { name: 1 }).lean() : null;
+				const names = member.allProjects === false ? (await TenantProject.find({ _id: { $in: member.projects || [] } }, { name: 1 }).lean()).map((x: any) => x.name) : [];
+				await notifyTenant([
+					{
+						recipient: member.user?._id || member.user,
+						organization: req.organization._id,
+						actor: req.user._id,
+						actorName: req.user.name,
+						type: 'member-changed',
+						title: role ? `You’re now ${role.name} in ${req.organization.name}` : `Your projects in ${req.organization.name} changed`,
+						message: accessChanged ? (member.allProjects === false ? `You can open: ${names.join(', ') || 'no projects yet'}` : 'You can open every project') : undefined,
+						href: '/projects',
+					},
+				]);
+			});
 		return memberView(await OrganizationMember.findById(member._id).populate('user', 'name email image twoFactorEnabled').populate('role', 'name system').lean());
 	})
 );
@@ -443,6 +464,22 @@ inOrg.post(
 		invitation.projects = access.projects;
 		invitation.invitedBy = req.user._id;
 		await sendInvite(req, invitation);
+		// Someone who already has an account also sees it in the app (WO-37); accepting is on Home.
+		if (existing)
+			later(() =>
+				notifyTenant([
+					{
+						recipient: existing._id,
+						organization: req.organization._id,
+						actor: req.user._id,
+						actorName: req.user.name,
+						type: 'invitation',
+						title: `${req.user.name || 'Someone'} invited you to join ${req.organization.name}`,
+						message: `As ${role.name}. Accept it on your Home page.`,
+						href: '/dashboard',
+					},
+				])
+			);
 		return invitationView(await OrganizationInvitation.findById(invitation._id).populate('role', 'name').populate('invitedBy', 'name').lean());
 	})
 );
@@ -507,6 +544,22 @@ const joinFromInvitation = async (invitation: any, user: any) => {
 	invitation.acceptedBy = user._id;
 	await invitation.save();
 	await TenantUser.updateOne({ _id: user._id }, { $set: { lastOrganization: invitation.organization._id, emailVerified: true } });
+	// Whoever invited them hears they joined (WO-37).
+	if (invitation.invitedBy)
+		later(() =>
+			notifyTenant([
+				{
+					recipient: invitation.invitedBy,
+					organization: invitation.organization._id,
+					actor: user._id,
+					actorName: user.name,
+					type: 'member-joined',
+					title: `${user.name || user.email} joined ${invitation.organization.name}`,
+					message: `As ${invitation.role?.name || 'a member'}.`,
+					href: '/org/members',
+				},
+			])
+		);
 };
 
 /** An invitation's projects by name, for the person invited. */

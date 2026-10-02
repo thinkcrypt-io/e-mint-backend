@@ -22,6 +22,21 @@ import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenan
 import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { robotsTxt, siteConfigOf, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
+import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
+
+/**
+ * Tells the project's people who can see `route` that something came in from
+ * the site (WO-37) — after the response, never failing it.
+ */
+const tellTeam = (req: any, { route, permission, title, message, path, record }: { route: string; permission: string; title: string; message?: string; path: string; record?: any }) =>
+	later(async () => {
+		const project = req.project;
+		const people = await projectAudience({ organization: project.organization, project: project._id, permission });
+		const href = await projectHrefFor(project, path);
+		await notifyTenant(
+			people.map(recipient => ({ recipient, organization: project.organization, project: project._id, type: 'site-record', title, message, href, route, record }))
+		);
+	});
 
 /**
  * /public/api/:project — a tenant project's public API (docs/multi-tenancy
@@ -145,6 +160,14 @@ router.post(
 		if (await ProjectCustomer.exists({ email: body.email }))
 			throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
 		const customer: any = await ProjectCustomer.create({ ...body, lastLoginAt: new Date() });
+		tellTeam(req, {
+			route: 'customers',
+			permission: 'view-customers',
+			title: `New customer on ${req.project.name}: ${customer.name}`,
+			message: customer.email,
+			path: `/customers/${customer._id}`,
+			record: customer._id,
+		});
 		return { token: customer.generateToken(), customer: publicCustomer(customer) };
 	})
 );
@@ -525,6 +548,15 @@ router.post(
 			throw invalid(e);
 		}
 		res.status(201);
+		const label = doc.get?.(displayFieldOf(ctx.def));
+		tellTeam(req, {
+			route: ctx.def.route,
+			permission: `view-${ctx.def.route}`,
+			title: `New ${String(ctx.def.name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()} from ${req.project.name}`,
+			message: typeof label === 'string' && label.trim() ? label.trim().slice(0, 140) : undefined,
+			path: `/${ctx.def.route}/${doc._id}`,
+			record: doc._id,
+		});
 		return shape(doc.toObject(), ctx.def);
 	})
 );

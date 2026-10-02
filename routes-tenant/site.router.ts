@@ -6,6 +6,7 @@ import { compiledModel, syncDynamicModels } from '../library/functions/dynamicMo
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { mergeSiteConfig, setupChecklist, siteConfigOf, siteOrigin } from '../library/functions/siteConfig.function.js';
+import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 
 /**
  * /tenant/api/p/:projectId — a website project's setup (docs/multi-tenancy WO-34).
@@ -62,6 +63,9 @@ router.put(
 		}
 		if (!Object.keys($set).length) throw new TenancyError(400, 'Nothing to change');
 		const project = await TenantProject.findOneAndUpdate({ _id: req.project._id }, { $set }, { new: true }).lean();
+		const SECTION: Record<string, string> = { tracking: 'tracking', code: 'code', seo: 'SEO & indexing', redirects: 'redirects', headers: 'headers' };
+		const what = [...Object.keys(patch).map(k => SECTION[k]).filter(Boolean), ...(domains !== undefined ? ['domains'] : [])];
+		recordProjectEvent({ req, model: 'Site setup', modelPath: 'site-setup', document: req.project._id, name: 'Site setup', text: `changed the site setup (${what.join(', ')})` });
 		return view(project);
 	})
 );

@@ -45,11 +45,13 @@ export const tenantNav = (
 				...(can('manage-api-keys') ? [{ title: 'Connect AI', href: '/model-builder/connect', icon: 'plug' }] : []),
 		  ])
 		: [];
+	// What happened in the project, for everyone who reads its records (WO-36).
+	const activity = inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : [];
 	const org = section('Organization', 'building-2', [
 		{ title: 'Projects', href: '/projects', icon: 'folder-kanban' },
 		{ title: 'Members', href: '/org/members', icon: 'users' },
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
 		...(can('manage-organization') ? [{ title: 'Settings', href: '/org/settings', icon: 'settings' }] : []),
 	]);
-	return [...site, ...files, ...audience, ...build, ...org];
+	return [...site, ...files, ...audience, ...activity, ...build, ...org];
 };

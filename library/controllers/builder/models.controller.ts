@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { recordProjectEvent } from '../../functions/recordHistory.function.js';
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ModelDefinition, RouteConfig, RouteSettings, RouteVersion } from '../../models/builder/_index.js';
@@ -818,7 +819,10 @@ export const createModelCore = async (
 /** POST /builder/models */
 export const createModel = async (req: any, res: Response): Promise<Response> => {
 	try {
-		return res.status(201).json(await createModelCore(req, req.body));
+		const created: any = await createModelCore(req, req.body);
+		const def = created?.doc;
+		recordProjectEvent({ req, action: 'create', model: 'Model', modelPath: 'model-builder', document: def?._id, name: def?.title, text: `built the model ${def?.title || def?.name}` });
+		return res.status(201).json(created);
 	} catch (e: any) {
 		return answer(res, e);
 	}
@@ -925,6 +929,8 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 export const updateModel = async (req: any, res: Response): Promise<Response> => {
 	try {
 		const { before, ...result } = await updateModelCore(req, req.params.id, req.body);
+		const def: any = (result as any)?.doc;
+		recordProjectEvent({ req, model: 'Model', modelPath: 'model-builder', document: req.params.id, name: def?.title, text: `changed the model ${def?.title || def?.name || ''}`.trim() });
 		return res.status(200).json(result);
 	} catch (e: any) {
 		return answer(res, e);
@@ -970,7 +976,19 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 
 export const deleteModel = async (req: any, res: Response): Promise<Response> => {
 	try {
-		return res.status(200).json(await deleteModelCore(req, req.params.id, { dropData: req.query.dropData === 'true' }));
+		const def: any = mongoose.isValidObjectId(req.params.id) ? await ModelDefinition.findById(req.params.id, { title: 1, name: 1 }).lean() : null;
+		const dropData = req.query.dropData === 'true';
+		const result = await deleteModelCore(req, req.params.id, { dropData });
+		recordProjectEvent({
+			req,
+			action: 'delete',
+			model: 'Model',
+			modelPath: 'model-builder',
+			document: req.params.id,
+			name: def?.title,
+			text: `deleted the model ${def?.title || def?.name || ''}${dropData ? ' and its records' : ''}`,
+		});
+		return res.status(200).json(result);
 	} catch (e: any) {
 		return answer(res, e);
 	}
@@ -995,6 +1013,14 @@ export const updatePublicApi = async (req: any, res: Response): Promise<Response
 		def.version = (def.version || 1) + 1;
 		def.updatedBy = req.user?._id;
 		await def.save();
+		recordProjectEvent({
+			req,
+			model: 'Public API',
+			modelPath: 'public-api',
+			document: def._id,
+			name: def.title,
+			text: value.enabled ? `turned on the public API of ${def.title} (${value.actions.join(', ')})` : `turned off the public API of ${def.title}`,
+		});
 		await syncDynamicModels({ app: req.app, force: true });
 		return res.status(200).json({ publicApi: def.publicApi });
 	} catch (e: any) {
