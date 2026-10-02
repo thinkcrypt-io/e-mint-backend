@@ -22,7 +22,7 @@ import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
 import { tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
-import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject, uniqueSlug } from '../../library/functions/tenancy.function.js';
+import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject, PANEL_PAGES, uniqueSlug } from '../../library/functions/tenancy.function.js';
 import { projectHooks } from '../../library/functions/projectHooks.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import '../../library/functions/websiteKit.function.js';
@@ -110,7 +110,8 @@ router.post(
 		if (active >= 100) throw new TenancyError(400, 'This organization has 100 projects — archive one first.');
 		const org: any = await Organization.findById(req.organization._id, { slug: 1 }).lean();
 		const slug = await uniqueSlug(body.name, s => TenantProject.exists({ organization: req.organization._id, slug: s }));
-		const publicSlug = await uniqueSlug(`${org.slug}-${slug}`, s => TenantProject.exists({ publicSlug: s }));
+		// The tenant panel's addresses start with it (/<publicSlug>/<page>): never one of the panel's own pages.
+		const publicSlug = await uniqueSlug(`${org.slug}-${slug}`, async s => PANEL_PAGES.has(s) || TenantProject.exists({ publicSlug: s }));
 		const project: any = await TenantProject.create({
 			...body,
 			slug,

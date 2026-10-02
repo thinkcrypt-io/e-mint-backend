@@ -656,3 +656,30 @@ Decisions D14–D17 (README).
   to name models plainly and never prefix or number them to dodge a clash.
 - Smoke suite all green (after a backend restart — repeated runs hit the
   sign-up rate limit, 429).
+
+## 2026-10-02 — Project addresses: /<project>/<page> (D18)
+- **Admin**: `src/proxy.ts` (Next 16 proxy) — in the tenant build, a first
+  segment that isn't one of the app's pages is a project (publicSlug):
+  `/acme-store` → /dashboard, `/acme-store/clients` → /t/clients,
+  `/acme-store/clients/<id>` → /view/clients/<id>, `/acme-store/<project page>…`
+  → that page (rewrites; the address stays). The page list comes from
+  `src/app`'s folders at build time (next.config.mjs → NEXT_PUBLIC_APP_PAGES).
+  A project page with no project in its address redirects into the
+  `mint_project` cookie's project (the tab in front sets it), so hard-coded
+  links like `/dashboard-builder` still land in the right project.
+- panel.ts: `getProjectSlug()` (from the address; replaces the localStorage
+  project), `projectHref()` / `projectPagePath()`, `rememberProject()`;
+  `apiBase` calls `/p/<publicSlug>`; `pagePath`, sidebar/search links and
+  record links (`/view/…`) go through `projectHref`. `openProject(slug)` opens
+  `/<slug>`; leaving, switching organization and signing out clear the cookie.
+- **Backend**: `/tenant/api/p/:project` accepts the publicSlug or the id;
+  new publicSlugs skip the panel's page names (`PANEL_PAGES`); tenant MCP page
+  links are `/<publicSlug>/<route>`; `images`, `public-api`, `t` reserved as
+  model routes.
+- Verified in a headless browser (local test account, projects Shop and
+  Blog): opening Shop → `/url-co-shop`; sidebar links all prefixed; the
+  hard-coded `/dashboard-builder` link → `/url-co-shop/dashboard-builder`;
+  `/url-co-shop/clients` lists Shop's record; `/url-co-shop/clients/<id>` shows
+  it; a second tab at `/url-co-blog` is in Blog while the first, reloaded,
+  stays in Shop; an unknown `/nope-nothing` → /projects. API: the slug and the
+  id both work, Blog can't see Shop's model (404).

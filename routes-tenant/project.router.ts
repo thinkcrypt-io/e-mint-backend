@@ -50,11 +50,13 @@ const router = express.Router({ mergeParams: true });
 
 router.use(tenantProtect);
 
-// The project, in this organization, active.
+// The project, in this organization, active — by id, or by its publicSlug
+// (the tenant panel's addresses are /<publicSlug>/<page>, D18).
 router.use(async (req: any, res: any, next: any) => {
 	try {
-		const id = req.params.projectId;
-		const project: any = isId(id) ? await TenantProject.findOne({ _id: id, organization: req.organization._id }).lean() : null;
+		const id = String(req.params.projectId || '');
+		const which = isId(id) ? { _id: id } : /^[a-z0-9][a-z0-9-]*$/.test(id) ? { publicSlug: id } : null;
+		const project: any = which ? await TenantProject.findOne({ ...which, organization: req.organization._id }).lean() : null;
 		if (!project || !canOpenProject(req.member, req.permissions, project._id)) return res.status(404).json({ message: 'Project not found' });
 		if (project.isActive === false && req.method !== 'GET')
 			return res.status(400).json({ message: 'This project is archived — restore it to make changes.' });

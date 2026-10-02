@@ -35,7 +35,7 @@ const plan = {
 res = await tool(key, 'plan_feature', { feature: plan });
 ok('plan_feature ok (links to the project’s Client)', res && !res.isError, res?.content?.[0]?.text?.slice(-160));
 res = await tool(key, 'build_feature', { feature: plan });
-ok('build_feature builds it in the project', res && !res.isError && /\/t\/tickets/.test(res.content?.[0]?.text || ''), res?.content?.[0]?.text?.slice(0, 200));
+ok('build_feature builds it in the project (link /<project>/tickets)', res && !res.isError && /:\/\/[^/\s]+\/[a-z0-9]+(-[a-z0-9]+)+\/tickets\b/.test(res.content?.[0]?.text || ''), res?.content?.[0]?.text?.slice(0, 200));
 r = await call('POST', P(s.crm, '/tickets'), { subject: 'Printer on fire', status: 'open' }, s.pat);
 ok('the new model takes records', r.status === 201, r.status);
 res = await tool(key, 'query_records', { route: 'tickets' });

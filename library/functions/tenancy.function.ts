@@ -47,6 +47,26 @@ export const slugify = (value: string) =>
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 40) || 'org';
 
+/**
+ * The admin app's top-level pages (admin/src/app). The tenant panel's
+ * addresses inside a project start with its publicSlug (/<publicSlug>/<page>,
+ * D18), so a publicSlug is never one of these. Add a new page folder here.
+ */
+export const PANEL_PAGES = new Set([
+	'adminroles', 'admins', 'analytics', 'auth', 'authors', 'bills', 'blogs', 'brands', 'builder', 'categories',
+	'clickevents', 'clients', 'collections', 'components', 'contents', 'customer-ledger', 'customers', 'damages',
+	'dashboard-builder', 'dashboard', 'deliveries', 'doc', 'docs', 'documents', 'emails', 'employees', 'expenses',
+	'features', 'fgroups', 'groups', 'heroku-doc', 'herokus', 'images', 'invoices-old', 'invoices', 'issues',
+	'jobapplications', 'jobposts', 'leads', 'leaves', 'maintenances', 'meetings', 'model-builder', 'modelattributes',
+	'not-found', 'notifications', 'npmlibraries', 'offers', 'orders', 'org', 'packages', 'passkey', 'payments',
+	'permissions', 'plannedfeatures', 'plannedmodels', 'plannedpages', 'plannedprojects', 'portfolios', 'print',
+	'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
+	'resources', 'roles', 'sellers', 'servicecat', 'services', 'sessions', 'settings', 'shops', 'sidebar-builder',
+	'sidebarcategories', 'sidebaritems', 'solutions', 'subscriptions', 'suppliers', 'support-tickets', 'support',
+	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'terms', 'test', 'themes', 'user-docs',
+	'user-feedback-success', 'user-feedback', 'users', 'vercel-doc', 'vercels', 'view', 'views', 'api',
+]);
+
 /** `base`, or `base-2`, `base-3`… — the first `exists` says is free. */
 export const uniqueSlug = async (base: string, exists: (slug: string) => Promise<any>) => {
 	const root = slugify(base);
