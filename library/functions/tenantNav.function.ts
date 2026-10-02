@@ -3,8 +3,8 @@ import { grants } from './tenantPermissions.function.js';
 
 /**
  * The tenant panel's fixed sidebar sections (docs/multi-tenancy WO-14/15),
- * appended after the project's own sections: building the project (for
- * roles with `build`) and the organization. Each entry only for the roles
+ * appended after the project's own sections: the media library, the
+ * project's audience, building it (for roles with `build`) and the organization. Each entry only for the roles
  * that can use it. Icons are Lucide names.
  */
 const section = (title: string, icon: string, items: Omit<SidebarItemType, 'path'>[]): SidebarItemType[] =>
@@ -27,13 +27,14 @@ export const tenantNav = (
 				...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 		  ])
 		: [];
+	// Everyone who works with records uses the media library, so it isn't kept under Build.
+	const files = inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : [];
 	const build = inProject && can('build')
 		? section('Build', 'hammer', [
 				{ title: 'Models', href: '/model-builder', icon: 'boxes' },
 				{ title: 'Pages', href: '/builder', icon: 'layout-template' },
 				{ title: 'Sidebar', href: '/sidebar-builder', icon: 'panel-left' },
 				{ title: 'Dashboard', href: '/dashboard-builder', icon: 'layout-dashboard' },
-				{ title: 'Media', href: '/images', icon: 'images' },
 				...(can('manage-api-keys') ? [{ title: 'Connect AI', href: '/model-builder/connect', icon: 'plug' }] : []),
 		  ])
 		: [];
@@ -43,5 +44,5 @@ export const tenantNav = (
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
 		...(can('manage-organization') ? [{ title: 'Settings', href: '/org/settings', icon: 'settings' }] : []),
 	]);
-	return [...audience, ...build, ...org];
+	return [...files, ...audience, ...build, ...org];
 };

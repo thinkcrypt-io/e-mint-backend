@@ -68,6 +68,7 @@ ok('admin code routes are not reachable', r.status === 404, r.status);
 // Sidebar
 r = await call('GET', P(s.crm, '/sidebar/crm/server'), null, s.pat);
 ok('project sidebar lists its models', r.status === 200 && JSON.stringify(r.body).includes('/invoices'), r.status);
+ok('sidebar: Files → Media library, not under Build', r.body?.some?.(i => i.sectionTitle === 'Files' && i.href === '/images') && r.body.filter(i => i.href === '/images').length === 1);
 r = await call('GET', P(s.crm, '/sidebar/crm/admin'), null, s.pat);
 ok("admin's built-in nav not served", r.status === 404);
 // Super admin unaffected

@@ -609,3 +609,22 @@ Decisions D14–D17 (README).
   (records first), Edit project (Media library). `tsc` clean in both repos.
 - No data migration: new fields default to today's behaviour (all projects,
   project media); old role keys are read as before and cleaned on save.
+
+## 2026-10-02 — Tenant panel: landing page, own token, Files section, forms in a drawer
+- **Landing page** (admin `a9c533a`, main): the tenant panel's `/` is a public
+  landing page (`src/app/_landing`) — sign up / sign in, or a Dashboard button
+  when signed in; the dashboard moved to `/dashboard`. `HOME` (panel.ts) is the
+  only home link/redirect; the sidebar's `'/'` goes through `homeHref`. The
+  super-admin panel's `/` is unchanged.
+- **Token key**: the tenant build always uses `MINT_TENANT_TOKEN`
+  (+ `MINT_TENANT_REFRESH_TOKEN`); `NEXT_PUBLIC_TOKEN_NAME` only sets the
+  admin's. `useAuth` treats the `'null'` left by signing out as signed out.
+- **Files section**: `tenantNav` shows *Files → Media library* (`/images`) to
+  anyone granted `view-image` (records:view or build), before Audience; Media
+  is no longer under Build. Smoke: `models.mjs` checks it.
+- **Forms**: `useModalLayout` always returns `drawer` in the tenant panel (no
+  self query); Settings hides *Form layout* there. Guides (account, records,
+  media, getting-started) updated.
+- Verified: smoke suite all green; headless browser — sign-up lands on
+  `/dashboard`, landing header flips Sign in/Sign up ↔ Dashboard, sidebar shows
+  Files → Media library and opens `/images`, tenant Settings has no Form layout.
