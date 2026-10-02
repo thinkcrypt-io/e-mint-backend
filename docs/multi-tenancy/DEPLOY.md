@@ -25,6 +25,8 @@ against production yet (all were verified on a scratch database).
    hand: `node scripts/migrateTenantIndexes.js [--apply]`.
 4. Super-admin pages: `npm run build && node scripts/seedTenancyAdmin.js`
    (permissions + the "Tenants" sidebar section).
+   **Done 2026-10-02** on the `e-mint` database (Atlas): the three permissions
+   upserted, "Tenants" sidebar section created. Safe to re-run.
 
 ## 2. Tenant panel (a second Vercel project from the `admin` repo)
 
