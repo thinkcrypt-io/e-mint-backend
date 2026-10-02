@@ -26,8 +26,8 @@ changed. Never leave work done but untracked here.
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
-admin `main` `007fa59`). **Open:** nothing numbered. WO-33/34 pushed (backend `c08dce26`, admin `742eb55`);
-WO-35–37 done, uncommitted — the user is testing them. Next candidates: Known gaps, Follow-ups. See the Status table.
+admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
+`main` `a3327d4`). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
