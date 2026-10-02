@@ -11,6 +11,9 @@ const schema = new Schema<any>(
 		email: { type: String, required: true, trim: true, lowercase: true },
 		name: { type: String, trim: true },
 		role: { type: Schema.Types.ObjectId, ref: 'OrganizationRole', required: true },
+		/** The project access the membership gets when it's accepted (WO-22). */
+		allProjects: { type: Boolean, default: true },
+		projects: { type: [{ type: Schema.Types.ObjectId, ref: 'TenantProject' }], default: undefined },
 		tokenHash: { type: String, required: true, unique: true, select: false },
 		invitedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 		expiresAt: { type: Date, required: true },

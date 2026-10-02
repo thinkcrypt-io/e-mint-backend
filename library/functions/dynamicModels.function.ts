@@ -490,8 +490,10 @@ export const buildSchema = (def: ModelDef) => {
 	}
 
 	// A public API's records can belong to the project customer who made them
-	// (owner-only). Not in the model's settings, so the panels' tables ignore it.
-	if (def.publicApi?.enabled) paths.customer = { type: Schema.Types.ObjectId, ref: 'ProjectCustomer', index: true };
+	// (owner-only). Not in the model's settings, so the panels' tables ignore it;
+	// underscored so it never collides with a field of the model's own (an
+	// order's `customer` link to the tenant's own Customers model).
+	if (def.publicApi?.enabled) paths._customer = { type: Schema.Types.ObjectId, ref: 'ProjectCustomer', index: true };
 
 	// Indexes are synced explicitly (syncIndexes) after a change, where a
 	// failure — duplicates under a new unique field — can be reported back.

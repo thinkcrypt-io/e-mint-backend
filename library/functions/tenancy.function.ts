@@ -101,6 +101,7 @@ export const publicUser = (u: any) => ({
 	_id: String(u._id),
 	name: u.name,
 	email: u.email,
+	emailVerified: !!u.emailVerified,
 	phone: u.phone || '',
 	image: u.image || '',
 	twoFactorEnabled: !!u.twoFactorEnabled,
@@ -144,7 +145,7 @@ export const selfPayload = async (req: any) => {
 		}));
 	const projects = req.organization
 		? (
-				await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false } })
+				await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false }, ...projectAccessFilter(req.member, req.permissions) })
 					.sort({ createdAt: 1 })
 					.lean()
 		  ).map(publicProject)
@@ -153,7 +154,7 @@ export const selfPayload = async (req: any) => {
 		...publicUser(req.user),
 		kind: 'tenant',
 		organization: publicOrganization(req.organization) || null,
-		role: req.role ? { _id: String(req.role._id), name: req.role.name, system: req.role.system || null, permissions: req.role.permissions || [] } : null,
+		role: req.role ? { _id: String(req.role._id), name: req.role.name, system: req.role.system || null, permissions: req.permissions || [] } : null,
 		permissions: req.permissions || [],
 		organizations,
 		projects,
@@ -170,8 +171,25 @@ export const publicProject = (p: any) => ({
 	icon: p.icon || '',
 	color: p.color || '',
 	domains: p.domains || [],
+	mediaScope: p.mediaScope || 'project',
 	isActive: p.isActive !== false,
 	createdAt: p.createdAt,
 });
 
 export const isId = (v: any) => mongoose.isValidObjectId(v);
+
+/* ------------------------------------------------------- project access */
+
+/**
+ * Whether a member opens every project of the organization (WO-22): Owner and
+ * Admin always do; anyone else unless their membership lists projects.
+ */
+export const opensAllProjects = (member: any, permissions: string[] = []) => permissions.includes('*') || member?.allProjects !== false;
+
+/** The projects a member can open, as a TenantProject filter to add (empty: all of them). */
+export const projectAccessFilter = (member: any, permissions: string[] = []): Record<string, any> =>
+	opensAllProjects(member, permissions) ? {} : { _id: { $in: member?.projects || [] } };
+
+/** Whether a member can open this project. */
+export const canOpenProject = (member: any, permissions: string[], projectId: any) =>
+	opensAllProjects(member, permissions) || (member?.projects || []).some((p: any) => String(p) === String(projectId));

@@ -7,6 +7,8 @@ import mongoose, { Schema } from 'mongoose';
  * names the project in the public API (`/public/api/<publicSlug>/…`).
  */
 export const PROJECT_TYPES = ['app', 'website'] as const;
+/** Whose media library a project uses (WO-23): its own, or the organization's shared one. */
+export const MEDIA_SCOPES = ['project', 'organization'] as const;
 
 const schema = new Schema<any>(
 	{
@@ -20,6 +22,7 @@ const schema = new Schema<any>(
 		color: { type: String, trim: true },
 		/** Website projects: the site's domains (analytics origin check, CORS). */
 		domains: { type: [String], default: undefined },
+		mediaScope: { type: String, enum: MEDIA_SCOPES, default: 'project' },
 		isActive: { type: Boolean, default: true },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 	},

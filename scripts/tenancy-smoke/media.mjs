@@ -34,5 +34,5 @@ ok("super admin's media doesn't show tenant folders", r.status === 200 && !JSON.
 r = await call('DELETE', '/admin/api/upload/anything', null);
 ok('admin S3 delete needs sign-in', r.status === 401, r.status);
 r = await call('GET', '/tenant/api/org/permissions', null, s.pat);
-ok('role permissions list project models', r.status === 200 && Array.isArray(r.body?.projects) && JSON.stringify(r.body).includes('view-invoices'), r.status);
+ok('role permissions: the standard keys, no per-model list (WO-21)', r.status === 200 && r.body?.organization?.[0]?.key === 'records:view' && !r.body?.projects, r.status);
 done();

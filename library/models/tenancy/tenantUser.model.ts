@@ -21,7 +21,15 @@ const schema = new Schema<any>(
 		image: { type: String, trim: true },
 		password: { type: String, minlength: 8, maxlength: 1024, select: false },
 		isActive: { type: Boolean, default: true },
+		/**
+		 * The account has proven it reads this email (WO-24): an emailed
+		 * invitation or reset link was used, or a verification code was typed.
+		 * Invitations show up in the app only for a verified email.
+		 */
 		emailVerified: { type: Boolean, default: false },
+		emailVerifyCode: { type: String, select: false },
+		emailVerifyExpires: { type: Date, select: false },
+		emailVerifyAttempts: { type: Number, select: false },
 
 		resetPasswordToken: { type: String, select: false },
 		resetPasswordExpires: { type: Date, select: false },

@@ -12,9 +12,12 @@ ok('update org', r.status === 200 && r.body?.name === 'Globex Corp' && r.body?.o
 r = await call('GET', '/tenant/api/org/roles', null, owner);
 ok('three system roles', r.status === 200 && r.body?.doc?.length === 3, r.body?.doc?.map(x => x.name).join(','));
 const roles = Object.fromEntries(r.body.doc.map(x => [x.system, x._id]));
-r = await call('POST', '/tenant/api/org/roles', { name: 'Editor', permissions: ['view-invoices', 'edit-invoices', 'build'] }, owner);
+r = await call('POST', '/tenant/api/org/roles', { name: 'Editor', permissions: ['records:view', 'records:edit', 'build'] }, owner);
 ok('custom role', r.status === 200 && r.body?.name === 'Editor', r.body?.message);
 const editorRole = r.body._id;
+r = await call('POST', '/tenant/api/org/roles', { name: 'Old style', permissions: ['data:*', 'view-invoices', 'build'] }, owner);
+ok('old keys normalized (WO-21)', r.status === 200 && JSON.stringify(r.body?.permissions) === JSON.stringify(['records:view', 'records:create', 'records:edit', 'records:delete', 'build']), JSON.stringify(r.body?.permissions));
+await call('DELETE', `/tenant/api/org/roles/${r.body?._id}`, null, owner);
 r = await call('POST', '/tenant/api/org/roles', { name: 'Bad', permissions: ['rm -rf'] }, owner);
 ok('unknown permission refused', r.status === 400, r.body?.message);
 r = await call('POST', '/tenant/api/org/invitations', { email: 'not-an-email', role: roles.member }, owner);

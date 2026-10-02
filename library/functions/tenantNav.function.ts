@@ -24,7 +24,7 @@ export const tenantNav = (
 		? section('Audience', 'users-round', [
 				...(projectType === 'website' && can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 				...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
-				...(can('build') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
+				...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 		  ])
 		: [];
 	const build = inProject && can('build')

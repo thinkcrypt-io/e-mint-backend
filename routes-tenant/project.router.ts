@@ -3,7 +3,7 @@ import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { tenantProtect } from '../middleware/tenant/protect.tenant.middleware.js';
 import { grants, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
-import { publicProject, isId } from '../library/functions/tenancy.function.js';
+import { canOpenProject, publicProject, isId } from '../library/functions/tenancy.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
 import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
@@ -32,7 +32,7 @@ import { customQuery } from '../middleware/index.js';
  * /tenant/api/p/:projectId — everything inside one project (docs/multi-tenancy WO-09).
  *
  * Signed in (tenantProtect), the project must belong to the token's
- * organization, and the rest of the request runs in the project's scope
+ * organization and be one the member can open (WO-22), and the rest of the request runs in the project's scope
  * (tenantScope): every builder collection query only sees this project's
  * documents and every insert carries its ids. The paths mirror the admin
  * API's, so the admin app's library components work unchanged:
@@ -41,7 +41,8 @@ import { customQuery } from '../middleware/index.js';
  *   /sidebar/:platform/:type      the project's sidebar, filtered by role
  *   /sidebarcategories, /sidebaritems   the sidebar builder's CRUD            build
  *   /dashboard                    the dashboard builder                       read; build to change
- *   /upload, /media, /files       uploads and the media manager over the project's own files
+ *   /upload, /media, /files       uploads and the media manager over the project's own files —
+ *                                 or the organization's shared library (mediaScope, WO-23)
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
  */
@@ -54,7 +55,7 @@ router.use(async (req: any, res: any, next: any) => {
 	try {
 		const id = req.params.projectId;
 		const project: any = isId(id) ? await TenantProject.findOne({ _id: id, organization: req.organization._id }).lean() : null;
-		if (!project) return res.status(404).json({ message: 'Project not found' });
+		if (!project || !canOpenProject(req.member, req.permissions, project._id)) return res.status(404).json({ message: 'Project not found' });
 		if (project.isActive === false && req.method !== 'GET')
 			return res.status(400).json({ message: 'This project is archived — restore it to make changes.' });
 		req.project = project;
@@ -109,11 +110,17 @@ router.use(
 // Files: the same routers as the super admin's, confined to the project's
 // files by the scope (File and Folder are tenantScoped). Creating File records
 // directly isn't needed — uploads make them.
-router.use('/upload', uploadRoute);
-router.use('/media', mediaRoute);
+// A project on the organization's shared library (mediaScope 'organization',
+// WO-23) works on the files with no project: `{ organization, project: null }`.
+const mediaLibrary = (req: any, _res: any, next: any) =>
+	req.project.mediaScope === 'organization' ? runInScope({ organization: req.organization._id }, () => next()) : next();
+
+router.use('/upload', mediaLibrary, uploadRoute);
+router.use('/media', mediaLibrary, mediaRoute);
 router.post('/files', (_req: any, res: any) => res.status(405).json({ message: 'Upload files instead' }));
 router.use(
 	'/files',
+	mediaLibrary,
 	defineRoutes({
 		Model: AdminFile,
 		settings: adminFileSettings,
@@ -137,7 +144,8 @@ router.use(
 		permission: 'customers',
 		route: 'customers',
 		frontendConfig: projectCustomerConfig,
-		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: () => tenantPermissions(['build']) },
+		// Customers are records like any other (WO-21): view-/edit-/delete-customers.
+		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: tenantPermissions },
 	})
 );
 

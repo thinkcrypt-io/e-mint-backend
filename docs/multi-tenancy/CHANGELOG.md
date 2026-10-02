@@ -529,3 +529,83 @@ re-run with the pane visible.
   tenant panel. Follow-ups (WORK_ORDERS): per-record access for tenant models,
   plans/limits, custom domains, OAuth for MCP, tenant data export, deleting an
   organization, tenant notifications.
+
+## 2026-10-02 — WO-20 User guides, and fixes found writing them
+- Admin: `/user-docs` (home + 16 guides, public, no login), built on the
+  shared docs pieces — `docs/_components/prose.tsx` (Section, P, C, A, List,
+  Note, Terms, CodeBlock, useHashScroll), `GuideCard.tsx` (moved out of the docs
+  home), DocsNavbar/DocsShell take a `nav`, GuideHeader an `icon`.
+  `panel.ts docsPath` maps /docs links to user guides in the tenant panel; used
+  by every shared screen's guide link (builder, model builder, sidebar and
+  dashboard builders, media, settings/2FA, login 2FA step, theme modal, bulk
+  upload, terms, site shell). DocsShell redirects /docs pages to their user
+  guide in the tenant panel (before AuthWrapper); PanelGuard does too and
+  skips the account lookup on /user-docs. `/docs/tenancy` removed; the admin
+  docs list the user guides as a card.
+- Admin, tenant panel: the model builder's Access panel is hidden (the
+  backend already refuses per-record access in projects, D12); the route
+  builder's "Source for every route" panel and per-route Source panel are
+  hidden (they answer 403 to tenants), the tab reads "Versions".
+- Backend fix: a public model's owner path was `customer`, which replaced a
+  tenant field of the same name (an order's `customer` link to their own
+  Customers model) whenever the public API was on. Now `_customer`
+  (`dynamicModels.function.ts`, `routes-public/public.router.ts`).
+  `public.mjs` gains a model field named `customer` and checks it survives.
+- Verified: smoke suite `run-all.sh` green on a fresh scratch DB (11 scripts;
+  org-2 by hand as before); `tsc --noEmit` clean in admin; in the browser, the
+  tenant panel's /user-docs pages render signed out, `/docs/builder#mcp-keys`
+  → `/user-docs/connect-ai#mcp-keys`, `/docs/builder#table-upload` →
+  `/user-docs/pages#table-upload`, `/docs/two-factor#passkeys` →
+  `/user-docs/account#passkeys`; the admin panel's /docs unchanged. A script
+  check: every in-app guide anchor and every guide-card topic exists in its
+  user guide (only `all-sessions`, from the admin-only Sessions page, has none).
+
+## 2026-10-02 — WO-21–24 Standard roles, project access, media library, several organizations
+Decisions D14–D17 (README).
+- **WO-21** `tenantPermissions.function.ts`: `ORG_PERMISSIONS` (with `group`)
+  led by `records:view|create|edit|delete`; `normalizePermissions` (old
+  `data:*`/`data:view` → record keys, per-model keys dropped); `grants` maps
+  `view-|create-|edit-|delete-<route>` onto them and `build` onto media
+  (`*-image`). Member = four record keys + `create-projects`. Applied in
+  tenantProtect (`req.permissions` normalized), `selfPayload`, the MCP key
+  check; roles API accepts old keys and saves them normalized,
+  `/org/permissions` returns the grouped list only. Customers follow the record
+  keys (were `build`); tenantNav shows Customers on `view-customers`.
+- **WO-22** OrganizationMember/OrganizationInvitation `allProjects` +
+  `projects[]`; `opensAllProjects`/`projectAccessFilter`/`canOpenProject`
+  (tenancy.function). Enforced in projects list/get/put/delete, `/p/:projectId`,
+  `auth/self`, tenant MCP keys. New project → added to a limited creator's list;
+  deleted project → pulled from members and invitations. `PUT /org/members/:id
+  { role?, allProjects, projects }`, invitations take and carry the same.
+- **WO-23** `TenantProject.mediaScope` (`project` | `organization`), set on
+  create/edit, in `publicProject`; project router `mediaLibrary` runs
+  `/upload`, `/media`, `/files` in `{organization}` when shared.
+- **WO-24** TenantUser `emailVerified` + hashed 6-digit `emailVerifyCode`
+  (10 min, 5 tries); `POST /auth/verify-email/send`, `POST /auth/verify-email`;
+  reset-password by email and any invitation join set it.
+  `/tenant/api/invitations/for-me` (GET, `:id/accept` → token in that org,
+  DELETE = decline) — verified emails only (`email_unverified` 403).
+  `joinFromInvitation` shared by every path; the emailed link joins in one
+  click for a signed-in invitee (`signedInTenantUser`, protect middleware).
+- Admin: Roles editor = Records (four switches) / Projects / Organization, role
+  summaries; `tenant/ProjectAccessPicker` in the invite dialog and a member's
+  "Projects for …" dialog (row shows "All projects" / "1 project: Shop");
+  project dialog "Media library" segment; `tenant/Workspaces` on Projects
+  ("Invitations for you" with verify-by-code, "Your organizations" with
+  Switch); accept page one-click for the signed-in invitee and shows the
+  projects; media root named after its library (`useMediaRoot`); sidebar
+  builder: "Only people who can view records" (no per-page permission picker
+  in projects). User guides updated (organization: project access, when
+  you're invited, roles; projects: media library; records, models, media,
+  sidebar, analytics, connect AI, FAQ, getting started).
+- Verified: new `scripts/tenancy-smoke/access.mjs` 35/35 (in run-all.sh);
+  full suite green incl. org-1 (old keys normalized) and media (grouped
+  permissions); org-2 by hand 28/28 against the new join code; by hand from
+  the dev mail log: a real verification code verifies, the emailed link joins
+  in one click signed in and still needs the password signed out. Browser
+  (headless, agent-browser, the pane being hidden): Projects for a
+  View-only member limited to Shop (only Shop, both organizations listed),
+  Members (access lines), Invite (All projects / Only these), New role
+  (records first), Edit project (Media library). `tsc` clean in both repos.
+- No data migration: new fields default to today's behaviour (all projects,
+  project media); old role keys are read as before and cleaned on save.

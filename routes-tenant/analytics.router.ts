@@ -13,7 +13,7 @@ import { tenantPermissions } from '../library/functions/tenantPermissions.functi
  *   GET /top?dim=…&from&to&limit  top paths | referrers | devices | browsers | os | countries | clicks | events
  *
  * `from`/`to` are dates (YYYY-MM-DD or ISO); the default is the last 30 days.
- * Reading needs view-analytics (or data:*, data:view, *).
+ * Reading needs view-analytics — records:view (WO-21) or *.
  */
 const router = express.Router();
 router.use(tenantPermissions(['view-analytics']));

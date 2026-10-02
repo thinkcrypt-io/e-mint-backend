@@ -1,7 +1,9 @@
 import express from 'express';
 import Joi from 'joi';
 import mongoose from 'mongoose';
-import TenantProject, { PROJECT_TYPES } from '../../library/models/tenancy/tenantProject.model.js';
+import TenantProject, { MEDIA_SCOPES, PROJECT_TYPES } from '../../library/models/tenancy/tenantProject.model.js';
+import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
+import OrganizationInvitation from '../../library/models/tenancy/organizationInvitation.model.js';
 import Organization from '../../library/models/tenancy/organization.model.js';
 import SidebarCategory from '../../library/models/sidebarcategories/model.js';
 import SidebarItem from '../../library/models/sidebaritems/model.js';
@@ -20,7 +22,7 @@ import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
 import { tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
-import { TenancyError, handle, isId, publicProject, uniqueSlug } from '../../library/functions/tenancy.function.js';
+import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject, uniqueSlug } from '../../library/functions/tenancy.function.js';
 import { projectHooks } from '../../library/functions/projectHooks.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import '../../library/functions/websiteKit.function.js';
@@ -28,11 +30,15 @@ import '../../library/functions/websiteKit.function.js';
 /**
  * /tenant/api/projects — the organization's projects (docs/multi-tenancy WO-07).
  *
- *   GET    /             every active project (archived with ?archived=1)
- *   POST   /             { name, type: 'app'|'website', description, icon, color, domains }   create-projects
+ *   GET    /             every active project the member can open (archived with ?archived=1)
+ *   POST   /             { name, type: 'app'|'website', description, icon, color, domains, mediaScope }   create-projects
  *   GET    /:id
- *   PUT    /:id          name, description, icon, color, domains, isActive                   manage-projects
+ *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive                   manage-projects
  *   DELETE /:id          refused while it has models; ?force=1 (owner) deletes everything in it
+ *
+ * Only the projects the member can open (WO-22): Owner and Admin open every
+ * one; others every one unless their membership lists projects. Another
+ * project answers 404, as if it didn't exist.
  *
  * A new project gets an empty "Pages" sidebar section and an empty dashboard,
  * written inside its own scope (tenantScope) — so they carry its ids.
@@ -60,13 +66,15 @@ const fields = {
 	icon: Joi.string().trim().max(40).allow(''),
 	color: Joi.string().trim().max(30).allow(''),
 	domains: Joi.array().items(domain).max(20),
+	/** Whose media library it uses (WO-23): its own, or the organization's shared one. */
+	mediaScope: Joi.string().valid(...MEDIA_SCOPES),
 };
 
-/** Projects in this organization only. */
+/** Projects in this organization, that this member can open. */
 const loadProject = async (req: any) => {
 	if (!isId(req.params.id)) throw new TenancyError(404, 'Project not found');
 	const project: any = await TenantProject.findOne({ _id: req.params.id, organization: req.organization._id });
-	if (!project) throw new TenancyError(404, 'Project not found');
+	if (!project || !canOpenProject(req.member, req.permissions, project._id)) throw new TenancyError(404, 'Project not found');
 	return project;
 };
 
@@ -76,7 +84,7 @@ const SCOPED = [ModelDefinition, RouteSettings, RouteConfig, RouteVersion, Sideb
 router.get(
 	'/',
 	handle(async req => {
-		const filter: any = { organization: req.organization._id };
+		const filter: any = { organization: req.organization._id, ...projectAccessFilter(req.member, req.permissions) };
 		if (req.query.archived !== '1') filter.isActive = { $ne: false };
 		const docs: any[] = await TenantProject.find(filter).sort({ createdAt: 1 }).lean();
 		const counts = await Promise.all(
@@ -122,6 +130,9 @@ router.post(
 			});
 			// What a project type brings with it (the website kit, WO-18).
 			await projectHooks.created(req, project);
+			// A member limited to some projects can open the ones they start (WO-22).
+			if (!opensAllProjects(req.member, req.permissions))
+				await OrganizationMember.updateOne({ _id: req.member._id }, { $addToSet: { projects: project._id } });
 		} catch (e) {
 			await removeEverything(req.organization._id, project._id).catch(() => undefined);
 			await TenantProject.deleteOne({ _id: project._id });
@@ -182,6 +193,9 @@ router.delete(
 		if (models && req.role?.system !== 'owner') throw new TenancyError(403, 'Only the organization’s owner can delete a project with data');
 		await removeEverything(req.organization._id, project._id);
 		await TenantProject.deleteOne({ _id: project._id });
+		// Nobody's access list or invitation names it any more (WO-22).
+		await OrganizationMember.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id } });
+		await OrganizationInvitation.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id } });
 		return { message: 'Project deleted' };
 	})
 );

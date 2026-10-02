@@ -5,6 +5,7 @@ import TenantUser, { TENANT_TOKEN_KIND } from '../../library/models/tenancy/tena
 import Organization from '../../library/models/tenancy/organization.model.js';
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
 import { REVOKED_CODE, sessionIdOf, tenantSessions } from '../../library/functions/sessions.function.js';
+import { normalizePermissions } from '../../library/functions/tenantPermissions.function.js';
 
 /**
  * Signs in a tenant user's request (docs/multi-tenancy WO-05). The token must
@@ -56,7 +57,8 @@ const make =
 				req.organization = organization;
 				req.member = member;
 				req.role = member.role;
-				req.permissions = member.role?.permissions || [];
+				// Today's keys only (WO-21): old data:* read as records:*, per-model keys dropped.
+				req.permissions = normalizePermissions(member.role?.permissions || []);
 			} else if (requireOrg) {
 				return res.status(403).json({ message: 'Choose or create an organization first.', code: 'NO_ORGANIZATION' });
 			}
@@ -71,3 +73,26 @@ const make =
 export const tenantProtect = make(true);
 export const tenantProtectAccount = make(false);
 export default tenantProtect;
+
+/**
+ * The signed-in tenant user, if the request carries a valid session — or null,
+ * never an error. For pages anyone can open that do more for a signed-in
+ * account (an invitation link accepted in one click, WO-24).
+ */
+export const signedInTenantUser = async (req: any): Promise<any | null> => {
+	const header = String(req.headers.authorization || '');
+	if (!header.startsWith('Bearer ')) return null;
+	try {
+		const token = header.slice(7).trim();
+		const decoded = jwt.verify(token, secret()) as any;
+		if (decoded?.kind !== TENANT_TOKEN_KIND) return null;
+		const sid = sessionIdOf(decoded, token);
+		if (await tenantSessions.isRevoked(sid)) return null;
+		const user: any = await TenantUser.findById(decoded._id);
+		if (!user || user.isActive === false) return null;
+		req.sessionId = sid;
+		return user;
+	} catch {
+		return null;
+	}
+};

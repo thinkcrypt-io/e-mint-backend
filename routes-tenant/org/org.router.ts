@@ -12,11 +12,12 @@ import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../library/models/tenancy/organization.model.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
 import { deliver, shell, p } from '../../library/controllers/twoFactor/twoFactor.service.js';
-import { tenantProtect, tenantProtectAccount } from '../../middleware/tenant/protect.tenant.middleware.js';
+import { signedInTenantUser, tenantProtect, tenantProtectAccount } from '../../middleware/tenant/protect.tenant.middleware.js';
 import {
 	ORG_PERMISSIONS,
 	ORG_PERMISSION_KEYS,
 	grants,
+	normalizePermissions,
 	ownerOnly,
 	tenantPermissions,
 } from '../../library/functions/tenantPermissions.function.js';
@@ -39,16 +40,20 @@ import {
  *   POST   /                         a new organization, you its owner → { token } in it
  *   POST   /switch/:id               → { token } in that organization
  *   GET    /members                  members (and their roles)
- *   PUT    /members/:id              { role }                      manage-members
+ *   PUT    /members/:id              { role, allProjects, projects } manage-members
  *   DELETE /members/:id              remove (`me` = leave)         manage-members
  *   POST   /transfer-ownership       { member }                    owner
  *   GET    /roles · POST · PUT /:id · DELETE /:id                  manage-roles
  *   GET    /permissions              what a role can be given
- *   GET    /invitations · POST · POST /:id/resend · DELETE /:id    manage-members
+ *   GET    /invitations · POST { email, name, role, allProjects, projects } · POST /:id/resend · DELETE /:id   manage-members
  *
- * And, with no session — the emailed link (invitationsRouter):
- *   GET    /tenant/api/invitations/:token          who it's for, which organization
- *   POST   /tenant/api/invitations/:token/accept   { name, phone, password } → { token }
+ * Project access (WO-22): a member opens every project (`allProjects`, the
+ * default) or only `projects`; Owner and Admin always open every one.
+ *
+ * Joining (invitationsRouter, /tenant/api/invitations):
+ *   GET    /for-me · POST /for-me/:id/accept · DELETE /for-me/:id   in the app, verified email (WO-24)
+ *   GET    /:token                 the emailed link: who it's for, which organization, which projects
+ *   POST   /:token/accept          { name, phone, password } → { token } — or nothing, signed in as the invitee
  */
 
 const router = express.Router();
@@ -164,9 +169,26 @@ const memberView = (m: any) => ({
 	_id: String(m._id),
 	user: m.user && { _id: String(m.user._id), name: m.user.name, email: m.user.email, image: m.user.image || '', twoFactorEnabled: !!m.user.twoFactorEnabled },
 	role: m.role && { _id: String(m.role._id), name: m.role.name, system: m.role.system || null },
+	// Owner and Admin open every project whatever is stored (WO-22).
+	allProjects: m.role?.system === 'owner' || m.role?.system === 'admin' || m.allProjects !== false,
+	projects: (m.projects || []).map(String),
 	status: m.status,
 	joinedAt: m.joinedAt,
 });
+
+/** Project access from a request body (WO-22): every project, or these of this organization. */
+const accessSchema = {
+	allProjects: Joi.boolean(),
+	projects: Joi.array().items(Joi.string()).max(200),
+};
+const checkAccess = async (req: any, body: any) => {
+	if (body.allProjects === undefined && body.projects === undefined) return null;
+	const allProjects = body.allProjects !== false;
+	const ids = allProjects ? [] : [...new Set<string>((body.projects || []).filter((id: any) => isId(id)).map(String))];
+	const found = ids.length ? await TenantProject.find({ _id: { $in: ids }, organization: req.organization._id }, { _id: 1 }).lean() : [];
+	if (found.length !== ids.length) throw new TenancyError(400, 'Choose projects of this organization');
+	return { allProjects, projects: allProjects ? [] : found.map((p: any) => p._id) };
+};
 
 inOrg.get(
 	'/members',
@@ -200,9 +222,13 @@ inOrg.put(
 	tenantPermissions(['manage-members']),
 	handle(async req => {
 		const member = await loadMember(req);
-		if (member.role?.system === 'owner') throw new TenancyError(400, 'The owner’s role can’t change — transfer ownership first.');
-		const role = await loadRole(req, req.body?.role);
-		member.role = role._id;
+		const body = check(Joi.object({ role: Joi.string(), ...accessSchema }), req.body);
+		if (body.role && String(body.role) !== String(member.role?._id)) {
+			if (member.role?.system === 'owner') throw new TenancyError(400, 'The owner’s role can’t change — transfer ownership first.');
+			member.role = (await loadRole(req, body.role))._id;
+		}
+		const access = await checkAccess(req, body);
+		if (access) Object.assign(member, access);
 		await member.save();
 		return memberView(await OrganizationMember.findById(member._id).populate('user', 'name email image twoFactorEnabled').populate('role', 'name system').lean());
 	})
@@ -248,19 +274,23 @@ const roleView = (r: any, members = 0) => ({
 	_id: String(r._id),
 	name: r.name,
 	description: r.description || '',
-	permissions: r.permissions || [],
+	permissions: normalizePermissions(r.permissions || []),
 	system: r.system || null,
 	members,
 });
 
-/** Organization keys, `data:*`, and per-model keys (view-/create-/edit-/delete-<route>). */
+/**
+ * The standard keys (ORG_PERMISSIONS, WO-21). Old keys a role still holds
+ * (`data:*`, per-model `view-<route>`…) are accepted and normalized away, so
+ * saving an old role cleans it.
+ */
 const PERMISSION_PATTERN = new RegExp(
-	`^(${ORG_PERMISSION_KEYS.map(k => k.replace(/[*:]/g, '\\$&')).join('|')}|(view|create|edit|delete)-[a-z0-9-]{1,60})$`
+	`^(${ORG_PERMISSION_KEYS.map(k => k.replace(/[*:]/g, '\\$&')).join('|')}|data:\\*|data:view|(view|create|edit|delete)-[a-z0-9-]{1,60})$`
 );
 const roleBody = Joi.object({
 	name: Joi.string().trim().min(1).max(60).required(),
 	description: Joi.string().trim().max(300).allow(''),
-	permissions: Joi.array().items(Joi.string().pattern(PERMISSION_PATTERN).messages({ 'string.pattern.base': 'Unknown permission' })).max(500).default([]),
+	permissions: Joi.array().items(Joi.string().pattern(PERMISSION_PATTERN).messages({ 'string.pattern.base': 'Unknown permission' })).max(100).default([]),
 });
 
 inOrg.get(
@@ -278,35 +308,10 @@ inOrg.get(
 	})
 );
 
-/**
- * What a role can be given: the organization keys, and each project's models
- * (view-/create-/edit-/delete-<route> — a key applies in every project that
- * has that route).
- */
+/** What a role can be given: the standard keys, in their groups (WO-21). */
 inOrg.get(
 	'/permissions',
-	handle(async req => {
-		const projects: any[] = await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false } }, { name: 1 }).lean();
-		const models = await Promise.all(
-			projects.map(p =>
-				runInScope({ organization: req.organization._id, project: p._id }, () =>
-					ModelDefinition.find({}, { name: 1, title: 1, route: 1 }).sort({ title: 1 }).lean()
-				)
-			)
-		);
-		return {
-			organization: ORG_PERMISSIONS,
-			projects: projects.map((p, i) => ({
-				_id: String(p._id),
-				name: p.name,
-				models: (models[i] as any[]).map(m => ({
-					title: m.title,
-					route: m.route,
-					keys: ['view', 'create', 'edit', 'delete'].map(a => `${a}-${m.route}`),
-				})),
-			})),
-		};
-	})
+	handle(async () => ({ organization: ORG_PERMISSIONS }))
 );
 
 inOrg.post(
@@ -314,6 +319,7 @@ inOrg.post(
 	tenantPermissions(['manage-roles']),
 	handle(async req => {
 		const body = check(roleBody, req.body);
+		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*');
 		if (await OrganizationRole.exists({ organization: req.organization._id, name: body.name }))
 			throw new TenancyError(400, 'A role with this name exists');
 		const role = await OrganizationRole.create({ ...body, organization: req.organization._id });
@@ -329,6 +335,7 @@ inOrg.put(
 		const role: any = await OrganizationRole.findOne({ _id: req.params.id, organization: req.organization._id });
 		if (!role) throw new TenancyError(404, 'Role not found');
 		const body = check(roleBody, req.body);
+		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*');
 		// Owner and admin are everything by definition; their names and descriptions can change.
 		if (role.system === 'owner' || role.system === 'admin') delete body.permissions;
 		if (body.name !== role.name && (await OrganizationRole.exists({ organization: req.organization._id, name: body.name })))
@@ -366,6 +373,8 @@ const invitationView = (i: any) => ({
 	email: i.email,
 	name: i.name || '',
 	role: i.role && { _id: String(i.role._id || i.role), name: i.role.name },
+	allProjects: i.allProjects !== false,
+	projects: (i.projects || []).map(String),
 	invitedBy: i.invitedBy && typeof i.invitedBy === 'object' ? { _id: String(i.invitedBy._id), name: i.invitedBy.name } : null,
 	expiresAt: i.expiresAt,
 	expired: new Date(i.expiresAt) < new Date(),
@@ -415,10 +424,12 @@ inOrg.post(
 				email: Joi.string().trim().lowercase().email().required(),
 				name: Joi.string().trim().max(120).allow(''),
 				role: Joi.string().required().messages({ 'any.required': 'Choose a role' }),
+				...accessSchema,
 			}),
 			req.body
 		);
 		const role = await loadRole(req, body.role);
+		const access = (await checkAccess(req, body)) || { allProjects: true, projects: [] };
 		const existing: any = await TenantUser.findOne({ email: body.email }, { _id: 1 }).lean();
 		if (existing && (await OrganizationMember.exists({ organization: req.organization._id, user: existing._id, status: 'active' })))
 			throw new TenancyError(400, 'They are already a member');
@@ -428,6 +439,8 @@ inOrg.post(
 			invitation = new OrganizationInvitation({ organization: req.organization._id, email: body.email, tokenHash: 'pending', expiresAt: new Date() });
 		invitation.name = body.name || invitation.name;
 		invitation.role = role._id;
+		invitation.allProjects = access.allProjects;
+		invitation.projects = access.projects;
 		invitation.invitedBy = req.user._id;
 		await sendInvite(req, invitation);
 		return invitationView(await OrganizationInvitation.findById(invitation._id).populate('role', 'name').populate('invitedBy', 'name').lean());
@@ -466,9 +479,119 @@ inOrg.delete(
 
 router.use('/', inOrg);
 
-/* --------------------------------------------- the emailed link (no session) */
+/* ------------------------------------- joining: the emailed link, and in the app */
+
+/**
+ * Makes `user` a member from an invitation — its role and project access
+ * (WO-22) — marks it accepted, and opens the organization next time they sign
+ * in. Their email is now proven (the link was emailed to it, or they verified
+ * it), WO-24.
+ */
+const joinFromInvitation = async (invitation: any, user: any) => {
+	await OrganizationMember.findOneAndUpdate(
+		{ organization: invitation.organization._id, user: user._id },
+		{
+			$set: {
+				role: invitation.role._id,
+				allProjects: invitation.allProjects !== false,
+				projects: invitation.allProjects === false ? invitation.projects || [] : [],
+				status: 'active',
+				invitedBy: invitation.invitedBy,
+				joinedAt: new Date(),
+			},
+			$unset: { removedAt: 1 },
+		},
+		{ upsert: true }
+	);
+	invitation.acceptedAt = new Date();
+	invitation.acceptedBy = user._id;
+	await invitation.save();
+	await TenantUser.updateOne({ _id: user._id }, { $set: { lastOrganization: invitation.organization._id, emailVerified: true } });
+};
+
+/** An invitation's projects by name, for the person invited. */
+const projectNames = async (invitation: any) =>
+	invitation.allProjects === false ? (await TenantProject.find({ _id: { $in: invitation.projects || [] } }, { name: 1 }).lean()).map((p: any) => p.name) : [];
 
 export const invitationsRouter = express.Router();
+
+/*
+ * In the app (WO-24): invitations sent to the signed-in account's email —
+ * listed only once that email is verified, so nobody signing up with another
+ * person's address sees, or takes, their invitations.
+ *
+ *   GET    /tenant/api/invitations/for-me              { verified, doc }
+ *   POST   /tenant/api/invitations/for-me/:id/accept   → { token } in that organization
+ *   DELETE /tenant/api/invitations/for-me/:id          decline
+ */
+const pendingFor = (user: any) => ({ email: user.email, acceptedAt: null, cancelledAt: null, expiresAt: { $gt: new Date() } });
+
+const loadMine = async (req: any) => {
+	if (!req.user.emailVerified) throw new TenancyError(403, 'Verify your email first.', 'email_unverified');
+	if (!isId(req.params.id)) throw new TenancyError(404, 'Invitation not found');
+	const invitation: any = await OrganizationInvitation.findOne({ _id: req.params.id, ...pendingFor(req.user) })
+		.populate('organization', 'name logo isActive')
+		.populate('role', 'name system');
+	if (!invitation || invitation.organization?.isActive === false) throw new TenancyError(404, 'Invitation not found');
+	return invitation;
+};
+
+invitationsRouter.get(
+	'/for-me',
+	tenantProtectAccount,
+	handle(async req => {
+		if (!req.user.emailVerified) return { verified: false, email: req.user.email, doc: [] };
+		const [docs, memberships]: any = await Promise.all([
+			OrganizationInvitation.find(pendingFor(req.user))
+				.populate('organization', 'name logo isActive')
+				.populate('role', 'name')
+				.populate('invitedBy', 'name')
+				.sort({ createdAt: -1 })
+				.lean(),
+			OrganizationMember.find({ user: req.user._id, status: 'active' }, { organization: 1 }).lean(),
+		]);
+		const mine = new Set(memberships.map((m: any) => String(m.organization)));
+		const open = docs.filter((i: any) => i.organization && i.organization.isActive !== false && !mine.has(String(i.organization._id)));
+		return {
+			verified: true,
+			email: req.user.email,
+			doc: await Promise.all(
+				open.map(async (i: any) => ({
+					_id: String(i._id),
+					organization: { _id: String(i.organization._id), name: i.organization.name, logo: i.organization.logo || '' },
+					role: i.role?.name,
+					invitedBy: i.invitedBy?.name || '',
+					allProjects: i.allProjects !== false,
+					projects: await projectNames(i),
+					expiresAt: i.expiresAt,
+				}))
+			),
+		};
+	})
+);
+
+invitationsRouter.post(
+	'/for-me/:id/accept',
+	tenantProtectAccount,
+	handle(async req => {
+		const invitation = await loadMine(req);
+		await joinFromInvitation(invitation, req.user);
+		return { message: `Welcome to ${invitation.organization.name}`, ...(await switchTo(req, invitation.organization._id)) };
+	})
+);
+
+invitationsRouter.delete(
+	'/for-me/:id',
+	tenantProtectAccount,
+	handle(async req => {
+		const invitation = await loadMine(req);
+		invitation.cancelledAt = new Date();
+		await invitation.save();
+		return { message: 'Invitation declined' };
+	})
+);
+
+/* The emailed link (no session needed). */
 
 const openInvitation = async (token: any) => {
 	const invitation: any = await OrganizationInvitation.findOne({ tokenHash: sha256(String(token || '')) })
@@ -485,12 +608,18 @@ invitationsRouter.get(
 	handle(async req => {
 		const invitation = await openInvitation(req.params.token);
 		const existingAccount = !!(await TenantUser.exists({ email: invitation.email }));
+		// Signed in as the person invited: one click joins (WO-24).
+		const me = await signedInTenantUser(req);
 		return {
 			email: invitation.email,
 			name: invitation.name || '',
 			organization: { name: invitation.organization.name, logo: invitation.organization.logo || '' },
 			role: invitation.role?.name,
+			// What they'll open: every project, or these (WO-22).
+			allProjects: invitation.allProjects !== false,
+			projects: await projectNames(invitation),
 			existingAccount,
+			signedInAsInvitee: !!me && me.email === invitation.email,
 			expiresAt: invitation.expiresAt,
 		};
 	})
@@ -501,32 +630,30 @@ invitationsRouter.post(
 	rateLimit({ name: 'tenant-invite-accept', windowMs: 15 * 60 * 1000, max: 30 }),
 	handle(async req => {
 		const invitation = await openInvitation(req.params.token);
-		let user: any = await TenantUser.findOne({ email: invitation.email }).select('+password');
-		if (user) {
-			// An existing account proves it's theirs with its password.
-			if (!(await user.checkPassword(req.body?.password))) throw new TenancyError(400, 'That password isn’t right for this account.', 'wrong_password');
-			if (user.isActive === false) throw new TenancyError(400, 'This account has been deactivated.');
+		const me = await signedInTenantUser(req);
+		let user: any;
+		if (me && me.email === invitation.email) {
+			// The link came to their email and they're signed in to that account: nothing more to prove.
+			user = me;
 		} else {
-			const body = check(
-				Joi.object({
-					name: Joi.string().trim().min(1).max(120).required(),
-					phone: Joi.string().trim().max(40).allow(''),
-					password: Joi.string().min(8).max(200).required().messages({ 'string.min': 'Use at least 8 characters for the password' }),
-				}),
-				req.body
-			);
-			user = await TenantUser.create({ name: body.name, phone: body.phone, email: invitation.email, password: body.password, emailVerified: true });
+			user = await TenantUser.findOne({ email: invitation.email }).select('+password');
+			if (user) {
+				// An existing account proves it's theirs with its password.
+				if (!(await user.checkPassword(req.body?.password))) throw new TenancyError(400, 'That password isn’t right for this account.', 'wrong_password');
+				if (user.isActive === false) throw new TenancyError(400, 'This account has been deactivated.');
+			} else {
+				const body = check(
+					Joi.object({
+						name: Joi.string().trim().min(1).max(120).required(),
+						phone: Joi.string().trim().max(40).allow(''),
+						password: Joi.string().min(8).max(200).required().messages({ 'string.min': 'Use at least 8 characters for the password' }),
+					}),
+					req.body
+				);
+				user = await TenantUser.create({ name: body.name, phone: body.phone, email: invitation.email, password: body.password, emailVerified: true });
+			}
 		}
-		await OrganizationMember.findOneAndUpdate(
-			{ organization: invitation.organization._id, user: user._id },
-			{ $set: { role: invitation.role._id, status: 'active', invitedBy: invitation.invitedBy, joinedAt: new Date() }, $unset: { removedAt: 1 } },
-			{ upsert: true }
-		);
-		invitation.acceptedAt = new Date();
-		invitation.acceptedBy = user._id;
-		await invitation.save();
-		user.lastOrganization = invitation.organization._id;
-		await user.save();
+		await joinFromInvitation(invitation, user);
 		return { message: `Welcome to ${invitation.organization.name}`, token: await tenantSessions.issueSession(user, req, 'invitation', invitation.organization._id) };
 	})
 );

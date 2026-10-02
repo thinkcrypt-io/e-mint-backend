@@ -42,8 +42,9 @@ import { TenancyError, handle } from '../library/functions/tenancy.function.js';
  *
  * A model with `auth: 'customer'` needs `Authorization: Bearer <customer
  * token>` of this project; with `ownerOnly` each customer only reaches the
- * records they created. Only the model's own fields go in and out (plus _id,
- * code, createdAt, updatedAt) — never `customer`, never anything else.
+ * records they created (the record's `_customer`, set by the server). Only the
+ * model's own fields go in and out (plus _id, code, createdAt, updatedAt) —
+ * never `_customer`, never anything else.
  */
 
 const router = express.Router({ mergeParams: true });
@@ -369,7 +370,7 @@ const open = async (req: any, action: string): Promise<Ctx> => {
 };
 
 /** Only the owner's records, when the model is owner-only. */
-const owned = (ctx: Ctx) => (ctx.def.publicApi.ownerOnly ? { customer: ctx.customer!._id } : {});
+const owned = (ctx: Ctx) => (ctx.def.publicApi.ownerOnly ? { _customer: ctx.customer!._id } : {});
 
 const fieldKeys = (def: any) => def.fields.filter((f: any) => f.kind !== 'formula').map((f: any) => f.key);
 const outKeys = (def: any) => [...SYSTEM_OUT, ...def.fields.map((f: any) => f.key)];
@@ -456,7 +457,7 @@ router.post(
 	'/:route',
 	handle(async (req, res) => {
 		const ctx = await open(req, 'create');
-		const doc: any = new ctx.Model({ ...bodyOf(req, ctx), ...(ctx.customer && { customer: ctx.customer._id }) });
+		const doc: any = new ctx.Model({ ...bodyOf(req, ctx), ...(ctx.customer && { _customer: ctx.customer._id }) });
 		applyFormulas(doc, ctx.formulas);
 		try {
 			await doc.save();

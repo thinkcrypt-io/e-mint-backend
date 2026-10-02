@@ -18,6 +18,8 @@ const order = await make({ name: 'Order', title: 'Orders', code: { enabled: true
 	{ key: 'quantity', label: 'Quantity', kind: 'number', min: 1, required: true },
 	{ key: 'unitPrice', label: 'Unit price', kind: 'number' },
 	{ key: 'total', label: 'Total', kind: 'formula', formula: 'quantity * unitPrice' },
+	// A field of its own named like the server's owner path used to be — must stay the tenant's.
+	{ key: 'customer', label: 'Customer name', kind: 'text' },
 ] });
 ok('models made', !!product?._id && !!order?._id);
 r = await call('PUT', P(s.crm, `/builder/models/${product._id}/public-api`), { enabled: true, actions: ['list', 'get'], auth: 'none' }, s.pat);
@@ -40,7 +42,7 @@ r = await pub('');
 ok('public info lists the two models', r.status === 200 && r.body?.models?.length === 2, JSON.stringify(r.body?.models?.map(m => `${m.route}:${m.actions}`)));
 r = await pub('products?sort=price');
 ok('list products without a token', r.status === 200 && r.body?.total === 2 && r.body.doc[0].name === 'Widget', r.status);
-ok('only the model’s fields come out', r.body?.doc?.[0] && !('customer' in r.body.doc[0]) && !('__v' in r.body.doc[0]));
+ok('only the model’s fields come out', r.body?.doc?.[0] && !('_customer' in r.body.doc[0]) && !('__v' in r.body.doc[0]));
 r = await pub(`products/${widgetId}`);
 ok('get one', r.status === 200 && r.body?.price === 12.5);
 r = await pub('products', { method: 'POST', body: JSON.stringify({ name: 'Hack' }) });
@@ -63,8 +65,9 @@ r = await pub('auth/me', as(cara));
 ok('me', r.status === 200 && r.body?.name === 'Cara');
 r = await pub('orders');
 ok('orders need a signed-in customer', r.status === 401 && r.body?.code === 'customer_required');
-r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId, quantity: 3, unitPrice: 12.5, total: 1 }), ...as(cara) });
+r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId, quantity: 3, unitPrice: 12.5, total: 1, customer: 'Cara at the counter' }), ...as(cara) });
 ok('Cara orders (formula computed, not taken)', r.status === 201 && r.body?.total === 37.5, `${r.status} ${JSON.stringify(r.body)}`);
+ok('a field named customer is the model’s own', r.body?.customer === 'Cara at the counter' && !('_customer' in r.body), JSON.stringify(r.body));
 const caraOrder = r.body?._id;
 r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId, quantity: 0 }), ...as(cara) });
 ok('validation from the model (min 1)', r.status === 400, r.body?.message);

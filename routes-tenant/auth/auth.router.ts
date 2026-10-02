@@ -32,6 +32,8 @@ import {
  *   PUT  /change-password          { oldPassword, password }
  *   POST /forgot-password          { email } — always the same answer
  *   POST /reset-password/:token    { password }
+ *   POST /verify-email/send        emails a 6-digit code to the account's address
+ *   POST /verify-email             { code } → the email is verified (WO-24)
  *   POST /logout                   signs this device out
  *
  * Tokens: `{ _id, kind:'tenant', org, sid }`. A token issued with no
@@ -183,6 +185,8 @@ router.post(
 		}).select('+resetPasswordToken +resetPasswordExpires');
 		if (!user) throw new TenancyError(400, 'This reset link has expired or was already used. Ask for a new one.', 'reset_expired');
 		user.password = next;
+		// The link came by email: the account reads this address (WO-24).
+		user.emailVerified = true;
 		user.resetPasswordToken = undefined;
 		user.resetPasswordExpires = undefined;
 		await user.save();
@@ -190,6 +194,58 @@ router.post(
 		const live = await tenantSessions.Session.find({ admin: user._id, revokedAt: null }).lean();
 		await tenantSessions.revokeSessions(live, user._id, 'Password reset');
 		return { message: 'Your password was changed. Sign in with the new one.' };
+	})
+);
+
+/* ------------------------------------------------------- verifying email */
+
+/**
+ * Proving the account reads its email (WO-24) — what lets invitations sent to
+ * that address show up in the app. A 6-digit code, 10 minutes, 5 tries; only
+ * a hash is kept.
+ */
+const VERIFY_TTL_MS = 10 * 60 * 1000;
+const verifyLimit = rateLimit({ name: 'tenant-verify-email', windowMs: 15 * 60 * 1000, max: 10 });
+
+router.post(
+	'/verify-email/send',
+	tenantProtectAccount,
+	verifyLimit,
+	handle(async req => {
+		const user: any = await TenantUser.findById(req.user._id);
+		if (user.emailVerified) return { message: 'Your email is already verified', verified: true };
+		const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+		await TenantUser.updateOne(
+			{ _id: user._id },
+			{ $set: { emailVerifyCode: sha256(`${user._id}:${code}`), emailVerifyExpires: new Date(Date.now() + VERIFY_TTL_MS), emailVerifyAttempts: 0 } }
+		);
+		await deliver(
+			user.email,
+			`${code} is your MINT verification code`,
+			`Hi ${user.name},\n\nYour code to verify this email is ${code}. It works for 10 minutes.`,
+			shell('Verify your email', p(`Hi ${user.name},`) + p(`Your code to verify this email is <b style="font-size:20px;letter-spacing:2px">${code}</b>.`) + p('It works for 10 minutes.'))
+		);
+		return { message: `We sent a code to ${user.email}` };
+	})
+);
+
+router.post(
+	'/verify-email',
+	tenantProtectAccount,
+	verifyLimit,
+	handle(async req => {
+		const { code } = check(Joi.object({ code: Joi.string().trim().pattern(/^\d{6}$/).required().messages({ 'string.pattern.base': 'The code has 6 digits' }) }), req.body);
+		const user: any = await TenantUser.findById(req.user._id).select('+emailVerifyCode +emailVerifyExpires +emailVerifyAttempts');
+		if (user.emailVerified) return { message: 'Your email is already verified', verified: true };
+		if (!user.emailVerifyCode || !user.emailVerifyExpires || new Date(user.emailVerifyExpires) < new Date())
+			throw new TenancyError(400, 'That code has expired — send a new one.', 'code_expired');
+		if ((user.emailVerifyAttempts || 0) >= 5) throw new TenancyError(400, 'Too many tries — send a new code.', 'code_expired');
+		if (sha256(`${user._id}:${code}`) !== user.emailVerifyCode) {
+			await TenantUser.updateOne({ _id: user._id }, { $inc: { emailVerifyAttempts: 1 } });
+			throw new TenancyError(400, 'That code isn’t right.', 'wrong_code');
+		}
+		await TenantUser.updateOne({ _id: user._id }, { $set: { emailVerified: true }, $unset: { emailVerifyCode: 1, emailVerifyExpires: 1, emailVerifyAttempts: 1 } });
+		return { message: 'Your email is verified', verified: true };
 	})
 );
 

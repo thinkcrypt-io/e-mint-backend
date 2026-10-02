@@ -29,9 +29,14 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 17 | Isolation tests, parity check, guide | both | M | done |
 | 18 | Website projects: website kit (settings, pages, SEO, contents) + site API | backend | L | done |
 | 19 | Website analytics (tracker, events, reports) + website workspace UI | both | L | done |
+| 20 | User guides `/user-docs` — the tenants' documentation | both | M | done |
+| 21 | Standard role permissions (records view/add/edit/delete + specific), no per-model keys | both | M | done |
+| 22 | Project access per member and per invitation | both | M | done |
+| 23 | Media library per project or shared by the organization | both | S | done |
+| 24 | Several organizations: invitations in the app, every workspace listed | both | M | done |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
-15 → 10 → 11 → 18 → 19 → 16 → 17. (12–15 need 05–09; 18–19 need 08 and 11.)
+15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24. (12–15 need 05–09; 18–19 need 08 and 11.)
 
 ---
 
@@ -279,7 +284,86 @@ beyond what the dashboard builder already uses.
 **Done when** the tracker records a pageview from a test page and the report
 shows it.
 
+## WO-20 — User guides (M)
+**Why** `/docs` is the super admin's (its guides and the component library);
+tenants need their own documentation, and everything they need should be
+there. **Admin** `/user-docs`: a home page and 16 public guides (getting
+started, account & security, organization, projects, models, pages, sidebar,
+dashboard, media, connect AI, records, public API, customers & sign-in,
+websites, analytics, FAQ), listed in `user-docs/_components/guides.ts`, framed
+by `UserGuide` (DocsShell with the user-guides navbar). In the tenant panel
+every guide link goes there: `panel.ts docsPath('/docs/<guide>#<anchor>')`
+maps to the user guide with the same anchor, DocsShell sends any /docs page
+to its user guide before the sign-in check, the footer links to /user-docs,
+and `tenant/GuideLink` points at the right guide. `/docs/tenancy` is removed.
+Examples carry the real API address (`NEXT_PUBLIC_BACKEND` without
+`/tenant/api`). **Done when** every in-app guide link lands on an existing
+section of a user guide in the tenant panel, and the super admin's /docs is
+unchanged.
+
+## WO-21 — Standard role permissions (M)
+**Why** (user, 2026-10-02): "the specific item permission not necessary —
+view, edit, delete and some specific permission first, which is the
+standard." **Backend** `ORG_PERMISSIONS` led by four record keys —
+`records:view`, `records:create`, `records:edit`, `records:delete` — that
+apply to every model (and the project's media, customers and analytics) in
+the projects a member can open; then `build`, `manage-api-keys`,
+`create-projects`, `manage-projects`, `manage-members`, `manage-roles`,
+`manage-organization`. `grants()` maps `view-|create-|edit-|delete-<route>`
+onto them (and `build` onto media), and still reads the old `data:*` /
+`data:view`. Roles accept only these keys (old per-model keys are dropped on
+save); `/org/permissions` lists them grouped. Member = all four record keys
++ `create-projects`. Customers follow the record keys. **Admin** Roles page:
+records as four switches, then the rest; no per-model list. **Done when** a
+role with only `records:view` reads every model but can't add, and roles
+can't be given per-model keys.
+
+## WO-22 — Project access (M)
+**Why** (user): "invite other users and give access to projects, with user
+roles." **Backend** `OrganizationMember` and `OrganizationInvitation` get
+`allProjects` (default true) and `projects[]`. Owner/Admin (`*`) always open
+every project. A member limited to some projects only sees those —
+projects list/get/put/delete, `/p/:projectId`, `auth/self`, the tenant MCP
+(a key for a project its maker lost stops working). Creating a project adds
+it to a limited creator's list; deleting one pulls it from every list.
+`PUT /org/members/:id { role, allProjects, projects }`; invitations take the
+same and accepting copies them. **Admin** invite dialog and member rows:
+role + "All projects / Only these" with a project picker. **Done when** a
+member limited to project A gets 404 for project B everywhere, and an
+invitation for A only joins with A only.
+
+## WO-23 — Media library per project or organization (S)
+**Why** (user): "users can decide if media should be project specific or
+organization specific." **Backend** `TenantProject.mediaScope`
+(`project` default | `organization`), set on create and edit. The project
+router runs `/upload`, `/media` and `/files` in the organization's scope
+(`{organization, project: null}`) when it's `organization` — one library
+shared by every project that chooses it; the super admin still only sees
+`organization: null`. Switching moves nothing: each library keeps its files.
+Deleting a project removes only its own library. **Admin** project dialog:
+"Media library — this project only / shared with the organization"; the
+Media page says which it shows. **Done when** two projects set to
+`organization` see each other's folders, a third set to `project` doesn't,
+and the super admin sees none of them.
+
+## WO-24 — Several organizations (M)
+**Why** (user): "if a user has access to multiple organizations — my own,
+and invited to B's workspace — that would show up too." **Backend**
+`GET /tenant/api/invitations/for-me` (pending invitations to the account's
+email — only once the email is verified, so an account can't claim another
+person's invitations), `POST …/for-me/:id/accept`, `DELETE …/for-me/:id`
+(decline). `emailVerified` is set by accepting an emailed invitation link,
+resetting the password by email, signing in with an email code, or the new
+`POST /auth/verify-email/send` + `POST /auth/verify-email { code }`. The
+emailed link accepts in one click for a signed-in account with that email.
+**Admin** Projects home: "Invitations for you" (accept/decline, or verify
+your email to see them) and "Your organizations" (every workspace, with its
+role, one click to switch). **Done when** a user invited to B sees and
+accepts it in the app, then has both organizations listed and switchable.
+
 ## Follow-ups (not in v1)
-Per-record access on tenant models; billing/plans and limits per plan;
+Per-record access on tenant models; password reset for project customers;
+moving files between a project's library and the organization's;
+billing/plans and limits per plan;
 custom domains for the public API; OAuth for MCP; tenant data export;
 deleting an organization.
