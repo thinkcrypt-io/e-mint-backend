@@ -119,5 +119,37 @@ await call('DELETE', `/tenant/api/projects/${B._id}`, null, alma);
 r = await call('GET', '/tenant/api/org/members', null, alma);
 ok('deleted project pulled from access lists', r.body?.doc?.find(m => m._id === veraMember._id)?.projects?.join() === A._id);
 
+/* ---- D19: per-record access in a project */
+r = await call('POST', P(A._id, '/builder/models'), { name: 'Memo', title: 'Memos', access: { enabled: true }, fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }] }, alma);
+const memoDef = r.body?.doc?._id;
+ok('a model with per-record access in a project', r.status === 201 && !!memoDef, r.body?.message || JSON.stringify(r.body?.problems));
+r = await call('GET', P(A._id, '/access-users'), null, alma);
+const people = r.body?.doc || [];
+const veraId = people.find(p => p.email === `vera${stamp}@example.com`)?._id;
+ok('access-users: the people who can open Shop', r.status === 200 && people.some(p => p.email === `alma${stamp}@example.com`) && !!veraId, JSON.stringify(people.map(p => p.email)));
+r = await call('GET', P(C._id, '/access-users'), null, alma);
+ok("…Vault's leaves out Vera, who can't open it", r.status === 200 && !(r.body?.doc || []).some(p => p.email === `vera${stamp}@example.com`), JSON.stringify((r.body?.doc || []).map(p => p.email)));
+const memo = async body => { const b = (await call('POST', P(A._id, '/memos'), body, alma)).body; return b?._id || b?.doc?._id; };
+const mineId = await memo({ title: 'Only Alma', privacy: 'only-me' });
+await memo({ title: 'Shared with Vera', privacy: 'private', access: [veraId] });
+await memo({ title: 'Everyone', privacy: 'public' });
+r = await call('GET', P(A._id, '/memos?limit=50'), null, alma);
+ok('the owner sees all three', (r.body?.doc || []).length === 3, (r.body?.doc || []).length);
+r = await call('GET', P(A._id, '/memos?limit=50'), null, vera);
+const seen = (r.body?.doc || []).map(d => d.title).sort().join();
+ok('Vera sees the one shared with her and the public one', r.status === 200 && seen === 'Everyone,Shared with Vera', `${r.status} ${seen}`);
+r = await call('GET', P(A._id, `/memos/${mineId}`), null, vera);
+ok("…not Alma's own (404)", r.status === 404, r.status);
+r = await call('GET', P(A._id, '/memos/get/filters'), null, alma);
+const ownerFilter = (Array.isArray(r.body) ? r.body : []).find(f => f.name === 'addedBy');
+ok("the Owner filter lists the project's people", ownerFilter?.options?.length >= 2 && ownerFilter.options.some(o => String(o.value) === String(veraId)), JSON.stringify(ownerFilter?.options?.map(o => o.label)));
+r = await call('PUT', P(A._id, `/builder/models/${memoDef}/public-api`), { enabled: true, actions: ['list', 'create'], auth: 'none', ownerOnly: false }, alma);
+ok('public API on', r.status === 200, r.body?.message);
+r = await call('GET', `/public/api/${A.publicSlug}/memos`, null);
+ok('the public API only reaches public records', r.status === 200 && r.body?.doc?.map(d => d.title).join() === 'Everyone', `${r.status} ${JSON.stringify(r.body?.doc?.map(d => d.title))}`);
+r = await call('POST', `/public/api/${A.publicSlug}/memos`, { title: 'From the site', privacy: 'only-me' }, null);
+r = await call('GET', P(A._id, '/memos?limit=50'), null, vera);
+ok('what a site sends in is public: the team sees it', (r.body?.doc || []).some(d => d.title === 'From the site' && d.privacy === 'public'), JSON.stringify((r.body?.doc || []).map(d => `${d.title}:${d.privacy}`)));
+
 await mongoose.disconnect();
 done();

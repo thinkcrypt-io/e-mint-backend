@@ -500,14 +500,17 @@ export const buildSchema = (def: ModelDef) => {
 	if (def.code?.enabled) paths.code = { type: String, trim: true, unique: true, sparse: true };
 
 	const restricted = !!def.access?.enabled;
+	// Who owns and shares a record: the platform's admins, or in a tenant
+	// project the organization's people (D19 — /access-users lists them).
+	const people = currentScope() ? 'TenantUser' : 'Admin';
 	if (restricted) {
 		paths.privacy = {
 			type: String,
 			enum: { values: PRIVACY_VALUES, message: 'Privacy is only me, private or public' },
 			default: PRIVACY_VALUES.includes(def.access?.default || '') ? def.access!.default : 'private',
 		};
-		paths.access = { type: [{ type: Schema.Types.ObjectId, ref: 'Admin' }], set: idsOnly, default: undefined };
-		paths.addedBy = { type: Schema.Types.ObjectId, ref: 'Admin', set: idOnly };
+		paths.access = { type: [{ type: Schema.Types.ObjectId, ref: people }], set: idsOnly, default: undefined };
+		paths.addedBy = { type: Schema.Types.ObjectId, ref: people, set: idOnly };
 	}
 
 	// A public API's records can belong to the project customer who made them
@@ -523,7 +526,9 @@ export const buildSchema = (def: ModelDef) => {
 	if (restricted) {
 		schema.index({ addedBy: 1 });
 		schema.index({ access: 1 });
-		schema.plugin(accessNotifications, { route: def.route, noun: humanize(def.name), displayField: displayFieldOf(def) });
+		// Notifications are the super-admin panel's (tenant projects have none yet).
+		if (!currentScope())
+			schema.plugin(accessNotifications, { route: def.route, noun: humanize(def.name), displayField: displayFieldOf(def) });
 	}
 
 	if (def.code?.enabled)
@@ -859,7 +864,7 @@ export const accessSettings = (def: ModelDef) => ({
 			menuKey: 'name',
 			labelKey: 'name',
 			modelAddOn: 'email',
-			helperText: 'They can see and edit it, and get a notification.',
+			helperText: currentScope() ? 'They can see and edit it.' : 'They can see and edit it, and get a notification.',
 			// Shown in the form only when the record is private.
 			renderIf: { field: 'privacy', operator: 'eq', value: 'private' },
 			viewType: 'data-array-tag',
@@ -879,7 +884,8 @@ export const accessSettings = (def: ModelDef) => ({
 			field: 'addedBy_in',
 			type: 'multi-select',
 			category: 'model',
-			model: 'Admin',
+			// A project's people come from /access-users (getFilters), never the platform's admins.
+			model: currentScope() ? 'access-users' : 'Admin',
 			key: 'name',
 			label: 'Owner',
 			title: 'Filter by owner',
@@ -1067,7 +1073,7 @@ const mount = (def: ModelDef, Model: mongoose.Model<any>, lookup: ReturnType<typ
 		route: def.route,
 		...(tenant && { auth: tenantAuth }),
 		// Restricted records: only the owner, the people given access, or everyone when public.
-		...(def.access?.enabled && !tenant && { injectMiddleware: recordAccessMiddleware(Model) }),
+		...(def.access?.enabled && { injectMiddleware: recordAccessMiddleware(Model) }),
 	});
 	const wrapper = express.Router();
 	wrapper.use(`/${def.route}`, router);

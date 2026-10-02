@@ -56,7 +56,7 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 		key,
 		// The tenant panel's addresses inside a project: /<publicSlug>/<route>, /<publicSlug>/model-builder/…
 		page: route => tenantUrl(`/${project.publicSlug}/${route}`),
-		link: path => tenantUrl(`/${project.publicSlug}${path}`),
+		link: path => tenantUrl(`/${project.publicSlug}${path === '/' ? '' : path}`),
 		allows: p => grants(permissions, [p]),
 		builder: () => grants(permissions, ['build']),
 		scope: { organization: key.organization, project: key.project },

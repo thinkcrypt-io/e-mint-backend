@@ -370,7 +370,15 @@ const open = async (req: any, action: string): Promise<Ctx> => {
 };
 
 /** Only the owner's records, when the model is owner-only. */
-const owned = (ctx: Ctx) => (ctx.def.publicApi.ownerOnly ? { _customer: ctx.customer!._id } : {});
+/**
+ * The records a call may reach: with owner-only, the customer's own; on a
+ * model with per-record access (D19) only those marked public — a record kept
+ * to some of the team never reaches a site.
+ */
+const owned = (ctx: Ctx) => ({
+	...(ctx.def.publicApi.ownerOnly && { _customer: ctx.customer!._id }),
+	...(ctx.def.access?.enabled && { privacy: 'public' }),
+});
 
 const fieldKeys = (def: any) => def.fields.filter((f: any) => f.kind !== 'formula').map((f: any) => f.key);
 const outKeys = (def: any) => [...SYSTEM_OUT, ...def.fields.map((f: any) => f.key)];
@@ -457,7 +465,12 @@ router.post(
 	'/:route',
 	handle(async (req, res) => {
 		const ctx = await open(req, 'create');
-		const doc: any = new ctx.Model({ ...bodyOf(req, ctx), ...(ctx.customer && { _customer: ctx.customer._id }) });
+		// On a model with per-record access, what a site sends in is public: the team sees it (it has no owner among them).
+		const doc: any = new ctx.Model({
+			...bodyOf(req, ctx),
+			...(ctx.customer && { _customer: ctx.customer._id }),
+			...(ctx.def.access?.enabled && { privacy: 'public' }),
+		});
 		applyFormulas(doc, ctx.formulas);
 		try {
 			await doc.save();

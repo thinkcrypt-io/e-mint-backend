@@ -4,7 +4,9 @@ import Organization from '../models/tenancy/organization.model.js';
 import OrganizationMember from '../models/tenancy/organizationMember.model.js';
 import OrganizationRole from '../models/tenancy/organizationRole.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
-import { seedOrgRoles } from './tenantPermissions.function.js';
+import TenantUser from '../models/tenancy/tenantUser.model.js';
+import { normalizePermissions, seedOrgRoles } from './tenantPermissions.function.js';
+import { currentScope } from './tenantScope.function.js';
 
 /**
  * Shared tenancy helpers (docs/multi-tenancy WO-05/06/07): making an
@@ -213,3 +215,28 @@ export const projectAccessFilter = (member: any, permissions: string[] = []): Re
 /** Whether a member can open this project. */
 export const canOpenProject = (member: any, permissions: string[], projectId: any) =>
 	opensAllProjects(member, permissions) || (member?.projects || []).some((p: any) => String(p) === String(projectId));
+
+/**
+ * Who a project's record can be shared with (per-record access, D19): the
+ * organization's active members who can open the current project, as
+ * { _id, name, email } — the tenant's /access-users, and the options of a
+ * restricted model's Owner filter. Empty outside a project.
+ */
+export const projectPeople = async ({ search = '', id }: { search?: string; id?: string } = {}) => {
+	const s = currentScope();
+	if (!s?.organization || !s.project) return [];
+	const members: any[] = await OrganizationMember.find({ organization: s.organization, status: 'active', ...(id && { user: id }) })
+		.populate('role', 'permissions')
+		.lean();
+	const open = members.filter(m => canOpenProject(m, normalizePermissions(m.role?.permissions || []), s.project));
+	const rx = search ? new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
+	return TenantUser.find({
+		_id: { $in: open.map(m => m.user) },
+		isActive: { $ne: false },
+		...(rx && { $or: [{ name: rx }, { email: rx }] }),
+	})
+		.select('name email')
+		.sort({ name: 1 })
+		.limit(1000)
+		.lean();
+};

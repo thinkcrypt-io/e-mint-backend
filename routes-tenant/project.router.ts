@@ -3,7 +3,7 @@ import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { tenantProtect } from '../middleware/tenant/protect.tenant.middleware.js';
 import { grants, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
-import { canOpenProject, publicProject, isId } from '../library/functions/tenancy.function.js';
+import { canOpenProject, publicProject, isId, projectPeople } from '../library/functions/tenancy.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
 import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
@@ -153,6 +153,26 @@ router.use(
 
 // A website project's analytics (events from /public/track.js).
 router.use('/analytics', analyticsRouter);
+
+// Who a restricted model's records can be shared with (per-record access, D19):
+// the organization's members who can open this project. Shaped like a list
+// endpoint, as the record pickers read it — the tenant's /access-users.
+router.get('/access-users', async (req: any, res: any) => {
+	try {
+		const doc = await projectPeople({ search: String(req.query.search || '').trim().slice(0, 100) });
+		return res.status(200).json({ doc, totalDocs: doc.length, docsInPage: doc.length, totalPages: 1, page: 1 });
+	} catch (e: any) {
+		return res.status(500).json({ message: e.message });
+	}
+});
+router.get('/access-users/:id', async (req: any, res: any) => {
+	try {
+		const [doc] = isId(req.params.id) ? await projectPeople({ id: req.params.id }) : [];
+		return doc ? res.status(200).json(doc) : res.status(404).json({ message: 'Not found' });
+	} catch (e: any) {
+		return res.status(500).json({ message: e.message });
+	}
+});
 
 // The project's built models, last: anything not answered above.
 router.use(dynamicModelsDispatcher);

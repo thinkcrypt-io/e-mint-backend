@@ -683,3 +683,32 @@ Decisions D14–D17 (README).
   it; a second tab at `/url-co-blog` is in Blog while the first, reloaded,
   stays in Shop; an unknown `/nope-nothing` → /projects. API: the slug and the
   id both work, Blog can't see Shop's model (404).
+
+## 2026-10-02 — WO-29…32: project cache, MCP dashboard, per-record access, API reference + tester
+- **WO-29** (admin `mainApi.ts`): `serializeQueryArgs` puts the tab's project
+  in every cache key — a client-side move from a project to /projects kept the
+  project's sidebar sections. Verified: Shop → Projects shows Home +
+  Organization only.
+- **WO-30** (backend `mcp.router.ts`): `get_dashboard`, `update_dashboard`
+  (replace|append; `normalizeWidget` + every route/field must exist; nothing
+  saved on any problem). Instructions mention them. Smoke (`mcp.mjs`): saves
+  2 widgets, refuses an unknown field, reads them back, another project's
+  dashboard untouched.
+- **WO-31** (D19): `dynamicModels.function.ts` — owner/access ref `TenantUser`
+  in projects, `recordAccessMiddleware` mounted for tenant models, no
+  notifications plugin in projects, Owner filter model `access-users`;
+  `models.controller.ts` no longer refuses access in projects;
+  `tenancy.function.ts` `projectPeople()`; `project.router.ts`
+  `/access-users`(+`/:id`); `getFilters.controller.ts` fills the Owner filter
+  from it; `public.router.ts` only `privacy: 'public'` records, site creates
+  are public. Admin: the Access panel shows in projects (project wording);
+  Models guide `#models-access`. Smoke (`access.mjs`, 10 checks): owner sees
+  3, Vera (shared) sees shared + public, not the owner's (404); access-users
+  lists Shop's people and leaves Vera out of Vault's; Owner filter options;
+  public API returns only the public record; a site-created record is public.
+- **WO-32** (admin `public-api/_components/`): API reference from
+  `GET /public/api/<slug>/` and a tester. Verified in the browser: 8
+  endpoints listed for Clients + sign-in; Try → `GET /clients` → 200 with
+  Shop's record.
+- Smoke suite all green. `WORK_ORDERS.md` gained a Handoff section and
+  WO-25…33 (WO-33, the AI-built website, is next).

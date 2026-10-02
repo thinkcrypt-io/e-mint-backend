@@ -1,10 +1,66 @@
 # Multi-tenancy — work orders
 
-Read `README.md` first (decisions D1–D12 and the architecture).
+Read `README.md` first (decisions D1–D19 and the architecture).
 Each item: **files → change → done when**. `BLOCKER` gates later items.
 Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
+
+## Handoff — read this first (kept current; last updated 2026-10-02)
+
+**This file is the to-do list and the hand-over.** An agent picking this up:
+read this section, then `README.md` (decisions D1–D19), then the open WO
+below. When an item lands, set its Status here, add a `CHANGELOG.md` entry
+(what, files, how verified), and update this section if anything in it
+changed. Never leave work done but untracked here.
+
+**Repos and branches** (monorepo `/Users/asifistiaque/Desktop/proj/e-mint`):
+- `admin/` — Next 16 + Chakra v3. Super-admin panel *and* tenant panel (same
+  app, `NEXT_PUBLIC_PANEL=tenant`). Remote `origin`
+  (aiasifistiaque/mint-admin). **Branch `main`** — the deploy branch for both
+  panels (Vercel). `v3` is frozen.
+- `backend/` — Express + Mongoose. Remote **`mint`**
+  (thinkcrypt-io/e-mint-backend), **branch `v3`**. Never push to `origin` or
+  `boilerplate`.
+- Commit/push only when the user asks. Commit messages end with
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+**Where it stands:** WO-01…32 done. **Next: WO-33** (a website built by an
+AI through the MCP, managed from the panel). See the Status table.
+
+**Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
+swaps the old global unique indexes, `ensureTenantIndexes`) with
+`TENANT_FRONTEND_URL`, `TENANT_WEBAUTHN_ORIGIN`, `TENANT_WEBAUTHN_RP_NAME`; and
+the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant`,
+`NEXT_PUBLIC_BACKEND=https://<api>/tenant/api`, `NEXT_PUBLIC_SIDEBAR_TYPE=server`.
+`seedTenancyAdmin.js` is **done** on the Atlas `e-mint` DB (2026-10-02).
+
+**Run it locally** (launch configs in `.claude/launch.json`):
+- scratch Mongo: `mongod --dbpath <scratch>/mongo --port 27999`
+  (DB `emint_tenancy_dev`; `node backend/scripts/seedTenancyDev.js` seeds it);
+- `backend-test` → :5001 (`node dist/server.js`, so **`npm run build` after
+  every backend change**, then restart); `tenant` → :3001; `admin-test` → :3002.
+- Tests: `bash backend/scripts/tenancy-smoke/run-all.sh` (all suites must
+  pass). Repeated runs hit the sign-up rate limit (429) — restart the backend.
+- `npx tsc --noEmit -p .` in each repo. In `admin/` the only expected error is
+  a stale `.next/dev/types/validator.ts` (deleted `docs/tenancy` page) —
+  local dev artefact, not in a clean build.
+- The desktop browser pane may be hidden (React stalls); the headless
+  `agent-browser` CLI works for UI checks. First compiles after a restart
+  take 30–60s per page.
+
+**Conventions that bite:**
+- Tenant code runs inside a scope (AsyncLocalStorage, `tenantScoped`
+  plugin). Never `mongoose.models[name]` in code a project reaches — use
+  `scopedModel(name)`; a plain `Client` there is the *platform's* model.
+- Tenant panel addresses are `/<publicSlug>/<page>` (D18, `src/proxy.ts`);
+  build links with `projectHref()` / `pagePath()`; the project comes from the
+  URL (`getProjectSlug()`), and the RTK cache key includes it.
+- Home is `HOME` (panel.ts), never `'/'`. Tenant docs live in `/user-docs`
+  (update the guide with the feature; link with `GuideLink` / `docsPath`).
+- Admin UI rules: Chakra tokens not hex; cl `Dropdown` (no NativeSelect);
+  `PromptDialog` for confirms; `ModalFooter`; no backdrop blur; no bare
+  prettier (tabs, single quotes).
 
 ## Status
 
@@ -34,9 +90,18 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 | 22 | Project access per member and per invitation | both | M | done |
 | 23 | Media library per project or shared by the organization | both | S | done |
 | 24 | Several organizations: invitations in the app, every workspace listed | both | M | done |
+| 25 | Tenant landing page at `/`, dashboard at `/dashboard`, own token key | admin | M | done |
+| 26 | Files → Media library in the sidebar for record users; tenant forms always in a drawer | both | S | done |
+| 27 | Model names are the project's own (scoped indexes at boot, scoped model lookups, MCP told) | both | M | done |
+| 28 | Project addresses `/<project>/<page>` (D18) | both | L | done |
+| 29 | Project-aware API cache (no project items outside a project) | admin | S | done |
+| 30 | MCP: dashboard builder tools | backend | S | done |
+| 31 | Per-record access on tenant models (D19) | both | M | done |
+| 32 | Public API page: API reference + request tester | admin | M | done |
+| 33 | **A website built by an AI through the MCP, managed from the panel** | both | L | **next — not started** |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
-15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24. (12–15 need 05–09; 18–19 need 08 and 11.)
+15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
 
 ---
 
@@ -361,8 +426,106 @@ your email to see them) and "Your organizations" (every workspace, with its
 role, one click to switch). **Done when** a user invited to B sees and
 accepts it in the app, then has both organizations listed and switchable.
 
+## WO-25 — Landing page, dashboard address, token key (M) — done
+Tenant `/` is a public landing page (`admin/src/app/_landing`); the dashboard
+moved to `/dashboard`; `HOME` in panel.ts for every home link/redirect. The
+tenant build always keeps its token under `MINT_TENANT_TOKEN`
+(constants.tsx) so both panels run side by side. Admin `a9c533a`.
+
+## WO-26 — Files section, drawer forms (S) — done
+`tenantNav`: *Files → Media library* for anyone granted `view-image`;
+`useModalLayout` is always `drawer` in the tenant panel, Settings hides Form
+layout. Admin `3e77f6f`, backend `212b69f9`.
+
+## WO-27 — Project-specific model names (M) — done
+`ensureTenantIndexes()` at boot; `scopedModel()` in import links, MCP
+query_records, stats labels, record view; name and address numbered apart
+(`Customer` stays Customer at `/customers2`); `describe_platform` tells a
+project's AI names are its own. Backend `a90d18ac`, admin `cf8227f`.
+
+## WO-28 — Project addresses (L) — done
+D18. `src/proxy.ts` rewrites `/<publicSlug>/<page>`; project from the URL
+per tab; `/p/:project` takes slug or id; `mint_project` cookie for links
+without a project. Admin `7129e60`, backend `6e5a95be`.
+
+## WO-29 — Project-aware API cache (S) — done
+`mainApi.serializeQueryArgs` prefixes the tab's project, so a client-side
+move between a project and the organization never shows the other's cached
+data (the sidebar kept project sections on /projects).
+
+## WO-30 — MCP dashboard tools (S) — done
+`get_dashboard`, `update_dashboard` (mode replace|append; `normalizeWidget`
+plus a check that every route and field exists) in
+`library/controllers/mcp/mcp.router.ts`; smoke in `mcp.mjs`.
+
+## WO-31 — Per-record access in projects (M) — done
+D19. A model's *Restrict access to each record* now works in projects:
+owner/privacy/access reference `TenantUser`; `recordAccessMiddleware` mounted
+for tenant models; `/p/:project/access-users` and the Owner filter list the
+members who can open the project (`projectPeople()`); no notifications in
+projects; the public API only reaches `privacy: 'public'` records and what a
+site creates is public. Smoke in `access.mjs`.
+
+## WO-32 — Public API reference + tester (M) — done
+`admin/src/app/public-api/_components/` — `api.ts` (endpoints, examples from
+`GET /public/api/<slug>/`), `ApiReference.tsx` (every endpoint: query, body
+fields, example response, Try), `ApiTester.tsx` (method, path, customer token
+kept from a sign-in, JSON body, status/time/response, Copy as fetch).
+Guide sections `reference`, `tester` in `/user-docs/public-api`.
+
+## WO-33 — A website built by an AI through the MCP (L) — next, not started
+**The user's words:** "user creates website via Claude Code, deploys and
+instantly gets an admin panel." With our MCP connected while an AI (Claude
+Code or any other) builds a website, everything the site shows — contents,
+SEO, favicon, images, analytics — must end up in the project and be managed
+from the panel afterwards. Long separate lists the content model doesn't
+cover (products, projects, clients…) become their own models, linked. "All in
+one solution."
+
+**Builds on** WO-18 (website kit: `SiteSettings`, `WebPage`, `PageSeo`,
+`WebContent`; site API `/site`, `/pages`, `/pages/by-path`, `/contents`),
+WO-19 (`track.js` analytics), WO-11 (public API per model), WO-10/30 (MCP).
+
+**MCP work** (`library/controllers/mcp/mcp.router.ts`, tenant
+`routes-tenant/mcp.router.ts`; website projects only, `build` scope, upserts so
+a rebuild updates instead of duplicating):
+- `describe_website` — the kit, the site API contract, and a code recipe for
+  the site (fetch `/site` and `/pages/by-path` at build/request time, render
+  `contents` in order, SEO into `<head>`, favicon/logo from settings,
+  `track.js` on every page, lists from the model's public API) — so the AI
+  writes a site that reads from us, not hard-coded text.
+- `get_site` / `update_site_settings` — name, logo, favicon, colours, font,
+  contact, socials, default SEO, domains (domains drive analytics).
+- `upsert_page` — by path: name, status, menu, template, its SEO, and its
+  content blocks in order (create/update `WebContent`, link them).
+- `upload_media` — from a URL (or base64) into the project's media library,
+  returning the hosted URL to use in settings/contents/records.
+- Lists → models: reuse `plan_feature`/`build_feature` with `publicApi`
+  (read actions on) settable per step; plus a write tool to add records
+  (`create_records`, validated like the create form, `data`/`build` scope) —
+  today the MCP's record tool is read-only (`query_records`).
+- `site_snippets` — `track.js` / widget snippets and the API base for the
+  site's env.
+
+**Admin**: the website workspace shows what the AI seeded (pages with SEO and
+contents, settings with favicon/logo) — check the existing kit pages cover it.
+**User guide**: a "Build your site with AI" section (connect-ai + websites).
+**Done when** an MCP client, in one session, turns a 2-page site into a
+seeded website project: `/site` and `/pages/by-path` return everything the
+site renders (settings, favicon, SEO, ordered contents, list models through
+the public API), track.js is in place, and editing a content in the panel
+changes the deployed site with no code change. Add a smoke suite
+(`website-mcp.mjs`) to `run-all.sh`.
+
+## Known gaps
+- About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
+  rely on the proxy's cookie redirect — correct, one extra hop; convert to
+  `projectHref` when touching those files.
+- A full click-through of the tenant panel in a visible browser after the
+  backend deploy.
+
 ## Follow-ups (not in v1)
-Per-record access on tenant models; password reset for project customers;
+Password reset for project customers;
 moving files between a project's library and the organization's;
 billing/plans and limits per plan;
 custom domains for the public API; OAuth for MCP; tenant data export;

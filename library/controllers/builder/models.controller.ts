@@ -169,8 +169,6 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 	if (error) return { problems: error.details.map(d => d.message.replace(/"/g, '')) };
 
 	const problems: string[] = [];
-	// Per-record access is built on admin accounts; tenant models don't have it yet (docs/multi-tenancy D12).
-	if (currentScope() && value.access?.enabled) problems.push('Per-record access isn’t available in projects yet');
 	// `extraTargets`: models planned alongside this one (a feature build) that don't exist yet.
 	const targets = new Set([...(await linkTargets(req.app)).map(t => t.name), ...extraTargets]);
 

@@ -13,6 +13,8 @@ import { FEATURE_SCHEMA, catalogText, planFromAi, platformGuide } from '../build
 import { effectiveConfig, effectiveSettings, publishConfigPatch, routeModel, routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { runInScope, TenantScope } from '../../functions/tenantScope.function.js';
+import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
+import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -45,7 +47,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, form or detail layout, or to turn its Bulk upload on. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
+Use update_page for later changes to a page's columns, form or detail layout, or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -494,6 +496,118 @@ const TOOLS: ToolDef[] = [
 			return {
 				text: `Updated /${route}: ${caller.page(route)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}`,
 			};
+		},
+	},
+	{
+		name: 'get_dashboard',
+		title: 'Read the dashboard',
+		description: 'The home page’s widgets as saved in the dashboard builder (none saved: the default dashboard). Read it before update_dashboard.',
+		scope: 'read',
+		inputSchema: { type: 'object', properties: {} },
+		annotations: { readOnlyHint: true, openWorldHint: false },
+		run: async () => {
+			const doc: any = await DashboardConfig.findOne({ key: 'default' }).lean();
+			const widgets = doc?.widgets || [];
+			return {
+				text: widgets.length
+					? `${widgets.length} widget(s):\n${JSON.stringify(widgets, null, 1)}`
+					: 'No dashboard saved yet — update_dashboard makes one.',
+				data: { widgets, saved: !!doc },
+			};
+		},
+	},
+	{
+		name: 'update_dashboard',
+		title: 'Change the dashboard',
+		description:
+			'Saves the home page’s widgets (the dashboard builder). Each widget reads one model (`route`, from list_models) under the viewer’s own permissions: "stat" a single number (count, or sum/avg of a number `field`, over a `range`, optionally compared with the period before); "chart" over time (group "time", `interval`) or broken down by a field (group "field", `by`: an options or linked field); "recent" the latest records with up to 6 `columns`. `mode` "replace" (default) saves exactly `widgets` — call get_dashboard first to keep what’s there — "append" adds them after the current ones. Show the user the plan first.',
+		scope: 'build',
+		inputSchema: {
+			type: 'object',
+			required: ['widgets'],
+			properties: {
+				mode: { type: 'string', enum: ['replace', 'append'] },
+				widgets: {
+					type: 'array',
+					maxItems: 40,
+					items: {
+						type: 'object',
+						required: ['type', 'route'],
+						properties: {
+							type: { type: 'string', enum: ['stat', 'chart', 'recent'] },
+							route: { type: 'string', description: 'The model’s route' },
+							title: { type: 'string' },
+							size: { type: 'string', enum: ['sm', 'md', 'lg', 'xl', 'full'], description: 'Width: sm a quarter … full the whole row' },
+							metric: { type: 'string', enum: ['count', 'sum', 'avg'] },
+							field: { type: 'string', description: 'The number field for sum/avg' },
+							range: { type: 'string', enum: ['all', 'today', '7d', '30d', '90d', 'month', '12m', 'year'] },
+							dateField: { type: 'string', description: 'The date the range applies to (default createdAt)' },
+							compare: { type: 'boolean', description: 'stat: show the change from the period before' },
+							prefix: { type: 'string', description: 'e.g. "$"' },
+							suffix: { type: 'string' },
+							group: { type: 'string', enum: ['time', 'field'] },
+							chart: { type: 'string', enum: ['bar', 'line', 'donut'] },
+							interval: { type: 'string', enum: ['day', 'week', 'month'] },
+							by: { type: 'string', description: 'chart by field: the field to break down by' },
+							limit: { type: 'integer', description: 'chart by field: bars (2–12); recent: rows (1–20)' },
+							columns: { type: 'array', items: { type: 'string' }, description: 'recent: field keys to show' },
+							sort: { type: 'string', description: 'recent: e.g. "-createdAt"' },
+							filters: {
+								type: 'array',
+								items: {
+									type: 'object',
+									required: ['field', 'value'],
+									properties: { field: { type: 'string' }, op: { type: 'string', enum: ['eq', 'ne', 'in'] }, value: {} },
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+		run: async (req, args, caller) => {
+			const incoming = Array.isArray(args?.widgets) ? args.widgets : null;
+			if (!incoming) return { text: 'Send the widgets as a list.', isError: true };
+			const current: any = await DashboardConfig.findOne({ key: 'default' }).lean();
+			const list = args?.mode === 'append' ? [...(current?.widgets || []), ...incoming] : incoming;
+			if (list.length > 40) return { text: 'A dashboard holds up to 40 widgets.', isError: true };
+
+			const problems: string[] = [];
+			const widgets: any[] = [];
+			const fieldsOf = new Map<string, Set<string>>();
+			for (let i = 0; i < list.length; i++) {
+				const { widget, error } = normalizeWidget(list[i], i);
+				if (error) {
+					problems.push(error);
+					continue;
+				}
+				// The model and the fields it names must be this panel's — the builder's form only offers those.
+				if (!fieldsOf.has(widget.route)) {
+					if (!routeModel(req.app, widget.route)) {
+						problems.push(`Widget ${i + 1}: no model at /${widget.route} — call list_models for routes`);
+						continue;
+					}
+					const settings = await effectiveSettings(req.app, widget.route);
+					fieldsOf.set(widget.route, new Set([...(settings?.fields || []).map((f: any) => f.key), '_id', 'code', 'createdAt', 'updatedAt']));
+				}
+				const keys = fieldsOf.get(widget.route)!;
+				const named = [widget.field, widget.by, widget.dateField, ...(widget.columns || []), ...(widget.filters || []).map((f: any) => f.field)]
+					.concat(widget.sort ? [String(widget.sort).replace(/^-/, '')] : [])
+					.filter(Boolean);
+				const unknown = [...new Set(named.filter((k: string) => !keys.has(k.split('.')[0])))];
+				if (unknown.length) problems.push(`Widget ${i + 1} (/${widget.route}): unknown field ${unknown.join(', ')}`);
+				else widgets.push(widget);
+			}
+			if (problems.length) return { text: `Nothing saved:\n- ${problems.join('\n- ')}`, isError: true };
+
+			const seen = new Set<string>();
+			widgets.forEach((w, i) => {
+				if (seen.has(w.id)) w.id = `${w.id}-${i}`;
+				seen.add(w.id);
+			});
+			await DashboardConfig.findOneAndUpdate({ key: 'default' }, { $set: { widgets, updatedBy: caller.user._id } }, { upsert: true });
+			return { text: `Saved the dashboard: ${widgets.length} widget(s). ${caller.link('/')}`, data: { widgets } };
 		},
 	},
 ];

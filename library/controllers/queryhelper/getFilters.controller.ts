@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { Filter, FilterResponse } from '../../types/_index.js';
 import mongoose from 'mongoose';
 import { getActiveConfig } from '../../functions/resolveRoute.function.js';
+import { currentScope } from '../../functions/tenantScope.function.js';
+import { projectPeople } from '../../functions/tenancy.function.js';
 import {
 	filterRouteKey,
 	resolveFilterModel,
@@ -40,7 +42,11 @@ const getFilters = ({
 					continue; // Skip this iteration if the user's role is not included in the roles array
 				}
 
-				if (category === 'model' || category === 'distinct') {
+				if (category === 'model' && model === 'access-users' && currentScope()?.project) {
+					// A restricted model's Owner, in a tenant project: the people who can open it.
+					const people: any[] = await projectPeople();
+					newFilter.options = people.map(p => ({ value: p._id, label: p.name || p.email }));
+				} else if (category === 'model' || category === 'distinct') {
 					const myModel = resolveFilterModel(model, baseModel);
 
 					if (!myModel) {

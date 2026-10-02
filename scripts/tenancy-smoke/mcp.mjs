@@ -54,6 +54,17 @@ ok('an admin key is refused by the tenant MCP', r.status === 401, r.status);
 r = await rpc('/mcp', adminKey, 'tools/call', { name: 'list_models', arguments: {} });
 const adminList = r.body?.result?.content?.[0]?.text || '';
 ok("the admin MCP doesn't list tenant models", r.status === 200 && !/^- Ticket —/m.test(adminList) && !/\bT[0-9a-f]{24}_/.test(adminList), r.status);
+// The dashboard builder over MCP
+res = await tool(key, 'update_dashboard', { widgets: [{ type: 'stat', route: 'tickets', title: 'Open tickets', filters: [{ field: 'status', value: 'open' }] }, { type: 'chart', route: 'tickets', group: 'field', by: 'status' }] });
+ok('update_dashboard saves widgets', res && !res.isError && /2 widget/.test(res.content?.[0]?.text || ''), res?.content?.[0]?.text?.slice(0, 160));
+res = await tool(key, 'update_dashboard', { mode: 'append', widgets: [{ type: 'recent', route: 'tickets', columns: ['subject', 'nope'] }] });
+ok('an unknown field is refused, nothing saved', res?.isError && /unknown field nope/.test(res.content?.[0]?.text || ''), res?.content?.[0]?.text?.slice(0, 160));
+res = await tool(key, 'get_dashboard', {});
+ok('get_dashboard reads them back', res?.structuredContent?.widgets?.length === 2, res?.content?.[0]?.text?.slice(0, 80));
+r = await call('GET', P(s.crm, '/dashboard'), null, s.pat);
+ok("it's the project's dashboard", r.status === 200 && r.body?.widgets?.length === 2 && r.body.widgets[0].title === 'Open tickets', JSON.stringify(r.body?.widgets?.map?.(w => w.type)));
+r = await call('GET', P(s.site, '/dashboard'), null, s.pat);
+ok("another project's dashboard is untouched", r.status === 200 && !r.body?.widgets?.length, r.body?.widgets?.length);
 // Revoke
 const keys = (await call('GET', P(s.crm, '/builder/api-keys'), null, s.pat)).body;
 const id = (keys?.doc || keys || []).find?.(k => k.name === 'Claude')?._id;
