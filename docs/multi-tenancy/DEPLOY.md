@@ -35,9 +35,13 @@ Same repo and branch as the admin panel; environment:
 |---|---|
 | `NEXT_PUBLIC_PANEL` | `tenant` |
 | `NEXT_PUBLIC_BACKEND` | `https://<api host>/tenant/api` |
-| `NEXT_PUBLIC_TOKEN_NAME` | `MINT_TENANT_TOKEN` |
 | `NEXT_PUBLIC_SIDEBAR_TYPE` | `server` |
 | `NEXT_PUBLIC_URL` | `https://app.mintapp.shop` |
+
+`NEXT_PUBLIC_TOKEN_NAME` isn't needed: the tenant build always keeps its token
+under `MINT_TENANT_TOKEN` (constants.tsx), so it never shares a session with the
+admin panel even if the admin's env is copied over. Its `/` is the public landing
+page; the dashboard is `/dashboard` (panel.ts `HOME`).
 
 Both builds were checked with `next build` (admin and `NEXT_PUBLIC_PANEL=tenant`).
 
