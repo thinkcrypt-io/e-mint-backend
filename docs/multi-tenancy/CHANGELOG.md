@@ -712,3 +712,74 @@ Decisions D14–D17 (README).
   Shop's record.
 - Smoke suite all green. `WORK_ORDERS.md` gained a Handoff section and
   WO-25…33 (WO-33, the AI-built website, is next).
+
+## 2026-10-02 — WO-33 A website built by an AI through the MCP
+- New MCP tools (`library/controllers/mcp/website.tools.ts`), website projects
+  only unless noted: `describe_website` (steps, the kit's fields, the site API
+  with this project's address, a Next.js recipe), `get_site`,
+  `update_site_settings` (upserts the first SiteSettings record; `domains`
+  needs manage-projects), `upsert_page` (page by path, its PageSeo, its
+  WebContent blocks by slug in order — priority (n−i)·10; `removeOthers`
+  archives dropped blocks; everything validated before any save, created docs
+  rolled back on a save failure), `upload_media` (any project; URL or base64 →
+  webp except svg/ico/gif, S3 + File in the project's or organization's
+  library; http(s) only, private addresses refused in production, redirects
+  re-checked, 10 MB), `create_records` (any MCP; built models; links by id or
+  name; `matchOn` upserts; formulas applied; per-record-access models get
+  privacy public), `set_public_api` (projects), `site_snippets`.
+- `mcp.router.ts`: `ToolDef.only` ('project' | 'website') filters tools/list
+  and tools/call; `Caller.project` (tenant MCP sets it); website paragraph
+  added to the initialize instructions; build_feature's schema takes a
+  per-step `publicApi` (applied after the build, in step order).
+  `namingFields`/`refIds` moved to `mcp/records.helpers.ts`;
+  `PUBLIC_API` exported from models.controller.
+- Optional env `PUBLIC_API_URL` (DEPLOY.md).
+- Admin: user guide /user-docs/websites#ai-site "Build your site with AI";
+  connect-ai's tool table lists the new tools.
+- Verified: `scripts/tenancy-smoke/website-mcp.mjs` (in run-all.sh) — tools
+  offered per project type; settings, 2 pages with SEO and blocks, a Product
+  model with publicApi filled by create_records (matchOn), all read back
+  through /site, /pages/by-path and /products; a panel edit shows on the site
+  API; a rebuild updates without duplicates and archives a dropped block;
+  refusals change nothing. Full suite green. Real S3 upload not run (opt-in).
+
+## 2026-10-03 — WO-34 Website workspace, and three bugs
+- Bugs (user reports):
+  - Contents and SEO tables answered "Cast to ObjectId failed … at path page":
+    `middleware/filter.middleware.ts` read the paging `?page=1` as the kit's
+    `page` reference (the sortable branch skipped the reserved names). Bare
+    reserved keys are now never fields; `page_in` still filters.
+  - Home opened another project's dashboard: admin `src/proxy.ts` sent a bare
+    `/dashboard` to the last-project cookie. `/dashboard` alone is now always
+    the organization home (a project's dashboard is `/<project>`).
+  - Accepting an invitation as a new account failed with "name is not
+    allowed to be empty" when the invitation carried a name: the form showed
+    it but sent its own empty state
+    (`app/auth/accept-invitation/[token]/_components/TenantAcceptInvitation.tsx`).
+    Verified in a browser: the invitee joined with only the invited project.
+- Site setup on `TenantProject.site` (`library/functions/siteConfig.function.ts`,
+  Joi-checked, merged per section): tracking (MINT analytics on/off, GA4,
+  GTM, Google Ads, Meta/TikTok/LinkedIn pixels, Clarity, Hotjar), code (head,
+  body start/end), SEO (indexing, sitemap, robots rules, main domain, Google
+  and Bing verification), redirects, response headers. Tenant API
+  GET/PUT `/site-config` (build; domains need manage-projects),
+  GET `/site-overview` (settings, pages with SEO/blocks, checklist).
+- Site API: `/site` adds `config`; `/site/tags`, `/site/robots.txt`,
+  `/site/sitemap.xml` (published pages minus noIndex; `?origin=`).
+  `/public/track.js` fetches /site/tags and injects every tag and the custom
+  code (scripts recreated so they run; pixels re-fire on client navigation);
+  `data-no-tags` leaves them to the site.
+- MCP: `update_site_settings { config }`, get_site shows it, describe_website
+  explains robots/sitemap/redirects/headers.
+- Admin: `/site-setup` (tabs General = the Site settings record, Tracking,
+  Code, SEO & indexing, Redirects & headers, Domains; ?tab= deep links),
+  `WebsiteOverview` at the top of a website project's dashboard (30-day
+  traffic, setup checklist, pages), sidebar section "Site" (Site setup,
+  Analytics — Analytics left Audience), guide sections in /user-docs/websites.
+- Verified: full smoke suite (13 new checks); headless browser: overview,
+  Tracking save → /site/tags, General save → /site, Home stays on the
+  organization, Contents table loads. Dev note: with three Next dev servers
+  the machine hit load 118 and pages took minutes; stop admin-test when not
+  needed. A background tab was seen requesting /auth/login in a loop once —
+  not reproduced; watch for it.
+

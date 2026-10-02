@@ -9,15 +9,123 @@
  * `MintAnalytics.track(name, props)`. No cookies: a random visitor id in
  * localStorage, a session id in sessionStorage (ends with the tab). Sent in
  * small batches with navigator.sendBeacon (text/plain, so no preflight).
- * `data-no-track` on the script, or Do Not Track, turns it off.
+ * `data-no-track` on the script, or Do Not Track, turns the counting off.
+ *
+ * It also puts the website's tags on the page (WO-34) — Google Analytics /
+ * Ads / Tag Manager, Meta, TikTok and LinkedIn pixels, Clarity, Hotjar, the
+ * custom head and body code, verification metas — as set on the panel's Site
+ * setup page (GET …/site/tags), so they change without a deploy.
+ * `data-no-tags` leaves them to the site (e.g. rendered on the server).
  */
 export const TRACK_JS = `(function () {
 	'use strict';
 	var script = document.currentScript || document.querySelector('script[data-project][src*="/public/track.js"]');
-	if (!script || script.hasAttribute('data-no-track') || navigator.doNotTrack === '1') return;
+	if (!script) return;
 	var project = script.getAttribute('data-project');
 	if (!project) { console.warn('MINT analytics: add data-project="<your project slug>"'); return; }
-	var endpoint = new URL(script.src, location.href).origin + '/public/api/' + encodeURIComponent(project) + '/track';
+	var api = new URL(script.src, location.href).origin + '/public/api/' + encodeURIComponent(project);
+	var endpoint = api + '/track';
+	var off = script.hasAttribute('data-no-track') || navigator.doNotTrack === '1';
+	var tagged = false;
+
+	/* ---- the site's tags (Site setup) ---- */
+	function addScript(src, inline) {
+		var el = document.createElement('script');
+		if (src) { el.async = true; el.src = src; }
+		if (inline) el.text = inline;
+		document.head.appendChild(el);
+	}
+	function addHtml(html, where) {
+		if (!html) return;
+		var tpl = document.createElement('template');
+		tpl.innerHTML = html;
+		Array.prototype.slice.call(tpl.content.childNodes).forEach(function (node) {
+			var el = node;
+			if (node.nodeName === 'SCRIPT') {
+				el = document.createElement('script');
+				for (var i = 0; i < node.attributes.length; i++) el.setAttribute(node.attributes[i].name, node.attributes[i].value);
+				el.text = node.textContent;
+			} else el = document.importNode(node, true);
+			if (where === 'bodyStart') document.body.insertBefore(el, document.body.firstChild);
+			else (where === 'head' ? document.head : document.body).appendChild(el);
+		});
+	}
+	function meta(name, content) {
+		if (!content || document.querySelector('meta[name="' + name + '"]')) return;
+		var m = document.createElement('meta');
+		m.name = name; m.content = content;
+		document.head.appendChild(m);
+	}
+	function applyTags(t) {
+		if (window.__mintTags) return;
+		window.__mintTags = true;
+		if (t.mintAnalytics === false) { off = true; queue.length = 0; }
+		meta('google-site-verification', t.googleVerification);
+		meta('msvalidate.01', t.bingVerification);
+		if (t.noindex) meta('robots', 'noindex');
+		var w = window;
+		if (t.ga4 || t.googleAds) {
+			addScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(t.ga4 || t.googleAds));
+			w.dataLayer = w.dataLayer || [];
+			w.gtag = w.gtag || function () { w.dataLayer.push(arguments); };
+			w.gtag('js', new Date());
+			if (t.ga4) w.gtag('config', t.ga4);
+			if (t.googleAds) w.gtag('config', t.googleAds);
+		}
+		if (t.gtm) {
+			w.dataLayer = w.dataLayer || [];
+			w.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
+			addScript('https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(t.gtm));
+		}
+		if (t.metaPixel && !w.fbq) {
+			var fbq = w.fbq = function () { fbq.callMethod ? fbq.callMethod.apply(fbq, arguments) : fbq.queue.push(arguments); };
+			if (!w._fbq) w._fbq = fbq;
+			fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = [];
+			addScript('https://connect.facebook.net/en_US/fbevents.js');
+			w.fbq('init', t.metaPixel);
+			w.fbq('track', 'PageView');
+		}
+		if (t.tiktokPixel && !w.ttq) {
+			var ttq = w.ttq = [];
+			ttq.methods = ['page', 'track', 'identify', 'instances', 'debug', 'on', 'off', 'once', 'ready', 'alias', 'group', 'enableCookie', 'disableCookie'];
+			ttq.setAndDefer = function (o, m) { o[m] = function () { o.push([m].concat(Array.prototype.slice.call(arguments, 0))); }; };
+			for (var i = 0; i < ttq.methods.length; i++) ttq.setAndDefer(ttq, ttq.methods[i]);
+			ttq.load = function (id) {
+				var src = 'https://analytics.tiktok.com/i18n/pixel/events.js';
+				ttq._i = ttq._i || {}; ttq._i[id] = []; ttq._i[id]._u = src; ttq._t = ttq._t || {}; ttq._t[id] = +new Date(); ttq._o = ttq._o || {}; ttq._o[id] = {};
+				addScript(src + '?sdkid=' + encodeURIComponent(id) + '&lib=ttq');
+			};
+			w.TiktokAnalyticsObject = 'ttq';
+			ttq.load(t.tiktokPixel);
+			ttq.page();
+		}
+		if (t.linkedinPartner) {
+			w._linkedin_partner_id = t.linkedinPartner;
+			w._linkedin_data_partner_ids = w._linkedin_data_partner_ids || [];
+			w._linkedin_data_partner_ids.push(t.linkedinPartner);
+			addScript('https://snap.licdn.com/li.lms-analytics/insight.min.js');
+		}
+		if (t.clarity && !w.clarity) {
+			w.clarity = function () { (w.clarity.q = w.clarity.q || []).push(arguments); };
+			addScript('https://www.clarity.ms/tag/' + encodeURIComponent(t.clarity));
+		}
+		if (t.hotjar && !w.hj) {
+			w.hj = function () { (w.hj.q = w.hj.q || []).push(arguments); };
+			w._hjSettings = { hjid: Number(t.hotjar), hjsv: 6 };
+			addScript('https://static.hotjar.com/c/hotjar-' + encodeURIComponent(t.hotjar) + '.js?sv=6');
+		}
+		addHtml(t.head, 'head');
+		addHtml(t.bodyStart, 'bodyStart');
+		addHtml(t.bodyEnd, 'bodyEnd');
+		tagged = true;
+	}
+	if (!script.hasAttribute('data-no-tags')) {
+		fetch(api + '/site/tags').then(function (r) { return r.ok ? r.json() : null; }).then(function (t) {
+			if (!t) return;
+			if (document.body) applyTags(t);
+			else document.addEventListener('DOMContentLoaded', function () { applyTags(t); });
+		}).catch(function () {});
+	}
 
 	function id() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 	function stored(store, key) {
@@ -30,12 +138,13 @@ export const TRACK_JS = `(function () {
 
 	function utm(name) { try { return new URLSearchParams(location.search).get(name) || undefined; } catch (e) { return undefined; } }
 	function flush() {
-		if (!queue.length) return;
+		if (off || !queue.length) return;
 		var body = JSON.stringify({ visitorId: visitorId, sessionId: sessionId, events: queue.splice(0, 20) });
 		if (navigator.sendBeacon && navigator.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' }))) return;
 		fetch(endpoint, { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(function () {});
 	}
 	function push(event) {
+		if (off) return;
 		event.path = event.path || location.pathname;
 		event.title = event.title || document.title;
 		queue.push(event);
@@ -46,7 +155,13 @@ export const TRACK_JS = `(function () {
 	var last = null;
 	function pageview() {
 		if (location.pathname === last) return;
+		var first = last === null;
 		last = location.pathname;
+		// The pixels count their first page view themselves; later ones (client-side navigation) come from here.
+		if (!first && tagged) {
+			if (window.fbq) window.fbq('track', 'PageView');
+			if (window.ttq && window.ttq.page) window.ttq.page();
+		}
 		push({ type: 'pageview', referrer: document.referrer || undefined, utmSource: utm('utm_source'), utmMedium: utm('utm_medium'), utmCampaign: utm('utm_campaign') });
 	}
 	['pushState', 'replaceState'].forEach(function (fn) {

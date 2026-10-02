@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Admin } from '../../../imports.js';
-import { isSecretPath, listModelFields, scopedModel } from '../../functions/routeRegistry.function.js';
+import { listModelFields, scopedModel } from '../../functions/routeRegistry.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { ApiKey } from '../../models/builder/_index.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
@@ -15,6 +15,8 @@ import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { runInScope, TenantScope } from '../../functions/tenantScope.function.js';
 import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
+import { namingFields, refIds } from './records.helpers.js';
+import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -67,6 +69,8 @@ type Caller = {
 	/** The builder permission, for the read and build scopes. */
 	builder: (scope: 'read' | 'build') => boolean;
 	scope?: TenantScope;
+	/** The tenant project the key belongs to (none on the admin MCP). */
+	project?: any;
 };
 
 const authenticate = async (req: Request): Promise<Caller | { error: string }> => {
@@ -110,6 +114,8 @@ type ToolDef = {
 	title: string;
 	description: string;
 	scope: Scope;
+	/** Only offered inside a tenant project, or a website project. */
+	only?: 'project' | 'website';
 	inputSchema: any;
 	annotations: Record<string, boolean>;
 	run: (req: any, args: any, caller: Caller) => Promise<{ text: string; data?: any; isError?: boolean }>;
@@ -181,30 +187,7 @@ const bulkUploadOf = (v: any, known: (k: any) => boolean): any => {
 /* -------------------------------------------------------- query_records */
 
 const MAX_RECORDS = 500;
-const NAMING = ['name', 'title', 'label', 'code', 'email', 'slug'];
 const OPS: Record<string, string> = { gt: '$gt', gte: '$gte', lt: '$lt', lte: '$lte', ne: '$ne', in: '$in', nin: '$nin' };
-
-/** A model's naming fields: the usual ones and its unique text fields (an industry's code). */
-const namingFields = (Model: mongoose.Model<any>) => [
-	...new Set([
-		...NAMING.filter(f => Model.schema.path(f)),
-		...Object.entries<any>(Model.schema.paths)
-			.filter(([k, p]) => p?.instance === 'String' && p?.options?.unique && !k.includes('.') && !isSecretPath(k, p))
-			.map(([k]) => k),
-	]),
-];
-
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** Linked records named by id, or by name / code / title (any case) → their ids. */
-const refIds = async (Ref: mongoose.Model<any>, values: any[]) => {
-	const ids = values.filter(v => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v))).map(String);
-	const names = values.filter(v => !ids.includes(String(v))).map(v => String(v).trim()).filter(Boolean);
-	if (!names.length) return ids;
-	const or = namingFields(Ref).flatMap(f => names.map(n => ({ [f]: new RegExp(`^${escapeRe(n)}$`, 'i') })));
-	const found = or.length ? await Ref.find({ $or: or }, { _id: 1 }).limit(1000).lean() : [];
-	return [...ids, ...found.map((d: any) => String(d._id))];
-};
 
 /**
  * Reads the records of one page for the user's AI: the same records the
@@ -274,6 +257,35 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 	const head = `/${route}: ${total.toLocaleString()} record${total === 1 ? '' : 's'} match${page < pages ? ` — page ${page} of ${pages}, ${rows.length} shown (ask for page ${page + 1})` : `, ${rows.length} on this page`}.`;
 	const notes = unknown.length ? `\nIgnored filters (not fields of this page): ${unknown.join(', ')}` : '';
 	return { text: `${head}${notes}\n${JSON.stringify(rows)}`, data: { route, total, page, pages, limit, records: rows } };
+};
+
+/** build_feature's plan: a project's new model can have its public API switched on as it's built (WO-33). */
+const STEP: any = FEATURE_SCHEMA.properties.steps.items;
+const BUILD_SCHEMA = {
+	...FEATURE_SCHEMA,
+	properties: {
+		...FEATURE_SCHEMA.properties,
+		steps: {
+			...FEATURE_SCHEMA.properties.steps,
+			items: {
+				...STEP,
+				properties: {
+					...STEP.properties,
+					publicApi: {
+						type: 'object',
+						description:
+							'create, in a project only: switch the model’s public API on as it’s built — e.g. {"enabled": true, "actions": ["list", "get"]} for a list a website shows. auth "customer" for signed-in customers only.',
+						properties: {
+							enabled: { type: 'boolean' },
+							actions: { type: 'array', items: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete'] } },
+							auth: { type: 'string', enum: ['none', 'customer'] },
+							ownerOnly: { type: 'boolean' },
+						},
+					},
+				},
+			},
+		},
+	},
 };
 
 const TOOLS: ToolDef[] = [
@@ -388,16 +400,30 @@ const TOOLS: ToolDef[] = [
 		description:
 			'Builds a confirmed feature plan in the admin: creates the models, adds the fields to existing ones, adds the tabs and sidebar entries. All or nothing. Only call it after the user has confirmed every step.',
 		scope: 'build',
-		inputSchema: { type: 'object', required: ['feature'], properties: { feature: FEATURE_SCHEMA } },
+		inputSchema: { type: 'object', required: ['feature'], properties: { feature: BUILD_SCHEMA } },
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
 		run: async (req, args, caller) => {
 			try {
 				const r = await buildFeature(req, planFromAi(args?.feature), { source: 'mcp', apiKey: caller.key });
+				// Public APIs asked for on new models — a project's only. Created models come back in step order.
+				const creates = (Array.isArray(args?.feature?.steps) ? args.feature.steps : []).filter((s: any) => s?.action !== 'update');
+				const apis: string[] = [];
+				for (let i = 0; i < creates.length; i++) {
+					if (!creates[i]?.publicApi || !r.created[i]) continue;
+					if (!caller.scope) {
+						r.warnings.push(`${r.created[i].title}: the public API is for project models only`);
+						continue;
+					}
+					const set = await setPublicApi(req, r.created[i].name, creates[i].publicApi);
+					if (set.error) r.warnings.push(`${r.created[i].title}'s public API: ${set.error}`);
+					else apis.push(`- Public API on: ${r.created[i].title} (${set.value.actions.join(', ')}) — /${r.created[i].route}`);
+				}
 				const lines = [
 					`Built “${r.feature.title}”.`,
 					...r.created.map(c => `- New: ${c.title} — ${caller.page(c.route)} (model: ${caller.link(`/model-builder/${c.id}`)})`),
 					...r.updated.map(u => `- Changed: ${u.title} — added ${u.added.join(', ') || 'nothing'}${u.changed.length ? `; changed ${u.changed.join(', ')}` : ''}`),
 					...r.tabs.map(t => `- Tab “${t.title}” on the ${t.page} page`),
+					...apis,
 					...r.warnings.map(w => `- Note: ${w}`),
 				];
 				return { text: lines.join('\n'), data: { ...r, feature: { id: String(r.feature._id), title: r.feature.title } } };
@@ -610,7 +636,12 @@ const TOOLS: ToolDef[] = [
 			return { text: `Saved the dashboard: ${widgets.length} widget(s). ${caller.link('/')}`, data: { widgets } };
 		},
 	},
+	...WEBSITE_TOOLS,
 ];
+
+/** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */
+const available = (t: ToolDef, caller: Caller) =>
+	!t.only || (t.only === 'project' ? !!caller.project : caller.project?.type === 'website');
 
 /* ------------------------------------------------------------ JSON-RPC */
 
@@ -629,14 +660,14 @@ const handle = async (req: any, msg: any, caller: Caller) => {
 				protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
 				capabilities: { tools: { listChanged: false } },
 				serverInfo: SERVER_INFO,
-				instructions: INSTRUCTIONS,
+				instructions: caller.project?.type === 'website' ? INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS,
 			});
 		}
 		case 'ping':
 			return notification ? null : rpcResult(id, {});
 		case 'tools/list':
 			return rpcResult(id, {
-				tools: TOOLS.filter(t => caller.key.scopes?.includes(t.scope)).map(({ name, title, description, inputSchema, annotations }) => ({
+				tools: TOOLS.filter(t => caller.key.scopes?.includes(t.scope) && available(t, caller)).map(({ name, title, description, inputSchema, annotations }) => ({
 					name,
 					title,
 					description,
@@ -645,7 +676,7 @@ const handle = async (req: any, msg: any, caller: Caller) => {
 				})),
 			});
 		case 'tools/call': {
-			const tool = TOOLS.find(t => t.name === params?.name);
+			const tool = TOOLS.find(t => t.name === params?.name && available(t, caller));
 			if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
 			const denied = can(caller, tool.scope);
 			if (denied) return rpcResult(id, { content: [{ type: 'text', text: denied }], isError: true });
@@ -715,7 +746,7 @@ export const makeMcpRouter = (authenticateWith: Authenticate) => {
 	return router;
 };
 
-export type { Caller };
+export type { Caller, ToolDef };
 export { hashKey };
 
 export default makeMcpRouter(authenticate);

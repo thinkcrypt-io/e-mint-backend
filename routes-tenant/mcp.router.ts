@@ -60,6 +60,7 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 		allows: p => grants(permissions, [p]),
 		builder: () => grants(permissions, ['build']),
 		scope: { organization: key.organization, project: key.project },
+		project,
 	};
 };
 

@@ -20,9 +20,16 @@ export const tenantNav = (
 ): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
 	// A website: its analytics; any project: the customers of its public API.
+	// A website's own pages (WO-34): its setup — tags, code, SEO, redirects, domains — and its analytics.
+	const site =
+		inProject && projectType === 'website'
+			? section('Site', 'globe', [
+					...(can('build') ? [{ title: 'Site setup', href: '/site-setup', icon: 'settings-2' }] : []),
+					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
+			  ])
+			: [];
 	const audience = inProject
 		? section('Audience', 'users-round', [
-				...(projectType === 'website' && can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 				...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
 				...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 		  ])
@@ -44,5 +51,5 @@ export const tenantNav = (
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
 		...(can('manage-organization') ? [{ title: 'Settings', href: '/org/settings', icon: 'settings' }] : []),
 	]);
-	return [...files, ...audience, ...build, ...org];
+	return [...site, ...files, ...audience, ...build, ...org];
 };

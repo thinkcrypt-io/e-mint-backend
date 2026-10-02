@@ -25,9 +25,9 @@ changed. Never leave work done but untracked here.
 - Commit/push only when the user asks. Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-**Where it stands:** WO-01…32 done and pushed (backend `v3` `942ba57e`,
-admin `main` `007fa59`). **Next: WO-33** (a website built by an
-AI through the MCP, managed from the panel). See the Status table.
+**Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
+admin `main` `007fa59`). **Open (user's requests, 2026-10-02):** WO-35 new-project wizard, WO-36
+history, WO-37 notifications (WO-34 and the invitation bug are done, uncommitted). See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -99,7 +99,12 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 30 | MCP: dashboard builder tools | backend | S | done |
 | 31 | Per-record access on tenant models (D19) | both | M | done |
 | 32 | Public API page: API reference + request tester | admin | M | done |
-| 33 | **A website built by an AI through the MCP, managed from the panel** | both | L | **next — not started** |
+| 33 | **A website built by an AI through the MCP, managed from the panel** | both | L | done |
+| 34 | **Website workspace: site setup page (tags, pixels, head code, headers, redirects, robots/sitemap, domains), website overview on the home dashboard** + bugs (kit `page` field vs paging, Home → another project's dashboard) | both | L | done |
+| 35 | **New-project wizard: app → build your first model; website → name, logo, favicon** | admin | M | next |
+| 36 | **History in every project** (who changed what, per project) | both | M | next |
+| 37 | **Notifications for every tenant user** (bell, per project and organization) | both | M | next |
+| — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -474,7 +479,16 @@ fields, example response, Try), `ApiTester.tsx` (method, path, customer token
 kept from a sign-in, JSON body, status/time/response, Copy as fetch).
 Guide sections `reference`, `tester` in `/user-docs/public-api`.
 
-## WO-33 — A website built by an AI through the MCP (L) — next, not started
+## WO-33 — A website built by an AI through the MCP (L) — done
+**Built:** `library/controllers/mcp/website.tools.ts` (describe_website,
+get_site, update_site_settings, upsert_page, upload_media, create_records,
+set_public_api, site_snippets), `mcp/records.helpers.ts`; `ToolDef.only`
+hides website tools outside website projects (project-only for
+set_public_api); build_feature steps take `publicApi`. Smoke:
+`website-mcp.mjs` (30 checks). Guide: /user-docs/websites#ai-site, tools in
+connect-ai. upload_media's real upload is opt-in in the smoke
+(`SMOKE_UPLOAD=1`, writes to the S3 bucket). See CHANGELOG.
+
 **The user's words:** "user creates website via Claude Code, deploys and
 instantly gets an admin panel." With our MCP connected while an AI (Claude
 Code or any other) builds a website, everything the site shows — contents,
@@ -517,6 +531,48 @@ site renders (settings, favicon, SEO, ordered contents, list models through
 the public API), track.js is in place, and editing a content in the panel
 changes the deployed site with no code change. Add a smoke suite
 (`website-mcp.mjs`) to `run-all.sh`.
+
+## WO-34 — Website workspace (L) — done
+**The user's words:** "should have website analytics page, page to set up
+google tags, pixel, headers — not tables, a full page like the analytics page
+… website dashboard must have analytics, headers manipulation and every other
+configuration a website must have."
+- Bugs found with it (fixed, uncommitted): `middleware/filter.middleware.ts` —
+  a bare `?page=1` was read as the kit's `page` reference field (Cast to
+  ObjectId on /web-contents, /seo); admin `src/proxy.ts` — bare `/dashboard`
+  followed the last-project cookie, so Home opened another project's
+  dashboard; now always the organization home.
+- Site configuration on `TenantProject.site` (code schema, not a kit model):
+  tracking (GA4, GTM, Meta Pixel, TikTok, LinkedIn, Clarity, Hotjar, MINT
+  analytics on/off), code (head, body start, body end), SEO (indexing,
+  robots.txt, sitemap, Google/Bing verification), redirects, response headers.
+  Tenant API GET/PUT `/site-config`; site API `/site` returns it, plus
+  `/site/robots.txt`, `/site/sitemap.xml`; track.js injects the tags so they
+  change from the panel without a deploy.
+- Admin: `/site-setup` full page (General = the Site settings record, Tracking,
+  Code, SEO & indexing, Redirects & headers, Domains); website overview on the
+  project dashboard (analytics tiles, setup checklist, pages); sidebar "Site".
+- MCP: update_site_settings takes `config`; describe_website covers it.
+- Built as above: backend `library/functions/siteConfig.function.ts`,
+  `routes-tenant/site.router.ts` (site-config, site-overview), public router
+  (/site config, /site/tags, /site/robots.txt, /site/sitemap.xml), track.js
+  tag injection (`data-no-tags` opts out), tenantNav "Site" section (Site
+  setup, Analytics). Admin `app/site-setup`, `tenant/WebsiteOverview.tsx` on
+  the website dashboard, guide sections in /user-docs/websites. Smoke: 13
+  checks in website-mcp.mjs.
+
+## WO-35 — New-project wizard (M) — next
+After creating a project: an app gets "build your first model" (the model
+wizard or Connect AI); a website gets name, logo, favicon (and colours) into
+its Site settings, then its first page. Skippable; shown once.
+
+## WO-36 — History in every project (M) — next
+Who created, changed, archived or deleted what, in each project (the admin
+panel's history, scoped); a History page per project and on each record.
+
+## WO-37 — Notifications for tenant users (M) — next
+A bell for every user: invitations, records shared with them (D19 access),
+mentions/assignments, project events; per project and organization; read state.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

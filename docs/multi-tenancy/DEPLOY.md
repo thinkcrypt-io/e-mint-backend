@@ -14,6 +14,7 @@ against production yet (all were verified on a scratch database).
    | `TENANT_FRONTEND_URL` | `https://app.mintapp.shop` | links in emails (reset password, invitations), MCP links |
    | `TENANT_WEBAUTHN_ORIGIN` | `https://app.mintapp.shop` | passkeys for tenant users (comma-separated list allowed; defaults to TENANT_FRONTEND_URL) |
    | `TENANT_WEBAUTHN_RP_NAME` | `MINT` | the name shown when saving a passkey |
+   | `PUBLIC_API_URL` (optional) | `https://api.mintapp.shop` | the API origin the MCP's website tools hand out for sites (`/public/api/…`, track.js); defaults to the host the MCP request came in on |
 3. Index migration — **automatic**: on boot the server swaps the old
    single-field unique indexes (`modeldefinitions` name/route,
    `routesettings`/`routeconfigs` route, `dashboardconfigs` key, `folders` slug)

@@ -40,8 +40,9 @@ const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryTyp
 
 			for (const key in req.query) {
 				const [field, operator] = key.split('_');
-				const matchable =
-					allowFilter.includes(field) && !RESERVED.includes(field) && (!operator || MATCH_OPS.includes(operator));
+				// `page`, `limit`… bare are the list's own; with an operator (page_in) they filter a field of that name.
+				if (!operator && RESERVED.includes(field)) continue;
+				const matchable = allowFilter.includes(field) && (!operator || MATCH_OPS.includes(operator));
 
 				if ((allowSort.includes(field) || matchable) && req.query[key]) {
 					if (field.endsWith('At') || field.endsWith('Date') || field === 'date') {

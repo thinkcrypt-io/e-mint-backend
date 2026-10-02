@@ -125,7 +125,7 @@ const fieldSchema = Joi.object({
 });
 
 /** A tenant project model's public API (docs/multi-tenancy WO-11). */
-const PUBLIC_API = Joi.object({
+export const PUBLIC_API = Joi.object({
 	enabled: Joi.boolean().required(),
 	actions: Joi.array().items(Joi.string().valid('list', 'get', 'create', 'update', 'delete')).unique().max(5).default([]),
 	auth: Joi.string().valid('none', 'customer').default('none'),
