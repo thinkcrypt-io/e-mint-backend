@@ -25,7 +25,8 @@ changed. Never leave work done but untracked here.
 - Commit/push only when the user asks. Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-**Where it stands:** WO-01…32 done. **Next: WO-33** (a website built by an
+**Where it stands:** WO-01…32 done and pushed (backend `v3` `942ba57e`,
+admin `main` `007fa59`). **Next: WO-33** (a website built by an
 AI through the MCP, managed from the panel). See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
