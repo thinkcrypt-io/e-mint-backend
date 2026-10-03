@@ -176,13 +176,13 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 
 	/** The checks every field gets — a model's, or a section's own (`scope`: the fields its formulas may use). */
 	const checkField = (f: any, name: string, scope: any[]) => {
-		// A Password field is encrypted and hidden, so its key may say what it holds.
+		// A Password field is shown as dots, so its key may say what it holds.
 		if (SECRET_KINDS.includes(f.kind)) {
 			delete f.unique;
 			delete f.index;
 			delete f.searchable;
 		} else if (SENSITIVE.test(f.key))
-			problems.push(`${name}: fields that hold secrets need the Password kind — it's stored encrypted and hidden`);
+			problems.push(`${name}: fields that hold secrets need the Password kind — it's shown as dots until clicked`);
 		if (['select', 'multiselect'].includes(f.kind) && !f.options?.length)
 			problems.push(`${name}: add at least one allowed value`);
 		if (!ENUM_KINDS.includes(f.kind) || !f.options?.length) delete f.options;

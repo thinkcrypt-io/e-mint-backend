@@ -640,40 +640,32 @@ facebook twitter, etc tracking. server side tracking etc. head scripts."
 
 ## WO-39 — Password fields, searchable dropdowns, code prefix (M) — done
 **The user's words:** "on the model builder a password type needs to be set
-where originally the password remains hidden if trying to reveal user needs to
-provide his password first … the dropdown needs to be searchable. Also when i
-enable the code the prefix is not being taken into consideration model codes
-are 0001 0002".
-- **Password kind** (backend `FIELD_KINDS`, admin `modelKinds.ts`): path
-  `{ type: String, select: false, secret: true }`;
-  `library/functions/secretFields.function.ts` (plugin in `buildSchema`)
-  seals with `lib/crypto/secret.ts` (`SECRET_ENCRYPTION_KEY`) on save /
-  insertMany / update queries, keeps the stored value when a blank comes in,
-  strips it from projections unless `revealSecrets`, and from toJSON.
-  `POST /<route>/:id/reveal {field, password}` (routes-admin/common/router.ts
-  → `library/controllers/crud/revealSecret.controller.ts`) runs behind the
-  route's getById middlewares (read permission + record access), checks the
-  Admin's or TenantUser's own password (400 `wrong_password`, never 401),
-  rate-limited per IP. History (`diffFields` `secret`, passed by the live
-  `controllers/common/updateDocument.controller.ts`) logs "from hidden to a
-  new one". Secret-named keys are only allowed with this kind; not unique,
-  indexed, searchable, defaulted or inside sections. AI/feature prompts know it.
-- Admin: `cl/RevealSecret.tsx` (dots + eye → password dialog → value with
-  copy, hides after 60s; stops row clicks), table type `secret`
-  (`SecretCell`, CELLS_WITH_DOC, `secretPath` from TableRowComponent), view
-  type `secret` (ViewRow gets `route`), `useRevealSecretMutation`
-  (`store/services/secretApi.ts`). VPassword keeps `value ?? ''`.
+… the dropdown needs to be searchable. Also when i enable the code the
+prefix is not being taken into consideration model codes are 0001 0002".
+Then (2026-10-04): "do not need a secret encryption key, just hide the
+key/credential on frontend for now, click to reveal."
+- **Password kind** (backend `FIELD_KINDS`, admin `modelKinds.ts`): stored and
+  returned as text (`{ type: String, secret: true }`); settings type /
+  tableType / viewType `password`, so the form, table and detail page show
+  dots with show and copy (existing `SecretValue`, `VPassword`). `secret`
+  keeps the value out of history (`secretFields.function.ts` `secretPaths`
+  → `diffFields`, passed by the live `controllers/common/updateDocument`).
+  Secret-named keys (password, token, pin…) only with this kind; not
+  unique, indexed, searchable, defaulted or inside sections. AI/feature
+  prompts know it. **Hidden on screen only** — anyone who can read the
+  record (panel, export, API, MCP) gets the value.
+- First built with encryption (`SECRET_ENCRYPTION_KEY`) and a reveal endpoint
+  that asked for the person's own password (`835b64b` / `27a9d495`); removed
+  on the user's call — bring it back from git history if wanted later.
 - **Dropdown** (`cl/Dropdown.tsx`): `searchable` (default on over 10 items) —
-  search box at the top, arrows/Enter handled by the box (the list ignores
-  keys from a child), trigger label from the full list.
+  search box at the top, arrows/Enter handled by the box, trigger label from
+  the full list.
 - **Code prefix:** the API always honoured it; the empty Prefix box showed a
   grey "INV" placeholder people read as set. Switching codes on now fills a
   prefix from the title (`suggestPrefix`), placeholder "None".
-- Docs: /docs/builder#models-password, /user-docs/models#models-password,
-  record-code notes. DEPLOY.md: `SECRET_ENCRYPTION_KEY` on Heroku.
-- Verified: smoke `secrets.mjs` (18 checks) + all suites; super-admin API
-  reveal; headless UI — kind search + keyboard pick, table reveal (wrong and
-  right password), detail page reveal, edit form blank keeps / new replaces.
+- Docs: /docs/builder#models-password, /user-docs/models#models-password.
+- Verified: smoke `secrets.mjs` + all suites; headless UI — kind search and
+  keyboard pick, table dots → Show → value.
 - Seen, not from this: "uncontrolled to controlled input" console error on
   every tenant edit form (Tickets too).
 

@@ -860,3 +860,12 @@ Decisions D14–D17 (README).
   placeholder no longer looks like a value. (The backend was correct.)
 - Verified: smoke `secrets.mjs` + all 15 suites; super-admin reveal by API;
   headless agent-browser walk (kind search, table/detail reveal, form save).
+
+## 2026-10-04 — WO-39 Password fields made plain (user's call)
+- No encryption key needed: Password fields are stored and returned as text
+  and shown as dots in the panel with show and copy (`password` type). Removed
+  the encryption plugin, `POST /<route>/:id/reveal`, `revealSecret.controller.ts`,
+  admin `RevealSecret.tsx`, `secretApi.ts` and the `secret` table/view type.
+  History still never records the value. `SECRET_ENCRYPTION_KEY` dropped from
+  DEPLOY.md.
+- Verified: `secrets.mjs` (rewritten) + all suites; table Show in the browser.

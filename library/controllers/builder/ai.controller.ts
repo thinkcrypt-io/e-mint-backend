@@ -57,7 +57,7 @@ export const KIND_GUIDE: Record<string, string> = {
 		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee',
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
 	password:
-		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Stored encrypted, never in lists or the API; revealed only after the person re-enters their own password. Not for the app’s own sign-in passwords',
+		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
 	sectionlist:
 		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };

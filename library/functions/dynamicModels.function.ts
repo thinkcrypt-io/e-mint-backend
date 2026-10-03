@@ -17,7 +17,6 @@ import {
 import { invalidateRoute } from './resolveRoute.function.js';
 import { ACCESS_KEYS, PRIVACY_OPTIONS, PRIVACY_VALUES, recordAccessMiddleware } from './recordAccess.function.js';
 import { accessNotifications } from './notifications.function.js';
-import { secretFieldsPlugin } from './secretFields.function.js';
 import { format as formatFormula, parse as parseFormula } from './formula.function.js';
 
 /**
@@ -66,7 +65,7 @@ export const FIELD_KINDS = [
 	'section',
 	// Rows of the same fields (`fields`), stored as a list: an invoice's items.
 	'sectionlist',
-	// Encrypted, never in a response; shown after the person re-enters their own password (secretFields.function.ts).
+	// A credential kept for someone: stored as text, shown as dots in the panel (click to see); never in history.
 	'password',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
@@ -472,8 +471,8 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				p = { type: [new Schema(pathsOf(f.fields || []), { _id: false })], default: undefined };
 				break;
 			case 'password':
-				// Sealed by secretFieldsPlugin; never selected unless revealed.
-				p = { type: String, select: false, secret: true };
+				// `secret` keeps the value out of history (secretFields.function.ts).
+				p = { type: String, secret: true };
 				break;
 		}
 
@@ -550,9 +549,6 @@ export const buildSchema = (def: ModelDef) => {
 			// Always for a new record, so a copied record never keeps its source's code.
 			if (this.isNew) this.code = await nextCode(def);
 		});
-
-	// Password fields: sealed on the way in, never in a response (secretFields.function.ts).
-	schema.plugin(secretFieldsPlugin);
 
 	return schema;
 };
@@ -779,13 +775,11 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 				break;
 			}
 			case 'password':
-				// Never in a list or a record (select: false); the table and view
-				// show dots and a Reveal that asks for the person's own password.
+				// Dots in the table, form and detail page, with show and copy.
 				Object.assign(s, { type: 'string', search: false, secret: true });
 				s.schema.type = 'password';
-				s.schema.tableType = 'secret';
-				s.schema.viewType = 'secret';
-				s.schema.helperText = f.helper || 'Stored encrypted. Leave it empty to keep the current one.';
+				s.schema.tableType = 'password';
+				s.schema.viewType = 'password';
 				break;
 		}
 

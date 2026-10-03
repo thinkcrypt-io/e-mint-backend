@@ -137,7 +137,7 @@ Rules:
 - Reuse what exists: link to an existing model instead of creating a copy of it (never create a model whose name is taken). Check the model list first.
 ${projectNaming()}- Put a link on the "many" side as a single reference (LeaveRequest.employee → Employee), not as a list on the "one" side.
 - Keys are camelCase, unique, and never one of: ${RESERVED_KEYS.join(', ')}. _id, createdAt, updatedAt (and "code" when codes are on) are automatic.
-- Never store the app’s own sign-in secrets (users’ passwords, OTPs, hashes). A credential the business keeps for a client or a system (a portal login, a Wi-Fi key) uses the password kind — encrypted, hidden, revealed only after re-entering one's own password.
+- Never store the app’s own sign-in secrets (users’ passwords, OTPs, hashes). A credential the business keeps for a client or a system (a portal login, a Wi-Fi key) uses the password kind — shown as dots, click to see.
 - Use select (with options) for known sets of values, with a sensible default (status "draft").
 - Mark required only what a record can't exist without. Usually 5–15 fields per model.
 - The display field is a text, email, url or select field, or "code" when codes are on.
