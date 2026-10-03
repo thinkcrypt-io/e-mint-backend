@@ -8,8 +8,17 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-04)
 
-**Where it stands:** T-01…T-05 done (uncommitted — backend, admin, docs): the
-whole backend of the studio except the MCP. **Next: T-06** (Templates MCP).
+**Where it stands:** T-01…T-05 done and pushed (backend `v3` `34f95936`,
+admin `main` `5c92bd4`): the whole backend of the studio except the MCP.
+**Next: T-06** (Templates MCP) — paused on the user's word (2026-10-04, "we'll
+start T-06 later"). Its first, **untested** draft is on branch
+`templates-t06-wip` (remote `mint`): the shared MCP transport
+(`mcp/transport.ts`, with `/mcp` switched onto it), `emt_` key management
+(`templates/keys.ts`, `/admin/api/templates/keys`) and the server
+(`templates/mcp.router.ts` at `/templates/mcp`). Start T-06 from that branch:
+run `mcp.mjs` / `website-mcp.mjs` (the transport refactor touches the live
+MCP), write `templates-mcp.mjs`, then merge into `v3`. The user's rule: commit
+and push each WO as it finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions); the starter templates seed themselves at boot.
