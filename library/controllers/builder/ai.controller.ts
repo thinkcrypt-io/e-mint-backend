@@ -56,6 +56,8 @@ export const KIND_GUIDE: Record<string, string> = {
 	formula:
 		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee',
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
+	password:
+		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Stored encrypted, never in lists or the API; revealed only after the person re-enters their own password. Not for the app’s own sign-in passwords',
 	sectionlist:
 		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };
@@ -218,7 +220,7 @@ ${Object.entries(KIND_GUIDE)
 
 Rules:
 - Keys are camelCase, unique, and never one of: ${RESERVED_KEYS.join(', ')}. Every model gets _id, createdAt and updatedAt (and "code" when codes are on) automatically — don't add them.
-- Never store secrets (passwords, tokens, API keys, OTPs, hashes).
+- Never store the app’s own sign-in secrets (users’ passwords, OTPs, hashes). A credential the business keeps for a client or a system (a portal login, a Wi-Fi key) uses the password kind.
 - Use select (with options) whenever a field has a known set of values; give it a sensible default when one value is the natural starting point (e.g. status "draft").
 - Link to existing models with reference/references rather than copying their data. Only these models can be linked to:
 ${targets.length ? targets.map(t => `  - ${t.name}${t.title ? ` (${t.title})` : ''}`).join('\n') : '  (none)'}

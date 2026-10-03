@@ -17,6 +17,7 @@ import {
 import { invalidateRoute } from './resolveRoute.function.js';
 import { ACCESS_KEYS, PRIVACY_OPTIONS, PRIVACY_VALUES, recordAccessMiddleware } from './recordAccess.function.js';
 import { accessNotifications } from './notifications.function.js';
+import { secretFieldsPlugin } from './secretFields.function.js';
 import { format as formatFormula, parse as parseFormula } from './formula.function.js';
 
 /**
@@ -65,6 +66,8 @@ export const FIELD_KINDS = [
 	'section',
 	// Rows of the same fields (`fields`), stored as a list: an invoice's items.
 	'sectionlist',
+	// Encrypted, never in a response; shown after the person re-enters their own password (secretFields.function.ts).
+	'password',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -94,7 +97,9 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'section', 'sectionlist'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'section', 'sectionlist', 'password'];
+/** Kinds whose key may say what they hold (password, pin, token): they're encrypted and hidden. */
+export const SECRET_KINDS: FieldKind[] = ['password'];
 /** A formula written out tidily, or as typed when it doesn't parse (the builder says why). */
 export const tidyFormula = (src: any) => {
 	const text = typeof src === 'string' ? src.trim() : '';
@@ -466,6 +471,10 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			case 'sectionlist':
 				p = { type: [new Schema(pathsOf(f.fields || []), { _id: false })], default: undefined };
 				break;
+			case 'password':
+				// Sealed by secretFieldsPlugin; never selected unless revealed.
+				p = { type: String, select: false, secret: true };
+				break;
 		}
 
 		// A single value limited to a list: blank means "not set", not a value outside it.
@@ -541,6 +550,9 @@ export const buildSchema = (def: ModelDef) => {
 			// Always for a new record, so a copied record never keeps its source's code.
 			if (this.isNew) this.code = await nextCode(def);
 		});
+
+	// Password fields: sealed on the way in, never in a response (secretFields.function.ts).
+	schema.plugin(secretFieldsPlugin);
 
 	return schema;
 };
@@ -766,6 +778,15 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 				s.schema.viewType = 'section-data-array';
 				break;
 			}
+			case 'password':
+				// Never in a list or a record (select: false); the table and view
+				// show dots and a Reveal that asks for the person's own password.
+				Object.assign(s, { type: 'string', search: false, secret: true });
+				s.schema.type = 'password';
+				s.schema.tableType = 'secret';
+				s.schema.viewType = 'secret';
+				s.schema.helperText = f.helper || 'Stored encrypted. Leave it empty to keep the current one.';
+				break;
 		}
 
 		// Limited to a list: picked from it in the form, and filtered by it.

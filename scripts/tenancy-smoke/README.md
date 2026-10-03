@@ -22,6 +22,8 @@ Then, from this folder:
 | `node mcp.mjs` | tenant MCP keys, tools, builds in the project, key isolation | |
 | `node public.mjs` | public API, customers, owner-only records, widget.js | |
 | `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
+| `node website-mcp.mjs` | website settings through the MCP and Site setup (WO-38) | |
+| `node secrets.mjs` | Password fields (WO-39): encrypted, never in responses, reveal with your own password, history, bulk import | |
 | `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
 | `node access.mjs` | WO-21–24: standard role permissions, project access per member/invitation, the shared media library, invitations in the app, several organizations | stands alone; marks the invitees' emails verified directly in the scratch DB (the real code only goes by email) |
 | `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |

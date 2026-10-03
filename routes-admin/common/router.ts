@@ -49,6 +49,8 @@ import {
 import exportRows from '../../library/controllers/export/exportRows.controller.js';
 import { importRows, importTemplate } from '../../library/controllers/bulk/importRows.controller.js';
 import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
+import revealSecret from '../../library/controllers/crud/revealSecret.controller.js';
+import { rateLimit } from '../../library/functions/rateLimit.function.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import {
@@ -87,6 +89,9 @@ type CustomRoute = {
 	middlewares?: any[];
 	description?: string;
 };
+
+/** Password reveals: each asks for the person's password, so a cap on guesses per address. */
+const revealLimit = rateLimit({ name: 'reveal-secret', windowMs: 15 * 60 * 1000, max: 60 });
 
 // Initialize a new router
 type RouteOptions = {
@@ -448,6 +453,10 @@ const defineRoutes = ({
 		...middlewares.distinct,
 		replaceController?.distinct || getDistinctFields({ model: config.MODEL })
 	);
+
+	// A Password field's value, after the person re-enters their own password
+	// (revealSecret.controller.ts) — behind the same checks as reading the record.
+	router.post('/:id/reveal', revealLimit, ...middlewares.getById, revealSecret(config.MODEL));
 
 	customRoutes.forEach((customRoute: CustomRoute) => {
 		const {

@@ -11,11 +11,17 @@
  * small batches with navigator.sendBeacon (text/plain, so no preflight).
  * `data-no-track` on the script, or Do Not Track, turns the counting off.
  *
- * It also puts the website's tags on the page (WO-34) — Google Analytics /
- * Ads / Tag Manager, Meta, TikTok and LinkedIn pixels, Clarity, Hotjar, the
- * custom head and body code, verification metas — as set on the panel's Site
- * setup page (GET …/site/tags), so they change without a deploy.
- * `data-no-tags` leaves them to the site (e.g. rendered on the server).
+ * It also puts the website's tags on the page (WO-34, WO-38) — Google
+ * Analytics / Ads / Tag Manager, Meta, TikTok, LinkedIn, Pinterest, X and Snap
+ * pixels, Clarity, Hotjar, the code tags, verification metas, the favicon — as
+ * set on the panel's Site setup page (GET …/site/tags), so they change without
+ * a deploy. `data-no-tags` leaves them to the site (e.g. rendered on the server).
+ *
+ * Each page view carries an event id; with Meta's Conversions API on, the pixel
+ * tags its PageView with the same id and the server sends it too, so Meta
+ * counts it once. `MintAnalytics.headers()` gives the site headers to add to
+ * its own calls to the site API (a form it sends in), so a lead sent from the
+ * server is matched to the visitor.
  */
 export const TRACK_JS = `(function () {
 	'use strict';
@@ -27,6 +33,8 @@ export const TRACK_JS = `(function () {
 	var endpoint = api + '/track';
 	var off = script.hasAttribute('data-no-track') || navigator.doNotTrack === '1';
 	var tagged = false;
+	function id() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+	var firstEid = id();
 
 	/* ---- the site's tags (Site setup) ---- */
 	function addScript(src, inline) {
@@ -63,6 +71,11 @@ export const TRACK_JS = `(function () {
 		meta('google-site-verification', t.googleVerification);
 		meta('msvalidate.01', t.bingVerification);
 		if (t.noindex) meta('robots', 'noindex');
+		if (t.favicon && !document.querySelector('link[rel~="icon"]')) {
+			var icon = document.createElement('link');
+			icon.rel = 'icon'; icon.href = t.favicon;
+			document.head.appendChild(icon);
+		}
 		var w = window;
 		if (t.ga4 || t.googleAds) {
 			addScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(t.ga4 || t.googleAds));
@@ -83,7 +96,7 @@ export const TRACK_JS = `(function () {
 			fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = [];
 			addScript('https://connect.facebook.net/en_US/fbevents.js');
 			w.fbq('init', t.metaPixel);
-			w.fbq('track', 'PageView');
+			w.fbq('track', 'PageView', {}, { eventID: firstEid });
 		}
 		if (t.tiktokPixel && !w.ttq) {
 			var ttq = w.ttq = [];
@@ -104,6 +117,26 @@ export const TRACK_JS = `(function () {
 			w._linkedin_data_partner_ids = w._linkedin_data_partner_ids || [];
 			w._linkedin_data_partner_ids.push(t.linkedinPartner);
 			addScript('https://snap.licdn.com/li.lms-analytics/insight.min.js');
+		}
+		if (t.pinterestTag && !w.pintrk) {
+			w.pintrk = function () { w.pintrk.queue.push(Array.prototype.slice.call(arguments)); };
+			w.pintrk.queue = []; w.pintrk.version = '3.0';
+			addScript('https://s.pinimg.com/ct/core.js');
+			w.pintrk('load', t.pinterestTag);
+			w.pintrk('page');
+		}
+		if (t.xPixel && !w.twq) {
+			var twq = w.twq = function () { twq.exe ? twq.exe.apply(twq, arguments) : twq.queue.push(arguments); };
+			twq.version = '1.1'; twq.queue = [];
+			addScript('https://static.ads-twitter.com/uwt.js');
+			w.twq('config', t.xPixel);
+		}
+		if (t.snapPixel && !w.snaptr) {
+			var snaptr = w.snaptr = function () { snaptr.handleRequest ? snaptr.handleRequest.apply(snaptr, arguments) : snaptr.queue.push(arguments); };
+			snaptr.queue = [];
+			addScript('https://sc-static.net/scevent.min.js');
+			w.snaptr('init', t.snapPixel, {});
+			w.snaptr('track', 'PAGE_VIEW');
 		}
 		if (t.clarity && !w.clarity) {
 			w.clarity = function () { (w.clarity.q = w.clarity.q || []).push(arguments); };
@@ -127,7 +160,6 @@ export const TRACK_JS = `(function () {
 		}).catch(function () {});
 	}
 
-	function id() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 	function stored(store, key) {
 		try { var v = store.getItem(key); if (!v) { v = id(); store.setItem(key, v); } return v; } catch (e) { return id(); }
 	}
@@ -136,10 +168,17 @@ export const TRACK_JS = `(function () {
 	var queue = [];
 	var timer = null;
 
+	function cookie(name) { var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : undefined; }
+	// Meta's click id: its cookie, or built from ?fbclid= the way the pixel does.
+	function fbc() {
+		var c = cookie('_fbc');
+		if (c) return c;
+		try { var click = new URLSearchParams(location.search).get('fbclid'); return click ? 'fb.1.' + Date.now() + '.' + click : undefined; } catch (e) { return undefined; }
+	}
 	function utm(name) { try { return new URLSearchParams(location.search).get(name) || undefined; } catch (e) { return undefined; } }
 	function flush() {
 		if (off || !queue.length) return;
-		var body = JSON.stringify({ visitorId: visitorId, sessionId: sessionId, events: queue.splice(0, 20) });
+		var body = JSON.stringify({ visitorId: visitorId, sessionId: sessionId, fbp: cookie('_fbp'), fbc: fbc(), events: queue.splice(0, 20) });
 		if (navigator.sendBeacon && navigator.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' }))) return;
 		fetch(endpoint, { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(function () {});
 	}
@@ -157,12 +196,15 @@ export const TRACK_JS = `(function () {
 		if (location.pathname === last) return;
 		var first = last === null;
 		last = location.pathname;
+		var eid = first ? firstEid : id();
 		// The pixels count their first page view themselves; later ones (client-side navigation) come from here.
 		if (!first && tagged) {
-			if (window.fbq) window.fbq('track', 'PageView');
+			if (window.fbq) window.fbq('track', 'PageView', {}, { eventID: eid });
 			if (window.ttq && window.ttq.page) window.ttq.page();
+			if (window.pintrk) window.pintrk('page');
+			if (window.snaptr) window.snaptr('track', 'PAGE_VIEW');
 		}
-		push({ type: 'pageview', referrer: document.referrer || undefined, utmSource: utm('utm_source'), utmMedium: utm('utm_medium'), utmCampaign: utm('utm_campaign') });
+		push({ type: 'pageview', eventId: eid, referrer: document.referrer || undefined, utmSource: utm('utm_source'), utmMedium: utm('utm_medium'), utmCampaign: utm('utm_campaign') });
 	}
 	['pushState', 'replaceState'].forEach(function (fn) {
 		var orig = history[fn];
@@ -185,6 +227,14 @@ export const TRACK_JS = `(function () {
 	window.MintAnalytics = {
 		track: function (name, props) { push({ type: 'event', name: String(name).slice(0, 120), props: props }); },
 		pageview: function () { last = null; pageview(); },
+		visitorId: visitorId,
+		/** Add to the site's own calls to the site API (e.g. a form it sends in): matches a lead sent from the server to this visitor. */
+		headers: function () {
+			var h = { 'x-mint-visitor': visitorId };
+			if (cookie('_fbp')) h['x-mint-fbp'] = cookie('_fbp');
+			if (fbc()) h['x-mint-fbc'] = fbc();
+			return h;
+		},
 	};
 
 	if (document.readyState === 'complete' || document.readyState === 'interactive') pageview();

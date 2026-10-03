@@ -21,7 +21,8 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
 import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenancy/websiteEvent.model.js';
 import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { robotsTxt, siteConfigOf, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
+import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
+import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 
 /**
@@ -168,6 +169,7 @@ router.post(
 			path: `/customers/${customer._id}`,
 			record: customer._id,
 		});
+		if (req.project.type === 'website') forwardConversion(req.project, req, 'signup', { email: customer.email, phone: customer.phone });
 		return { token: customer.generateToken(), customer: publicCustomer(customer) };
 	})
 );
@@ -291,6 +293,7 @@ router.post(
 					utmSource: clip(e.utmSource, 120),
 					utmMedium: clip(e.utmMedium, 120),
 					utmCampaign: clip(e.utmCampaign, 120),
+					eventId: e.type === 'pageview' ? clip(e.eventId, 64) : undefined,
 					sessionId: clip(body.sessionId, 64),
 					visitorId: clip(body.visitorId, 64),
 					device: (DEVICE_TYPES as readonly string[]).includes(deviceType) ? deviceType : 'other',
@@ -306,6 +309,8 @@ router.post(
 				};
 			});
 		if (docs.length) await WebsiteEvent.insertMany(docs);
+		// Page views to Meta's Conversions API too, when it's on (WO-38).
+		forwardPageviews(req.project, visitorOf(req, body), docs.filter((d: any) => d.type === 'pageview'));
 		return { ok: true, recorded: docs.length };
 	})
 );
@@ -316,8 +321,8 @@ router.post(
  * For website projects (WO-18): the site in one or two calls instead of
  * stitching the kit's models together. Read-only, published records only.
  *
- *   GET /site                      the site settings (first record), its menu, and its
- *                                  configuration (tags, code, SEO, redirects, headers — WO-34)
+ *   GET /site                      the site settings (WebsiteSettings, flat), its menu, and its
+ *                                  configuration (tags, code, SEO, redirects, headers — WO-34, WO-38)
  *   GET /site/tags                 what /public/track.js injects: the tags and custom code
  *   GET /site/robots.txt           robots.txt from the indexing settings
  *   GET /site/sitemap.xml          the published pages (not hidden from search); ?origin=https://…
@@ -346,13 +351,11 @@ router.get(
 	'/site',
 	handle(async req => {
 		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
-		const settings = await kitModel(req, 'site-settings');
-		const doc = settings?.Model ? await settings.Model.findOne({}).sort({ createdAt: 1 }).lean() : null;
-		const config = siteConfigOf(req.project);
+		const doc = await loadSite(req.project, { req, cached: true });
 		return {
-			settings: doc ? shape(doc, settings!.def) : null,
+			settings: publicSettings(doc),
 			menu: await menuOf(req),
-			config: { ...config, origin: siteOrigin(req.project, config), domains: req.project.domains || [] },
+			config: publicConfig(req.project, doc),
 		};
 	})
 );
@@ -366,28 +369,33 @@ router.get(
 	handle(async (req, res) => {
 		websiteOnly(req);
 		res.setHeader('Cache-Control', 'public, max-age=60');
-		return siteTags(req.project);
+		return siteTags(await loadSite(req.project, { req, cached: true }));
 	})
 );
 
-router.get('/site/robots.txt', (req: any, res: any) => {
-	if (req.project.type !== 'website') return res.status(404).json({ message: 'Not found' });
-	res.setHeader('Cache-Control', 'public, max-age=300');
-	res.type('text/plain').send(robotsTxt(req.project));
-});
+router.get(
+	'/site/robots.txt',
+	handle(async (req, res) => {
+		websiteOnly(req);
+		const doc = await loadSite(req.project, { req, cached: true });
+		res.setHeader('Cache-Control', 'public, max-age=300');
+		res.type('text/plain').send(robotsTxt(req.project, doc));
+		return undefined;
+	})
+);
 
 router.get(
 	'/site/sitemap.xml',
 	handle(async (req, res) => {
 		websiteOnly(req);
 		const asked = String(req.query.origin || '').replace(/\/+$/, '');
-		const origin = /^https?:\/\/[^\s/]+$/.test(asked) ? asked : siteOrigin(req.project);
+		const doc = await loadSite(req.project, { req, cached: true });
+		const origin = /^https?:\/\/[^\s/]+$/.test(asked) ? asked : siteOrigin(req.project, doc);
 		const pages = await kitModel(req, 'pages');
 		const seo = await kitModel(req, 'seo');
 		const list: any[] = pages?.Model ? await pages.Model.find({ status: 'published' }, { path: 1, updatedAt: 1 }).sort({ path: 1 }).limit(5000).lean() : [];
 		const hidden = new Set(seo?.Model ? (await seo.Model.distinct('page', { noIndex: true })).map(String) : []);
-		const config = siteConfigOf(req.project);
-		const xmlText = config.seo.indexing && config.seo.sitemap ? sitemapXml(origin, list.filter(p => p.path && !hidden.has(String(p._id)))) : sitemapXml(origin, []);
+		const xmlText = doc.seo?.indexing !== false && doc.seo?.sitemap !== false ? sitemapXml(origin, list.filter(p => p.path && !hidden.has(String(p._id)))) : sitemapXml(origin, []);
 		res.setHeader('Cache-Control', 'public, max-age=300');
 		res.type('application/xml').send(xmlText);
 		return undefined;
@@ -557,6 +565,7 @@ router.post(
 			path: `/${ctx.def.route}/${doc._id}`,
 			record: doc._id,
 		});
+		if (req.project.type === 'website') forwardConversion(req.project, req, 'lead', { ...contactOf(req.body), form: ctx.def.title || ctx.def.name });
 		return shape(doc.toObject(), ctx.def);
 	})
 );

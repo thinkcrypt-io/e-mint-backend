@@ -820,3 +820,43 @@ Decisions D14–D17 (README).
 - Verified: activity.mjs (25 checks) in run-all.sh, full suite green; headless
   browser: History page and the bell render in a project.
 
+## 2026-10-03 — WO-38 Website settings record
+- New `WebsiteSettings` model (one per project, tenant-scoped, unique
+  org+project) replaces the website kit's "Site settings" table and
+  `TenantProject.site`: identity, contact, social, SEO, tracking, server-side
+  tracking + secrets (`select:false`), named head tags, redirects, headers,
+  last site check. Old data is copied in on first read (`loadSite`).
+- Backend: `models/tenancy/websiteSettings.model.ts`;
+  `functions/siteConfig.function.ts` (rewritten), `serverTracking.function.ts`
+  (Meta CAPI, GA4 MP), `siteCheck.function.ts`; `routes-tenant/site.router.ts`
+  (site-config GET/PUT returns `legacy` table info, POST /site-config/check);
+  public router (/site, /site/tags, /track eventIds + CAPI forwarding, leads
+  and sign-ups forwarded); track.js (Pinterest, X, Snap, favicon, eventID,
+  fbp/fbc, `MintAnalytics.headers()`); MCP website tools write through
+  `saveSite`; website kit = Pages, SEO, Contents.
+- Admin: `/site-setup` tabs of self-saving cards (General with legacy-table
+  notice, Contact & social, SEO, Tracking, Server-side, Code, Redirects &
+  headers, Domains, Check the site); tenantApi types + `checkSite`; get-started
+  and WebsiteOverview use the new shape; /user-docs/websites sections
+  site-contact, site-seo, server-side, site-check.
+- Verified: `tsc --noEmit` both repos; all 14 smoke suites on a fresh scratch
+  DB; headless agent-browser walk of every tab, adding a tag through the Code
+  dialog (stored as `bodyEnd`), and Remove the table on a project with the
+  old Site settings table (definition gone, settings kept, notice gone).
+
+## 2026-10-03 — WO-39 Password fields, searchable dropdowns, code prefix
+- Model builder kind **Password**: encrypted at rest (AES-256-GCM,
+  `SECRET_ENCRYPTION_KEY`), `select: false`, stripped from every response;
+  revealed per record with `POST /<route>/:id/reveal` after the person
+  re-enters their own password. Files: backend
+  `functions/secretFields.function.ts`, `controllers/crud/revealSecret.controller.ts`,
+  `dynamicModels.function.ts`, `builder/models.controller.ts`,
+  `routes-admin/common/router.ts`, `controllers/common/updateDocument.controller.ts`,
+  `recordHistory.function.ts`, AI prompts; admin `cl/RevealSecret.tsx`,
+  `store/services/secretApi.ts`, table cell + view row `secret`, `modelKinds.ts`,
+  `FieldsEditor.tsx`, `VPassword.tsx`.
+- `cl/Dropdown.tsx` searchable (default over 10 items).
+- Code prefix: suggested from the title when codes are switched on; the
+  placeholder no longer looks like a value. (The backend was correct.)
+- Verified: smoke `secrets.mjs` + all 15 suites; super-admin reveal by API;
+  headless agent-browser walk (kind search, table/detail reveal, form save).

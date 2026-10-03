@@ -35,7 +35,7 @@ ok('describe_website: the site API with this project’s address', text(res).inc
 
 // Settings
 res = await tool(key, 'update_site_settings', { settings: { siteName: 'Crumb & Co', favicon: 'https://cdn.example.com/favicon.png', primaryColor: '#7c2d12', metaTitle: 'Crumb & Co bakery', nonsense: 1 }, domains: ['crumb.example.com'] });
-ok('update_site_settings creates them', !res?.isError && /Created the site settings/.test(text(res)) && /Ignored.*nonsense/.test(text(res)), text(res).slice(0, 160));
+ok('update_site_settings saves them', !res?.isError && /Site settings saved/.test(text(res)) && /Ignored.*nonsense/.test(text(res)), text(res).slice(0, 160));
 res = await tool(key, 'update_site_settings', { settings: { primaryColor: 'not a colour?', siteName: '' } });
 ok('bad settings are refused', res?.isError && /Nothing saved/.test(text(res)), text(res).slice(0, 120));
 res = await tool(key, 'update_site_settings', { domains: ['not a domain'] });
@@ -151,6 +151,30 @@ r = await call('GET', P(site, '/site-overview'), null, s.pat);
 ok('the website overview: pages and a checklist', r.status === 200 && r.body?.counts?.published === 2 && r.body.checklist.find(c => c.key === 'favicon')?.done === true && r.body.checklist.find(c => c.key === 'logo')?.done === false, JSON.stringify(r.body?.counts));
 r = await call('GET', P(s.crm, '/site-config'), null, s.pat);
 ok('an app project has no site setup', r.status === 404, r.status);
+
+// WO-38: one settings record per project — code tags, server-side keys, the check
+r = await call('GET', P(site, '/site-config'), null, s.pat);
+ok('the code became a named tag', r.body?.headTags?.length === 1 && r.body.headTags[0].name === 'Head code' && r.body.headTags[0].content.includes('theme-color'), JSON.stringify(r.body?.headTags));
+r = await call('PUT', P(site, '/site-config'), { headTags: [{ name: 'Chat widget', location: 'bodyEnd', content: '<script>window.chat=1</script>' }, { name: 'Old test', location: 'head', content: '<meta name="old">', enabled: false }] }, s.pat);
+ok('save named tags', r.status === 200 && r.body?.headTags?.length === 2 && r.body.headTags[0]._id, `${r.status} ${r.body?.message || ''}`);
+r = await pub('site/tags');
+ok('…only the enabled ones reach the site, in their place', r.body?.bodyEnd?.includes('window.chat') && !r.body?.head?.includes('old'), JSON.stringify({ head: r.body?.head, bodyEnd: r.body?.bodyEnd }));
+r = await call('PUT', P(site, '/site-config'), { social: { instagram: 'instagram.com/crumb' } }, s.pat);
+ok('a social link must be a full address', r.status === 400 && /https/.test(r.body?.message || ''), r.body?.message);
+r = await call('PUT', P(site, '/site-config'), { serverSide: { meta: { enabled: true } } }, s.pat);
+ok('server-side Meta needs a token first', r.status === 400 && /access token/.test(r.body?.message || ''), r.body?.message);
+r = await call('PUT', P(site, '/site-config'), { secrets: { metaAccessToken: 'EAAtestTOKEN123' }, serverSide: { meta: { enabled: true, testEventCode: 'TEST123' } } }, s.pat);
+ok('…with one: on, and the token is never sent back', r.status === 200 && r.body?.serverSide?.meta?.enabled === true && r.body.serverSide.meta.tokenSet === true && !JSON.stringify(r.body).includes('EAAtestTOKEN123'), `${r.status} ${r.body?.message || ''}`);
+const [siteBody, tagsBody] = await Promise.all([text_('site'), text_('site/tags')]);
+ok('…nor to the site', !siteBody.body.includes('EAAtest') && !tagsBody.body.includes('EAAtest') && !siteBody.body.includes('TEST123'));
+r = await call('PUT', P(site, '/site-config'), { serverSide: { ga4: { enabled: true } } }, s.pat);
+ok('server-side GA4 needs its API secret', r.status === 400 && /API secret/.test(r.body?.message || ''), r.body?.message);
+r = await call('PUT', P(site, '/site-config'), { secrets: { metaAccessToken: '' }, serverSide: { meta: { enabled: false } } }, s.pat);
+ok('remove the token', r.status === 200 && r.body?.serverSide?.meta?.tokenSet === false, r.status);
+r = await call('POST', P(site, '/site-config/check'), null, s.pat);
+ok('check the site: an address that isn’t live is reported, not an error', r.status === 200 && r.body?.reachable === false && r.body?.origin === 'https://crumb.example.com' && !!r.body?.message, JSON.stringify(r.body).slice(0, 200));
+r = await call('GET', P(site, '/site-config'), null, s.pat);
+ok('…and kept with the settings', r.body?.check?.checkedAt && r.body.check.reachable === false);
 r = await fetch(`${ROOT}/public/track.js`).then(x => x.text());
 ok('track.js injects the tags', r.includes("/site/tags") && r.includes('googletagmanager.com/gtag/js'));
 done();

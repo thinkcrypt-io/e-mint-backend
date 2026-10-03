@@ -10,7 +10,6 @@ import { projectHooks } from './projectHooks.function.js';
  * project starts with — ordinary built models (the builder can change them
  * like any other), modelled on the AGS backend (ab/akashbari-backend-2/models):
  *
- *   SiteSettings  /site-settings  AGS GlobalSettings — branding, theme, contact, socials, default SEO
  *   WebContent    /web-contents   AGS Content — the content blocks of the site
  *   WebPage       /pages          the site's pages (path, status, template, menu)
  *   PageSeo       /seo            AGS Seo — per-page title, description, image, keywords
@@ -19,64 +18,18 @@ import { projectHooks } from './projectHooks.function.js';
  * block and an SEO entry point at their page (the "many" side), so each page's
  * detail lists its contents and SEO. The site API (routes-public, /site and
  * /pages/by-path) reads them; their public API starts read-only (list, get).
+ *
+ * The site's own settings (name, logo, favicon, contact, tags…) aren't a model
+ * here: they're the project's WebsiteSettings (WO-38, siteConfig.function.ts).
  */
 
 const labelled = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ value, label }));
 
 export const WEBSITE_KIT = (category: string) => ({
 	title: 'Website',
-	summary: 'Site settings, pages, per-page SEO and content blocks — the website kit.',
+	summary: 'Pages, per-page SEO and content blocks — the website kit.',
 	sidebarCategory: category,
 	steps: [
-		{
-			action: 'create',
-			name: 'SiteSettings',
-			route: 'site-settings',
-			title: 'Site settings',
-			description: 'Branding, theme, contact details, social links and default SEO',
-			buttonTitle: 'Add settings',
-			displayField: 'siteName',
-			rationale: 'One record holds the site’s name, logo, colours, contact details, socials and default SEO (AGS GlobalSettings).',
-			fields: [
-				{ key: 'siteName', label: 'Site name', kind: 'text', required: true },
-				{ key: 'logo', label: 'Logo', kind: 'image' },
-				{ key: 'favicon', label: 'Favicon', kind: 'image' },
-				{ key: 'footerText', label: 'Footer text', kind: 'textarea' },
-				{ key: 'primaryColor', label: 'Primary colour', kind: 'color', default: '#000000' },
-				{ key: 'secondaryColor', label: 'Secondary colour', kind: 'color', default: '#ffffff' },
-				{ key: 'fontFamily', label: 'Font family', kind: 'text', default: 'Inter' },
-				{ key: 'email', label: 'Email', kind: 'email' },
-				{ key: 'phone', label: 'Phone', kind: 'text' },
-				{ key: 'address', label: 'Address', kind: 'textarea' },
-				{ key: 'mapEmbedUrl', label: 'Map embed URL', kind: 'url' },
-				{ key: 'facebook', label: 'Facebook', kind: 'url' },
-				{ key: 'twitter', label: 'X / Twitter', kind: 'url' },
-				{ key: 'instagram', label: 'Instagram', kind: 'url' },
-				{ key: 'youtube', label: 'YouTube', kind: 'url' },
-				{ key: 'linkedin', label: 'LinkedIn', kind: 'url' },
-				{ key: 'metaTitle', label: 'Default meta title', kind: 'text' },
-				{ key: 'metaDescription', label: 'Default meta description', kind: 'textarea' },
-				{ key: 'ogImage', label: 'Default share image', kind: 'image' },
-				{ key: 'enableComments', label: 'Comments on', kind: 'boolean', default: true },
-				{ key: 'enableTicker', label: 'Ticker on', kind: 'boolean', default: true },
-			],
-			form: [
-				{ sectionTitle: 'Branding', fields: ['siteName', ['logo', 'favicon'], 'footerText'] },
-				{ sectionTitle: 'Theme', fields: [['primaryColor', 'secondaryColor'], 'fontFamily'] },
-				{ sectionTitle: 'Contact', fields: [['email', 'phone'], 'address', 'mapEmbedUrl'] },
-				{ sectionTitle: 'Social', fields: [['facebook', 'twitter'], ['instagram', 'youtube'], 'linkedin'] },
-				{ sectionTitle: 'Default SEO', fields: ['metaTitle', 'metaDescription', 'ogImage'] },
-				{ sectionTitle: 'Features', fields: [['enableComments', 'enableTicker']] },
-			],
-			table: ['siteName', 'email', 'phone', 'primaryColor'],
-			view: [
-				{ title: 'Branding', columns: 2, fields: ['siteName', 'logo', 'favicon', 'footerText'] },
-				{ title: 'Theme', columns: 3, fields: ['primaryColor', 'secondaryColor', 'fontFamily'] },
-				{ title: 'Contact', columns: 2, fields: ['email', 'phone', 'address', 'mapEmbedUrl'] },
-				{ title: 'Social', columns: 2, fields: ['facebook', 'twitter', 'instagram', 'youtube', 'linkedin'] },
-				{ title: 'Default SEO', columns: 1, fields: ['metaTitle', 'metaDescription', 'ogImage'] },
-			],
-		},
 		{
 			action: 'create',
 			name: 'WebPage',
@@ -202,7 +155,7 @@ export const WEBSITE_KIT = (category: string) => ({
 });
 
 /** The kit's models start with a read-only public API (the site reads them). */
-const KIT_ROUTES = ['site-settings', 'pages', 'seo', 'web-contents'];
+const KIT_ROUTES = ['pages', 'seo', 'web-contents'];
 
 /** Seeds the website kit into a new website project (projectHooks.created). */
 export const seedWebsiteKit = async (req: any, project: any) => {

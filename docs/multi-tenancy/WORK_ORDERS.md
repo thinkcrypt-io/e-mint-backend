@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-02)
+## Handoff — read this first (kept current; last updated 2026-10-03)
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D19), then the open WO
@@ -27,7 +27,8 @@ changed. Never leave work done but untracked here.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
-`main` `a3327d4`). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 done, not committed** (website settings model; Password
+fields — backend and admin working trees). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -37,7 +38,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 `seedTenancyAdmin.js` is **done** on the Atlas `e-mint` DB (2026-10-02).
 
 **Run it locally** (launch configs in `.claude/launch.json`):
-- scratch Mongo: `mongod --dbpath <scratch>/mongo --port 27999`
+- scratch Mongo: `mongod --dbpath <scratch>/mongo --port 27999` (foreground —
+  `--fork` fails on macOS)
   (DB `emint_tenancy_dev`; `node backend/scripts/seedTenancyDev.js` seeds it);
 - `backend-test` → :5001 (`node dist/server.js`, so **`npm run build` after
   every backend change**, then restart); `tenant` → :3001; `admin-test` → :3002.
@@ -104,6 +106,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 35 | **New-project wizard: app → build your first model; website → name, logo, favicon** | both | M | done |
 | 36 | **History in every project** (who changed what, per project) | both | M | done |
 | 37 | **Notifications for every tenant user** (bell, per project and organization) | both | M | done |
+| 38 | **Website settings: one `WebsiteSettings` record per project (no Site settings table), AGS-style cards, server-side tracking, check the site** | both | L | done (uncommitted) |
+| 39 | **Model builder: Password field kind (encrypted, revealed with your own password), searchable dropdowns, code prefix filled in** | both | M | done (uncommitted) |
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
@@ -594,6 +598,85 @@ account, invitee joined (to the inviter), role/projects changed, record shared
 public API and a customer sign-up (to everyone who can see it). Admin: the
 bell and /notifications in the tenant panel ('notifications' left
 ADMIN_ONLY_PAGES; ACCOUNT_PATH has it). Not yet: mentions/assignments.
+
+## WO-38 — Website settings record (L) — done
+**The user's words:** "the site settings basic seo, gtag, etc are being saved
+under a table, but the table should not be there. should be like the analytics
+tab of ags admin … a model regarding websiteSettings … every tag saved, site
+logo, name, settings … with the project id … google analytics id, gtag,
+facebook twitter, etc tracking. server side tracking etc. head scripts."
+- **Model** `library/models/tenancy/websiteSettings.model.ts`
+  (`websitesettings`, `tenantScoped`, unique `{organization, project}`):
+  identity, contact, social, seo, tracking (GA4, GTM, Google Ads, Meta,
+  TikTok, LinkedIn, Pinterest, X, Snap, Clarity, Hotjar, MINT analytics),
+  serverSide (Meta CAPI, GA4 Measurement Protocol), `secrets`
+  (`select:false`; the panel only sees tokenSet/secretSet, never the site API
+  or MCP), named `headTags` (head / body start / body end, on/off),
+  redirects, headers, last `check`.
+- **One read/write path** `siteConfig.function.ts`: `loadSite` (created on
+  first read, copying the old kit "Site settings" record and
+  `TenantProject.site` — both now legacy, left in place), `saveSite`,
+  `publicSettings` (same flat shape `/site` served before, so sites keep
+  working), `siteTags`, robots/sitemap, 60s cache cleared on save.
+- **Server-side** `serverTracking.function.ts`: Meta CAPI PageView (deduped
+  with the pixel by eventID from track.js), Lead (public creates),
+  CompleteRegistration (customer sign-up); GA4 MP generate_lead / sign_up.
+  Visitor matching: IP, UA, `x-mint-visitor`/`x-mint-fbp`/`x-mint-fbc`
+  (`MintAnalytics.headers()`), hashed email/phone.
+- **Check the site** `siteCheck.function.ts` (POST /site-config/check): fetches
+  the live home page via the MCP's `fetchable` SSRF guard; per tag on/missing,
+  IDs the page hard-codes, GTM+GA4 double counting, Meta token debug.
+- Website kit is now 3 models (Pages, SEO, Contents). Existing projects keep
+  their old table until removed: Site setup → General shows a notice with
+  "Remove the table" (deletes the ModelDefinition; records stay in Mongo).
+- Admin `/site-setup` rewritten as tabs of cards that save on their own
+  (`_components/`: General, Contact & social, SEO, Tracking, Server-side,
+  Code, Redirects & headers, Domains, Check the site); get-started and the
+  website overview use it; guides in /user-docs/websites.
+- Verified: all 14 smoke suites (website.mjs: kit 3 models, legacy import;
+  website-mcp.mjs: WO-38 checks); headless UI — every tab, Code dialog saves a
+  tag, legacy notice + Remove the table on a project with the old table.
+- Not yet: TikTok Events API server-side; sites must add
+  `MintAnalytics.headers()` to their form requests for lead matching.
+
+## WO-39 — Password fields, searchable dropdowns, code prefix (M) — done
+**The user's words:** "on the model builder a password type needs to be set
+where originally the password remains hidden if trying to reveal user needs to
+provide his password first … the dropdown needs to be searchable. Also when i
+enable the code the prefix is not being taken into consideration model codes
+are 0001 0002".
+- **Password kind** (backend `FIELD_KINDS`, admin `modelKinds.ts`): path
+  `{ type: String, select: false, secret: true }`;
+  `library/functions/secretFields.function.ts` (plugin in `buildSchema`)
+  seals with `lib/crypto/secret.ts` (`SECRET_ENCRYPTION_KEY`) on save /
+  insertMany / update queries, keeps the stored value when a blank comes in,
+  strips it from projections unless `revealSecrets`, and from toJSON.
+  `POST /<route>/:id/reveal {field, password}` (routes-admin/common/router.ts
+  → `library/controllers/crud/revealSecret.controller.ts`) runs behind the
+  route's getById middlewares (read permission + record access), checks the
+  Admin's or TenantUser's own password (400 `wrong_password`, never 401),
+  rate-limited per IP. History (`diffFields` `secret`, passed by the live
+  `controllers/common/updateDocument.controller.ts`) logs "from hidden to a
+  new one". Secret-named keys are only allowed with this kind; not unique,
+  indexed, searchable, defaulted or inside sections. AI/feature prompts know it.
+- Admin: `cl/RevealSecret.tsx` (dots + eye → password dialog → value with
+  copy, hides after 60s; stops row clicks), table type `secret`
+  (`SecretCell`, CELLS_WITH_DOC, `secretPath` from TableRowComponent), view
+  type `secret` (ViewRow gets `route`), `useRevealSecretMutation`
+  (`store/services/secretApi.ts`). VPassword keeps `value ?? ''`.
+- **Dropdown** (`cl/Dropdown.tsx`): `searchable` (default on over 10 items) —
+  search box at the top, arrows/Enter handled by the box (the list ignores
+  keys from a child), trigger label from the full list.
+- **Code prefix:** the API always honoured it; the empty Prefix box showed a
+  grey "INV" placeholder people read as set. Switching codes on now fills a
+  prefix from the title (`suggestPrefix`), placeholder "None".
+- Docs: /docs/builder#models-password, /user-docs/models#models-password,
+  record-code notes. DEPLOY.md: `SECRET_ENCRYPTION_KEY` on Heroku.
+- Verified: smoke `secrets.mjs` (18 checks) + all suites; super-admin API
+  reveal; headless UI — kind search + keyboard pick, table reveal (wrong and
+  right password), detail page reveal, edit form blank keeps / new replaces.
+- Seen, not from this: "uncontrolled to controlled input" console error on
+  every tenant edit form (Tickets too).
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

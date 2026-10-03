@@ -2,6 +2,7 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { applyFormulas } from '../../library/functions/formula.function.js';
+import { secretPaths } from '../../library/functions/secretFields.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -59,6 +60,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 					// would report timestamps and defaults as user edits.
 					fields: [...updates, ...(req.formulas || []).map((f: any) => f.key)],
 					settings,
+					secret: secretPaths(model.schema),
 				}),
 			});
 

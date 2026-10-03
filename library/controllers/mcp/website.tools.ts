@@ -16,7 +16,7 @@ import { PUBLIC_API } from '../builder/models.controller.js';
 import { routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { refIds } from './records.helpers.js';
-import { mergeSiteConfig, siteConfigOf } from '../../functions/siteConfig.function.js';
+import { FLAT, TRACKERS, forgetSite, loadSite, patchFromFlat, publicConfig, publicSettings, saveSite } from '../../functions/siteConfig.function.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
 /**
@@ -49,7 +49,7 @@ const publicBase = (req: any, project: any) => `${apiOrigin(req)}/public/api/${p
 
 /* ------------------------------------------------------------ the kit */
 
-const KIT = { settings: 'site-settings', pages: 'pages', seo: 'seo', contents: 'web-contents' } as const;
+const KIT = { pages: 'pages', seo: 'seo', contents: 'web-contents' } as const;
 
 type Kit = { def: any; Model: mongoose.Model<any> };
 
@@ -308,10 +308,8 @@ const upsertPage = async (req: any, args: any, caller: Caller): Promise<Out> => 
 const DOMAIN = /^(localhost(:\d+)?|([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?)$/;
 
 const updateSiteSettings = async (req: any, args: any, caller: Caller): Promise<Out> => {
-	const settings = await kitModel(KIT.settings);
-	if (!settings) return missingKit(KIT.settings);
 	const input = args?.settings && typeof args.settings === 'object' ? args.settings : Object.fromEntries(Object.entries<any>(args || {}).filter(([k]) => k !== 'domains' && k !== 'config'));
-	const hasSettings = Object.keys(input).length > 0;
+	const config = args?.config && typeof args.config === 'object' ? args.config : {};
 	const lines: string[] = [];
 
 	let domains: string[] | undefined;
@@ -324,55 +322,37 @@ const updateSiteSettings = async (req: any, args: any, caller: Caller): Promise<
 		if (!caller.allows('manage-projects')) return refuse(`${caller.user.name || 'The key’s owner'} can't change the project's domains (their role needs Manage projects).`);
 	}
 
-	// Tags, code, SEO & indexing, redirects, headers (WO-34): on the project, checked before anything is saved.
-	let config: any;
-	if (args?.config !== undefined) {
+	// The project's WebsiteSettings (WO-38): flat settings plus the config sections — checked before anything is saved.
+	const { patch, skipped } = patchFromFlat(input);
+	for (const k of ['tracking', 'code', 'headTags', 'redirects', 'headers'])
+		if (config[k] !== undefined) patch[k] = config[k];
+	if (config.seo !== undefined) patch.seo = { ...(patch.seo || {}), ...config.seo };
+	let doc: any = null;
+	if (Object.keys(patch).length) {
+		if (!caller.allows('build')) return refuse(`${caller.user.name || 'The key’s owner'} can't change the site setup (their role needs Build).`);
 		try {
-			config = mergeSiteConfig(caller.project, args.config);
+			doc = await saveSite(caller.project, patch, { req });
 		} catch (e: any) {
 			return refuse(`Nothing saved — ${e.message}.`);
 		}
-	}
-
-	let doc: any = null;
-	if (hasSettings) {
-		const denied = mayWrite(req, caller, KIT.settings);
-		if (denied) return refuse(denied);
-		const picked = await pickFields(settings.def, input);
-		if (picked.problems.length) return refuse(`Nothing saved:\n- ${picked.problems.join('\n- ')}`);
-		doc = await settings.Model.findOne({}).sort({ createdAt: 1 });
-		const isNew = !doc;
-		doc ||= new settings.Model(ownedBy(settings.Model, caller));
-		doc.set(picked.body);
-		const problems = validationProblems(doc);
-		if (problems.length) return refuse(`Nothing saved:\n- ${problems.join('\n- ')}`);
-		try {
-			await doc.save();
-		} catch (e) {
-			return saveFailure(e);
-		}
-		lines.push(`${isNew ? 'Created' : 'Updated'} the site settings (${Object.keys(picked.body).join(', ') || 'nothing changed'}).`);
-		if (picked.skipped.length) lines.push(`Ignored (not fields of Site settings): ${picked.skipped.join(', ')}`);
-	}
-	if (config) {
-		await TenantProject.updateOne({ _id: caller.project._id }, { $set: { site: config } });
-		caller.project.site = config;
-		const tags = Object.entries<any>(config.tracking).filter(([k, v]) => k !== 'mintAnalytics' && v).map(([k]) => k);
-		lines.push(`Site setup saved — tags: ${tags.join(', ') || 'none'}; ${config.redirects.length} redirect(s), ${config.headers.length} header(s); indexing ${config.seo.indexing ? 'on' : 'off'}.`);
+		const tags = TRACKERS.filter(k => doc.tracking?.[k]);
+		lines.push(`Site settings saved (${Object.keys(patch).join(', ')}) — tags: ${tags.join(', ') || 'none'}; ${doc.redirects.length} redirect(s), ${doc.headers.length} header(s); indexing ${doc.seo?.indexing === false ? 'off' : 'on'}.`);
+		if (skipped.length) lines.push(`Ignored (not site settings): ${skipped.join(', ')} — get_site lists the settings.`);
 	}
 	if (domains) {
 		await TenantProject.updateOne({ _id: caller.project._id }, { $set: { domains } });
 		caller.project.domains = domains;
+		forgetSite(caller.project);
 		lines.push(`Domains: ${domains.join(', ') || 'none'} — analytics only counts visits from these${domains.length ? '' : ' (none: from anywhere)'}.`);
 	}
-	if (!lines.length) return refuse('Send the settings to change (fields of Site settings — get_site lists them), config, and/or domains.');
-	lines.push(`In the panel: ${caller.page(KIT.settings)}`);
-	return { text: lines.join('\n'), data: { settings: doc ? shape(doc.toObject(), settings.def) : undefined, domains: caller.project.domains || [] } };
+	if (!lines.length) return refuse(`Send the settings to change (${Object.keys(FLAT).join(', ')}), config, and/or domains.${skipped.length ? ` Not settings: ${skipped.join(', ')}.` : ''}`);
+	lines.push(`In the panel: ${caller.page('site-setup')}`);
+	doc ||= await loadSite(caller.project, { req });
+	return { text: lines.join('\n'), data: { settings: publicSettings(doc), config: publicConfig(caller.project, doc) } };
 };
 
 const getSite = async (req: any, _args: any, caller: Caller): Promise<Out> => {
-	const [settings, pages, seo, contents] = await Promise.all([kitModel(KIT.settings), kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
-	const doc: any = settings ? await settings.Model.findOne({}).sort({ createdAt: 1 }).lean() : null;
+	const [site, pages, seo, contents] = await Promise.all([loadSite(caller.project, { req }), kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
 	const list: any[] = pages ? await pages.Model.find({}).sort({ priority: -1, path: 1 }).limit(200).lean() : [];
 	const ids = list.map(p => p._id);
 	const [seos, blocks]: any = await Promise.all([
@@ -388,20 +368,20 @@ const getSite = async (req: any, _args: any, caller: Caller): Promise<Out> => {
 		contents: blocks.filter((b: any) => String(b.page) === String(p._id)).map((b: any) => b.slug || b._id),
 	}));
 	const project = caller.project;
+	const config = publicConfig(project, site);
 	const data = {
 		project: { name: project.name, slug: project.publicSlug, domains: project.domains || [] },
 		api: publicBase(req, project),
-		settings: doc && settings ? shape(doc, settings.def) : null,
-		config: siteConfigOf(project),
-		settingsFields: settings?.def.fields.map((f: any) => `${f.key}:${f.kind}`) || [],
+		settings: publicSettings(site),
+		config: { ...config, headTags: (site.headTags || []).map((t: any) => ({ name: t.name, location: t.location, enabled: t.enabled !== false })) },
+		settingsFields: Object.keys(FLAT).filter(k => k !== 'twitter'),
 		pages: pageRows,
 	};
 	const text = [
 		`Website “${project.name}” — site API ${data.api}`,
 		`Domains: ${data.project.domains.join(', ') || 'none yet (analytics counts visits from anywhere)'}`,
-		`Settings: ${data.settings ? JSON.stringify(data.settings) : 'none yet — update_site_settings creates them'}`,
-		`Settings fields: ${data.settingsFields.join(', ')}`,
-		`Site setup (tags, code, SEO, redirects, headers): ${JSON.stringify(data.config)}`,
+		`Settings: ${JSON.stringify(data.settings)}`,
+		`Site setup (tags, code tags, SEO & indexing, redirects, headers): ${JSON.stringify({ tracking: config.tracking, seo: config.seo, headTags: data.config.headTags, redirects: config.redirects, headers: config.headers })}`,
 		pageRows.length ? '| Path | Name | Status | SEO title | Content blocks |\n|---|---|---|---|---|' : 'No pages yet — upsert_page makes them.',
 		...pageRows.map(p => `| ${p.path} | ${p.name} | ${p.status} | ${p.seoTitle || '—'} | ${p.contents.join(', ') || '—'} |`),
 	].join('\n');
@@ -431,7 +411,7 @@ const isPrivateIp = (ip: string): boolean =>
 	net.isIPv4(ip) ? PRIVATE_V4.some(r => r.test(ip)) : ip === '::1' || ip === '::' || /^f[cd]/i.test(ip) || /^fe80/i.test(ip) || /^::ffff:/i.test(ip) && isPrivateIp(ip.replace(/^::ffff:/i, ''));
 
 /** A URL the server may fetch: http(s), and in production never this network's own addresses. */
-const fetchable = async (raw: string) => {
+export const fetchable = async (raw: string) => {
 	let url: URL;
 	try {
 		url = new URL(raw);
@@ -670,7 +650,7 @@ const siteSnippets = async (req: any, _args: any, caller: Caller): Promise<Out> 
 const fieldList = (kit: Kit | null) => (kit ? kit.def.fields.map((f: any) => `${f.key} (${f.kind}${f.options?.length ? `: ${f.options.map((o: any) => o.value).join('|')}` : ''}${f.ref ? ` → ${f.ref}` : ''})`).join(', ') : '(missing)');
 
 const describeWebsite = async (req: any, _args: any, caller: Caller): Promise<Out> => {
-	const [settings, pages, seo, contents] = await Promise.all([kitModel(KIT.settings), kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
+	const [pages, seo, contents] = await Promise.all([kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
 	const s = snippetsOf(req, caller.project);
 	const text = `# Building a website that this project manages
 
@@ -686,7 +666,7 @@ This project ("${caller.project.name}") is a WEBSITE project. Build the site so 
 7. Write the site's code to read the site API below at request time (short revalidation), then tell the user where everything is edited in the panel.
 
 ## The website kit (models already in this project)
-- Site settings (/site-settings), one record: ${fieldList(settings)}
+- Site settings (not a model — update_site_settings sets them, the panel's Site setup page edits them): ${Object.keys(FLAT).filter(k => k !== 'twitter').join(', ')}
 - Pages (/pages): ${fieldList(pages)}
 - SEO (/seo), one per page: ${fieldList(seo)}
 - Contents (/web-contents), blocks on a page: ${fieldList(contents)}
@@ -729,7 +709,7 @@ export const list = (route: string, query = '') => mint(\`/\${route}?\${query}\`
 - Revalidate (60s) or render on request; a fully static export only changes after a rebuild.
 - The site setup comes from here too: the analytics script injects the tracking tags and custom code by itself. Serve /robots.txt and /sitemap.xml from \`\${API}/site/robots.txt\` and \`\${API}/site/sitemap.xml?origin=https://<domain>\` (route handlers), and apply \`config.redirects\` and \`config.headers\` from GET /site in middleware (Next: middleware.ts, or fetch them in next.config redirects()/headers() at build).
 - Never put an API key in the site — the site API needs none.`;
-	return { text, data: { api: s.api, snippets: s, kit: { settings: !!settings, pages: !!pages, seo: !!seo, contents: !!contents } } };
+	return { text, data: { api: s.api, snippets: s, kit: { pages: !!pages, seo: !!seo, contents: !!contents } } };
 };
 
 /* --------------------------------------------------------------- tools */
@@ -788,18 +768,18 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 		name: 'update_site_settings',
 		title: 'Change the site settings',
 		description:
-			'Sets the website’s settings record (created if there is none): siteName, logo, favicon, colours, fontFamily, footerText, email, phone, address, socials, metaTitle, metaDescription, ogImage… (get_site lists the fields). Only the fields sent change. `domains` sets where the site is deployed (analytics only counts visits from them).',
+			'Sets the website’s settings (one per project, edited on the panel’s Site setup page): siteName, tagline, logo, favicon, primaryColor, secondaryColor, fontFamily, footerText, email, phone, whatsapp, address, mapEmbedUrl, hours, facebook, instagram, x, linkedin, youtube, tiktok, pinterest, metaTitle, titleTemplate ("%s · Acme"), metaDescription, ogImage, keywords. Only the fields sent change. `config` holds the tags, code, SEO & indexing, redirects and headers; `domains` sets where the site is deployed (analytics only counts visits from them).',
 		scope: 'build',
 		only: 'website',
 		inputSchema: {
 			type: 'object',
 			properties: {
-				settings: { type: 'object', description: 'Field key → value, e.g. {"siteName": "Acme", "favicon": "https://…/favicon.png", "primaryColor": "#0f766e"}' },
+				settings: { type: 'object', description: 'Setting → value, e.g. {"siteName": "Acme", "favicon": "https://…/favicon.png", "primaryColor": "#0f766e", "instagram": "https://instagram.com/acme"}' },
 				domains: { type: 'array', items: { type: 'string' }, description: 'e.g. ["acme.com", "www.acme.com"] — replaces the list' },
 				config: {
 					type: 'object',
 					description:
-						'The site setup — send only the sections that change: tracking {mintAnalytics, ga4 "G-…", gtm "GTM-…", googleAds "AW-…", metaPixel, tiktokPixel, linkedinPartner, clarity, hotjar}; code {head, bodyStart, bodyEnd} (HTML); seo {indexing, sitemap, robots (extra rules), canonicalDomain, googleVerification, bingVerification}; redirects [{from "/old", to "/new" or URL, permanent}]; headers [{source "/(.*)", name, value}]. Lists replace the saved ones.',
+						'The site setup — send only the sections that change: tracking {mintAnalytics, ga4 "G-…", gtm "GTM-…", googleAds "AW-…", metaPixel, tiktokPixel, linkedinPartner, pinterestTag, xPixel, snapPixel, clarity, hotjar}; headTags [{name, location "head"|"bodyStart"|"bodyEnd", content (HTML), enabled}] (replaces the list) or code {head, bodyStart, bodyEnd} (replaces only the tags named for those places); seo {indexing, sitemap, robots (extra rules), canonicalDomain, googleVerification, bingVerification}; redirects [{from "/old", to "/new" or URL, permanent}]; headers [{source "/(.*)", name, value}]. Lists replace the saved ones. Server-side tracking keys are set by the user in the panel, never here.',
 				},
 			},
 		},

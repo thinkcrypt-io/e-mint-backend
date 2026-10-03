@@ -82,6 +82,8 @@ type DiffArgs = {
 	after: Record<string, any>;
 	fields: string[];
 	settings?: Record<string, any>;
+	/** Password fields (secretFields.function.ts): logged as changed, never with values. */
+	secret?: string[];
 };
 
 /**
@@ -91,10 +93,16 @@ type DiffArgs = {
  * what stops an unchanged `ObjectId` or `Date` being reported as an edit just
  * because the two instances aren't `===`.
  */
-export const diffFields = ({ before, after, fields, settings }: DiffArgs): HistoryChange[] => {
+export const diffFields = ({ before, after, fields, settings, secret = [] }: DiffArgs): HistoryChange[] => {
 	const changes: HistoryChange[] = [];
 
 	for (const field of fields) {
+		// A Password field: that it changed, never what it was or is.
+		if (secret.includes(field) || settings?.[field]?.secret) {
+			if (after?.[field] && after[field] !== before?.[field])
+				changes.push({ field, label: settings?.[field]?.title || prettify(field), from: 'hidden', to: 'a new one' });
+			continue;
+		}
 		const from = describe(before?.[field]);
 		const to = describe(after?.[field]);
 		if (from === to) continue;

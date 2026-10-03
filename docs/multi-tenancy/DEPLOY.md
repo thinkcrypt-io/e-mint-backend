@@ -14,6 +14,7 @@ against production yet (all were verified on a scratch database).
    | `TENANT_FRONTEND_URL` | `https://app.mintapp.shop` | links in emails (reset password, invitations), MCP links |
    | `TENANT_WEBAUTHN_ORIGIN` | `https://app.mintapp.shop` | passkeys for tenant users (comma-separated list allowed; defaults to TENANT_FRONTEND_URL) |
    | `TENANT_WEBAUTHN_RP_NAME` | `MINT` | the name shown when saving a passkey |
+   | `SECRET_ENCRYPTION_KEY` | 32+ random characters (check whether Heroku already has it — the AI provider keys use it; **never change it once set**) | Password fields in built models (WO-39) are encrypted with it; without it, saving one fails. Changing it makes every stored value unreadable |
    | `PUBLIC_API_URL` (optional) | `https://api.mintapp.shop` | the API origin the MCP's website tools hand out for sites (`/public/api/…`, track.js); defaults to the host the MCP request came in on |
 3. Index migration — **automatic**: on boot the server swaps the old
    single-field unique indexes (`modeldefinitions` name/route,
@@ -54,3 +55,7 @@ Both builds were checked with `next build` (admin and `NEXT_PUBLIC_PANEL=tenant`
   browser pane was hidden during development).
 - Point a test page at `/public/widget.js` and `/public/track.js` with the
   website project's slug and check a sign-in and a page view arrive.
+- Website settings (WO-38) need no migration step: each website project's
+  `WebsiteSettings` record is created on its first read, copying the old
+  "Site settings" table record and `TenantProject.site`. Owners remove the old
+  table from Site setup → General when they're ready.

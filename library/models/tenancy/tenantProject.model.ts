@@ -23,7 +23,7 @@ const schema = new Schema<any>(
 		/** Website projects: the site's domains (analytics origin check, CORS). */
 		domains: { type: [String], default: undefined },
 		mediaScope: { type: String, enum: MEDIA_SCOPES, default: 'project' },
-		/** Website projects: tags, head/body code, SEO, redirects, headers (WO-34, siteConfig.function.ts). */
+		/** Before WO-38, a website's tags, code, SEO, redirects and headers. Now in WebsiteSettings (copied over on first read); no longer written. */
 		site: { type: Schema.Types.Mixed, default: undefined },
 		isActive: { type: Boolean, default: true },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
