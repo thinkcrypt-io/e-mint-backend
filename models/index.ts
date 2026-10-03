@@ -230,6 +230,10 @@ export { default as issueSettings } from './issues/issues.settings.js';
 export { default as SupportTicket } from './support-tickets/supportTicket.model.js';
 export { default as supportTicketSettings } from './support-tickets/supportTicket.settings.js';
 
+//Waitlist (the marketing website's early-access sign-ups)
+export { default as Waitlist } from './waitlist/waitlist.model.js';
+export { default as waitlistSettings } from './waitlist/waitlist.settings.js';
+
 //Maintenance
 export { default as Maintenance } from './maintenance/maintenance.model.js';
 export { default as maintenanceSettings } from './maintenance/maintenance.settings.js';

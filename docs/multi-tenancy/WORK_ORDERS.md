@@ -56,6 +56,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
   `agent-browser` CLI works for UI checks. First compiles after a restart
   take 30–60s per page.
 
+**Marketing website** (`mint-webpage/`, WO-41): its own repo (aiasifistiaque/mint-website, branch `main`), launch config `mint-webpage` (:3100). When a product change ships, update the site in the same piece of work — `src/content/*` (features, changelog, workflow, personas) and the drawings in `src/components/mock/mocks.tsx`; see its README.
+
 **Conventions that bite:**
 - Tenant code runs inside a scope (AsyncLocalStorage, `tenantScoped`
   plugin). Never `mongoose.models[name]` in code a project reaches — use
@@ -114,6 +116,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 39 | **Model builder: Password field kind (encrypted, revealed with your own password), searchable dropdowns, code prefix filled in** | both | M | done |
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 | 40 | **Public API lists: the admin lists' filters (`field_op=value`), search, multi-sort, `fields`; documented in the API reference, user guide and MCP** | both | M | done |
+| 41 | **Marketing website (`mint-webpage/`, repo aiasifistiaque/mint-website `main`) + waitlist: `POST /public/waitlist`, `Waitlist` model, super-admin `/waitlist` table, `scripts/seedWaitlist.js`** | backend + website | M | done (both pushed; seed + deploy pending) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)

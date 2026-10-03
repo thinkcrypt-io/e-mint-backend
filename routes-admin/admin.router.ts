@@ -59,6 +59,8 @@ import {
 	issueSettings,
 	SupportTicket,
 	supportTicketSettings,
+	Waitlist,
+	waitlistSettings,
 	Maintenance,
 	maintenanceSettings,
 	AdminExpense,
@@ -550,6 +552,16 @@ router.use(
 				description: 'Close or reopen a ticket; the support team can set any status',
 			},
 		],
+	}),
+);
+
+// Early-access sign-ups from the marketing website (POST /public/waitlist).
+router.use(
+	'/waitlist',
+	defineRoutes({
+		Model: Waitlist,
+		settings: waitlistSettings,
+		permission: 'waitlist',
 	}),
 );
 

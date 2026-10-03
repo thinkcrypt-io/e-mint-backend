@@ -893,3 +893,22 @@ Decisions D14–D17 (README).
   non-number for a number, or a non-true/false for a yes/no now answers 400
   (it used to be ignored or matched nothing); archived records disappear
   from the public API.
+
+## 2026-10-04 — WO-41 Marketing website + waitlist
+- New `mint-webpage/` (Next 16, Tailwind v4, static): home, workflow,
+  product, who it's for, features, AI, developers, use cases, security,
+  changelog, about, waitlist, privacy. Log in / Dashboard link to the tenant
+  panel (`NEXT_PUBLIC_APP_URL`). Pushed to aiasifistiaque/mint-website `main`.
+- Backend: `models/waitlist/` (Waitlist, unique email, status
+  waiting/invited/joined/declined), `controllers/waitlist/joinWaitlist.controller.ts`
+  (`POST /public/waitlist`: Joi, honeypot, one entry per email — re-sign-up
+  fills blanks — answers `{ position, already }`, 10 per IP per 15 min),
+  admin route `/waitlist` (permission `waitlist`), Admin preferences key,
+  `scripts/seedWaitlist.js` (permission + sidebar item next to Leads).
+- Verified: backend `tsc`; endpoint by curl on a scratch server (bad email,
+  new, second email, re-sign-up update, honeypot, bad team size, CORS
+  preflight, admin route 401 without token); the site's waitlist form end
+  to end in the browser pane; `next build` (all pages static); mobile width.
+- To do: deploy the backend, run `node scripts/seedWaitlist.js`,
+  create the website's Vercel project with its env vars.
+

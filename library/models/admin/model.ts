@@ -190,6 +190,7 @@ const schema = new Schema<AdminType>(
 			services: [String],
 			issues: [String],
 			'support-tickets': [String],
+			waitlist: [String],
 			maintenances: [String],
 			resources: [String],
 			components: [String],
