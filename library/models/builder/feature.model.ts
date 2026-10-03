@@ -12,7 +12,7 @@ const schema = new Schema<any>(
 		title: { type: String, required: true, trim: true },
 		description: { type: String, default: '' },
 		summary: { type: String, default: '' },
-		source: { type: String, enum: ['wizard', 'mcp'], default: 'wizard' },
+		source: { type: String, enum: ['wizard', 'mcp', 'template'], default: 'wizard' },
 		// The plan as it was built (normalized steps).
 		plan: { type: Schema.Types.Mixed, default: null },
 		result: { type: Schema.Types.Mixed, default: null },

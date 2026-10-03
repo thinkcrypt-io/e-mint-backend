@@ -27,6 +27,9 @@ Then, from this folder:
 | `node secrets.mjs` | Password fields (WO-39): secret-named keys need the kind, stored as text, never in history | |
 | `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
 | `node access.mjs` | WO-21–24: standard role permissions, project access per member/invitation, the shared media library, invitations in the app, several organizations | stands alone; marks the invitees' emails verified directly in the scratch DB (the real code only goes by email) |
+| `node templates.mjs` | Template Studio (docs/templates T-02): starters as templates, validation with fixes, nothing built | counts collections in the scratch DB (`SMOKE_MONGO`); removes its own templates |
+| `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
+| `node templates-manage.mjs` | Template Studio T-05: publish with notes + explanation gate, versions/restore, duplicate, export/import, settings, delete vs archive, save a project as a template | removes its templates |
 | `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |
 
 `./run-all.sh` runs them all in order (exit 1 on any FAIL).

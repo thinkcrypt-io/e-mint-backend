@@ -13,6 +13,8 @@ import YAML from 'yamljs';
 import adminRouter from './routes-admin/admin.router.js';
 import { syncDynamicModels } from './library/functions/dynamicModels.function.js';
 import { ensureTenantIndexes } from './library/functions/tenantIndexes.function.js';
+import { seedStarterTemplates } from './library/functions/templateSeed.function.js';
+import { schedulePreviewPurge } from './library/functions/templateSandbox.function.js';
 import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
@@ -50,7 +52,13 @@ app.use(morgan('combined'));
 app.use(requestIp.mw());
 
 // Old databases' global unique indexes would refuse a project's `Client` (tenantIndexes.function.ts).
-connectDb().then(() => ensureTenantIndexes().catch(e => console.error(`Tenancy indexes: ${e.message}`)));
+connectDb().then(() => {
+	ensureTenantIndexes().catch(e => console.error(`Tenancy indexes: ${e.message}`));
+	// The code starters as the first templates (docs/templates TD14), where missing.
+	seedStarterTemplates();
+	// Template previews older than 24 hours go, now and every hour (docs/templates T-04).
+	schedulePreviewPurge();
+});
 
 // Swagger UI setup
 app.use(

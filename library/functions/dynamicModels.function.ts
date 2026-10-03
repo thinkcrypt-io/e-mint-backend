@@ -167,7 +167,7 @@ export const RESERVED_KEYS = [
  */
 const RESERVED_ROUTES = new Set([
 	'api', 'admin', 'auth', 'builder', 'model-builder', 'docs', 'doc', 'view', 'views', 'dashboard', 'settings',
-	'notifications', 'access-users',
+	'notifications', 'access-users', 'templates',
 	'new', 'edit', 'create', 'test', 'error', 'not-found', 'heroku-doc', 'vercel-doc', 'user-feedback',
 	'user-feedback-success', 'purchased-themes', 'customer-ledger', 'invoices-old', 'repos', 'qr', 'users',
 	'orders', 'payments', 'groups', 'damages', 'deliveries', 'suppliers', 'images', 'fgroups', 'servicecat',
@@ -1015,6 +1015,16 @@ export const compiledModel = (name: string) => reg().compiled.get(name)?.Model |
 export const isBuiltModel = (name: string) => reg().compiled.has(name);
 
 /** A deleted tenant project: its models, routes and registry are forgotten. */
+/**
+ * Waits for the project's compiled models to finish building their indexes —
+ * an index build still running after its collection is dropped makes the
+ * collection again (docs/templates T-04, preview cleanup).
+ */
+export const settleProjectModels = async (projectId: any) => {
+	const r = registries.get(`p:${projectId}`);
+	if (r) await Promise.all([...r.compiled.values()].map(c => c.Model.init().catch(() => undefined)));
+};
+
 export const forgetProjectModels = (projectId: any) => {
 	const key = `p:${projectId}`;
 	const r = registries.get(key);

@@ -62,10 +62,10 @@ export const PANEL_PAGES = new Set([
 	'jobapplications', 'jobposts', 'leads', 'leaves', 'maintenances', 'meetings', 'model-builder', 'modelattributes',
 	'not-found', 'notifications', 'npmlibraries', 'offers', 'orders', 'org', 'packages', 'passkey', 'payments',
 	'permissions', 'plannedfeatures', 'plannedmodels', 'plannedpages', 'plannedprojects', 'portfolios', 'print',
-	'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
+	'preview', 'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
 	'resources', 'roles', 'sellers', 'servicecat', 'services', 'sessions', 'settings', 'shops', 'sidebar-builder',
 	'sidebarcategories', 'sidebaritems', 'solutions', 'subscriptions', 'suppliers', 'support-tickets', 'support',
-	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'terms', 'test', 'themes', 'user-docs',
+	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'templates', 'terms', 'test', 'themes', 'user-docs',
 	'user-feedback-success', 'user-feedback', 'users', 'vercel-doc', 'vercels', 'view', 'views', 'api',
 ]);
 
@@ -130,6 +130,8 @@ export const publicUser = (u: any) => ({
 	modalLayout: u.modalLayout || 'modal',
 	theme: u.theme || null,
 	preferences: u.preferences || {},
+	/** A template preview's session (docs/templates T-04): the panel shows its banner. */
+	...(u.system === true && { preview: true }),
 	createdAt: u.createdAt,
 });
 
@@ -195,6 +197,7 @@ export const publicProject = (p: any) => ({
 	domains: p.domains || [],
 	mediaScope: p.mediaScope || 'project',
 	isActive: p.isActive !== false,
+	...(p.preview && { preview: { expiresAt: p.preview.expiresAt, from: p.preview.from } }),
 	createdAt: p.createdAt,
 });
 

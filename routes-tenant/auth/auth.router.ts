@@ -10,6 +10,7 @@ import { makeTwoFactorRouter } from '../../library/controllers/twoFactor/twoFact
 import { addOwnSessionRoutes } from '../../library/controllers/sessions/sessions.router.js';
 import { tenantProtectAccount } from '../../middleware/tenant/protect.tenant.middleware.js';
 import { rateLimit } from '../../library/functions/rateLimit.function.js';
+import { redeemTicket } from '../../library/functions/templateSandbox.function.js';
 import {
 	TenancyError,
 	createOrganization,
@@ -35,6 +36,7 @@ import {
  *   POST /verify-email/send        emails a 6-digit code to the account's address
  *   POST /verify-email             { code } → the email is verified (WO-24)
  *   POST /logout                   signs this device out
+ *   POST /preview                  { ticket } → a template preview's session (docs/templates T-04)
  *
  * Tokens: `{ _id, kind:'tenant', org, sid }`. A token issued with no
  * organization (the user belongs to none) only reaches the account routes.
@@ -135,6 +137,23 @@ router.post(
 		if (user.isActive === false) throw new TenancyError(400, 'This account has been deactivated.');
 		if (user.twoFactorEnabled) return { twoFactor: await tenantTwoFactor.startLogin(user) };
 		return { token: await issue(req, user, 'password') };
+	})
+);
+
+/**
+ * POST /preview { ticket } — a template preview (docs/templates T-04): the
+ * super admin's single-use, 5-minute ticket for a session in the sandbox.
+ */
+router.post(
+	'/preview',
+	authLimit,
+	handle(async req => {
+		const found = await redeemTicket(req.body?.ticket);
+		if (!found) throw new TenancyError(400, 'This preview link was used already or has expired. Open the preview again from Template Studio.', 'preview_ticket');
+		return {
+			token: await tenantSessions.issueSession(found.owner, req, 'preview', found.organization._id),
+			project: { _id: found.project._id, publicSlug: found.project.publicSlug, name: found.project.name, type: found.project.type },
+		};
 	})
 );
 

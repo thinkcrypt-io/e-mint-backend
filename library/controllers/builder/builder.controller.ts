@@ -18,6 +18,7 @@ import {
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { PROTECTED_ROUTES, checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { formulaPipeline, formulasOf, subFieldsOf } from '../../functions/formula.function.js';
+import { scopeKey } from '../../functions/tenantScope.function.js';
 
 type Kind = 'settings' | 'config';
 const KINDS: Kind[] = ['settings', 'config'];
@@ -25,19 +26,29 @@ const modelFor = (kind: Kind): mongoose.Model<any> => (kind === 'settings' ? Rou
 
 // The router stack is fixed once the server has booted; only the model
 // builder's routes change after that, and they bump the dynamic version.
-let registry: {
+// Versions are counted per scope (each tenant project has its own), so the
+// cache is per scope too — one shared entry handed project A's routes to
+// project B whenever their versions happened to match.
+type Registry = {
 	version: number;
 	resources: Map<string, ResourceRouteEntry>;
 	filters: Map<string, FilterRouteEntry>;
-} | null = null;
+};
+const registries = new Map<string, Registry>();
+const MAX_REGISTRIES = 500;
 
 const getRegistry = (app: any) => {
-	if (registry?.version !== getDynamicVersion())
+	const key = scopeKey();
+	let registry = registries.get(key);
+	if (registry?.version !== getDynamicVersion()) {
 		registry = {
 			version: getDynamicVersion(),
 			resources: new Map(collectResourceRoutes(app).map(e => [e.route, e])),
 			filters: new Map(collectFilterRoutes(app).map(e => [e.route, e])),
 		};
+		if (registries.size >= MAX_REGISTRIES && !registries.has(key)) registries.delete(registries.keys().next().value as string);
+		registries.set(key, registry);
+	}
 	return registry;
 };
 

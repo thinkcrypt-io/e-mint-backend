@@ -6,9 +6,10 @@ import { ApiKey, Feature } from '../../models/builder/_index.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import { BuildError } from './models.controller.js';
 import { MODEL } from './ai.controller.js';
-import { buildFeature, modelCatalog, planFeature, planProblems } from './features.service.js';
+import { TEMPLATE_MAX_STEPS, buildFeature, modelCatalog, planFeature, planProblems } from './features.service.js';
 import { FEATURE_SCHEMA, catalogText, planFromAi, platformGuide } from './features.schema.js';
-import { STARTERS, starterList } from '../../functions/starterTemplates.function.js';
+import { starterPlan, starterTemplates } from '../../functions/templateSeed.function.js';
+import { ProjectTemplate } from '../../models/templates/_index.js';
 
 /**
  * /admin/api/builder/features — the feature wizard's API — and
@@ -56,15 +57,26 @@ export const buildFeaturePlan = async (req: any, res: Response) => {
 	}
 };
 
-/** GET /builder/starters — the starter templates a new project can begin with (WO-35). */
-export const listStarters = async (_req: any, res: Response) => res.status(200).json({ doc: starterList() });
+/**
+ * GET /builder/starters — the starter templates a new project can begin with
+ * (WO-35): the published app templates (docs/templates TD14), else the code list.
+ */
+export const listStarters = async (_req: any, res: Response) => {
+	try {
+		return res.status(200).json({ doc: await starterTemplates() });
+	} catch (e) {
+		return answer(res, e);
+	}
+};
 
-/** POST /builder/starters/:key — builds one, all or nothing, like any feature. */
+/** POST /builder/starters/:key — builds one's models, all or nothing, like any feature. */
 export const buildStarter = async (req: any, res: Response) => {
 	try {
-		const starter = STARTERS.find(s => s.key === req.params.key);
+		const starter = await starterPlan(req.params.key);
 		if (!starter) return res.status(404).json({ message: 'No such template' });
-		const result = await buildFeature(req, planFromAi(starter.plan), { source: 'wizard' });
+		const result = await buildFeature(req, planFromAi(starter.plan), { source: starter.template ? 'template' : 'wizard', maxSteps: TEMPLATE_MAX_STEPS });
+		if (starter.template)
+			await ProjectTemplate.updateOne({ _id: starter.template }, { $inc: { 'usage.applied': 1 }, $set: { 'usage.lastAppliedAt': new Date() } });
 		return res.status(201).json(result);
 	} catch (e) {
 		return answer(res, e);

@@ -42,6 +42,10 @@ import { PROTECTED_ROUTES } from './validate.js';
  */
 
 export const MAX_STEPS = 12;
+/** A template (docs/templates TD7) is a whole app, checked and built as one plan. */
+export const TEMPLATE_MAX_STEPS = 40;
+
+type PlanOptions = { maxSteps?: number };
 
 export type TabPlan = { from: string; fromRoute: string; field: string; title: string; enabled: boolean; suggested: boolean };
 export type LinkPlan = { field: string; label: string; to: string; toRoute: string; many: boolean };
@@ -166,8 +170,9 @@ const categoryId = async (value: any): Promise<string | null> => {
 
 /* ------------------------------------------------------------- planning */
 
-export const planFeature = async (req: any, input: any): Promise<FeaturePlan> => {
+export const planFeature = async (req: any, input: any, opts: PlanOptions = {}): Promise<FeaturePlan> => {
 	const app = req.app;
+	const maxSteps = Math.min(opts.maxSteps || MAX_STEPS, TEMPLATE_MAX_STEPS);
 	await syncDynamicModels({ app });
 	const problems: string[] = [];
 
@@ -175,7 +180,7 @@ export const planFeature = async (req: any, input: any): Promise<FeaturePlan> =>
 	if (!title) problems.push('Give the feature a title');
 	const raw: any[] = Array.isArray(input?.steps) ? input.steps.filter((s: any) => s && typeof s === 'object') : [];
 	if (!raw.length) problems.push('A feature needs at least one step');
-	if (raw.length > MAX_STEPS) problems.push(`At most ${MAX_STEPS} steps in one feature — split it in two`);
+	if (raw.length > maxSteps) problems.push(`At most ${maxSteps} steps in one ${maxSteps > MAX_STEPS ? 'template' : 'feature — split it in two'}`);
 
 	const catalog = await modelCatalog(app);
 	const existing = new Map(catalog.map(c => [lower(c.name), c]));
@@ -191,7 +196,7 @@ export const planFeature = async (req: any, input: any): Promise<FeaturePlan> =>
 	const updates: UpdateStep[] = [];
 	const steps: Step[] = [];
 
-	for (const [index, s] of raw.slice(0, MAX_STEPS).entries()) {
+	for (const [index, s] of raw.slice(0, maxSteps).entries()) {
 		const action = s.action === 'update' ? 'update' : 'create';
 		const base = { index, rationale: str(s.rationale, 1500), tabs: [], links: [], problems: [] as string[] };
 		if (action === 'create') {
@@ -420,7 +425,7 @@ export const planFeature = async (req: any, input: any): Promise<FeaturePlan> =>
 	}
 
 	// Tabs the plan names itself: switch a suggested one off, retitle it, or add one.
-	for (const [i, s] of raw.slice(0, MAX_STEPS).entries()) {
+	for (const [i, s] of raw.slice(0, maxSteps).entries()) {
 		const step = steps[i];
 		if (!step || !Array.isArray(s.tabs)) continue;
 		for (const t of s.tabs) {
@@ -512,10 +517,10 @@ export type BuildResult = {
 export const buildFeature = async (
 	req: any,
 	input: any,
-	opts: { source: 'wizard' | 'mcp'; apiKey?: any }
+	opts: { source: 'wizard' | 'mcp' | 'template'; apiKey?: any; maxSteps?: number }
 ): Promise<BuildResult> => {
 	const app = req.app;
-	const plan = await planFeature(req, input);
+	const plan = await planFeature(req, input, { maxSteps: opts.maxSteps });
 	if (!plan.ok) throw new BuildError(400, 'The feature has problems, so nothing was built', planProblems(plan));
 
 	const note = `Built with the feature “${plan.title}”`;

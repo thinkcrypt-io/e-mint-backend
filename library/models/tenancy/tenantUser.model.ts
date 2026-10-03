@@ -21,6 +21,8 @@ const schema = new Schema<any>(
 		image: { type: String, trim: true },
 		password: { type: String, minlength: 8, maxlength: 1024, select: false },
 		isActive: { type: Boolean, default: true },
+		/** The template sandbox's owner (docs/templates T-04): no password, signed in only by a preview ticket. */
+		system: { type: Boolean, default: undefined },
 		/**
 		 * The account has proven it reads this email (WO-24): an emailed
 		 * invitation or reset link was used, or a verification code was typed.

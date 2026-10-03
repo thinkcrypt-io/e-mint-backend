@@ -198,7 +198,8 @@ const nameFromPath = (path: string) =>
 				.replace(/[-_]+/g, ' ')
 				.replace(/^\w/, c => c.toUpperCase());
 
-const upsertPage = async (req: any, args: any, caller: Caller): Promise<Out> => {
+/** Exported for the template apply engine (docs/templates T-03), which calls it with its own caller. */
+export const upsertPage = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const path = normalizePath(args?.path);
 	if (!path) return refuse('Give the page’s path, e.g. "/" or "/about".');
 	const [pages, seo, contents] = await Promise.all([kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
@@ -525,7 +526,7 @@ const uploadMedia = async (_req: any, args: any, caller: Caller): Promise<Out> =
 
 const MAX_WRITE = 200;
 
-const createRecords = async (req: any, args: any, caller: Caller): Promise<Out> => {
+export const createRecords = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const route = String(args?.route || '').trim();
 	const def: any = route ? await ModelDefinition.findOne({ route }).lean() : null;
 	const Model = def ? compiledModel(def.name) : null;

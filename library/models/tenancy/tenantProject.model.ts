@@ -6,7 +6,8 @@ import mongoose, { Schema } from 'mongoose';
  * projects are seeded with the website kit (D13). `publicSlug` is global — it
  * names the project in the public API (`/public/api/<publicSlug>/…`).
  */
-export const PROJECT_TYPES = ['app', 'website'] as const;
+/** `api` (docs/templates TD2): a project whose workspace leads with its public API. */
+export const PROJECT_TYPES = ['app', 'website', 'api'] as const;
 /** Whose media library a project uses (WO-23): its own, or the organization's shared one. */
 export const MEDIA_SCOPES = ['project', 'organization'] as const;
 
@@ -25,11 +26,53 @@ const schema = new Schema<any>(
 		mediaScope: { type: String, enum: MEDIA_SCOPES, default: 'project' },
 		/** Before WO-38, a website's tags, code, SEO, redirects and headers. Now in WebsiteSettings (copied over on first read); no longer written. */
 		site: { type: Schema.Types.Mixed, default: undefined },
+		/** The template it was built from (docs/templates T-03): which version, and the answers given. */
+		template: {
+			type: new Schema(
+				{
+					template: { type: Schema.Types.ObjectId, ref: 'ProjectTemplate' },
+					key: String,
+					version: Number,
+					appliedAt: Date,
+					answers: { type: Schema.Types.Mixed, default: {} },
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
+		/** The template's setup guide as a checklist the project's dashboard shows (T-14 ticks it). */
+		setup: {
+			type: new Schema(
+				{
+					steps: [{ _id: false, title: String, body: String, page: String, done: { type: Boolean, default: false } }],
+					faq: [{ _id: false, q: String, a: String }],
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
+		/** A template preview in the sandbox (docs/templates T-04): deleted at `expiresAt`; opened with a single-use ticket. */
+		preview: {
+			type: new Schema(
+				{
+					template: { type: Schema.Types.ObjectId, ref: 'ProjectTemplate' },
+					from: { type: String, enum: ['draft', 'published'] },
+					expiresAt: Date,
+					ticketHash: String,
+					ticketExpiresAt: Date,
+					createdBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
 		isActive: { type: Boolean, default: true },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 	},
 	{ timestamps: true }
 );
 schema.index({ organization: 1, slug: 1 }, { unique: true });
+schema.index({ 'preview.ticketHash': 1 }, { sparse: true });
+schema.index({ 'preview.expiresAt': 1 }, { sparse: true });
 
 export default mongoose.model<any>('TenantProject', schema, 'tenantprojects');

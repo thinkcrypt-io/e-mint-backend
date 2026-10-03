@@ -48,6 +48,8 @@ const schema = new Schema<any>(
 		owner: { type: Schema.Types.ObjectId, ref: 'TenantUser', required: true, index: true },
 		logo: { type: String, trim: true },
 		isActive: { type: Boolean, default: true },
+		/** The platform's own organization (docs/templates T-04: template previews) — hidden from oversight and sign-in. */
+		system: { type: Boolean, default: undefined },
 		plan: { type: String, default: 'free', trim: true },
 		onboarding: { type: onboardingSchema, default: {} },
 	},

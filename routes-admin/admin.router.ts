@@ -275,6 +275,7 @@ import {
 import { getDocumentHistory } from '../library/controllers/history/_index.js';
 import builderRouter from '../library/controllers/builder/_index.js';
 import dashboardRouter from '../library/controllers/dashboard/_index.js';
+import templatesRouter from '../library/controllers/templates/templates.router.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import { Organization, TenantUser, TenantProject } from '../library/models/tenancy/_index.js';
 import {
@@ -311,6 +312,8 @@ router.post('/whatsapp/send', sendWhatsapp);
 
 router.use('/builder', builderRouter);
 router.use('/dashboard', dashboardRouter);
+// Template Studio (docs/templates): blueprints only — nothing here builds a model.
+router.use('/templates', templatesRouter);
 
 router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
 // The admin's System Status page — public, just up/down and timings.
@@ -1543,17 +1546,23 @@ router.use(
 // read, filter, switch off. Tenants are made by signing up, never here, and
 // deleting one isn't a table action.
 const oversight = { post: notAllowed, delete: notAllowed, copy: notAllowed };
+// The template sandbox (docs/templates T-04) is the platform's own, not a tenant: never listed.
+const notSandbox = {
+	organizations: customQuery({ query: { system: { $ne: true } } }),
+	users: customQuery({ query: { system: { $ne: true } } }),
+	projects: customQuery({ query: { preview: { $exists: false } } }),
+};
 router.use(
 	'/organizations',
-	defineRoutes({ Model: Organization, settings: organizationSettings, permission: 'organizations', route: 'organizations', frontendConfig: organizationConfig, replaceController: oversight }),
+	defineRoutes({ Model: Organization, settings: organizationSettings, permission: 'organizations', route: 'organizations', frontendConfig: organizationConfig, replaceController: oversight, injectMiddleware: { getAll: [notSandbox.organizations] } }),
 );
 router.use(
 	'/tenant-users',
-	defineRoutes({ Model: TenantUser, settings: tenantUserSettings, permission: 'tenant-users', route: 'tenant-users', frontendConfig: tenantUserConfig, replaceController: oversight }),
+	defineRoutes({ Model: TenantUser, settings: tenantUserSettings, permission: 'tenant-users', route: 'tenant-users', frontendConfig: tenantUserConfig, replaceController: oversight, injectMiddleware: { getAll: [notSandbox.users] } }),
 );
 router.use(
 	'/tenant-projects',
-	defineRoutes({ Model: TenantProject, settings: tenantProjectSettings, permission: 'tenant-projects', route: 'tenant-projects', frontendConfig: tenantProjectConfig, replaceController: oversight }),
+	defineRoutes({ Model: TenantProject, settings: tenantProjectSettings, permission: 'tenant-projects', route: 'tenant-projects', frontendConfig: tenantProjectConfig, replaceController: oversight, injectMiddleware: { getAll: [notSandbox.projects] } }),
 );
 
 // The signed-in admin's notifications, and who a record can be shared with.

@@ -973,6 +973,8 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 
 		if (dropData) {
 			await Counter.deleteOne({ slug: counterSlugFor(def.name) });
+			// An index build still running would make the collection again after the drop.
+			await compiledModel(def.name)?.init().catch(() => undefined);
 			await mongoose.connection.db?.dropCollection(def.collectionName).catch(() => {});
 		}
 

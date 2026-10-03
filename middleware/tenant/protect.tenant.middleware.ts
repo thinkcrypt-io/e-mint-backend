@@ -24,6 +24,17 @@ import { normalizePermissions } from '../../library/functions/tenantPermissions.
  */
 const secret = () => process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542';
 
+/**
+ * What a preview session may change: anything inside a project except its AI
+ * keys, its own notifications and signing out. Reading is always fine.
+ */
+const previewMayWrite = (req: any) => {
+	if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return true;
+	const path = String(req.originalUrl || '').split('?')[0];
+	if (/^\/tenant\/api\/p\/[^/]+\//.test(path)) return !/\/api-keys(\/|$)/.test(path);
+	return /^\/tenant\/api\/(notifications|auth\/logout|auth\/sessions\/current)(\/|$)/.test(path);
+};
+
 const make =
 	(requireOrg: boolean) =>
 	async (req: any, res: Response, next: NextFunction): Promise<Response | void> => {
@@ -44,6 +55,9 @@ const make =
 			if (user.isActive === false) return res.status(401).json({ message: 'This account has been deactivated.' });
 			req.user = user;
 			req.permissions = [];
+			// A template preview's session (docs/templates T-04) works inside the preview projects only.
+			if (user.system === true && !previewMayWrite(req))
+				return res.status(403).json({ message: 'This is a template preview — only the project itself can be changed here.', code: 'PREVIEW_ONLY' });
 
 			const orgId = decoded.org && mongoose.isValidObjectId(decoded.org) ? decoded.org : null;
 			if (orgId) {

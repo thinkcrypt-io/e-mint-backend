@@ -1,0 +1,145 @@
+# Templates — changelog
+
+Newest last. One entry per work order: what, files, how verified.
+
+## T-01 — Plan & docs (2026-10-04)
+- `backend/docs/templates/README.md` (what, decisions TD1–TD15, blueprint,
+  architecture), `WORK_ORDERS.md` (T-01…T-15, handoff), this file; pointer
+  `admin/docs/TEMPLATES.md`.
+- Decisions taken from the user's request and the suggestions they accepted
+  (2026-10-04): API as a real project type (TD2), sandbox previews (TD8),
+  questions/placeholders, versions, visibility, duplicate, save as template,
+  history, building blocks (later).
+- Verified: paths checked against the code (`features.service.ts`
+  `buildFeature`/`planFeature`/`MAX_STEPS`, `starterTemplates.function.ts`,
+  `websiteKit.function.ts`, `mcp/mcp.router.ts`, `ApiKey`, `builder/validate.ts`
+  `PROTECTED_ROUTES`, `seedBuilderAccess.js`).
+
+## T-02 — ProjectTemplate, blueprint, validator (2026-10-04)
+- **Models** `library/models/templates/` — `ProjectTemplate` (`projecttemplates`,
+  not tenantScoped: key, type, status, visibility + organizations, `draft`,
+  `published`, `version`/`versions[]`, `changed`, usage, source; name/summary/
+  category/icon/color mirrored from the draft's overview for lists) and
+  `TemplateKey` (`templatekeys`, scopes read/write/preview/publish — used by T-06).
+- **Blueprint** `controllers/templates/blueprint.ts`: `normalizeBlueprint` /
+  `normalizePart` (known keys, capped strings and lists, parts a type lacks
+  come back empty — `PARTS_BY_TYPE`), `placeholdersUsed` / `fillPlaceholders`
+  (`{{key}}`, built-ins project/slug/api), `whatsInside` (generated summary),
+  `stepIdentity`.
+- **Validator** `controllers/templates/validate.ts`: `planFeature` in a fixed
+  **dry scope** (organization `…d0a1`, project `…d0a2`; nothing is ever built
+  there), a website's plan checked with the kit in front; errors / explain
+  (TD11 gate) / warnings, each `{ part, path, message, fix }`. Covers models
+  (create only, renames, descriptions, help text), sidebar, dashboard
+  (`normalizeWidget`), roles (`ORG_PERMISSIONS`), endpoints (`PUBLIC_API`),
+  webhooks, website pages/blocks/SEO/starter repo, sample data, questions and
+  placeholders, setup guide.
+- **Feature builder**: `planFeature(req, input, { maxSteps })` and
+  `buildFeature(..., { maxSteps, source: 'template' })`; `TEMPLATE_MAX_STEPS`
+  = 40 (the wizard keeps 12). `Feature.source` allows `template`. Changed from
+  the plan: one plan, not batches — a later batch's links couldn't be checked
+  without building the earlier one.
+- **Service + API** `templates.service.ts`, `templates.router.ts` at
+  `/admin/api/templates`: `GET /meta`, `GET /`, `POST /`, `GET /:id` (by id or
+  key, with whatsInside and validation), `PUT /:id/draft` (`{part, value}` or
+  `{blueprint}`), `POST /:id/validate`. History entries for create/update.
+- **Starters** `functions/templateSeed.function.ts`: the 4 code starters
+  upserted at boot (`server.ts`) as published app templates v1 with an
+  audience, description, model descriptions, a sidebar and a setup guide;
+  never overwritten. `GET /builder/starters` lists published app templates
+  visible to the caller (everyone, or their organization), code list as the
+  fallback; `POST /builder/starters/:key` builds the template's models
+  (placeholders at their defaults) and counts the use.
+- **Reserved**: `templates` in the admin's `RESERVED_ROUTES` and `PANEL_PAGES`.
+- **Permissions** `scripts/seedTemplateAccess.js`: `templates`
+  (view/create/edit/delete), `template-publishing` (edit), `template-keys`
+  (view/create/delete).
+- **Verified**: `npx tsc` clean; new smoke `templates.mjs` (32 checks: starters,
+  every validation family, 14 models in one plan, website kit links, and no
+  model definitions / collections / sidebar categories created); full
+  `run-all.sh` green on a scratch server (:5011, Mongo :27998) after
+  `seedTenancyAdmin.js` for the oversight suite.
+
+## T-03 — Apply engine (2026-10-04)
+- `library/functions/applyTemplate.function.ts` — `applyTemplate(req, { project,
+  template, from, answers, sampleData, preview })`, in the project's scope:
+  required answers → placeholders filled (built-ins project/slug/api) →
+  validated again → sidebar categories (the template's, priorities before the
+  project's first section; unlisted models go to that section) → models (one
+  `buildFeature`, `source: 'template'`, `TEMPLATE_MAX_STEPS`, each step's
+  sidebar category) → sidebar item order and labels → dashboard widgets
+  appended (`normalizeWidget`, model names → built routes) → organization
+  roles (new names only; existing ones reported) → public API
+  (`setPublicApi`) → website settings (`saveSite`) and pages parents-first
+  (`upsertPage`; SEO only when given) → sample data in link order
+  (`createRecords`, links by display value) → `TenantProject.template` and
+  `.setup` (guide steps as a checklist, pages resolved to routes) → usage
+  counted → project history event. Every step pushes its undo; a failure runs
+  them newest first and answers `Nothing was built — <step>: <why>`.
+- `TenantProject`: `template`, `setup`, `preview` fields; `PROJECT_TYPES`
+  gains `api` (TD2 — the UI comes with T-09; such a project's first section is
+  "Data").
+- `website.tools.ts`: `upsertPage`, `createRecords` exported.
+- Validator: a page with half an SEO entry is an error (the kit's PageSeo
+  needs title and description); none at all stays a warning.
+- **Fixed on the way (affects tenants):** the builder's route registry cache
+  (`builder.controller.ts getRegistry`) was one global entry keyed by a
+  version that is counted per scope, so after building in project A, project
+  B could get A's routes ("No admin route 'categories'") whenever their
+  versions matched — now cached per scope. And a dropped collection could be
+  made again by its model's index build still running: `deleteModelCore`
+  awaits `Model.init()` before dropping, and project removal awaits every
+  compiled model (`settleProjectModels`).
+
+## T-04 — Sandbox previews (2026-10-04)
+- `library/functions/projectLifecycle.function.ts` — `createProject` and
+  `removeProjectContents` moved out of the projects router (which now calls
+  them), so previews are made like tenants' projects. Removal also clears the
+  project's `WebsiteSettings` and `History` (were left behind before).
+- `library/functions/templateSandbox.function.ts` — `ensureSandbox` (system
+  organization `mint-template-sandbox` + owner `template-previews@sandbox.invalid`,
+  both `system: true`, no password), `previewTemplate` (project in the
+  sandbox, applyTemplate as the sandbox owner, a failed build removed),
+  single-use 5-minute tickets (sha256 on the project), `reopenPreview`,
+  `listPreviews`, `deletePreview`, `redeemTicket`, `purgeExpiredPreviews`
+  (boot + hourly, `server.ts`), at most 50 previews (oldest go).
+- Admin API: `POST /templates/:id/preview`, `GET /templates/:id/previews`,
+  `POST /templates/previews/:projectId/open`, `DELETE /templates/previews/:projectId`.
+- Tenant: `POST /tenant/api/auth/preview { ticket }` → session + project;
+  `tenantProtect` lets the sandbox user write only inside `/tenant/api/p/:id/`
+  (not its AI keys), its notifications and signing out (`PREVIEW_ONLY`).
+  `self` says `preview: true`; projects carry `preview { expiresAt, from }`.
+- Super admin's Organizations / Tenant users / Tenant projects never list the
+  sandbox (`customQuery` on their lists).
+- Admin (tenant panel): `/preview?ticket=…` page; `PreviewBanner` pill on
+  every page of a preview session. `templates` admin-only, `preview`
+  tenant-only (pages.ts); `preview` reserved as a publicSlug.
+- Verified: smoke `templates-preview.mjs` (41 checks: an app template with
+  every part, answers and placeholders, ticket once only, preview guard,
+  hidden from oversight, reopen/delete leaves no collections or documents, a
+  failing build leaves nothing, a website template through the site API, all
+  4 starters); expired preview removed at boot (manual: expiresAt set back,
+  restart, project/collections/definitions gone); full `run-all.sh` green;
+  browser: ticket link → signed in on the preview's dashboard with the
+  template's sidebar and banner, Invoices table with the template's
+  description, a used link explains itself.
+
+## T-05 — Templates admin API (2026-10-04)
+- `templates.service.ts`: `saveSettings` (key — drafts only; visibility
+  everyone / organizations (needs some) / hidden; archive and restore),
+  `publishTemplate` (needs notes; refused when nothing changed, on errors, or
+  on missing explanations — each problem with its fix; next version, draft
+  copied to `published` and `versions[]`), `getVersion`, `restoreVersion`
+  (into the draft), `duplicateTemplate`, `exportTemplate` / `importTemplate`
+  (`format: 'emint-template@1'`, key suffixed when taken), `captureTemplate`,
+  `deleteTemplate` (a published one is archived instead). History on every write.
+- `capture.ts` — a project's structure as a blueprint: models (fields,
+  display field, codes, access; route kept only when it isn't the default),
+  sidebar, dashboard (routes → model names), public API, setup guide, and for
+  a website its pages with SEO, content blocks and settings. Sample data only
+  from a preview (refused for a tenant project), 20 per model, links as
+  display values. Page layouts aren't captured.
+- Routes: `PUT /:id/settings` and `POST /:id/publish` (edit-template-publishing),
+  `GET /:id/versions/:v`, `POST /:id/versions/:v/restore`, `POST /:id/duplicate`,
+  `GET /:id/export`, `POST /import`, `POST /capture`, `DELETE /:id` (delete-templates).
+- Verified: smoke `templates-manage.mjs` (32 checks), all suites green.
