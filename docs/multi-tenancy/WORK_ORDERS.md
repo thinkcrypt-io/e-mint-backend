@@ -27,8 +27,7 @@ changed. Never leave work done but untracked here.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
-`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 done, not committed** (website settings model; Password
-fields — backend and admin working trees). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -106,8 +105,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 35 | **New-project wizard: app → build your first model; website → name, logo, favicon** | both | M | done |
 | 36 | **History in every project** (who changed what, per project) | both | M | done |
 | 37 | **Notifications for every tenant user** (bell, per project and organization) | both | M | done |
-| 38 | **Website settings: one `WebsiteSettings` record per project (no Site settings table), AGS-style cards, server-side tracking, check the site** | both | L | done (uncommitted) |
-| 39 | **Model builder: Password field kind (encrypted, revealed with your own password), searchable dropdowns, code prefix filled in** | both | M | done (uncommitted) |
+| 38 | **Website settings: one `WebsiteSettings` record per project (no Site settings table), AGS-style cards, server-side tracking, check the site** | both | L | done |
+| 39 | **Model builder: Password field kind (encrypted, revealed with your own password), searchable dropdowns, code prefix filled in** | both | M | done |
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
