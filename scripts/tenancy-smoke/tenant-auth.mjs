@@ -1,5 +1,5 @@
 // Tenant auth smoke test on the scratch server (:5001). Test accounts are made up (example.com).
-const ROOT = 'http://localhost:5001';
+const ROOT = process.env.SMOKE_ROOT || 'http://localhost:5001';
 const call = async (method, path, body, token) => {
 	const r = await fetch(ROOT + path, { method, headers: { 'content-type': 'application/json', ...(token && { authorization: token }) }, body: body && JSON.stringify(body) });
 	let j; try { j = await r.json(); } catch { j = null; }

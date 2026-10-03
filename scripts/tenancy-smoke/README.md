@@ -21,6 +21,7 @@ Then, from this folder:
 | `node media.mjs` | project uploads/media manager, admin-only S3 routes refused | no real upload (the bucket is real) |
 | `node mcp.mjs` | tenant MCP keys, tools, builds in the project, key isolation | |
 | `node public.mjs` | public API, customers, owner-only records, widget.js | |
+| `node public-filters.mjs` | public API lists (WO-40): every filter operator per field kind, dates, search, sort, paging, `fields`, 400s, archived rows | archives a row straight in the scratch DB (`SMOKE_MONGO`) |
 | `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
 | `node website-mcp.mjs` | website settings through the MCP and Site setup (WO-38) | |
 | `node secrets.mjs` | Password fields (WO-39): secret-named keys need the kind, stored as text, never in history | |
@@ -29,6 +30,10 @@ Then, from this folder:
 | `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |
 
 `./run-all.sh` runs them all in order (exit 1 on any FAIL).
+
+Another server already on :5001? Point the scripts elsewhere:
+`SMOKE_ROOT=http://localhost:5011 SMOKE_MONGO=mongodb://127.0.0.1:27998/emint_tenancy_dev sh run-all.sh`
+(the `backend-scratch` launch config runs the backend on :5011 against Mongo :27998).
 
 Accounts are made up (`@example.com`); mail to example.com is printed in the
 server log in development.

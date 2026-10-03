@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-03)
+## Handoff — read this first (kept current; last updated 2026-10-04)
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D19), then the open WO
@@ -27,7 +27,7 @@ changed. Never leave work done but untracked here.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
-`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 done, not committed** (public API list filters + docs, 2026-10-04). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -44,6 +44,11 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
   every backend change**, then restart); `tenant` → :3001; `admin-test` → :3002.
 - Tests: `bash backend/scripts/tenancy-smoke/run-all.sh` (all suites must
   pass). Repeated runs hit the sign-up rate limit (429) — restart the backend.
+  To leave a running :5001 alone, use the `backend-scratch` launch config
+  (:5011, Mongo :27998) and `SMOKE_ROOT=http://localhost:5011
+  SMOKE_MONGO=mongodb://127.0.0.1:27998/emint_tenancy_dev sh run-all.sh`
+  (`tenant-scratch` → :3011 is the tenant panel against it). `public.mjs`
+  expects a fresh project — re-run the whole suite, not it alone.
 - `npx tsc --noEmit -p .` in each repo. In `admin/` the only expected error is
   a stale `.next/dev/types/validator.ts` (deleted `docs/tenancy` page) —
   local dev artefact, not in a clean build.
@@ -108,6 +113,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 38 | **Website settings: one `WebsiteSettings` record per project (no Site settings table), AGS-style cards, server-side tracking, check the site** | both | L | done |
 | 39 | **Model builder: Password field kind (encrypted, revealed with your own password), searchable dropdowns, code prefix filled in** | both | M | done |
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
+| 40 | **Public API lists: the admin lists' filters (`field_op=value`), search, multi-sort, `fields`; documented in the API reference, user guide and MCP** | both | M | done (not committed) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -668,6 +674,47 @@ key/credential on frontend for now, click to reveal."
   keyboard pick, table dots → Show → value.
 - Seen, not from this: "uncontrolled to controlled input" console error on
   every tenant edit form (Tickets too).
+
+## WO-40 — Public API lists: filters like the admin's, and their docs (M) — done
+**The user's words (2026-10-04):** "on api reference filters needs to be
+mentioned, so that users while using the public api can filter the items,
+pagination etc every documentation should be top notch" — then "public
+endpoints should have filters like the admin endpoints have", and "any
+changes made should be listed" in these agent docs.
+- **Backend** `routes-public/public.router.ts` ("lists: filters, search,
+  sort"): `GET /:route` takes the admin lists' syntax
+  (`middleware/filter.middleware.ts`): `<field>=<value>`, repeated name = any
+  of, `<field>_<op>=<value>` with `ne in nin gt gte lt lte btwn` plus
+  `contains` (text, any case, regex-escaped) and `all` (list fields); dates
+  take a day (whole day, UTC), a moment, or `today|week|month|year|days_N|
+  months_N`; `createdAt`/`updatedAt` filter on every model; `search=` over
+  text/email/textarea/select/tags; `sort=-a,b` (≤3 keys, `_id` tie-break so
+  pages never overlap); `fields=` picks keys (+`_id`). Operators allowed per
+  kind (`OPS`); field keys may contain `_` (whole key tried first). Unknown
+  names ignored; unreadable values / wrong operators / `a[b]=` objects → 400
+  with the reason. Before: exact match only, a bad reference id silently
+  dropped the filter.
+- **Archived records** (`archivedAt`) never reach the public API — list, get,
+  update, delete (`owned()`), as in the admin lists.
+- `GET /` now sends, per model with List on, `filters` ({key, kind, ops}),
+  `search` and `sort` keys (`listCapabilities`) — the reference reads them.
+- **Admin** Public API page reference (`public-api/_components/ApiReference.tsx`,
+  `api.ts`): a "Lists: paging, sorting and filters" block (parameters,
+  operators, date values) above the models; each list endpoint shows its
+  sortable/searchable fields, a Filters table (every `key_op` per field, with
+  allowed values) and example requests built from its fields with **Try**.
+- **User guide** `/user-docs/public-api`: new sections Listing and paging
+  (`#list`), Sorting, Filters (`#filters`), Filters by kind of field, Filtering
+  by date, Search, Choosing fields, Recipes; errors + troubleshooting rows;
+  `guides.ts` topics; `GuideLink` anchors `filters|paging|sorting`.
+- **MCP** (`mcp/website.tools.ts`): the site API part of `describe_website`
+  and `set_public_api`'s answer give the AI the full query syntax.
+- **Smoke:** new `tenancy-smoke/public-filters.mjs` (in `run-all.sh`); all
+  scripts take `SMOKE_ROOT` / `SMOKE_MONGO`; launch configs
+  `backend-scratch`, `tenant-scratch`.
+- Keep in step when changing list behaviour: the router's `OPS`/`RESERVED`,
+  admin `api.ts` (`LIST_PARAMS`, `FILTER_OPS`, `FALLBACK_OPS`), the user
+  guide sections, the MCP text.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

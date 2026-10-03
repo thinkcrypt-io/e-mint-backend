@@ -57,7 +57,7 @@ const old = r.body._id;
 await call('POST', P(old, '/builder/models'), { name: 'SiteSettings', title: 'Site settings', route: 'site-settings', fields: [{ key: 'siteName', label: 'Site name', kind: 'text', required: true }, { key: 'email', label: 'Email', kind: 'email' }, { key: 'twitter', label: 'X', kind: 'url' }, { key: 'metaTitle', label: 'Title', kind: 'text' }] }, s.pat);
 await call('POST', P(old, '/site-settings'), { siteName: 'Legacy Ltd', email: 'old@example.com', twitter: 'https://x.com/legacy', metaTitle: 'Legacy' }, s.pat);
 const mongoose = (await import('mongoose')).default;
-await mongoose.connect(process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev');
+await mongoose.connect(process.env.MONGO_CONNECTION_URI || process.env.SMOKE_MONGO || 'mongodb://127.0.0.1:27999/emint_tenancy_dev');
 const oid = new mongoose.Types.ObjectId(old);
 await mongoose.connection.db.collection('websitesettings').deleteMany({ project: oid });
 await mongoose.connection.db.collection('tenantprojects').updateOne({ _id: oid }, { $set: { site: { tracking: { ga4: 'G-OLD12345' }, code: { head: '<meta name="x" content="y">' }, redirects: [{ from: '/a', to: '/b', permanent: true }] } } });

@@ -5,7 +5,7 @@ import { call, ok, done, ROOT } from './lib.mjs';
 const stamp = Date.now();
 const PASS = 'activity-pass-123';
 const P = (pid, path) => `/tenant/api/p/${pid}${path}`;
-const MONGO = process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
+const MONGO = process.env.MONGO_CONNECTION_URI || process.env.SMOKE_MONGO || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
 const settle = () => new Promise(r => setTimeout(r, 400));
 const idOf = r => r.body?._id || r.body?.doc?._id;
 

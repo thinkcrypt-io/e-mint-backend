@@ -6,7 +6,7 @@ import { call, ok, done } from './lib.mjs';
 const stamp = Date.now();
 const PASS = 'access-pass-123';
 const P = (pid, path) => `/tenant/api/p/${pid}${path}`;
-const MONGO = process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
+const MONGO = process.env.MONGO_CONNECTION_URI || process.env.SMOKE_MONGO || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
 
 // The owner's organization and three projects: A and B share the organization's media, C keeps its own.
 let r = await call('POST', '/tenant/api/auth/register', { name: 'Alma Owner', email: `alma${stamp}@example.com`, password: PASS, organization: `Alpha ${stamp}` });

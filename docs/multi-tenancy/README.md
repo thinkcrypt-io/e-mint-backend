@@ -141,7 +141,7 @@ and projects.
 | Sessions / 2FA for both kinds | `library/functions/sessions.function.ts` (makeSessions), `library/controllers/twoFactor/*` (makeTwoFactor, makeTwoFactorRouter) |
 | Tenant API | `routes-tenant/` — tenant.router, auth/, org/, projects/, project.router (`/p/:projectId`), analytics.router, mcp.router (`/tenant/mcp`) |
 | Guards | `middleware/tenant/protect.tenant.middleware.ts`, `dual.middleware.ts` |
-| Public API, widget, tracker | `routes-public/` (`/public`) |
+| Public API, widget, tracker | `routes-public/` (`/public`); list filters/search/sort/fields in `public.router.ts` ("lists: filters, search, sort", WO-40) |
 | Website kit | `library/functions/websiteKit.function.ts` |
 | Super-admin oversight | `routes-admin/admin.router.ts` (`/organizations`, `/tenant-users`, `/tenant-projects`) |
 | Scripts | `migrateTenantIndexes.js`, `seedTenancyDev.js` (local only), `seedTenancyAdmin.js`, `tenancy-smoke/` (run-all.sh) |
@@ -155,5 +155,6 @@ and projects.
 | Pages | `/auth/register` (TenantRegister), `/auth/accept-invitation` (TenantAcceptInvitation), `/projects`, `/org/{members,roles,settings,new}`, `/t/[slug]`, `/public-api`, `/analytics` |
 | Project access, media library, in-app invitations | `tenancy.function.ts` (`opensAllProjects`, `projectAccessFilter`, `canOpenProject`), `org.router.ts` (`checkAccess`, `joinFromInvitation`, `/invitations/for-me`), `project.router.ts` (`mediaLibrary`), auth `verify-email`; admin `tenant/ProjectAccessPicker.tsx`, `tenant/Workspaces.tsx`, `pages/media/useMediaRoot.ts` |
 | User guides (tenants' docs) | `/user-docs` (+ `_components/guides.ts`, `UserGuide.tsx`); guide links go through `panel.ts docsPath` |
+| Public API page (reference + tester) | `src/app/public-api/` — `_components/api.ts` (endpoints, list parameters/operators, examples), `ApiReference.tsx`, `ApiTester.tsx`; its guide `/user-docs/public-api` |
 
 Deploying: `DEPLOY.md`.

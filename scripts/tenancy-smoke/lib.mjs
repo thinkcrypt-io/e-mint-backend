@@ -1,5 +1,5 @@
 // Shared helpers for the tenancy smoke scripts (see README.md). Local scratch server only.
-export const ROOT = 'http://localhost:5001';
+export const ROOT = process.env.SMOKE_ROOT || 'http://localhost:5001';
 export const call = async (method, path, body, token) => {
 	const r = await fetch(ROOT + path, { method, headers: { 'content-type': 'application/json', ...(token && { authorization: token }) }, body: body && JSON.stringify(body) });
 	let j; try { j = await r.json(); } catch { j = null; }

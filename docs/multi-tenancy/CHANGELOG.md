@@ -869,3 +869,27 @@ Decisions D14–D17 (README).
   History still never records the value. `SECRET_ENCRYPTION_KEY` dropped from
   DEPLOY.md.
 - Verified: `secrets.mjs` (rewritten) + all suites; table Show in the browser.
+
+## 2026-10-04 — WO-40 Public API list filters (admin syntax) + docs
+- Backend `routes-public/public.router.ts`: list filters `<field>=`,
+  `<field>_<op>=` (ne, in, nin, gt, gte, lt, lte, btwn, contains, all),
+  date days/moments/shortcuts, `createdAt`/`updatedAt`, `search`,
+  multi-field `sort` with `_id` tie-break, `fields`; 400s that name the field;
+  archived records excluded everywhere in the public API; `GET /` lists each
+  model's `filters`, `search`, `sort`. MCP text (`mcp/website.tools.ts`)
+  updated.
+- Admin: `public-api/_components/{api.ts,ApiReference.tsx}` (lists block,
+  per-list filters table, examples with Try), `user-docs/public-api/page.tsx`
+  (8 new sections), `user-docs/_components/guides.ts`,
+  `components/library/tenant/GuideLink.tsx`.
+- Smoke: `public-filters.mjs` (54 checks: every operator per kind, date
+  edges, search, sort, paging, fields, 400s, info, archived); `lib.mjs`,
+  `admin.mjs`, `tenant-auth.mjs`, `website.mjs`, `access.mjs`,
+  `activity.mjs` take `SMOKE_ROOT` / `SMOKE_MONGO`.
+- Verified: `tsc --noEmit` both repos; all 17 suites (`run-all.sh`) on a
+  fresh scratch DB (:27998, backend :5011); the Public API page and the
+  guide in the browser pane.
+- Behaviour changes for live sites: a reference filter with a bad id, a
+  non-number for a number, or a non-true/false for a yes/no now answers 400
+  (it used to be ignored or matched nothing); archived records disappear
+  from the public API.

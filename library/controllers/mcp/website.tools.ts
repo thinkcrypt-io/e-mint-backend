@@ -611,7 +611,7 @@ const publicApiTool = async (req: any, args: any, caller: Caller): Promise<Out> 
 	const lines = v.enabled
 		? [
 				`${r.def.title}'s public API is on (${v.auth === 'customer' ? `signed-in customers${v.ownerOnly ? ', each only their own records' : ''}` : 'open to anyone'}):`,
-				...v.actions.map((a: string) => `- ${{ list: `GET ${base}?limit=20&page=1&sort=-createdAt`, get: `GET ${base}/:id`, create: `POST ${base}`, update: `PUT ${base}/:id`, delete: `DELETE ${base}/:id` }[a]}`),
+				...v.actions.map((a: string) => `- ${{ list: `GET ${base}?limit=20&page=1&sort=-createdAt — filters: <field>=<value>, <field>_<op>=<value> (ne, in, nin, gt, gte, lt, lte, btwn, contains, all), search=, fields=`, get: `GET ${base}/:id`, create: `POST ${base}`, update: `PUT ${base}/:id`, delete: `DELETE ${base}/:id` }[a]}`),
 		  ]
 		: [`${r.def.title}'s public API is off.`];
 	return { text: lines.join('\n'), data: { model: r.def.name, route: r.def.route, publicApi: v, endpoint: base } };
@@ -685,8 +685,16 @@ Use one block per editable piece (hero, intro, each section), not one block per 
 Base: ${s.api}
 - GET /site → { settings, menu: [{ _id, name, path, parent }] } (published pages with showInMenu, by priority)
 - GET /pages/by-path?path=/about → { page, seo, contents: [...] } (published, visible blocks, highest priority first); 404 when there's no published page
-- GET /<route>?limit=20&page=1&sort=-createdAt&<field>=<value> → { doc: [...], total, page, limit, totalPages } — a list model with its public API on
-- GET /<route>/<id> → one record; linked records come back as { _id, <name field> }
+- GET /<route> → { doc: [...], total, page, limit, totalPages } — a list model with its public API on. Query (the admin lists' syntax):
+  - page (from 1), limit (1–100, default 20); another page exists while page < totalPages
+  - sort=-price,name (up to 3 fields, - = descending; default -createdAt)
+  - <field>=<value> equals (tags/multi-options/links: has it; dates: that whole day); repeat the name or use _in for any of several
+  - <field>_<op>=<value>: _ne, _in / _nin (comma-separated), _gt _gte _lt _lte (numbers, dates), _btwn=from_to (10_50, 2026-10-01_2026-10-31; an end may be empty), _contains (text, any case), _all (tags: has every one)
+  - dates also take today, week, month, year, days_30, months_3; createdAt/updatedAt filter on every model
+  - search=<words> (text fields contain it, any case); fields=name,price (only those keys + _id)
+  - unknown names are ignored; unreadable values → 400 { message }. GET / lists each model's filters, search and sort fields.
+  - e.g. /products?category=<id>&price_btwn=20_100&tags_in=sale,new&sort=price&limit=24&page=2
+- GET /<route>/<id> → one record; linked records come back as { _id, <name field> }. Archived records never come out.
 
 ## Code recipe (Next.js App Router — adapt the same idea to any framework)
 \`\`\`ts
@@ -705,7 +713,7 @@ export const list = (route: string, query = '') => mint(\`/\${route}?\${query}\`
   ${s.track}
 - Each route: \`generateMetadata\` from page.seo (title, description, image, keywords, canonical, noIndex → robots), falling back to the settings' defaults; render page.contents through components chosen by slug/section/category; notFound() when getPage returns null.
 - A dynamic catch-all route ([[...slug]]) can render pages added later in the panel with a generic block renderer.
-- Lists: list('products', 'limit=12&sort=-createdAt'), detail pages by /products/<id> or a slug field.
+- Lists: list('products', 'limit=12&sort=-createdAt'), detail pages by /products/<id> or a slug field (list('products', \`slug=\${slug}&limit=1\`)). Filter on the server, not in the site's code: list('products', 'featured=true&limit=3'), list('posts', 'status=published&sort=-createdAt'); build queries with URLSearchParams; page with page/limit and the answer's totalPages.
 - Revalidate (60s) or render on request; a fully static export only changes after a rebuild.
 - The site setup comes from here too: the analytics script injects the tracking tags and custom code by itself. Serve /robots.txt and /sitemap.xml from \`\${API}/site/robots.txt\` and \`\${API}/site/sitemap.xml?origin=https://<domain>\` (route handlers), and apply \`config.redirects\` and \`config.headers\` from GET /site in middleware (Next: middleware.ts, or fetch them in next.config redirects()/headers() at build).
 - Never put an API key in the site — the site API needs none.`;

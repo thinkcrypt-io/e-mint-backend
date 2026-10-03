@@ -1,5 +1,5 @@
 // Admin auth smoke test against the scratch server (:5001). Dev test account from scripts/seedTenancyDev.js.
-const B = 'http://localhost:5001/admin/api';
+const B = (process.env.SMOKE_ROOT || 'http://localhost:5001') + '/admin/api';
 const PASS = 'tenancy-dev-pass-1';
 const call = async (method, path, body, token) => {
 	const r = await fetch(B + path, { method, headers: { 'content-type': 'application/json', ...(token && { authorization: token }) }, body: body && JSON.stringify(body) });
