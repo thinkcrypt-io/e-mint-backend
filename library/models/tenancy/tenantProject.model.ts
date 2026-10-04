@@ -35,6 +35,8 @@ const schema = new Schema<any>(
 					version: Number,
 					appliedAt: Date,
 					answers: { type: Schema.Types.Mixed, default: {} },
+					/** A website template's starter code (T-10), placeholders filled: { repoUrl, framework, deployUrl, env[] }. */
+					starter: { type: Schema.Types.Mixed, default: undefined },
 				},
 				{ _id: false }
 			),

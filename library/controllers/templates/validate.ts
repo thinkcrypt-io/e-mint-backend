@@ -249,6 +249,19 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		const repo = bp.website?.starter?.repoUrl;
 		if (repo && !/^https:\/\/\S+$/.test(repo))
 			add('error', 'website', 'website.starter.repoUrl', 'The starter code’s repository isn’t an https link.', 'Paste the repository’s https URL, e.g. https://github.com/you/site.');
+		const starter = bp.website?.starter || {};
+		if (starter.deployUrl && !/^https:\/\/\S+$/.test(starter.deployUrl))
+			add('error', 'website', 'website.starter.deployUrl', 'The deploy button’s link isn’t an https link.', 'Paste the host’s deploy URL, e.g. https://vercel.com/new/clone?repository-url=…');
+		if (!repo && (starter.deployUrl || (starter.env || []).length))
+			add('warning', 'website', 'website.starter.repoUrl', 'The starter code has settings but no repository.', 'Add the repository the project’s site starts from, or clear the rest.');
+		const envKeys = new Set<string>();
+		(starter.env || []).forEach((e: any, i: number) => {
+			if (!/^[A-Z][A-Z0-9_]*$/.test(e.key))
+				add('error', 'website', `website.starter.env[${i}].key`, `“${e.key}” isn’t an environment variable name.`, 'Use capitals, digits and _, starting with a letter, e.g. NEXT_PUBLIC_API.');
+			else if (envKeys.has(e.key)) add('error', 'website', `website.starter.env[${i}].key`, `${e.key} is listed twice.`, 'Keep one.');
+			envKeys.add(e.key);
+			if (!e.value) add('warning', 'website', `website.starter.env[${i}].value`, `${e.key} has no value.`, 'Fill it in, or use {{api}} / {{slug}} — the project’s API address and public name.');
+		});
 	}
 
 	/* -------------------------------------------------------- sampleData */

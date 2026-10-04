@@ -333,3 +333,47 @@ Newest last. One entry per work order: what, files, how verified.
   the new webhook delivering a booking made by pasting the reference's curl),
   New project with three kinds; studio (:3012): Public API and Webhooks tabs
   saved to the draft with the expected warnings.
+
+## T-10 — Studio: website tabs (2026-10-04)
+- **Admin** `[id]/_components/`: the one Website tab becomes five, sharing one
+  working copy of the `website` part (`website.ts`: types, `siteFrom` /
+  `siteTo`, `pageTree`) — a save leaves everything it didn't touch exactly as
+  it was (checked: renaming one page changed only that name).
+  - **Pages**: the pages as a tree (children under their parent): name, path
+    (children follow a changed path), parent (never a descendant), status,
+    page template, order, in the menu; add a page or a page under one; removing
+    a page moves its children up.
+  - **Content**: a page picker, then its blocks in order — slug, name,
+    category, section, and the fields the category uses (text and the line
+    under it, button text and link, rich content, list / links one per line,
+    cards, image, gallery, video); move, remove, add. Problems inline.
+  - **SEO**: a card per page — title and description with their lengths,
+    share image, canonical, keywords, noindex — beside `SerpPreview`.
+  - **Site settings**: the Site setup cards in template mode — Branding,
+    Theme (`VColor`), Contact and Social (the same field lists, now exported
+    from `site-setup/_components/General.tsx`), SEO defaults.
+  - **Starter code**: repository, framework, deploy link ("Make a Vercel
+    link"), environment variables with {{api}} / {{slug}} buttons and a
+    preview of them filled for an example project.
+  - Problems open the right tab by path (`tabOfPart(part, path)`).
+- **Backend**: starter code checks — deploy link https, settings without a
+  repository (warning), variable names (capitals, digits, `_`) and duplicates
+  (errors), empty values (warnings). The apply engine keeps a website
+  template's starter code, placeholders filled, on the project
+  (`template.starter`); `publicProject` returns it as `starter`.
+- **Tenant panel**: a website's home shows a **Starter code** card (the
+  repository, Deploy it, each variable to copy); `/user-docs/websites#starter-code`.
+- **Guides**: `/docs/templates` Pages, Content, SEO, Site settings and Starter
+  code sections say how each tab works.
+- **Smoke** `templates-preview.mjs` +8 checks: a blog website (three pages,
+  one a draft grandchild; content, list, card and rich-content blocks; SEO with
+  keywords and noindex; branding, contact, social and SEO defaults; starter
+  code) checks clean, previews with parents first, and the site API returns the
+  home page's blocks with placeholders filled, the blog page's rich content and
+  SEO, the site settings — and not the draft; bad starter variables are
+  caught; the project carries the starter code with {{api}} and {{slug}} filled.
+- **Verified**: admin `tsc` clean; every suite green on a fresh scratch
+  server (repeat runs hit the shared tenant sign-in limit — restart first);
+  browser on :3012: the five tabs render a four-page blog template, the tree
+  nests, a block opens to its category's fields, the SEO preview reads, and a
+  save round-trips unchanged apart from the edit.

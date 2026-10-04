@@ -198,6 +198,8 @@ export const publicProject = (p: any) => ({
 	mediaScope: p.mediaScope || 'project',
 	isActive: p.isActive !== false,
 	...(p.preview && { preview: { expiresAt: p.preview.expiresAt, from: p.preview.from } }),
+	// A website template's starter code, filled for this project (docs/templates T-10).
+	...(p.template?.starter?.repoUrl && { starter: p.template.starter }),
 	createdAt: p.createdAt,
 });
 

@@ -164,6 +164,63 @@ r = await call('GET', `/public/api/${slug}/posts`);
 ok('the template’s endpoint is on, sample post there', r.status === 200 && JSON.stringify(r.body).includes('First post'), r.status);
 await call('DELETE', `${A}/templates/previews/${SP}`, null, T);
 
+/* ---------------------- T-10: a blog website, as the studio's website tabs save it */
+await db.collection('projecttemplates').deleteMany({ key: 'smoke-preview-blog' });
+r = await call('POST', `${A}/templates`, {
+	type: 'website',
+	key: 'smoke-preview-blog',
+	blueprint: {
+		overview: { name: 'Smoke preview blog' },
+		questions: [{ key: 'blog', label: 'Blog name?', default: 'Field notes' }],
+		models: { steps: [{ action: 'create', name: 'Post', title: 'Posts', displayField: 'title', fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }] }] },
+		endpoints: [{ model: 'Post', actions: ['list', 'get'], note: 'The blog list' }],
+		website: {
+			pages: [
+				{ path: '/', name: 'Home', template: 'home', priority: 0, seo: { title: '{{blog}}', description: 'Notes from the field.', keywords: ['notes', 'field'] }, contents: [
+					{ slug: 'hero', category: 'content', name: 'Hero', content: 'Welcome to {{blog}}', subContent: 'Short reads', btnText: 'Read', url: '/blog' },
+					{ slug: 'topics', category: 'list', name: 'Topics', list: ['Birds', 'Weather'] },
+					{ slug: 'authors', category: 'card', name: 'Authors', card: [{ title: 'Ada', subTitle: 'Editor', description: 'Writes most of it' }] },
+				] },
+				{ path: '/blog', name: 'Blog', parent: '/', priority: 1, seo: { title: 'Blog — {{blog}}', description: 'Every post.' }, contents: [{ slug: 'intro', category: 'rich-content', name: 'Intro', richContent: '<p>All the posts</p>' }] },
+				{ path: '/blog/archive', name: 'Archive', parent: '/blog', status: 'draft', showInMenu: false, priority: 2, seo: { title: 'Archive', description: 'Old posts.', noIndex: true }, contents: [] },
+			],
+			settings: {
+				identity: { siteName: '{{blog}}', tagline: 'Short reads', primaryColor: '#0f766e' },
+				contact: { email: 'hello@example.com' },
+				social: { instagram: 'https://instagram.com/fieldnotes' },
+				seo: { titleTemplate: '%s · {{blog}}', metaDescription: 'Notes from the field.' },
+			},
+			starter: { repoUrl: 'https://github.com/example/blog-starter', framework: 'Next.js', deployUrl: 'https://vercel.com/new/clone?repository-url=https://github.com/example/blog-starter', env: [{ key: 'NEXT_PUBLIC_API', value: '{{api}}' }, { key: 'NEXT_PUBLIC_SLUG', value: '{{slug}}' }] },
+		},
+	},
+}, T);
+ok('T-10 blog template: no errors', r.status === 201 && !r.body.doc.validation.errors.length, JSON.stringify(r.body?.doc?.validation?.errors));
+const blogId = r.body.doc._id;
+r = await call('PUT', `${A}/templates/${blogId}/draft`, { part: 'website', value: { ...r.body.doc.draft.website, starter: { repoUrl: 'https://github.com/x/y', env: [{ key: 'bad key', value: '' }, { key: 'A', value: 'x' }, { key: 'A', value: 'y' }] } } }, T);
+ok('T-10 starter env: bad names and duplicates are errors, empty values warnings', ['website.starter.env[0].key', 'website.starter.env[2].key'].every(p => r.body.doc.validation.errors.some(e => e.path === p)) && r.body.doc.validation.warnings.some(w => w.path === 'website.starter.env[0].value'), JSON.stringify(r.body.doc.validation.errors.map(e => e.path)));
+r = await call('GET', `${A}/templates/${blogId}`, null, T);
+const draftSite = r.body.doc.draft.website;
+await call('PUT', `${A}/templates/${blogId}/draft`, { part: 'website', value: { ...draftSite, starter: { repoUrl: 'https://github.com/example/blog-starter', framework: 'Next.js', deployUrl: 'https://vercel.com/new/clone?repository-url=https://github.com/example/blog-starter', env: [{ key: 'NEXT_PUBLIC_API', value: '{{api}}' }, { key: 'NEXT_PUBLIC_SLUG', value: '{{slug}}' }] } } }, T);
+r = await call('POST', `${A}/templates/${blogId}/preview`, {}, T);
+ok('T-10 blog previews: three pages, parents first', r.status === 201 && r.body.result.pages.join() === '/,/blog,/blog/archive', `${r.status} ${r.body?.message} ${JSON.stringify(r.body?.result?.pages)}`);
+const bslug = r.body.project?.publicSlug;
+const BPID = r.body.project?._id;
+const BTOK = (await call('POST', '/tenant/api/auth/preview', { ticket: r.body.ticket })).body.token;
+r = await call('GET', `/public/api/${bslug}/pages/by-path?path=/`);
+const home = JSON.stringify(r.body);
+ok('T-10 site API: home with its blocks — content, list, cards — filled', r.status === 200 && home.includes('Welcome to Field notes') && home.includes('Weather') && home.includes('Writes most of it') && home.includes('notes'), home.slice(0, 300));
+r = await call('GET', `/public/api/${bslug}/pages/by-path?path=/blog`);
+ok('T-10 site API: the blog page, rich content, its SEO', r.status === 200 && JSON.stringify(r.body).includes('All the posts') && JSON.stringify(r.body).includes('Blog — Field notes'), JSON.stringify(r.body).slice(0, 300));
+r = await call('GET', `/public/api/${bslug}/pages/by-path?path=/blog/archive`);
+ok('T-10 a draft page isn’t served', r.status === 404, r.status);
+r = await call('GET', `/public/api/${bslug}/site`);
+const site = JSON.stringify(r.body);
+ok('T-10 site settings: name, colour, contact, social, SEO defaults', r.status === 200 && ['Field notes', '#0f766e', 'hello@example.com', 'instagram.com/fieldnotes', '%s · Field notes'].every(x => site.includes(x)), site.slice(0, 400));
+r = await call('GET', `/tenant/api/p/${BPID}`, null, BTOK);
+ok('T-10 starter code kept on the project, {{api}} and {{slug}} filled', r.body?.starter?.repoUrl === 'https://github.com/example/blog-starter' && r.body.starter.env[0].value.endsWith(`/public/api/${bslug}`) && r.body.starter.env[1].value === bslug, JSON.stringify(r.body?.starter));
+await call('DELETE', `${A}/templates/previews/${BPID}`, null, T);
+await db.collection('projecttemplates').deleteMany({ key: 'smoke-preview-blog' });
+
 for (const key of ['clients-invoices', 'projects-tasks', 'leads', 'products']) {
 	r = await call('POST', `${A}/templates/${key}/preview`, {}, T);
 	ok(`starter ${key} previews from its published version`, r.status === 201 && r.body.project.from === 'published' && r.body.result.models.length >= 1, `${r.status} ${r.body?.message || ''}`);

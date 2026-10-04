@@ -343,7 +343,14 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 			{ _id: project._id },
 			{
 				$set: {
-					template: { template: template._id, key: template.key, version: result.template.version, appliedAt: new Date(), answers },
+					template: {
+						template: template._id,
+						key: template.key,
+						version: result.template.version,
+						appliedAt: new Date(),
+						answers,
+						...(bp.website?.starter?.repoUrl && { starter: bp.website.starter }),
+					},
 					setup: {
 						steps: (bp.guide?.steps || []).map((s: any) => ({ title: s.title, body: s.body, page: resolvePage(s.page), done: false })),
 						faq: bp.guide?.faq || [],
