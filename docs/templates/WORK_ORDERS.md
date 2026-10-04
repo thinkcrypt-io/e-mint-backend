@@ -19,8 +19,8 @@ Templates overview widget; T-12 the guide/explanation pass (all 29 guide
 sections linked from the studio, every link lands). `PartSummary` is no
 longer used by any tab.
 **Next: T-13** (the first templates, written with Claude through the
-Templates MCP, previewed and published — needs `ANTHROPIC_API_KEY`-free
-Claude: connect Claude Code via /templates/connect). The user's rule: commit
+Templates MCP, previewed and published — Claude connects with a key from
+/templates/connect, no server API key needed). The user's rule: commit
 and push each WO as it finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
