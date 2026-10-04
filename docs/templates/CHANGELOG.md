@@ -408,3 +408,20 @@ Newest last. One entry per work order: what, files, how verified.
   through the exact URL the page's command copies, with a key made in the
   page's dialog; the widget added in the builder, saved, and on the home page
   with live counts.
+
+## T-12 — Guide and explanation pass (2026-10-04)
+- **Links**: every guide link in the studio (tabs, dialogs, panels, the
+  connect page) checked against `/docs/templates` — all land. The two
+  sections nothing pointed at are linked now: **types** from New template's
+  Type picker, **explanations** from the problems panel's "Still to explain".
+- **Help text**: the Dashboard tab's Shows, Over, Along, Chart, One bar per
+  and How many, and Starter code's Framework — the last fields without one.
+  Every tab and dialog already had its intro and guide link.
+- **Fixes**: every check the validator makes carries a fix; the ones that
+  named old tabs now say "Public API tab" and "Models tab … then check again".
+- **Guide**: Publishing walks through the four steps (save and clear the
+  list, preview, Publish, notes); Versions says where they're listed and what
+  "changed" means; Who can use it explains the three choices and the
+  reserved keys.
+- **Verified**: admin and backend `tsc` clean; on :3012 all 29 linked anchors
+  exist on the rendered guide and the guide has exactly those 29 sections.

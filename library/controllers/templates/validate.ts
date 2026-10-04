@@ -100,7 +100,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		);
 		// Where each checked step sits in the blueprint (update steps were left out).
 		const indexOf = rawSteps.map((s, i) => (s.action !== 'update' ? i : -1)).filter(i => i >= 0);
-		for (const p of plan.problems) add('error', 'models', 'models', p, 'Fix it in the Models tab, then validate again.');
+		for (const p of plan.problems) add('error', 'models', 'models', p, 'Fix it on the Models tab, then check again.');
 		for (const step of plan.steps) {
 			if (step.action !== 'create') continue;
 			const c = step as CreateStep;
@@ -112,7 +112,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 			const i = indexOf[step.index - kit.length];
 			const where = `models.steps[${i}]`;
 			const label = c.title || c.name || `Step ${i + 1}`;
-			for (const p of step.problems) add('error', 'models', where, `${label}: ${p}`, 'Change this model in the Models tab, then validate again.');
+			for (const p of step.problems) add('error', 'models', where, `${label}: ${p}`, 'Change this model on the Models tab, then check again.');
 			models.push({ name: c.name, route: c.route, title: c.title });
 			const wanted = stepIdentity(rawSteps[i]);
 			if (c.name && wanted.name && c.name !== wanted.name)
@@ -184,7 +184,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		const bad = e.actions.filter((a: string) => !PUBLIC_ACTIONS.includes(a));
 		if (bad.length) add('error', 'endpoints', `${where}.actions`, `Unknown actions: ${bad.join(', ')}.`, `Use ${PUBLIC_ACTIONS.join(', ')}.`);
 		const { error } = PUBLIC_API.validate({ enabled: true, actions: e.actions.filter((a: string) => PUBLIC_ACTIONS.includes(a)), auth: e.auth, ownerOnly: e.ownerOnly });
-		if (error) add('error', 'endpoints', where, error.details[0].message.replace(/"/g, ''), 'Fix it in the Endpoints tab.');
+		if (error) add('error', 'endpoints', where, error.details[0].message.replace(/"/g, ''), 'Fix it on the Public API tab.');
 		if (e.ownerOnly && e.auth !== 'customer')
 			add('error', 'endpoints', `${where}.ownerOnly`, `${e.model}: “each customer only their own records” needs signed-in customers.`, 'Set who can call it to signed-in customers, or turn owner-only off.');
 		if (!e.actions.length) add('warning', 'endpoints', `${where}.actions`, `${e.model}: no actions picked, so it will be list and get.`, 'Pick the actions the site or app needs.');
@@ -213,7 +213,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		if (!w.note) add('warning', 'webhooks', `${where}.note`, `Webhook ${i + 1} has no note.`, 'Say what the receiving system does with it.');
 	});
 	if (type === 'api' && !(bp.endpoints || []).length)
-		add('warning', 'endpoints', 'endpoints', 'This API template opens no endpoints.', 'Turn on the public API for the models the tenant’s site or app calls (Endpoints tab).');
+		add('warning', 'endpoints', 'endpoints', 'This API template opens no endpoints.', 'Turn on the public API for the models the tenant’s site or app calls (Public API tab).');
 
 	/* ----------------------------------------------------------- website */
 	if (type === 'website') {

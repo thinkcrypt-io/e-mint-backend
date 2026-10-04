@@ -8,16 +8,20 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-04)
 
-**Where it stands:** T-01…T-11 done and pushed (backend `v3`, admin `main`,
+**Where it stands:** T-01…T-12 done and pushed (backend `v3`, admin `main`,
 marketing site `mint-webpage` `main`): the studio's backend, the Templates MCP
 (T-06), the studio in the super admin panel with an editor for every part
 (T-07 gallery, editor, common tabs; T-08 Sidebar, Dashboard, Roles; T-09
 Public API and Webhooks; T-10 Pages, Content, SEO, Site settings, Starter
 code) and API projects with outgoing webhooks for tenants (T-09); T-11
 Connect Claude page (`/templates/connect`, emt_ keys) and the dashboard's
-Templates overview widget. `PartSummary` is no longer used by any tab.
-**Next: T-12** (guide and explanation pass over the studio). The user's rule:
-commit and push each WO as it finishes, then go on.
+Templates overview widget; T-12 the guide/explanation pass (all 29 guide
+sections linked from the studio, every link lands). `PartSummary` is no
+longer used by any tab.
+**Next: T-13** (the first templates, written with Claude through the
+Templates MCP, previewed and published — needs `ANTHROPIC_API_KEY`-free
+Claude: connect Claude Code via /templates/connect). The user's rule: commit
+and push each WO as it finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions and the Config → Templates sidebar item); the starter templates
@@ -72,7 +76,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-09 | API project type + API tabs + outgoing webhooks | both | L | done |
 | T-10 | Studio: Website tabs (Pages, Content, SEO, Site defaults, Starter code) | admin | L | done |
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
-| T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | open |
+| T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
 | T-13 | First templates, written through the MCP | both | L | open |
 | T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
