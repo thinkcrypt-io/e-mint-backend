@@ -107,6 +107,11 @@ r = await wdraft('endpoints', [{ model: 'Post', actions: ['create'], note: 'A co
 v = r.body.doc.validation;
 ok('endpoints: create-only (a form) is no warning; open create + list is', !v.warnings.some(i => i.path === 'endpoints[0]') && v.warnings.some(i => i.path === 'endpoints[1]'), JSON.stringify(v.warnings.map(i => i.path)));
 
+r = await wdraft('models', { steps: [{ action: 'create', name: 'Project', title: 'Projects', description: 'x', rationale: 'x', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', helper: 'x' }] }] });
+ok('a model whose route is taken (projects) warns where it will really be', r.body.doc.validation.warnings.some(i => /will be at \/projects\d/.test(i.message)), JSON.stringify(r.body.doc.validation.warnings.map(i => i.message)));
+r = await wdraft('models', { steps: [{ action: 'create', name: 'Project', route: 'work', title: 'Projects', description: 'x', rationale: 'x', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', helper: 'x' }] }] });
+ok('…and a route of its own clears it', !r.body.doc.validation.warnings.some(i => /will be at/.test(i.message)) && r.body.doc.validation.models.some(m => m.route === 'work'));
+
 /* ------------------------------------- sample data checked like the build */
 r = await wdraft('models', {
 	steps: [

@@ -263,6 +263,14 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 			const wanted = stepIdentity(rawSteps[i]);
 			if (c.name && wanted.name && c.name !== wanted.name)
 				add('warning', 'models', where, `${label} will be built as ${c.name} (${wanted.name} is taken in every project).`, `Rename it yourself if ${c.name} reads badly.`);
+			else if (c.route && wanted.route && c.route !== wanted.route)
+				add(
+					'warning',
+					'models',
+					where,
+					`${label} will be at /${c.route} (/${wanted.route} is taken in every project) — that's its public API address too.`,
+					'Give the model a route of its own (e.g. route: "work"), or rename it.'
+				);
 			if (!c.description)
 				add('explain', 'models', `${where}.description`, `${label} has no description.`, 'Add one line on what these records are — it shows under the page title.');
 			if (!c.rationale)
