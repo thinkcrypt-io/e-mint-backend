@@ -85,8 +85,9 @@ export const captureProject = async (projectId: any, input: { name?: string; sam
 			fields: (d.fields || []).map(fieldForPlan),
 		}));
 
-		const categories: any[] = await SidebarCategory.find({}).sort({ priority: 1 }).lean();
-		const items: any[] = await SidebarItem.find({}).sort({ priority: 1 }).lean();
+		// In the order the sidebar shows them: the higher priority first.
+		const categories: any[] = await SidebarCategory.find({}).sort({ priority: -1 }).lean();
+		const items: any[] = await SidebarItem.find({}).sort({ priority: -1 }).lean();
 		const sidebar = categories
 			.map(c => ({
 				name: c.name,

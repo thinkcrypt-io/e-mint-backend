@@ -8,15 +8,16 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-04)
 
-**Where it stands:** T-01…T-07 done and pushed (backend `v3`, admin `main`):
+**Where it stands:** T-01…T-08 done and pushed (backend `v3`, admin `main`):
 the studio's backend, the Templates MCP (T-06) and the studio in the super
 admin panel (T-07: gallery, New template, Save a project as a template,
 import, editor with problems panel, Overview / Models / Questions / Sample
 data / Setup guide / Versions & publish tabs, Preview and Publish dialogs, the
-`/docs/templates` guide). Sidebar, Dashboard, Roles, Public API, Webhooks and
-Website show read-only (`PartSummary`) until T-08…T-10 give them editors.
-**Next: T-08** (App tabs: Sidebar, Dashboard, Roles). The user's rule:
-commit and push each WO as it finishes, then go on.
+`/docs/templates` guide; T-08: Sidebar, Dashboard and Roles editors). Public
+API, Webhooks and Website show read-only (`PartSummary`) until T-09/T-10 give
+them editors.
+**Next: T-09** (API project type, Endpoints and Webhooks tabs, outgoing
+webhooks). The user's rule: commit and push each WO as it finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions and the Config → Templates sidebar item); the starter templates
@@ -67,7 +68,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-05 | Templates admin API (CRUD, draft/publish/versions, duplicate, import/export, save as template, usage) | backend | M | done |
 | T-06 | Templates MCP `/templates/mcp` (shared transport, `emt_` keys, tools) | backend | L | done |
 | T-07 | Studio: gallery, New template, editor shell, common tabs | admin | L | done |
-| T-08 | Studio: App tabs (Sidebar, Dashboard, Roles) | admin | M | open |
+| T-08 | Studio: App tabs (Sidebar, Dashboard, Roles) | admin | M | done |
 | T-09 | API project type + API tabs + outgoing webhooks | both | L | open |
 | T-10 | Studio: Website tabs (Pages, Content, SEO, Site defaults, Starter code) | admin | L | open |
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | open |

@@ -133,13 +133,15 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				return ids.findIndex(i => lower(i.name) === k || lower(i.route) === k || lower(i.title) === k);
 			};
 
-			/* 2. Sidebar categories: the template's, then the project's first section for the rest. */
+			/* 2. Sidebar categories: the template's, then the project's first section for the rest.
+			 * The sidebar shows the higher priority first, so the template's sections go above
+			 * the project's top one, the first listed highest. */
 			step = 'Sidebar';
 			const categoryOfStep = new Map<number, string>();
-			const top: any = await SidebarCategory.findOne({}, { priority: 1 }).sort({ priority: 1 }).lean();
-			let priority = Math.max(0, (top?.priority ?? 100) - 10 * ((bp.sidebar || []).length + 1));
+			const top: any = await SidebarCategory.findOne({}, { priority: 1 }).sort({ priority: -1 }).lean();
+			let priority = (top?.priority ?? 100) + 10 * ((bp.sidebar || []).length + 1);
 			for (const c of bp.sidebar || []) {
-				priority += 10;
+				priority -= 10;
 				const cat: any = await SidebarCategory.create({ name: c.name, description: c.description, icon: c.icon || 'blocks', priority, isActive: true });
 				undo.push({ step: 'Sidebar', run: () => SidebarCategory.deleteOne({ _id: cat._id }) });
 				result.categories.push(c.name);
@@ -184,12 +186,12 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				return lower(q);
 			};
 
-			/* 4. Sidebar order and labels, as the template lists them. */
+			/* 4. Sidebar order and labels, as the template lists them (first listed, highest priority). */
 			for (const c of bp.sidebar || [])
 				for (const [j, it] of c.items.entries()) {
 					const i = stepOf(it.model);
 					const m = i >= 0 ? builtByStep(i) : null;
-					if (m) await SidebarItem.updateOne({ href: m.route }, { $set: { priority: (j + 1) * 10, ...(it.label && { name: it.label }) } });
+					if (m) await SidebarItem.updateOne({ href: m.route }, { $set: { priority: (c.items.length - j) * 10, ...(it.label && { name: it.label }) } });
 				}
 
 			/* 5. Dashboard. */

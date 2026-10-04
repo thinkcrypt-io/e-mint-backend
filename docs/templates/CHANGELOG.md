@@ -228,3 +228,42 @@ Newest last. One entry per work order: what, files, how verified.
   unchanged → Setup guide → Sample data record) checked clean, previewed
   (ticket link opened) and published v1; every tab rendered; every guide
   anchor exists; no console errors on a fresh load.
+
+## T-08 — Studio: App tabs (2026-10-04)
+- **Admin** `src/app/templates/[id]/_components/`:
+  - `models.ts`: `templateModels(doc)` — the saved models by the name the
+    server gives them, with route and fields; what the tabs pick from.
+  - `SidebarTab`: sections (name, icon by name, description), the pages in
+    each from the template's models (add from those not yet placed, order,
+    a sidebar-only label, take out), and a preview of the sidebar as a new
+    project gets it, unplaced pages under the Models tab's section.
+  - `DashboardTab`: the dashboard builder's widgets against the template's
+    models — Number (count / total / average, period, dated by, before/after,
+    compare), Chart (over time per day/week/month, or by a choice, yes/no or
+    link field; bars/line/…), Recent items (columns, how many). Each widget is
+    described in a sentence ("Total of Amount in Transactions by Kind, last 30
+    days"), with its problems inline, and a 12-column layout sketch. Filters
+    are kept as they come (Claude or a captured project sets them).
+  - `RolesTab`: name, description and the organization permissions grouped
+    with what each allows (`meta.orgPermissions`); a warning when the name is
+    Owner / Admin / Member.
+  - The editor's `ADAPTERS` stage the three parts with the rest (widgets get
+    an `id` and a default size).
+  - Guide sections Sidebar, Dashboard, Roles say how each tab works.
+- **Backend fix**: the sidebar shows the higher `priority` first, but the
+  build gave the template's first section and first page the lowest — a
+  preview listed them backwards. `applyTemplate` now puts the template's
+  sections above the project's top one, first listed highest, and pages
+  likewise; capture (`capture.ts`) reads the sidebar in the same order.
+- **Smoke** `templates-preview.mjs` +5 checks: a books template saved as the
+  tabs save it (2 sections, 4 widgets — number with a filter, chart by a
+  field, chart per week, recent with columns — 2 roles) checks clean and
+  previews with sections and pages in order and the label kept, the 4 widgets
+  on the built routes with their settings, and both roles with their
+  permissions.
+- **Verified**: admin `tsc` clean; every suite green on the scratch server;
+  browser on :3012: a section with two pages (preview right, unplaced page
+  under "First section" until placed), a role with three permissions (all 11
+  permissions shown in their groups), three widgets including a chart moved to
+  another model, totalling Amount by Kind (only choice/link fields offered) —
+  saved together and reloaded as saved.

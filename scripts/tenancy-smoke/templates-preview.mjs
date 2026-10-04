@@ -2,7 +2,8 @@
 // (models, sidebar, dashboard, roles, public API, placeholders, sample data, website pages
 // and settings, setup checklist), opened with a single-use ticket, kept out of the
 // oversight tables, confined to the project, and removed completely; a failing build
-// leaves nothing behind.
+// leaves nothing behind. T-08: a sidebar, 4 widgets and 2 roles shaped as the studio
+// saves them land in the preview.
 import { call, ok, done } from './lib.mjs';
 
 const A = '/admin/api';
@@ -15,9 +16,9 @@ const collectionsOf = async id => (await db.listCollections({ name: { $regex: `^
 
 let r = await call('POST', `${A}/auth/login`, { email: 'admin@example.com', password: PASS });
 const T = r.body.token;
-await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken'] } });
+await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken', 'smoke-preview-books'] } });
 // Left behind if an earlier run stopped half-way (the sandbox organization outlives its previews).
-await db.collection('organizationroles').deleteMany({ name: 'Smoke accountant' });
+await db.collection('organizationroles').deleteMany({ name: { $in: ['Smoke accountant', 'Smoke bookkeeper', 'Smoke auditor'] } });
 
 /* ------------------------------------------------------------ an app template */
 r = await call('POST', `${A}/templates`, {
@@ -172,7 +173,52 @@ for (const key of ['clients-invoices', 'projects-tasks', 'leads', 'products']) {
 r = await call('GET', `${A}/templates/${appId}`, null, T);
 ok('preview counted on the template', r.body?.doc?.usage?.previews === 1, JSON.stringify(r.body?.doc?.usage));
 
-await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken'] } });
-await db.collection('organizationroles').deleteMany({ name: 'Smoke accountant' });
+/* ------------------------------- T-08: sidebar, dashboard and roles as the studio saves them */
+r = await call('POST', `${A}/templates`, {
+	type: 'app',
+	key: 'smoke-preview-books',
+	blueprint: {
+		overview: { name: 'Smoke preview books' },
+		models: {
+			steps: [
+				{ action: 'create', name: 'Account', title: 'Accounts', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }] },
+				{ action: 'create', name: 'Entry', title: 'Entries', displayField: 'note', fields: [{ key: 'note', label: 'Note', kind: 'text', required: true }, { key: 'amount', label: 'Amount', kind: 'number' }, { key: 'kind', label: 'Kind', kind: 'select', options: [{ value: 'in', label: 'In' }, { value: 'out', label: 'Out' }] }, { key: 'account', label: 'Account', kind: 'reference', ref: 'Account' }] },
+				{ action: 'create', name: 'Budget', title: 'Budgets', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }] },
+			],
+		},
+		sidebar: [
+			{ name: 'Books', icon: 'book-open', description: 'Day to day', items: [{ model: 'Entry', label: 'Ledger' }, { model: 'Account', label: '' }] },
+			{ name: 'Planning', icon: 'target', description: '', items: [{ model: 'Budget', label: '' }] },
+		],
+		dashboard: [
+			{ id: 'w1', type: 'stat', route: 'Entry', title: 'Money in', size: 'sm', metric: 'sum', field: 'amount', range: 'month', dateField: 'createdAt', prefix: '$', filters: [{ field: 'kind', op: 'eq', value: 'in' }] },
+			{ id: 'w2', type: 'chart', route: 'Entry', title: 'By kind', size: 'md', metric: 'sum', field: 'amount', range: '30d', dateField: 'createdAt', group: 'field', by: 'kind', chart: 'bar', limit: 6 },
+			{ id: 'w3', type: 'chart', route: 'Entry', title: 'Per week', size: 'lg', metric: 'count', range: '90d', dateField: 'createdAt', group: 'time', interval: 'week', chart: 'line' },
+			{ id: 'w4', type: 'recent', route: 'Account', title: 'New accounts', size: 'full', columns: ['name'], limit: 5, sort: '-createdAt' },
+		],
+		roles: [
+			{ name: 'Smoke bookkeeper', description: 'Records entries.', permissions: ['records:view', 'records:create', 'records:edit'] },
+			{ name: 'Smoke auditor', description: 'Reads everything.', permissions: ['records:view'] },
+		],
+	},
+}, T);
+ok('T-08 books template created, no errors', r.status === 201 && !r.body.doc.validation.errors.length, `${r.status} ${JSON.stringify(r.body?.doc?.validation?.errors)}`);
+const booksId = r.body.doc._id;
+r = await call('POST', `${A}/templates/${booksId}/preview`, {}, T);
+ok('T-08 books preview built', r.status === 201 && r.body.result.widgets === 4 && r.body.result.categories.join() === 'Books,Planning' && r.body.result.roles.created.join() === 'Smoke bookkeeper,Smoke auditor', `${r.status} ${r.body?.message} ${JSON.stringify(r.body?.result)}`);
+const BP = `/tenant/api/p/${r.body.project?._id}`;
+const BT = (await call('POST', '/tenant/api/auth/preview', { ticket: r.body.ticket })).body.token;
+r = await call('GET', `${BP}/sidebar/admin/server`, null, BT);
+const nav = JSON.stringify(r.body || []);
+ok('T-08 sidebar: both sections, label kept, pages in order', ['Books', 'Planning', 'Ledger'].every(s => nav.includes(s)) && nav.indexOf('Ledger') < nav.indexOf('Accounts') && nav.indexOf('Books') < nav.indexOf('Planning'), nav.slice(0, 400));
+r = await call('GET', `${BP}/dashboard`, null, BT);
+const ws = r.body?.widgets || [];
+ok('T-08 dashboard: 4 widgets on the built routes, in order, with their settings', ws.map(w => `${w.type}:${w.route}:${w.size}`).join() === 'stat:entries:sm,chart:entries:md,chart:entries:lg,recent:accounts:full' && ws[0].prefix === '$' && ws[0].filters?.[0]?.value === 'in' && ws[1].by === 'kind' && ws[2].interval === 'week' && ws[3].columns?.join() === 'name', JSON.stringify(ws));
+const roles = await db.collection('organizationroles').find({ name: { $in: ['Smoke bookkeeper', 'Smoke auditor'] } }).toArray();
+ok('T-08 roles: both in the organization with their permissions', roles.length === 2 && roles.find(x => x.name === 'Smoke bookkeeper')?.permissions?.join() === 'records:view,records:create,records:edit' && roles.find(x => x.name === 'Smoke auditor')?.description === 'Reads everything.', JSON.stringify(roles.map(x => [x.name, x.permissions])));
+await call('DELETE', `${A}/templates/previews/${BP.split('/').pop()}`, null, T);
+
+await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken', 'smoke-preview-books'] } });
+await db.collection('organizationroles').deleteMany({ name: { $in: ['Smoke accountant', 'Smoke bookkeeper', 'Smoke auditor'] } });
 await mc.close();
 done();
