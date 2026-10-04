@@ -23,6 +23,14 @@ Templates MCP, previewed and published — Claude connects with a key from
 /templates/connect, no server API key needed). The user's rule: commit
 and push each WO as it finishes, then go on.
 
+**Previews build in the background (T-16, 2026-10-05):** a 14-model template
+took 100–200 s to preview on production (Atlas round trips), past the
+platform's 30-second request limit, so the MCP client saw only "the
+connector's server returned an error" while the build finished anyway. Now a
+request waits 20 s (`TEMPLATE_PREVIEW_WAIT_MS`), then answers `building` with
+a preview id; MCP `preview_status` / the studio's previews list (polled) say
+ready or failed. One build per template at a time.
+
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions and the Config → Templates sidebar item); the starter templates
 seed themselves at boot.
@@ -80,6 +88,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-13 | First templates, written through the MCP | both | L | open |
 | T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
+| T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
 
 Execution order: 01 → 02 → 03 → 05 → 04 → 06 → 07 → 08 → 10 → 09 → 11 → 12 → 13
 (→ 14 → 15). T-06 needs T-02/03/05; T-07…T-10 need T-05; T-04 needs T-03.
@@ -402,7 +411,48 @@ Reusable parts (Customers, Payments, Addresses, Blog posts…) that templates
 include by reference and that can be added to an existing project with a
 rename step for clashing names.
 
+## T-16 — Big template previews, readable errors, answer defaults (M)
+**Why** previews of `clients-invoices` (14 models, ~160 sample records) and
+`finance-management` failed on production with only "The connector's server
+returned an error". The sandbox showed all four previews fully built
+(tickets issued, `usage.previews` counted): 100 s alone, ~200 s when four ran
+side by side — past the 30-second request limit, not a thrown error.
+Locally the same build is 8 s and ~1,065 Mongo operations (per model: the
+model, its sidebar item, route settings/config versions, the collection and
+its indexes; then per sample record its link lookups).
+**Backend** `templateSandbox.function.ts`: `previewTemplate` creates the
+project with `preview.status: 'building'`, runs `applyTemplate` in the
+background and waits `BUILD_WAIT_MS` (20 s): done → as before (201 + link);
+still going → `{ status: 'building', project }` (202); a build already running
+for the template → that one (`already`). A failure while waiting throws and
+leaves nothing; a later one keeps a `failed` record (error + problems, kept
+1 hour). `previewStatus(id)` → ready (fresh ticket + what was built, kept on
+`preview.result`) / building / failed; `building` older than 15 min counts as
+failed (the server restarted). Reopen and delete refuse a building preview;
+the 50-preview cap never evicts one. `TenantProject.preview` gains `status`,
+`builtAt`, `result`, `error`, `problems`.
+MCP: `safely()` returns any error as a tool error (unexpected ones logged with
+their stack); `preview_template` answers building with the id; new tool
+`preview_status` (preview id, or template → its newest); instructions say to
+poll. Admin API `POST /:id/preview` → 201 ready / 202 building.
+`createRecords` caches link lookups per call (same name, same model).
+Validator: a field default that is a question's answer (`{{paymentTerms}}`)
+is checked per option of a choice question against the field's allowed
+values (error naming the options that don't fit; a number field fed by a
+free-text question is a warning); the planner sees a copy with a sample
+answer (the question's default, else its first option).
+**Admin** `PreviewDialog`: a 202 says it's building; the list polls every 5 s
+while one builds, shows Building… / Not built — why, Open only when ready.
+Guide `/docs/templates#preview`.
+**Done when** `clients-invoices` previews through the MCP on production:
+the call answers within 20 s and `preview_status` gives the link.
+
 ## Follow-ups (not numbered yet)
+The validator doesn't check sample-data links (a record linking a client
+that isn't in the sample fails only at build time — now reported, but late).
+A preview could build faster with fewer round trips per model (sidebar item,
+route settings and config versions are separate writes).
+
 "Template updated — see what's new" for projects built from an older
 version; user-made templates / marketplace; rate limits per public endpoint;
 forms and cookie consent as website template parts once they exist (see the

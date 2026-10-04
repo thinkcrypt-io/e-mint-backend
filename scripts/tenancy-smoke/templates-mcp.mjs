@@ -121,7 +121,15 @@ const PT = r.body?.token;
 const PP = `/tenant/api/p/${r.body?.project?._id}`;
 r = await call('GET', `${PP}/accounts`, null, PT);
 ok('…with the sample data and the answer filled in', r.status === 200 && r.body.doc?.[0]?.name === 'Main account', JSON.stringify(r.body?.doc?.[0]));
-await call('DELETE', `${A}/templates/previews/${t.structuredContent?.project?._id}`, null, T);
+const pvId = t.structuredContent?.project?._id;
+ok('preview_template says ready', t.structuredContent?.status === 'ready' && t.structuredContent?.project?.status === 'ready', JSON.stringify(t.structuredContent?.project));
+t = await tool(full, 'preview_status', { preview: pvId });
+ok('preview_status by id: ready, with a fresh link', !t.isError && t.structuredContent?.status === 'ready' && /\/preview\?ticket=[a-f0-9]{48}$/.test(t.structuredContent?.url || '') && /2 model/.test(t.text), t.text.slice(0, 300));
+t = await tool(full, 'preview_status', { template: key });
+ok('preview_status by template: its newest preview', !t.isError && t.structuredContent?.project?._id === pvId, t.text.slice(0, 200));
+t = await tool(full, 'preview_status', { preview: 'nope' });
+ok('preview_status: a bad id is a readable error', t.isError && /isn’t a preview id/.test(t.text), t.text);
+await call('DELETE', `${A}/templates/previews/${pvId}`, null, T);
 
 /* --------------------------------------------------------------- publish */
 t = await tool(writer, 'publish_template', { template: key, notes: 'First.', confirm: true });

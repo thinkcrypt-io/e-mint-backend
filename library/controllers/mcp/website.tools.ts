@@ -83,12 +83,15 @@ const formulasFor = async (req: any, def: any) => {
 /** Never taken from the AI: who owns a record and who it's shared with. */
 const NOT_WRITABLE = new Set(['_id', 'code', 'createdAt', 'updatedAt', 'addedBy', 'access', 'archivedAt', 'archivedBy', '_customer']);
 
+/** Linked records already looked up in this call, by model and name — many records link the same few. */
+type RefCache = Map<string, string[]>;
+
 /**
  * `input` cut down to the model's own writable fields, links resolved (an id,
  * or the linked record's name / title / code). Collects unknown keys and links
  * that name nothing.
  */
-const pickFields = async (def: any, input: any, omit: string[] = []) => {
+const pickFields = async (def: any, input: any, omit: string[] = [], refCache?: RefCache) => {
 	const body: any = {};
 	const skipped: string[] = [];
 	const problems: string[] = [];
@@ -110,7 +113,9 @@ const pickFields = async (def: any, input: any, omit: string[] = []) => {
 				continue;
 			}
 			const wanted = ([] as any[]).concat(value);
-			const ids = await refIds(Ref, wanted);
+			const cacheKey = `${f.ref}\u0000${wanted.map(String).join('\u0000')}`;
+			const ids = refCache?.get(cacheKey) || (await refIds(Ref, wanted));
+			refCache?.set(cacheKey, ids);
 			if (ids.length < wanted.length) {
 				problems.push(`${key}: no ${f.ref} called ${wanted.filter(v => !ids.includes(String(v))).map(v => `“${v}”`).join(', ')}`);
 				continue;
@@ -547,8 +552,9 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	const skipped = new Set<string>();
 	const docs: { doc: any; Model: mongoose.Model<any>; isNew: boolean }[] = [];
 	const seen = new Set<string>();
+	const refCache: RefCache = new Map();
 	for (let i = 0; i < records.length; i++) {
-		const picked = await pickFields(def, records[i]);
+		const picked = await pickFields(def, records[i], [], refCache);
 		picked.skipped.forEach(k => skipped.add(k));
 		problems.push(...picked.problems.map(p => `records[${i}].${p}`));
 		let existing: any = null;

@@ -5,7 +5,7 @@ import { KIND_GUIDE } from '../builder/ai.controller.js';
 import { BuildError } from '../builder/models.controller.js';
 import { TEMPLATE_MAX_STEPS } from '../builder/features.service.js';
 import { ORG_PERMISSION_KEYS } from '../../functions/tenantPermissions.function.js';
-import { previewTemplate } from '../../functions/templateSandbox.function.js';
+import { listPreviews, previewStatus, previewTemplate } from '../../functions/templateSandbox.function.js';
 import {
 	BLOCK_CATEGORIES,
 	BUILTIN_PLACEHOLDERS,
@@ -51,7 +51,7 @@ How to work with the user:
 3. create_template, then write it ONE PART AT A TIME, showing the user each part and asking before moving on: overview → questions (what's asked when the template is used; set them before any part uses {{key}}) → models (upsert_model, one model per call; linked-to models first) → sidebar → dashboard → roles → endpoints (and webhooks for API, pages + site defaults for websites) → sample data → setup guide.
 4. Every write answers with that part's problems and fixes. Fix them as you go. Run validate_template at the end.
 5. Explain everything: a template is published only when it has a summary, a description, who it's for, a setup guide, and a description on every model. Give fields help text when they aren't obvious. People who use the template will read all of it.
-6. preview_template builds it into a throwaway project and returns a link — share it so the user can click around. Previews are deleted after 24 hours.
+6. preview_template builds it into a throwaway project and returns a link — share it so the user can click around. A big template keeps building for a few minutes: then poll preview_status with the preview id about every 30 seconds. Previews are deleted after 24 hours.
 7. publish_template only when the user says so explicitly, with notes on what changed. Never publish on your own.`;
 
 /* ------------------------------------------------------------- auth */
@@ -105,13 +105,43 @@ const report = (doc: any, v: Validation, headline: string, part?: Part): ToolOut
 	};
 };
 
+/** Any failure comes back as a readable tool error; an unexpected one is logged with its stack. */
 const safely = async (fn: () => Promise<ToolOutput>): Promise<ToolOutput> => {
 	try {
 		return await fn();
 	} catch (e: any) {
-		if (e instanceof BuildError) return refuse([e.message, ...(e.problems || []).map(p => `- ${p}`)].join('\n'));
-		throw e;
+		if (!(e instanceof BuildError)) console.error('Templates MCP:', e?.stack || e);
+		const message = e?.message || 'Something went wrong on the server.';
+		return refuse([e instanceof BuildError ? message : `The server failed: ${message}`, ...(e?.problems || []).map((p: any) => `- ${p}`)].join('\n'));
 	}
+};
+
+/** A preview still building: its id, and when to ask again. */
+const building = (name: string, project: any, already?: boolean): ToolOutput => {
+	const secs = Math.max(0, Math.round((Date.now() - new Date(project.createdAt).getTime()) / 1000));
+	return {
+		text: [
+			already
+				? `A preview of “${name}” is already being built (started ${secs}s ago) — this is that one; a second build would only slow both down.`
+				: `Building a preview of “${name}” — a template this size takes a few minutes on the server.`,
+			`Preview id: ${project._id}. Call preview_status with it in about 30 seconds for the link.`,
+		].join('\n'),
+		data: { status: 'building', project },
+	};
+};
+
+/** A built preview: what's in it and its single-use link. */
+const ready = (name: string, p: { project: any; result: any; url: string }): ToolOutput => {
+	const r = p.result || { models: [], pages: [], records: {}, warnings: [] };
+	return {
+		text: [
+			`Built a preview of “${name}”: ${r.models.length} model(s)${r.pages.length ? `, ${r.pages.length} page(s)` : ''}${Object.keys(r.records).length ? `, sample records in ${Object.keys(r.records).length} model(s)` : ''}.`,
+			`Open it (works once, for 5 minutes): ${p.url}`,
+			`It is deleted ${new Date(p.project.expiresAt).toUTCString()}. A new link: preview_status with preview ${p.project._id}, or Template Studio → the template → Previews.`,
+			...(r.warnings.length ? ['Notes:', ...r.warnings.map((w: string) => `- ${w}`)] : []),
+		].join('\n'),
+		data: { status: 'ready', url: p.url, project: p.project, result: r },
+	};
 };
 
 const load = async (ref: any) => {
@@ -407,7 +437,8 @@ const TOOLS: Tool[] = [
 	{
 		name: 'preview_template',
 		title: 'Preview a template',
-		description: 'Builds the draft into a throwaway project (deleted after 24 hours) and returns a single-use link (5 minutes) that opens it. Give the link to the user.',
+		description:
+			'Builds the draft into a throwaway project (deleted after 24 hours) and returns a single-use link (5 minutes) that opens it. Give the link to the user. A big template takes a few minutes: then this answers “still building” with a preview id — call preview_status with it about every 30 seconds until it’s ready. Don’t start another preview meanwhile.',
 		scope: 'preview',
 		inputSchema: {
 			type: 'object',
@@ -424,16 +455,42 @@ const TOOLS: Tool[] = [
 			safely(async () => {
 				const doc: any = await load(args.template);
 				const p = await previewTemplate(req, doc, { from: args.from === 'published' ? 'published' : 'draft', answers: args.answers, sampleData: args.sampleData });
-				const r = p.result;
-				return {
-					text: [
-						`Built a preview of “${doc.name}”: ${r.models.length} model(s)${r.pages.length ? `, ${r.pages.length} page(s)` : ''}${Object.keys(r.records).length ? `, sample records in ${Object.keys(r.records).length} model(s)` : ''}.`,
-						`Open it (works once, for 5 minutes): ${p.url}`,
-						`It is deleted ${new Date(p.project.expiresAt).toUTCString()}. A new link: Template Studio → the template → Previews.`,
-						...(r.warnings.length ? ['Notes:', ...r.warnings.map(w => `- ${w}`)] : []),
-					].join('\n'),
-					data: { url: p.url, project: p.project, result: r },
-				};
+				if (p.status === 'building') return building(doc.name, p.project, p.already);
+				return ready(doc.name, p);
+			}),
+	},
+	{
+		name: 'preview_status',
+		title: 'Check a preview',
+		description:
+			'Where a preview stands: still building, ready (with a fresh single-use link — give it to the user), or failed (with why). Pass the preview id preview_template gave, or the template to check its newest preview.',
+		scope: 'preview',
+		inputSchema: {
+			type: 'object',
+			properties: {
+				preview: { type: 'string', description: 'The preview id from preview_template' },
+				template: { ...templateArg, description: 'Instead of a preview id: the template whose newest preview to check' },
+			},
+		},
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+		run: (_req, args) =>
+			safely(async () => {
+				let id = args.preview ? String(args.preview) : '';
+				let name = '';
+				if (!id) {
+					if (!args.template) return refuse('Pass the preview id preview_template gave, or the template.');
+					const doc: any = await load(args.template);
+					name = doc.name;
+					const [newest] = await listPreviews(doc._id);
+					if (!newest) return refuse(`“${doc.name}” has no previews — make one with preview_template.`);
+					id = String(newest._id);
+				}
+				const s: any = await previewStatus(id);
+				name ||= String(s.project.name || '').replace(/ · preview .*$/, '');
+				if (s.status === 'building') return building(name, s.project);
+				if (s.status === 'failed')
+					return refuse([`The preview of “${name}” wasn’t built — ${s.project.error}`, ...(s.project.problems || []).map((p: string) => `- ${p}`), 'Fix the template, then preview it again.'].join('\n'));
+				return ready(name, s);
 			}),
 	},
 	{

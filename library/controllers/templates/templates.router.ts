@@ -306,7 +306,9 @@ router.delete(
 /**
  * POST /:id/preview { from?: 'draft'|'published', answers?, sampleData? } —
  * builds the template into a throwaway sandbox project (deleted after 24 hours)
- * and returns a single-use link that opens it in the tenant panel.
+ * and returns a single-use link that opens it in the tenant panel (201). A big
+ * template keeps building after the request's 20 seconds: 202 `building`, and
+ * GET /:id/previews shows when it's ready.
  */
 router.post(
 	'/:id/preview',
@@ -315,7 +317,8 @@ router.post(
 		const doc = await getTemplateOrFail(req.params.id);
 		const body = req.body || {};
 		const from = body.from === 'published' || body.from === 'draft' ? body.from : undefined;
-		return res.status(201).json(await previewTemplate(req, doc, { from, answers: body.answers, sampleData: body.sampleData }));
+		const out = await previewTemplate(req, doc, { from, answers: body.answers, sampleData: body.sampleData });
+		return res.status(out.status === 'ready' ? 201 : 202).json(out);
 	})
 );
 

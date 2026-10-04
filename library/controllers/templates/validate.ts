@@ -5,6 +5,7 @@ import { ORG_PERMISSION_KEYS, SYSTEM_ROLE_DEFAULTS } from '../../functions/tenan
 import { planFeature, TEMPLATE_MAX_STEPS, CreateStep } from '../builder/features.service.js';
 import { planFromAi } from '../builder/features.schema.js';
 import { PUBLIC_API } from '../builder/models.controller.js';
+import { defaultOf, enumOf } from '../../functions/dynamicModels.function.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import {
 	BLOCK_CATEGORIES,
@@ -51,6 +52,65 @@ const DRY_SCOPE = {
 
 const lower = (s: string) => String(s || '').toLowerCase();
 
+const ANSWER = /\{\{\s*([A-Za-z][\w]*)\s*\}\}/g;
+
+/**
+ * Field defaults that are a question's answer (`{{paymentTerms}}`) can't be
+ * checked as written — the planner would compare the braces with the field's
+ * allowed values. Instead every option a choice question offers is checked
+ * against the field, and the steps go to the planner (a copy) with a sample
+ * answer filled in: the question's default, else its first option.
+ */
+const answerDefaults = (rawSteps: any[], questions: any[], add: (severity: Severity, part: Part, path: string, message: string, fix: string) => void) => {
+	const byKey = new Map<string, any>(questions.filter(q => q?.key).map(q => [q.key, q]));
+	const sample = (k: string) => {
+		const q = byKey.get(k);
+		return q ? String(q.default || q.options?.[0]?.value || '') : `{{${k}}}`;
+	};
+	const steps = JSON.parse(JSON.stringify(rawSteps));
+	steps.forEach((s: any, i: number) => {
+		const visit = (fields: any[], path: string, prefix: string) =>
+			(fields || []).forEach((f: any, j: number) => {
+				if (!f || typeof f !== 'object') return;
+				const where = `${path}[${j}]`;
+				const name = `${s.title || s.name || `Step ${i + 1}`} › ${prefix}${f.label || f.key}`;
+				if (Array.isArray(f.fields)) visit(f.fields, `${where}.fields`, `${prefix}${f.label || f.key} › `);
+				if (typeof f.default !== 'string' || !f.default.includes('{{')) return;
+				const keys = [...f.default.matchAll(ANSWER)].map(m => m[1]);
+				if (!keys.length) return;
+				const asField = (value: string) => defaultOf({ kind: f.kind, default: value });
+				const allowed = enumOf({ kind: f.kind, options: (f.options || []).map((o: any) => ({ value: typeof o === 'object' ? o?.value : o })) });
+				const q = keys.length === 1 && f.default.trim() === `{{${keys[0]}}}` ? byKey.get(keys[0]) : null;
+				if (q?.kind === 'select') {
+					const bad = (q.options || [])
+						.map((o: any) => String(o.value))
+						.filter((v: string) => {
+							const d = asField(v);
+							return d === undefined || (allowed && !(Array.isArray(d) ? d : [d]).every(x => allowed.includes(x)));
+						});
+					if (bad.length)
+						add(
+							'error',
+							'models',
+							`models.steps[${i}].${where}.default`,
+							`${name}: its default is the answer to “${q.label || q.key}”, but ${bad.map((v: string) => `“${v}”`).join(', ')} ${bad.length === 1 ? 'isn’t' : 'aren’t'} ${allowed ? 'one of the field’s allowed values' : `a valid ${f.kind}`}.`,
+							allowed ? 'Give the question and the field the same options, or drop the default.' : 'Change the question’s options, or drop the default.'
+						);
+				} else if (f.kind === 'number' && q)
+					add(
+						'warning',
+						'models',
+						`models.steps[${i}].${where}.default`,
+						`${name} is a number, but its default is the answer to “${q.label || q.key}”, which can be any text — one that isn’t a number leaves it empty.`,
+						'Make the question a choice of numbers.'
+					);
+				f.default = f.default.replace(ANSWER, (_m: string, k: string) => sample(k));
+			});
+		visit(s.fields, 'fields', '');
+	});
+	return steps as any[];
+};
+
 export const validateTemplate = async (req: any, type: TemplateType, bp: any): Promise<Validation> => {
 	const issues: Issue[] = [];
 	const add = (severity: Severity, part: Part, path: string, message: string, fix: string) =>
@@ -88,7 +148,9 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 	if (rawSteps.length > TEMPLATE_MAX_STEPS)
 		add('error', 'models', 'models.steps', `A template holds at most ${TEMPLATE_MAX_STEPS} models (this one has ${rawSteps.length}).`, 'Remove the models it can do without, or split it into two templates.');
 
-	const creates = rawSteps.filter(s => s.action !== 'update').slice(0, TEMPLATE_MAX_STEPS);
+	const creates = answerDefaults(rawSteps, bp.questions || [], add)
+		.filter(s => s.action !== 'update')
+		.slice(0, TEMPLATE_MAX_STEPS);
 	if (creates.length) {
 		const input = planFromAi({
 			title: o.name || 'Template',

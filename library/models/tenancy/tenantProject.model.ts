@@ -53,12 +53,20 @@ const schema = new Schema<any>(
 			),
 			default: undefined,
 		},
-		/** A template preview in the sandbox (docs/templates T-04): deleted at `expiresAt`; opened with a single-use ticket. */
+		/**
+		 * A template preview in the sandbox (docs/templates T-04): deleted at `expiresAt`; opened with a single-use ticket.
+		 * Built in the background: `building` → `ready` (with what was built) or `failed` (with why; nothing else kept).
+		 */
 		preview: {
 			type: new Schema(
 				{
 					template: { type: Schema.Types.ObjectId, ref: 'ProjectTemplate' },
 					from: { type: String, enum: ['draft', 'published'] },
+					status: { type: String, enum: ['building', 'ready', 'failed'] },
+					builtAt: Date,
+					result: Schema.Types.Mixed,
+					error: String,
+					problems: [String],
 					expiresAt: Date,
 					ticketHash: String,
 					ticketExpiresAt: Date,

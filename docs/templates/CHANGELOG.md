@@ -425,3 +425,36 @@ Newest last. One entry per work order: what, files, how verified.
   reserved keys.
 - **Verified**: admin and backend `tsc` clean; on :3012 all 29 linked anchors
   exist on the rendered guide and the guide has exactly those 29 sections.
+
+## T-16 — Big template previews, readable errors, answer defaults (2026-10-05)
+- **Cause** (clients-invoices preview failing on production with a generic
+  connector error): not a thrown error — the four "failed" previews were all
+  in the sandbox, fully built, after 100–200 s; the request had outlived the
+  platform's 30-second limit. (The MCP transport already turned thrown errors
+  into tool errors.) Locally: 8 s, ~1,065 Mongo operations.
+- **Background builds** `templateSandbox.function.ts`: wait 20 s
+  (`TEMPLATE_PREVIEW_WAIT_MS`), then `building`; `previewStatus`; failed
+  record kept an hour; stale builds (15 min) count as failed; one build per
+  template; reopen/delete refuse a building preview; eviction skips it.
+  `TenantProject.preview.status/builtAt/result/error/problems`.
+- **MCP** `safely()` catches everything (stack logged for unexpected errors);
+  `preview_template` → building + id; new `preview_status`; instructions.
+- **Admin API** `POST /templates/:id/preview` 201 ready / 202 building.
+  **Admin** PreviewDialog toast + polled list with Building… / Not built.
+- **Faster sample data**: `createRecords` caches link lookups per call.
+- **Validator**: `{{answer}}` field defaults checked per question option
+  against the field's allowed values; planner checks a sample-filled copy —
+  answers can now drive select/number defaults.
+- **Guide** `/docs/templates#preview`; README TD8.
+- **Smoke** `templates-mcp.mjs` +4 (ready status, preview_status by id and by
+  template, bad id).
+- **Verified** (local Mongo :27998, backend :5013 with the production copy of
+  clients-invoices): with a 2 s wait the MCP answers building in 2.2 s, a
+  second call joins it, `preview_status` gives a link that signs in; a late
+  sample-data failure reads "Sample data: Reconciliation — no Client called
+  …" with no models left; an early failure leaves no project; `{{paymentTerms}}`
+  default validates, builds with the answer (45), and a field missing option
+  60 is named. Studio dialog checked on :3013 (building → built; failed row
+  with the reason). Suites templates, templates-preview, templates-mcp green;
+  templates-manage's one tenant-dashboard check needs `run-all`'s saved
+  tenant state. Both `tsc` clean.
