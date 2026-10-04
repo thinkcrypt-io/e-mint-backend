@@ -458,3 +458,46 @@ Newest last. One entry per work order: what, files, how verified.
   with the reason). Suites templates, templates-preview, templates-mcp green;
   templates-manage's one tenant-dashboard check needs `run-all`'s saved
   tenant state. Both `tsc` clean.
+
+## T-13 (part) — The first ten templates, as drafts (2026-10-05)
+- **Written through the Templates MCP on production** (drafts, never
+  published yet): `finance-management` (8 models: accounts, categories,
+  contacts, transactions, invoices, bills, budgets, recurring costs), `crm`
+  (companies, people, products, deals with weighted value, activities),
+  `hr-leave` (departments, employees with allowance, leave types, leave
+  requests, public holidays, documents with expiry), `inventory` (categories,
+  locations, suppliers, products with stock value, purchase orders, stock
+  movements, stock counts), `booking-api` (services, staff, availability, time
+  off, owner-only bookings, booking webhook), `products-orders-api`
+  (categories, products with variants, shipping methods, owner-only orders and
+  wishlists, order webhook), `blog` (authors, categories, posts, newsletter
+  subscribers; 4 pages), `business-site` (services, team, testimonials, FAQs,
+  enquiry form; 5 pages), `portfolio` (disciplines, projects at `/work`,
+  experience, testimonials, message form; 4 pages), `ecommerce` (collections,
+  products, owner-only cart and orders, contact form; 6 pages incl. a noindex
+  cart). Each has questions, sidebar, dashboard, roles, sample data, a setup
+  guide and FAQ; all validate with no errors and no warnings on the new
+  validator.
+- **Covers** `admin/public/template-covers/*.svg` (e4cb57d).
+- **Relative sample dates** (backend b47a3c27, admin 51bddce):
+  `blueprint.ts` `relativeDate` / `resolveSampleDates` — `now`, `now±Nd|w|m|y`
+  in date fields (sections and line items too) resolve on the build day, so
+  date-ranged widgets keep data; the studio's sample-data editor keeps them as
+  text; guide + MCP format text.
+- **Validator** (backend 4a12bcdd, 9ad5faf4): sample records checked like the
+  build saves them (required, choices, numbers, dates, links by name — the
+  same naming fields as `refIds`, case-insensitive); create-only open
+  endpoints are forms, not warnings; an optional url question used only as a
+  webhook address isn't a warning; a model whose route is taken (`/projects`
+  → `/projects2`) warns. Guide updated (admin 5db4752).
+- **Found, left as a follow-up:** the public API writes any field a customer
+  sends, so an owner-only Order can be created as `paid`; the shop and booking
+  templates' FAQs say to confirm payment / status server-side. A follow-up
+  task proposes per-field public read-only.
+- Verified: each template imported into the scratch server, validated (clean;
+  deliberate mistakes caught) and built with sample data in 2–5 s; public
+  endpoints called (open lists, owner-only refused without sign-in, create-only
+  forms accept but don't list, site API pages/SEO/settings with answers filled
+  in); an e-commerce customer flow (sign up, cart, order; a second customer
+  sees none of it). Smoke: templates, templates-preview, templates-manage,
+  templates-mcp all pass on a fresh server.

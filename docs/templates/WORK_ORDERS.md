@@ -18,10 +18,20 @@ Connect Claude page (`/templates/connect`, emt_ keys) and the dashboard's
 Templates overview widget; T-12 the guide/explanation pass (all 29 guide
 sections linked from the studio, every link lands). `PartSummary` is no
 longer used by any tab.
-**Next: T-13** (the first templates, written with Claude through the
-Templates MCP, previewed and published — Claude connects with a key from
-/templates/connect, no server API key needed). The user's rule: commit
-and push each WO as it finishes, then go on.
+**T-13 in progress (2026-10-05):** all ten templates are written as
+**drafts on production** through the Templates MCP (keys below), each
+validated clean and built + exercised on the scratch server (`:5011`):
+apps `finance-management`, `crm`, `hr-leave`, `inventory`; APIs
+`booking-api`, `products-orders-api`; websites `blog`, `business-site`,
+`portfolio`, `ecommerce`. Covers are `admin/public/template-covers/*.svg`
+(served by the panel, relative `/template-covers/<key>.svg`). **Waiting on:**
+(1) a backend redeploy of `v3` — production still runs code without relative
+sample dates (`now-12d`, b47a3c27), background previews (T-16) and the new
+checks (4a12bcdd, 9ad5faf4), so production previews of these templates fail
+until then; (2) the user's yes to publish (publishing reaches every tenant).
+Then: preview each on production (`preview_template` → `preview_status`),
+publish with notes, mark T-13 done. The user's rule: commit and push each
+WO as it finishes, then go on.
 
 **Previews build in the background (T-16, 2026-10-05):** a 14-model template
 took 100–200 s to preview on production (Atlas round trips), past the
@@ -87,7 +97,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-10 | Studio: Website tabs (Pages, Content, SEO, Site defaults, Starter code) | admin | L | done |
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
 | T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
-| T-13 | First templates, written through the MCP | both | L | open |
+| T-13 | First templates, written through the MCP | both | L | drafts written + checked locally; production preview + publish wait on deploy and the user's yes |
 | T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
 | T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
