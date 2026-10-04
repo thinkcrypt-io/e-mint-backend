@@ -134,7 +134,9 @@ name, title or route (a website: also the kit's `pages`, `seo`,
 | Project create/remove (shared with the projects router) | `backend/library/functions/projectLifecycle.function.ts` |
 | Sandbox, tickets, cleanup | `backend/library/functions/templateSandbox.function.ts`; ticket exchange `POST /tenant/api/auth/preview`; guard in `middleware/tenant/protect.tenant.middleware.ts` (`previewMayWrite`) |
 | Preview page + banner (tenant panel) | `admin/src/app/preview/page.tsx`, `admin/src/components/library/tenant/PreviewBanner.tsx` |
-| MCP | `backend/library/controllers/mcp/transport.ts` (shared), `backend/library/controllers/templates/mcp.router.ts` → `/templates/mcp` |
-| Panel | `admin/src/app/templates/` (gallery, `[id]` editor, `connect`), `admin/src/components/library/store/services/templatesApi.ts` |
+| MCP | `backend/library/controllers/mcp/transport.ts` (shared), `backend/library/controllers/templates/mcp.router.ts` → `/templates/mcp`; keys `templates/keys.ts` |
+| AI sample data | `backend/library/controllers/templates/sampleAi.ts` → `POST /admin/api/templates/:id/ai/sample-data` |
+| Panel | `admin/src/app/templates/` — gallery `page.tsx`, shared `_components/` (ui, StudioDialog, New template, Capture), editor `[id]/page.tsx` + `[id]/_components/` (one file per tab, ProblemsPanel, Preview/Publish dialogs, PartSummary for parts whose editor is still to come); RTK `admin/src/components/library/store/services/templatesApi.ts` |
 | Guide | `admin/src/app/docs/templates/page.tsx`, listed in `docs/_components/guides.ts` |
-| Smoke | `backend/scripts/tenancy-smoke/templates.mjs`, `templates-mcp.mjs` (in `run-all.sh`) |
+| Smoke | `backend/scripts/tenancy-smoke/templates*.mjs` (in `run-all.sh`) |
+| Sidebar entry | Config → Templates, seeded by `backend/scripts/seedTemplateAccess.js` |

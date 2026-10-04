@@ -33,6 +33,7 @@ import {
 } from './templates.service.js';
 import { deletePreview, listPreviews, previewTemplate, reopenPreview } from '../../functions/templateSandbox.function.js';
 import { createKey, listKeys, revokeKey } from './keys.js';
+import { generateSampleData } from './sampleAi.js';
 
 /**
  * /admin/api/templates — Template Studio's API for the super admin panel
@@ -251,11 +252,16 @@ router.get(
 	})
 );
 
-/** DELETE /:id — a never-published draft is deleted; a published template is archived. */
+/** DELETE /:id — a never-published draft is deleted (with its previews); a published template is archived. */
 router.delete(
 	'/:id',
 	...remove,
-	handle(async (req, res) => res.status(200).json(await deleteTemplate(req, req.params.id)))
+	handle(async (req, res) => {
+		const doc: any = await getTemplateOrFail(req.params.id);
+		// A draft that goes for good takes its previews with it; an archived template keeps them until they expire.
+		if (!doc.version) for (const p of await listPreviews(doc._id)) await deletePreview(p._id).catch(() => undefined);
+		return res.status(200).json(await deleteTemplate(req, req.params.id));
+	})
 );
 
 /**
@@ -272,6 +278,17 @@ router.post(
 		const from = body.from === 'published' || body.from === 'draft' ? body.from : undefined;
 		return res.status(201).json(await previewTemplate(req, doc, { from, answers: body.answers, sampleData: body.sampleData }));
 	})
+);
+
+/**
+ * POST /:id/ai/sample-data { model, count?, note? } — example records for one
+ * model, written by Claude (the server's ANTHROPIC_API_KEY). Saves nothing:
+ * the studio shows them and the admin keeps what they like.
+ */
+router.post(
+	'/:id/ai/sample-data',
+	...edit,
+	handle(async (req, res) => res.status(200).json(await generateSampleData(req, req.params.id, req.body || {})))
 );
 
 /** GET /:id/previews — this template's previews that still exist. */

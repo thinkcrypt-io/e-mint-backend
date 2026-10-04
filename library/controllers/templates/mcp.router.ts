@@ -18,9 +18,9 @@ import {
 	stepIdentity,
 	whatsInside,
 } from './blueprint.js';
-import { Issue, Validation, validateTemplate } from './validate.js';
+import { Issue, Validation } from './validate.js';
 import { keyFromSecret } from './keys.js';
-import { createTemplate, exportTemplate, findTemplate, importTemplate, listTemplates, publishTemplate, saveDraft } from './templates.service.js';
+import { checkTemplate, createTemplate, exportTemplate, findTemplate, importTemplate, listTemplates, publishTemplate, saveDraft } from './templates.service.js';
 
 /**
  * /templates/mcp — Template Studio's MCP server (docs/templates TD9, T-06).
@@ -124,7 +124,7 @@ const load = async (ref: any) => {
 const savePart = (req: any, ref: any, part: Part, value: any, what: string) =>
 	safely(async () => {
 		const doc: any = await saveDraft(req, (await load(ref))._id, { part, value });
-		const v = await validateTemplate(req, doc.type, doc.draft);
+		const v = await checkTemplate(req, doc);
 		return report(doc, v, `Saved ${what}.`, part);
 	});
 
@@ -225,7 +225,7 @@ const TOOLS: Tool[] = [
 		run: (req, args) =>
 			safely(async () => {
 				const doc: any = await load(args.template);
-				const v = await validateTemplate(req, doc.type, doc.draft);
+				const v = await checkTemplate(req, doc);
 				const out = report(doc, v, `Template “${doc.name}” — parts: ${PARTS_BY_TYPE[doc.type as 'app'].join(', ')}.`);
 				return { text: `${out.text}\n\nDraft:\n${JSON.stringify(doc.draft, null, 1)}`, data: { ...out.data, draft: doc.draft, whatsInside: whatsInside(doc.draft) } };
 			}),
@@ -250,7 +250,7 @@ const TOOLS: Tool[] = [
 		run: (req, args) =>
 			safely(async () => {
 				const doc: any = await createTemplate(req, args, 'mcp');
-				return report(doc, await validateTemplate(req, doc.type, doc.draft), `Created the ${doc.type} template “${doc.name}” — key ${doc.key}.`);
+				return report(doc, await checkTemplate(req, doc), `Created the ${doc.type} template “${doc.name}” — key ${doc.key}.`);
 			}),
 	},
 	{
@@ -401,7 +401,7 @@ const TOOLS: Tool[] = [
 		run: (req, args) =>
 			safely(async () => {
 				const doc: any = await load(args.template);
-				return report(doc, await validateTemplate(req, doc.type, doc.draft), `Checked “${doc.name}”.`);
+				return report(doc, await checkTemplate(req, doc), `Checked “${doc.name}”.`);
 			}),
 	},
 	{
@@ -447,7 +447,7 @@ const TOOLS: Tool[] = [
 			safely(async () => {
 				if (args.confirm !== true) return refuse('Publishing reaches every tenant — ask the user, then call again with confirm: true.');
 				const doc: any = await publishTemplate(req, (await load(args.template))._id, { notes: args.notes });
-				return report(doc, await validateTemplate(req, doc.type, doc.draft), `Published “${doc.name}” as version ${doc.version}.`);
+				return report(doc, await checkTemplate(req, doc), `Published “${doc.name}” as version ${doc.version}.`);
 			}),
 	},
 	{
@@ -473,7 +473,7 @@ const TOOLS: Tool[] = [
 		run: (req, args) =>
 			safely(async () => {
 				const doc: any = await importTemplate(req, args.data, 'mcp');
-				return report(doc, await validateTemplate(req, doc.type, doc.draft), `Imported “${doc.name}” as a new draft — key ${doc.key}.`);
+				return report(doc, await checkTemplate(req, doc), `Imported “${doc.name}” as a new draft — key ${doc.key}.`);
 			}),
 	},
 ];

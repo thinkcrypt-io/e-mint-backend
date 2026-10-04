@@ -16,6 +16,8 @@ const collectionsOf = async id => (await db.listCollections({ name: { $regex: `^
 let r = await call('POST', `${A}/auth/login`, { email: 'admin@example.com', password: PASS });
 const T = r.body.token;
 await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken'] } });
+// Left behind if an earlier run stopped half-way (the sandbox organization outlives its previews).
+await db.collection('organizationroles').deleteMany({ name: 'Smoke accountant' });
 
 /* ------------------------------------------------------------ an app template */
 r = await call('POST', `${A}/templates`, {

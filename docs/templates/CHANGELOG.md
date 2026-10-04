@@ -174,3 +174,57 @@ Newest last. One entry per work order: what, files, how verified.
   v1, export/import, website pages and settings, revoke); `mcp.mjs`,
   `website-mcp.mjs` and every other suite green; the admin `/mcp` checked by
   hand (tools/list by scope, out-of-scope call → the scope message).
+
+## T-07 — Studio: gallery, editor, common tabs (2026-10-04)
+- **Admin** `src/app/templates/`:
+  - `page.tsx` — the gallery: filter by type, status, category, search;
+    cards with cover or icon on the colour, type, status/version, a problems
+    badge, usage. Import (an exported file), **Save a project as a template**
+    (`CaptureDialog`, tenant projects; structure only), **New template**
+    (`NewTemplateDialog`: each type says what it holds). Empty state explains
+    templates and the two ways to make one.
+  - `[id]/page.tsx` — the editor: header (type, status, key, source, usage;
+    Check again, Preview, Publish), a sticky save bar (edits stay in the page
+    across tabs; each changed part saved on its own), the **problems panel**
+    (problems / to explain / warnings, each with its fix; "Go there" opens the
+    tab and the model or item), tabs with problem counts and an edited dot.
+  - Tabs (`[id]/_components/`): **Overview** (introduction with "needed to
+    publish" marks, icon by typed Lucide name, colour, cover and screenshots
+    from the media library, What's inside), **Models** (the model builder's
+    own `ModelPanels` writing into blueprint steps — name check from the
+    validator, link targets are the template's models plus the website kit;
+    list with order/remove, a links summary, the "why it's there" line, a
+    Claude-written page layout kept or dropped; round trip keeps every key),
+    **Questions** (where each `{{key}}` is used, "ask for it" for unanswered
+    placeholders), **Sample data** (records per model, a form from the
+    model's fields, links by display value, **Generate with AI**), **Setup
+    guide** (steps with the page each opens, FAQ, a tenant's-eye preview),
+    **Versions & publish** (publish, versions with restore, visibility and
+    organizations, key while unpublished, duplicate / export / archive /
+    delete). Sidebar, Dashboard, Roles, Public API, Webhooks and Website are
+    read-only (`PartSummary`) until T-08…T-10.
+  - `PublishDialog` (notes; lists what blocks it; explains what publishing
+    changes and doesn't), `PreviewDialog` (questions answered as a tenant,
+    sample data on/off, draft or published, previews still open: open again /
+    delete).
+  - `templatesApi.ts` (RTK; writes update the editor from the answer).
+    `importTemplate` is already bulkApi's endpoint — the file import here is
+    `importTemplateFile` (endpoint names are global across injected services).
+  - Guide `src/app/docs/templates/page.tsx` with every section T-12 lists
+    (T-12 is now a review pass), in `docs/_components/guides.ts`.
+- **Backend**: `checks` counts kept on the template (`checkTemplate`, used by
+  the editor, `/validate` and the MCP) and `cover` mirrored, for the gallery;
+  `POST /:id/ai/sample-data` (`sampleAi.ts`, server `ANTHROPIC_API_KEY`,
+  saves nothing); deleting a never-published draft removes its previews;
+  Config → Templates sidebar item in `seedTemplateAccess.js`.
+- `.claude/launch.json` `admin-scratch` (:3012 → :5011).
+- Not done here: "Plan with AI" in the Models tab (Claude through the MCP
+  covers it), a relations diagram (a links list instead).
+- Verified: admin `tsc` clean for the new files; `templates-manage.mjs` +4
+  checks; every suite green (after clearing a role an aborted run left in the
+  sandbox — `templates-preview.mjs` now clears it first); browser on :3012: a
+  template made only in the panel (New template → Overview → Models with a
+  model added in the form → a Claude-written linked model round-tripped
+  unchanged → Setup guide → Sample data record) checked clean, previewed
+  (ticket link opened) and published v1; every tab rendered; every guide
+  anchor exists; no console errors on a fresh load.

@@ -39,6 +39,7 @@ const schema = new Schema<any>(
 		category: { type: String, trim: true, maxlength: 60 },
 		icon: { type: String, trim: true, maxlength: 40 },
 		color: { type: String, trim: true, maxlength: 30 },
+		cover: { type: String, trim: true, maxlength: 1000 },
 		visibility: { type: String, enum: TEMPLATE_VISIBILITY, default: 'everyone' },
 		organizations: { type: [Schema.Types.ObjectId], ref: 'Organization', default: [] },
 		draft: { type: Schema.Types.Mixed, required: true },
@@ -53,6 +54,13 @@ const schema = new Schema<any>(
 			previews: { type: Number, default: 0 },
 			applied: { type: Number, default: 0 },
 			lastAppliedAt: { type: Date },
+		},
+		/** How the draft last checked — counts only, for the gallery's "has problems" badge. */
+		checks: {
+			errors: { type: Number, default: 0 },
+			explain: { type: Number, default: 0 },
+			warnings: { type: Number, default: 0 },
+			at: { type: Date },
 		},
 		source: { type: String, enum: TEMPLATE_SOURCES, default: 'panel' },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'Admin' },

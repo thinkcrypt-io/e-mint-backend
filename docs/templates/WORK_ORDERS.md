@@ -8,19 +8,28 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-04)
 
-**Where it stands:** T-01…T-06 done and pushed (backend `v3`, admin `main`):
-the whole backend of the studio, including the Templates MCP at
-`/templates/mcp` (T-06: shared MCP transport, `emt_` keys, 24 tools; the
-`templates-t06-wip` branch was merged and removed). **Next: T-07** — the
-studio in the super admin panel (gallery, New template, editor shell with the
-problems panel, common tabs). The user's rule: commit and push each WO as it
-finishes, then go on.
+**Where it stands:** T-01…T-07 done and pushed (backend `v3`, admin `main`):
+the studio's backend, the Templates MCP (T-06) and the studio in the super
+admin panel (T-07: gallery, New template, Save a project as a template,
+import, editor with problems panel, Overview / Models / Questions / Sample
+data / Setup guide / Versions & publish tabs, Preview and Publish dialogs, the
+`/docs/templates` guide). Sidebar, Dashboard, Roles, Public API, Webhooks and
+Website show read-only (`PartSummary`) until T-08…T-10 give them editors.
+**Next: T-08** (App tabs: Sidebar, Dashboard, Roles). The user's rule:
+commit and push each WO as it finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
-permissions); the starter templates seed themselves at boot.
+permissions and the Config → Templates sidebar item); the starter templates
+seed themselves at boot.
 
 **Scope:** the **super admin panel** and the Templates MCP. The tenant side
 (choosing a template when creating a project) is T-14, after the studio works.
+
+**Checking the panel headless:** the `admin-scratch` launch config (:3012 →
+backend :5011). Sign in by storing the login's token as `MINT_ADMIN_TOKEN`
+(see memory on visual verification). With the browser pane hidden, renders
+stall until a `focus` event is dispatched on `window` — poke it after each
+action. `window.open` (Preview) replaces the pane's tab.
 
 **Run it locally:** same setup as multi-tenancy (`../multi-tenancy/WORK_ORDERS.md`
 → Handoff → Run it locally): scratch Mongo :27999, `backend-test` :5001
@@ -57,7 +66,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-04 | Sandbox previews (system org, preview ticket, 24h cleanup) | both | L | done |
 | T-05 | Templates admin API (CRUD, draft/publish/versions, duplicate, import/export, save as template, usage) | backend | M | done |
 | T-06 | Templates MCP `/templates/mcp` (shared transport, `emt_` keys, tools) | backend | L | done |
-| T-07 | Studio: gallery, New template, editor shell, common tabs | admin | L | open |
+| T-07 | Studio: gallery, New template, editor shell, common tabs | admin | L | done |
 | T-08 | Studio: App tabs (Sidebar, Dashboard, Roles) | admin | M | open |
 | T-09 | API project type + API tabs + outgoing webhooks | both | L | open |
 | T-10 | Studio: Website tabs (Pages, Content, SEO, Site defaults, Starter code) | admin | L | open |

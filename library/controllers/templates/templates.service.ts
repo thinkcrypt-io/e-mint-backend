@@ -41,12 +41,26 @@ const mirror = (doc: any) => {
 	doc.category = o.category || '';
 	doc.icon = o.icon || '';
 	doc.color = o.color || '';
+	doc.cover = o.cover || '';
+};
+
+/**
+ * Validates the draft and keeps the counts on the template, so lists can say
+ * "has problems" without validating every card.
+ */
+export const checkTemplate = async (req: any, doc: any) => {
+	const validation = await validateTemplate(req, doc.type, doc.draft);
+	const checks = { errors: validation.errors.length, explain: validation.explain.length, warnings: validation.warnings.length };
+	const was = doc.checks || {};
+	if (was.errors !== checks.errors || was.explain !== checks.explain || was.warnings !== checks.warnings || !was.at)
+		await ProjectTemplate.updateOne({ _id: doc._id }, { $set: { checks: { ...checks, at: new Date() } } });
+	return validation;
 };
 
 /** A template as the studio and the MCP show it: the draft, what's inside, and how it checks. */
 export const describeTemplate = async (req: any, doc: any) => {
 	const t = doc.toObject ? doc.toObject() : doc;
-	const validation = await validateTemplate(req, t.type, t.draft);
+	const validation = await checkTemplate(req, t);
 	return {
 		_id: t._id,
 		key: t.key,
@@ -57,12 +71,14 @@ export const describeTemplate = async (req: any, doc: any) => {
 		category: t.category,
 		icon: t.icon,
 		color: t.color,
+		cover: t.cover,
 		visibility: t.visibility,
 		organizations: t.organizations,
 		version: t.version,
 		changed: t.changed,
 		versions: (t.versions || []).map(({ blueprint, ...v }: any) => v),
 		usage: t.usage,
+		checks: { errors: validation.errors.length, explain: validation.explain.length, warnings: validation.warnings.length },
 		source: t.source,
 		parts: PARTS_BY_TYPE[t.type as TemplateType],
 		draft: t.draft,
@@ -134,10 +150,7 @@ export const saveDraft = async (req: any, idOrKey: string, input: { part?: any; 
 	return doc;
 };
 
-export const validateById = async (req: any, idOrKey: string) => {
-	const doc: any = await mustFind(idOrKey);
-	return validateTemplate(req, doc.type, doc.draft);
-};
+export const validateById = async (req: any, idOrKey: string) => checkTemplate(req, await mustFind(idOrKey));
 
 export { mustFind as getTemplateOrFail };
 

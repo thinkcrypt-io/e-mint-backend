@@ -90,9 +90,21 @@ await t('/leads/settings', 'PUT', { visibility: 'everyone' });
 s = await call('GET', `${A}/builder/starters`, null, T);
 ok('back for everyone', s.body.doc.some(x => x.key === 'leads'));
 
+/* ------------------------------------------------- studio support (T-07) */
+await t(`/${dupId}/draft`, 'PUT', { part: 'overview', value: { ...blueprint.overview, name: 'Smoke manage fashion', cover: 'https://example.com/cover.png' } });
+r = await t('?search=smoke-manage-dress');
+const card = (r.body.doc || []).find(d => d.key === 'smoke-manage-dress');
+ok('the gallery gets check counts and the cover without the blueprint', card && typeof card.checks?.errors === 'number' && card.cover === 'https://example.com/cover.png' && !card.draft, JSON.stringify(card && { checks: card.checks, cover: card.cover }));
+r = await t(`/${dupId}/ai/sample-data`, 'POST', { model: 'Nope' });
+ok('AI sample data: an unknown model (or no key) is refused, nothing called', r.status === 400 || r.status === 503, `${r.status} ${r.body?.message}`);
+r = await t(`/${dupId}/preview`, 'POST', {});
+const dupPreview = r.body?.project?._id;
+ok('a preview of the draft', r.status === 201, `${r.status} ${r.body?.message}`);
+
 /* ----------------------------------------------------- delete vs archive */
 r = await t(`/${dupId}`, 'DELETE');
 ok('a never-published draft is deleted', r.status === 200 && r.body.archived === false && (await t(`/${dupId}`)).status === 404);
+ok('…with its previews', !(await db.collection('tenantprojects').findOne({ _id: new (await import('../../node_modules/mongodb/lib/index.js')).ObjectId(dupPreview) })));
 r = await t(`/${importedId}`, 'DELETE');
 ok('imported draft deleted', r.status === 200);
 r = await t(`/${id}`, 'DELETE');
