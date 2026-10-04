@@ -103,6 +103,47 @@ ok('website: duplicate path, bad path, duplicate block, missing parent, repo lin
 r = await wdraft('endpoints', [{ model: 'Post', actions: ['list', 'get'], note: 'The blog list.' }, { model: 'pages', actions: ['delete'], auth: 'none', ownerOnly: true }]);
 v = r.body.doc.validation;
 ok('endpoints: owner-only needs customers; kit models allowed', v.errors.some(i => i.part === 'endpoints' && /signed-in customers/.test(i.message)) && !v.errors.some(i => i.path === 'endpoints[0]'));
+r = await wdraft('endpoints', [{ model: 'Post', actions: ['create'], note: 'A contact form.' }, { model: 'pages', actions: ['list', 'create'], note: 'Open guestbook.' }]);
+v = r.body.doc.validation;
+ok('endpoints: create-only (a form) is no warning; open create + list is', !v.warnings.some(i => i.path === 'endpoints[0]') && v.warnings.some(i => i.path === 'endpoints[1]'), JSON.stringify(v.warnings.map(i => i.path)));
+
+/* ------------------------------------- sample data checked like the build */
+r = await wdraft('models', {
+	steps: [
+		{ action: 'create', name: 'Topic', title: 'Topics', description: 'x', rationale: 'x', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true, helper: 'x' }] },
+		{
+			action: 'create', name: 'Post', title: 'Posts', description: 'x', rationale: 'x', displayField: 'title',
+			fields: [
+				{ key: 'title', label: 'Title', kind: 'text', required: true, helper: 'x' },
+				{ key: 'status', label: 'Status', kind: 'select', helper: 'x', options: [{ value: 'draft', label: 'Draft' }, { value: 'live', label: 'Live' }] },
+				{ key: 'words', label: 'Words', kind: 'number', helper: 'x' },
+				{ key: 'on', label: 'On', kind: 'date', helper: 'x' },
+				{ key: 'topic', label: 'Topic', kind: 'reference', ref: 'Topic', helper: 'x' },
+			],
+		},
+	],
+});
+r = await wdraft('sampleData', {
+	Topic: [{ name: 'Guides' }],
+	Post: [
+		{ title: 'Fine', status: 'live', words: 900, on: 'now-12d', topic: 'guides' },
+		{ status: 'published', words: 'many', on: 'last week', topic: 'News' },
+	],
+});
+v = r.body.doc.validation;
+const sampleErr = v.errors.find(i => i.path === 'sampleData.Post')?.message || '';
+ok(
+	'sample data: missing required, unknown choice, not a number, not a date, link to nothing — caught; relative dates and case-insensitive links pass',
+	['has no Title', '“published” isn’t one of', '“many” isn’t a number', '“last week” isn’t a date', '“News”'].every(t => sampleErr.includes(t)) && !sampleErr.includes('record 1') && !v.errors.some(i => i.path === 'sampleData.Topic'),
+	sampleErr
+);
+r = await call('POST', `${A}/templates`, { type: 'api', name: 'Smoke hooks', summary: 'An API.' }, T);
+const hid = r.body.doc._id;
+const hdraft = (part, value) => call('PUT', `${A}/templates/${hid}/draft`, { part, value }, T);
+await hdraft('models', { steps: [{ action: 'create', name: 'Order', title: 'Orders', description: 'x', rationale: 'x', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', helper: 'x' }] }] });
+await hdraft('webhooks', [{ model: 'Order', events: ['create'], url: '{{hookUrl}}', note: 'x' }]);
+r = await hdraft('questions', [{ key: 'hookUrl', label: 'Where should orders be sent?', kind: 'url', required: false }]);
+ok('an optional address used only by a webhook is no warning (skipping it switches the webhook off)', !r.body.doc.validation.warnings.some(i => i.part === 'questions'), JSON.stringify(r.body.doc.validation.warnings.map(i => i.message)));
 
 /* --------------------------------------------------------- nothing built */
 const after = await snapshot();
@@ -111,6 +152,6 @@ ok('no collections created', after.collections === before.collections);
 ok('no sidebar categories created', after.categories === before.categories);
 ok('dry scope never written', (await db.collection('modeldefinitions').countDocuments({ project: new ObjectId('00000000000000000000d0a2') })) === 0);
 
-await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-finance', 'smoke-blog'] } });
+await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-finance', 'smoke-blog', 'smoke-hooks'] } });
 await mc.close();
 done();

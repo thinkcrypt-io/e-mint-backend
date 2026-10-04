@@ -114,8 +114,9 @@ r = await call('POST', `${A}/templates`, {
 	key: 'smoke-preview-broken',
 	blueprint: {
 		overview: { name: 'Smoke preview broken' },
-		models: { steps: [{ action: 'create', name: 'Gadget', title: 'Gadgets', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }, { key: 'size', label: 'Size', kind: 'select', options: [{ value: 's', label: 'S' }] }] }] },
-		sampleData: { Gadget: [{ name: 'Ok', size: 's' }, { name: 'Bad', size: 'xxl' }] },
+		// Two records with one unique name: the checks before the build can't see it, so the build itself fails and is undone.
+		models: { steps: [{ action: 'create', name: 'Gadget', title: 'Gadgets', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true, unique: true }, { key: 'size', label: 'Size', kind: 'select', options: [{ value: 's', label: 'S' }] }] }] },
+		sampleData: { Gadget: [{ name: 'Twin', size: 's' }, { name: 'Twin', size: 's' }] },
 	},
 }, T);
 const brokenId = r.body.doc._id;

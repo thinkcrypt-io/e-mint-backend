@@ -15,6 +15,7 @@ import {
 	TemplateType,
 	WEBHOOK_EVENTS,
 	placeholdersUsed,
+	relativeDate,
 	stepIdentity,
 } from './blueprint.js';
 
@@ -109,6 +110,89 @@ const answerDefaults = (rawSteps: any[], questions: any[], add: (severity: Sever
 		visit(s.fields, 'fields', '');
 	});
 	return steps as any[];
+};
+
+/** How a sample link names its record (records.helpers `refIds`): these fields, or any unique text field, ignoring case. */
+const NAMING = ['name', 'title', 'label', 'code', 'email', 'slug'];
+const MAX_SAMPLE_ISSUES = 6;
+
+/**
+ * Sample records checked the way the build will save them — a wrong choice,
+ * a missing required value, a number or date that isn't one, or a link to a
+ * record the sample data doesn't have would otherwise only fail the build.
+ * Answers (`{{key}}`) are left alone; dates may be relative ("now-12d").
+ */
+const checkSampleData = (
+	rawSteps: any[],
+	models: PlannedModel[],
+	sampleOf: Map<string, any[]>,
+	add: (severity: Severity, part: Part, path: string, message: string, fix: string) => void
+) => {
+	const stepOf = (m: PlannedModel) => rawSteps.find(s => s?.action !== 'update' && [stepIdentity(s).name, stepIdentity(s).title].some(x => lower(x) === lower(m.name) || lower(x) === lower(m.title)));
+	const modelOf = (ref: string) => models.find(m => !m.kit && [m.name, m.title, m.route].some(x => lower(x) === lower(ref)));
+	const isAnswer = (v: any) => typeof v === 'string' && v.includes('{{');
+	/** Every way a sample record of `m` can be linked to, lower-cased; null when it can't be known (codes are made at build time). */
+	const namesOf = (m: PlannedModel) => {
+		const s = stepOf(m);
+		if (!s || s.code?.enabled) return null;
+		const keys = new Set([...NAMING, ...(s.fields || []).filter((f: any) => f?.unique && ['text', 'email', 'url'].includes(f.kind)).map((f: any) => f.key)]);
+		const out = new Set<string>();
+		for (const r of sampleOf.get(m.name) || []) for (const k of keys) if (r?.[k] !== undefined && r[k] !== null) out.add(lower(String(r[k]).trim()));
+		return out;
+	};
+
+	for (const [name, rows] of sampleOf) {
+		const m = models.find(x => x.name === name);
+		const s = m && !m.kit ? stepOf(m) : null;
+		if (!m || !s) continue;
+		const issues: string[] = [];
+		const fields: any[] = (s.fields || []).filter((f: any) => f?.key);
+		rows.forEach((r: any, i: number) => {
+			const at = `record ${i + 1}`;
+			for (const f of fields) {
+				const v = r?.[f.key];
+				const label = f.label || f.key;
+				if (v === undefined || v === null || v === '') {
+					if (f.required && f.default === undefined && !['formula', 'boolean'].includes(f.kind)) issues.push(`${at} has no ${label}, which is required`);
+					continue;
+				}
+				if (isAnswer(v)) continue;
+				const options = (f.options || []).map((o: any) => String(typeof o === 'object' ? o?.value : o));
+				const choices = options.some((o: string) => o.includes('{{')) ? null : options;
+				if (f.kind === 'select' && choices?.length && !choices.includes(String(v)))
+					issues.push(`${at}: ${label} “${v}” isn’t one of ${choices.join(', ')}`);
+				else if (f.kind === 'multiselect' && choices?.length) {
+					const bad = ([] as any[]).concat(v).filter(x => !choices.includes(String(x)));
+					if (bad.length) issues.push(`${at}: ${label} ${bad.map(x => `“${x}”`).join(', ')} isn’t one of ${choices.join(', ')}`);
+				} else if (f.kind === 'number' && (typeof v === 'boolean' || Array.isArray(v) || Number.isNaN(Number(v))))
+					issues.push(`${at}: ${label} “${v}” isn’t a number`);
+				else if (f.kind === 'date' && relativeDate(v) === v && Number.isNaN(Date.parse(String(v))))
+					issues.push(`${at}: ${label} “${v}” isn’t a date — use 2026-10-01, or relative: now, now-12d, now+1m`);
+				else if (f.kind === 'reference' || f.kind === 'references') {
+					const target = modelOf(f.ref);
+					if (!target) continue;
+					const names = namesOf(target);
+					if (!names) continue;
+					const wanted = ([] as any[]).concat(v).filter(x => typeof x === 'string' && !/^[a-f0-9]{24}$/i.test(x));
+					const missing = wanted.filter(x => !names.has(lower(x.trim())));
+					if (missing.length)
+						issues.push(
+							sampleOf.has(target.name)
+								? `${at}: ${label} links to ${missing.map(x => `“${x}”`).join(', ')}, which no sample ${target.title} record is called`
+								: `${at}: ${label} links to a ${target.title} record, but there are no sample ${target.title}`
+						);
+				}
+			}
+		});
+		if (issues.length)
+			add(
+				'error',
+				'sampleData',
+				`sampleData.${name}`,
+				`Sample ${m.title}: ${issues.slice(0, MAX_SAMPLE_ISSUES).join('; ')}${issues.length > MAX_SAMPLE_ISSUES ? ` — and ${issues.length - MAX_SAMPLE_ISSUES} more` : ''}.`,
+				'Fix those records — the build would stop on them and the preview would fail.'
+			);
+	}
 };
 
 export const validateTemplate = async (req: any, type: TemplateType, bp: any): Promise<Validation> => {
@@ -250,8 +334,10 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		if (e.ownerOnly && e.auth !== 'customer')
 			add('error', 'endpoints', `${where}.ownerOnly`, `${e.model}: “each customer only their own records” needs signed-in customers.`, 'Set who can call it to signed-in customers, or turn owner-only off.');
 		if (!e.actions.length) add('warning', 'endpoints', `${where}.actions`, `${e.model}: no actions picked, so it will be list and get.`, 'Pick the actions the site or app needs.');
-		if (e.actions.some((a: string) => ['create', 'update', 'delete'].includes(a)) && e.auth === 'none')
-			add('warning', 'endpoints', where, `${e.model}: anyone on the internet can write to it.`, 'Fine for a contact form; otherwise require signed-in customers.');
+		// Create-only is a form (contact, sign-up): anyone can send, nobody can read back — no warning.
+		const formOnly = e.actions.length === 1 && e.actions[0] === 'create';
+		if (e.auth === 'none' && !formOnly && e.actions.some((a: string) => ['create', 'update', 'delete'].includes(a)))
+			add('warning', 'endpoints', where, `${e.model}: anyone on the internet can write to it.`, 'Fine for a contact form (then open create only); otherwise require signed-in customers.');
 		if (!e.note) add('warning', 'endpoints', `${where}.note`, `${e.model}’s endpoint has no note.`, 'Say what the site or app uses it for — the API reference shows it.');
 	});
 
@@ -327,14 +413,24 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 	}
 
 	/* -------------------------------------------------------- sampleData */
+	const sampleOf = new Map<string, any[]>();
 	for (const [model, rows] of Object.entries(bp.sampleData || {}) as [string, any[]][]) {
 		const m = find(model);
 		if (!m) unknownModel('sampleData', `sampleData.${model}`, 'Sample data', model);
 		else if (!rows.length) add('warning', 'sampleData', `sampleData.${model}`, `There are no sample ${m.title} records.`, 'Add a few, or remove the empty list.');
+		else sampleOf.set(m.name, rows);
 	}
+	checkSampleData(rawSteps, models, sampleOf, add);
 
 	/* --------------------------------------------------------- questions */
 	const qKeys = new Set<string>();
+	// An address asked only for a webhook may be skipped: the webhook is then made switched off, as intended.
+	const { webhooks: _webhooks, questions: _questions, ...rest } = bp || {};
+	const elsewhere = JSON.stringify(rest);
+	const webhookOnly = (q: any) =>
+		q.kind === 'url' &&
+		(bp.webhooks || []).some((w: any) => new RegExp(`\\{\\{\\s*${q.key}\\s*\\}\\}`).test(w.url || '')) &&
+		!new RegExp(`\\{\\{\\s*${q.key}\\s*\\}\\}`).test(elsewhere);
 	(bp.questions || []).forEach((q: any, i: number) => {
 		const where = `questions[${i}]`;
 		if (!/^[a-z][A-Za-z0-9_]{0,39}$/.test(q.key))
@@ -345,7 +441,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		qKeys.add(q.key);
 		if (!q.label) add('error', 'questions', `${where}.label`, `Question “${q.key}” has no label.`, 'Write the question as people will read it, e.g. “Which currency do you bill in?”.');
 		if (q.kind === 'select' && !q.options?.length) add('error', 'questions', `${where}.options`, `“${q.label || q.key}” is a choice with no options.`, 'Add the options to choose from.');
-		if (!q.required && !q.default)
+		if (!q.required && !q.default && !webhookOnly(q))
 			add('warning', 'questions', `${where}.default`, `“${q.label || q.key}” is optional with no default, so skipping it leaves the text blank.`, 'Give it a default, or make it required.');
 	});
 	const used = placeholdersUsed(bp);
