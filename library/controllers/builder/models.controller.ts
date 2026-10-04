@@ -132,6 +132,8 @@ export const PUBLIC_API = Joi.object({
 	actions: Joi.array().items(Joi.string().valid('list', 'get', 'create', 'update', 'delete')).unique().max(5).default([]),
 	auth: Joi.string().valid('none', 'customer').default('none'),
 	ownerOnly: Joi.boolean().default(false),
+	/** Left out, the note it has is kept. */
+	note: Joi.string().trim().allow('').max(300),
 });
 
 const bodySchema = Joi.object({
@@ -1018,7 +1020,7 @@ export const updatePublicApi = async (req: any, res: Response): Promise<Response
 		if (value.enabled && !value.actions.length) return fail(res, 400, 'Choose at least one action, or turn the public API off');
 		const def: any = mongoose.isValidObjectId(req.params.id) ? await ModelDefinition.findById(req.params.id) : null;
 		if (!def) return fail(res, 404, 'Model not found');
-		def.publicApi = value;
+		def.publicApi = { ...value, note: value.note ?? def.publicApi?.note ?? '' };
 		def.version = (def.version || 1) + 1;
 		def.updatedBy = req.user?._id;
 		await def.save();

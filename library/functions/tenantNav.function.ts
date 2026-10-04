@@ -14,9 +14,23 @@ const section = (title: string, icon: string, items: Omit<SidebarItemType, 'path
 		...(i === 0 && { startOfSection: true, sectionTitle: title, sectionIcon: icon }),
 	}));
 
+/** The public API's pages: its settings and reference, webhooks, and the customers who sign in to it. */
+const apiItems = (can: (key: string) => boolean) => [
+	...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
+	...(can('build') ? [{ title: 'Webhooks', href: '/webhooks', icon: 'send' }] : []),
+	...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
+];
+
+/**
+ * What goes straight after the Dashboard, before the project's own sections:
+ * an API project's API (docs/templates T-09, TD2) — it's what the project is.
+ */
+export const tenantLead = (permissions: string[], projectType?: string): SidebarItemType[] =>
+	projectType === 'api' ? section('API', 'plug-zap', apiItems(key => grants(permissions, [key]))) : [];
+
 export const tenantNav = (
 	permissions: string[],
-	{ inProject, projectType }: { inProject: boolean; projectType?: 'app' | 'website' }
+	{ inProject, projectType }: { inProject: boolean; projectType?: 'app' | 'website' | 'api' }
 ): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
 	// A website: its analytics; any project: the customers of its public API.
@@ -28,12 +42,8 @@ export const tenantNav = (
 					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 			  ])
 			: [];
-	const audience = inProject
-		? section('Audience', 'users-round', [
-				...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
-				...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
-		  ])
-		: [];
+	// An API project has these at the top instead (tenantLead).
+	const audience = inProject && projectType !== 'api' ? section('Audience', 'users-round', apiItems(can)) : [];
 	// Everyone who works with records uses the media library, so it isn't kept under Build.
 	const files = inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : [];
 	const build = inProject && can('build')

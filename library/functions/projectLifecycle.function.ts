@@ -23,6 +23,9 @@ import { PANEL_PAGES, uniqueSlug } from './tenancy.function.js';
 import { projectHooks } from './projectHooks.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import './websiteKit.function.js';
+import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
+import WebhookDelivery from '../models/tenancy/webhookDelivery.model.js';
+import ApiCall from '../models/tenancy/apiCall.model.js';
 
 /**
  * Making and removing a tenant project — one place for the projects router
@@ -46,6 +49,9 @@ const SCOPED = [
 	WebsiteEvent,
 	WebsiteSettings,
 	History,
+	ProjectWebhook,
+	WebhookDelivery,
+	ApiCall,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */

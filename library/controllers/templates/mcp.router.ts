@@ -168,7 +168,7 @@ ${Object.entries(KIND_GUIDE)
 - dashboard: [{ type: 'stat'|'chart'|'recent', route (a model's name), title, metric?: 'count'|'sum'|'avg', field?, range?, group?: 'time'|'field', by?, chart?, columns?, limit? }].
 - roles: [{ name, description, permissions }] — organization roles, permissions from: ${ORG_PERMISSION_KEYS.join(', ')}. Owner, Admin and Member exist already.
 - endpoints: [{ model, actions (${PUBLIC_ACTIONS.join(', ')}), auth: 'none'|'customer', ownerOnly, note (what the site/app uses it for) }].
-- webhooks (api): [{ model, events (${WEBHOOK_EVENTS.join(', ')}), note }] — the receiving URL is asked when the template is used.
+- webhooks (api): [{ model, events (${WEBHOOK_EVENTS.join(', ')}), url, note }] — url is where it's sent, usually a question's placeholder (add a question of kind "url", e.g. {{orders_webhook_url}}); left empty, the webhook is made switched off for the project to fill in. Deliveries are signed (x-mint-signature, HMAC-SHA256).
 - website.pages: [{ path ("/", "/about"), name, status, template (${PAGE_TEMPLATES.join(', ')}), showInMenu, priority, parent (a path), seo: { title, description (both, or neither), image, keywords[] }, contents: [{ slug (unique on the page), name, section, category (${BLOCK_CATEGORIES.join(', ')}), content, subContent, btnText, url, image, list[], card[], gallery[], richContent }] }]
 - website.settings: { identity: { siteName, tagline, logo, favicon, footerText, primaryColor, secondaryColor, fontFamily }, contact: {…}, social: {…}, seo: { metaTitle, titleTemplate ("%s · Acme"), metaDescription, ogImage, keywords[] } }
 - website.starter: { repoUrl (https), framework, deployUrl, env: [{ key, value }] }
@@ -326,7 +326,7 @@ const TOOLS: Tool[] = [
 	partTool('set_dashboard', 'Set the dashboard', 'dashboard', 'The home dashboard’s widgets: [{ type, route (a model name), title, metric, field, range, group, by, chart, columns, limit }]. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the dashboard'),
 	partTool('set_roles', 'Set the roles', 'roles', 'Organization roles the template suggests: [{ name, description, permissions }]. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the roles'),
 	partTool('set_endpoints', 'Set the public API', 'endpoints', 'Public endpoints: [{ model, actions, auth, ownerOnly, note }]. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the public API'),
-	partTool('set_webhooks', 'Set the webhooks', 'webhooks', 'API templates: [{ model, events, note }]. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the webhooks'),
+	partTool('set_webhooks', 'Set the webhooks', 'webhooks', 'API templates: [{ model, events, url, note }] — url usually {{a_url_question}}. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the webhooks'),
 	partTool('set_questions', 'Set the questions', 'questions', 'What’s asked when the template is used: [{ key, label, help, kind, options, default, required }]. Answers replace {{key}}. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the questions'),
 	partTool('set_sample_data', 'Set the sample data', 'sampleData', 'Example records: { ModelName: [records] }, links by the linked record’s display value. Replaces all sample data.', { type: 'object' }, 'the sample data'),
 	partTool('set_setup_guide', 'Set the setup guide', 'guide', 'The checklist a new project shows: { steps: [{ title, body, page }], faq: [{ q, a }] }.', { type: 'object' }, 'the setup guide'),

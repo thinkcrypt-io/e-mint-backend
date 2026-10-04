@@ -1,6 +1,7 @@
 import History from '../models/history/model.js';
 import { displayModelName } from './routeRegistry.function.js';
 import { currentScope } from './tenantScope.function.js';
+import { fireWebhooks } from './webhooks.function.js';
 import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 
 /**
@@ -177,6 +178,9 @@ export const recordHistory = ({ req, action, model, doc, changes = [] }: RecordA
 
 		// An update that changed nothing is not worth an entry.
 		if (action === 'update' && changes.length === 0) return;
+
+		// Inside a project, the project's webhooks hear about it too (docs/templates T-09).
+		fireWebhooks({ model, event: action, doc, source: 'panel' });
 
 		const userName = req?.user?.name || req?.user?.username || 'Someone';
 		// Inside a project the model is `T<projectId>_Client`: kept and shown as `Client` (WO-36).

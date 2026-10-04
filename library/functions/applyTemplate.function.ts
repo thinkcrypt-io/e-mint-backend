@@ -18,6 +18,8 @@ import { normalizePermissions } from './tenantPermissions.function.js';
 import { scopedModel } from './routeRegistry.function.js';
 import { syncDynamicModels } from './dynamicModels.function.js';
 import { recordProjectEvent } from './recordHistory.function.js';
+import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
+import { newWebhookSecret, webhookUrlProblem } from './webhooks.function.js';
 import { runInScope } from './tenantScope.function.js';
 
 /**
@@ -53,6 +55,8 @@ export type ApplyResult = {
 	widgets: number;
 	roles: { created: string[]; skipped: string[] };
 	endpoints: string[];
+	/** Routes webhooks were made for (switched off when they have no usable address). */
+	webhooks: string[];
 	pages: string[];
 	records: Record<string, number>;
 	warnings: string[];
@@ -118,6 +122,7 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 		widgets: 0,
 		roles: { created: [], skipped: [] },
 		endpoints: [],
+		webhooks: [],
 		pages: [],
 		records: {},
 		warnings: [],
@@ -237,12 +242,24 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				const route = routeOf(e.model);
 				const def: any = await ModelDefinition.findOne({ route }, { publicApi: 1 }).lean();
 				const before = def?.publicApi ?? null;
-				const r = await setPublicApi(req, route, { actions: e.actions, auth: e.auth, ownerOnly: e.ownerOnly });
+				const r = await setPublicApi(req, route, { actions: e.actions, auth: e.auth, ownerOnly: e.ownerOnly, note: e.note });
 				if (r.error) throw fail('Public API', r.error);
 				undo.push({ step: 'Public API', run: () => ModelDefinition.updateOne({ route }, { $set: { publicApi: before } }) });
 				result.endpoints.push(route);
 			}
-			if ((bp.webhooks || []).length) result.warnings.push('Webhooks come with API projects (T-09) — not set up yet.');
+			/* 7b. Webhooks: an address the template (or an answer) gave that can be used, or switched off until the project sets one. */
+			step = 'Webhooks';
+			for (const w of bp.webhooks || []) {
+				const route = routeOf(w.model);
+				const url = /^https?:\/\//.test(w.url || '') ? w.url : '';
+				const problem = url ? await webhookUrlProblem(url) : null;
+				if (problem) result.warnings.push(`Webhook for ${route}: ${problem} It’s made switched off.`);
+				else if (!url) result.warnings.push(`Webhook for ${route} has no address — it’s made switched off until the project sets one.`);
+				const ok = !!url && !problem;
+				const hook: any = await ProjectWebhook.create({ route, events: w.events, url: ok ? url : '', active: ok, note: w.note, secret: newWebhookSecret(), createdBy: req.user?._id });
+				undo.push({ step: 'Webhooks', run: () => ProjectWebhook.deleteOne({ _id: hook._id }) });
+				result.webhooks.push(route);
+			}
 
 			/* 8. Website: settings, then pages (parents first). */
 			if (template.type === 'website') {

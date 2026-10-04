@@ -152,6 +152,8 @@ const webhooks = (v: any) =>
 	list(v, LIMITS.endpoints).map((w: any) => ({
 		model: str(w?.model || w?.route, 60),
 		events: strings(w?.events, 3, 10),
+		/** Where it's sent — usually a question's placeholder (`{{orders_webhook_url}}`); empty makes it switched off. */
+		url: str(w?.url, 500),
 		note: str(w?.note, 300),
 	}));
 

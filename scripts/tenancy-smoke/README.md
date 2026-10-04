@@ -31,6 +31,7 @@ Then, from this folder:
 | `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
 | `node templates-manage.mjs` | Template Studio T-05: publish with notes + explanation gate, versions/restore, duplicate, export/import, settings, delete vs archive, save a project as a template | removes its templates |
 | `node templates-mcp.mjs` | Template Studio T-06: the Templates MCP (`/templates/mcp`) — `emt_` keys (create, list, revoke), scopes, `emk_`/`emt_` kept apart, a whole session from create to preview link to publish | removes its templates and keys |
+| `node webhooks.mjs` | Template Studio T-09: an API project's sidebar; webhooks fired by panel and public-API changes, signed (checked here with the secret), retried 3 times and logged, dropped when deleted; Send test; a new secret; refused addresses (`ftp:`, cloud metadata); the API overview; an API template previewed with endpoints, an endpoint note and a webhook from a question's answer. A local receiver on a random port | deletes its project, template and preview |
 | `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |
 
 `./run-all.sh` runs them all in order (exit 1 on any FAIL).

@@ -267,3 +267,69 @@ Newest last. One entry per work order: what, files, how verified.
   permissions shown in their groups), three widgets including a chart moved to
   another model, totalling Amount by Kind (only choice/link fields offered) —
   saved together and reloaded as saved.
+
+## T-09 — API projects, API tabs, outgoing webhooks (2026-10-04)
+- **API projects** (`TenantProject.type` already allowed `api`): the tenant
+  sidebar leads with **API** — Public API, Webhooks, Customers — straight after
+  the Dashboard (`tenantNav.function.ts` `tenantLead`; apps and websites keep
+  them under Audience, now with Webhooks). The project's home opens on
+  `ApiOverview`: base address, endpoints on, calls and failed calls in the last
+  day, the 20 latest calls, webhooks on and their latest deliveries
+  (`GET /tenant/api/p/:id/api-overview`). New project offers **API**.
+- **Call log** `ApiCall` (tenantScoped, 7-day TTL): method, path, route,
+  status, ms, whether a customer token came — for API projects only, no
+  bodies, tokens or addresses.
+- **Webhooks** `ProjectWebhook` (route, events, url, secret `select:false`,
+  active, note, lastDelivery) and `WebhookDelivery` (the last 50 per webhook,
+  30-day TTL). `functions/webhooks.function.ts`: fired after the response from
+  `recordHistory` (every panel create/update/delete, bulk included) and from the
+  public API's create/update/delete; body `{ delivery, event, route, project,
+  source, at, record }` (the record as the public API shapes it, never password
+  fields); headers `x-mint-event`, `x-mint-delivery`, `x-mint-timestamp`,
+  `x-mint-signature` = `sha256=` HMAC-SHA256 of `<timestamp>.<body>`; 10 s
+  timeout, no redirects; non-2xx retried 3 times (×1, ×4, ×16 of 15 s in
+  production, 0.5 s in development, `WEBHOOK_RETRY_BASE_MS`); each retry
+  re-reads the webhook, so deleting or switching it off stops them. Addresses:
+  http(s) only, no credentials, link-local (cloud metadata) always refused,
+  private networks refused in production (`WEBHOOK_ALLOW_PRIVATE=1`).
+  Retries wait in the process — a restart drops them (the log shows them
+  unfinished).
+- **Tenant API** `routes-tenant/webhooks.router.ts` (`build`): list (with the
+  models to pick from, never secrets), create (secret shown once), update (no
+  address → switched off), delete (with its log), new secret, Send test (one
+  try, now, with the newest record), deliveries. History entries for each.
+  `webhooks`, `api-overview`, `history` reserved as tenant routes; `webhooks` a
+  panel page. Deleting a project removes its webhooks, log and calls.
+- **Endpoint notes**: `ModelDefinition.publicApi.note` (kept when a body leaves
+  it out), set from a template's endpoint note, returned by the public API's
+  info and shown in the tenant's API reference; capture reads it back.
+- **Templates**: a webhook gains `url` (usually `{{a_url_question}}`); empty is
+  a warning (made switched off), a non-address an error; an API template with no
+  endpoints is a warning. The apply engine makes the webhooks (on when the
+  filled address passes the address checks, otherwise off with a warning) —
+  previews too, so Send test works there. MCP instructions say so.
+- **Admin, tenant**: Webhooks page (`app/webhooks/`: list with on/off, Send
+  test, new secret, delete, delivery log with what was sent and the answer, and
+  how to check a signature in Node); example requests — curl and fetch — on
+  every endpoint of the API reference (`ExampleRequest`, `api.ts`
+  `exampleRequests`). `StatusDot`'s green was the theme's black (the green scale
+  is mapped onto the brand); it uses `green.fg` now.
+- **Admin, studio**: **Public API** tab (per model: public, actions, who may
+  call, note, example requests) and **Webhooks** tab (model, events, address
+  from a web-address question or typed, note; what the receiver gets).
+- **Guides**: `/user-docs/public-api#examples`, `#webhooks`,
+  `#verify-signatures` and troubleshooting rows; `/user-docs/projects#api`;
+  `/docs/templates` Public API, Webhooks and types sections.
+- **Marketing site**: changelog entry, API projects and Webhooks tiles, a
+  "Tell your other systems" step (with its drawing) in Build an API.
+- **Not done**: separate keys for the public API (it has none — public is
+  public, customers sign in), so the API section has no "API keys" entry; AI
+  keys stay under Build → Connect AI.
+- **Verified**: backend and admin `tsc` clean; new smoke `webhooks.mjs`
+  (46 checks, a local receiver verifying every signature) and every other suite
+  green; browser on the tenant panel (:3011): an API project's sidebar and
+  dashboard with real calls and deliveries, Webhooks page (Send test → toast and
+  log, Add a webhook with a bad address refused in the form, secret shown once,
+  the new webhook delivering a booking made by pasting the reference's curl),
+  New project with three kinds; studio (:3012): Public API and Webhooks tabs
+  saved to the draft with the expected warnings.

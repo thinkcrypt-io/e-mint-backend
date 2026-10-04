@@ -7,7 +7,7 @@ import { canOpenProject, publicProject, isId, projectPeople } from '../library/f
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
 import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
-import { tenantNav } from '../library/functions/tenantNav.function.js';
+import { tenantLead, tenantNav } from '../library/functions/tenantNav.function.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import defineRoutes from '../routes-admin/common/router.js';
 import SidebarCategory from '../library/models/sidebarcategories/model.js';
@@ -25,6 +25,7 @@ import ProjectCustomer from '../library/models/tenancy/projectCustomer.model.js'
 import analyticsRouter from './analytics.router.js';
 import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
+import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -46,6 +47,7 @@ import { customQuery } from '../middleware/index.js';
  *   /upload, /media, /files       uploads and the media manager over the project's own files —
  *                                 or the organization's shared library (mediaScope, WO-23)
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
+ *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
  */
 const router = express.Router({ mergeParams: true });
@@ -93,7 +95,10 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const items = await buildSidebar(req.permissions || [], (permissions, key) => grants(permissions, [key]));
 		// The tenant panel serves project tables under /t/<route> (admin panel.ts pagePath).
 		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));
-		return res.status(200).json([...project, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type })]);
+		// An API project leads with its API, straight after the dashboard (T-09).
+		const [home, ...own] = project;
+		const lead = tenantLead(req.permissions || [], req.project.type);
+		return res.status(200).json([home, ...lead, ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);
 		return res.status(500).json({ message: 'Something went wrong' });
@@ -159,6 +164,9 @@ router.use('/analytics', analyticsRouter);
 router.use('/', siteRouter);
 // What happened in the project: records, models, the public API, the site setup (WO-36).
 router.use('/history', historyRouter);
+// Outgoing webhooks, and what an API project's dashboard shows (docs/templates T-09).
+router.use('/webhooks', webhooksRouter);
+router.use('/api-overview', overviewRouter);
 
 // Who a restricted model's records can be shared with (per-record access, D19):
 // the organization's members who can open this project. Shaped like a list

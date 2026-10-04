@@ -136,7 +136,9 @@ name, title or route (a website: also the kit's `pages`, `seo`,
 | Preview page + banner (tenant panel) | `admin/src/app/preview/page.tsx`, `admin/src/components/library/tenant/PreviewBanner.tsx` |
 | MCP | `backend/library/controllers/mcp/transport.ts` (shared), `backend/library/controllers/templates/mcp.router.ts` → `/templates/mcp`; keys `templates/keys.ts` |
 | AI sample data | `backend/library/controllers/templates/sampleAi.ts` → `POST /admin/api/templates/:id/ai/sample-data` |
-| Panel | `admin/src/app/templates/` — gallery `page.tsx`, shared `_components/` (ui, StudioDialog, New template, Capture), editor `[id]/page.tsx` + `[id]/_components/` (one file per tab, ProblemsPanel, Preview/Publish dialogs, PartSummary for parts whose editor is still to come); RTK `admin/src/components/library/store/services/templatesApi.ts` |
+| Panel | `admin/src/app/templates/` — gallery `page.tsx`, shared `_components/` (ui, StudioDialog, New template, Capture), editor `[id]/page.tsx` + `[id]/_components/` (one file per tab, ProblemsPanel, Preview/Publish dialogs, PartSummary for the website parts until T-10); RTK `admin/src/components/library/store/services/templatesApi.ts` |
 | Guide | `admin/src/app/docs/templates/page.tsx`, listed in `docs/_components/guides.ts` |
-| Smoke | `backend/scripts/tenancy-smoke/templates*.mjs` (in `run-all.sh`) |
+| API projects, webhooks (T-09) | Models `library/models/tenancy/projectWebhook.model.ts`, `webhookDelivery.model.ts`, `apiCall.model.ts`; sending `library/functions/webhooks.function.ts` (fired from `recordHistory` and `routes-public/public.router.ts`); tenant API `routes-tenant/webhooks.router.ts` → `/tenant/api/p/:id/webhooks` and `/api-overview`; sidebar `library/functions/tenantNav.function.ts` (`tenantLead`) |
+| API projects, webhooks — panel | `admin/src/app/webhooks/` (page, dialog, delivery log, `verify.ts`), `admin/src/components/library/tenant/ApiOverview.tsx` (an API project's dashboard), example requests `admin/src/app/public-api/_components/ExampleRequest.tsx` + `api.ts` `exampleRequests`; studio tabs `EndpointsTab.tsx`, `WebhooksTab.tsx` |
+| Smoke | `backend/scripts/tenancy-smoke/templates*.mjs`, `webhooks.mjs` (in `run-all.sh`) |
 | Sidebar entry | Config → Templates, seeded by `backend/scripts/seedTemplateAccess.js` |

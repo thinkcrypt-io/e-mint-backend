@@ -78,6 +78,8 @@ const schema = new Schema<any>(
 			actions: { type: [String], enum: ['list', 'get', 'create', 'update', 'delete'], default: undefined },
 			auth: { type: String, enum: ['none', 'customer'], default: 'none' },
 			ownerOnly: { type: Boolean, default: false },
+			/** What the site or app uses it for — shown in the API reference (a template's endpoint note, T-09). */
+			note: { type: String, trim: true, maxlength: 300, default: '' },
 		},
 		fields: { type: [fieldSchema], default: [] },
 		active: { type: Boolean, default: true },

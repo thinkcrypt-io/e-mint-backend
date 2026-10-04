@@ -200,8 +200,20 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		const bad = w.events.filter((ev: string) => !WEBHOOK_EVENTS.includes(ev));
 		if (bad.length || !w.events.length)
 			add('error', 'webhooks', `${where}.events`, `Webhook ${i + 1} needs events from: ${WEBHOOK_EVENTS.join(', ')}.`, 'Pick when it fires.');
+		if (!w.url)
+			add(
+				'warning',
+				'webhooks',
+				`${where}.url`,
+				`Webhook ${i + 1} has no address, so it’s made switched off.`,
+				'Ask for it: add a question of kind “url” and put its {{key}} here — or leave it for the project to fill in.'
+			);
+		else if (!/\{\{\s*[\w-]+\s*\}\}/.test(w.url) && !/^https?:\/\/[^\s/]+/.test(w.url))
+			add('error', 'webhooks', `${where}.url`, `Webhook ${i + 1}’s address “${w.url}” isn’t a web address.`, 'Start it with https://, or use a question’s {{key}}.');
 		if (!w.note) add('warning', 'webhooks', `${where}.note`, `Webhook ${i + 1} has no note.`, 'Say what the receiving system does with it.');
 	});
+	if (type === 'api' && !(bp.endpoints || []).length)
+		add('warning', 'endpoints', 'endpoints', 'This API template opens no endpoints.', 'Turn on the public API for the models the tenant’s site or app calls (Endpoints tab).');
 
 	/* ----------------------------------------------------------- website */
 	if (type === 'website') {

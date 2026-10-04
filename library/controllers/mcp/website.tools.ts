@@ -597,7 +597,7 @@ export const setPublicApi = async (req: any, model: string, input: any) => {
 	if (error) return { error: error.details[0].message.replace(/"/g, '') };
 	if (value.ownerOnly && value.auth !== 'customer') return { error: 'Owner-only records need signed-in customers (auth: "customer").' };
 	if (value.enabled && !value.actions.length) value.actions = ['list', 'get'];
-	def.publicApi = value;
+	def.publicApi = { ...value, note: value.note ?? def.publicApi?.note ?? '' };
 	def.version = (def.version || 1) + 1;
 	await def.save();
 	await syncDynamicModels({ app: req.app, force: true });

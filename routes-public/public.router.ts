@@ -6,7 +6,7 @@ import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import Organization from '../library/models/tenancy/organization.model.js';
 import ProjectCustomer, { CUSTOMER_TOKEN_KIND } from '../library/models/tenancy/projectCustomer.model.js';
 import ModelDefinition from '../library/models/builder/modelDefinition.model.js';
-import { runInScope } from '../library/functions/tenantScope.function.js';
+import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 import {
 	compiledModel,
 	displayFieldOf,
@@ -24,6 +24,8 @@ import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
+import { fireWebhooks } from '../library/functions/webhooks.function.js';
+import ApiCall from '../library/models/tenancy/apiCall.model.js';
 
 /**
  * Tells the project's people who can see `route` that something came in from
@@ -95,6 +97,30 @@ router.use(async (req: any, res: any, next: any) => {
 	}
 });
 
+// An API project's calls, for its dashboard's "recent calls" (docs/templates T-09):
+// method, path, answer and time — nothing sent or signed in with.
+router.use((req: any, res: any, next: any) => {
+	if (req.project?.type !== 'api' || req.method === 'OPTIONS') return next();
+	const started = Date.now();
+	const scope = currentScope();
+	res.on('finish', () => {
+		if (!scope) return;
+		const path = String(req.path || '/').slice(0, 300);
+		const route = path.split('/')[1] || '';
+		runInScope(scope, () =>
+			ApiCall.create({
+				method: req.method,
+				path,
+				route: route === 'auth' ? '' : route.slice(0, 60),
+				status: res.statusCode,
+				ms: Date.now() - started,
+				customer: String(req.headers.authorization || '').startsWith('Bearer '),
+			})
+		).catch(() => undefined);
+	});
+	next();
+});
+
 /** The signed-in customer of this project, or null. */
 const customerOf = async (req: any) => {
 	const header = String(req.headers.authorization || '');
@@ -135,6 +161,7 @@ router.get(
 				actions: d.publicApi.actions || [],
 				auth: d.publicApi.auth || 'none',
 				ownerOnly: !!d.publicApi.ownerOnly,
+				...(d.publicApi.note && { note: d.publicApi.note }),
 				fields: d.fields.map((f: any) => ({ key: f.key, label: f.label || f.key, kind: f.kind, required: !!f.required, ...(f.options?.length && { options: f.options.map((o: any) => o.value) }) })),
 				...(d.publicApi.actions || []).includes('list') && listCapabilities(d),
 			})),
@@ -778,6 +805,7 @@ router.post(
 			record: doc._id,
 		});
 		if (req.project.type === 'website') forwardConversion(req.project, req, 'lead', { ...contactOf(req.body), form: ctx.def.title || ctx.def.name });
+		fireWebhooks({ route: ctx.def.route, event: 'create', doc, source: 'api' });
 		return shape(doc.toObject(), ctx.def);
 	})
 );
@@ -791,11 +819,13 @@ router.put(
 		if (!doc) throw new TenancyError(404, 'Not found');
 		doc.set(bodyOf(req, ctx));
 		applyFormulas(doc, ctx.formulas);
+		const changed = doc.isModified();
 		try {
 			await doc.save();
 		} catch (e) {
 			throw invalid(e);
 		}
+		if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
 		return shape(doc.toObject(), ctx.def);
 	})
 );
@@ -807,6 +837,7 @@ router.delete(
 		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
 		const gone = await ctx.Model.findOneAndDelete({ _id: req.params.id, ...owned(ctx) });
 		if (!gone) throw new TenancyError(404, 'Not found');
+		fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
 		return { message: 'Deleted' };
 	})
 );

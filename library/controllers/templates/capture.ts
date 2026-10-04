@@ -104,7 +104,7 @@ export const captureProject = async (projectId: any, input: { name?: string; sam
 
 		const endpoints = own
 			.filter(d => d.publicApi?.enabled)
-			.map(d => ({ model: d.name, actions: d.publicApi.actions || [], auth: d.publicApi.auth || 'none', ownerOnly: !!d.publicApi.ownerOnly, note: '' }));
+			.map(d => ({ model: d.name, actions: d.publicApi.actions || [], auth: d.publicApi.auth || 'none', ownerOnly: !!d.publicApi.ownerOnly, note: d.publicApi.note || '' }));
 
 		let website: any;
 		if (type === 'website') {
