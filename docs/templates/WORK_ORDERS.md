@@ -29,7 +29,9 @@ platform's 30-second request limit, so the MCP client saw only "the
 connector's server returned an error" while the build finished anyway. Now a
 request waits 20 s (`TEMPLATE_PREVIEW_WAIT_MS`), then answers `building` with
 a preview id; MCP `preview_status` / the studio's previews list (polled) say
-ready or failed. One build per template at a time.
+ready or failed. One build per template at a time. Pushed: backend `v3`
+`f2ab1437`, admin `main` `2692d1d`. Not yet deployed — production needs the
+backend redeployed before the T-13 previews work.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions and the Config → Templates sidebar item); the starter templates
