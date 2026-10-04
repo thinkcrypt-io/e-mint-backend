@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
+import { currentScope } from '../../functions/tenantScope.function.js';
 
 /**
  * The dashboard the builder saves (admin /dashboard-builder) and every admin's
@@ -10,7 +11,8 @@ import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
  */
 
 const MAX_WIDGETS = 40;
-const TYPES = ['stat', 'chart', 'recent'];
+/** `templates`: Template Studio's overview (docs/templates T-11) — the super admin's dashboard only. */
+const TYPES = ['stat', 'chart', 'recent', 'templates'];
 const SIZES = ['sm', 'md', 'lg', 'xl', 'full'];
 const METRICS = ['count', 'sum', 'avg'];
 const RANGES = ['all', 'today', '7d', '30d', '90d', 'month', '12m', 'year'];
@@ -46,6 +48,11 @@ const filtersOf = (list: any) =>
 /** A widget as saved: known properties only, each checked; unknown ones dropped. */
 export const normalizeWidget = (w: any, i: number) => {
 	const type = TYPES.includes(w?.type) ? w.type : null;
+	if (type === 'templates') {
+		// Inside a tenant project (or a template being checked) there are no templates to show.
+		if (currentScope()) return { error: `Widget ${i + 1}: the Templates overview is only for the super admin’s dashboard` };
+		return { widget: { id: str(w.id, 40) || `w${Date.now().toString(36)}${i}`, type, route: 'templates', title: str(w.title, 80), size: oneOf(w.size, SIZES, 'full'), filters: [] } };
+	}
 	const route = typeof w?.route === 'string' && ROUTE.test(w.route) ? w.route.replace(/\/+$/, '') : null;
 	if (!type || !route) return { error: `Widget ${i + 1}: pick what it shows and the model it reads` };
 	const out: any = {

@@ -377,3 +377,34 @@ Newest last. One entry per work order: what, files, how verified.
   browser on :3012: the five tabs render a four-page blog template, the tree
   nests, a block opens to its category's fields, the SEO preview reads, and a
   save round-trips unchanged apart from the edit.
+
+## T-11 — Connect Claude page + Templates dashboard widget (2026-10-04)
+- **Admin** `src/app/templates/connect/page.tsx` (**Connect Claude**, linked
+  from the gallery's header — the page the backend's key errors already name):
+  how the Templates MCP works and how it differs from Models → Connect your AI;
+  its `emt_` keys — create with the four scopes explained (read, write,
+  preview on; publish off, with a warning), expiry, the secret shown once with
+  the setup filled in, revoke; setup for Claude Code (`claude mcp add
+  --transport http emint-templates <backend>/templates/mcp/emt_…`), Claude
+  Desktop / claude.ai (connector URL) and other MCP clients (header or URL);
+  four starter prompts to copy.
+- **Widget** `templates` (Templates overview): `normalizeWidget` accepts it
+  outside any tenant scope only — a tenant project's dashboard (and a
+  template's dashboard part) refuses it; no route to read, size full or half.
+  `GET /admin/api/templates/stats` (view-templates): published, drafts,
+  archived, with problems, the 5 most used published, the 5 recently changed.
+  Admin: `TemplatesWidget` in `dashboard/widgets.tsx` (hidden for admins who
+  can't view templates), **Add templates overview** in the dashboard builder
+  (super admin panel only; added without a dialog; its pencil toggles width).
+- **Reserved keys**: `connect`, `new`, `keys`, `meta`, `stats`, `import`,
+  `previews`, `mcp`, `capture` — the studio's own paths — are never a
+  template's key (a new template gets `connect-2`; renaming to one is refused).
+- **Guides**: `/docs/templates#mcp` (the page, localhost vs deployed, the
+  widget), `/docs/dashboard-builder#templates`.
+- **Smoke** `templates-manage.mjs` +5 checks: reserved keys, stats, the
+  widget saved on the super admin dashboard and refused in a tenant project.
+- **Verified**: both `tsc` clean; every suite green; the connection made as
+  Claude Code makes it (initialize → tools/list: 23 tools → list_templates)
+  through the exact URL the page's command copies, with a key made in the
+  page's dialog; the widget added in the builder, saved, and on the home page
+  with live counts.

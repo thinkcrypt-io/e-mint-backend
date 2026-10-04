@@ -128,6 +128,29 @@ if (tenantProject) {
 } else ok('(no tenant project on this DB to capture — skipped)', true);
 await t(`/previews/${pv}`, 'DELETE');
 
+/* ------------------------------------- T-11: reserved keys, stats, the dashboard widget */
+r = await t('', 'POST', { type: 'app', key: 'connect', name: 'Smoke manage connect' });
+ok('a studio page’s word isn’t a key (connect → another)', r.status === 201 && r.body.doc.key !== 'connect', r.body?.doc?.key);
+await db.collection('projecttemplates').deleteMany({ _id: new (await import('../../node_modules/mongodb/lib/index.js')).ObjectId(r.body.doc._id) });
+r = await t(`/${id}/settings`, 'PUT', { key: 'stats' });
+ok('…nor can a template be renamed to one', r.status === 400 && /page of the studio/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await t('/stats');
+const want = await db.collection('projecttemplates').countDocuments({ status: 'published' });
+ok('stats: counts, most used, recently changed', r.status === 200 && r.body.published === want && typeof r.body.drafts === 'number' && typeof r.body.withProblems === 'number' && Array.isArray(r.body.mostUsed) && r.body.recent.length >= 1 && r.body.mostUsed.every(x => x.status === 'published'), JSON.stringify({ ...r.body, mostUsed: r.body?.mostUsed?.length, recent: r.body?.recent?.map(x => x.key) }));
+const dash = await call('GET', `${A}/dashboard`, null, T);
+r = await call('PUT', `${A}/dashboard`, { widgets: [...(dash.body.widgets || []), { type: 'templates', size: 'nope', title: 'Templates' }] }, T);
+ok('the Templates widget on the super admin dashboard', r.status === 200 && r.body.widgets?.some(w => w.type === 'templates' && w.route === 'templates' && w.size === 'full'), `${r.status} ${JSON.stringify(r.body?.widgets?.slice(-1))}`);
+if (dash.body.saved) await call('PUT', `${A}/dashboard`, { widgets: dash.body.widgets }, T);
+else await call('DELETE', `${A}/dashboard`, null, T);
+try {
+	const { load } = await import('./lib.mjs');
+	const st = load();
+	r = await call('PUT', `/tenant/api/p/${st.crm}/dashboard`, { widgets: [{ type: 'templates' }] }, st.pat);
+	ok('…but not in a tenant project', r.status === 400 && /super admin/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+} catch {
+	ok('(no tenant state for the tenant check — skipped)', true);
+}
+
 await db.collection('projecttemplates').deleteMany({ key: KEYS });
 await mc.close();
 done();
