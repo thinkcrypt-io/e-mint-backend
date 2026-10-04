@@ -450,8 +450,6 @@ Guide `/docs/templates#preview`.
 the call answers within 20 s and `preview_status` gives the link.
 
 ## Follow-ups (not numbered yet)
-The validator doesn't check sample-data links (a record linking a client
-that isn't in the sample fails only at build time — now reported, but late).
 A preview could build faster with fewer round trips per model (sidebar item,
 route settings and config versions are separate writes).
 
