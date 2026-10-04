@@ -912,3 +912,12 @@ Decisions D14–D17 (README).
 - To do: deploy the backend, run `node scripts/seedWaitlist.js`,
   create the website's Vercel project with its env vars.
 
+## 2026-10-04 — WO-41 follow-up: website v2 (backend as a service)
+- mint-webpage `9e76ce1` (pushed to mint-website `main`): repositioned as
+  backend as a service with the admin panel and back office built in
+  (plan: `mint-webpage/docs/CONTENT_PLAN.md`); new `/backend` page; home
+  sections for what you build, blocks-or-AI, the stack; dark mode; Manrope
+  body font.
+- Verified: `next build`; light, dark and phone-width screenshots (headless).
+- Waitlist seed run on Atlas `e-mint` (permission + sidebar item).
+
