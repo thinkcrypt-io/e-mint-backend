@@ -21,13 +21,13 @@ export const isTemplateType = (v: any): v is TemplateType => (TEMPLATE_TYPES as 
 export const isPart = (v: any): v is Part => (PARTS as readonly string[]).includes(v);
 
 /** By id or key. */
-export const findTemplate = async (idOrKey: string) => {
-	const q = str(idOrKey, 80);
+export const findTemplate = async (idOrKey: any) => {
+	const q = str(idOrKey == null ? '' : String(idOrKey), 80);
 	if (!q) return null;
 	return ProjectTemplate.findOne(mongoose.isValidObjectId(q) ? { _id: q } : { key: q.toLowerCase() });
 };
 
-const mustFind = async (idOrKey: string) => {
+const mustFind = async (idOrKey: any) => {
 	const doc = await findTemplate(idOrKey);
 	if (!doc) throw new BuildError(404, 'No template with that id or key — list the templates to find it.');
 	return doc;

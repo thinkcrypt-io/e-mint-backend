@@ -4,7 +4,7 @@
 # the server's dev mail log — run it by hand after org-1.mjs.
 cd "$(dirname "$0")" || exit 1
 fail=0
-for f in admin tenant-auth org-1 projects models media mcp public public-filters website website-mcp secrets analytics oversight access activity templates templates-preview templates-manage; do
+for f in admin tenant-auth org-1 projects models media mcp public public-filters website website-mcp secrets analytics oversight access activity templates templates-preview templates-manage templates-mcp; do
 	printf '%-12s ' "$f"
 	out=$(node "$f.mjs" 2>&1)
 	last=$(printf '%s\n' "$out" | tail -1)

@@ -8,17 +8,13 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-04)
 
-**Where it stands:** T-01…T-05 done and pushed (backend `v3` `34f95936`,
-admin `main` `5c92bd4`): the whole backend of the studio except the MCP.
-**Next: T-06** (Templates MCP) — paused on the user's word (2026-10-04, "we'll
-start T-06 later"). Its first, **untested** draft is on branch
-`templates-t06-wip` (remote `mint`): the shared MCP transport
-(`mcp/transport.ts`, with `/mcp` switched onto it), `emt_` key management
-(`templates/keys.ts`, `/admin/api/templates/keys`) and the server
-(`templates/mcp.router.ts` at `/templates/mcp`). Start T-06 from that branch:
-run `mcp.mjs` / `website-mcp.mjs` (the transport refactor touches the live
-MCP), write `templates-mcp.mjs`, then merge into `v3`. The user's rule: commit
-and push each WO as it finishes, then go on.
+**Where it stands:** T-01…T-06 done and pushed (backend `v3`, admin `main`):
+the whole backend of the studio, including the Templates MCP at
+`/templates/mcp` (T-06: shared MCP transport, `emt_` keys, 24 tools; the
+`templates-t06-wip` branch was merged and removed). **Next: T-07** — the
+studio in the super admin panel (gallery, New template, editor shell with the
+problems panel, common tabs). The user's rule: commit and push each WO as it
+finishes, then go on.
 
 **On deploy:** run `node scripts/seedTemplateAccess.js` on the real DB (the
 permissions); the starter templates seed themselves at boot.
@@ -30,7 +26,7 @@ permissions); the starter templates seed themselves at boot.
 → Handoff → Run it locally): scratch Mongo :27999, `backend-test` :5001
 (`npm run build` after every backend change, then restart), `admin-test`
 :3002 (super admin), `tenant` :3001 (previews). Smoke:
-`bash backend/scripts/tenancy-smoke/run-all.sh` (`templates.mjs` included).
+`bash backend/scripts/tenancy-smoke/run-all.sh` (the `templates*.mjs` suites included).
 :5001/:3001 may belong to another session — then run your own: Mongo
 `--port 27998`, the `backend-scratch` config (:5011), and
 `SMOKE_ROOT=http://localhost:5011 SMOKE_MONGO=mongodb://127.0.0.1:27998/emint_tenancy_dev`.
@@ -60,7 +56,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-03 | Apply engine (one plan, every blueprint part, undo) — BLOCKER | backend | L | done |
 | T-04 | Sandbox previews (system org, preview ticket, 24h cleanup) | both | L | done |
 | T-05 | Templates admin API (CRUD, draft/publish/versions, duplicate, import/export, save as template, usage) | backend | M | done |
-| T-06 | Templates MCP `/templates/mcp` (shared transport, `emt_` keys, tools) | backend | L | open |
+| T-06 | Templates MCP `/templates/mcp` (shared transport, `emt_` keys, tools) | backend | L | done |
 | T-07 | Studio: gallery, New template, editor shell, common tabs | admin | L | open |
 | T-08 | Studio: App tabs (Sidebar, Dashboard, Roles) | admin | M | open |
 | T-09 | API project type + API tabs + outgoing webhooks | both | L | open |

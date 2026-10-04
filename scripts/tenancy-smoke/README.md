@@ -30,6 +30,7 @@ Then, from this folder:
 | `node templates.mjs` | Template Studio (docs/templates T-02): starters as templates, validation with fixes, nothing built | counts collections in the scratch DB (`SMOKE_MONGO`); removes its own templates |
 | `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
 | `node templates-manage.mjs` | Template Studio T-05: publish with notes + explanation gate, versions/restore, duplicate, export/import, settings, delete vs archive, save a project as a template | removes its templates |
+| `node templates-mcp.mjs` | Template Studio T-06: the Templates MCP (`/templates/mcp`) — `emt_` keys (create, list, revoke), scopes, `emk_`/`emt_` kept apart, a whole session from create to preview link to publish | removes its templates and keys |
 | `node oversight.mjs` | the super admin's Organizations / Tenant users / Tenant projects | needs `seedTenancyAdmin.js` on the scratch DB |
 
 `./run-all.sh` runs them all in order (exit 1 on any FAIL).

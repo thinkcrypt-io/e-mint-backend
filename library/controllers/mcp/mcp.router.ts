@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import { Request } from 'express';
 import mongoose from 'mongoose';
 import { Admin } from '../../../imports.js';
 import { listModelFields, scopedModel } from '../../functions/routeRegistry.function.js';
@@ -17,6 +17,7 @@ import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import { namingFields, refIds } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
+import { createMcpRouter } from './transport.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -25,8 +26,8 @@ import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.too
  * the pages and the sidebar, through the same checks and build as the admin's
  * feature wizard (builder/features.service.ts).
  *
- * Streamable HTTP, stateless: every POST carries JSON-RPC and gets JSON back;
- * there's no server-sent stream (GET answers 405, which the spec allows).
+ * The protocol itself (Streamable HTTP, stateless JSON-RPC) is transport.ts,
+ * shared with the Templates MCP.
  *
  * Auth is an API key (Settings → API & MCP in the admin), acting as the admin
  * who made it and never beyond their role:
@@ -36,7 +37,6 @@ import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.too
  *     the request logger, so the key doesn't land in the logs.
  */
 
-const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const SERVER_INFO = { name: 'e-mint', title: 'e-mint admin builder', version: '1.0.0' };
 
 const adminUrl = (path = '') => `${(process.env.ADMIN_FRONTEND_URL || process.env.ADMIN_URL || '').replace(/\/$/, '')}${path}`;
@@ -645,106 +645,29 @@ const available = (t: ToolDef, caller: Caller) =>
 
 /* ------------------------------------------------------------ JSON-RPC */
 
-const rpcError = (id: any, code: number, message: string, data?: any) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message, ...(data && { data }) } });
-const rpcResult = (id: any, result: any) => ({ jsonrpc: '2.0', id, result });
-
-const handle = async (req: any, msg: any, caller: Caller) => {
-	if (!msg || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string') return rpcError(msg?.id, -32600, 'Invalid request');
-	const { id, method, params } = msg;
-	const notification = id === undefined;
-
-	switch (method) {
-		case 'initialize': {
-			const asked = String(params?.protocolVersion || '');
-			return rpcResult(id, {
-				protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
-				capabilities: { tools: { listChanged: false } },
-				serverInfo: SERVER_INFO,
-				instructions: caller.project?.type === 'website' ? INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS,
-			});
-		}
-		case 'ping':
-			return notification ? null : rpcResult(id, {});
-		case 'tools/list':
-			return rpcResult(id, {
-				tools: TOOLS.filter(t => caller.key.scopes?.includes(t.scope) && available(t, caller)).map(({ name, title, description, inputSchema, annotations }) => ({
-					name,
-					title,
-					description,
-					inputSchema,
-					annotations: { title, ...annotations },
-				})),
-			});
-		case 'tools/call': {
-			const tool = TOOLS.find(t => t.name === params?.name && available(t, caller));
-			if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
-			const denied = can(caller, tool.scope);
-			if (denied) return rpcResult(id, { content: [{ type: 'text', text: denied }], isError: true });
-			try {
-				await syncDynamicModels({ app: req.app });
-				const out = await tool.run(req, params?.arguments || {}, caller);
-				console.log(`MCP ${tool.name} by key ${caller.key.prefix}… (${caller.user.email || caller.user._id})${out.isError ? ' — refused' : ''}`);
-				return rpcResult(id, {
-					content: [{ type: 'text', text: out.text }],
-					...(out.data && { structuredContent: out.data }),
-					...(out.isError && { isError: true }),
-				});
-			} catch (e: any) {
-				console.error(`MCP ${tool.name}:`, e?.message);
-				return rpcResult(id, { content: [{ type: 'text', text: `The tool failed: ${e?.message || 'unknown error'}` }], isError: true });
-			}
-		}
-		default:
-			if (notification) return null; // notifications/initialized, cancelled, …
-			return rpcError(id, -32601, `Method not found: ${method}`);
-	}
-};
-
 type Authenticate = (req: Request) => Promise<Caller | { error: string }>;
 
-const makePost = (authenticateWith: Authenticate) => async (req: any, res: Response) => {
-	const caller = await authenticateWith(req);
-	if ('error' in caller) {
-		res.setHeader('WWW-Authenticate', 'Bearer realm="e-mint", error="invalid_token"');
-		return res.status(401).json(rpcError(null, -32001, caller.error));
-	}
-	// The builder resolves models against the admin API's routes, which it reads off the app.
-	req.user = caller.user;
-	req.permissions = caller.permissions;
-
-	const body = req.body;
-	const batch = Array.isArray(body);
-	const messages = batch ? body : [body];
-	if (!messages.length) return res.status(400).json(rpcError(null, -32600, 'Empty batch'));
-
-	const answer = async () => {
-		const replies = [];
-		for (const m of messages) {
-			const r = await handle(req, m, caller);
-			if (r) replies.push(r);
-		}
-		return replies;
-	};
-	// A tenant key works inside its project only: every query the tools make is scoped.
-	const replies = caller.scope ? await runInScope(caller.scope, answer) : await answer();
-	if (!replies.length) return res.status(202).end();
-	return res.status(200).json(batch ? replies : replies[0]);
-};
-
-const notAllowed = (req: Request, res: Response) => res.status(405).set('Allow', 'POST').json(rpcError(null, -32000, 'Use POST — this server has no event stream'));
-
 /** The MCP endpoint over one way of authenticating: the admins' (/mcp) or tenant projects' (/tenant/mcp). */
-export const makeMcpRouter = (authenticateWith: Authenticate) => {
-	const post = makePost(authenticateWith);
-	const router = express.Router();
-	router.post('/', post);
-	router.post('/:key', post);
-	router.get('/', notAllowed);
-	router.get('/:key', notAllowed);
-	router.delete('/', notAllowed);
-	router.delete('/:key', notAllowed);
-	return router;
-};
+export const makeMcpRouter = (authenticateWith: Authenticate) =>
+	createMcpRouter<Caller>({
+		info: SERVER_INFO,
+		instructions: caller => (caller.project?.type === 'website' ? INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS),
+		tools: caller => TOOLS.filter(t => available(t, caller)),
+		listed: (tool, caller) => !!caller.key.scopes?.includes((tool as ToolDef).scope),
+		denied: (tool, caller) => can(caller, (tool as ToolDef).scope),
+		authenticate: authenticateWith,
+		// The builder resolves models against the admin API's routes, which it reads off the app.
+		prepare: (req, caller) => {
+			req.user = caller.user;
+			req.permissions = caller.permissions;
+		},
+		// A tenant key works inside its project only: every query the tools make is scoped.
+		around: (caller, fn) => (caller.scope ? runInScope(caller.scope, fn) : fn()),
+		beforeCall: async req => {
+			await syncDynamicModels({ app: req.app });
+		},
+		logLine: (tool, caller, out) => `MCP ${tool.name} by key ${caller.key.prefix}… (${caller.user.email || caller.user._id})${out.isError ? ' — refused' : ''}`,
+	});
 
 export type { Caller, ToolDef };
 export { hashKey };

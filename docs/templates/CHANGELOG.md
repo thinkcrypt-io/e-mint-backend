@@ -143,3 +143,34 @@ Newest last. One entry per work order: what, files, how verified.
   `GET /:id/versions/:v`, `POST /:id/versions/:v/restore`, `POST /:id/duplicate`,
   `GET /:id/export`, `POST /import`, `POST /capture`, `DELETE /:id` (delete-templates).
 - Verified: smoke `templates-manage.mjs` (32 checks), all suites green.
+
+## T-06 — Templates MCP (2026-10-04)
+- `library/controllers/mcp/transport.ts` — the MCP protocol once for every
+  e-mint server (`createMcpRouter`: initialize, ping, tools/list, tools/call,
+  batches, key in header or path, 405 on GET/DELETE). `tools` is what a caller
+  may call, `listed` what tools/list offers, so a tool outside the key's
+  scopes still answers with the scope message, as before. The builder's
+  `/mcp` and `/tenant/mcp` (`makeMcpRouter`) moved onto it unchanged.
+- `templates/keys.ts` + `/admin/api/templates/keys` — `emt_` keys: create
+  (secret once, sha256 kept; scopes read/write/preview/publish, default the
+  first three; optional expiry), list (never the hash), revoke (own keys, or
+  any with `*`). `view-` / `create-` / `delete-template-keys`.
+- `templates/mcp.router.ts` → `/templates/mcp` (server `e-mint-templates`):
+  instructions (agree purpose and audience → format → one part at a time with
+  the user → questions before `{{key}}` → validate → preview → publish only on
+  a clear yes), `describe_template_format` (types and parts, every part's
+  shape, field kinds, publishing rules, an example), and list/get/create,
+  `update_overview`, `upsert_model`/`remove_model`, `set_sidebar`,
+  `set_dashboard`, `set_roles`, `set_endpoints`, `set_webhooks`,
+  `set_questions`, `set_sample_data`, `set_setup_guide`, `upsert_page`/
+  `remove_page`, `set_site_defaults`, `set_starter_code`, `validate_template`,
+  `preview_template` (the ticket link), `publish_template` (`confirm: true` +
+  notes), `export_template`, `import_template`. Every write answers with that
+  part's problems and fixes plus the template's overall state. A key acts as
+  its admin, never beyond their role (scope → permission in `NEEDS`).
+- Fix: `findTemplate` takes an ObjectId as well as a string.
+- Verified: smoke `templates-mcp.mjs` (47 checks: keys, scopes, `emk_` refused
+  here and `emt_` at `/mcp`, a whole app session to a working preview link and
+  v1, export/import, website pages and settings, revoke); `mcp.mjs`,
+  `website-mcp.mjs` and every other suite green; the admin `/mcp` checked by
+  hand (tools/list by scope, out-of-scope call → the scope message).

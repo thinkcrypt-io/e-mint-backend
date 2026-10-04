@@ -32,6 +32,7 @@ import {
 	validateById,
 } from './templates.service.js';
 import { deletePreview, listPreviews, previewTemplate, reopenPreview } from '../../functions/templateSandbox.function.js';
+import { createKey, listKeys, revokeKey } from './keys.js';
 
 /**
  * /admin/api/templates — Template Studio's API for the super admin panel
@@ -79,6 +80,35 @@ router.get(
 			orgPermissions: ORG_PERMISSIONS,
 		})
 	)
+);
+
+/* ------------------------------------------------------- Templates MCP keys (T-06) */
+
+/** GET /keys — every key Claude connects to /templates/mcp with (never the secrets). */
+router.get(
+	'/keys',
+	adminProtect,
+	adminPermissions(['view-template-keys', 'create-template-keys']),
+	handle(async (_req, res) => res.status(200).json({ doc: await listKeys() }))
+);
+
+/** POST /keys { name, scopes?, expiresInDays? } — the secret is in this answer only. */
+router.post(
+	'/keys',
+	adminProtect,
+	adminPermissions(['create-template-keys']),
+	handle(async (req, res) => res.status(201).json(await createKey(req, req.body || {})))
+);
+
+/** DELETE /keys/:keyId — revoked at once. */
+router.delete(
+	'/keys/:keyId',
+	adminProtect,
+	adminPermissions(['delete-template-keys']),
+	handle(async (req, res) => {
+		await revokeKey(req, req.params.keyId);
+		return res.status(200).json({ message: 'Key revoked' });
+	})
 );
 
 /* ------------------------------------------------------------ previews (T-04) */
