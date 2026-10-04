@@ -298,6 +298,44 @@ export const fillPlaceholders = (bp: any, answers: Record<string, any> = {}, bui
 	return { blueprint: { ...filled, type: bp?.type }, unknown: [...unknown] };
 };
 
+/* ------------------------------------------------------- relative sample dates */
+
+const RELATIVE_DATE = /^now(?:\s*([+-])\s*(\d{1,4})\s*([dwmy]))?$/i;
+
+/** "now", "now-12d", "now+3w", "now-2m", "now+1y" → that day as ISO; anything else unchanged. */
+export const relativeDate = (v: any, base = new Date()) => {
+	const m = typeof v === 'string' ? v.trim().match(RELATIVE_DATE) : null;
+	if (!m) return v;
+	const d = new Date(base);
+	const n = m[1] ? (m[1] === '-' ? -1 : 1) * Number(m[2]) : 0;
+	const unit = (m[3] || 'd').toLowerCase();
+	if (unit === 'd') d.setDate(d.getDate() + n);
+	else if (unit === 'w') d.setDate(d.getDate() + 7 * n);
+	else if (unit === 'm') d.setMonth(d.getMonth() + n);
+	else d.setFullYear(d.getFullYear() + n);
+	return d.toISOString();
+};
+
+/**
+ * Sample records with their date fields (in sections and line items too)
+ * resolved against the day the project is built — so "this month" on a
+ * template's dashboard still has numbers a year after it was written.
+ */
+export const resolveSampleDates = (rows: any[], fields: any[] = [], base = new Date()): any[] => {
+	const one = (r: any, fs: any[]): any => {
+		if (!r || typeof r !== 'object') return r;
+		const out = { ...r };
+		for (const f of fs) {
+			if (!f?.key || !(f.key in out)) continue;
+			if (f.kind === 'date') out[f.key] = relativeDate(out[f.key], base);
+			else if (f.kind === 'section') out[f.key] = one(out[f.key], f.fields || []);
+			else if (f.kind === 'sectionlist' && Array.isArray(out[f.key])) out[f.key] = out[f.key].map((x: any) => one(x, f.fields || []));
+		}
+		return out;
+	};
+	return rows.map(r => one(r, fields));
+};
+
 /* ------------------------------------------------------------ what's inside */
 
 /** A create step's model name and route as they'll be built in an empty project. */

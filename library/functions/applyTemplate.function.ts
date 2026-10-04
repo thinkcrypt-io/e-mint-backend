@@ -11,7 +11,7 @@ import { planFromAi } from '../controllers/builder/features.schema.js';
 import { normalizeWidget } from '../controllers/dashboard/dashboard.controller.js';
 import { apiOrigin, createRecords, setPublicApi, upsertPage } from '../controllers/mcp/website.tools.js';
 import type { Caller } from '../controllers/mcp/mcp.router.js';
-import { fillPlaceholders, stepIdentity } from '../controllers/templates/blueprint.js';
+import { fillPlaceholders, resolveSampleDates, stepIdentity } from '../controllers/templates/blueprint.js';
 import { validateTemplate } from '../controllers/templates/validate.js';
 import { loadSite, saveSite } from './siteConfig.function.js';
 import { normalizePermissions } from './tenantPermissions.function.js';
@@ -316,7 +316,8 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				const caller = callerFor(req, project);
 				for (const k of linkOrder(keys, refsOf)) {
 					const route = routeOf(k);
-					const out = await createRecords(req, { route, records: sample[k] }, caller);
+					const records = resolveSampleDates(sample[k], steps[stepOf(k)]?.fields || []);
+					const out = await createRecords(req, { route, records }, caller);
 					if (out.isError) throw fail('Sample data', `${k} — ${out.text}`);
 					const created = (out.data?.records || []).map((r: any) => r._id);
 					undo.push({

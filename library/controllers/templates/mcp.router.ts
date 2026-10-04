@@ -173,7 +173,7 @@ ${Object.entries(KIND_GUIDE)
 - website.settings: { identity: { siteName, tagline, logo, favicon, footerText, primaryColor, secondaryColor, fontFamily }, contact: {…}, social: {…}, seo: { metaTitle, titleTemplate ("%s · Acme"), metaDescription, ogImage, keywords[] } }
 - website.starter: { repoUrl (https), framework, deployUrl, env: [{ key, value }] }
 - questions: [{ key (camelCase), label (the question), help, kind (${QUESTION_KINDS.join(', ')}), options? (select), default, required }] — answers replace {{key}} anywhere in the template. Built in, never asked: ${BUILTIN_PLACEHOLDERS.map(k => `{{${k}}}`).join(', ')}.
-- sampleData: { ModelName: [records] } — up to 50 per model; links by the linked record's display value (e.g. "account": "Main account"). Tenants choose whether to include it.
+- sampleData: { ModelName: [records] } — up to 50 per model; links by the linked record's display value (e.g. "account": "Main account"). Dates can be relative to the day the project is built — "now", "now-12d", "now+3w", "now-2m", "now+1y" — use them so date-ranged dashboard widgets ("this month") always have data. Tenants choose whether to include it.
 - guide: { steps: [{ title (an action: "Add your first client"), body (how and why), page (a model name, or a panel path like /site-setup) }], faq: [{ q, a }] } — the checklist a new project shows.
 
 ## Rules for publishing
