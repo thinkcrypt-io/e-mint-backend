@@ -17,6 +17,9 @@ import { captureProject } from './capture.js';
 
 const str = (v: any, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
+/** Words the studio's own pages and API use after /templates/ — never a template's key. */
+const RESERVED_KEYS = new Set(['connect', 'new', 'keys', 'meta', 'stats', 'import', 'previews', 'mcp', 'capture']);
+
 export const isTemplateType = (v: any): v is TemplateType => (TEMPLATE_TYPES as readonly string[]).includes(v);
 export const isPart = (v: any): v is Part => (PARTS as readonly string[]).includes(v);
 
@@ -116,7 +119,7 @@ export const createTemplate = async (
 	const overview = { ...(input.overview || {}), ...(input.name && { name: input.name }), ...(input.summary && { summary: input.summary }), ...(input.category && { category: input.category }) };
 	const draft = input.blueprint ? normalizeBlueprint(type, { ...input.blueprint, overview: { ...(input.blueprint.overview || {}), ...overview } }) : emptyBlueprint(type, overview);
 	if (!draft.overview.name) throw new BuildError(400, 'Give the template a name.');
-	const key = await uniqueSlug(str(input.key, 60) || draft.overview.name, k => ProjectTemplate.exists({ key: k }));
+	const key = await uniqueSlug(str(input.key, 60) || draft.overview.name, async k => RESERVED_KEYS.has(k) || ProjectTemplate.exists({ key: k }));
 	const doc: any = new ProjectTemplate({ key, type, draft, source, createdBy: req.user?._id, updatedBy: req.user?._id, name: draft.overview.name });
 	mirror(doc);
 	await doc.save();
@@ -165,6 +168,7 @@ export const saveSettings = async (req: any, idOrKey: string, input: { key?: any
 	if (input.key !== undefined) {
 		const key = str(input.key, 60).toLowerCase();
 		if (!/^[a-z0-9][a-z0-9-]{1,59}$/.test(key)) throw new BuildError(400, 'A key is lowercase letters, digits and hyphens, e.g. “finance-management”.');
+		if (RESERVED_KEYS.has(key)) throw new BuildError(400, `“${key}” is a page of the studio — pick another key.`);
 		if (key !== doc.key) {
 			if (doc.version > 0) throw new BuildError(400, 'A published template’s key can’t change — projects built from it name it by its key.');
 			if (await ProjectTemplate.exists({ key })) throw new BuildError(400, `The key “${key}” is taken.`);

@@ -1,7 +1,7 @@
 import express, { Response } from 'express';
 import { adminProtect, adminPermissions } from '../../../middleware/index.js';
 import { ORG_PERMISSIONS } from '../../functions/tenantPermissions.function.js';
-import { TEMPLATE_TYPES } from '../../models/templates/_index.js';
+import { ProjectTemplate, TEMPLATE_TYPES } from '../../models/templates/_index.js';
 import { BuildError } from '../builder/models.controller.js';
 import {
 	BLOCK_CATEGORIES,
@@ -148,6 +148,45 @@ router.post(
 	handle(async (req, res) => {
 		const doc = await captureTemplate(req, req.body || {});
 		return res.status(201).json({ doc: await describeTemplate(req, doc) });
+	})
+);
+
+/**
+ * GET /stats — the Templates dashboard widget (T-11): how many are published,
+ * drafts (never published) and archived, which have problems, the most used,
+ * the recently changed.
+ */
+router.get(
+	'/stats',
+	...view,
+	handle(async (_req, res) => {
+		const fields = { key: 1, name: 1, type: 1, status: 1, version: 1, usage: 1, checks: 1, updatedAt: 1, icon: 1, color: 1 };
+		const [byStatus, problems, used, recent] = await Promise.all([
+			ProjectTemplate.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]),
+			ProjectTemplate.countDocuments({ status: { $ne: 'archived' }, 'checks.errors': { $gt: 0 } }),
+			ProjectTemplate.find({ status: 'published' }, fields).sort({ 'usage.applied': -1, 'usage.previews': -1, updatedAt: -1 }).limit(5).lean(),
+			ProjectTemplate.find({ status: { $ne: 'archived' } }, fields).sort({ updatedAt: -1 }).limit(5).lean(),
+		]);
+		const count = (s: string) => byStatus.find((b: any) => b._id === s)?.n || 0;
+		const row = (t: any) => ({
+			key: t.key,
+			name: t.name,
+			type: t.type,
+			status: t.status,
+			version: t.version || 0,
+			applied: t.usage?.applied || 0,
+			previews: t.usage?.previews || 0,
+			errors: t.checks?.errors || 0,
+			updatedAt: t.updatedAt,
+		});
+		return res.status(200).json({
+			published: count('published'),
+			drafts: count('draft'),
+			archived: count('archived'),
+			withProblems: problems,
+			mostUsed: used.map(row),
+			recent: recent.map(row),
+		});
 	})
 );
 
