@@ -91,3 +91,27 @@ Newest last. One entry per work order: what, files, how verified.
   own `button{background:red}` doesn't leak in, signing up in one updates all,
   the session survives a reload, light cards on a light page, phone width
   without overflow.
+
+## W-04 — Panel: Widgets (2026-10-05)
+- **Admin** `src/app/widgets/page.tsx`: the script tag to copy; **Look**
+  (colour — empty takes Site setup's on websites —, font, corners 0–24, light
+  / dark / match the page); a panel per catalogue widget (on/off, options,
+  texts, snippet, live preview on a light or dark page of the *unsaved*
+  settings: a `sandbox="allow-scripts"` srcdoc frame setting
+  `window.__MINT_PREVIEW__` before loading `mint.js`); **Coming next** with the
+  organization's payment providers; a save bar (Discard / Save). `build`
+  permission. `tenantApi` getWidgets / saveWidgets (tag `tenant-widgets`),
+  `widgets` in PROJECT_PAGES and TENANT_ONLY_PAGES, GuideLink anchors.
+- **Backend** nav item `Widgets` (tenantNav: Site for websites, beside Public
+  API for API projects, Audience for apps); `widgets` a panel page; `mint.js`
+  reads `window.__MINT_PREVIEW__` and exposes `Mint.preview` (the login widget
+  then doesn't sign in); an unknown `data-project` now warns "there is no
+  project …" instead of claiming widgets are switched off.
+- **Guide** `/user-docs/widgets` (add-mint, look, login, mint-js, coming-next,
+  faq) in USER_GUIDES; the Customers guide points to it.
+- **Verified:** widgets smoke (18) passes; in the panel an owner switches the
+  login widget on, the save bar appears, Save → `GET /public/api/:slug/widgets`
+  returns it at once. The preview draws the card from `__MINT_PREVIEW__` on a
+  plain page; inside the sandboxed frame locally Chrome blocks the `localhost`
+  script (local-network rule) and the frame says so — a public CDN script
+  loads in the same frame, so production's public API is expected to draw.

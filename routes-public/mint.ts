@@ -163,7 +163,11 @@ export const MINT_JS = `(function () {
 	var preview = window.__MINT_PREVIEW__ && typeof window.__MINT_PREVIEW__ === 'object' ? window.__MINT_PREVIEW__ : null;
 	var config = preview
 		? Promise.resolve({ theme: preview.theme || {}, widgets: preview.widgets || {} })
-		: fetch(api + 'widgets').then(function (r) { return r.ok ? r.json() : { theme: {}, widgets: {} }; }).catch(function () { return { theme: {}, widgets: {} }; });
+		: fetch(api + 'widgets').then(function (r) {
+			if (r.ok) return r.json();
+			if (r.status === 404) { warned = null; console.warn('MINT: there is no project "' + project + '" — check data-project on the mint.js script tag'); }
+			return { theme: {}, widgets: {} };
+		}).catch(function () { return { theme: {}, widgets: {} }; });
 	function kebab(s) { return s.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }); }
 	function selector(name) { return '[data-mint="' + name + '"],mint-' + name; }
 	function optionsFor(host, base) {
@@ -208,7 +212,7 @@ export const MINT_JS = `(function () {
 				if (names[name] || (root.querySelector && root.querySelector('mint-' + name)) || (root.tagName && root.tagName.toLowerCase() === 'mint-' + name)) load(name);
 			});
 			Object.keys(names).forEach(function (name) {
-				if (!cfg.widgets[name] && !warned[name]) { warned[name] = true; console.info('MINT: the "' + name + '" widget is switched off for this project (Site setup → Widgets).'); }
+				if (!cfg.widgets[name] && warned && !warned[name]) { warned[name] = true; console.info('MINT: the "' + name + '" widget is switched off for this project (Site setup → Widgets).'); }
 			});
 		});
 	}
