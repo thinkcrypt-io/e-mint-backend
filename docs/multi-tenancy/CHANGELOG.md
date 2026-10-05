@@ -921,3 +921,31 @@ Decisions D14–D17 (README).
 - Verified: `next build`; light, dark and phone-width screenshots (headless).
 - Waitlist seed run on Atlas `e-mint` (permission + sidebar item).
 
+## 2026-10-05 — WO-42 Public API read-only fields
+- Decision D20 (README). `publicApi.readOnlyFields` on ModelDefinition; the
+  public router drops those keys from create and update bodies (create gets
+  the field's default, update keeps the value); `GET /` marks them and
+  formulas `readOnly: true`. Saving with a key that isn't a field, or a
+  required field with no default while create is on, answers 400.
+- Files: backend `library/models/builder/modelDefinition.model.ts`,
+  `library/controllers/builder/models.controller.ts` (`PUBLIC_API`,
+  `readOnlyProblem`, `mergedPublicApi`, `updatePublicApi`),
+  `library/controllers/mcp/website.tools.ts` (`setPublicApi`,
+  `set_public_api`), `library/controllers/mcp/mcp.router.ts` (build_feature
+  schema), `routes-public/public.router.ts`, `library/functions/dynamicModels.function.ts`
+  (type); templates: `library/controllers/templates/{blueprint,validate,capture,mcp.router}.ts`,
+  `library/functions/applyTemplate.function.ts`. Admin
+  `src/app/public-api/{page.tsx,_components/{ReadOnlyFields.tsx,ApiReference.tsx,api.ts}}`,
+  `src/app/templates/[id]/_components/EndpointsTab.tsx`,
+  `src/components/library/store/services/tenantApi.ts`,
+  `src/app/user-docs/{public-api/page.tsx,_components/guides.ts}`,
+  `src/app/docs/templates/page.tsx`.
+- Verified: `tsc --noEmit` both repos; all smoke suites (`run-all.sh`) on a
+  fresh scratch DB (Mongo :27998, backend :5011), with new checks in
+  `public.mjs` and `templates-preview.mjs`; the tenant Public API page in the
+  browser pane (`tenant-scratch` :3011): saved list shown, ticking a required
+  field with no default shows the 400 and un-ticks, ticking another saves and
+  the reference's create/update bodies name it; `/user-docs/public-api#read-only`
+  renders. The studio's Public API tab uses the same component (typechecked,
+  not clicked through).
+- Behaviour change for live sites: none until a model has read-only fields.

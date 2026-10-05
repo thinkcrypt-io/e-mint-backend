@@ -4,7 +4,7 @@ import { WEBSITE_KIT } from '../../functions/websiteKit.function.js';
 import { ORG_PERMISSION_KEYS, SYSTEM_ROLE_DEFAULTS } from '../../functions/tenantPermissions.function.js';
 import { planFeature, TEMPLATE_MAX_STEPS, CreateStep } from '../builder/features.service.js';
 import { planFromAi } from '../builder/features.schema.js';
-import { PUBLIC_API } from '../builder/models.controller.js';
+import { PUBLIC_API, readOnlyProblem } from '../builder/models.controller.js';
 import { defaultOf, enumOf } from '../../functions/dynamicModels.function.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import {
@@ -216,6 +216,8 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 	const rawSteps: any[] = bp.models?.steps || [];
 	const kit = type === 'website' ? planFromAi(WEBSITE_KIT('Website')).steps : [];
 	const models: PlannedModel[] = [];
+	/** Each planned model's fields, by name — for the endpoints' read-only fields. */
+	const fieldsOf = new Map<string, any[]>();
 
 	rawSteps.forEach((s, i) => {
 		if (s.action === 'update')
@@ -260,6 +262,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 			const label = c.title || c.name || `Step ${i + 1}`;
 			for (const p of step.problems) add('error', 'models', where, `${label}: ${p}`, 'Change this model on the Models tab, then check again.');
 			models.push({ name: c.name, route: c.route, title: c.title });
+			fieldsOf.set(c.name, c.fields || []);
 			const wanted = stepIdentity(rawSteps[i]);
 			if (c.name && wanted.name && c.name !== wanted.name)
 				add('warning', 'models', where, `${label} will be built as ${c.name} (${wanted.name} is taken in every project).`, `Rename it yourself if ${c.name} reads badly.`);
@@ -347,6 +350,14 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 		if (e.auth === 'none' && !formOnly && e.actions.some((a: string) => ['create', 'update', 'delete'].includes(a)))
 			add('warning', 'endpoints', where, `${e.model}: anyone on the internet can write to it.`, 'Fine for a contact form (then open create only); otherwise require signed-in customers.');
 		if (!e.note) add('warning', 'endpoints', `${where}.note`, `${e.model}’s endpoint has no note.`, 'Say what the site or app uses it for — the API reference shows it.');
+		// Read-only fields: the model's own, and a required one needs a default when the API creates records.
+		const fields = fieldsOf.get(find(e.model)!.name);
+		if (e.readOnly?.length && fields) {
+			const problem = readOnlyProblem(fields, e.readOnly, e.actions);
+			if (problem) add('error', 'endpoints', `${where}.readOnly`, `${e.model}: ${problem}`, 'Fix the read-only fields on the Public API tab.');
+		}
+		if (e.readOnly?.length && !e.actions.some((a: string) => a === 'create' || a === 'update'))
+			add('warning', 'endpoints', `${where}.readOnly`, `${e.model}: read-only fields do nothing — the API can’t create or update these records.`, 'Remove them, or open create/update.');
 	});
 
 	/* ---------------------------------------------------------- webhooks */

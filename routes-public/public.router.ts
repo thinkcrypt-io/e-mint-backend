@@ -63,7 +63,10 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  * token>` of this project; with `ownerOnly` each customer only reaches the
  * records they created (the record's `_customer`, set by the server). Only the
  * model's own fields go in and out (plus _id, code, createdAt, updatedAt) —
- * never `_customer`, never anything else.
+ * never `_customer`, never anything else. Fields the builder made read-only
+ * (`publicApi.readOnlyFields` — an order's status, a payment reference) and
+ * formulas are never written: on create they take their default, on update
+ * they're left as they are; `GET /` marks them `readOnly`.
  */
 
 const router = express.Router({ mergeParams: true });
@@ -162,7 +165,15 @@ router.get(
 				auth: d.publicApi.auth || 'none',
 				ownerOnly: !!d.publicApi.ownerOnly,
 				...(d.publicApi.note && { note: d.publicApi.note }),
-				fields: d.fields.map((f: any) => ({ key: f.key, label: f.label || f.key, kind: f.kind, required: !!f.required, ...(f.options?.length && { options: f.options.map((o: any) => o.value) }) })),
+				fields: d.fields.map((f: any) => ({
+					key: f.key,
+					label: f.label || f.key,
+					kind: f.kind,
+					required: !!f.required,
+					...(f.options?.length && { options: f.options.map((o: any) => o.value) }),
+					// Never written by the API: sent on create or update, it's ignored.
+					...((f.kind === 'formula' || readOnlyOf(d).has(f.key)) && { readOnly: true }),
+				})),
 				...(d.publicApi.actions || []).includes('list') && listCapabilities(d),
 			})),
 		};
@@ -760,10 +771,19 @@ router.get(
 	})
 );
 
-/** The body, cut down to the model's own (non-formula) fields. */
+/** The fields the public API never writes — the business sets them (an order's status, a payment reference). */
+const readOnlyOf = (def: any) => new Set<string>(def.publicApi?.readOnlyFields || []);
+
+/**
+ * The body, cut down to the model's own (non-formula) fields the API may
+ * write. Read-only fields are dropped like unknown keys: on create they take
+ * their default, on update they keep what they have — so a site can send back
+ * a record it read without being refused.
+ */
 const bodyOf = (req: any, ctx: Ctx) => {
 	const body: any = {};
-	for (const k of fieldKeys(ctx.def)) if (req.body?.[k] !== undefined) body[k] = req.body[k];
+	const readOnly = readOnlyOf(ctx.def);
+	for (const k of fieldKeys(ctx.def)) if (req.body?.[k] !== undefined && !readOnly.has(k)) body[k] = req.body[k];
 	stripFormulaKeys(body, ctx.formulas);
 	return body;
 };

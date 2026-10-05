@@ -242,7 +242,7 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				const route = routeOf(e.model);
 				const def: any = await ModelDefinition.findOne({ route }, { publicApi: 1 }).lean();
 				const before = def?.publicApi ?? null;
-				const r = await setPublicApi(req, route, { actions: e.actions, auth: e.auth, ownerOnly: e.ownerOnly, note: e.note });
+				const r = await setPublicApi(req, route, { actions: e.actions, auth: e.auth, ownerOnly: e.ownerOnly, readOnlyFields: e.readOnly || [], note: e.note });
 				if (r.error) throw fail('Public API', r.error);
 				undo.push({ step: 'Public API', run: () => ModelDefinition.updateOne({ route }, { $set: { publicApi: before } }) });
 				result.endpoints.push(route);

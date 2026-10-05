@@ -501,3 +501,17 @@ Newest last. One entry per work order: what, files, how verified.
   in); an e-commerce customer flow (sign up, cart, order; a second customer
   sees none of it). Smoke: templates, templates-preview, templates-manage,
   templates-mcp all pass on a fresh server.
+
+## 2026-10-05 — Endpoints: read-only fields (multi-tenancy WO-42)
+- Blueprint `endpoints[].readOnly: [fieldKeys]` — fields the project's public
+  API never writes (an order's status). Normalizer (`blueprint.ts`) keeps a
+  de-duplicated list; `validate.ts` errors on a key that isn't the model's
+  field or a required field with no default while create is on, warns when the
+  endpoint can't create/update; `applyTemplate` passes it to `setPublicApi`
+  (`publicApi.readOnlyFields`); `capture.ts` keeps it; MCP format text +
+  `set_endpoints`. Studio Public API tab: read-only field checkboxes (shared
+  `ReadOnlyFields`). Guide `/docs/templates#endpoints`.
+- Closes the follow-up found in T-13 (owner-only Order created as `paid`).
+  The T-13 drafts still need `readOnly` set after the backend deploy (Handoff).
+- Verified: `templates-preview.mjs` (errors, build, a customer's `paid`
+  order comes back `pending`); all smoke suites pass.

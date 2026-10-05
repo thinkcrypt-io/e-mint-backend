@@ -280,6 +280,7 @@ const BUILD_SCHEMA = {
 							actions: { type: 'array', items: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete'] } },
 							auth: { type: 'string', enum: ['none', 'customer'] },
 							ownerOnly: { type: 'boolean' },
+							readOnlyFields: { type: 'array', items: { type: 'string' }, description: 'Field keys the public API never writes (e.g. an order’s status)' },
 						},
 					},
 				},

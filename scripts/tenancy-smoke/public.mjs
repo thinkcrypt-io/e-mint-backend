@@ -20,6 +20,9 @@ const order = await make({ name: 'Order', title: 'Orders', code: { enabled: true
 	{ key: 'total', label: 'Total', kind: 'formula', formula: 'quantity * unitPrice' },
 	// A field of its own named like the server's owner path used to be — must stay the tenant's.
 	{ key: 'customer', label: 'Customer name', kind: 'text' },
+	// Only the business sets these — read-only on the public API below.
+	{ key: 'status', label: 'Status', kind: 'select', default: 'pending', options: [{ value: 'pending', label: 'Pending' }, { value: 'paid', label: 'Paid' }] },
+	{ key: 'paymentReference', label: 'Payment reference', kind: 'text' },
 ] });
 ok('models made', !!product?._id && !!order?._id);
 r = await call('PUT', P(s.crm, `/builder/models/${product._id}/public-api`), { enabled: true, actions: ['list', 'get'], auth: 'none' }, s.pat);
@@ -28,6 +31,16 @@ r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), { ena
 ok('owner-only without customer auth refused', r.status === 400, r.body?.message);
 r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), { enabled: true, actions: ['list', 'get', 'create', 'update', 'delete'], auth: 'customer', ownerOnly: true }, s.pat);
 ok('Orders: customers only, owner-only', r.status === 200, r.body?.message);
+// Read-only fields: the business's own (status, payment reference) are never written by the public API.
+const orderApi = { enabled: true, actions: ['list', 'get', 'create', 'update', 'delete'], auth: 'customer', ownerOnly: true };
+r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), { ...orderApi, readOnlyFields: ['nope'] }, s.pat);
+ok('read-only: unknown field refused', r.status === 400 && /isn’t a field/.test(r.body?.message), r.body?.message);
+r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), { ...orderApi, readOnlyFields: ['quantity'] }, s.pat);
+ok('read-only: required field with no default refused when create is open', r.status === 400 && /no default/.test(r.body?.message), r.body?.message);
+r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), { ...orderApi, readOnlyFields: ['status', 'paymentReference'] }, s.pat);
+ok('read-only: status + payment reference set', r.status === 200 && r.body?.publicApi?.readOnlyFields?.join() === 'status,paymentReference', JSON.stringify(r.body?.publicApi));
+r = await call('PUT', P(s.crm, `/builder/models/${order._id}/public-api`), orderApi, s.pat);
+ok('read-only: kept when a save leaves it out', r.body?.publicApi?.readOnlyFields?.length === 2, JSON.stringify(r.body?.publicApi));
 const admin = (await call('POST', '/admin/api/auth/login', { email: 'admin@example.com', password: 'tenancy-dev-pass-1' })).body.token;
 const am = await call('GET', '/admin/api/builder/models', null, admin);
 r = await call('PUT', `/admin/api/builder/models/${(am.body?.doc || am.body || [])[0]?._id || '000000000000000000000000'}/public-api`, { enabled: true, actions: ['list'] }, admin);
@@ -69,6 +82,19 @@ r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId,
 ok('Cara orders (formula computed, not taken)', r.status === 201 && r.body?.total === 37.5, `${r.status} ${JSON.stringify(r.body)}`);
 ok('a field named customer is the model’s own', r.body?.customer === 'Cara at the counter' && !('_customer' in r.body), JSON.stringify(r.body));
 const caraOrder = r.body?._id;
+r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId, quantity: 1, status: 'paid', paymentReference: 'FAKE-123' }), ...as(cara) });
+ok('customer sending status "paid" gets the default status', r.status === 201 && r.body?.status === 'pending' && !r.body?.paymentReference, JSON.stringify(r.body));
+const sneaky = r.body?._id;
+r = await pub(`orders/${sneaky}`, { method: 'PUT', body: JSON.stringify({ status: 'paid', paymentReference: 'FAKE-456', quantity: 2 }), ...as(cara) });
+ok('update ignores read-only fields, writes the rest', r.status === 200 && r.body?.status === 'pending' && !r.body?.paymentReference && r.body?.quantity === 2, JSON.stringify(r.body));
+r = await call('PUT', P(s.crm, `/orders/${sneaky}`), { status: 'paid', paymentReference: 'PAY-1' }, s.pat);
+ok('the business sets them in the panel', r.status === 200, `${r.status} ${r.body?.message || ''}`);
+r = await pub(`orders/${sneaky}`, { method: 'PUT', body: JSON.stringify({ status: 'pending' }), ...as(cara) });
+ok('…and the customer can’t undo it', r.body?.status === 'paid' && r.body?.paymentReference === 'PAY-1', JSON.stringify(r.body));
+r = await pub('');
+const orderInfo = r.body?.models?.find(m => m.route === 'orders');
+ok('public info marks read-only fields (and formulas)', orderInfo?.fields?.find(f => f.key === 'status')?.readOnly === true && orderInfo.fields.find(f => f.key === 'total')?.readOnly === true && !orderInfo.fields.find(f => f.key === 'quantity')?.readOnly, JSON.stringify(orderInfo?.fields));
+await pub(`orders/${sneaky}`, { method: 'DELETE', ...as(cara) });
 r = await pub('orders', { method: 'POST', body: JSON.stringify({ item: widgetId, quantity: 0 }), ...as(cara) });
 ok('validation from the model (min 1)', r.status === 400, r.body?.message);
 r = await pub('orders', as(cara));

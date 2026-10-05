@@ -145,6 +145,8 @@ const endpoints = (v: any) =>
 		actions: strings(e?.actions, 5, 10),
 		auth: e?.auth === 'customer' ? 'customer' : 'none',
 		ownerOnly: bool(e?.ownerOnly),
+		/** Field keys the public API never writes (an order's status) — creates get the default, updates ignore them. */
+		readOnly: [...new Set(strings(e?.readOnly, 100, 60))],
 		note: str(e?.note, 300),
 	}));
 
@@ -372,7 +374,7 @@ export const whatsInside = (bp: any) => {
 		type: bp?.type,
 		models,
 		pages: pages.map((p: any) => ({ path: p.path, name: p.name, blocks: p.contents?.length || 0 })),
-		endpoints: (bp?.endpoints || []).map((e: any) => ({ model: e.model, actions: e.actions, auth: e.auth })),
+		endpoints: (bp?.endpoints || []).map((e: any) => ({ model: e.model, actions: e.actions, auth: e.auth, ...(e.readOnly?.length && { readOnly: e.readOnly }) })),
 		webhooks: (bp?.webhooks || []).length,
 		sidebar: (bp?.sidebar || []).map((c: any) => ({ name: c.name, items: c.items.length })),
 		widgets: (bp?.dashboard || []).length,

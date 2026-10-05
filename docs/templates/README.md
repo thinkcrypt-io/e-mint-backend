@@ -101,7 +101,7 @@ for the super admin panel, not the app panel."
   sidebar: [{ name, icon, description, items: [{ model, label }] }],
   dashboard: [/* dashboard widgets, normalizeWidget shape; route = a model's name or route */],
   roles: [{ name, description, permissions: [/* ORG_PERMISSIONS */] }],
-  endpoints: [{ model, actions[], auth: 'none'|'customer', ownerOnly, note }],   // every type
+  endpoints: [{ model, actions[], auth: 'none'|'customer', ownerOnly, readOnly: [fieldKeys], note }],   // every type; readOnly = never written by the public API (multi-tenancy D20)
   webhooks: [{ model, events: ['create'|'update'|'delete'], note }],             // api (target URL asked at apply)
   website: {
     pages: [{ path, name, status, template, showInMenu, parent, seo: {…}, contents: [/* WebContent blocks */] }],

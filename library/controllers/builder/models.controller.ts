@@ -134,6 +134,32 @@ export const PUBLIC_API = Joi.object({
 	ownerOnly: Joi.boolean().default(false),
 	/** Left out, the note it has is kept. */
 	note: Joi.string().trim().allow('').max(300),
+	/** Fields the public API never writes (the business sets them). Left out, the list it has is kept. */
+	readOnlyFields: Joi.array().items(Joi.string().trim().min(1).max(60)).unique().max(100),
+});
+
+/**
+ * What's wrong with a public API's read-only fields for a model with `fields`,
+ * or null: each must be one of the model's fields, and when the API creates
+ * records, a required one needs a default — the API never sends it, so every
+ * create would fail.
+ */
+export const readOnlyProblem = (fields: any[], keys: string[] = [], actions: string[] = []) => {
+	for (const k of keys) {
+		const f = (fields || []).find((x: any) => x?.key === k);
+		if (!f) return `“${k}” isn’t a field of this model, so it can’t be read-only`;
+		const noDefault = f.default === undefined || f.default === null || f.default === '';
+		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula')
+			return `${f.label || f.key} is required and has no default, and the public API can’t write it — every create would fail. Give it a default, or let the API write it.`;
+	}
+	return null;
+};
+
+/** A model's public API as saved: the request's values, keeping the note and read-only fields it has when they're left out. */
+export const mergedPublicApi = (value: any, before: any) => ({
+	...value,
+	note: value.note ?? before?.note ?? '',
+	readOnlyFields: value.readOnlyFields ?? before?.readOnlyFields ?? [],
 });
 
 const bodySchema = Joi.object({
@@ -1007,9 +1033,10 @@ export const deleteModel = async (req: any, res: Response): Promise<Response> =>
 
 /**
  * PUT /builder/models/:id/public-api — a tenant project model's public API:
- * on/off, which actions, open or for signed-in customers, owner-only. Only in
- * a project (the platform's models have no public API). Owner-only needs
- * signed-in customers; writes without them would be anyone's.
+ * on/off, which actions, open or for signed-in customers, owner-only, and
+ * the fields it never writes (`readOnlyFields`). Only in a project (the
+ * platform's models have no public API). Owner-only needs signed-in
+ * customers; writes without them would be anyone's.
  */
 export const updatePublicApi = async (req: any, res: Response): Promise<Response> => {
 	try {
@@ -1020,7 +1047,10 @@ export const updatePublicApi = async (req: any, res: Response): Promise<Response
 		if (value.enabled && !value.actions.length) return fail(res, 400, 'Choose at least one action, or turn the public API off');
 		const def: any = mongoose.isValidObjectId(req.params.id) ? await ModelDefinition.findById(req.params.id) : null;
 		if (!def) return fail(res, 404, 'Model not found');
-		def.publicApi = { ...value, note: value.note ?? def.publicApi?.note ?? '' };
+		const next = mergedPublicApi(value, def.publicApi);
+		const problem = next.enabled && readOnlyProblem(def.fields, next.readOnlyFields, next.actions);
+		if (problem) return fail(res, 400, problem);
+		def.publicApi = next;
 		def.version = (def.version || 1) + 1;
 		def.updatedBy = req.user?._id;
 		await def.save();

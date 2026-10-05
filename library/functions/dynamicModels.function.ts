@@ -236,7 +236,7 @@ export type ModelDef = {
 	/** Per-record access (recordAccess.function.ts): an owner, a privacy and an access list on every record. */
 	access?: { enabled?: boolean; default?: string };
 	/** Tenant projects: the model's public API (routes-public). */
-	publicApi?: { enabled?: boolean; actions?: string[]; auth?: 'none' | 'customer'; ownerOnly?: boolean };
+	publicApi?: { enabled?: boolean; actions?: string[]; auth?: 'none' | 'customer'; ownerOnly?: boolean; readOnlyFields?: string[] };
 	fields: ModelFieldDef[];
 	active?: boolean;
 	version?: number;

@@ -20,7 +20,7 @@ Then, from this folder:
 | `node projects.mjs` then `node models.mjs` | projects; the tenant model registry (same model names in two orgs, isolation, codes, populate, builder guards, sidebar, super admin unaffected, forced delete) | the scripts below use projects.mjs's state |
 | `node media.mjs` | project uploads/media manager, admin-only S3 routes refused | no real upload (the bucket is real) |
 | `node mcp.mjs` | tenant MCP keys, tools, builds in the project, key isolation | |
-| `node public.mjs` | public API, customers, owner-only records, widget.js | |
+| `node public.mjs` | public API, customers, owner-only records, read-only fields (WO-42), widget.js | |
 | `node public-filters.mjs` | public API lists (WO-40): every filter operator per field kind, dates, search, sort, paging, `fields`, 400s, archived rows | archives a row straight in the scratch DB (`SMOKE_MONGO`) |
 | `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
 | `node website-mcp.mjs` | website settings through the MCP and Site setup (WO-38) | |
@@ -28,7 +28,7 @@ Then, from this folder:
 | `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
 | `node access.mjs` | WO-21–24: standard role permissions, project access per member/invitation, the shared media library, invitations in the app, several organizations | stands alone; marks the invitees' emails verified directly in the scratch DB (the real code only goes by email) |
 | `node templates.mjs` | Template Studio (docs/templates T-02): starters as templates, validation with fixes, nothing built | counts collections in the scratch DB (`SMOKE_MONGO`); removes its own templates |
-| `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
+| `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters; endpoints' read-only fields (WO-42) | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
 | `node templates-manage.mjs` | Template Studio T-05: publish with notes + explanation gate, versions/restore, duplicate, export/import, settings, delete vs archive, save a project as a template | removes its templates |
 | `node templates-mcp.mjs` | Template Studio T-06: the Templates MCP (`/templates/mcp`) — `emt_` keys (create, list, revoke), scopes, `emk_`/`emt_` kept apart, a whole session from create to preview link to publish | removes its templates and keys |
 | `node webhooks.mjs` | Template Studio T-09: an API project's sidebar; webhooks fired by panel and public-API changes, signed (checked here with the secret), retried 3 times and logged, dropped when deleted; Send test; a new secret; refused addresses (`ftp:`, cloud metadata); the API overview; an API template previewed with endpoints, an endpoint note and a webhook from a question's answer. A local receiver on a random port | deletes its project, template and preview |

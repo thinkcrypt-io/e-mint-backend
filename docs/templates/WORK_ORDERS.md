@@ -30,7 +30,12 @@ sample dates (`now-12d`, b47a3c27), background previews (T-16) and the new
 checks (4a12bcdd, 9ad5faf4), so production previews of these templates fail
 until then; (2) the user's yes to publish (publishing reaches every tenant).
 Then: preview each on production (`preview_template` → `preview_status`),
-publish with notes, mark T-13 done. The user's rule: commit and push each
+publish with notes, mark T-13 done. **Before publishing**, once the backend
+with multi-tenancy WO-42 is deployed: give the customer-written endpoints
+`readOnly` (products-orders-api / ecommerce Order: status, paymentReference,
+trackingUrl …; booking-api Booking: status …) with `set_endpoints`, and
+soften their FAQs' "verify payment before fulfilling" — production's
+normalizer drops `readOnly` until that deploy. The user's rule: commit and push each
 WO as it finishes, then go on.
 
 **Previews build in the background (T-16, 2026-10-05):** a 14-model template

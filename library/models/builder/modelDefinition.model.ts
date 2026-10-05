@@ -80,6 +80,12 @@ const schema = new Schema<any>(
 			ownerOnly: { type: Boolean, default: false },
 			/** What the site or app uses it for — shown in the API reference (a template's endpoint note, T-09). */
 			note: { type: String, trim: true, maxlength: 300, default: '' },
+			/**
+			 * Fields the public API never writes — the business sets them (an
+			 * order's status, a payment reference). On create they take their
+			 * default; on update what's sent for them is ignored.
+			 */
+			readOnlyFields: { type: [String], default: undefined },
 		},
 		fields: { type: [fieldSchema], default: [] },
 		active: { type: Boolean, default: true },

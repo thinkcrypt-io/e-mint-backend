@@ -276,7 +276,49 @@ const roles = await db.collection('organizationroles').find({ name: { $in: ['Smo
 ok('T-08 roles: both in the organization with their permissions', roles.length === 2 && roles.find(x => x.name === 'Smoke bookkeeper')?.permissions?.join() === 'records:view,records:create,records:edit' && roles.find(x => x.name === 'Smoke auditor')?.description === 'Reads everything.', JSON.stringify(roles.map(x => [x.name, x.permissions])));
 await call('DELETE', `${A}/templates/previews/${BP.split('/').pop()}`, null, T);
 
-await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken', 'smoke-preview-books'] } });
+/* --------------------- read-only fields: endpoints[].readOnly, never written by the public API */
+await db.collection('projecttemplates').deleteMany({ key: 'smoke-preview-shop' });
+const shopEndpoint = { model: 'Order', actions: ['create', 'get', 'update'], auth: 'customer', ownerOnly: true, note: 'Checkout' };
+r = await call('POST', `${A}/templates`, {
+	type: 'api',
+	key: 'smoke-preview-shop',
+	blueprint: {
+		overview: { name: 'Smoke preview shop' },
+		models: {
+			steps: [
+				{ action: 'create', name: 'Order', title: 'Orders', displayField: 'item', fields: [
+					{ key: 'item', label: 'Item', kind: 'text', required: true },
+					{ key: 'status', label: 'Status', kind: 'select', required: true, default: 'pending', options: [{ value: 'pending', label: 'Pending' }, { value: 'paid', label: 'Paid' }] },
+					{ key: 'paymentReference', label: 'Payment reference', kind: 'text' },
+				] },
+			],
+		},
+		endpoints: [{ ...shopEndpoint, readOnly: ['status', 'nope', 'item'] }],
+	},
+}, T);
+const shopId = r.body?.doc?._id;
+const roErrors = (r.body?.doc?.validation?.errors || []).filter(i => i.path === 'endpoints[0].readOnly').map(i => i.message);
+ok('readOnly: unknown field is an error', r.status === 201 && roErrors.some(m => /“nope” isn’t a field/.test(m)), `${r.status} ${JSON.stringify(roErrors)}`);
+r = await call('PUT', `${A}/templates/${shopId}/draft`, { part: 'endpoints', value: [{ ...shopEndpoint, readOnly: ['item'] }] }, T);
+const roErrors2 = (r.body?.doc?.validation?.errors || []).filter(i => i.path === 'endpoints[0].readOnly').map(i => i.message);
+ok('readOnly: required field with no default is an error when create is open', roErrors2.some(m => /no default/.test(m)), `${r.status} ${JSON.stringify(roErrors2)}`);
+r = await call('PUT', `${A}/templates/${shopId}/draft`, { part: 'endpoints', value: [{ ...shopEndpoint, readOnly: ['status', 'paymentReference', 'status'] }] }, T);
+ok('readOnly: status + payment reference, no errors (duplicates dropped)', r.status === 200 && !(r.body?.doc?.validation?.errors || []).some(i => i.part === 'endpoints') && r.body?.doc?.draft?.endpoints?.[0]?.readOnly?.join() === 'status,paymentReference', `${r.status} ${JSON.stringify(r.body?.doc?.validation?.errors)} ${JSON.stringify(r.body?.doc?.draft?.endpoints)}`);
+r = await call('POST', `${A}/templates/${shopId}/preview`, {}, T);
+ok('shop preview built', r.status === 201 && r.body.result.endpoints.join() === 'orders', `${r.status} ${r.body?.message} ${JSON.stringify(r.body?.result)}`);
+const SHOP = r.body?.project;
+const def = await db.collection('modeldefinitions').findOne({ project: new (await import('../../node_modules/mongodb/lib/index.js')).ObjectId(SHOP?._id), route: 'orders' });
+ok('the built model’s public API has the read-only fields', def?.publicApi?.readOnlyFields?.join() === 'status,paymentReference', JSON.stringify(def?.publicApi));
+const spub = (path, init = {}) => call(init.method || 'GET', `/public/api/${SHOP?.publicSlug}/${path}`, init.body, init.token);
+r = await spub('auth/register', { method: 'POST', body: { name: 'Shopper', email: `shopper${Date.now()}@example.com`, password: 'customer-pass-1' } });
+const shopper = `Bearer ${r.body?.token}`;
+r = await spub('orders', { method: 'POST', body: { item: 'Mug', status: 'paid', paymentReference: 'FAKE' }, token: shopper });
+ok('customer creating an order with status "paid" gets the default status', r.status === 201 && r.body?.status === 'pending' && !r.body?.paymentReference, `${r.status} ${JSON.stringify(r.body)}`);
+r = await spub(`orders/${r.body?._id}`, { method: 'PUT', body: { status: 'paid', item: 'Big mug' }, token: shopper });
+ok('…and can’t update it to "paid" either', r.status === 200 && r.body?.status === 'pending' && r.body?.item === 'Big mug', `${r.status} ${JSON.stringify(r.body)}`);
+if (SHOP?._id) await call('DELETE', `${A}/templates/previews/${SHOP._id}`, null, T);
+
+await db.collection('projecttemplates').deleteMany({ key: { $in: ['smoke-preview-finance', 'smoke-preview-site', 'smoke-preview-broken', 'smoke-preview-books', 'smoke-preview-shop'] } });
 await db.collection('organizationroles').deleteMany({ name: { $in: ['Smoke accountant', 'Smoke bookkeeper', 'Smoke auditor'] } });
 await mc.close();
 done();

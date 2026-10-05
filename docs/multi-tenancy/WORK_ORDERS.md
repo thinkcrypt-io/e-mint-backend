@@ -117,6 +117,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | — | **Bug: inviting someone to a project doesn't work** (user report 2026-10-02) | admin | S | done (accept form sent an empty name) |
 | 40 | **Public API lists: the admin lists' filters (`field_op=value`), search, multi-sort, `fields`; documented in the API reference, user guide and MCP** | both | M | done |
 | 41 | **Marketing website (`mint-webpage/`, repo aiasifistiaque/mint-website `main`) + waitlist: `POST /public/waitlist`, `Waitlist` model, super-admin `/waitlist` table, `scripts/seedWaitlist.js`** | backend + website | M | done (both pushed; seed + deploy pending) |
+| 42 | **Public API read-only fields (`publicApi.readOnlyFields`, template `endpoints[].readOnly`): a customer can't create an order as `paid`** | both | M | done |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -718,6 +719,39 @@ changes made should be listed" in these agent docs.
 - Keep in step when changing list behaviour: the router's `OPS`/`RESERVED`,
   admin `api.ts` (`LIST_PARAMS`, `FILTER_OPS`, `FALLBACK_OPS`), the user
   guide sections, the MCP text.
+
+## WO-42 — Public API read-only fields (M) — done
+**The user's words (2026-10-05):** the public API "lets a signed-in customer
+create records on owner-only endpoints … a customer can set fields that only
+the business should control — e.g. an order's `status: "paid"`,
+`paymentReference`, `trackingUrl`, or a booking's `status: "confirmed"`. Add
+field-level write control for the public API." Decision D20.
+- **Backend:** `ModelDefinition.publicApi.readOnlyFields: [String]`;
+  `PUBLIC_API` (models.controller) takes `readOnlyFields`;
+  `readOnlyProblem(fields, keys, actions)` (unknown key; required with no
+  default while create is on) and `mergedPublicApi(value, before)` (keeps
+  note and read-only list when left out) — used by `updatePublicApi` and the
+  MCP's `setPublicApi`. Router `bodyOf` drops read-only keys on create and
+  update (dropped, not refused); `GET /` marks read-only and formula fields
+  `readOnly: true`. MCP `set_public_api` and `build_feature`'s `publicApi`
+  take `readOnlyFields`.
+- **Templates:** blueprint `endpoints[].readOnly: [keys]` (normalizer
+  de-duplicates), validate.ts errors via `readOnlyProblem` on the planned
+  model's fields + a warning when the endpoint can't create/update,
+  `applyTemplate` passes it to `setPublicApi`, `capture.ts` (save a project
+  as a template) keeps it, Templates MCP format text and `set_endpoints`.
+- **Admin:** shared `public-api/_components/ReadOnlyFields.tsx` (field
+  checkboxes, shown when Create or Update is on; formulas not offered) on the
+  tenant Public API page and the studio's Public API tab; a refused save snaps
+  back to what's saved. API reference: body tables list only sendable fields
+  and name the read-only ones; `api.ts` `sendable` skips them in example
+  bodies. Guides: `/user-docs/public-api#read-only` (+ writing, address,
+  troubleshooting, `guides.ts` topic), `/docs/templates#endpoints`.
+- **Smoke:** `public.mjs` (unknown key / required-no-default refused, kept
+  when left out, customer create with `status: "paid"` gets `pending`, update
+  ignores it, the business sets it in the panel and the customer can't undo
+  it, `GET /` marks it); `templates-preview.mjs` (template errors, a built
+  preview's model has the list, a customer's `paid` order is `pending`).
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

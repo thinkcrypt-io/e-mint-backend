@@ -12,7 +12,7 @@ import { applyFormulas, formulasOf } from '../../functions/formula.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { runInScope } from '../../functions/tenantScope.function.js';
 import { getS3, resolveUploadFolder } from '../../../routes-admin/file/media.helpers.js';
-import { PUBLIC_API } from '../builder/models.controller.js';
+import { PUBLIC_API, mergedPublicApi, readOnlyProblem } from '../builder/models.controller.js';
 import { routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { refIds } from './records.helpers.js';
@@ -603,21 +603,27 @@ export const setPublicApi = async (req: any, model: string, input: any) => {
 	if (error) return { error: error.details[0].message.replace(/"/g, '') };
 	if (value.ownerOnly && value.auth !== 'customer') return { error: 'Owner-only records need signed-in customers (auth: "customer").' };
 	if (value.enabled && !value.actions.length) value.actions = ['list', 'get'];
-	def.publicApi = { ...value, note: value.note ?? def.publicApi?.note ?? '' };
+	const next = mergedPublicApi(value, def.publicApi);
+	const problem = next.enabled && readOnlyProblem(def.fields, next.readOnlyFields, next.actions);
+	if (problem) return { error: problem };
+	def.publicApi = next;
 	def.version = (def.version || 1) + 1;
 	await def.save();
 	await syncDynamicModels({ app: req.app, force: true });
-	return { def, value };
+	return { def, value: next };
 };
 
 const publicApiTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
-	const r = await setPublicApi(req, args?.model, { enabled: args?.enabled, actions: args?.actions, auth: args?.auth, ownerOnly: args?.ownerOnly });
+	const r = await setPublicApi(req, args?.model, { enabled: args?.enabled, actions: args?.actions, auth: args?.auth, ownerOnly: args?.ownerOnly, readOnlyFields: args?.readOnlyFields });
 	if (r.error || !r.def) return refuse(r.error || 'Model not found');
 	const base = `${publicBase(req, caller.project)}/${r.def.route}`;
 	const v = r.value;
 	const lines = v.enabled
 		? [
 				`${r.def.title}'s public API is on (${v.auth === 'customer' ? `signed-in customers${v.ownerOnly ? ', each only their own records' : ''}` : 'open to anyone'}):`,
+				...(v.readOnlyFields?.length && v.actions.some((a: string) => a === 'create' || a === 'update')
+					? [`Read-only (the API never writes them — creates get the default, updates ignore them): ${v.readOnlyFields.join(', ')}`]
+					: []),
 				...v.actions.map((a: string) => `- ${{ list: `GET ${base}?limit=20&page=1&sort=-createdAt — filters: <field>=<value>, <field>_<op>=<value> (ne, in, nin, gt, gte, lt, lte, btwn, contains, all), search=, fields=`, get: `GET ${base}/:id`, create: `POST ${base}`, update: `PUT ${base}/:id`, delete: `DELETE ${base}/:id` }[a]}`),
 		  ]
 		: [`${r.def.title}'s public API is off.`];
@@ -880,7 +886,7 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 		name: 'set_public_api',
 		title: 'Turn a model’s public API on or off',
 		description:
-			'A model’s public API — what a site or app can call without a key: on/off, which `actions` (list, get, create, update, delete; default list and get), `auth` "none" (anyone) or "customer" (signed-in customers), and `ownerOnly` (each customer only their own records). A website’s list models need list and get.',
+			'A model’s public API — what a site or app can call without a key: on/off, which `actions` (list, get, create, update, delete; default list and get), `auth` "none" (anyone) or "customer" (signed-in customers), `ownerOnly` (each customer only their own records), and `readOnlyFields` — field keys the API never writes, for what only the business sets (an order’s status, payment reference, tracking link): on create they take their default, on update they’re ignored. Left out, the read-only list the model has is kept. A website’s list models need list and get.',
 		scope: 'build',
 		only: 'project',
 		inputSchema: {
@@ -892,6 +898,7 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 				actions: { type: 'array', items: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete'] } },
 				auth: { type: 'string', enum: ['none', 'customer'] },
 				ownerOnly: { type: 'boolean' },
+				readOnlyFields: { type: 'array', items: { type: 'string' }, description: 'Field keys the public API never writes; [] lets it write every field' },
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
