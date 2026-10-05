@@ -961,3 +961,7 @@ Decisions D14–D17 (README).
   10,000 collections + indexes on M10 / M20–M30; one collection per model
   reaches that at a few hundred projects. Chosen over shared collections for
   every tenant (reasons in D21).
+- Scope made explicit (the user, same day): only project models move to one
+  collection; super-admin models stay one collection each and their existing
+  data, collections and indexes must remain unchanged — WO-43 now says how
+  (scope branches, migration selects tenant models only, before/after checks).

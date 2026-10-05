@@ -769,7 +769,25 @@ field-level write control for the public API." Decision D20.
 … atlas seem to have cap" → chose "One collection per project: all of a
 project's models in one collection, with a `_model` field. Collections then
 grow with projects only." Decision D21 (README) — why this and not shared
-collections for every tenant is recorded there.
+collections for every tenant is recorded there. Then: "only databases from
+projects will be on one collection, anything built on the super admin panel
+will be a single collection. and the previous data on superadmin models must
+remain unchanged."
+
+**Scope — projects only. The super admin is untouched:**
+- Models built in the super-admin panel (no scope, `organization: null`)
+  keep **one collection per model**, compiled exactly as today
+  (`mongoose.model(name, schema, collectionName)`, `Model.syncIndexes()`),
+  with no `_model` field.
+- **No super-admin document, collection, index or ModelDefinition is
+  changed** — not by the code change, not by the migration. Every new code
+  path branches on the scope (`currentScope()?.project`); the platform branch
+  is the existing code, unchanged.
+- The migration script selects tenant ModelDefinitions only
+  (`organization` and `project` set, `collectionName` matching
+  `^t_<projectId>_`) and refuses to run on anything else.
+- Code models (the platform's own `lib/`/`library/` models) are not touched
+  either.
 
 **Why.** Today each tenant model is its own collection
 (`t_<projectId>_<route>`, D6) with 2–4 indexes, so the cluster's count is
@@ -785,7 +803,7 @@ project.
 1. **Storage.** A tenant project's built models all use collection
    `t_<projectId>`. Each record carries `_model` = the model's `name`
    (`Booking`; fixed at creation, unique in the project). Super-admin
-   (platform) built models are unchanged: one collection each.
+   (platform) built models are unchanged: one collection each (Scope above).
 2. **Mongoose discriminators** (`dynamicModels.function.ts`, `compile`): per
    project a base model `T<projectId>__Records` on `t_<projectId>` —
    empty schema, `{ discriminatorKey: '_model', timestamps: true,
@@ -801,7 +819,8 @@ project.
    `_model` is reserved: no field key may be `_model` (add to the builder's
    reserved keys).
 3. **Index manager** (new `library/functions/projectIndexes.function.ts`),
-   replacing `Model.syncIndexes()` for tenant models — **syncIndexes on a
+   replacing `Model.syncIndexes()` for tenant models only — super-admin
+   models keep `syncIndexes()` on their own collection — **syncIndexes on a
    shared collection drops every other model's indexes**:
    - shared, one per collection: `p_model_createdAt` `{_model:1, createdAt:-1}`;
      `p_model_code` `{_model:1, code:1}` unique, partial `{code: {$exists: true}}`;
@@ -818,8 +837,10 @@ project.
      `syncIndexes` does today (models.controller `syncIndexes`, ~552).
      Deleting a model drops its `m_<name>_*` indexes.
 4. **Direct collection calls** — Mongoose's `_model` filter only applies
-   through the model. Each of these must add `{ _model: def.name }` (or go
-   through the model):
+   through the model. In a project, each of these must add
+   `{ _model: def.name }` (or go through the model); for a super-admin model
+   they keep today's behaviour (whole collection, `dropCollection` on delete
+   with data):
    - `models.controller.ts` ~925 (privacy backfill when access turns on) and
      ~941 (formula recalculation `updateMany({}, pipeline)`);
    - ~1006 delete-with-data: `dropCollection` → `Model.deleteMany({})`, then
@@ -837,10 +858,13 @@ project.
    returns `t_<projectId>` for every route and the "collection already holds
    data" check is skipped in a project (it would mark every route taken once
    the collection exists); it also stops listing all collections per call
-   for tenants. `ModelDefinition.collectionName` is `unique: true` today —
-   every model of a project now shares one value: make it unique only for the
-   platform (partial `{organization: null}`) via `ensureTenantIndexes`'
-   PLAN (drop `collectionName_1`, create the partial one).
+   for tenants. The platform branch of `checkAvailability` stays as it is
+   (its own collection per model, the "already holds data" check included).
+   `ModelDefinition.collectionName` is `unique: true` today — every model of
+   a project now shares one value: keep it unique for the platform
+   (partial `{organization: null}`) via `ensureTenantIndexes`' PLAN (create
+   the partial unique index first, then drop `collectionName_1`), so two
+   super-admin models can still never share a collection.
 6. **Project lifecycle.** `removeProjectContents` drops `t_<projectId>` and
    any leftover `t_<projectId>_*`; template previews (`templateSandbox`)
    go through it. The preview guard's `collectionsInUse` keeps working (fewer
@@ -875,6 +899,14 @@ project.
 - public API (owner-only, read-only fields) unchanged;
 - the project has exactly one data collection; deleting the project or a
   template preview drops it;
+- **super admin unchanged:** before and after the change and the migration,
+  each super-admin built model still has its own collection with the same
+  name, document count, document contents (hash of a sorted export) and
+  indexes, and no `_model` field; a model built in the super-admin panel
+  after the change gets its own collection; its unique fields, delete with
+  data and formula recalculation behave as before; the migration's dry run
+  lists no super-admin model; the `admin.mjs`/`models.mjs` platform checks
+  pass;
 - migration: build a project the old way (collections `t_<pid>_<route>`
   made directly in the scratch DB), run the script (dry run, `--apply`,
   re-run, `--drop-old`), then the checks above on it; links between records
@@ -882,8 +914,9 @@ project.
 - All suites pass (`run-all.sh`) — models, public, public-filters, access,
   activity, templates-preview, webhooks cover the rest.
 
-**Done when** new projects get one collection; the migration has run on the
-scratch DB and (on the user's yes) production; all smoke suites pass;
+**Done when** new projects get one collection; super-admin models and their
+data are byte-for-byte as before (checked as above); the migration has run on
+the scratch DB and (on the user's yes) production; all smoke suites pass;
 README D21 is marked done and this Handoff, CHANGELOG and DEPLOY.md
 (migration step) are updated. Size L (~1–2 days).
 
