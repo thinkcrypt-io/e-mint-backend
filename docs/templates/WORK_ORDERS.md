@@ -8,8 +8,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-05)
 
-**2026-10-05 — T-14 started (website + API part done):** a new website or API
-project's Get started offers the published templates of its kind (the user:
+**2026-10-05 — T-14 Get started done for every kind:** a new app, API or
+website project's Get started offers the published templates of its kind,
+built whole — models, pages, sidebar, dashboard, roles, sample records (the
+user: "for apps, api's websites it will be the same"). Before that, website
+and API projects never listed theirs (the user:
 "while creating apps, it says start with template, but while creating websites
 it does not … i have one website template published" — Get started only ever
 listed *app* templates, as model-only starters). Tenant
@@ -17,9 +20,10 @@ listed *app* templates, as model-only starters). Tenant
 in the background, 202), `GET /p/:id/templates/applying` (project `applying`);
 only into a project with no models of its own (a website's kit doesn't count),
 once. Panel: template cards → questions + sample-data switch → progress →
-"ready" with counts. Apps still use the model-only starters; the rest of T-14
-(gallery in New project, template page, apps on the full engine,
-`/user-docs/templates`) is still to do.
+"ready" with counts. The model-only `builder/starters` list is now only the
+fallback for an app when no app template is published. Still to do in T-14:
+the gallery inside New project, a template page with screenshots,
+`/user-docs/templates`.
 
 **Where it stands:** T-01…T-12 done and pushed (backend `v3`, admin `main`,
 marketing site `mint-webpage` `main`): the studio's backend, the Templates MCP
@@ -116,7 +120,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
 | T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
 | T-13 | First templates, written through the MCP | both | L | drafts written + checked locally; production preview + publish wait on deploy and the user's yes |
-| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | website + API on Get started done; apps, New project gallery later |
+| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | Get started done for apps, APIs, websites; New project gallery later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
 | T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
 

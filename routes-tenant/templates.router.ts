@@ -11,7 +11,7 @@ import { KIT_ROUTES, whatsInside } from '../library/controllers/templates/bluepr
 
 /**
  * /tenant/api/p/:projectId/templates — starting a new project from a published
- * template (docs/templates T-14, the website and API part): the templates this
+ * template (docs/templates T-14), for apps, APIs and websites alike: the templates this
  * project's kind can use, and applying one with the full engine (models,
  * pages, site defaults, sidebar, dashboard, roles, sample data) — the same
  * build a template preview runs. Big templates take longer than a request may
@@ -62,6 +62,9 @@ router.get(
 					inside: {
 						models: inside.models.map((m: any) => m.title),
 						pages: inside.pages.map((p: any) => p.name || p.path),
+						sidebar: inside.sidebar.map((c: any) => c.name),
+						widgets: inside.widgets,
+						roles: inside.roles,
 						sampleRecords: inside.counts.sampleRecords,
 					},
 					questions: d.published?.questions || [],
@@ -105,7 +108,16 @@ router.post(
 						$set: {
 							'applying.status': 'ready',
 							'applying.finishedAt': new Date(),
-							'applying.result': { models: result.models, pages: result.pages, records: result.records, warnings: result.warnings },
+							'applying.result': {
+								models: result.models,
+								pages: result.pages,
+								categories: result.categories,
+								widgets: result.widgets,
+								roles: result.roles,
+								endpoints: result.endpoints,
+								records: result.records,
+								warnings: result.warnings,
+							},
 						},
 					}
 				)

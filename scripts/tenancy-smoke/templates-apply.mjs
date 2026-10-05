@@ -1,4 +1,4 @@
-// Template Studio T-14 (website / API part): a tenant starts a new project from a
+// Template Studio T-14: a tenant starts a new app, API or website from a
 // published template — the list matches the project's kind, questions are asked,
 // the build runs in the background with the full engine, and it only goes into a
 // new, empty project once.
@@ -13,7 +13,8 @@ const KEY = 'smoke-apply-site';
 
 let r = await call('POST', `${A}/auth/login`, { email: 'admin@example.com', password: 'tenancy-dev-pass-1' });
 const AT = r.body.token;
-await db.collection('projecttemplates').deleteMany({ key: { $in: [KEY, 'smoke-apply-hidden'] } });
+await db.collection('projecttemplates').deleteMany({ key: { $in: [KEY, 'smoke-apply-hidden', 'smoke-apply-app'] } });
+await db.collection('organizationroles').deleteMany({ name: 'Smoke apply clerk' });
 
 r = await call('POST', `${A}/templates`, {
 	type: 'website',
@@ -93,6 +94,35 @@ ok('only once per project', r.status === 400 && /already made from a template/.t
 r = await call('GET', P(site._id));
 ok('needs a sign-in', r.status === 401, r.status);
 
-await db.collection('projecttemplates').deleteMany({ key: { $in: [KEY, 'smoke-apply-hidden'] } });
+/* ------------------------------------------- an app gets the whole build too */
+r = await call('POST', `${A}/templates`, {
+	type: 'app',
+	key: 'smoke-apply-app',
+	blueprint: {
+		overview: { name: 'Smoke apply app', summary: 'Jobs and clients.' },
+		models: {
+			steps: [
+				{ action: 'create', name: 'Client', title: 'Clients', displayField: 'name', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }] },
+				{ action: 'create', name: 'Job', title: 'Jobs', displayField: 'title', fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }, { key: 'client', label: 'Client', kind: 'reference', ref: 'Client' }, { key: 'fee', label: 'Fee', kind: 'number' }] },
+			],
+		},
+		sidebar: [{ name: 'Work', icon: 'briefcase', items: ['Job', 'Client'] }],
+		dashboard: [{ type: 'stat', route: 'Job', title: 'Fees', metric: 'sum', field: 'fee' }],
+		roles: [{ name: 'Smoke apply clerk', description: 'Keeps the jobs.', permissions: ['records:view', 'records:edit'] }],
+		sampleData: { Client: [{ name: 'Acme' }], Job: [{ title: 'Audit', client: 'Acme', fee: 500 }] },
+	},
+}, AT);
+ok('an app template', r.status === 201, `${r.status} ${r.body?.message}`);
+const appDraft = (await db.collection('projecttemplates').findOne({ key: 'smoke-apply-app' })).draft;
+await db.collection('projecttemplates').updateOne({ key: 'smoke-apply-app' }, { $set: { status: 'published', published: appDraft, version: 1, changed: false } });
+r = await call('GET', P(app._id), null, T);
+ok('an app lists it', r.body.doc.some(t => t.key === 'smoke-apply-app'), r.body.doc.map(t => t.key).join());
+r = await call('POST', P(app._id, '/smoke-apply-app/apply'), {}, T);
+ok('…and applies it', r.status === 202, `${r.status} ${r.body?.message}`);
+s = await poll(app._id);
+ok('models, sidebar, dashboard, role and sample records — not just the models', s.status === 'ready' && s.result.models.length === 2 && s.result.categories.join() === 'Work' && s.result.widgets === 1 && s.result.roles.created.join() === 'Smoke apply clerk' && s.result.records.jobs === 1, JSON.stringify(s));
+
+await db.collection('projecttemplates').deleteMany({ key: { $in: [KEY, 'smoke-apply-hidden', 'smoke-apply-app'] } });
+await db.collection('organizationroles').deleteMany({ name: 'Smoke apply clerk' });
 await mc.close();
 done();

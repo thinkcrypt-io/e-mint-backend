@@ -535,3 +535,17 @@ Newest last. One entry per work order: what, files, how verified.
   answers, background build, public page + endpoint, usage, once only) and
   templates-preview, widgets pass; in the panel a new website applied
   Business site (5 pages, 5 models, 25 records) and opened on its overview.
+
+## T-14 (part) — Apps too: every template is built whole (2026-10-05)
+- **The user:** "for apps, api's websites it will be the same, the templates
+  builds models, pages, sidebar, dashboard, roles and sample records".
+- **Panel** app projects go through `TemplateStart` like the others; "Start
+  from scratch" shows the model wizard and AI only. The old model-only
+  starters show only when no app template is published (an API never gets
+  them). "What you get" lists the sidebar, dashboard and roles; the ready
+  screen counts them; the sample switch is off when there's nothing to add.
+- **Backend** the list carries sidebar / widgets / roles; the stored result
+  carries categories, widgets, roles, endpoints.
+- **Verified:** templates-apply now also applies an app template (sidebar,
+  dashboard widget, role, sample records); templates, templates-preview pass;
+  in the panel a new app applied Clients & invoices from Get started.
