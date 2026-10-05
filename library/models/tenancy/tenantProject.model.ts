@@ -42,6 +42,24 @@ const schema = new Schema<any>(
 			),
 			default: undefined,
 		},
+		/** A template being applied from Get started (T-14): built in the background, the panel polls this. */
+		applying: {
+			type: new Schema(
+				{
+					template: { type: Schema.Types.ObjectId, ref: 'ProjectTemplate' },
+					key: String,
+					name: String,
+					status: { type: String, enum: ['building', 'ready', 'failed'] },
+					startedAt: Date,
+					finishedAt: Date,
+					result: Schema.Types.Mixed,
+					error: String,
+					problems: [String],
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
 		/** The template's setup guide as a checklist the project's dashboard shows (T-14 ticks it). */
 		setup: {
 			type: new Schema(

@@ -6,7 +6,20 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-04)
+## Handoff — read this first (kept current; last updated 2026-10-05)
+
+**2026-10-05 — T-14 started (website + API part done):** a new website or API
+project's Get started offers the published templates of its kind (the user:
+"while creating apps, it says start with template, but while creating websites
+it does not … i have one website template published" — Get started only ever
+listed *app* templates, as model-only starters). Tenant
+`GET /p/:id/templates`, `POST /p/:id/templates/:key/apply` (full `applyTemplate`,
+in the background, 202), `GET /p/:id/templates/applying` (project `applying`);
+only into a project with no models of its own (a website's kit doesn't count),
+once. Panel: template cards → questions + sample-data switch → progress →
+"ready" with counts. Apps still use the model-only starters; the rest of T-14
+(gallery in New project, template page, apps on the full engine,
+`/user-docs/templates`) is still to do.
 
 **Where it stands:** T-01…T-12 done and pushed (backend `v3`, admin `main`,
 marketing site `mint-webpage` `main`): the studio's backend, the Templates MCP
@@ -103,7 +116,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
 | T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
 | T-13 | First templates, written through the MCP | both | L | drafts written + checked locally; production preview + publish wait on deploy and the user's yes |
-| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | later |
+| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | website + API on Get started done; apps, New project gallery later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
 | T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
 

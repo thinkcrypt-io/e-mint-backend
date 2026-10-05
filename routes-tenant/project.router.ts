@@ -27,6 +27,7 @@ import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
+import templatesRouter from './templates.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -49,6 +50,7 @@ import { customQuery } from '../middleware/index.js';
  *                                 or the organization's shared library (mediaScope, WO-23)
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
+ *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
  */
 const router = express.Router({ mergeParams: true });
@@ -169,6 +171,8 @@ router.use('/history', historyRouter);
 router.use('/webhooks', webhooksRouter);
 // Site widgets (docs/widgets W-03): any project with a public API.
 router.use('/widgets', widgetsRouter);
+
+router.use('/templates', templatesRouter);
 router.use('/api-overview', overviewRouter);
 
 // Who a restricted model's records can be shared with (per-record access, D19):

@@ -185,7 +185,7 @@ const TENANT_RESERVED_ROUTES = new Set([
 	'access-users', 'new', 'edit', 'create', 'test', 'error', 'not-found',
 	'org', 'projects', 'invitations', 'p', 'sidebar', 'sidebarcategories', 'sidebaritems', 'upload', 'uploads', 'media',
 	'files', 'permissionlist', 'analytics', 'api-keys', 'public', 'mcp', 'site', 'track', 'customers', 'members', 'roles',
-	'sidebar-builder', 'dashboard-builder', 'account', 'switch', 'webhooks', 'api-overview', 'history', 'widgets',
+	'sidebar-builder', 'dashboard-builder', 'account', 'switch', 'webhooks', 'api-overview', 'history', 'widgets', 'templates',
 	// The tenant panel's project pages (/<project>/<page>): a model's table is /<project>/<route>.
 	'images', 'public-api', 't',
 ]);

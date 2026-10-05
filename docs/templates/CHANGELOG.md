@@ -515,3 +515,23 @@ Newest last. One entry per work order: what, files, how verified.
   The T-13 drafts still need `readOnly` set after the backend deploy (Handoff).
 - Verified: `templates-preview.mjs` (errors, build, a customer's `paid`
   order comes back `pending`); all smoke suites pass.
+
+## T-14 (part) — Website and API projects start from a template (2026-10-05)
+- **Why:** the user saw "start with a template" for apps but not websites,
+  though a website template was published. Get started's starters were
+  published *app* templates only, applied as models only.
+- **Backend** `routes-tenant/templates.router.ts` (`build`): the published
+  templates of the project's type this organization may use (what's inside,
+  questions); apply → `applyTemplate` in the background, progress on
+  `TenantProject.applying` (stale after 15 min); refused for a project with
+  models of its own (the website kit's pages/seo/web-contents don't count) or
+  one already made from a template. `templates` reserved as a tenant route.
+- **Panel** `get-started/page.tsx` `TemplateStart` for website and API
+  projects (falls back to the old flow when none are published or the backend
+  hasn't the endpoint yet): cards, questions by kind, sample-data switch,
+  polling, ready/failed screens. tenantApi getProjectTemplates /
+  applyProjectTemplate / getTemplateApplying. Projects guide updated.
+- **Verified:** smoke `templates-apply.mjs` (16: kinds, visibility, required
+  answers, background build, public page + endpoint, usage, once only) and
+  templates-preview, widgets pass; in the panel a new website applied
+  Business site (5 pages, 5 models, 25 records) and opened on its overview.
