@@ -115,3 +115,11 @@ Newest last. One entry per work order: what, files, how verified.
   plain page; inside the sandboxed frame locally Chrome blocks the `localhost`
   script (local-network rule) and the frame says so — a public CDN script
   loads in the same frame, so production's public API is expected to draw.
+
+## Plan — full catalogue and messaging (2026-10-05)
+- `CATALOGUE.md`: ~60 widgets in seven groups with phases (Live / P1 / P2 / P3);
+  one Collection widget instead of fifteen content widgets; what we won't build.
+- `WORK_ORDERS.md`: W-14…W-23 added.
+- New module `../messaging/` (README: layers, decisions MD1–MD12, data; WORK_ORDERS
+  M-01…M-13) for the user's request: email to clients and newsletters from the
+  panel, plus SMS and WhatsApp.

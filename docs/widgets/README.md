@@ -54,6 +54,9 @@ price or `status: paid`.
 
 ## 2. The widget catalogue (suggested, in build order)
 
+The first fifteen, in build order. **The full catalogue (~60, phased) is
+`CATALOGUE.md`; email, SMS and WhatsApp are planned in `../messaging/`.**
+
 | # | Widget | What the visitor sees | What the business gets | Needs |
 |---|---|---|---|---|
 | 1 | **Login & account** (exists → upgrade) | Sign in / sign up, then an account menu: profile, my orders, my bookings, sign out; password reset | Customers in the project's Customers list | — |

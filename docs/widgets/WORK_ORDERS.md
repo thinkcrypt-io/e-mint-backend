@@ -4,6 +4,13 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
+**2026-10-05 — catalogue and messaging planned.** The full list of ~60 widgets,
+grouped and phased, is `CATALOGUE.md` (W-14…W-23 added below). Email, SMS and
+WhatsApp — sending to clients, newsletters, automations — is its own module:
+`../messaging/` (M-01…M-13), interleaved with these: W-05 → M-02 → M-03 → M-04
+→ W-06/W-07 → W-07b. MD1–MD4 (provider, shared domain, quotas, double opt-in)
+wait on the user.
+
 **Where it stands:** W-01 plan, **W-02 Countries** and **W-03 Runtime** done
 (2026-10-05). W-03: `/public/mint.js` (core: Mint.auth/api/on/config/define,
 Shadow DOM, theme, auto light/dark from the page, MutationObserver) + lazy
@@ -47,6 +54,16 @@ Related, running separately: "public API read-only fields" (started
 | W-11 | Reviews & ratings, wishlist, pricing plans | both | L | later |
 | W-12 | Templates + MCP: blueprint `widgets` part, builder MCP tools, T-13 templates use them | both | M | after W-06/W-08 |
 | W-13 | Guides (`/user-docs/widgets`, `/payments`) + marketing site | admin + website | M | with each WO |
+| W-14 | **Collection** widget: any public model as cards, list, table, accordion, carousel, gallery, map, calendar; filters, search, paging, detail | both | L | open (P2) |
+| W-15 | My account & customer portal: profile, addresses, change password, delete account; orders, bookings, invoices in one place | both | M | open (P1, reset needs M-04) |
+| W-16 | Order tracking without an account + couriers (Steadfast, Pathao, RedX) | both | M | open (P2) |
+| W-17 | Coupons & discount codes | both | M | open (P2) |
+| W-18 | Search with filters | both | M | open (P2) |
+| W-19 | Social sign-in (Google, Facebook) and sign-in by email/SMS code | both | M | open (P2) |
+| W-20 | Members-only content (`data-mint-gate`) | backend | S | open (P2) |
+| W-21 | Events & tickets / RSVP, waitlist | both | L | later (P3) |
+| W-22 | AI assistant on the site (the project's public data only) | both | L | later (P3) |
+| W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
