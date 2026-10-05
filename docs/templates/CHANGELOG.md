@@ -549,3 +549,15 @@ Newest last. One entry per work order: what, files, how verified.
 - **Verified:** templates-apply now also applies an app template (sidebar,
   dashboard widget, role, sample records); templates, templates-preview pass;
   in the panel a new app applied Clients & invoices from Get started.
+
+## Fix — website previews timed out on production (2026-10-05)
+- A preview request waited 20 s for its build *after* pruning old previews and
+  creating the project; on Atlas a website's kit takes long enough that the
+  answer passed Heroku's 30 s limit, and the MCP saw a connector error (the build
+  itself finished). `templateSandbox.function.ts`: the wait now counts from the
+  start of the request, and old previews are pruned after the build starts.
+- Found alongside: the production cluster is at its 500-collection cap (501 —
+  e-mint 342, the rest other databases); 143 of the 168 tenant collections were
+  previews. Preview budget to be cut next (see WORK_ORDERS Handoff).
+- Verified: tsc; templates-preview smoke all passed; production preview link
+  opens the sandbox project signed in.

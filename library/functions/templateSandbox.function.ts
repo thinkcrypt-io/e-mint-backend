@@ -129,11 +129,21 @@ export type PreviewAnswer =
  * running, asking again answers that one (`already`) — builds side by side
  * only slow each other down.
  */
+/** Removes the oldest previews past MAX_PREVIEWS, never one still building or the one just made. */
+const pruneSandbox = async (organization: any, keep: any) => {
+	const extra = (await TenantProject.countDocuments({ organization })) - MAX_PREVIEWS;
+	if (extra <= 0) return;
+	const old = await TenantProject.find({ organization, _id: { $ne: keep } }).sort({ createdAt: 1 }).lean();
+	for (const p of old.filter(p => statusOf(p) !== 'building').slice(0, extra)) await removePreview(p);
+};
+
 export const previewTemplate = async (
 	req: any,
 	template: any,
 	opts: { from?: 'draft' | 'published'; answers?: Record<string, any>; sampleData?: boolean; waitMs?: number } = {}
 ): Promise<PreviewAnswer> => {
+	// The wait counts from here: setting up the project (a website's kit) takes seconds against the real database.
+	const started = Date.now();
 	const from = opts.from || (template.status === 'published' && !template.changed ? 'published' : 'draft');
 	const { organization, owner } = await ensureSandbox();
 	const running: any = await TenantProject.findOne({
@@ -143,13 +153,6 @@ export const previewTemplate = async (
 		createdAt: { $gt: new Date(Date.now() - STALE_BUILD_MS) },
 	}).lean();
 	if (running) return { status: 'building', project: publicPreview(running), already: true };
-
-	// Keep the sandbox small: the oldest previews go (never one still building).
-	const extra = (await TenantProject.countDocuments({ organization: organization._id })) - MAX_PREVIEWS + 1;
-	if (extra > 0) {
-		const old = await TenantProject.find({ organization: organization._id }).sort({ createdAt: 1 }).lean();
-		for (const p of old.filter(p => statusOf(p) !== 'building').slice(0, extra)) await removePreview(p);
-	}
 
 	// The build runs as the sandbox owner, in the sandbox — the admin's request lends its app and address.
 	const sandboxReq = Object.assign(Object.create(req), { user: owner, organization, member: null, permissions: ['*'] });
@@ -187,7 +190,11 @@ export const previewTemplate = async (
 		}
 	})();
 
-	const done = await Promise.race([build.then(result => ({ result }), (error: any) => ({ error })), sleep(opts.waitMs ?? BUILD_WAIT_MS)]);
+	// Keep the sandbox small: the oldest previews go (never one still building) — after the request, not before it.
+	pruneSandbox(organization._id, project._id).catch((e: any) => console.error('Pruning old template previews failed:', e?.message || e));
+
+	const wait = Math.max(0, (opts.waitMs ?? BUILD_WAIT_MS) - (Date.now() - started));
+	const done = await Promise.race([build.then(result => ({ result }), (error: any) => ({ error })), sleep(wait)]);
 	if (!done) return { status: 'building', project: publicPreview(await TenantProject.findById(project._id).lean()) };
 	if ('error' in done) {
 		// The caller hears why, so the failed record isn't needed.
