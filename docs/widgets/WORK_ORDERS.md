@@ -20,6 +20,19 @@ runtime** — done the same day (below). To add countries: put their data in
 `library/data/countries.ts`, run `scripts/countries/buildCountryAssets.mjs`
 for their pictures, restart — or add them in the database.
 
+**W-04 in progress (2026-10-05):** committed — backend 0be1b203 (nav item
+under Site / API / Audience, `window.__MINT_PREVIEW__` + `Mint.preview` in
+mint.js, preview-safe login) and admin 0a82875 (`src/app/widgets/page.tsx`:
+script tag, Look, per-widget on/off + options + texts + snippet + sandboxed
+live preview, Coming next with the org's providers, save bar). Type-checks;
+widgets smoke passes. **Still to do:** verify the page in the browser (the
+scratch tenant panel at :3011 was showing the no-Build-permission state even
+for an owner — same on Webhooks, so likely environmental; check with the
+browser pane visible), the user guide `user-docs/widgets` (anchors add-mint,
+look, login, mint-js, coming-next) + guides.ts entry, mark W-04 done.
+Then: New project offers "Start with a template" for apps but not websites
+although a website template is published — investigate.
+
 Related, running separately: "public API read-only fields" (started
 2026-10-05) — W-06 builds on it.
 
@@ -30,7 +43,7 @@ Related, running separately: "public API read-only fields" (started
 | W-01 | Plan & docs | backend | S | done |
 | W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | done |
 | W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | done |
-| W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | open |
+| W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | in progress |
 | W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
 | W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | open |
 | W-07 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | open |
