@@ -27,6 +27,7 @@ import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
+import paymentsRouter from './payments.router.js';
 import templatesRouter from './templates.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
@@ -171,6 +172,8 @@ router.use('/history', historyRouter);
 router.use('/webhooks', webhooksRouter);
 // Site widgets (docs/widgets W-03): any project with a public API.
 router.use('/widgets', widgetsRouter);
+// Payments (docs/widgets W-06): merchant accounts and what checkout took.
+router.use('/payments', paymentsRouter);
 
 router.use('/templates', templatesRouter);
 router.use('/api-overview', overviewRouter);

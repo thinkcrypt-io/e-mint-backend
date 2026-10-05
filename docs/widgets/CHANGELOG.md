@@ -189,3 +189,55 @@ Newest last. One entry per work order: what, files, how verified.
   sign-in back; 375 px wide drawer full width with no sideways scroll; the
   preview's demo cart in BDT on a dark page. Panel Shop section checked on
   :3011 (saved state, a refused save's message, Discard).
+
+## W-06 — Payments core (2026-10-06)
+- **The user's words:** "proceed to payment and next parts".
+- **Order mapping** (`ShopMapping.order`): the orders model, its items list and
+  each item's name / quantity / unit price (+ variant, SKU, product link), the
+  status and which values mean waiting / paid / cancelled, email, name, phone,
+  address (a section's sub-fields or one text block), note, delivery cost,
+  total, payment reference. Suggested from an `*Order*` model with an items
+  list and a status that has a paid value (both templates recognised). Saving
+  it makes the order's status and payment reference read-only on the public
+  API. Products may map a SKU, copied onto order items.
+- **Models:** `SitePaymentSettings` (`sitepaymentsettings`, per project:
+  Stripe enabled / mode / publishable key / secret key + webhook signing secret
+  sealed and `select: false`; thank-you and back-to-cart pages with `{ref}`),
+  `SitePayment` (`sitepayments`: public `ref`, order, amount in minor units,
+  currency, status created → pending → paid / failed / expired, lines priced
+  at checkout, provider ids, events). Named Site* — the old platform's
+  `Payment` model owns `payments`.
+- **Checkout** (`POST /public/api/:slug/checkout`): signed in → the saved cart;
+  guest → lines + email. Priced by `priceCart`; any line with a problem → 409
+  `cart_changed` with the cart (`TenancyError.extra`, now passed through by
+  `handle`). Writes the order (waiting for payment, items, total, contact,
+  `_customer`), fires its create webhook, records the payment, opens a Stripe
+  Checkout Session for the total (one line, the server's amount), returns
+  `redirectUrl`. A provider failure marks the payment failed and the order
+  cancelled. `GET /checkout/options` lists the ways to pay switched on;
+  `GET /checkout/:ref` answers the thank-you page.
+- **Stripe** (`library/functions/payments/stripe.ts`): form-encoded HTTP,
+  zero-decimal currencies, signature check (t + v1 HMAC, 5-minute tolerance).
+  `STRIPE_API_BASE` only outside production.
+- **Paid only by the webhook** (`POST /public/payments/stripe/:slug`, raw body
+  from `server.ts`): bad signature → 400; then the session is fetched from
+  Stripe and only its answer counts — reference, `payment_status: paid`,
+  amount and currency must match, else the payment is failed with the reason.
+  `markPaid` runs once (atomic status change): order → paid + payment
+  reference, update webhook, team notification, stock down (product and
+  variant, never below 0), the customer's cart emptied, a receipt from the
+  business's own email server (M-02). Expired / failed sessions are recorded.
+- **Settings rules:** keys must match the mode (sk_test_/rk_test_ in test,
+  live in live), whsec_ for the signing secret; Stripe can't be switched on
+  without both, nor when the organization's country doesn't offer it; a mode
+  change drops keys stored for the other mode.
+- **Tenant API** `/p/:id/payments` (records:view), `/settings` GET/PUT and
+  `/settings/check` (manage-projects), history entry.
+- **Verified:** new suite `payments.mjs` (37 checks) with a stand-in Stripe in
+  the test — mapping refusals, read-only order fields, settings refusals, keys
+  never returned, key check, guest checkout at the server's price (sent
+  prices ignored, 6200 paisa asked), order in the panel, forged signature,
+  signed-but-unpaid, a customer posting `status: paid` directly, paid →
+  reference + stock (product and variant) once despite a retry, wrong amount,
+  expiry, a signed-in customer's cart emptied and the order in their own list,
+  the payments list. widgets-cart, webhooks, templates-apply re-run green.

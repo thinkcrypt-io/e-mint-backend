@@ -2,7 +2,21 @@
 
 Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
-## Handoff — read this first (last updated 2026-10-05)
+## Handoff — read this first (last updated 2026-10-06)
+
+**2026-10-06 — W-06 Payments core done** (CHANGELOG). The user: "proceed to
+payment and next parts". Order mapping in `ShopMapping.order`
+(`shop.function.ts` `checkOrder`/`guessOrder`); `functions/payments.function.ts`
+(`checkout`, `stripeWebhook` → `markPaid`, `paymentStatus`,
+`savePaymentSettings`); `payments/stripe.ts` (HTTP, no SDK);
+`SitePayment` / `SitePaymentSettings` (the old platform owns `Payment` /
+`payments` — don't reuse the name). Public: `/checkout/options`, `POST
+/checkout`, `GET /checkout/:ref`, webhook `POST /public/payments/stripe/:slug`
+(raw body kept by server.ts). Tenant: `/p/:id/payments` (+ `/settings`,
+`/settings/check`). Suite `payments.mjs` needs the backend started with
+`STRIPE_API_BASE=http://127.0.0.1:12111`. **Next: W-07** — checkout widget,
+thank-you page, My orders, the Payments page and the order part of the Shop
+section in the panel.
 
 **2026-10-05 — W-05 Shop + Cart done** (CHANGELOG). The shop mapping lives in
 `SiteWidgets.shop` (`functions/shop.function.ts`: `checkShop`, `guessShop`,
@@ -55,7 +69,7 @@ Related, running separately: "public API read-only fields" (started
 | W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | done |
 | W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | done |
 | W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | done 2026-10-05 |
-| W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | open |
+| W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | done 2026-10-06 |
 | W-07 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | open |
 | W-07b | SSLCommerz and bKash (Bangladeshi organizations), cash on delivery, bank transfer, refunds | both | L | open |
 | W-08 | Forms widget (contact, newsletter, any create-only model), spam guard, team email | both | M | open |

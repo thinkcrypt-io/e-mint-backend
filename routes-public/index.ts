@@ -10,6 +10,8 @@ import { joinWaitlist } from '../controllers/waitlist/joinWaitlist.controller.js
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
+import TenantProject from '../library/models/tenancy/tenantProject.model.js';
+import { stripeWebhook } from '../library/functions/payments.function.js';
 
 /**
  * /public — what a tenant project's own site or app talks to
@@ -103,6 +105,25 @@ router.get('/countries/:code', async (req, res) => {
 	if (!c) return res.status(404).json({ message: 'No such country' });
 	res.setHeader('Cache-Control', 'public, max-age=300');
 	res.json(withPictures(req, c));
+});
+
+/*
+ * Payment providers' webhooks (docs/widgets W-06): only these can mark an
+ * order paid. The signature is checked against the project's own signing
+ * secret on the raw body (server.ts keeps it for /public/payments/).
+ */
+router.post('/payments/stripe/:project', async (req: any, res) => {
+	try {
+		const slug = String(req.params.project || '').toLowerCase();
+		const project: any = /^[a-z0-9-]{1,120}$/.test(slug) ? await TenantProject.findOne({ publicSlug: slug }).lean() : null;
+		if (!project || project.isActive === false) return res.status(404).json({ message: 'Not found' });
+		res.json(await stripeWebhook(req.app, project, req.rawBody, String(req.headers['stripe-signature'] || '')));
+	} catch (e: any) {
+		const status = e?.status || 500;
+		if (status === 500) console.error('stripe webhook:', e);
+		// A 5xx makes Stripe try again later; a 400 (bad signature) doesn't.
+		res.status(status).json({ message: status === 500 ? 'Something went wrong' : e.message });
+	}
 });
 
 router.use('/api/:project', publicApiRouter);

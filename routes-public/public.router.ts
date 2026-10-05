@@ -27,6 +27,7 @@ import { later, notifyTenant, projectAudience, projectHrefFor } from '../library
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
+import { checkout, checkoutOptions, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 
@@ -529,6 +530,33 @@ router.get(
 			contents: (blocks || []).map((b: any) => shape(b, contents!.def)),
 		};
 	})
+);
+
+/* ---------------------------------------------- checkout (docs/widgets W-06) */
+
+/**
+ *   GET  /checkout/options     the ways to pay switched on: { methods: [{ provider, name, mode }] }
+ *   POST /checkout             { provider, email, name?, phone?, address?, note?, lines? (guests) }
+ *                              → { ref, order, amount, currency, redirectUrl } — send the buyer to redirectUrl
+ *   GET  /checkout/:ref        the thank-you page's question: { status, order, amount, lines… }
+ * Prices come from the catalogue; a cart that changed answers 409 with the new cart.
+ */
+const checkoutLimit = rateLimit({ name: 'public-checkout', windowMs: 10 * 60 * 1000, max: 30 });
+
+router.get(
+	'/checkout/options',
+	handle(async (req: any) => checkoutOptions(req.project))
+);
+
+router.post(
+	'/checkout',
+	checkoutLimit,
+	handle(async (req: any) => checkout({ app: req.app, project: req.project, customer: await customerOf(req), body: req.body || {} }))
+);
+
+router.get(
+	'/checkout/:ref',
+	handle(async (req: any) => paymentStatus(String(req.params.ref || '')))
 );
 
 /* ------------------------------------------------------- model routes */

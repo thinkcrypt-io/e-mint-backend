@@ -40,6 +40,10 @@ const swaggerDocument = YAML.load('./docs/swagger.yaml');
 app.use(
 	express.json({
 		limit: '50mb',
+		// Payment providers sign the exact bytes they send (docs/widgets W-06).
+		verify: (req: any, _res, buf) => {
+			if (String(req.url || '').startsWith('/public/payments/')) req.rawBody = Buffer.from(buf);
+		},
 	})
 );
 

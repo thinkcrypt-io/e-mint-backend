@@ -37,7 +37,7 @@ export const handle =
 			const status = e?.status || (e?.name === 'ValidationError' ? 400 : 500);
 			if (status === 500) console.error('tenancy:', e);
 			if (!res.headersSent)
-				res.status(status).json({ message: status === 500 ? 'Something went wrong' : e?.message, ...(e?.code && { code: e.code }) });
+				res.status(status).json({ message: status === 500 ? 'Something went wrong' : e?.message, ...(e?.code && { code: e.code }), ...(status !== 500 && e?.extra) });
 		}
 	};
 

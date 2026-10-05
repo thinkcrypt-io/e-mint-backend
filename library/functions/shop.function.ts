@@ -31,6 +31,8 @@ export type ShopMapping = {
 			stock?: string;
 			status?: string;
 			variants?: string;
+			/** Copied onto each order item when the order's items have a SKU. */
+			sku?: string;
 		};
 		/** With `status`: the values that sell (a boolean field: [true]). */
 		activeValues?: (string | boolean)[];
@@ -39,7 +41,31 @@ export type ShopMapping = {
 	};
 	/** Signed-in carts in a model of the project's own; null keeps them in MINT. */
 	cart: { model: string; fields: { product: string; quantity: string; variant?: string; label?: string } } | null;
+	/**
+	 * Where checkout writes orders (W-06): the model, what its fields mean, each
+	 * item's sub-fields, and which status values mean waiting / paid / cancelled.
+	 * Optional — the cart works without it; checkout needs it.
+	 */
+	order?: ShopOrderMapping | null;
 	currency: string;
+};
+
+export type ShopOrderMapping = {
+	model: string;
+	fields: {
+		items: string;
+		status: string;
+		email?: string;
+		name?: string;
+		phone?: string;
+		address?: string;
+		note?: string;
+		shippingCost?: string;
+		total?: string;
+		paymentReference?: string;
+	};
+	item: { name: string; quantity: string; unitPrice: string; variant?: string; sku?: string; product?: string };
+	statuses: { pending: string; paid: string; cancelled?: string };
 };
 
 /** What each part of the mapping may be. */
@@ -58,6 +84,17 @@ const KINDS = {
 	cartQuantity: ['number'],
 	cartVariant: ['text', 'select'],
 	cartLabel: ['text'],
+	sku: ['text'],
+	orderItems: ['sectionlist'],
+	orderStatus: ['select', 'text'],
+	orderEmail: ['email', 'text'],
+	orderText: ['text', 'textarea'],
+	orderAddress: ['section', 'text', 'textarea'],
+	orderMoney: ['number'],
+	orderRef: ['text'],
+	itemText: ['text', 'select'],
+	itemNumber: ['number'],
+	itemProduct: ['reference'],
 };
 
 const MAX_LINES = 50;
@@ -111,6 +148,7 @@ export const guessShop = (defs: any[], currency: string): ShopMapping | null => 
 				...opt('compareAtPrice', pick(f, KINDS.compareAtPrice, /compare|was|old|regular/i)),
 				...opt('image', pick(f, KINDS.image, /image|photo|picture/i)),
 				...opt('stock', pick(f, KINDS.stock, /^(stock|quantity|inventory)$/i)),
+				...opt('sku', pick(f, KINDS.sku, /^sku$|code$/i)),
 				...(statusField?.options?.some((o: any) => o.value === 'active') && { status }),
 				...(vName && { variants }),
 			},
@@ -142,9 +180,54 @@ export const guessShop = (defs: any[], currency: string): ShopMapping | null => 
 				},
 			};
 	}
+	mapping.order = guessOrder(defs, product);
 	return mapping;
 };
 const opt = (key: string, value?: string) => (value ? { [key]: value } : {});
+
+/** An orders model: a list of items with a name, quantity and price, and a status with a "paid" value. */
+const guessOrder = (defs: any[], product: any): ShopOrderMapping | null => {
+	for (const d of defs.filter(x => /order/i.test(x.name) && x.name !== product.name)) {
+		const f = d.fields || [];
+		const items = f.find((x: any) => x.kind === 'sectionlist' && /item|line|product/i.test(x.key));
+		const status = f.find((x: any) => x.kind === 'select' && /status/i.test(x.key));
+		if (!items || !status) continue;
+		const values = (status.options || []).map((o: any) => String(o.value));
+		const paid = values.find((v: string) => /^paid$/i.test(v)) || values.find((v: string) => /paid/i.test(v) && !/unpaid|pending/i.test(v));
+		const pending = values.find((v: string) => /pending|awaiting|unpaid|new/i.test(v));
+		if (!paid || !pending) continue;
+		const sub = items.fields || [];
+		const name = pick(sub, KINDS.itemText, /^(name|product|title|label)$/i) || pick(sub, KINDS.itemText, /name|title/i);
+		const quantity = pick(sub, KINDS.itemNumber, /qty|quantity/i);
+		const unitPrice = pick(sub, KINDS.itemNumber, /unit|price/i);
+		if (!name || !quantity || !unitPrice) continue;
+		return {
+			model: d.name,
+			fields: {
+				items: items.key,
+				status: status.key,
+				...opt('email', pick(f, KINDS.orderEmail, /email/i)),
+				...opt('name', pick(f, ['text'], /^(name|customername|fullname)$/i)),
+				...opt('phone', pick(f, ['text'], /phone|mobile/i)),
+				...opt('address', pick(f, KINDS.orderAddress, /address|ship/i)),
+				...opt('note', pick(f, ['textarea'], /note|message|instruction/i)),
+				...opt('shippingCost', pick(f, KINDS.orderMoney, /ship|delivery/i)),
+				...opt('total', pick(f, KINDS.orderMoney, /^total$/i)),
+				...opt('paymentReference', pick(f, KINDS.orderRef, /payment|transaction/i)),
+			},
+			item: {
+				name,
+				quantity,
+				unitPrice,
+				...opt('variant', pick(sub, KINDS.itemText, /variant|option|size/i)),
+				...opt('sku', pick(sub, ['text'], /^sku$|code$/i)),
+				...opt('product', sub.find((x: any) => x.kind === 'reference' && x.ref === product.name)?.key),
+			},
+			statuses: { pending, paid, ...opt('cancelled', values.find((v: string) => /cancel/i.test(v))) } as ShopOrderMapping['statuses'],
+		};
+	}
+	return null;
+};
 
 /** A field the mapping names: it exists and is of a kind that fits — or a 400 saying which. */
 const need = (def: any, key: any, kinds: string[], what: string, required = false) => {
@@ -175,6 +258,7 @@ export const checkShop = (body: any, defs: any[]): ShopMapping => {
 		['stock', KINDS.stock, 'stock'],
 		['status', KINDS.status, 'status'],
 		['variants', KINDS.variants, 'variants'],
+		['sku', KINDS.sku, 'SKU'],
 	] as const) {
 		const v = need(product, pf[k], kinds as any, what);
 		if (v) (fields as any)[k] = v;
@@ -222,10 +306,70 @@ export const checkShop = (body: any, defs: any[]): ShopMapping => {
 		if (label) out.cart.fields.label = label;
 	}
 
+	if (body?.order?.model) out.order = checkOrder(body.order, byName, product);
+
 	const currency = String(body?.currency || '').trim().toUpperCase();
 	if (!/^[A-Z]{3}$/.test(currency)) throw new TenancyError(400, 'Pick the currency your prices are in (e.g. BDT, USD).');
 	out.currency = currency;
 	return out;
+};
+
+/** The order mapping as saved: the items list and status are required, the rest optional. */
+const checkOrder = (o: any, byName: Map<string, any>, product: any): ShopOrderMapping => {
+	const order = byName.get(o.model);
+	if (!order) throw new TenancyError(400, `There's no “${o.model}” model for orders.`);
+	if (order.name === product.name) throw new TenancyError(400, 'Orders need a model of their own, not the products’.');
+	const f = o.fields || {};
+	const fields: ShopOrderMapping['fields'] = {
+		items: need(order, f.items, KINDS.orderItems, 'order’s items', true)!,
+		status: need(order, f.status, KINDS.orderStatus, 'order’s status', true)!,
+	};
+	for (const [k, kinds, what] of [
+		['email', KINDS.orderEmail, 'order’s email'],
+		['name', ['text'], 'order’s name'],
+		['phone', ['text'], 'order’s phone'],
+		['address', KINDS.orderAddress, 'order’s address'],
+		['note', KINDS.orderText, 'order’s note'],
+		['shippingCost', KINDS.orderMoney, 'order’s delivery cost'],
+		['total', KINDS.orderMoney, 'order’s total'],
+		['paymentReference', KINDS.orderRef, 'order’s payment reference'],
+	] as const) {
+		const v = need(order, f[k], kinds as any, what);
+		if (v) (fields as any)[k] = v;
+	}
+	const sub = { title: 'Each order item', fields: fieldOf(order, fields.items).fields || [] };
+	const i = o.item || {};
+	const item: ShopOrderMapping['item'] = {
+		name: need(sub, i.name, KINDS.itemText, 'item’s name', true)!,
+		quantity: need(sub, i.quantity, KINDS.itemNumber, 'item’s quantity', true)!,
+		unitPrice: need(sub, i.unitPrice, KINDS.itemNumber, 'item’s price', true)!,
+	};
+	for (const [k, kinds, what] of [
+		['variant', KINDS.itemText, 'item’s variant'],
+		['sku', ['text'], 'item’s SKU'],
+		['product', KINDS.itemProduct, 'item’s product'],
+	] as const) {
+		const v = need(sub, i[k], kinds as any, what);
+		if (v) (item as any)[k] = v;
+	}
+	if (item.product && fieldOf(sub, item.product)?.ref !== product.name) throw new TenancyError(400, `The item’s product field must link to ${product.title || product.name}.`);
+	const sf = fieldOf(order, fields.status);
+	const values: string[] = sf.kind === 'select' ? (sf.options || []).map((x: any) => String(x.value)) : [];
+	const st = o.statuses || {};
+	const value = (v: any, what: string, required: boolean) => {
+		const val = typeof v === 'string' ? v.trim() : '';
+		if (!val) {
+			if (required) throw new TenancyError(400, `Say which status means ${what}.`);
+			return undefined;
+		}
+		if (values.length && !values.includes(val)) throw new TenancyError(400, `“${val}” isn’t one of the order status’s choices.`);
+		return val;
+	};
+	const statuses: ShopOrderMapping['statuses'] = { pending: value(st.pending, 'waiting for payment', true)!, paid: value(st.paid, 'paid', true)! };
+	const cancelled = value(st.cancelled, 'cancelled', false);
+	if (cancelled) statuses.cancelled = cancelled;
+	if (statuses.pending === statuses.paid) throw new TenancyError(400, 'Waiting for payment and paid must be different statuses.');
+	return { model: order.name, fields, item, statuses };
 };
 
 /* ---------------------------------------------------------- load and save */
@@ -276,7 +420,14 @@ export const saveShop = async (project: any, body: any) => {
 	}
 	const defs: any[] = await runInScope(scopeOf(project), () => ModelDefinition.find({ active: { $ne: false } }).lean());
 	const shop = checkShop(body?.shop, defs);
-	await runInScope(scopeOf(project), () => SiteWidgets.updateOne({}, { $set: { shop } }, { upsert: true }));
+	await runInScope(scopeOf(project), async () => {
+		await SiteWidgets.updateOne({}, { $set: { shop } }, { upsert: true });
+		// Checkout owns an order's status and payment reference: the public API never writes them (W-06, WD5).
+		if (shop.order) {
+			const owned = [shop.order.fields.status, shop.order.fields.paymentReference].filter(Boolean);
+			await ModelDefinition.updateOne({ name: shop.order.model }, { $addToSet: { 'publicApi.readOnlyFields': { $each: owned } } });
+		}
+	});
 	return shopView(project);
 };
 
@@ -333,6 +484,7 @@ export const productView = (doc: any, m: ShopMapping) => {
 		price: money(Math.max(0, price)),
 		compareAtPrice: compare !== null && compare > price ? money(compare) : null,
 		image: f.image ? firstImage(doc[f.image]) : '',
+		...(f.sku && { sku: String(doc[f.sku] ?? '') }),
 		stock,
 		variants,
 		available: variants.length ? variants.some((x: any) => (x.stock === null ? stock !== 0 : x.stock > 0)) : stock !== 0,
@@ -387,7 +539,7 @@ export const priceCart = async (app: any, m: ShopMapping, lines: CartLine[]) => 
 	const priced = lines.map(l => {
 		const p: any = byId.get(l.product);
 		if (!p) return { ...l, name: '', image: '', unitPrice: null, total: 0, problem: 'unavailable' };
-		const base = { product: l.product, variant: l.variant, name: p.name, image: p.image, compareAtPrice: null as number | null };
+		const base = { product: l.product, variant: l.variant, name: p.name, image: p.image, ...(p.sku && { sku: p.sku }), compareAtPrice: null as number | null };
 		let unit = p.price;
 		let stock = p.stock;
 		if (p.variants.length) {
