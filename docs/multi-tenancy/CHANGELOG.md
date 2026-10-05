@@ -1040,3 +1040,20 @@ Decisions D14–D17 (README).
   record, and pointing the app's `docsPath()` / marketing site at the new
   domain. Each of these waits for the user.
 
+## 2026-10-06 — WO-44 The app sends guide readers to the docs site
+- Admin `next.config.mjs`: `/user-docs` and `/user-docs/:path*` redirect
+  (307) to `NEXT_PUBLIC_DOCS_URL` (default `https://docs.mintapp.shop`) with
+  the same path, and the browser keeps the `#anchor`. This covers both panels
+  and every old link (landing page, GuideLink, bookmarks).
+- `panel.ts`: new `DOCS_URL`; in the tenant panel `docsPath()` returns
+  the docs site's address. `DocsShell` hands a tenant's `/docs/*` over with
+  `window.location.replace`, because `router.replace` can't leave the app.
+- mint-docs `GuideNav`: jumps to the `#section` on load, since the browser's
+  own jump can be lost while the page hydrates.
+- Verified on a tenant dev build (:3344) pointed at the local docs (:3200):
+  `/user-docs`, `/user-docs/models` and `/user-docs/public-api` answer 307
+  to the docs site, `/user-docs/models#models-fields` lands on
+  `/models#models-fields`, and `/docs/two-factor#passkey-qr` lands on
+  `/account#passkey-qr`.
+- Deploy order: docs site first (DEPLOY.md §2b), then admin/tenant.
+

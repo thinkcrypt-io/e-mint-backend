@@ -64,6 +64,7 @@ Same repo and branch as the admin panel; environment:
 | `NEXT_PUBLIC_BACKEND` | `https://<api host>/tenant/api` |
 | `NEXT_PUBLIC_SIDEBAR_TYPE` | `server` |
 | `NEXT_PUBLIC_URL` | `https://app.mintapp.shop` |
+| `NEXT_PUBLIC_DOCS_URL` (optional) | the user guides' site; defaults to `https://docs.mintapp.shop`. The app's `/user-docs/*` redirects there (next.config.mjs), and guide links go straight to it |
 
 `NEXT_PUBLIC_TOKEN_NAME` isn't needed: the tenant build always keeps its token
 under `MINT_TENANT_TOKEN` (constants.tsx), so it never shares a session with the
@@ -71,6 +72,15 @@ admin panel even if the admin's env is copied over. Its `/` is the public landin
 page; the dashboard is `/dashboard` (panel.ts `HOME`).
 
 Both builds were checked with `next build` (admin and `NEXT_PUBLIC_PANEL=tenant`).
+
+## 2b. User guides (`mint-docs`, its own Vercel project)
+
+Repo `aiasifistiaque/mint-docs`, branch `main`; domain `docs.mintapp.shop`
+(DNS: `CNAME docs → cname.vercel-dns.com`). Set `NEXT_PUBLIC_API_URL` to the
+backend's root (today `https://mint-c5e1255519fc.herokuapp.com`, because
+`api.mintapp.shop` doesn't reach the backend yet); the other variables'
+defaults are production's. **Deploy it before the admin/tenant change that
+redirects `/user-docs` there**, or guide links land on a 404.
 
 ## 3. After deploying
 
