@@ -241,3 +241,38 @@ Newest last. One entry per work order: what, files, how verified.
   reference + stock (product and variant) once despite a retry, wrong amount,
   expiry, a signed-in customer's cart emptied and the order in their own list,
   the payments list. widgets-cart, webhooks, templates-apply re-run green.
+
+## W-07 — Checkout, thank-you page, My orders, Payments page (2026-10-06)
+- **Widgets** (`WIDGET_TYPES`): `checkout` (ask phone / address / note,
+  require an account; 9 texts), `thanks` (keep-shopping link; 6 texts),
+  `orders` (3 texts). They switch on only with the Shop's orders set up (400
+  `orders_not_set_up`) and reach a site only then.
+- **Scripts:** `routes-public/widgets/checkout.ts` (served as both
+  `checkout.js` and `thanks.js`, 3.6 KB gz) — the form, the summary from
+  `Mint.cart`, ways to pay from `/checkout/options` (a Test mode badge), Pay →
+  `POST /checkout` → `redirectUrl`; a changed cart is reloaded and explained.
+  Thank-you reads `?ref=`, polls `/checkout/:ref` (1.5 s, then 4 s) until
+  paid / failed, then empties a guest's cart (`cart.clear`) or reloads a
+  customer's. `routes-public/widgets/orders.ts` (1.2 KB gz): the customer's
+  orders from new `GET /public/api/:slug/shop/orders` (`customerOrders`:
+  status label from the field's options, total or items summed).
+- **Core:** `Mint.cart.refresh()`, `Mint.money(amount, currency)`.
+- **Sidebar:** Payments after Widgets (manage-projects) → `/site-payments`.
+- **Panel** (admin): `/site-payments` — how payments work, Stripe (mode, keys
+  as "stored", webhook address to copy with the four events, signing secret,
+  offer at checkout; going live asks first), after-paying pages, a key check,
+  the payments list with statuses and reasons; the Shop section's Orders part
+  (model, items list, status values, item fields, the buyer's fields);
+  Widgets page notes when orders are missing. `tenantApi`
+  `getSitePaymentSettings` / `saveSitePaymentSettings` /
+  `checkSitePaymentKeys` / `getSitePayments`.
+- **Guides** moved with the user's decision to **mint-docs**
+  (docs.mintapp.shop): new `/payments` guide; `/widgets` gains the Shop's
+  orders, Checkout, Thank-you page and My orders. The admin `/user-docs`
+  pages are being retired (not touched here).
+- **Verified:** `payments.mjs` now 46 checks (My orders, the switching rule,
+  scripts served and parsing). In a real (headless) browser against a
+  stand-in Stripe that redirects to the thank-you page and sends a signed
+  webhook: add a mug → checkout page (Test mode badge, BDT 650.00) → Pay →
+  thank-you "Your payment is confirmed — order ORD-0001", guest cart emptied.
+  Panel Payments page and the Shop's Orders part checked headless on :3021.
