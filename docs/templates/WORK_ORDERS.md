@@ -20,10 +20,12 @@ collections free (`templateSandbox.function.ts`; `MONGO_COLLECTION_LIMIT`
 overrides, default 500 on Atlas and none elsewhere). The wait for a build counts
 from the request's start (website previews were passing Heroku's 30 s limit).
 Open: the cluster itself (move the other databases, or a dedicated tier) — the
-user's call; tenant-side previews wait for it. T-13: read-only fields set on
-every endpoint customers write to (Booking gets `cancelRequested`); the ten
-templates still need previewing and the user's yes to publish. Portfolio is
-already at version 1 (not published by Claude) — its draft changed too.
+user's call — done the same day: production moved to its own cluster in
+us-east-1 (multi-tenancy WORK_ORDERS Handoff). **T-13 done:** read-only fields on
+every endpoint customers write to (Booking gets `cancelRequested`); all ten
+previewed on production (3–5 s each on the new cluster) and published on the
+user's "publish all" — nine at v1, Portfolio v2. Next: rest of T-14 (New
+project gallery, template page with screenshots, /user-docs/templates).
 
 **2026-10-05 — T-14 Get started done for every kind:** a new app, API or
 website project's Get started offers the published templates of its kind,
@@ -136,7 +138,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-10 | Studio: Website tabs (Pages, Content, SEO, Site defaults, Starter code) | admin | L | done |
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
 | T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
-| T-13 | First templates, written through the MCP | both | L | drafts written + checked locally; production preview + publish wait on deploy and the user's yes |
+| T-13 | First templates, written through the MCP | both | L | done 2026-10-05 — all ten previewed on production and published (the user's yes) |
 | T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | Get started done for apps, APIs, websites; New project gallery later |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
 | T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
@@ -442,7 +444,7 @@ anchor link; every input has help text; every validation message has a fix.
 **Done when** every guide link in the studio lands on a section, and a
 reviewer can make and publish a template using only the guide.
 
-## T-13 — First templates through the MCP (L)
+## T-13 — First templates through the MCP (L) — done
 Written with Claude through `/templates/mcp`, each previewed, then published:
 **Apps** Finance management, CRM, HR & leave, Inventory; **API** Booking API,
 Products & orders API; **Websites** Blog, Business site, Portfolio,

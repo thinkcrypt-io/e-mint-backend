@@ -573,3 +573,16 @@ Newest last. One entry per work order: what, files, how verified.
 - Verified: tsc; templates-preview smoke all passed; locally at most one
   preview per template, 8 in the sandbox; with the limit set to 60 a preview is
   refused straight away (409, the message names the counts).
+
+## T-13 — First templates published (2026-10-05)
+- Ten templates written through the Templates MCP on production: apps Finance
+  management, CRM, HR & leave, Inventory; APIs Booking API, Products & orders
+  API; websites Blog, Business site, Portfolio, E-commerce.
+- Before publishing, read-only fields on every endpoint customers write to:
+  Bookings (status, paid, team notes; new `cancelRequested` for customers to
+  cancel), Orders in both shop templates (status, payment reference, tracking),
+  contact forms and the newsletter (status, notes). Guides and FAQs reworded.
+- Verified: all ten validate with no problems or warnings; each previewed on
+  production (built in 3–5 s on the new cluster, every model, page, sidebar
+  section, dashboard widget and sample record listed); published on the user's
+  "publish all" — visibility everyone; Portfolio v2, the rest v1.
