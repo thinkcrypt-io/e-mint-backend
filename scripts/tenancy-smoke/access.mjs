@@ -9,7 +9,7 @@ const P = (pid, path) => `/tenant/api/p/${pid}${path}`;
 const MONGO = process.env.MONGO_CONNECTION_URI || process.env.SMOKE_MONGO || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
 
 // The owner's organization and three projects: A and B share the organization's media, C keeps its own.
-let r = await call('POST', '/tenant/api/auth/register', { name: 'Alma Owner', email: `alma${stamp}@example.com`, password: PASS, organization: `Alpha ${stamp}` });
+let r = await call('POST', '/tenant/api/auth/register', { name: 'Alma Owner', email: `alma${stamp}@example.com`, password: PASS, organization: `Alpha ${stamp}`, country: 'BD' });
 const alma = r.body.token;
 const project = async (name, mediaScope) => (await call('POST', '/tenant/api/projects', { name, type: 'app', mediaScope }, alma)).body;
 const A = await project('Shop', 'organization');
@@ -32,7 +32,7 @@ ok('model in Shop', r.status === 201 || r.status === 200, r.body?.message);
 await call('POST', P(A._id, '/items'), { name: 'Lamp' }, alma);
 
 /* ---- WO-24 + WO-22: Vera has her own organization, is invited to Alpha for Shop only */
-r = await call('POST', '/tenant/api/auth/register', { name: 'Vera Viewer', email: `vera${stamp}@example.com`, password: PASS, organization: `Vera Co ${stamp}` });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Vera Viewer', email: `vera${stamp}@example.com`, password: PASS, organization: `Vera Co ${stamp}`, country: 'BD' });
 let vera = r.body.token;
 r = await call('POST', '/tenant/api/org/invitations', { email: `vera${stamp}@example.com`, role: viewer, allProjects: false, projects: [A._id] }, alma);
 ok('invite with a role and one project', r.status === 200 && r.body?.allProjects === false && r.body?.projects?.join() === A._id, r.body?.message);
@@ -105,7 +105,7 @@ r = await call('GET', P(C._id, '/media/browse'), null, alma);
 ok('Vault switched to shared: sees it', r.status === 200 && JSON.stringify(r.body).includes('Brand'));
 
 /* ---- declining, and deleting a project pulls it from access lists */
-r = await call('POST', '/tenant/api/auth/register', { name: 'Dan Decline', email: `dan${stamp}@example.com`, password: PASS, organization: `Dan Co ${stamp}` });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Dan Decline', email: `dan${stamp}@example.com`, password: PASS, organization: `Dan Co ${stamp}`, country: 'BD' });
 const dan = r.body.token;
 await mongoose.connection.db.collection('tenantusers').updateOne({ email: `dan${stamp}@example.com` }, { $set: { emailVerified: true } });
 await call('POST', '/tenant/api/org/invitations', { email: `dan${stamp}@example.com`, role: viewer, allProjects: false, projects: [B._id] }, alma);

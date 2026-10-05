@@ -2,7 +2,7 @@ import { call, ok, done, save, claims } from './lib.mjs';
 const stamp = Date.now();
 const PASS = 'tenant-pass-123';
 const ownerEmail = `org-owner${stamp}@example.com`;
-let r = await call('POST', '/tenant/api/auth/register', { name: 'Olivia Owner', email: ownerEmail, password: PASS, organization: 'Globex' });
+let r = await call('POST', '/tenant/api/auth/register', { name: 'Olivia Owner', email: ownerEmail, password: PASS, organization: 'Globex' , country: 'BD'});
 const owner = r.body.token;
 ok('owner registered', r.status === 200);
 r = await call('GET', '/tenant/api/org', null, owner);
@@ -32,7 +32,7 @@ r = await call('GET', '/tenant/api/org/invitations', null, owner);
 ok('pending invitations listed', r.status === 200 && r.body?.doc?.length === 2 && !JSON.stringify(r.body).includes('tokenHash'), r.body?.doc?.length);
 // A second person with their own org, to accept with an existing account
 const otherEmail = `existing${stamp}@example.com`;
-r = await call('POST', '/tenant/api/auth/register', { name: 'Eve Existing', email: otherEmail, password: PASS, organization: 'Eve Co' });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Eve Existing', email: otherEmail, password: PASS, organization: 'Eve Co' , country: 'BD'});
 const eve = r.body.token;
 r = await call('POST', '/tenant/api/org/invitations', { email: otherEmail, role: roles.admin }, owner);
 ok('invite an existing account', r.status === 200);

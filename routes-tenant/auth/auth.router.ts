@@ -14,6 +14,7 @@ import { redeemTicket } from '../../library/functions/templateSandbox.function.j
 import {
 	TenancyError,
 	createOrganization,
+	checkCountry,
 	handle,
 	pickOrganization,
 	publicUser,
@@ -101,16 +102,18 @@ router.post(
 				email: Joi.string().trim().lowercase().email().required(),
 				password,
 				organization: Joi.string().trim().min(1).max(120).required().messages({ 'any.required': 'Name your organization' }),
+				country: Joi.string().trim().length(2).required().messages({ 'any.required': 'Pick your country', 'string.length': 'Pick your country from the list' }),
 				onboarding: onboardingSchema.default({}),
 			}),
 			req.body
 		);
+		const country = await checkCountry(body.country);
 		if (await TenantUser.exists({ email: body.email }))
 			throw new TenancyError(400, 'An account with this email already exists — sign in instead.', 'email_taken');
 
 		const user: any = await TenantUser.create({ name: body.name, email: body.email, password: body.password });
 		try {
-			const organization = await createOrganization({ name: body.organization, owner: user, onboarding: body.onboarding });
+			const organization = await createOrganization({ name: body.organization, owner: user, onboarding: body.onboarding, country });
 			user.lastOrganization = organization._id;
 			await user.save();
 			return { token: await tenantSessions.issueSession(user, req, 'password', organization._id) };

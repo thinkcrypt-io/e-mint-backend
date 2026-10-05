@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { listCountries, countryByCode, providersFor } from './countries.function.js';
 import mongoose from 'mongoose';
 import Organization from '../models/tenancy/organization.model.js';
 import OrganizationMember from '../models/tenancy/organizationMember.model.js';
@@ -80,12 +81,13 @@ export const uniqueSlug = async (base: string, exists: (slug: string) => Promise
 };
 
 /** A new organization with its three system roles and `owner` as its owner. */
-export const createOrganization = async ({ name, owner, onboarding }: { name: string; owner: any; onboarding?: any }) => {
+export const createOrganization = async ({ name, owner, onboarding, country }: { name: string; owner: any; onboarding?: any; country?: string }) => {
 	const slug = await uniqueSlug(name, s => Organization.exists({ slug: s }));
 	const organization: any = await Organization.create({
 		name: String(name).trim().slice(0, 120),
 		slug,
 		owner: owner._id,
+		...(country && { country }),
 		onboarding: { ...(onboarding || {}), ...(onboarding && { completedAt: new Date() }) },
 	});
 	try {
@@ -142,6 +144,9 @@ export const publicOrganization = (o: any) =>
 		slug: o.slug,
 		logo: o.logo || '',
 		plan: o.plan || 'free',
+		country: o.country || '',
+		/** Offered because of the country (docs/widgets W-02). */
+		paymentProviders: providersFor(o.country),
 		owner: String(o.owner),
 		onboarding: o.onboarding || {},
 		createdAt: o.createdAt,
@@ -244,4 +249,15 @@ export const projectPeople = async ({ search = '', id }: { search?: string; id?:
 		.sort({ name: 1 })
 		.limit(1000)
 		.lean();
+};
+
+/**
+ * An organization's country from a request (docs/widgets W-02): an active
+ * country's code, upper-cased — anything else is refused with a sentence.
+ */
+export const checkCountry = async (code: any) => {
+	await listCountries();
+	const c = countryByCode(code);
+	if (!c) throw new TenancyError(400, 'Pick your country from the list — that one isn’t available yet.', 'country_unknown');
+	return c.code;
 };

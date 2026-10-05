@@ -51,6 +51,8 @@ const schema = new Schema<any>(
 		/** The platform's own organization (docs/templates T-04: template previews) — hidden from oversight and sign-in. */
 		system: { type: Boolean, default: undefined },
 		plan: { type: String, default: 'free', trim: true },
+		/** Where it's based (docs/widgets W-02): an active Country's code. Decides the payment providers it's offered. */
+		country: { type: String, uppercase: true, trim: true, match: /^[A-Z]{2}$/ },
 		onboarding: { type: onboardingSchema, default: {} },
 	},
 	{ timestamps: true, minimize: false }

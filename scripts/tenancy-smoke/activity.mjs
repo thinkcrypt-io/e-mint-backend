@@ -10,13 +10,13 @@ const settle = () => new Promise(r => setTimeout(r, 400));
 const idOf = r => r.body?._id || r.body?.doc?._id;
 
 // Owen owns the organization; Mia has her own account.
-let r = await call('POST', '/tenant/api/auth/register', { name: 'Owen Owner', email: `owen${stamp}@example.com`, password: PASS, organization: `Oak ${stamp}` });
+let r = await call('POST', '/tenant/api/auth/register', { name: 'Owen Owner', email: `owen${stamp}@example.com`, password: PASS, organization: `Oak ${stamp}`, country: 'BD' });
 const owen = r.body.token;
 r = await call('POST', '/tenant/api/projects', { name: 'Desk', type: 'app' }, owen);
 const desk = r.body;
 r = await call('POST', '/tenant/api/projects', { name: 'Other', type: 'app' }, owen);
 const other = r.body;
-r = await call('POST', '/tenant/api/auth/register', { name: 'Mia Member', email: `mia${stamp}@example.com`, password: PASS, organization: `Mia Co ${stamp}` });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Mia Member', email: `mia${stamp}@example.com`, password: PASS, organization: `Mia Co ${stamp}`, country: 'BD' });
 let mia = r.body.token;
 
 /* ------------------------------------------------------------- WO-36 */

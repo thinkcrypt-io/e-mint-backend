@@ -14,6 +14,7 @@ import adminRouter from './routes-admin/admin.router.js';
 import { syncDynamicModels } from './library/functions/dynamicModels.function.js';
 import { ensureTenantIndexes } from './library/functions/tenantIndexes.function.js';
 import { seedStarterTemplates } from './library/functions/templateSeed.function.js';
+import { seedCountries } from './library/functions/countries.function.js';
 import { schedulePreviewPurge } from './library/functions/templateSandbox.function.js';
 import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
 import userRouter from './user-routes/user.router.js';
@@ -59,6 +60,8 @@ connectDb().then(() => {
 	ensureTenantIndexes().catch(e => console.error(`Tenancy indexes: ${e.message}`));
 	// The code starters as the first templates (docs/templates TD14), where missing.
 	seedStarterTemplates();
+	// The built-in countries (docs/widgets W-02), where missing.
+	seedCountries();
 	// Template previews older than 24 hours go, now and every hour (docs/templates T-04).
 	schedulePreviewPurge();
 });

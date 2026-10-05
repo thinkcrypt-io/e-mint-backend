@@ -1,9 +1,9 @@
 import { call, ok, done, save } from './lib.mjs';
 const stamp = Date.now();
 const PASS = 'tenant-pass-123';
-let r = await call('POST', '/tenant/api/auth/register', { name: 'Pat Projects', email: `pat${stamp}@example.com`, password: PASS, organization: 'Initech' });
+let r = await call('POST', '/tenant/api/auth/register', { name: 'Pat Projects', email: `pat${stamp}@example.com`, password: PASS, organization: 'Initech' , country: 'BD'});
 const pat = r.body.token;
-r = await call('POST', '/tenant/api/auth/register', { name: 'Other', email: `other${stamp}@example.com`, password: PASS, organization: 'Umbrella' });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Other', email: `other${stamp}@example.com`, password: PASS, organization: 'Umbrella' , country: 'BD'});
 const other = r.body.token;
 r = await call('POST', '/tenant/api/projects', { name: 'CRM', type: 'app', description: 'Clients and deals' }, pat);
 ok('create app project', r.status === 200 && r.body?.slug === 'crm' && /^initech(-\d+)?-crm$/.test(r.body?.publicSlug), JSON.stringify({ slug: r.body?.slug, pub: r.body?.publicSlug, m: r.body?.message }));

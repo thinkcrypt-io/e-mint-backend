@@ -4,11 +4,14 @@ import { WIDGET_JS } from './widget.js';
 import { TRACK_JS } from './track.js';
 import { joinWaitlist } from '../controllers/waitlist/joinWaitlist.controller.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
+import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
+import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 
 /**
  * /public — what a tenant project's own site or app talks to
  * (docs/multi-tenancy WO-11): its public API and the customer login widget.
- * Also the marketing website's waitlist form (POST /waitlist).
+ * Also the marketing website's waitlist form (POST /waitlist), and the
+ * countries list (docs/widgets W-02) for sign-up and for widgets.
  * No admin or tenant token; CORS is open (app-wide cors()).
  */
 const router = express.Router();
@@ -34,6 +37,44 @@ router.get('/track.js', (_req, res) => {
 
 // The marketing website's "Join the waitlist" (mint-webpage).
 router.post('/waitlist', rateLimit({ name: 'waitlist', windowMs: 15 * 60 * 1000, max: 10 }), joinWaitlist);
+
+/* Countries (docs/widgets W-02): the list, one, and each one's flag and map. */
+const withPictures = (req: any, c: any) => ({
+	...c,
+	flagUrl: `${apiOrigin(req)}/public/countries/${c.code.toLowerCase()}/flag.svg`,
+	mapUrl: `${apiOrigin(req)}/public/countries/${c.code.toLowerCase()}/map.svg`,
+});
+
+router.get('/countries', async (req, res) => {
+	try {
+		res.setHeader('Cache-Control', 'public, max-age=300');
+		res.json({ doc: (await listCountries()).map(c => withPictures(req, c)) });
+	} catch {
+		res.status(500).json({ message: 'Could not load the countries' });
+	}
+});
+
+router.get('/countries/:code/:picture(flag|map).svg', async (req, res) => {
+	try {
+		const svg = /^[a-z]{2}$/i.test(req.params.code) ? await countryPicture(req.params.code, req.params.picture as 'flag' | 'map') : null;
+		if (!svg) return res.status(404).json({ message: 'No such picture' });
+		res.setHeader('Content-Type', 'image/svg+xml');
+		res.setHeader('Cache-Control', 'public, max-age=86400');
+		// An SVG opened on its own runs no script of ours or anyone's.
+		res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+		res.send(svg);
+	} catch {
+		res.status(500).json({ message: 'Could not load the picture' });
+	}
+});
+
+router.get('/countries/:code', async (req, res) => {
+	await listCountries();
+	const c = countryByCode(req.params.code);
+	if (!c) return res.status(404).json({ message: 'No such country' });
+	res.setHeader('Cache-Control', 'public, max-age=300');
+	res.json(withPictures(req, c));
+});
 
 router.use('/api/:project', publicApiRouter);
 

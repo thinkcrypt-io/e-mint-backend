@@ -4,9 +4,15 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
-**Where it stands:** plan agreed (W-01). Next: **W-02 Countries** (the
-organization's country decides its payment providers), then the runtime (W-03)
-and the shop (W-04…W-07), in that order.
+**Where it stands:** W-01 plan and **W-02 Countries done** (2026-10-05):
+`Country` collection with Bangladesh + 10 seeded at boot (flags, maps, dial
+codes, currency, payment providers), `GET /public/countries`, organizations
+carry a country (required on sign-up and New organization; old ones filled in
+from their sign-up answer at boot), `paymentProviders` on every organization
+response, a searchable country picker in the tenant panel. **Next: W-03
+runtime**, then the shop (W-04…W-07). To add countries: put their data in
+`library/data/countries.ts`, run `scripts/countries/buildCountryAssets.mjs`
+for their pictures, restart — or add them in the database.
 
 Related, running separately: "public API read-only fields" (started
 2026-10-05) — W-06 builds on it.
@@ -16,7 +22,7 @@ Related, running separately: "public API read-only fields" (started
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | W-01 | Plan & docs | backend | S | done |
-| W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | open |
+| W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | done |
 | W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | open |
 | W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | open |
 | W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
@@ -34,7 +40,7 @@ Related, running separately: "public API read-only fields" (started
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
 things go), this file, `CHANGELOG.md`; pointer `admin/docs/WIDGETS.md`.
 
-## W-02 — Countries (M)
+## W-02 — Countries (M) — done
 - `Country` (global, `countries`): `code` (ISO alpha-2, unique), `code3`,
   `name`, `nativeName`, `dialCode`, `flag` (emoji), `flagSvg`, `mapSvg`
   (stored in the database, `select: false`), `currency { code, symbol, name }`,

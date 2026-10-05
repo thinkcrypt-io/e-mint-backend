@@ -11,12 +11,12 @@ const stamp = Date.now();
 const email = `owner${stamp}@example.com`;
 const PASS = 'tenant-pass-123';
 
-let r = await call('POST', '/tenant/api/auth/register', { name: 'Ada Owner', email, password: PASS, organization: 'Acme Studio', onboarding: { businessName: 'Acme', industry: 'agency', teamSize: '2-10', heardFrom: 'search', goals: ['website', 'crm'] } });
+let r = await call('POST', '/tenant/api/auth/register', { name: 'Ada Owner', email, password: PASS, organization: 'Acme Studio', country: 'BD', onboarding: { businessName: 'Acme', industry: 'agency', teamSize: '2-10', heardFrom: 'search', goals: ['website', 'crm'] } });
 ok('register → token', r.status === 200 && r.body?.token?.startsWith('Bearer '), `${r.status} ${r.body?.message || ''}`);
 const t1 = r.body.token;
-r = await call('POST', '/tenant/api/auth/register', { name: 'Dup', email, password: PASS, organization: 'X' });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Dup', email, password: PASS, organization: 'X' , country: 'BD'});
 ok('duplicate email refused', r.status === 400 && r.body?.code === 'email_taken', r.status);
-r = await call('POST', '/tenant/api/auth/register', { name: 'Bad', email: `bad${stamp}@example.com`, password: PASS, organization: 'X', onboarding: { industry: 'not-a-thing' } });
+r = await call('POST', '/tenant/api/auth/register', { name: 'Bad', email: `bad${stamp}@example.com`, password: PASS, organization: 'X', country: 'BD', onboarding: { industry: 'not-a-thing' } });
 ok('invalid onboarding answer refused', r.status === 400, r.body?.message);
 r = await call('GET', '/tenant/api/auth/self', null, t1);
 ok('self has organization + owner role', r.status === 200 && r.body?.organization?.name === 'Acme Studio' && r.body?.role?.system === 'owner' && r.body.permissions.includes('*'), JSON.stringify({ org: r.body?.organization?.slug, role: r.body?.role?.name }));

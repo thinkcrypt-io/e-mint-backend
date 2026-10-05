@@ -26,6 +26,7 @@ import { later, notifyTenant } from '../../library/functions/tenantNotify.functi
 import {
 	TenancyError,
 	createOrganization,
+	checkCountry,
 	handle,
 	isId,
 	publicOrganization,
@@ -93,13 +94,15 @@ router.post(
 		const body = check(
 			Joi.object({
 				name: Joi.string().trim().min(1).max(120).required().messages({ 'any.required': 'Name the organization' }),
+				country: Joi.string().trim().length(2).required().messages({ 'any.required': 'Pick the organization’s country', 'string.length': 'Pick the country from the list' }),
 				onboarding: Joi.object().unknown(true).default(undefined),
 			}),
 			req.body
 		);
 		const owned = await Organization.countDocuments({ owner: req.user._id, isActive: { $ne: false } });
 		if (owned >= 20) throw new TenancyError(400, 'You own 20 organizations already.');
-		const organization = await createOrganization({ name: body.name, owner: req.user, onboarding: body.onboarding });
+		const country = await checkCountry(body.country);
+		const organization = await createOrganization({ name: body.name, owner: req.user, onboarding: body.onboarding, country });
 		return { organization: publicOrganization(organization), ...(await switchTo(req, organization._id)) };
 	})
 );
@@ -141,6 +144,8 @@ inOrg.put(
 			Joi.object({
 				name: Joi.string().trim().min(1).max(120),
 				logo: Joi.string().trim().max(1000).allow(''),
+				/** Changes the payment providers it's offered (docs/widgets W-02). */
+				country: Joi.string().trim().length(2),
 				onboarding: Joi.object({
 					businessName: Joi.string().trim().max(160).allow(''),
 					industry: optionalPick(ORG_INDUSTRIES),
@@ -158,6 +163,7 @@ inOrg.put(
 		const set: any = {};
 		if (body.name) set.name = body.name;
 		if (body.logo !== undefined) set.logo = body.logo;
+		if (body.country) set.country = await checkCountry(body.country);
 		if (body.onboarding) for (const [k, v] of Object.entries(body.onboarding)) set[`onboarding.${k}`] = v;
 		const organization = await Organization.findByIdAndUpdate(req.organization._id, { $set: set }, { new: true }).lean();
 		return publicOrganization(organization);
