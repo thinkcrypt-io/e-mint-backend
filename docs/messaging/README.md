@@ -59,7 +59,21 @@ already integrates one) and Twilio elsewhere. WhatsApp through the WhatsApp
 Business Cloud API — business-initiated messages need templates Meta
 approves, so it comes after email and SMS.
 
-## 3. Decisions (proposed — the user decides MD1–MD4)
+## 3. Decisions
+
+**The user, 2026-10-05:** "for email, it can be sent via nodemailer, they
+would manually add their email config, on signup and invite wishlist signup
+everyone gets email." So: no SES, no shared MINT sender, no per-plan quotas —
+each organization types in its own SMTP server; MINT's own mail (MAIL_* env)
+covers sign-up, invitations and the waitlist ("wishlist" read as the marketing
+site's waitlist). MD1–MD3 below are replaced by MD1′; MD4 (double opt-in) is
+still open — it matters only from M-07.
+
+| # | Decision | Why |
+|---|---|---|
+| MD1′ | **nodemailer + each organization's own SMTP server** (Organization → Email; password sealed with SECRET_ENCRYPTION_KEY). Nothing goes to a tenant's customers until it's set up. MINT's own emails (welcome on sign-up, invitations, password resets, codes, waitlist) keep using MINT's SMTP. | The user's decision. No sending cost or reputation for MINT to carry; the business's emails come from its own address. |
+
+The original proposals, kept for the record:
 
 | # | Decision | Why |
 |---|---|---|

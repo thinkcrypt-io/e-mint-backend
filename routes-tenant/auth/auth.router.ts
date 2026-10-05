@@ -6,6 +6,7 @@ import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../lib
 import { TenantPasskey, TenantTwoFactorChallenge } from '../../library/models/twoFactor/tenant.models.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
 import { makeTwoFactor, deliver, shell, p } from '../../library/controllers/twoFactor/twoFactor.service.js';
+import { button, esc, mailPage, para } from '../../library/functions/mail.function.js';
 import { makeTwoFactorRouter } from '../../library/controllers/twoFactor/twoFactor.router.js';
 import { addOwnSessionRoutes } from '../../library/controllers/sessions/sessions.router.js';
 import { tenantProtectAccount } from '../../middleware/tenant/protect.tenant.middleware.js';
@@ -92,6 +93,25 @@ const check = (schema: Joi.Schema, body: any) => {
 
 /* -------------------------------------------------------------- sign-up */
 
+/** Welcome to MINT — from MINT's own mail (docs/messaging M-02); never holds up the sign-up. */
+const welcome = (user: any, organization: any) => {
+	const hi = `Hi ${user.name},`;
+	const link = `${tenantUrl()}/projects`;
+	deliver(
+		user.email,
+		'Welcome to MINT',
+		`${hi}\n\nWelcome to MINT — ${organization.name} is ready. Start your first project (from a template, or from scratch) here:\n\n${link}\n\nThe guides are at ${tenantUrl()}/user-docs if you get stuck.\n\n— The MINT team`,
+		mailPage(
+			'MINT',
+			'Welcome to MINT',
+			para(esc(hi)) +
+				para(`<b>${esc(organization.name)}</b> is ready. Start your first project — from a template, or from scratch.`) +
+				button(link, 'Start a project') +
+				para(`Stuck? The <a href="${esc(tenantUrl())}/user-docs">guides</a> walk through everything.`)
+		)
+	).catch((e: any) => console.log('welcome email:', e?.message));
+};
+
 router.post(
 	'/register',
 	authLimit,
@@ -116,6 +136,7 @@ router.post(
 			const organization = await createOrganization({ name: body.organization, owner: user, onboarding: body.onboarding, country });
 			user.lastOrganization = organization._id;
 			await user.save();
+			welcome(user, organization);
 			return { token: await tenantSessions.issueSession(user, req, 'password', organization._id) };
 		} catch (e) {
 			await TenantUser.deleteOne({ _id: user._id }).catch(() => undefined);

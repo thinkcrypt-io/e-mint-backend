@@ -1,4 +1,5 @@
 import express from 'express';
+import mailRouter from './mail.router.js';
 import crypto from 'crypto';
 import Joi from 'joi';
 import Organization from '../../library/models/tenancy/organization.model.js';
@@ -48,6 +49,7 @@ import {
  *   GET    /roles · POST · PUT /:id · DELETE /:id                  manage-roles
  *   GET    /permissions              what a role can be given
  *   GET    /invitations · POST { email, name, role, allProjects, projects } · POST /:id/resend · DELETE /:id   manage-members
+ *   /mail                            its own email server (mail.router.ts)  manage-organization
  *
  * Project access (WO-22): a member opens every project (`allProjects`, the
  * default) or only `projects`; Owner and Admin always open every one.
@@ -519,6 +521,9 @@ inOrg.delete(
 		return { message: 'Invitation cancelled' };
 	})
 );
+
+// The organization's own email server (docs/messaging M-02).
+inOrg.use('/mail', mailRouter);
 
 router.use('/', inOrg);
 

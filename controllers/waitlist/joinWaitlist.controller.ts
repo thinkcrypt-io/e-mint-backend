@@ -1,5 +1,23 @@
 import Joi from 'joi';
 import Waitlist, { WAITLIST_TEAM_SIZES } from '../../models/waitlist/waitlist.model.js';
+import { deliver } from '../../library/controllers/twoFactor/twoFactor.service.js';
+import { button, esc, mailPage, para } from '../../library/functions/mail.function.js';
+
+/** "You're on the list" — from MINT's own mail (docs/messaging M-02); never holds up the answer. */
+const confirm = (entry: any, position: number) => {
+	const hi = entry.name ? `Hi ${entry.name},` : 'Hi,';
+	const site = String(process.env.MARKETING_URL || 'https://mintapp.shop').replace(/\/$/, '');
+	deliver(
+		entry.email,
+		`You're on the MINT waitlist — number ${position}`,
+		`${hi}\n\nThanks for joining the MINT waitlist. You're number ${position}. We'll email you as soon as your place comes up.\n\n${site}\n\n— The MINT team`,
+		mailPage(
+			'MINT',
+			'You’re on the list',
+			para(esc(hi)) + para(`Thanks for joining the MINT waitlist. You’re <b>number ${position}</b>. We’ll email you as soon as your place comes up.`) + button(site, 'See what’s coming')
+		)
+	).catch((e: any) => console.log('waitlist email:', e?.message));
+};
 
 /**
  * POST /public/waitlist — the marketing website's "Join the waitlist" form
@@ -56,7 +74,9 @@ export const joinWaitlist = async (req: any, res: any) => {
 
 		const details = Object.fromEntries(DETAILS.filter(k => value[k]).map(k => [k, value[k]]));
 		const entry = await Waitlist.create({ email: value.email, source: value.source || undefined, ...details });
-		return res.status(201).json({ position: await positionOf(entry), already: false });
+		const position = await positionOf(entry);
+		confirm(entry, position);
+		return res.status(201).json({ position, already: false });
 	} catch (e: any) {
 		// Two sign-ups for one email at once: the other one won.
 		if (e?.code === 11000) {

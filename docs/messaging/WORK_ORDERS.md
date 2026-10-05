@@ -4,9 +4,14 @@ Plan: `README.md`. Site widgets: `../widgets/` (CATALOGUE, WORK_ORDERS).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
-Planned only; nothing built (W-05 cart, the step before M-02, done
-2026-10-05). MD1–MD4 (provider, shared domain, quotas,
-double opt-in) wait on the user. Suggested order, interleaved with the
+**M-02 done 2026-10-06** (CHANGELOG): the user chose nodemailer + each
+organization's own SMTP (README MD1′) — so no SES, shared domain or quotas.
+Organization → Email (settings, test, log), `functions/mail.function.ts`
+(`sendOrgMail`, `welcomeCustomer`), `MailSettings` / `MailMessage`; MINT's own
+welcome on sign-up and waitlist confirmation. Next by the user's word
+("proceed to payment and next parts"): W-06/W-07 payments + checkout, whose
+order confirmation email uses `sendOrgMail`. MD4 (double opt-in) still open,
+needed at M-07. Suggested order, interleaved with the
 widget work orders: **W-05 cart → M-02 core → M-03 templates → M-04
 customer auth emails → W-06/W-07 payments and checkout (order confirmation
 email) → W-07b** — then M-05/M-06/M-07 with W-08 forms and W-14 Collection,
@@ -18,7 +23,7 @@ M-10 SMS/WhatsApp and M-11 inbox. Commit and push each WO when it's done.
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | M-01 | Plan & docs | backend | S | done 2026-10-05 |
-| M-02 | Core: channels, message log, job queue, MINT sender on SES, suppression list, bounce/complaint handling, quotas | backend | L | open |
+| M-02 | Core: the organization's own SMTP (nodemailer), message log, test send, customer welcome; MINT's own welcome + waitlist emails | both | L | done 2026-10-06 |
 | M-03 | Templates: block editor, variables from models, preview, test send; system templates | both | L | open |
 | M-04 | Customer auth emails: password reset, email verification, magic link; login widget upgrade | both | M | open |
 | M-05 | Send one email from any record; logged on its history; attachments | both | M | open |
@@ -31,8 +36,15 @@ M-10 SMS/WhatsApp and M-11 inbox. Commit and push each WO when it's done.
 | M-12 | Templates + MCP: blueprint `messages` part; MCP tools to draft templates and campaigns | both | M | after M-09 |
 | M-13 | Guides (`/user-docs/email`) + marketing site | admin + website | M | with each WO |
 
-## M-02 — Core (L)
-Channel adapters (email first: SES, SMTP, provider keys), `Message` log,
+## M-02 — Core (L) — done (revised by the user's MD1′)
+Built: Organization → Email — host, port (SMTP ports only), SSL, username,
+password (sealed, never returned), from name/address, reply-to, customer
+welcome on/off; a test send; the last 50 sends (subject only, 180 days);
+plain-words errors (wrong password, port, TLS, refused address). Production
+refuses hosts on private addresses. Still to come with M-08: the job queue and
+batching (campaigns), suppression list, unsubscribe.
+
+Originally planned: channel adapters (email first: SES, SMTP, provider keys), `Message` log,
 `Job` queue with a worker loop, batching to the provider's rate, the shared
 sender (MD2), suppression list, SES bounce and complaint notifications (SNS →
 webhook), automatic pause (MD7), monthly quotas and usage (MD3).

@@ -66,7 +66,12 @@ export const tenantNav = (
 		{ title: 'Projects', href: '/projects', icon: 'folder-kanban' },
 		{ title: 'Members', href: '/org/members', icon: 'users' },
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
-		...(can('manage-organization') ? [{ title: 'Settings', href: '/org/settings', icon: 'settings' }] : []),
+		...(can('manage-organization')
+			? [
+					{ title: 'Email', href: '/org/email', icon: 'mail' },
+					{ title: 'Settings', href: '/org/settings', icon: 'settings' },
+			  ]
+			: []),
 	]);
 	return [...site, ...files, ...audience, ...activity, ...build, ...org];
 };

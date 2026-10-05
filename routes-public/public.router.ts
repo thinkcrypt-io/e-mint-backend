@@ -26,6 +26,7 @@ import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../li
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
+import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 
@@ -211,6 +212,8 @@ router.post(
 			record: customer._id,
 		});
 		if (req.project.type === 'website') forwardConversion(req.project, req, 'signup', { email: customer.email, phone: customer.phone });
+		// A welcome from the business, through its own email server (docs/messaging M-02) — when it has one.
+		later(() => welcomeCustomer(req.project, customer, siteOrigin(req.project) || undefined));
 		return { token: customer.generateToken(), customer: publicCustomer(customer) };
 	})
 );
