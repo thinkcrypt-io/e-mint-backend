@@ -25,6 +25,7 @@ import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
+import { publicWidgets } from '../library/functions/widgets.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 
 /**
@@ -385,6 +386,15 @@ const menuOf = async (req: any) => {
 		.lean();
 	return list.map(p => ({ _id: String(p._id), name: p.name, path: p.path, parent: p.parent ? String(p.parent) : null }));
 };
+
+// The site widgets switched on for this project, and their look (docs/widgets W-03) — read by mint.js.
+router.get(
+	'/widgets',
+	handle(async (req: any, res: any) => {
+		res.setHeader('Cache-Control', 'public, max-age=30');
+		return publicWidgets(req.project);
+	})
+);
 
 router.get(
 	'/site',

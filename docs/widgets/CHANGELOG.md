@@ -52,3 +52,42 @@ Newest last. One entry per work order: what, files, how verified.
   (search by name and +44), settings show Bangladesh with SSLCommerz, bKash,
   Stripe, change and save, New organization in the UK → Stripe; the backfill
   on a fake old organization ("bangladesh" → BD, "Narnia" left alone).
+
+## W-03 — Runtime (2026-10-05)
+- **`/public/mint.js`** (`routes-public/mint.ts`): one script per site
+  (`data-project="<slug>"`). Asks `GET /public/api/:slug/widgets` which
+  widgets are on, finds `[data-mint="<name>"]` / `<mint-<name>>` elements,
+  loads `/public/widgets/<name>.js?v=<version>` only for those, mounts each in
+  its own Shadow DOM; a MutationObserver mounts elements added later.
+  `data-*` attributes override options per element. `window.Mint`: `auth`
+  (ready, user, token, signIn, signUp, signOut, onChange — same token key as
+  widget.js, `window.MintAuth` aliased), `api`, `json`, `on`/`emit` (also
+  `mint:<event>` DOM events), `config`, `define`, `ui` (el, shadow, palette),
+  `refresh`. Theme → CSS inside each shadow root: primary colour (text colour
+  picked by contrast), font (empty: inherit the site's), radius, light/dark —
+  `auto` matches the page's own background (falls back to the visitor's
+  setting on a see-through page).
+- **Login widget** (`routes-public/widgets/login.ts`): card or a button that
+  opens it (popover; full width on phones), sign in / create account (can be
+  turned off), signed-in name + sign out, every text editable. `widget.js`
+  is unchanged.
+- **Versioning**: a hash of the scripts; `mint.js` cached 5 min, widget
+  files with the current `?v=` a day.
+- **Settings**: `SiteWidgets` (tenant-scoped, one per project: `widgets`,
+  `theme`); `functions/widgets.function.ts` — `WIDGET_TYPES` (title, summary,
+  description, guide anchor, options with kinds/defaults, texts, snippet),
+  `loadWidgets`, `saveWidgets` (unknown widgets refused; unknown options/texts
+  dropped; bad values → defaults; theme cleaned — hex colour, radius 0–24,
+  mode, font without CSS punctuation), `publicWidgets` (switched-on only,
+  30 s cache, empty colour → the website's own primary colour, else
+  #111827).
+- **Routes**: public `GET /public/api/:slug/widgets`; tenant
+  `GET/PUT /tenant/api/p/:id/widgets` (`build`; returns the catalogue, the
+  settings and the script tag; history entry on save). `widgets` is now a
+  reserved model route.
+- Verified: smoke `widgets.mjs` (18 checks incl. both scripts parse; in
+  run-all); a plain HTML page with the button, a card, `<mint-login>` with
+  `data-start-with` and an element added after 1.5 s — all mount, the site's
+  own `button{background:red}` doesn't leak in, signing up in one updates all,
+  the session survives a reload, light cards on a light page, phone width
+  without overflow.

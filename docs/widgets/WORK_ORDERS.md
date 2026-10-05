@@ -4,13 +4,19 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
-**Where it stands:** W-01 plan and **W-02 Countries done** (2026-10-05):
+**Where it stands:** W-01 plan, **W-02 Countries** and **W-03 Runtime** done
+(2026-10-05). W-03: `/public/mint.js` (core: Mint.auth/api/on/config/define,
+Shadow DOM, theme, auto light/dark from the page, MutationObserver) + lazy
+`/public/widgets/<name>.js` (login so far), `SiteWidgets` per project,
+`GET /public/api/:slug/widgets`, tenant `GET/PUT /p/:id/widgets` (`build`),
+the catalogue in `functions/widgets.function.ts` (`WIDGET_TYPES`). **Next: W-04**
+the panel's Widgets page, then the shop. W-02:
 `Country` collection with Bangladesh + 10 seeded at boot (flags, maps, dial
 codes, currency, payment providers), `GET /public/countries`, organizations
 carry a country (required on sign-up and New organization; old ones filled in
 from their sign-up answer at boot), `paymentProviders` on every organization
 response, a searchable country picker in the tenant panel. **Next: W-03
-runtime**, then the shop (W-04…W-07). To add countries: put their data in
+runtime** — done the same day (below). To add countries: put their data in
 `library/data/countries.ts`, run `scripts/countries/buildCountryAssets.mjs`
 for their pictures, restart — or add them in the database.
 
@@ -23,7 +29,7 @@ Related, running separately: "public API read-only fields" (started
 |---|---|---|---|---|
 | W-01 | Plan & docs | backend | S | done |
 | W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | done |
-| W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | open |
+| W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | done |
 | W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | open |
 | W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
 | W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | open |
@@ -61,7 +67,7 @@ things go), this file, `CHANGELOG.md`; pointer `admin/docs/WIDGETS.md`.
 **Done when** a Bangladeshi organization is offered SSLCommerz and bKash and a
 British one Stripe, from the data.
 
-## W-03 — Runtime (L)
+## W-03 — Runtime (L) — done
 - `GET /public/mint.js` (cached, versioned): reads `data-project`, loads
   `GET /public/api/:slug/widgets` (enabled widgets, options, theme from
   `WebsiteSettings.identity`), finds `[data-mint]` / `<mint-*>` elements and

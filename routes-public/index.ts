@@ -2,6 +2,9 @@ import express from 'express';
 import publicApiRouter from './public.router.js';
 import { WIDGET_JS } from './widget.js';
 import { TRACK_JS } from './track.js';
+import crypto from 'crypto';
+import { MINT_JS } from './mint.js';
+import { LOGIN_WIDGET_JS } from './widgets/login.js';
 import { joinWaitlist } from '../controllers/waitlist/joinWaitlist.controller.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
@@ -27,6 +30,31 @@ router.get('/widget.js', (_req, res) => {
 	res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
 	res.setHeader('Cache-Control', 'public, max-age=300');
 	res.send(WIDGET_JS);
+});
+
+/* Site widgets (docs/widgets W-03): the runtime, and each widget's script. */
+const WIDGET_SCRIPTS: Record<string, string> = { login: LOGIN_WIDGET_JS };
+// Changes whenever any of the scripts does, so widget files can be cached hard.
+const WIDGETS_VERSION = crypto
+	.createHash('sha256')
+	.update(MINT_JS + Object.values(WIDGET_SCRIPTS).join(''))
+	.digest('hex')
+	.slice(0, 10);
+const MINT_SERVED = MINT_JS.replace('__VERSION__', WIDGETS_VERSION);
+
+router.get('/mint.js', (_req, res) => {
+	res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+	res.setHeader('Cache-Control', 'public, max-age=300');
+	res.send(MINT_SERVED);
+});
+
+router.get('/widgets/:name.js', (req, res) => {
+	const js = Object.prototype.hasOwnProperty.call(WIDGET_SCRIPTS, req.params.name) ? WIDGET_SCRIPTS[req.params.name] : null;
+	if (!js) return res.status(404).json({ message: 'No such widget' });
+	res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+	// Asked for with ?v=<version>: a new version is a new address.
+	res.setHeader('Cache-Control', req.query.v === WIDGETS_VERSION ? 'public, max-age=86400' : 'public, max-age=300');
+	res.send(js);
 });
 
 router.get('/track.js', (_req, res) => {

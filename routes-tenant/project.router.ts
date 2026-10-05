@@ -26,6 +26,7 @@ import analyticsRouter from './analytics.router.js';
 import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
+import widgetsRouter from './widgets.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -166,6 +167,8 @@ router.use('/', siteRouter);
 router.use('/history', historyRouter);
 // Outgoing webhooks, and what an API project's dashboard shows (docs/templates T-09).
 router.use('/webhooks', webhooksRouter);
+// Site widgets (docs/widgets W-03): any project with a public API.
+router.use('/widgets', widgetsRouter);
 router.use('/api-overview', overviewRouter);
 
 // Who a restricted model's records can be shared with (per-record access, D19):
