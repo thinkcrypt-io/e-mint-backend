@@ -68,6 +68,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 
 **Marketing website** (`mint-webpage/`, WO-41): its own repo (aiasifistiaque/mint-website, branch `main`), launch config `mint-webpage` (:3100). When a product change ships, update the site in the same piece of work — `src/content/*` (features, changelog, workflow, personas) and the drawings in `src/components/mock/mocks.tsx`; see its README.
 
+**User docs site** (`mint-docs/`, WO-44, 2026-10-06): the 19 user guides as their own static site for **docs.mintapp.shop** (Next 16 + Tailwind, the marketing site's look), launch config `mint-docs` (:3200). Local git repo only (`main` `55cc671`) — no GitHub repo, Vercel project or DNS yet. Paths and `#anchors` match the app's `/user-docs/*` without the prefix. Until the app's `docsPath()` links point there, **a guide change goes in both** (admin `src/app/user-docs/*` and `mint-docs/src/app/*`); the prose pieces have the same names and props, so a page copies across. See its README.
+
 **Conventions that bite:**
 - Tenant code runs inside a scope (AsyncLocalStorage, `tenantScoped`
   plugin). Never `mongoose.models[name]` in code a project reaches — use

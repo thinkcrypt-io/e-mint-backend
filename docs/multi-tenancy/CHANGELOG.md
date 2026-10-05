@@ -1021,3 +1021,22 @@ Decisions D14–D17 (README).
 - **Production: nothing run.** Order: deploy the backend → mongodump → dry run
   (record counts here) → stop the app → `--apply` → check → later
   `--drop-old` (DEPLOY.md §1.5). Only on the user's yes.
+
+## 2026-10-06 — WO-44 User docs on their own subdomain
+- The user asked: "for the docs, create a new project, the project will be in
+  another sub domain." New project `mint-docs/` (MINT Guides) for
+  docs.mintapp.shop: the 19 tenant guides from admin `src/app/user-docs/*`
+  ported by script. `'use client'` is dropped (every page is static), imports
+  are repointed, `/user-docs/x` became `/x`, and links to app screens
+  (`/projects`, `/org/members`…) became `${APP_URL}/…`, because `/projects`
+  is also a guide's path.
+- Adds a home page (first steps, guides by group), a header with search (`/`,
+  Cmd K), a footer, light/dark mode, a sitemap, robots and a share image.
+  The look is the marketing site's (tokens, logo, light uppercase headings).
+- Verified with `tsc`, `next build` (all 26 routes static) and the browser
+  pane: anchors, "On this page" tracking, search, app links, dark mode, and
+  no horizontal overflow at 390px on every page.
+- Not done: the GitHub repo, the Vercel project and domain, the `docs` DNS
+  record, and pointing the app's `docsPath()` / marketing site at the new
+  domain. Each of these waits for the user.
+
