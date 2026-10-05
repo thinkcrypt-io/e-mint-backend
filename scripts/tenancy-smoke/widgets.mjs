@@ -40,8 +40,8 @@ r = await call('PUT', P(site._id), { widgets: { login: { enabled: true, options:
 const w = r.body?.widgets?.login;
 ok('saving: on, a known option kept, unknown ones dropped, bad values back to defaults', r.status === 200 && w.enabled && w.options.layout === 'button' && w.options.startWith === 'signin' && !('bogus' in w.options) && w.texts.signInTitle === 'Welcome back' && !('made' in w.texts), JSON.stringify(w));
 ok('the look: radius clamped, unknown mode → auto, colour kept, no CSS smuggled in the font', r.body.theme.radius === 24 && r.body.theme.colorMode === 'auto' && r.body.theme.primaryColor === '#0f766e' && !/[;{}]/.test(r.body.theme.fontFamily), JSON.stringify(r.body.theme));
-r = await call('PUT', P(site._id), { widgets: { cart: { enabled: true } } }, T);
-ok('an unknown widget is refused', r.status === 400 && /no “cart” widget/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await call('PUT', P(site._id), { widgets: { nope: { enabled: true } } }, T);
+ok('an unknown widget is refused', r.status === 400 && /no “nope” widget/.test(r.body?.message), `${r.status} ${r.body?.message}`);
 
 r = await call('GET', `/public/api/${site.publicSlug}/widgets`);
 ok('the site now gets the login widget, its options, texts and look', r.body.widgets.login?.options.layout === 'button' && r.body.widgets.login.texts.signInTitle === 'Welcome back' && r.body.theme.radius === 24 && !('enabled' in r.body.widgets.login), JSON.stringify(r.body));

@@ -46,8 +46,8 @@ const slug = r.body?.publicSlug;
 r = await call('GET', P(pid, '/sidebar/admin/server'), null, s.pat);
 const nav = r.body || [];
 ok(
-	'sidebar leads with API: Public API, Webhooks, Customers',
-	nav[0]?.title === 'Dashboard' && nav[1]?.sectionTitle === 'API' && nav.slice(1, 4).map(i => i.title).join() === 'Public API,Webhooks,Customers' && !nav.some(i => i.sectionTitle === 'Audience'),
+	'sidebar leads with API: Public API, Webhooks, Widgets, Customers',
+	nav[0]?.title === 'Dashboard' && nav[1]?.sectionTitle === 'API' && nav.slice(1, 5).map(i => i.title).join() === 'Public API,Webhooks,Widgets,Customers' && !nav.some(i => i.sectionTitle === 'Audience'),
 	nav.map(i => `${i.sectionTitle ? `[${i.sectionTitle}] ` : ''}${i.title}`).join(' | ')
 );
 r = await call('GET', P(s.crm, '/sidebar/admin/server'), null, s.pat);

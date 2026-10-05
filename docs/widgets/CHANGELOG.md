@@ -123,3 +123,69 @@ Newest last. One entry per work order: what, files, how verified.
 - New module `../messaging/` (README: layers, decisions MD1–MD12, data; WORK_ORDERS
   M-01…M-13) for the user's request: email to clients and newsletters from the
   panel, plus SMS and WhatsApp.
+
+## W-05 — Shop mapping + Cart (2026-10-05)
+- **The user's words:** "start with the work orders" — W-05 is first in the
+  agreed order (W-05 → M-02 → M-03 → M-04 → W-06/W-07 → W-07b).
+- **Shop mapping** (`library/functions/shop.function.ts`, stored as
+  `SiteWidgets.shop`): the products model and what its fields mean (name,
+  price, compare-at, image, stock, status + which values sell, variants with
+  name / price change or own price / stock), where signed-in carts live, the
+  currency. `checkShop` checks every field against the project's models
+  (kinds in `KINDS`) and says what's wrong; `guessShop` suggests one from the
+  names (the E-commerce and Products & orders templates are recognised as they
+  are; currency from the organization's country). A mapping that no longer
+  fits the models (a field removed) is treated as not set up — the cart goes
+  quiet rather than mispricing.
+- **Where carts live:** in MINT — new shared, scoped `SiteCart` collection
+  (`sitecarts`, one doc per customer, ids + variants + quantities only, TTL 90
+  days; one collection for every project, MD10 / WO-43) — or in a model of the
+  project's own (needs a reference to the products model and a quantity; its
+  public API on, owner-only), written as rows with `_customer` so the team sees
+  carts and the template's "Most in carts" chart works. Rows that didn't change
+  are left alone.
+- **Pricing (WD5):** `priceCart` reads the catalogue for every answer — unit
+  price (variant price change or own price), line total, subtotal, count;
+  lines that can't be bought say why (`unavailable`, `choose_variant`,
+  `sold_out`, `limited` — quantity cut to stock) and aren't counted; same
+  product + variant merged; ≤50 lines, quantities 1–99. Drafts / archived /
+  private records are never sold.
+- **Public API** (`routes-public/public.router.ts`, needs the shop set up and
+  the Cart widget on, else 404 `cart_off`): `GET /shop/products/:id`,
+  `POST /cart/price` (guest), `GET|PUT /cart` and `POST /cart/merge` (signed
+  in).
+- **Runtime:** `Mint.cart` in `mint.js` (ready, lines, count, subtotal,
+  currency, add, set, remove, clear, product, format, onChange; `mint:cart`
+  event) — guest cart in localStorage, merged into the server cart on
+  sign-in, empty after sign-out; a demo cart in the panel's preview.
+  `[data-mint-add]` anywhere loads the cart widget. Core 6.1 KB gzipped.
+- **Cart widget** `routes-public/widgets/cart.ts` (`/public/widgets/cart.js`,
+  4.2 KB gzipped): button with count + drawer, or the cart on the page;
+  add-to-cart on any element (`data-mint-add`, `data-mint-variant`,
+  `data-mint-quantity`), a variant picker (prices, sold out), quantity
+  steppers capped at stock, remove, subtotal, checkout link (only a site path
+  or http(s) URL), "Added" toast; Escape / scrim close, focus returned.
+- **Widget type** `cart` in `WIDGET_TYPES` (layout, checkout page, open on
+  add; 13 texts). Switching it on without a shop → 400 `shop_not_set_up`;
+  clearing the shop switches it off. `GET /public/api/:slug/widgets` adds
+  `shop: { currency }`.
+- **Tenant API** `GET|PUT /p/:id/widgets/shop` (`build`), history entry.
+- **Panel** (admin `src/app/widgets/_components/ShopPanel.tsx`): Shop section
+  on the Widgets page — model, field pickers filtered by kind, status values,
+  variant price mode, carts kept in MINT or a model, currency, Save / Discard /
+  Use the suggestion / Clear (PromptDialog); the Cart panel says when the shop
+  is missing; the preview gets the currency. `tenantApi` `getWidgetsShop` /
+  `saveWidgetsShop`. Guide `/user-docs/widgets#shop`, `#cart`, Mint.cart in
+  `#mint-js`, troubleshooting rows; GuideLink anchors `shop`, `cart`.
+- **Verified:** new suite `tenancy-smoke/widgets-cart.mjs` (46 checks: guess,
+  refusals with reasons, server pricing ignoring sent prices, stock cuts,
+  sold out / unavailable / choose-variant, guest → customer merge, the same
+  cart after a new sign-in, a panel price change showing at once, carts in
+  Cart items as owner-only rows, switching off) — whole `run-all.sh` passes
+  (widgets.mjs: unknown-widget check now uses "nope"; webhooks.mjs: the API
+  sidebar now has Widgets). In a browser (plain HTML page on :3096 against
+  :5011): picker → Small £20 / Large sold out, drawer, + capped at stock,
+  £62 subtotal, sign-up moved the guest cart to the server, sign-out empty,
+  sign-in back; 375 px wide drawer full width with no sideways scroll; the
+  preview's demo cart in BDT on a dark page. Panel Shop section checked on
+  :3011 (saved state, a refused save's message, Discard).

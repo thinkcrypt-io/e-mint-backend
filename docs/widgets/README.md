@@ -15,7 +15,8 @@ Backend and admin are separate git repos (`backend` → remote `mint`, branch
 push each work order when it's done, then go on. Commits end with
 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-**Status (2026-10-05):** plan agreed; building in order from W-02. The
+**Status (2026-10-05):** plan agreed; W-02…W-05 done (countries, runtime,
+panel, shop + cart); next W-06 payments core. The
 user's answers: tenants' own merchant accounts (WD6), widgets for any project
 with a public API (WD7), runtime then the shop first, and **payment providers
 by the organization's country** (WD11).

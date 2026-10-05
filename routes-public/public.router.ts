@@ -25,7 +25,8 @@ import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
-import { publicWidgets } from '../library/functions/widgets.function.js';
+import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
+import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 
 /**
@@ -393,6 +394,59 @@ router.get(
 	handle(async (req: any, res: any) => {
 		res.setHeader('Cache-Control', 'public, max-age=30');
 		return publicWidgets(req.project);
+	})
+);
+
+/* ------------------------------------------------ the shop (docs/widgets W-05) */
+
+/**
+ * The cart widget's API. The browser sends product ids, variant names and
+ * quantities — never prices: every answer is priced from the catalogue
+ * (functions/shop.function.ts). Needs the shop set up and the Cart widget on.
+ *
+ *   GET  /shop/products/:id      a product as the widgets show it (price, variants, stock)
+ *   POST /cart/price             { lines }  a guest's cart (kept in their browser), priced
+ *   GET  /cart                   the signed-in customer's cart
+ *   PUT  /cart                   { lines }  replaces it
+ *   POST /cart/merge             { lines }  adds a guest cart to it (on sign-in)
+ */
+const shopOf = async (req: any) => {
+	const [shop, saved] = await Promise.all([loadShop(req.project), loadWidgets(req.project)]);
+	if (!shop || !saved.widgets.cart?.enabled) throw new TenancyError(404, 'This site’s cart is switched off (Site setup → Widgets).', 'cart_off');
+	return shop;
+};
+
+router.get(
+	'/shop/products/:id',
+	handle(async (req: any) => getProduct(req.app, await shopOf(req), String(req.params.id)))
+);
+
+router.post(
+	'/cart/price',
+	handle(async (req: any) => priceCart(req.app, await shopOf(req), cleanLines(req.body?.lines)))
+);
+
+router.get(
+	'/cart',
+	handle(async (req: any) => {
+		const shop = await shopOf(req);
+		return customerCart(req.app, shop, await signedIn(req));
+	})
+);
+
+router.put(
+	'/cart',
+	handle(async (req: any) => {
+		const shop = await shopOf(req);
+		return setCustomerCart(req.app, shop, await signedIn(req), req.body?.lines);
+	})
+);
+
+router.post(
+	'/cart/merge',
+	handle(async (req: any) => {
+		const shop = await shopOf(req);
+		return setCustomerCart(req.app, shop, await signedIn(req), req.body?.lines, true);
 	})
 );
 

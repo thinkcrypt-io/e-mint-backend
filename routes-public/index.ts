@@ -5,6 +5,7 @@ import { TRACK_JS } from './track.js';
 import crypto from 'crypto';
 import { MINT_JS } from './mint.js';
 import { LOGIN_WIDGET_JS } from './widgets/login.js';
+import { CART_WIDGET_JS } from './widgets/cart.js';
 import { joinWaitlist } from '../controllers/waitlist/joinWaitlist.controller.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
@@ -33,7 +34,7 @@ router.get('/widget.js', (_req, res) => {
 });
 
 /* Site widgets (docs/widgets W-03): the runtime, and each widget's script. */
-const WIDGET_SCRIPTS: Record<string, string> = { login: LOGIN_WIDGET_JS };
+const WIDGET_SCRIPTS: Record<string, string> = { login: LOGIN_WIDGET_JS, cart: CART_WIDGET_JS };
 // Changes whenever any of the scripts does, so widget files can be cached hard.
 const WIDGETS_VERSION = crypto
 	.createHash('sha256')

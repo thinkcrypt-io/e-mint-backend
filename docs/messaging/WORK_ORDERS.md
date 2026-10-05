@@ -4,7 +4,8 @@ Plan: `README.md`. Site widgets: `../widgets/` (CATALOGUE, WORK_ORDERS).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
-Planned only; nothing built. MD1–MD4 (provider, shared domain, quotas,
+Planned only; nothing built (W-05 cart, the step before M-02, done
+2026-10-05). MD1–MD4 (provider, shared domain, quotas,
 double opt-in) wait on the user. Suggested order, interleaved with the
 widget work orders: **W-05 cart → M-02 core → M-03 templates → M-04
 customer auth emails → W-06/W-07 payments and checkout (order confirmation

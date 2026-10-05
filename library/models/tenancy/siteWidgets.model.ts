@@ -14,6 +14,12 @@ const schema = new Schema<any>(
 	{
 		/** { [widget]: { enabled, options: {…}, texts: {…} } } */
 		widgets: { type: Schema.Types.Mixed, default: {} },
+		/**
+		 * The shop (W-05): which model is the catalogue and what its fields mean,
+		 * where signed-in carts are kept, the currency. Checked on save by
+		 * functions/shop.function.ts (`checkShop`); null until it's set up.
+		 */
+		shop: { type: Schema.Types.Mixed, default: null },
 		theme: {
 			/** Buttons and links; empty: the site's own primary colour (website projects), else near-black. */
 			primaryColor: { type: String, trim: true, default: '' },

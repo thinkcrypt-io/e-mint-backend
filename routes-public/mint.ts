@@ -19,6 +19,9 @@
  *   Mint.auth.ready / .user / .token        the signed-in customer (shared with widget.js)
  *   Mint.auth.signIn(email, password) · signUp({ name, email, password }) · signOut()
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
+ *   Mint.cart.ready / .lines / .count / .subtotal / .currency   the cart (W-05), priced by the server
+ *   Mint.cart.add(productId, { variant, quantity }) · set(id, qty, variant) · remove(id, variant) · clear()
+ *   Mint.cart.product(id) · format(amount) · onChange(cb)    (also the `mint:cart` DOM event)
  *   Mint.api(path, init)                     the project's public API, signed in when there's a customer
  *   Mint.on(event, cb) / Mint.emit(event, detail)   also fired as `mint:<event>` DOM events on document
  *   Mint.config                              a promise of { theme, widgets } (switched-on ones)
@@ -92,6 +95,95 @@ export const MINT_JS = `(function () {
 	auth.ready = session.token
 		? request('auth/me').then(json).then(function (u) { setSession(u, session.token); return u; }, function () { setSession(null, null); return null; })
 		: Promise.resolve(null);
+
+	/* ------------------------------------------------------------ the cart */
+	// Guests' carts live in the browser; a signed-in customer's on the server (and a guest cart joins it on sign-in).
+	// Only ids, variants and quantities go out — every price comes back from the server (docs/widgets W-05).
+	var CART_KEY = 'mint:' + project + ':cart';
+	function readCart() { try { var v = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+	function writeCart(lines) { try { lines.length ? localStorage.setItem(CART_KEY, JSON.stringify(lines)) : localStorage.removeItem(CART_KEY); } catch (e) {} }
+	function bare(lines) {
+		return (lines || []).filter(function (l) { return l.problem !== 'unavailable'; })
+			.map(function (l) { return { product: l.product, variant: l.variant || '', quantity: l.quantity }; });
+	}
+	var DEMO = { PRODUCT_ID: { _id: 'PRODUCT_ID', name: 'Fig & cedar candle', price: 28, variants: [], available: true, image: '' }, 'demo-2': { _id: 'demo-2', name: 'Speckled mug', price: 22, variants: [], available: true, image: '' } };
+	function demoPrice(lines) {
+		var out = lines.filter(function (l) { return DEMO[l.product]; }).map(function (l) {
+			var p = DEMO[l.product];
+			return { product: l.product, variant: l.variant, quantity: l.quantity, name: p.name, image: '', unitPrice: p.price, total: p.price * l.quantity, stock: null };
+		});
+		return Promise.resolve({ lines: out, count: out.reduce(function (s, l) { return s + l.quantity; }, 0), subtotal: out.reduce(function (s, l) { return s + l.total; }, 0) });
+	}
+	var products = {}, formats = {}, cartQueue = Promise.resolve();
+	var cart = {
+		lines: [], count: 0, subtotal: 0, currency: '',
+		onChange: function (cb) { return on('cart', cb); },
+		/** A product as the widgets show it: { name, price, compareAtPrice, image, stock, variants, available }. */
+		product: function (id) {
+			if (preview) return Promise.resolve(DEMO[id] || DEMO.PRODUCT_ID);
+			if (!products[id]) products[id] = request('shop/products/' + encodeURIComponent(id)).then(json).catch(function (e) { delete products[id]; throw e; });
+			return products[id];
+		},
+		add: function (id, opts) {
+			opts = opts || {};
+			var variant = opts.variant || '', qty = Math.max(1, Math.floor(Number(opts.quantity) || 1));
+			return change(function (lines) {
+				var hit = lines.filter(function (l) { return l.product === String(id) && l.variant === variant; })[0];
+				if (hit) hit.quantity += qty; else lines.push({ product: String(id), variant: variant, quantity: qty });
+				return lines;
+			});
+		},
+		/** Sets a line's quantity; 0 removes it. */
+		set: function (id, quantity, variant) {
+			quantity = Math.floor(Number(quantity) || 0);
+			return change(function (lines) {
+				return lines.map(function (l) { if (l.product === String(id) && l.variant === (variant || '')) l.quantity = quantity; return l; })
+					.filter(function (l) { return l.quantity > 0; });
+			});
+		},
+		remove: function (id, variant) { return cart.set(id, 0, variant); },
+		clear: function () { return change(function () { return []; }); },
+		/** An amount in the shop's currency, the visitor's way. */
+		format: function (n) {
+			if (n == null) return '';
+			var c = cart.currency || 'USD';
+			try { formats[c] = formats[c] || new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: c }); return formats[c].format(n); }
+			catch (e) { return c + ' ' + Number(n).toFixed(2); }
+		},
+	};
+	function applyCart(priced) {
+		cart.lines = priced.lines || []; cart.count = priced.count || 0; cart.subtotal = priced.subtotal || 0;
+		emit('cart', cart);
+		return cart;
+	}
+	/** Saves the lines (signed in: on the server; a guest: in the browser) and takes the priced cart back. */
+	function saveCart(lines) {
+		if (preview) { demoLines = lines; return demoPrice(lines).then(applyCart); }
+		if (session.user) return request('cart', { method: 'PUT', body: JSON.stringify({ lines: lines }) }).then(json).then(applyCart);
+		writeCart(lines);
+		if (!lines.length) return Promise.resolve(applyCart({ lines: [], count: 0, subtotal: 0 }));
+		return request('cart/price', { method: 'POST', body: JSON.stringify({ lines: lines }) }).then(json).then(function (priced) {
+			writeCart(bare(priced.lines));
+			return applyCart(priced);
+		});
+	}
+	var demoLines = [{ product: 'PRODUCT_ID', variant: '', quantity: 1 }, { product: 'demo-2', variant: '', quantity: 2 }];
+	function loadCart() {
+		if (preview) return demoPrice(demoLines).then(applyCart);
+		var local = readCart();
+		if (session.user && local.length)
+			return request('cart/merge', { method: 'POST', body: JSON.stringify({ lines: local }) }).then(json).then(function (priced) { writeCart([]); return applyCart(priced); });
+		if (session.user) return request('cart').then(json).then(applyCart);
+		return saveCart(local);
+	}
+	function change(fn) {
+		var run = cartQueue.then(function () { return cart.ready; }).then(function (ok) {
+			if (!ok) { var err = new Error('The cart is switched off for this site (Site setup → Widgets).'); err.code = 'cart_off'; throw err; }
+			return saveCart(fn(bare(cart.lines)));
+		});
+		cartQueue = run.catch(function () {});
+		return run;
+	}
 
 	/* ------------------------------------------------------------ the look */
 	function luminance(hex) {
@@ -168,6 +260,15 @@ export const MINT_JS = `(function () {
 			if (r.status === 404) { warned = null; console.warn('MINT: there is no project "' + project + '" — check data-project on the mint.js script tag'); }
 			return { theme: {}, widgets: {} };
 		}).catch(function () { return { theme: {}, widgets: {} }; });
+	cart.ready = config.then(function (cfg) {
+		if (!cfg.widgets.cart) return false;
+		cart.currency = (cfg.shop && cfg.shop.currency) || (preview && preview.shop && preview.shop.currency) || 'USD';
+		return auth.ready.then(loadCart).catch(function (e) { console.warn('MINT cart:', e.message); }).then(function () {
+			// A sign-in brings the guest cart along; a sign-out starts an empty one.
+			auth.onChange(function () { cartQueue = cartQueue.then(loadCart).catch(function (e) { console.warn('MINT cart:', e.message); }); });
+			return true;
+		});
+	});
 	function kebab(s) { return s.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }); }
 	function selector(name) { return '[data-mint="' + name + '"],mint-' + name; }
 	function optionsFor(host, base) {
@@ -208,6 +309,8 @@ export const MINT_JS = `(function () {
 			var names = {};
 			for (var i = 0; i < found.length; i++) names[found[i].getAttribute('data-mint')] = true;
 			if (root.getAttribute && root.getAttribute('data-mint')) names[root.getAttribute('data-mint')] = true;
+			// Add-to-cart buttons anywhere bring the cart widget in, with or without a cart on the page.
+			if (cfg.widgets.cart && root.querySelector && root.querySelector('[data-mint-add]')) load('cart');
 			Object.keys(cfg.widgets).forEach(function (name) {
 				if (names[name] || (root.querySelector && root.querySelector('mint-' + name)) || (root.tagName && root.tagName.toLowerCase() === 'mint-' + name)) load(name);
 			});
@@ -228,6 +331,7 @@ export const MINT_JS = `(function () {
 		on: on,
 		emit: emit,
 		auth: auth,
+		cart: cart,
 		config: config,
 		define: function (name, def) { defs[name] = def; mountAll(name); },
 		ui: { el: el, shadow: shadow, palette: palette },

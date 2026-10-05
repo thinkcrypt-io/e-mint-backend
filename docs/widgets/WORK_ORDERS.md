@@ -4,6 +4,16 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
+**2026-10-05 — W-05 Shop + Cart done** (CHANGELOG). The shop mapping lives in
+`SiteWidgets.shop` (`functions/shop.function.ts`: `checkShop`, `guessShop`,
+`priceCart`); signed-in carts in `SiteCart` (shared) or the project's own cart
+model; `Mint.cart` in mint.js; `widgets/cart.ts`. **W-06 builds on it:**
+checkout prices from `priceCart`, then needs an **order mapping** (items
+sub-fields, status values, email, address, totals, payment reference) — add
+it to `ShopMapping` and the Shop panel the same way. Next in the agreed
+order: **M-02** (messaging core) — needs the user's MD1–MD4 first; ask, and
+do W-06 meanwhile if they'd rather.
+
 **2026-10-05 — catalogue and messaging planned.** The full list of ~60 widgets,
 grouped and phased, is `CATALOGUE.md` (W-14…W-23 added below). Email, SMS and
 WhatsApp — sending to clients, newsletters, automations — is its own module:
@@ -44,7 +54,7 @@ Related, running separately: "public API read-only fields" (started
 | W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | done |
 | W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | done |
 | W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | done |
-| W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
+| W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | done 2026-10-05 |
 | W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | open |
 | W-07 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | open |
 | W-07b | SSLCommerz and bKash (Bangladeshi organizations), cash on delivery, bank transfer, refunds | both | L | open |
@@ -114,7 +124,11 @@ against this project), the snippet to copy, a guide link on each panel.
 **Done when** a tenant switches a widget on, changes its button text and sees
 it in the preview, then copies the snippet.
 
-## W-05 — Commerce mapping + Cart (L)
+## W-05 — Commerce mapping + Cart (L) — done
+Built: Widgets page → **Shop** (products model + fields, carts in MINT or a
+cart model, currency; suggested from the models — the E-commerce and Products
+& orders templates are recognised). The **order** mapping moves to W-06, where
+it's first used.
 - Site setup → **Shop**: pick the Product / Order / Cart item models and map
   their fields (name, price, image, stock, variants, status…); the E-commerce
   and Products & orders templates set it.

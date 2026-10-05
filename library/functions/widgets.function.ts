@@ -2,6 +2,7 @@ import SiteWidgets from '../models/tenancy/siteWidgets.model.js';
 import { runInScope } from './tenantScope.function.js';
 import { loadSite } from './siteConfig.function.js';
 import { TenancyError } from './tenancy.function.js';
+import { loadShop } from './shop.function.js';
 
 /**
  * Site widgets (docs/widgets): what each widget accepts, a project's settings
@@ -82,6 +83,45 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 		],
 		snippet: '<div data-mint="login"></div>',
 	},
+	cart: {
+		name: 'cart',
+		title: 'Cart',
+		summary: 'Add-to-cart buttons on any product, a cart button with a count, and a cart drawer with quantities and the subtotal.',
+		description:
+			'Put data-mint-add="<product id>" on any button and it adds that product; products with variants ask which one. Guests’ carts are kept in their browser and join their account when they sign in, so a cart follows them between devices. Prices, stock and the subtotal always come from your catalogue — never from the page. Needs the Shop set up first (above).',
+		guide: 'cart',
+		options: [
+			{
+				key: 'layout',
+				label: 'Layout',
+				kind: 'select',
+				options: [
+					{ value: 'button', label: 'A cart button that opens a drawer' },
+					{ value: 'page', label: 'The cart itself, on the page' },
+				],
+				default: 'button',
+				help: 'A button suits a header; the cart itself suits a /cart page.',
+			},
+			{ key: 'checkoutUrl', label: 'Checkout page', kind: 'text', default: '', help: 'Where the Checkout button goes, e.g. /checkout. Empty: no Checkout button yet (the checkout widget is coming).' },
+			{ key: 'openOnAdd', label: 'Open the cart when something’s added', kind: 'boolean', default: true, help: 'Off: a short “Added” message instead.' },
+		],
+		texts: [
+			{ key: 'button', label: 'Cart button', default: 'Cart' },
+			{ key: 'title', label: 'Cart title', default: 'Your cart' },
+			{ key: 'empty', label: 'Empty cart', default: 'Your cart is empty.' },
+			{ key: 'subtotal', label: 'Subtotal', default: 'Subtotal' },
+			{ key: 'note', label: 'Under the subtotal', default: 'Delivery and any discount are worked out at checkout.' },
+			{ key: 'checkout', label: 'Checkout button', default: 'Checkout' },
+			{ key: 'remove', label: 'Remove link', default: 'Remove' },
+			{ key: 'added', label: 'Added message', default: 'Added to your cart' },
+			{ key: 'choose', label: 'Variant picker title', default: 'Choose one' },
+			{ key: 'addButton', label: 'Variant picker button', default: 'Add to cart' },
+			{ key: 'soldOut', label: 'Sold out', default: 'Sold out' },
+			{ key: 'limited', label: 'Fewer in stock ({count} is how many)', default: 'Only {count} left — quantity changed' },
+			{ key: 'unavailable', label: 'No longer sold', default: 'No longer available' },
+		],
+		snippet: '<div data-mint="cart"></div>\n<button data-mint-add="PRODUCT_ID">Add to cart</button>',
+	},
 };
 
 export const THEME_DEFAULTS = { primaryColor: '', fontFamily: '', radius: 10, colorMode: 'auto' };
@@ -147,6 +187,8 @@ export const saveWidgets = async (project: any, body: any) => {
 			texts: { ...was.texts, ...(patch?.texts || {}) },
 		});
 	}
+	if (widgets.cart?.enabled && !current.widgets.cart.enabled && !(await loadShop(project)))
+		throw new TenancyError(400, 'Set up the Shop first — which model holds your products and what its fields mean — then switch the cart on.', 'shop_not_set_up');
 	const theme = body?.theme ? cleanTheme({ ...current.theme, ...body.theme }) : current.theme;
 	await runInScope(scopeOf(project), () => SiteWidgets.updateOne({}, { $set: { widgets, theme } }, { upsert: true }));
 	publicCache.delete(String(project._id));
@@ -157,6 +199,9 @@ export const saveWidgets = async (project: any, body: any) => {
 
 const publicCache = new Map<string, { at: number; value: any }>();
 const PUBLIC_TTL_MS = 30 * 1000;
+
+/** After the shop changes: the next mint.js asks again. */
+export const forgetPublicWidgets = (project: any) => publicCache.delete(String(project._id));
 
 /**
  * The switched-on widgets and the look, for the site (no secrets — there are
@@ -173,9 +218,16 @@ export const publicWidgets = async (project: any) => {
 		const own = site?.identity?.primaryColor;
 		if (HEX.test(own || '')) primary = own;
 	}
+	// The cart works only with the shop set up (a field since removed turns it off here).
+	const shop = widgets.cart?.enabled ? await loadShop(project) : null;
 	const value = {
 		theme: { ...theme, primaryColor: primary || '#111827' },
-		widgets: Object.fromEntries(Object.entries<any>(widgets).filter(([, w]) => w.enabled).map(([name, w]) => [name, { options: w.options, texts: w.texts }])),
+		widgets: Object.fromEntries(
+			Object.entries<any>(widgets)
+				.filter(([name, w]) => w.enabled && (name !== 'cart' || shop))
+				.map(([name, w]) => [name, { options: w.options, texts: w.texts }])
+		),
+		...(shop && { shop: { currency: shop.currency } }),
 	};
 	publicCache.set(key, { at: Date.now(), value });
 	return value;
