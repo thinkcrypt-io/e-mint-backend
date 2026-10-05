@@ -24,8 +24,9 @@ user's call — done the same day: production moved to its own cluster in
 us-east-1 (multi-tenancy WORK_ORDERS Handoff). **T-13 done:** read-only fields on
 every endpoint customers write to (Booking gets `cancelRequested`); all ten
 previewed on production (3–5 s each on the new cluster) and published on the
-user's "publish all" — nine at v1, Portfolio v2. Next: rest of T-14 (New
-project gallery, template page with screenshots, /user-docs/templates).
+user's "publish all" — nine at v1, Portfolio v2. **T-14:** New project's
+"Start from" gallery and `/user-docs/templates` done (see T-14); left: a template
+page with screenshots.
 
 **2026-10-05 — T-14 Get started done for every kind:** a new app, API or
 website project's Get started offers the published templates of its kind,
@@ -139,7 +140,7 @@ smoke) and `seedTemplateAccess.js`.
 | T-11 | Templates MCP connect page + Templates dashboard widget | both | M | done |
 | T-12 | `/docs/templates` guide + explanation pass over the studio | admin | M | done |
 | T-13 | First templates, written through the MCP | both | L | done 2026-10-05 — all ten previewed on production and published (the user's yes) |
-| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | Get started done for apps, APIs, websites; New project gallery later |
+| T-14 | Tenant side: template gallery in New project, questions, apply, setup checklist | both | L | done except a template page with screenshots: Get started (all kinds), New project's Start from, /user-docs/templates |
 | T-15 | Building blocks: reusable parts shared by templates | both | L | later |
 | T-16 | Previews of big templates build in the background; readable MCP errors; answers as select/number defaults | both | M | done |
 
@@ -458,6 +459,17 @@ template page (overview, screenshots, what's inside, setup guide); questions;
 "include sample data"; apply with progress; the project opens on its **setup
 checklist** (dashboard card, ticks itself where it can tell); user guide
 `/user-docs/templates`. Get started (WO-35) uses the same gallery.
+
+**Done (2026-10-05):** Get started for every kind (apply in the background,
+`/p/:id/templates`); **New project's "Start from"** — the kind's templates as
+cards (what each builds) plus "Set it up yourself", from the organization-level
+`GET /tenant/api/templates?type=` (`templatesGallery.router.ts`, needs
+`create-projects`, cards shared with Get started via `templateCards`). Picking
+builds nothing: the new project opens `get-started?template=<key>` (its questions
+waiting) or `?start=own`; Get started reads it once and drops it. An empty name
+takes the template's. Guide `/user-docs/templates` (choosing, questions, build,
+after, the list, troubleshooting), linked from New project and Get started.
+**Left:** a template page with screenshots.
 
 ## T-15 — Building blocks (later, L)
 Reusable parts (Customers, Payments, Addresses, Blog posts…) that templates

@@ -28,15 +28,38 @@ router.use(tenantPermissions(['build']));
 /** A build that started longer ago than this died with a server restart. */
 const STALE_MS = 15 * 60 * 1000;
 
-const usable = (type: string) => {
-	const org = currentScope()?.organization;
-	return ProjectTemplate.find(
+/** The published templates of a kind this organization may use: everyone's, and those kept for it. */
+const usable = (type: string, org: any = currentScope()?.organization) =>
+	ProjectTemplate.find(
 		{ type, status: 'published', $or: [{ visibility: 'everyone' }, ...(org ? [{ visibility: 'organizations', organizations: org }] : [])] },
 		{ key: 1, name: 1, summary: 1, icon: 1, version: 1, published: 1, type: 1, status: 1 }
 	)
 		.sort({ name: 1 })
 		.lean();
+
+/** A template as a gallery card: what it is, what's inside, the questions it asks. */
+const cardOf = (d: any) => {
+	const inside = whatsInside(d.published);
+	return {
+		key: d.key,
+		name: d.name,
+		summary: d.summary || '',
+		icon: d.icon || '',
+		version: d.version,
+		inside: {
+			models: inside.models.map((m: any) => m.title),
+			pages: inside.pages.map((p: any) => p.name || p.path),
+			sidebar: inside.sidebar.map((c: any) => c.name),
+			widgets: inside.widgets,
+			roles: inside.roles,
+			sampleRecords: inside.counts.sampleRecords,
+		},
+		questions: d.published?.questions || [],
+	};
 };
+
+/** The gallery for a kind of project — Get started here, and New project before there's a project (templatesGallery.router). */
+export const templateCards = async (type: string, org?: any) => ((await usable(type, org)) as any[]).map(cardOf);
 
 const applyingView = (p: any) => {
 	const a = p?.applying;
@@ -48,30 +71,7 @@ const applyingView = (p: any) => {
 
 router.get(
 	'/',
-	handle(async (req: any) => {
-		const docs: any[] = await usable(req.project.type || 'app');
-		return {
-			doc: docs.map(d => {
-				const inside = whatsInside(d.published);
-				return {
-					key: d.key,
-					name: d.name,
-					summary: d.summary || '',
-					icon: d.icon || '',
-					version: d.version,
-					inside: {
-						models: inside.models.map((m: any) => m.title),
-						pages: inside.pages.map((p: any) => p.name || p.path),
-						sidebar: inside.sidebar.map((c: any) => c.name),
-						widgets: inside.widgets,
-						roles: inside.roles,
-						sampleRecords: inside.counts.sampleRecords,
-					},
-					questions: d.published?.questions || [],
-				};
-			}),
-		};
-	})
+	handle(async (req: any) => ({ doc: await templateCards(req.project.type || 'app') }))
 );
 
 router.get(

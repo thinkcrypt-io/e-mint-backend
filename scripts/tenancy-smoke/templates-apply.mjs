@@ -56,6 +56,18 @@ ok('an app doesn’t list website templates', r.status === 200 && !r.body.doc.so
 r = await call('POST', P(app._id, `/${KEY}/apply`), {}, T);
 ok('…nor apply one', r.status === 404, `${r.status} ${r.body?.message}`);
 
+// New project's gallery: the same cards before there's a project (organization-level).
+r = await call('GET', '/tenant/api/templates?type=website', null, T);
+const card = r.body?.doc?.find(t => t.key === KEY);
+ok('New project gallery: website templates, with what’s inside', r.status === 200 && card && card.inside.pages.join() === 'Home' && card.questions[0]?.key === 'business', JSON.stringify(r.body).slice(0, 200));
+ok('…not those kept for other organizations', r.body.doc.every(t => t.key !== 'smoke-apply-hidden'), r.body.doc.map(t => t.key).join());
+r = await call('GET', '/tenant/api/templates?type=app', null, T);
+ok('…an app’s gallery has no website templates', r.status === 200 && !r.body.doc.some(t => t.key === KEY), r.body.doc.map(t => t.key).join());
+r = await call('GET', '/tenant/api/templates?type=shop', null, T);
+ok('…an unknown kind → 400', r.status === 400, `${r.status} ${r.body?.message}`);
+r = await call('GET', '/tenant/api/templates?type=app');
+ok('…needs a sign-in', r.status === 401, r.status);
+
 r = await call('GET', P(site._id, '/applying'), null, T);
 ok('nothing applying yet', r.status === 200 && r.body.status === null, JSON.stringify(r.body));
 

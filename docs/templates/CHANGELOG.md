@@ -586,3 +586,20 @@ Newest last. One entry per work order: what, files, how verified.
   production (built in 3–5 s on the new cluster, every model, page, sidebar
   section, dashboard widget and sample record listed); published on the user's
   "publish all" — visibility everyone; Portfolio v2, the rest v1.
+
+## T-14 — New project's template gallery, templates guide (2026-10-05)
+- Backend: `routes-tenant/templatesGallery.router.ts` — `GET /tenant/api/templates?type=`
+  (organization-level, `create-projects`), the same cards as Get started
+  (`templateCards` exported from `routes-tenant/templates.router.ts`).
+- Panel: `ProjectsBoard.tsx` New project gets "Start from" (`StartFrom`,
+  `StartCard`) — the kind's templates and "Set it up yourself"; the project opens
+  `get-started?template=<key>` / `?start=own`, which `get-started/page.tsx` reads
+  once; an empty name takes the template's (the field isn't required then).
+  `tenantApi.ts` `getNewProjectTemplates` (full address — a bare path would go to
+  the current project). Guide `/user-docs/templates`, in `guides.ts` and
+  GuideLink; Get started's and the Projects guide's links point to it.
+- Verified: tsc (backend and panel); templates-apply smoke all passed (5 new
+  gallery checks: kind filter, other organizations' hidden, 400, 401); in the
+  browser, New project → Website → Business site with no name → project
+  "Business site" opened on its questions, the address cleaned; `?start=own`
+  opened the website's own setup; the guide renders.
