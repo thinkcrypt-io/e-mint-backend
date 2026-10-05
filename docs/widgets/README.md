@@ -15,8 +15,10 @@ Backend and admin are separate git repos (`backend` → remote `mint`, branch
 push each work order when it's done, then go on. Commits end with
 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-**Status: plan only (2026-10-05).** Nothing here is built yet. Decisions marked
-**open** need the user's answer before their work order starts.
+**Status (2026-10-05):** plan agreed; building in order from W-02. The
+user's answers: tenants' own merchant accounts (WD6), widgets for any project
+with a public API (WD7), runtime then the shop first, and **payment providers
+by the organization's country** (WD11).
 
 ---
 
@@ -75,17 +77,24 @@ Widgets 1–6 make a working shop; 6, 10 and 11 cover most service businesses;
 
 ## 3. Payments
 
-**How money moves:** each tenant connects **their own** merchant account; the
-customer pays the provider directly and the money goes to the tenant. MINT
-never holds funds, so MINT needs no payment licence. (A marketplace model with
-a platform fee — Stripe Connect — is possible later.) **Open: confirm.**
+**How money moves (agreed):** each tenant connects **their own** merchant
+account; the customer pays the provider directly and the money goes to the
+tenant. MINT never holds funds, so MINT needs no payment licence. (A
+marketplace model with a platform fee — Stripe Connect — is possible later.)
 
-**Providers** — **open: which first.** Suggested: **Stripe** (cards, Apple/
-Google Pay, 40+ countries), **SSLCommerz** (cards, bKash, Nagad, Rocket and
-banks in Bangladesh, one integration), **bKash** direct (cheapest in BD),
-**Cash on delivery** and **bank transfer** (no provider: the order waits for
-the team to mark it paid). Recommendation: Stripe + SSLCommerz + Cash on
-delivery first; bKash direct next.
+**Providers by country (the user, 2026-10-05):** "when creating
+organization should select country … if the organization is bangladeshi then
+sslcommerz, bkash should be there too. otherwise stripe." So every
+organization has a **country** (picked from a searchable list when it's
+created), and each country in the **Countries** table lists the providers
+offered there: Bangladesh → **SSLCommerz** (cards, bKash, Nagad, Rocket,
+banks) and **bKash** direct, plus Stripe; everywhere else → **Stripe**. It's
+data, not code: the super admin can change a country's providers. (Stripe
+doesn't onboard businesses registered in some countries — Bangladesh and
+Pakistan among them — so the list per country should follow where each
+provider really works.) **Cash on delivery** and **bank transfer** need no
+provider and can be offered everywhere: the order waits for the team to mark
+it paid.
 
 **The flow** (every provider the same way):
 1. The checkout widget sends the cart lines (product ids, variants,
@@ -137,11 +146,12 @@ reference) become **read-only on the public API** — see the follow-up
 | WD3 | **Config is data**: a `SiteWidgets` document per project (on/off, options, texts, model mapping), served to the page from `GET /public/api/:slug/widgets`. Panel, MCP and templates all write it. | Change a widget without redeploying the site. |
 | WD4 | **Headless API for every widget** (`window.Mint.*`, events like `mint:cart:change`). | Custom sites (and AI-built ones) keep their own design. |
 | WD5 | **The server owns money and status**: prices, totals, stock, order and payment status are set by MINT; the browser only sends ids and quantities. | Closes the tampering gap the T-13 templates found. |
-| WD6 | **Tenant's own merchant accounts**; secrets server-side only, never returned. | No payment licence for MINT; tenants keep their money. **Open: confirm.** |
-| WD7 | **Any project with a public API** can use widgets (website and API projects), not only website projects. | The Booking API's booking widget, an app's contact form. **Open: confirm.** |
+| WD6 | **Tenant's own merchant accounts**; secrets server-side only, never returned. | No payment licence for MINT; tenants keep their money. Agreed. |
+| WD7 | **Any project with a public API** can use widgets (website and API projects), not only website projects. | The Booking API's booking widget, an app's contact form. Agreed. |
 | WD8 | **Templates ship widgets ready**: a `widgets` part in the blueprint (no secrets). E-commerce → cart, checkout, payments, my orders; Business site → contact form, WhatsApp, cookie consent; Blog → newsletter; Booking API → booking. | A template's site works on day one. |
 | WD9 | **Explained everywhere**: every widget has a guide section, its snippet, a live preview and a doc link in the panel (as Template Studio does). | The user's standing rule. |
 | WD10 | **Size budget**: core under 8 KB gzipped, each widget under 15 KB; nothing loads that the page doesn't use. | Sites stay fast. |
+| WD11 | **Countries are data**: a global `Country` collection (ISO code, names, dial code, flag and map SVGs, currency, region, the payment providers offered there); an organization stores its country code, required when it's created. Seeded with Bangladesh + 10 countries; the rest later. Served at `GET /public/countries` (and each flag/map as an image) for the panel and for widgets (phone and address fields). | Payment providers, currency defaults and phone inputs all follow the country — one table to keep right. |
 
 ## 6. Where things go
 

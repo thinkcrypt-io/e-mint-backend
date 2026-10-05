@@ -4,26 +4,25 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-05)
 
-**Where it stands:** plan only (W-01). Waiting on the user's answers to the
-open decisions in README §3/§5: which payment providers first (suggested
-Stripe + SSLCommerz + cash on delivery), tenants' own merchant accounts
-(WD6), widgets for any project with a public API (WD7). W-02…W-04 don't need
-those answers and can start on the user's go-ahead.
+**Where it stands:** plan agreed (W-01). Next: **W-02 Countries** (the
+organization's country decides its payment providers), then the runtime (W-03)
+and the shop (W-04…W-07), in that order.
 
 Related, running separately: "public API read-only fields" (started
-2026-10-05) — W-05 builds on it.
+2026-10-05) — W-06 builds on it.
 
 ## Status
 
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | W-01 | Plan & docs | backend | S | done |
-| W-02 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | open |
-| W-03 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | open |
-| W-04 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
-| W-05 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks, first provider | backend | L | waits on providers |
-| W-06 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | waits on W-05 |
-| W-07 | More providers (SSLCommerz, bKash, cash on delivery, bank transfer), refunds | both | L | waits on providers |
+| W-02 | Countries: `Country` collection (flags, maps, dial codes, currency, providers), seed BD + 10, country picker when an organization is made | both | M | open |
+| W-03 | Runtime: `mint.js` loader, core, `SiteWidgets` config, login widget moved in | backend | L | open |
+| W-04 | Panel: Site setup → Widgets (catalogue, options, live preview, snippet) | admin | M | open |
+| W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | open |
+| W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | open |
+| W-07 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | open |
+| W-07b | SSLCommerz and bKash (Bangladeshi organizations), cash on delivery, bank transfer, refunds | both | L | open |
 | W-08 | Forms widget (contact, newsletter, any create-only model), spam guard, team email | both | M | open |
 | W-09 | Booking widget + server free-slots endpoint | both | M | open |
 | W-10 | WhatsApp button, cookie consent (gates tracking tags), announcement bar, search | both | M | open |
@@ -35,7 +34,28 @@ Related, running separately: "public API read-only fields" (started
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
 things go), this file, `CHANGELOG.md`; pointer `admin/docs/WIDGETS.md`.
 
-## W-02 — Runtime (L)
+## W-02 — Countries (M)
+- `Country` (global, `countries`): `code` (ISO alpha-2, unique), `code3`,
+  `name`, `nativeName`, `dialCode`, `flag` (emoji), `flagSvg`, `mapSvg`
+  (stored in the database, `select: false`), `currency { code, symbol, name }`,
+  `region`, `paymentProviders` (e.g. BD: sslcommerz, bkash, stripe; others:
+  stripe), `active`, `position`.
+- Built-in data for Bangladesh + 10 (`library/data/countries.ts`): flags from
+  flag-icons (MIT), map outlines drawn from Natural Earth (public domain) by
+  `scripts/countries/buildCountryAssets.mjs`; inserted at boot when missing
+  (edits are kept), `scripts/seedCountries.js` to refresh.
+- `GET /public/countries` (list, cached), `GET /public/countries/:code`
+  (one), `/public/countries/:code/flag.svg`, `/map.svg`.
+- `Organization.country` (code, checked against active countries) — required
+  when an organization is made (sign-up and New organization), changeable in
+  organization settings; `paymentProviders` of an organization come from it.
+- Panel: a searchable country picker (flag, name, dial code) on sign-up,
+  New organization and organization settings.
+- Smoke: list, images, sign-up refuses an unknown country, org providers.
+**Done when** a Bangladeshi organization is offered SSLCommerz and bKash and a
+British one Stripe, from the data.
+
+## W-03 — Runtime (L)
 - `GET /public/mint.js` (cached, versioned): reads `data-project`, loads
   `GET /public/api/:slug/widgets` (enabled widgets, options, theme from
   `WebsiteSettings.identity`), finds `[data-mint]` / `<mint-*>` elements and
@@ -52,14 +72,14 @@ things go), this file, `CHANGELOG.md`; pointer `admin/docs/WIDGETS.md`.
 **Done when** a plain HTML page with one script tag shows the login widget
 from config, and switching it off in the database hides it on reload.
 
-## W-03 — Panel: Widgets (M)
+## W-04 — Panel: Widgets (M)
 Site setup → **Widgets**: a card per widget (what it does, on/off), its
 options and texts, a **live preview** (an iframe page loading `mint.js`
 against this project), the snippet to copy, a guide link on each panel.
 **Done when** a tenant switches a widget on, changes its button text and sees
 it in the preview, then copies the snippet.
 
-## W-04 — Commerce mapping + Cart (L)
+## W-05 — Commerce mapping + Cart (L)
 - Site setup → **Shop**: pick the Product / Order / Cart item models and map
   their fields (name, price, image, stock, variants, status…); the E-commerce
   and Products & orders templates set it.
@@ -70,24 +90,25 @@ it in the preview, then copies the snippet.
 **Done when** a guest adds two products, signs in on another device and finds
 the same cart.
 
-## W-05 — Payments core (L) — waits on the provider decision
+## W-06 — Payments core (L)
 - `PaymentSettings` (providers, mode, currency, return pages; secrets
   `select: false`), `Payment` model.
 - `POST /public/api/:slug/checkout` — server-priced order + payment session;
   `GET /checkout/:id` for the thank-you page.
 - `POST /public/payments/:provider/:slug` — verify, confirm with the provider,
   mark paid, lower stock, fire the order webhook; idempotent.
+- Providers offered = the organization's country's `paymentProviders`.
 - The first provider adapter (Stripe Checkout, test mode).
 - Order fields the server owns are read-only on the public API.
 **Done when** a test-card payment marks the order paid only after the
 provider's webhook, and a forged "paid" from the browser changes nothing.
 
-## W-06 — Checkout, thank-you, My orders (L)
+## W-07 — Checkout, thank-you, My orders (L)
 Checkout widget (address, delivery method, discount code, summary, pay),
 thank-you page state, My orders in the account widget; tenant panel →
 **Payments** page (connect, keys, test/live, a test payment button).
 
-## W-07 — More providers + refunds (L)
+## W-07b — Bangladesh providers, manual methods, refunds (L)
 SSLCommerz (session + IPN + validation API), bKash (create / execute / query),
 cash on delivery and bank transfer (no provider — the team marks paid),
 refunds from the order page.
