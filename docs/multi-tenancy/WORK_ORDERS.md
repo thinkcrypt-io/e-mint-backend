@@ -6,7 +6,17 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-04)
+## Handoff — read this first (kept current; last updated 2026-10-05)
+
+**2026-10-05 — production database moved.** Production now runs on its own
+Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
+old shared cluster (Mumbai) had hit its 500-collection cap, which counts every
+database on the cluster (each tenant model is a collection), and the distance to
+Heroku made heavy builds 30–50× slower (template previews: 100–200 s → 3–5 s).
+Copied with mongodump/mongorestore; all 262 collections matched on documents
+and indexes. The old `e-mint` database is kept untouched as a rollback — delete
+it only on the user's yes. Free and Flex Atlas tiers cap collections at 500:
+count before anything that creates many models.
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D19), then the open WO
