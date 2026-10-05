@@ -949,3 +949,15 @@ Decisions D14–D17 (README).
   renders. The studio's Public API tab uses the same component (typechecked,
   not clicked through).
 - Behaviour change for live sites: none until a model has read-only fields.
+
+## 2026-10-05 — WO-43 planned: one collection per project
+- Planned only, nothing built: decision D21 (README) and WO-43 (WORK_ORDERS)
+  — a project's built models share `t_<projectId>` with a `_model` field
+  (Mongoose discriminators), a per-model index manager instead of
+  `syncIndexes`, the direct collection calls to fix, the
+  `collectionName` unique index, and a migration script with dry run,
+  re-runs and `--drop-old`.
+- Why: Atlas caps Free/Flex at 500 collections and recommends ≤ 5,000 /
+  10,000 collections + indexes on M10 / M20–M30; one collection per model
+  reaches that at a few hundred projects. Chosen over shared collections for
+  every tenant (reasons in D21).

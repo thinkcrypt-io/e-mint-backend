@@ -1,6 +1,6 @@
 # Multi-tenancy — work orders
 
-Read `README.md` first (decisions D1–D19 and the architecture).
+Read `README.md` first (decisions D1–D21 and the architecture).
 Each item: **files → change → done when**. `BLOCKER` gates later items.
 Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
@@ -19,7 +19,7 @@ it only on the user's yes. Free and Flex Atlas tiers cap collections at 500:
 count before anything that creates many models.
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
-read this section, then `README.md` (decisions D1–D19), then the open WO
+read this section, then `README.md` (decisions D1–D21), then the open WO
 below. When an item lands, set its Status here, add a `CHANGELOG.md` entry
 (what, files, how verified), and update this section if anything in it
 changed. Never leave work done but untracked here.
@@ -37,7 +37,7 @@ changed. Never leave work done but untracked here.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
-`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 pushed** (public API list filters + docs, 2026-10-04: backend `v3` `65c397dc`, admin `main` `3b902d8`). **WO-42 pushed** (public API read-only fields, 2026-10-05: backend `v3` `a4e012bf`, admin `main` `136e33f`; not deployed). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 pushed** (public API list filters + docs, 2026-10-04: backend `v3` `65c397dc`, admin `main` `3b902d8`). **WO-42 pushed** (public API read-only fields, 2026-10-05: backend `v3` `a4e012bf`, admin `main` `136e33f`; not deployed). **Open: WO-43** (one collection per project, D21 — planned 2026-10-05, not started; read it before anything that adds collections or calls a model's collection directly). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -128,6 +128,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 40 | **Public API lists: the admin lists' filters (`field_op=value`), search, multi-sort, `fields`; documented in the API reference, user guide and MCP** | both | M | done |
 | 41 | **Marketing website (`mint-webpage/`, repo aiasifistiaque/mint-website `main`) + waitlist: `POST /public/waitlist`, `Waitlist` model, super-admin `/waitlist` table, `scripts/seedWaitlist.js`** | backend + website | M | done (both pushed; seed + deploy pending) |
 | 42 | **Public API read-only fields (`publicApi.readOnlyFields`, template `endpoints[].readOnly`): a customer can't create an order as `paid`** | both | M | done (pushed: backend `a4e012bf`, admin `136e33f`) |
+| 43 | **One collection per project (D21): a project's models share `t_<projectId>` with a `_model` field; per-model index manager; migration of existing projects** | backend | L | planned — not started |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -762,6 +763,129 @@ field-level write control for the public API." Decision D20.
   ignores it, the business sets it in the panel and the customer can't undo
   it, `GET /` marks it); `templates-preview.mjs` (template errors, a built
   preview's model has the list, a customer's `paid` order is `pending`).
+
+## WO-43 — One collection per project (L) — planned
+**The user's words (2026-10-05):** "if i need to have unlimited collection?
+… atlas seem to have cap" → chose "One collection per project: all of a
+project's models in one collection, with a `_model` field. Collections then
+grow with projects only." Decision D21 (README) — why this and not shared
+collections for every tenant is recorded there.
+
+**Why.** Today each tenant model is its own collection
+(`t_<projectId>_<route>`, D6) with 2–4 indexes, so the cluster's count is
+projects × models. Atlas Free/Flex refuse more than 500 collections (the old
+shared cluster hit it — see the Handoff); dedicated tiers recommend at most
+5,000 (M10) / 10,000 (M20, M30) / 100,000 (M40+) collections **and indexes**
+combined — past that, checkpoints slow, memory per open file grows and
+failovers take longer. 100 projects × 10 models is already ~1,000 collections
+and ~3,000 indexes. After this WO: ~1 collection and ~6–10 indexes per
+project.
+
+**Design**
+1. **Storage.** A tenant project's built models all use collection
+   `t_<projectId>`. Each record carries `_model` = the model's `name`
+   (`Booking`; fixed at creation, unique in the project). Super-admin
+   (platform) built models are unchanged: one collection each.
+2. **Mongoose discriminators** (`dynamicModels.function.ts`, `compile`): per
+   project a base model `T<projectId>__Records` on `t_<projectId>` —
+   empty schema, `{ discriminatorKey: '_model', timestamps: true,
+   versionKey: false, autoIndex: false }`, made once per scope
+   (`reg()`). Each model compiles as
+   `Base.discriminator(internalModelName(name), buildSchema(def), { value: def.name, overwriteModels: true })`
+   instead of `mongoose.model(name, schema, def.collectionName)`. Mongoose
+   then sets `_model` on save/insertMany and adds `{ _model }` to every find,
+   count, update, delete, `findById`, populate and **aggregate** (a `$match`
+   is prepended) — so defineRoutes, filters, search, bulk actions, merge,
+   dashboard stats, history and the public API work unchanged. Unloading a
+   scope (`deleteModel` at ~1031/1163) removes the discriminators and the base.
+   `_model` is reserved: no field key may be `_model` (add to the builder's
+   reserved keys).
+3. **Index manager** (new `library/functions/projectIndexes.function.ts`),
+   replacing `Model.syncIndexes()` for tenant models — **syncIndexes on a
+   shared collection drops every other model's indexes**:
+   - shared, one per collection: `p_model_createdAt` `{_model:1, createdAt:-1}`;
+     `p_model_code` `{_model:1, code:1}` unique, partial `{code: {$exists: true}}`;
+     `p_model_customer` `{_model:1, _customer:1}` partial on `_customer`;
+     `p_model_addedBy` `{_model:1, addedBy:1}`; `p_model_access` `{_model:1, access:1}`
+     (the last three partial on the field existing);
+   - per model, named `m_<name>_<field>`: a unique field →
+     `{_model:1, <field>:1}` unique, partial `{_model: <name>}` (+ `<field>:
+     {$exists: true}` when not required — today's `sparse`); an indexed
+     field → the same without unique.
+   - `syncProjectIndexes(def)` lists the collection's indexes, creates the
+     model's missing ones, drops only `m_<name>_*` it no longer wants, never
+     touches other names. Duplicate-key failures come back as warnings, as
+     `syncIndexes` does today (models.controller `syncIndexes`, ~552).
+     Deleting a model drops its `m_<name>_*` indexes.
+4. **Direct collection calls** — Mongoose's `_model` filter only applies
+   through the model. Each of these must add `{ _model: def.name }` (or go
+   through the model):
+   - `models.controller.ts` ~925 (privacy backfill when access turns on) and
+     ~941 (formula recalculation `updateMany({}, pipeline)`);
+   - ~1006 delete-with-data: `dropCollection` → `Model.deleteMany({})`, then
+     its indexes; drop the collection only if it's now empty and no other
+     model of the project uses it;
+   - ~597 `estimatedDocumentCount()` (ignores filters) → `countDocuments()`;
+   - `bulkActions.controller.ts` ~97 undo restore `collection.insertMany` —
+     the stored raw docs must keep `_model` (check DeletedRecord keeps it;
+     set it if missing); ~316 merge reference counts `collection.countDocuments`
+     → add `_model` of the counted model;
+   - grep again for `.collection.`, `connection.collection(`,
+     `dropCollection`, `estimatedDocumentCount`, `bulkWrite`, `syncIndexes`
+     before closing — nothing new may bypass the model.
+5. **Naming.** `checkAvailability` (tenant branch): `collectionOf(route)`
+   returns `t_<projectId>` for every route and the "collection already holds
+   data" check is skipped in a project (it would mark every route taken once
+   the collection exists); it also stops listing all collections per call
+   for tenants. `ModelDefinition.collectionName` is `unique: true` today —
+   every model of a project now shares one value: make it unique only for the
+   platform (partial `{organization: null}`) via `ensureTenantIndexes`'
+   PLAN (drop `collectionName_1`, create the partial one).
+6. **Project lifecycle.** `removeProjectContents` drops `t_<projectId>` and
+   any leftover `t_<projectId>_*`; template previews (`templateSandbox`)
+   go through it. The preview guard's `collectionsInUse` keeps working (fewer
+   collections).
+
+**Migration** — `scripts/migrateProjectCollections.js`, dry run by default:
+- `--apply`, per project (or `--project <id>`): for each tenant
+  ModelDefinition whose `collectionName` ≠ `t_<projectId>`, copy its
+  collection into `t_<projectId>` in batches (`insertMany`, `ordered: false`,
+  `_model` set, **`_id` kept**; a re-run skips ids already copied), compare
+  counts per model, then set `collectionName` and bump `version` so every
+  process recompiles; build the project's indexes; report per model.
+- `--drop-old`: drop each old collection only when its count equals its
+  `_model` count in the new one. Kept until then — a failed run leaves the
+  project working on its old collections.
+- Run in a quiet window (writes to an old collection after its copy would
+  be missed; the script re-copies anything with `updatedAt` after the copy
+  started, but stop the app for production). Production is on its own
+  cluster since 2026-10-05 (262 collections, Handoff) — dry-run there first
+  and record the counts in the CHANGELOG.
+- Backup first (`mongodump` of the database), as for the cluster move.
+
+**Tests** — new `tenancy-smoke/collections.mjs` (in `run-all.sh`):
+- two models in one project with the same field key (`email`, unique on
+  both): the same email in each model is allowed; twice in one model is
+  refused; lists, counts, `GET /:id` across models 404, filters, search,
+  sort, `fields` and dashboard stats never show the other model's records;
+- bulk archive / delete / undo / merge and import touch one model only;
+  formula recalculation and access turned on change only that model;
+  deleting a model with its data leaves the other's records and indexes;
+  adding/removing a unique field creates/drops only `m_<name>_<field>`;
+- public API (owner-only, read-only fields) unchanged;
+- the project has exactly one data collection; deleting the project or a
+  template preview drops it;
+- migration: build a project the old way (collections `t_<pid>_<route>`
+  made directly in the scratch DB), run the script (dry run, `--apply`,
+  re-run, `--drop-old`), then the checks above on it; links between records
+  and history still resolve.
+- All suites pass (`run-all.sh`) — models, public, public-filters, access,
+  activity, templates-preview, webhooks cover the rest.
+
+**Done when** new projects get one collection; the migration has run on the
+scratch DB and (on the user's yes) production; all smoke suites pass;
+README D21 is marked done and this Handoff, CHANGELOG and DEPLOY.md
+(migration step) are updated. Size L (~1–2 days).
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
