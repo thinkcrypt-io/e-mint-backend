@@ -15,7 +15,11 @@ const section = (title: string, icon: string, items: Omit<SidebarItemType, 'path
 	}));
 
 /** Drop-in pieces for the tenant's own site or app (docs/widgets): a website keeps it under Site, the rest here. */
-const widgetsItem = (can: (key: string) => boolean) => (can('build') ? [{ title: 'Widgets', href: '/widgets', icon: 'blocks' }] : []);
+const widgetsItem = (can: (key: string) => boolean) => [
+	...(can('build') ? [{ title: 'Widgets', href: '/widgets', icon: 'blocks' }] : []),
+	// The site's merchant accounts and what checkout took (docs/widgets W-06/W-07).
+	...(can('manage-projects') ? [{ title: 'Payments', href: '/site-payments', icon: 'credit-card' }] : []),
+];
 
 /** The public API's pages: its settings and reference, webhooks, widgets, and the customers who sign in to it. */
 const apiItems = (can: (key: string) => boolean, withWidgets = true) => [

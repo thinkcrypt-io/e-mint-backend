@@ -184,6 +184,27 @@ ok('…paid, and their cart is empty again', r.body.lines.length === 0, JSON.str
 r = await call('GET', pub('/orders'), null, S);
 ok('…the order is in their own orders, paid', r.body.doc?.length === 1 && r.body.doc[0].status === 'paid', JSON.stringify(r.body.doc?.map(o => o.status)));
 
+/* ------------------------------------------------ W-07: the widgets */
+r = await call('GET', pub('/shop/orders'), null, S);
+ok('My orders: the customer’s own, with the status’s label, total and items', r.status === 200 && r.body.doc.length === 1 && r.body.doc[0].statusLabel === 'Paid' && r.body.doc[0].total === 28 && r.body.doc[0].items[0].variant === 'Large' && r.body.currency === 'BDT', JSON.stringify(r.body));
+r = await call('GET', pub('/shop/orders'));
+ok('…signed out → 401', r.status === 401, r.status);
+r = await call('PUT', P(site._id, '/widgets/shop'), { shop: { ...g, order: null } }, T);
+r = await call('PUT', P(site._id, '/widgets'), { widgets: { checkout: { enabled: true } } }, T);
+ok('checkout can’t go on before the Shop’s orders are set up', r.status === 400 && r.body?.code === 'orders_not_set_up', `${r.status} ${r.body?.message}`);
+await call('PUT', P(site._id, '/widgets/shop'), { shop: g }, T);
+r = await call('PUT', P(site._id, '/widgets'), { widgets: { checkout: { enabled: true, options: { askNote: true } }, thanks: { enabled: true }, orders: { enabled: true } } }, T);
+ok('…then checkout, the thank-you page and My orders go on', r.status === 200 && r.body.widgets.checkout.enabled && r.body.widgets.checkout.options.askNote && r.body.widgets.thanks.enabled && r.body.widgets.orders.enabled, `${r.status} ${r.body?.message}`);
+r = await call('GET', pub('/widgets'));
+ok('…and the site is told about them', ['cart', 'checkout', 'thanks', 'orders'].every(n => r.body.widgets[n]), Object.keys(r.body.widgets).join());
+for (const name of ['checkout', 'thanks', 'orders']) {
+	const res = await fetch(`${ROOT}/public/widgets/${name}.js`);
+	const js = await res.text();
+	let parses = true;
+	try { new Function(js); } catch (e) { parses = e.message; }
+	ok(`${name}.js is served and parses`, res.status === 200 && parses === true && js.includes(`Mint.define('${name}'`), parses);
+}
+
 /* ---------------------------------------------------------------- panel */
 r = await call('GET', P(site._id, '/payments'), null, T);
 const st = r.body.doc?.map(p => p.status) || [];

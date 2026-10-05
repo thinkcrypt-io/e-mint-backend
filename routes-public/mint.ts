@@ -21,7 +21,8 @@
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
  *   Mint.cart.ready / .lines / .count / .subtotal / .currency   the cart (W-05), priced by the server
  *   Mint.cart.add(productId, { variant, quantity }) · set(id, qty, variant) · remove(id, variant) · clear()
- *   Mint.cart.product(id) · format(amount) · onChange(cb)    (also the `mint:cart` DOM event)
+ *   Mint.cart.product(id) · format(amount) · refresh() · onChange(cb)    (also the `mint:cart` DOM event)
+ *   Mint.money(amount, currency)             an amount, the visitor's way
  *   Mint.api(path, init)                     the project's public API, signed in when there's a customer
  *   Mint.on(event, cb) / Mint.emit(event, detail)   also fired as `mint:<event>` DOM events on document
  *   Mint.config                              a promise of { theme, widgets } (switched-on ones)
@@ -115,6 +116,12 @@ export const MINT_JS = `(function () {
 		return Promise.resolve({ lines: out, count: out.reduce(function (s, l) { return s + l.quantity; }, 0), subtotal: out.reduce(function (s, l) { return s + l.total; }, 0) });
 	}
 	var products = {}, formats = {}, cartQueue = Promise.resolve();
+	function money(n, c) {
+		if (n == null) return '';
+		c = c || 'USD';
+		try { formats[c] = formats[c] || new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: c }); return formats[c].format(n); }
+		catch (e) { return c + ' ' + Number(n).toFixed(2); }
+	}
 	var cart = {
 		lines: [], count: 0, subtotal: 0, currency: '',
 		onChange: function (cb) { return on('cart', cb); },
@@ -144,12 +151,9 @@ export const MINT_JS = `(function () {
 		remove: function (id, variant) { return cart.set(id, 0, variant); },
 		clear: function () { return change(function () { return []; }); },
 		/** An amount in the shop's currency, the visitor's way. */
-		format: function (n) {
-			if (n == null) return '';
-			var c = cart.currency || 'USD';
-			try { formats[c] = formats[c] || new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: c }); return formats[c].format(n); }
-			catch (e) { return c + ' ' + Number(n).toFixed(2); }
-		},
+		format: function (n) { return money(n, cart.currency || 'USD'); },
+		/** Loads the cart again from the server (after checkout, or another tab). */
+		refresh: function () { var run = cartQueue.then(function () { return cart.ready; }).then(function (ok) { return ok ? loadCart() : cart; }); cartQueue = run.catch(function () {}); return run; },
 	};
 	function applyCart(priced) {
 		cart.lines = priced.lines || []; cart.count = priced.count || 0; cart.subtotal = priced.subtotal || 0;
@@ -332,6 +336,7 @@ export const MINT_JS = `(function () {
 		emit: emit,
 		auth: auth,
 		cart: cart,
+		money: money,
 		config: config,
 		define: function (name, def) { defs[name] = def; mountAll(name); },
 		ui: { el: el, shadow: shadow, palette: palette },

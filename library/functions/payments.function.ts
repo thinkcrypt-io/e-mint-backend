@@ -472,6 +472,32 @@ export const stripeWebhook = async (app: any, project: any, raw: Buffer | undefi
 	});
 };
 
+/* ------------------------------------------------------------ my orders */
+
+/** A signed-in customer's own orders, as the My orders widget shows them. */
+export const customerOrders = async (app: any, project: any, customer: any) => {
+	const shop = await loadShop(project);
+	if (!shop?.order) throw new TenancyError(404, 'Orders aren’t set up on this site.', 'orders_off');
+	const o = shop.order;
+	const { def, Model } = await orderModel(app, shop);
+	const statusField = (def.fields || []).find((f: any) => f.key === o.fields.status);
+	const label = (v: any) => statusField?.options?.find((x: any) => x.value === v)?.label || String(v ?? '');
+	const docs: any[] = await Model.find({ _customer: customer._id, archivedAt: null }).sort({ createdAt: -1 }).limit(50).lean();
+	return {
+		currency: shop.currency,
+		doc: docs.map(d => {
+			const items = (d[o.fields.items] || []).map((i: any) => ({
+				name: i[o.item.name] || '',
+				variant: o.item.variant ? i[o.item.variant] || '' : '',
+				quantity: Number(i[o.item.quantity]) || 0,
+				unitPrice: Number(i[o.item.unitPrice]) || 0,
+			}));
+			const total = o.fields.total && typeof d[o.fields.total] === 'number' ? d[o.fields.total] : items.reduce((s: number, i: any) => s + i.quantity * i.unitPrice, 0);
+			return { _id: String(d._id), code: d.code || '', status: d[o.fields.status], statusLabel: label(d[o.fields.status]), total, items, createdAt: d.createdAt };
+		}),
+	};
+};
+
 /* ------------------------------------------------------------ the panel */
 
 export const listPayments = async (project: any, limit = 100) =>

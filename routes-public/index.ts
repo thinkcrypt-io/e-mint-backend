@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { MINT_JS } from './mint.js';
 import { LOGIN_WIDGET_JS } from './widgets/login.js';
 import { CART_WIDGET_JS } from './widgets/cart.js';
+import { CHECKOUT_WIDGET_JS } from './widgets/checkout.js';
+import { ORDERS_WIDGET_JS } from './widgets/orders.js';
 import { joinWaitlist } from '../controllers/waitlist/joinWaitlist.controller.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
@@ -36,11 +38,12 @@ router.get('/widget.js', (_req, res) => {
 });
 
 /* Site widgets (docs/widgets W-03): the runtime, and each widget's script. */
-const WIDGET_SCRIPTS: Record<string, string> = { login: LOGIN_WIDGET_JS, cart: CART_WIDGET_JS };
+// One script draws both checkout and the thank-you page.
+const WIDGET_SCRIPTS: Record<string, string> = { login: LOGIN_WIDGET_JS, cart: CART_WIDGET_JS, checkout: CHECKOUT_WIDGET_JS, thanks: CHECKOUT_WIDGET_JS, orders: ORDERS_WIDGET_JS };
 // Changes whenever any of the scripts does, so widget files can be cached hard.
 const WIDGETS_VERSION = crypto
 	.createHash('sha256')
-	.update(MINT_JS + Object.values(WIDGET_SCRIPTS).join(''))
+	.update(MINT_JS + [...new Set(Object.values(WIDGET_SCRIPTS))].join(''))
 	.digest('hex')
 	.slice(0, 10);
 const MINT_SERVED = MINT_JS.replace('__VERSION__', WIDGETS_VERSION);

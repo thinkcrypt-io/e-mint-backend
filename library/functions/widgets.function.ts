@@ -122,6 +122,64 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 		],
 		snippet: '<div data-mint="cart"></div>\n<button data-mint-add="PRODUCT_ID">Add to cart</button>',
 	},
+	checkout: {
+		name: 'checkout',
+		title: 'Checkout',
+		summary: 'The buyer’s details and delivery address, the order summary, and Pay — then the payment provider’s own secure page.',
+		description:
+			'Put it on your checkout page. It shows what’s in the cart at your catalogue’s prices, asks for the details you choose, and sends the buyer to pay on Stripe’s page (or another provider you switch on in Payments). The order is written in your orders model as waiting for payment, and only the provider’s confirmation marks it paid. Needs the Shop’s orders set up and a way to pay switched on.',
+		guide: 'checkout',
+		options: [
+			{ key: 'askPhone', label: 'Ask for a phone number', kind: 'boolean', default: true, help: 'Couriers often need one.' },
+			{ key: 'askAddress', label: 'Ask for a delivery address', kind: 'boolean', default: true, help: 'Off for things that aren’t delivered (services, downloads).' },
+			{ key: 'askNote', label: 'Let buyers add a note', kind: 'boolean', default: false, help: 'Delivery instructions, a gift message.' },
+			{ key: 'requireSignIn', label: 'Buyers must have an account', kind: 'boolean', default: false, help: 'Off: guests pay with just an email; signing in is offered.' },
+		],
+		texts: [
+			{ key: 'title', label: 'Title', default: 'Checkout' },
+			{ key: 'details', label: 'Details heading', default: 'Your details' },
+			{ key: 'address', label: 'Address heading', default: 'Delivery address' },
+			{ key: 'summary', label: 'Summary heading', default: 'Your order' },
+			{ key: 'pay', label: 'Pay button ({amount} is the total)', default: 'Pay {amount}' },
+			{ key: 'empty', label: 'Empty cart', default: 'Your cart is empty.' },
+			{ key: 'changed', label: 'Cart changed', default: 'Some things in your cart changed — check them, then pay.' },
+			{ key: 'signIn', label: 'Sign-in needed', default: 'Sign in to check out.' },
+			{ key: 'secure', label: 'Under the button', default: 'You’ll pay on a secure page and come back here.' },
+		],
+		snippet: '<div data-mint="checkout"></div>',
+	},
+	thanks: {
+		name: 'thanks',
+		title: 'Thank-you page',
+		summary: 'After paying: the order number and what was bought once the payment is confirmed.',
+		description:
+			'Put it on the page buyers come back to after paying (your Payments settings say which — /thank-you by default). It reads the payment’s reference from the address and waits for the provider’s confirmation, which usually takes a second or two.',
+		guide: 'thanks',
+		options: [{ key: 'continueUrl', label: 'Keep shopping link', kind: 'text', default: '/', help: 'Where the “Keep shopping” link goes.' }],
+		texts: [
+			{ key: 'title', label: 'Title', default: 'Thank you!' },
+			{ key: 'paid', label: 'Paid ({code} is the order number)', default: 'Your payment is confirmed — order {code}.' },
+			{ key: 'waiting', label: 'Waiting', default: 'Confirming your payment…' },
+			{ key: 'failed', label: 'Not paid', default: 'The payment didn’t go through. Nothing was charged — try again from your cart.' },
+			{ key: 'missing', label: 'No payment found', default: 'We couldn’t find this payment.' },
+			{ key: 'continue', label: 'Keep shopping link', default: 'Keep shopping' },
+		],
+		snippet: '<div data-mint="thanks"></div>',
+	},
+	orders: {
+		name: 'orders',
+		title: 'My orders',
+		summary: 'A signed-in customer’s orders: number, date, status, total and what was in each.',
+		description: 'For an account page. Customers see only their own orders, with the status your team sets in the panel (Paid, Packed, Shipped…). Needs the Shop’s orders set up.',
+		guide: 'orders',
+		options: [],
+		texts: [
+			{ key: 'title', label: 'Title', default: 'My orders' },
+			{ key: 'empty', label: 'No orders', default: 'No orders yet.' },
+			{ key: 'signIn', label: 'Signed out', default: 'Sign in to see your orders.' },
+		],
+		snippet: '<div data-mint="orders"></div>',
+	},
 };
 
 export const THEME_DEFAULTS = { primaryColor: '', fontFamily: '', radius: 10, colorMode: 'auto' };
@@ -187,8 +245,13 @@ export const saveWidgets = async (project: any, body: any) => {
 			texts: { ...was.texts, ...(patch?.texts || {}) },
 		});
 	}
-	if (widgets.cart?.enabled && !current.widgets.cart.enabled && !(await loadShop(project)))
-		throw new TenancyError(400, 'Set up the Shop first — which model holds your products and what its fields mean — then switch the cart on.', 'shop_not_set_up');
+	const switchedOn = (n: string) => widgets[n]?.enabled && !current.widgets[n]?.enabled;
+	if (['cart', 'checkout', 'thanks', 'orders'].some(switchedOn)) {
+		const shop = await loadShop(project);
+		if (!shop) throw new TenancyError(400, 'Set up the Shop first — which model holds your products and what its fields mean — then switch the cart on.', 'shop_not_set_up');
+		if (['checkout', 'thanks', 'orders'].some(switchedOn) && !shop.order)
+			throw new TenancyError(400, 'Set up Orders in the Shop first — where checkout writes orders.', 'orders_not_set_up');
+	}
 	const theme = body?.theme ? cleanTheme({ ...current.theme, ...body.theme }) : current.theme;
 	await runInScope(scopeOf(project), () => SiteWidgets.updateOne({}, { $set: { widgets, theme } }, { upsert: true }));
 	publicCache.delete(String(project._id));
@@ -219,12 +282,13 @@ export const publicWidgets = async (project: any) => {
 		if (HEX.test(own || '')) primary = own;
 	}
 	// The cart works only with the shop set up (a field since removed turns it off here).
-	const shop = widgets.cart?.enabled ? await loadShop(project) : null;
+	const shop = ['cart', 'checkout', 'thanks', 'orders'].some(n => widgets[n]?.enabled) ? await loadShop(project) : null;
+	const needs = (name: string) => (name === 'cart' ? !!shop : ['checkout', 'thanks', 'orders'].includes(name) ? !!shop?.order : true);
 	const value = {
 		theme: { ...theme, primaryColor: primary || '#111827' },
 		widgets: Object.fromEntries(
 			Object.entries<any>(widgets)
-				.filter(([name, w]) => w.enabled && (name !== 'cart' || shop))
+				.filter(([name, w]) => w.enabled && needs(name))
 				.map(([name, w]) => [name, { options: w.options, texts: w.texts }])
 		),
 		...(shop && { shop: { currency: shop.currency } }),
