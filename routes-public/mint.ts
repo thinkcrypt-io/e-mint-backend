@@ -22,6 +22,7 @@
  *   Mint.api(path, init)                     the project's public API, signed in when there's a customer
  *   Mint.on(event, cb) / Mint.emit(event, detail)   also fired as `mint:<event>` DOM events on document
  *   Mint.config                              a promise of { theme, widgets } (switched-on ones)
+ *   Mint.preview                             true inside the panel's live preview (window.__MINT_PREVIEW__)
  *
  * `window.MintAuth` stays as an alias of Mint.auth for pages written for
  * widget.js. Plain ES5-style JavaScript, no dependencies, no eval.
@@ -158,7 +159,11 @@ export const MINT_JS = `(function () {
 
 	/* ------------------------------------------------------------ widgets */
 	var defs = {}, loading = {}, warned = {};
-	var config = fetch(api + 'widgets').then(function (r) { return r.ok ? r.json() : { theme: {}, widgets: {} }; }).catch(function () { return { theme: {}, widgets: {} }; });
+	// The panel's live preview (Site setup → Widgets) hands over its unsaved settings; widgets then don't sign anyone in.
+	var preview = window.__MINT_PREVIEW__ && typeof window.__MINT_PREVIEW__ === 'object' ? window.__MINT_PREVIEW__ : null;
+	var config = preview
+		? Promise.resolve({ theme: preview.theme || {}, widgets: preview.widgets || {} })
+		: fetch(api + 'widgets').then(function (r) { return r.ok ? r.json() : { theme: {}, widgets: {} }; }).catch(function () { return { theme: {}, widgets: {} }; });
 	function kebab(s) { return s.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }); }
 	function selector(name) { return '[data-mint="' + name + '"],mint-' + name; }
 	function optionsFor(host, base) {
@@ -210,6 +215,7 @@ export const MINT_JS = `(function () {
 
 	var Mint = window.Mint = {
 		__core: true,
+		preview: !!preview,
 		version: version,
 		project: project,
 		origin: origin,

@@ -14,10 +14,14 @@ const section = (title: string, icon: string, items: Omit<SidebarItemType, 'path
 		...(i === 0 && { startOfSection: true, sectionTitle: title, sectionIcon: icon }),
 	}));
 
-/** The public API's pages: its settings and reference, webhooks, and the customers who sign in to it. */
-const apiItems = (can: (key: string) => boolean) => [
+/** Drop-in pieces for the tenant's own site or app (docs/widgets): a website keeps it under Site, the rest here. */
+const widgetsItem = (can: (key: string) => boolean) => (can('build') ? [{ title: 'Widgets', href: '/widgets', icon: 'blocks' }] : []);
+
+/** The public API's pages: its settings and reference, webhooks, widgets, and the customers who sign in to it. */
+const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
 	...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
 	...(can('build') ? [{ title: 'Webhooks', href: '/webhooks', icon: 'send' }] : []),
+	...(withWidgets ? widgetsItem(can) : []),
 	...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 ];
 
@@ -39,11 +43,12 @@ export const tenantNav = (
 		inProject && projectType === 'website'
 			? section('Site', 'globe', [
 					...(can('build') ? [{ title: 'Site setup', href: '/site-setup', icon: 'settings-2' }] : []),
+					...widgetsItem(can),
 					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 			  ])
 			: [];
 	// An API project has these at the top instead (tenantLead).
-	const audience = inProject && projectType !== 'api' ? section('Audience', 'users-round', apiItems(can)) : [];
+	const audience = inProject && projectType !== 'api' ? section('Audience', 'users-round', apiItems(can, projectType !== 'website')) : [];
 	// Everyone who works with records uses the media library, so it isn't kept under Build.
 	const files = inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : [];
 	const build = inProject && can('build')

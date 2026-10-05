@@ -67,7 +67,7 @@ export const PANEL_PAGES = new Set([
 	'resources', 'roles', 'sellers', 'servicecat', 'services', 'sessions', 'settings', 'shops', 'sidebar-builder',
 	'sidebarcategories', 'sidebaritems', 'solutions', 'subscriptions', 'suppliers', 'support-tickets', 'support',
 	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'templates', 'terms', 'test', 'themes', 'user-docs',
-	'user-feedback-success', 'user-feedback', 'users', 'vercel-doc', 'vercels', 'view', 'views', 'api', 'webhooks',
+	'user-feedback-success', 'user-feedback', 'users', 'vercel-doc', 'vercels', 'view', 'views', 'api', 'webhooks', 'widgets',
 ]);
 
 /** `base`, or `base-2`, `base-3`… — the first `exists` says is free. */

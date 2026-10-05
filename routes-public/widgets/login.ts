@@ -49,6 +49,7 @@ export const LOGIN_WIDGET_JS = `(function () {
 					var data = { email: f.email.value.trim(), password: f.password.value };
 					if (up) data.name = f.name.value.trim();
 					error.textContent = '';
+					if (Mint.preview) { error.textContent = 'This is a preview — signing in works on your site.'; return; }
 					submit.disabled = true;
 					(up ? Mint.auth.signUp(data) : Mint.auth.signIn(data.email, data.password)).catch(function (err) {
 						error.textContent = err.message;
