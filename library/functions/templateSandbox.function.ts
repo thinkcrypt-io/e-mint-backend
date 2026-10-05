@@ -27,10 +27,18 @@ import { createOrganization } from './tenancy.function.js';
 
 export const SANDBOX_SLUG = 'mint-template-sandbox';
 const SANDBOX_EMAIL = 'template-previews@sandbox.invalid';
-const PREVIEW_TTL_MS = 24 * 60 * 60 * 1000;
+const PREVIEW_TTL_MS = 6 * 60 * 60 * 1000;
 const TICKET_TTL_MS = 5 * 60 * 1000;
-/** Previews kept at once; the oldest go first. */
-const MAX_PREVIEWS = 50;
+/** Previews kept at once; the oldest go first. Each template keeps only its newest. */
+const MAX_PREVIEWS = 8;
+/**
+ * Every model is its own collection, and a shared Atlas cluster holds at most
+ * 500 across all its databases (MONGO_COLLECTION_LIMIT; 0 = no limit; 500 by default on Atlas, none elsewhere). A preview
+ * isn't built when it would leave fewer than COLLECTION_RESERVE for real projects.
+ */
+const atlas = /mongodb\.net/.test(process.env.MONGO_CONNECTION_URI || process.env.MONGO_URI || '');
+const COLLECTION_LIMIT = process.env.MONGO_COLLECTION_LIMIT ? Number(process.env.MONGO_COLLECTION_LIMIT) : atlas ? 500 : 0;
+const COLLECTION_RESERVE = 40;
 /** How long a request waits for its build before answering `building` — under the platform's 30-second limit (TEMPLATE_PREVIEW_WAIT_MS overrides). */
 export const BUILD_WAIT_MS = Number(process.env.TEMPLATE_PREVIEW_WAIT_MS) >= 0 && process.env.TEMPLATE_PREVIEW_WAIT_MS ? Number(process.env.TEMPLATE_PREVIEW_WAIT_MS) : 20 * 1000;
 /** A build still `building` after this died with its server (a restart or deploy). */
@@ -116,9 +124,44 @@ export const removePreview = async (project: any) => {
 	await TenantProject.deleteOne({ _id: project._id });
 };
 
+/** Collections in use on the whole cluster (every database counts toward its limit); this database's alone if listing them isn't allowed. */
+const collectionsInUse = async () => {
+	const db = mongoose.connection.db!;
+	try {
+		const { databases } = await db.admin().listDatabases({ nameOnly: true });
+		const counts = await Promise.all(
+			databases.filter((d: any) => !['admin', 'local', 'config'].includes(d.name)).map((d: any) => mongoose.connection.getClient().db(d.name).listCollections({}, { nameOnly: true }).toArray().then(c => c.length))
+		);
+		return counts.reduce((a, n) => a + n, 0);
+	} catch {
+		return (await db.listCollections({}, { nameOnly: true }).toArray()).length;
+	}
+};
+
+/** Refuses a preview the database has no room for — a half-built preview helps nobody, and real projects need the room. */
+const checkRoom = async (template: any, from: 'draft' | 'published', type: string) => {
+	if (!(COLLECTION_LIMIT > 0)) return;
+	const bp = (from === 'published' ? template.published : template.draft) || {};
+	const needed = (bp.models?.steps || []).filter((s: any) => s?.action === 'create').length + (type === 'website' ? 3 : 0);
+	const used = await collectionsInUse();
+	if (used + needed > COLLECTION_LIMIT - COLLECTION_RESERVE)
+		throw new BuildError(
+			409,
+			`There’s no room for this preview: the database holds at most ${COLLECTION_LIMIT} collections (one per model), ${used} are in use, and this template needs ${needed}. Delete old previews, or wait for them to expire (6 hours).`
+		);
+};
+
 export type PreviewAnswer =
 	| { status: 'ready'; project: any; result: ApplyResult; ticket: string; url: string; ticketExpiresAt: Date }
 	| { status: 'building'; project: any; already?: boolean };
+
+/** Removes the oldest previews past MAX_PREVIEWS, never one still building or the one just made. */
+const pruneSandbox = async (organization: any, keep: any) => {
+	const extra = (await TenantProject.countDocuments({ organization })) - MAX_PREVIEWS;
+	if (extra <= 0) return;
+	const old = await TenantProject.find({ organization, _id: { $ne: keep } }).sort({ createdAt: 1 }).lean();
+	for (const p of old.filter(p => statusOf(p) !== 'building').slice(0, extra)) await removePreview(p);
+};
 
 /**
  * Builds `template` into a new sandbox project, in the background. Waits up to
@@ -129,14 +172,6 @@ export type PreviewAnswer =
  * running, asking again answers that one (`already`) — builds side by side
  * only slow each other down.
  */
-/** Removes the oldest previews past MAX_PREVIEWS, never one still building or the one just made. */
-const pruneSandbox = async (organization: any, keep: any) => {
-	const extra = (await TenantProject.countDocuments({ organization })) - MAX_PREVIEWS;
-	if (extra <= 0) return;
-	const old = await TenantProject.find({ organization, _id: { $ne: keep } }).sort({ createdAt: 1 }).lean();
-	for (const p of old.filter(p => statusOf(p) !== 'building').slice(0, extra)) await removePreview(p);
-};
-
 export const previewTemplate = async (
 	req: any,
 	template: any,
@@ -153,6 +188,10 @@ export const previewTemplate = async (
 		createdAt: { $gt: new Date(Date.now() - STALE_BUILD_MS) },
 	}).lean();
 	if (running) return { status: 'building', project: publicPreview(running), already: true };
+
+	// One preview per template: a new one replaces the last, so a template being worked on doesn't fill the database.
+	for (const p of await TenantProject.find({ organization: organization._id, 'preview.template': template._id }).lean()) await removePreview(p);
+	await checkRoom(template, from, template.type);
 
 	// The build runs as the sandbox owner, in the sandbox — the admin's request lends its app and address.
 	const sandboxReq = Object.assign(Object.create(req), { user: owner, organization, member: null, permissions: ['*'] });
@@ -209,7 +248,7 @@ const findPreview = async (projectId: any) => {
 	const { organization } = await ensureSandbox();
 	if (!mongoose.isValidObjectId(projectId)) throw new BuildError(400, `“${projectId}” isn’t a preview id.`);
 	const project: any = await TenantProject.findOne({ _id: projectId, organization: organization._id }).lean();
-	if (!project) throw new BuildError(404, 'That preview is gone — previews are deleted after 24 hours. Make a new one.');
+	if (!project) throw new BuildError(404, 'That preview is gone — previews are deleted after 6 hours. Make a new one.');
 	return project;
 };
 

@@ -51,7 +51,7 @@ How to work with the user:
 3. create_template, then write it ONE PART AT A TIME, showing the user each part and asking before moving on: overview → questions (what's asked when the template is used; set them before any part uses {{key}}) → models (upsert_model, one model per call; linked-to models first) → sidebar → dashboard → roles → endpoints (and webhooks for API, pages + site defaults for websites) → sample data → setup guide.
 4. Every write answers with that part's problems and fixes. Fix them as you go. Run validate_template at the end.
 5. Explain everything: a template is published only when it has a summary, a description, who it's for, a setup guide, and a description on every model. Give fields help text when they aren't obvious. People who use the template will read all of it.
-6. preview_template builds it into a throwaway project and returns a link — share it so the user can click around. A big template keeps building for a few minutes: then poll preview_status with the preview id about every 30 seconds. Previews are deleted after 24 hours.
+6. preview_template builds it into a throwaway project and returns a link — share it so the user can click around. A big template keeps building for a few minutes: then poll preview_status with the preview id about every 30 seconds. Previews are deleted after 6 hours.
 7. publish_template only when the user says so explicitly, with notes on what changed. Never publish on your own.`;
 
 /* ------------------------------------------------------------- auth */
@@ -438,7 +438,7 @@ const TOOLS: Tool[] = [
 		name: 'preview_template',
 		title: 'Preview a template',
 		description:
-			'Builds the draft into a throwaway project (deleted after 24 hours) and returns a single-use link (5 minutes) that opens it. Give the link to the user. A big template takes a few minutes: then this answers “still building” with a preview id — call preview_status with it about every 30 seconds until it’s ready. Don’t start another preview meanwhile.',
+			'Builds the draft into a throwaway project (deleted after 6 hours; it replaces the template’s previous preview) and returns a single-use link (5 minutes) that opens it. Give the link to the user. A big template takes a few minutes: then this answers “still building” with a preview id — call preview_status with it about every 30 seconds until it’s ready. Don’t start another preview meanwhile.',
 		scope: 'preview',
 		inputSchema: {
 			type: 'object',

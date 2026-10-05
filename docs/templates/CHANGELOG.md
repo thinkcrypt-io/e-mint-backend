@@ -561,3 +561,15 @@ Newest last. One entry per work order: what, files, how verified.
   previews. Preview budget to be cut next (see WORK_ORDERS Handoff).
 - Verified: tsc; templates-preview smoke all passed; production preview link
   opens the sandbox project signed in.
+
+## Fix — preview budget for a capped database (2026-10-05)
+- `templateSandbox.function.ts`: each template keeps only its newest preview,
+  at most 8 previews, deleted after 6 hours (was 50 / 24 hours); a preview is
+  refused with the counts when it would leave fewer than 40 collections on the
+  cluster (`MONGO_COLLECTION_LIMIT`, default 500 on Atlas). Texts in the studio,
+  /docs/templates, the preview page and the MCP say 6 hours and "replaces".
+- Production: the 8 previews from 2026-10-04 deleted with the user's yes
+  (e-mint 342 → 262 collections).
+- Verified: tsc; templates-preview smoke all passed; locally at most one
+  preview per template, 8 in the sandbox; with the limit set to 60 a preview is
+  refused straight away (409, the message names the counts).

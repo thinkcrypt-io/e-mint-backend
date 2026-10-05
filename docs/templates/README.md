@@ -41,7 +41,7 @@ for the super admin panel, not the app panel."
      only touch blueprints; it can never build in the platform or a project.
 4. A super admin **previews** a template: it is built into a throwaway
    project in a hidden sandbox organization, opened in the tenant panel, and
-   deleted after 24 hours.
+   deleted after 6 hours.
 5. **Publishing** makes a version available. A tenant picks a template when
    creating a project (later work order); the template is **built into their
    project** and from then on it's **their copy** — they change it with the
@@ -62,7 +62,7 @@ for the super admin panel, not the app panel."
 | TD5 | **Draft and published are separate**: editing always changes `draft`; **Publish** copies the draft into an immutable `versions[]` entry (number, notes, who, when) and sets `published`. Projects record the template key + version they came from. | Editing a live template must never change what tenants get mid-flight. |
 | TD6 | **Questions + placeholders**: a template lists questions (business name, currency, language, colour…); any blueprint string can hold `{{key}}`, filled at apply time before planning. Unanswered optional questions use their default. | One template fits many businesses. |
 | TD7 | **One apply engine** (`applyTemplate`) for previews now and tenants later: models (one plan with the template limit `TEMPLATE_MAX_STEPS` = 40 instead of the feature wizard's 12 — not batches, which couldn't be checked without building), page layouts, sidebar, dashboard, roles, public API, website pages/contents/SEO and site defaults, sample data, setup guide. All or nothing: a failure undoes what it did. | The preview must be exactly what a tenant gets. |
-| TD8 | **Sandbox previews**: a hidden **system organization** (`system: true`, never listed in oversight, no password sign-in) holds preview projects. The super admin opens one through a **single-use, 5-minute preview ticket** exchanged by the tenant panel for a session as the sandbox owner (sandbox org only). Preview projects (models, `t_<projectId>_*` collections, kit, media) are deleted after 24 hours. Builds run **in the background** (`preview.status` building → ready / failed): a request waits up to 20 s (`TEMPLATE_PREVIEW_WAIT_MS`), under the platform's 30-second limit, then answers `building`; MCP `preview_status` and the previews list say when it's ready. One build per template at a time. | "Preview before publish" without giving the super admin a tenant account or letting previews leak. |
+| TD8 | **Sandbox previews**: a hidden **system organization** (`system: true`, never listed in oversight, no password sign-in) holds preview projects. The super admin opens one through a **single-use, 5-minute preview ticket** exchanged by the tenant panel for a session as the sandbox owner (sandbox org only). Preview projects (models, `t_<projectId>_*` collections, kit, media) are deleted after 6 hours. Builds run **in the background** (`preview.status` building → ready / failed): a request waits up to 20 s (`TEMPLATE_PREVIEW_WAIT_MS`), under the platform's 30-second limit, then answers `building`; MCP `preview_status` and the previews list say when it's ready. One build per template at a time. | "Preview before publish" without giving the super admin a tenant account or letting previews leak. |
 | TD9 | **Templates MCP is separate**: `/templates/mcp`, server name `e-mint-templates`, its own keys (`TemplateKey`, `templatekeys`, secret `emt_…`, sha256 only) with scopes **`read`, `write`, `preview`, `publish`**. Keys act as the admin who made them and never beyond their role. The shared JSON-RPC transport is extracted from `/mcp` so both servers use one implementation. | "This MCP must be different" — a template key can't build in the platform, an admin key can't edit templates. |
 | TD10 | **Admin permissions** (`scripts/seedTemplateAccess.js`, the role editor's option-key pattern): `templates` → `view-/create-/edit-/delete-templates`; `template-publishing` → `edit-template-publishing`; `template-keys` → `view-/create-/delete-template-keys`. A `*` role has them all. | Publishing reaches every tenant; it gets its own permission. |
 | TD11 | **Explanation gate on publish**: summary, description, audience, at least one setup-guide step, and a description on every model are **required**; a field without help text, a page without SEO description, or an endpoint without a note is a **warning**. "What's inside" is **generated** from the blueprint, never typed. | "Everything should be explanatory so users can work perfectly." |
@@ -86,7 +86,7 @@ for the super admin panel, not the app panel."
              blueprint      scope planFeature) duplicate/export   (batched build)    (structure only)
                                                                         │
                                           ┌─────────────────────────────┴───────────┐
-                                    sandbox project (preview, 24h)          tenant project (later, T-14)
+                                    sandbox project (preview, 6h)           tenant project (later, T-14)
                                     system org, preview ticket → tenant panel
 ```
 

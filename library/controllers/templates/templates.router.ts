@@ -121,7 +121,7 @@ router.post(
 	handle(async (req, res) => res.status(200).json(await reopenPreview(req.params.projectId)))
 );
 
-/** DELETE /previews/:projectId — throws a preview away now rather than in 24 hours. */
+/** DELETE /previews/:projectId — throws a preview away now rather than in 6 hours. */
 router.delete(
 	'/previews/:projectId',
 	...edit,
@@ -305,7 +305,7 @@ router.delete(
 
 /**
  * POST /:id/preview { from?: 'draft'|'published', answers?, sampleData? } —
- * builds the template into a throwaway sandbox project (deleted after 24 hours)
+ * builds the template into a throwaway sandbox project (deleted after 6 hours)
  * and returns a single-use link that opens it in the tenant panel (201). A big
  * template keeps building after the request's 20 seconds: 202 `building`, and
  * GET /:id/previews shows when it's ready.

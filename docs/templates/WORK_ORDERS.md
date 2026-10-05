@@ -8,6 +8,23 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-05)
 
+**2026-10-05 — production collection cap; preview budget:** the production
+Atlas cluster is a shared tier capped at **500 collections across all its
+databases** (e-mint ~260 after cleanup; the rest are the user's other apps).
+Every tenant model is its own collection (`t_<project>_<route>`), and previews
+had taken 143 of 168. At 501 no tenant could create a model. With the user's
+yes, the 8 previews from 2026-10-04 were deleted (−80). Previews now: one per
+template (a new one replaces the last), at most 8, deleted after 6 hours, and
+refused (409, with the counts) when a build would leave fewer than 40
+collections free (`templateSandbox.function.ts`; `MONGO_COLLECTION_LIMIT`
+overrides, default 500 on Atlas and none elsewhere). The wait for a build counts
+from the request's start (website previews were passing Heroku's 30 s limit).
+Open: the cluster itself (move the other databases, or a dedicated tier) — the
+user's call; tenant-side previews wait for it. T-13: read-only fields set on
+every endpoint customers write to (Booking gets `cancelRequested`); the ten
+templates still need previewing and the user's yes to publish. Portfolio is
+already at version 1 (not published by Claude) — its draft changed too.
+
 **2026-10-05 — T-14 Get started done for every kind:** a new app, API or
 website project's Get started offers the published templates of its kind,
 built whole — models, pages, sidebar, dashboard, roles, sample records (the
