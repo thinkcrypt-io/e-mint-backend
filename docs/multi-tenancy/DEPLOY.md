@@ -28,6 +28,31 @@ against production yet (all were verified on a scratch database).
    (permissions + the "Tenants" sidebar section).
    **Done 2026-10-02** on the `e-mint` database (Atlas): the three permissions
    upserted, "Tenants" sidebar section created. Safe to re-run.
+5. **One collection per project (WO-43, D21)** — by hand, only on the user's
+   yes. **Not run on production yet.** In this order:
+   1. Deploy the WO-43 backend. It works on both layouts (a project model
+      keeps its own collection until it's moved; new models go to
+      `t_<projectId>`), and its first boot replaces `modeldefinitions`'
+      `collectionName_1` with `collectionName_platform` (unique among
+      super-admin models only — log: `collectionName now unique among
+      super-admin models only`). The script refuses to run before that.
+   2. Back up: `mongodump --uri "$MONGO_CONNECTION_URI" --out <dir>`.
+   3. Dry run, and note the counts in the CHANGELOG:
+      `npm run build && node scripts/migrateProjectCollections.js`.
+   4. Stop the app (`heroku maintenance:on`, or scale `web=0`), then
+      `node scripts/migrateProjectCollections.js --apply`. Per model it
+      prints `moved N record(s)` or `NOT MOVED` (that model stays on its old
+      collection and keeps working — run it again). Exit 1 on any problem.
+   5. Start the app and check a few projects (tables, a record with links,
+      its history, the public API).
+   6. Later (days, the user's call): `node scripts/migrateProjectCollections.js
+      --drop-old` drops each old `t_<projectId>_<route>` once every record in
+      it is in `t_<projectId>`; anything else is kept and listed.
+   Super-admin models, their collections, records and indexes are never read
+   for writing or changed (the script selects project models only and stops
+   on any project model whose collection isn't `t_<projectId>…`). Rehearsed
+   on the scratch DB 2026-10-06: 43 models in 12 projects moved, every
+   record identical, every other collection unchanged (CHANGELOG).
 
 ## 2. Tenant panel (a second Vercel project from the `admin` repo)
 

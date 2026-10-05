@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { currentScope, scopeKey } from './tenantScope.function.js';
+import { MODEL_KEY } from './projectIndexes.function.js';
 
 /**
  * Glue between what each admin route was built with in code — its settings
@@ -357,7 +358,8 @@ export const listModelFields = (model: mongoose.Model<any>): ModelField[] => {
 	};
 
 	model.schema.eachPath((path: string, type: any) => {
-		if (path === '__v' || isSecretPath(path, type)) return;
+		// `_model`: which model a project record belongs to (D21) — never a field to filter on.
+		if (path === '__v' || path === MODEL_KEY || isSecretPath(path, type)) return;
 
 		if (type?.schema && type.instance !== 'Embedded') {
 			fields.push({ key: path, instance: 'Array', isArray: true });

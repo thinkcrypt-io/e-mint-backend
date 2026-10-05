@@ -142,12 +142,13 @@ const collectionsInUse = async () => {
 const checkRoom = async (template: any, from: 'draft' | 'published', type: string) => {
 	if (!(COLLECTION_LIMIT > 0)) return;
 	const bp = (from === 'published' ? template.published : template.draft) || {};
-	const needed = (bp.models?.steps || []).filter((s: any) => s?.action === 'create').length + (type === 'website' ? 3 : 0);
+	// A project's models share one collection (D21): one for any models at all, the website kit's included.
+	const needed = (bp.models?.steps || []).some((s: any) => s?.action === 'create') || type === 'website' ? 1 : 0;
 	const used = await collectionsInUse();
 	if (used + needed > COLLECTION_LIMIT - COLLECTION_RESERVE)
 		throw new BuildError(
 			409,
-			`There’s no room for this preview: the database holds at most ${COLLECTION_LIMIT} collections (one per model), ${used} are in use, and this template needs ${needed}. Delete old previews, or wait for them to expire (6 hours).`
+			`There’s no room for this preview: the database holds at most ${COLLECTION_LIMIT} collections (one per project), ${used} are in use, and this template needs ${needed}. Delete old previews, or wait for them to expire (6 hours).`
 		);
 };
 

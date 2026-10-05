@@ -18,6 +18,7 @@ import { invalidateRoute } from './resolveRoute.function.js';
 import { ACCESS_KEYS, PRIVACY_OPTIONS, PRIVACY_VALUES, recordAccessMiddleware } from './recordAccess.function.js';
 import { accessNotifications } from './notifications.function.js';
 import { format as formatFormula, parse as parseFormula } from './formula.function.js';
+import { MODEL_KEY, projectCollection } from './projectIndexes.function.js';
 
 /**
  * Models built in the model builder (ModelDefinition documents), made real:
@@ -35,6 +36,10 @@ import { format as formatFormula, parse as parseFormula } from './formula.functi
  * Each process keeps its compiled copies in step with the database: it checks
  * the definitions at most every 10 seconds (and at once after a change it
  * made itself), recompiling only what changed.
+ *
+ * A tenant project's models share one collection, `t_<projectId>` (D21,
+ * WO-43): each is a discriminator of the project's base model, its records
+ * marked `_model: <name>`. The super admin's models keep one collection each.
  */
 
 const TTL_MS = 10_000;
@@ -157,7 +162,7 @@ export const RESERVED_KEYS = [
 	'_id', 'id', '__v', 'code', 'createdAt', 'updatedAt',
 	'collection', 'db', 'emit', 'errors', 'get', 'init', 'isModified', 'isNew', 'listeners', 'modelName',
 	'on', 'once', 'populated', 'prototype', 'remove', 'removeListener', 'save', 'schema', 'set',
-	'toObject', 'toJSON', 'validate', 'isSelected', 'model', 'baseModel',
+	'toObject', 'toJSON', 'validate', 'isSelected', 'model', 'baseModel', MODEL_KEY,
 ];
 
 /**
@@ -323,31 +328,40 @@ export const checkAvailability = async (
 
 	const defs = await ModelDefinition.find(excludeId ? { _id: { $ne: excludeId } } : {}, { name: 1, route: 1, collectionName: 1 }).lean();
 	const own = excludeId ? await ModelDefinition.findById(excludeId, { name: 1 }).lean() : null;
-	// A tenant project checks its own names and routes only; its collections
-	// are named t_<projectId>_<route>, which can't meet the platform's.
+	// A tenant project checks its own names and routes only. All its models
+	// share its one collection, t_<projectId> (D21), so a route never meets a
+	// collection; a name is taken while records of a deleted model with that
+	// name are still kept there (their `_model`).
 	const tenant = currentScope();
-	const collectionOf = (route: string) => (tenant?.project ? `t_${tenant.project}_${route}` : route);
+	const collectionOf = (route: string) => (tenant?.project ? projectCollection(tenant.project) : route);
+	const kept: string[] = tenant?.project
+		? await mongoose.connection
+				.collection(projectCollection(tenant.project))
+				.distinct(MODEL_KEY)
+				.catch(() => [])
+		: [];
 	const names = new Set(
 		(tenant ? [] : mongoose.modelNames().filter(n => n !== (own as any)?.name))
-			.concat(defs.map((d: any) => d.name))
-			.map(n => n.toLowerCase())
+			.concat(defs.map((d: any) => d.name), kept.filter(n => n !== (own as any)?.name))
+			.map(n => String(n).toLowerCase())
 	);
 	const routes = new Set(
 		tenant
 			? [...TENANT_RESERVED_ROUTES, ...defs.map((d: any) => d.route)]
 			: [...adminMounts(app), ...RESERVED_ROUTES, ...defs.map((d: any) => d.route)]
 	);
-	const collections = new Set(
-		((await mongoose.connection.db?.listCollections({}, { nameOnly: true }).toArray()) || []).map((c: any) =>
-			c.name.toLowerCase()
-		)
-	);
-	defs.forEach((d: any) => collections.add(d.collectionName.toLowerCase()));
+	// The platform's: a route is taken while a collection by its name holds data.
+	const collections = new Set<string>();
+	if (!tenant) {
+		((await mongoose.connection.db?.listCollections({}, { nameOnly: true }).toArray()) || []).forEach((c: any) =>
+			collections.add(c.name.toLowerCase())
+		);
+		defs.forEach((d: any) => collections.add(d.collectionName.toLowerCase()));
+	}
 
 	const reasons: string[] = [];
 	const nameFree = (name: string) => !names.has(name.toLowerCase());
-	const routeFree = (route: string) =>
-		!routes.has(route) && !dynamicMounts.has(route) && !collections.has(collectionOf(route).toLowerCase());
+	const routeFree = (route: string) => !routes.has(route) && !dynamicMounts.has(route);
 
 	if (tenant) {
 		// In a project the name and the address are numbered apart: only the
@@ -1028,7 +1042,8 @@ export const settleProjectModels = async (projectId: any) => {
 export const forgetProjectModels = (projectId: any) => {
 	const key = `p:${projectId}`;
 	const r = registries.get(key);
-	if (r) for (const c of r.compiled.values()) if (mongoose.models[c.modelName]) mongoose.deleteModel(c.modelName);
+	if (r) for (const c of r.compiled.values()) dropCompiled(c.modelName);
+	if (mongoose.models[baseNameOf(projectId)]) mongoose.deleteModel(baseNameOf(projectId));
 	registries.delete(key);
 	forgetScopeMounts(key);
 };
@@ -1069,18 +1084,51 @@ export const linkTargets = async (app: any) => {
 		.sort((a, b) => a.name.localeCompare(b.name));
 };
 
+/** A project's base model: no fields of its own, its discriminators are the project's models. */
+const baseNameOf = (projectId: any) => `T${projectId}__Records`;
+const projectBase = (projectId: any): mongoose.Model<any> =>
+	mongoose.models[baseNameOf(projectId)] ||
+	mongoose.model(
+		baseNameOf(projectId),
+		// The same options as buildSchema's: a discriminator can't differ from its base.
+		new Schema<any>({}, { discriminatorKey: MODEL_KEY, timestamps: true, versionKey: false, autoIndex: false }),
+		projectCollection(projectId)
+	);
+
+/** Unloads a compiled model — and, for a project's, its place on the base model. */
+const dropCompiled = (modelName: string) => {
+	const Model: any = mongoose.models[modelName];
+	if (!Model) return;
+	const base: any = Model.baseModelName && mongoose.models[Model.baseModelName];
+	if (base?.discriminators) delete base.discriminators[modelName];
+	if (base?.schema?.discriminators) delete base.schema.discriminators[modelName];
+	mongoose.deleteModel(modelName);
+};
+
+/**
+ * True when a tenant model keeps its records in its project's one collection
+ * (D21). A project model created before WO-43 keeps its own collection until
+ * scripts/migrateProjectCollections.js moves it.
+ */
+export const inProjectCollection = (def: Pick<ModelDef, 'collectionName'>) => {
+	const s = currentScope();
+	return !!s?.project && def.collectionName === projectCollection(s.project);
+};
+
 const compile = (def: ModelDef) => {
 	const r = reg();
 	const modelName = internalModelName(def.name);
 	const existing = mongoose.models[modelName];
 	if (existing && !r.compiled.has(def.name))
 		throw new Error(`A model in code is already registered as ${def.name}`);
-	if (existing) mongoose.deleteModel(modelName);
+	if (existing) dropCompiled(modelName);
 	// A tenant's references name models of its own project: point them at their internal names.
 	const schemaDef = currentScope()
 		? { ...def, fields: def.fields.map(f => (f.ref ? { ...f, ref: internalModelName(f.ref) } : f)) }
 		: def;
-	const Model = mongoose.model(modelName, buildSchema(schemaDef), def.collectionName);
+	const Model = inProjectCollection(def)
+		? projectBase(currentScope()!.project).discriminator(modelName, buildSchema(schemaDef), { value: def.name, overwriteModels: true })
+		: mongoose.model(modelName, buildSchema(schemaDef), def.collectionName);
 	r.compiled.set(def.name, { def, Model, stamp: stampOf(def), modelName });
 	r.failures.delete(def.name);
 	return Model;
@@ -1160,7 +1208,7 @@ export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boo
 					if (!live.has(name)) {
 						changed = true;
 						r.compiled.delete(name);
-						if (mongoose.models[c.modelName]) mongoose.deleteModel(c.modelName);
+						dropCompiled(c.modelName);
 						unmount(c.def.route);
 					}
 

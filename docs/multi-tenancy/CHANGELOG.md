@@ -965,3 +965,59 @@ Decisions D14–D17 (README).
   collection; super-admin models stay one collection each and their existing
   data, collections and indexes must remain unchanged — WO-43 now says how
   (scope branches, migration selects tenant models only, before/after checks).
+
+## 2026-10-06 — WO-43 One collection per project (built; production not migrated)
+- The user: "start with the workorder" (after reviewing the WO-43 PDF).
+  Section 11's open points were taken as recommended: `_model` = the model's
+  `name`; old collections kept until `--drop-old` (the user's call when);
+  production only on the user's yes, app stopped.
+- Backend:
+  - new `library/functions/projectIndexes.function.ts` — `MODEL_KEY`,
+    `projectCollection`, `ownRecordsOf(Model)` (the `_model` filter for
+    direct collection calls), the index manager `syncProjectIndexes` /
+    `dropModelIndexes` (shared `p_model_*`, per-model `m_<Name>_<field>`;
+    never touches another model's index).
+  - `dynamicModels.function.ts` — per-project base model
+    `T<projectId>__Records` on `t_<projectId>` (discriminatorKey `_model`);
+    a project model on `t_<projectId>` compiles as its discriminator
+    (`overwriteModels`), any other model exactly as before;
+    `inProjectCollection(def)`; unloading removes the discriminator and the
+    base; `checkAvailability` in a project: collection `t_<projectId>`, no
+    collection listing, names of kept records (`distinct('_model')`) taken;
+    `_model` in `RESERVED_KEYS`.
+  - `models.controller.ts` — `syncIndexes` → the index manager in a project;
+    record counts via `countDocuments`; privacy backfill and formula
+    recalculation confined to `{_model}`; delete with data removes the
+    model's records (drops the collection only when the project has no
+    models and it's empty); delete always drops the model's own indexes.
+  - `bulkActions.controller.ts` — undo restores with `_model` (also for
+    snapshots without it); merge preview counts and repointing per linking
+    model.
+  - `modelDefinition.model.ts` + `tenantIndexes.function.ts` —
+    `collectionName` unique only among super-admin models
+    (`collectionName_platform`, partial `{organization: null}`); boot swaps
+    `collectionName_1` for it (partial index first).
+  - `projectLifecycle` drops `t_<id>` and old `t_<id>_*`;
+    `templateSandbox` room check counts one collection per project;
+    `routeRegistry.listModelFields` hides `_model`; MCP duplicate message
+    leaves `_model` out; `features.schema.ts` comment.
+  - new `scripts/migrateProjectCollections.js` (dry run / `--apply` /
+    `--project` / `--drop-old`; refuses before the WO-43 backend has booted,
+    and on any project model whose collection isn't `t_<projectId>…`).
+- Admin: `RESERVED_KEYS` (`model-builder/_components/modelKinds.ts`), the
+  linked record card (`record-link/linked.ts`) and merge compare
+  (`CompareRows.tsx`) skip `_model`.
+- Smoke: new `collections.mjs` (57 checks) and `migration.mjs` (27 checks) in
+  `run-all.sh`; `models.mjs`, `public-filters.mjs`, `templates-preview.mjs`
+  updated for the new layout.
+- Verified on the scratch DB (Mongo 8.2 :27998, backend :5011): `tsc` both
+  repos; every suite in `run-all.sh` passes (`widgets`/`widgets-cart` need a
+  fresh server — sign-up rate limit after the earlier suites, unrelated);
+  dress rehearsal on the whole scratch DB (12 legacy projects): dry run listed
+  43 models, `--apply` moved 43, a re-run moved 0, `--drop-old` dropped 43;
+  the records of all 95 project models compared byte-for-byte (minus `_model`)
+  identical, every non-project collection's count and indexes unchanged,
+  super-admin definitions unchanged; 26 `t_` collections left.
+- **Production: nothing run.** Order: deploy the backend → mongodump → dry run
+  (record counts here) → stop the app → `--apply` → check → later
+  `--drop-old` (DEPLOY.md §1.5). Only on the user's yes.

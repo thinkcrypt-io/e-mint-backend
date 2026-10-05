@@ -37,7 +37,7 @@ changed. Never leave work done but untracked here.
 
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
-`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 pushed** (public API list filters + docs, 2026-10-04: backend `v3` `65c397dc`, admin `main` `3b902d8`). **WO-42 pushed** (public API read-only fields, 2026-10-05: backend `v3` `a4e012bf`, admin `main` `136e33f`; not deployed). **Open: WO-43** (one collection per project, D21 — planned 2026-10-05, not started; read it before anything that adds collections or calls a model's collection directly). **Site widgets W-05 (shop + cart) done 2026-10-05** (docs/widgets CHANGELOG): adds one shared scoped collection `sitecarts`; `functions/shop.function.ts` reads and writes tenant models only through their compiled Mongoose models (safe under WO-43's discriminators). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+`main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 pushed** (public API list filters + docs, 2026-10-04: backend `v3` `65c397dc`, admin `main` `3b902d8`). **WO-42 pushed** (public API read-only fields, 2026-10-05: backend `v3` `a4e012bf`, admin `main` `136e33f`; not deployed). **WO-43 done 2026-10-06** (one collection per project, D21; admin `main` `e847dcb`): code, `scripts/migrateProjectCollections.js`, `collections.mjs` + `migration.mjs` suites; rehearsed on the scratch DB. **Production migration not run** — only on the user's yes, after the backend is deployed (DEPLOY.md §1.5). Anything new that calls a model's collection directly must add `ownRecordsOf(Model)` (`projectIndexes.function.ts`); never `syncIndexes()` a project model. **Site widgets W-05 (shop + cart) done 2026-10-05** (docs/widgets CHANGELOG): adds one shared scoped collection `sitecarts`; `functions/shop.function.ts` reads and writes tenant models only through their compiled Mongoose models (safe under WO-43's discriminators). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with
@@ -128,7 +128,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 40 | **Public API lists: the admin lists' filters (`field_op=value`), search, multi-sort, `fields`; documented in the API reference, user guide and MCP** | both | M | done |
 | 41 | **Marketing website (`mint-webpage/`, repo aiasifistiaque/mint-website `main`) + waitlist: `POST /public/waitlist`, `Waitlist` model, super-admin `/waitlist` table, `scripts/seedWaitlist.js`** | backend + website | M | done (both pushed; seed + deploy pending) |
 | 42 | **Public API read-only fields (`publicApi.readOnlyFields`, template `endpoints[].readOnly`): a customer can't create an order as `paid`** | both | M | done (pushed: backend `a4e012bf`, admin `136e33f`) |
-| 43 | **One collection per project (D21): a project's models share `t_<projectId>` with a `_model` field; per-model index manager; migration of existing projects** | backend | L | planned — not started |
+| 43 | **One collection per project (D21): a project's models share `t_<projectId>` with a `_model` field; per-model index manager; migration of existing projects** | both | L | done (scratch-verified; production migration pending the user's yes — DEPLOY.md §1.5) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -764,7 +764,7 @@ field-level write control for the public API." Decision D20.
   it, `GET /` marks it); `templates-preview.mjs` (template errors, a built
   preview's model has the list, a customer's `paid` order is `pending`).
 
-## WO-43 — One collection per project (L) — planned
+## WO-43 — One collection per project (L) — done (2026-10-06; production migration pending the user's yes)
 **The user's words (2026-10-05):** "if i need to have unlimited collection?
 … atlas seem to have cap" → chose "One collection per project: all of a
 project's models in one collection, with a `_model` field. Collections then
@@ -913,6 +913,34 @@ project.
   and history still resolve.
 - All suites pass (`run-all.sh`) — models, public, public-filters, access,
   activity, templates-preview, webhooks cover the rest.
+
+**Built (2026-10-06)** as designed above, with these differences — read them
+before touching the code:
+- **Both layouts work.** A project model is a discriminator on `t_<projectId>`
+  only when its `collectionName` is `t_<projectId>` (`inProjectCollection`);
+  one created before WO-43 keeps its own collection, indexes and
+  `syncIndexes` until the script moves it. So the code ships first and the
+  migration runs after — never the other way (the old code would read a
+  shared collection unfiltered); the script refuses while
+  `collectionName_1` still exists.
+- **Names, not routes, are kept by kept records.** A model deleted without its
+  data leaves records with its `_model`; `checkAvailability` counts those
+  names as taken (`distinct('_model')` on `t_<projectId>`), so a new model
+  never inherits them. Routes no longer meet collections in a project.
+- **The migration upserts** (`replaceOne` by `_id` + `_model`, upsert) rather
+  than `insertMany`, so a re-run also refreshes changed records and removes
+  ones deleted from the old collection since. `--drop-old` drops an old
+  collection when **every `_id` in it** is in the new one (not equal counts —
+  records added after the move are fine).
+- `projectIndexes.function.ts` also gives a section's unique/indexed
+  sub-field its own `m_<Name>_<section>.<field>`; a unique field's index is
+  partial on `_model` (+ `$exists` when not required).
+- Other places touched: `routeRegistry.listModelFields` (no `_model` filter),
+  MCP save errors (no `_model` in the duplicate message), the template
+  preview room check (one collection per project), the admin panel's linked
+  record card and merge compare (skip `_model`), `RESERVED_KEYS` (both repos).
+- `_model` is in admin/tenant API responses (lists, records); the public API
+  never returns it.
 
 **Done when** new projects get one collection; super-admin models and their
 data are byte-for-byte as before (checked as above); the migration has run on

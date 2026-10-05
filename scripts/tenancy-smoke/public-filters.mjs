@@ -105,8 +105,9 @@ ok('info: search + sort keys', m?.search?.includes('name') && m?.search?.include
 const { MongoClient } = await import('../../node_modules/mongodb/lib/index.js');
 const uri = process.env.MONGO_CONNECTION_URI || process.env.SMOKE_MONGO || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
 const mc = await new MongoClient(uri).connect();
-const coll = (await mc.db().listCollections().toArray()).map(c => c.name).find(n => n.endsWith(`_${r0}`));
-await mc.db().collection(coll).updateOne({ name: 'Trail Shoe' }, { $set: { archivedAt: new Date() } });
+// The model's records: in its project's one collection (WO-43), marked with its name.
+const def = await mc.db().collection('modeldefinitions').findOne({ route: r0 });
+await mc.db().collection(def.collectionName).updateOne({ _model: def.name, name: 'Trail Shoe' }, { $set: { archivedAt: new Date() } });
 await mc.close();
 is('archived row not listed', await pub(''), 'Road Shoe|Tent|Lamp (50% off)');
 r = await fetch(`${ROOT}/public/api/${slug}/${r0}/${ids[0]}`);

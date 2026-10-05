@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
+import { PLATFORM_COLLECTION_INDEX } from '../models/builder/modelDefinition.model.js';
 
 /**
  * Names and routes in the builder's collections are unique per scope — the
  * super admin's, or one tenant project's (docs/multi-tenancy WO-03, D6) — so
  * every project can have its own `Client` (Mongoose `T<projectId>_Client`,
- * collection `t_<projectId>_clients`). A database that predates multi-tenancy
+ * collection `t_<projectId>`, D21). A database that predates multi-tenancy
  * still carries the old single-field unique indexes (`name_1`, `route_1`…),
  * which refuse a project's `Client` because the platform, or another project,
  * already has one.
@@ -43,5 +44,22 @@ export const ensureTenantIndexes = async () => {
 		}
 		for (const name of legacy) await col.dropIndex(name);
 		console.log(`Tenancy: ${step.collection} — ${legacy.join(', ')} now unique per project`);
+	}
+
+	// A tenant project's models all share one collection (D21, WO-43): the
+	// global unique collectionName_1 becomes unique among super-admin models only.
+	// The partial index is made first, so the platform's are never unguarded.
+	if (existing.has('modeldefinitions')) {
+		const col = db.collection('modeldefinitions');
+		const indexes = await col.indexes();
+		if (indexes.some(i => i.name === 'collectionName_1')) {
+			if (!indexes.some(i => i.name === PLATFORM_COLLECTION_INDEX))
+				await col.createIndex(
+					{ collectionName: 1 },
+					{ unique: true, partialFilterExpression: { organization: null }, name: PLATFORM_COLLECTION_INDEX }
+				);
+			await col.dropIndex('collectionName_1');
+			console.log('Tenancy: modeldefinitions — collectionName now unique among super-admin models only');
+		}
 	}
 };

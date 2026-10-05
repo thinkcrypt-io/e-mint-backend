@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import DeletedRecord from '../../models/deleted-record/model.js';
 import recordHistory from '../../functions/recordHistory.function.js';
+import { ownRecordsOf } from '../../functions/projectIndexes.function.js';
 
 /**
  * Bulk actions on the rows ticked in a table (admin selection bar):
@@ -92,7 +93,10 @@ export const bulkRestore = ({ Model }: Opts) => async (req: any, res: Response) 
 		const existing = new Set(
 			(await Model.find({ _id: { $in: snaps.map((s: any) => s.docId) } }).distinct('_id')).map(String)
 		);
-		const back = snaps.filter((s: any) => !existing.has(String(s.docId))).map((s: any) => s.doc);
+		// A project model's records share one collection: each goes back marked
+		// as its model's (a snapshot from before WO-43 has no `_model`).
+		const own = ownRecordsOf(Model);
+		const back = snaps.filter((s: any) => !existing.has(String(s.docId))).map((s: any) => ({ ...s.doc, ...own }));
 		// Straight into the collection: exactly what was deleted, no hooks re-numbering codes.
 		if (back.length) await Model.collection.insertMany(back as any[], { ordered: false });
 		await DeletedRecord.deleteMany({ _id: { $in: snaps.map((s: any) => s._id) } });
@@ -313,7 +317,7 @@ export const mergePreview = ({ Model, ownerOnly }: Opts) => async (req: any, res
 		const ids = input.merge.map(oid);
 		const links: { model: string; path: string; count: number }[] = [];
 		for (const r of refPathsTo(Model.modelName)) {
-			const count = await r.M.collection.countDocuments({ [r.path]: { $in: ids } });
+			const count = await r.M.collection.countDocuments({ ...ownRecordsOf(r.M), [r.path]: { $in: ids } });
 			if (count) links.push({ model: r.M.modelName, path: r.path, count });
 		}
 		// The fields a merge may take from another record — the route's editable ones.
@@ -350,16 +354,18 @@ export const mergeRecords = ({ Model, ownerOnly }: Opts) => async (req: any, res
 		let moved = 0;
 		for (const r of refPathsTo(Model.modelName)) {
 			const coll = r.M.collection;
+			// On a project's shared collection, only the linking model's records.
+			const own = ownRecordsOf(r.M);
 			if (r.kind === 'single') {
-				moved += (await coll.updateMany({ [r.path]: { $in: ids } }, { $set: { [r.path]: keepId } })).modifiedCount;
+				moved += (await coll.updateMany({ ...own, [r.path]: { $in: ids } }, { $set: { [r.path]: keepId } })).modifiedCount;
 			} else if (r.kind === 'array') {
-				const hit = await coll.updateMany({ [r.path]: { $in: ids } }, { $addToSet: { [r.path]: keepId } } as any);
-				await coll.updateMany({ [r.path]: { $in: ids } }, { $pullAll: { [r.path]: ids } } as any);
+				const hit = await coll.updateMany({ ...own, [r.path]: { $in: ids } }, { $addToSet: { [r.path]: keepId } } as any);
+				await coll.updateMany({ ...own, [r.path]: { $in: ids } }, { $pullAll: { [r.path]: ids } } as any);
 				moved += hit.matchedCount;
 			} else if (r.kind === 'subdoc') {
 				moved += (
 					await coll.updateMany(
-						{ [r.path]: { $in: ids } },
+						{ ...own, [r.path]: { $in: ids } },
 						{ $set: { [`${r.parent}.$[el].${r.sub}`]: keepId } },
 						{ arrayFilters: [{ [`el.${r.sub}`]: { $in: ids } }] }
 					)

@@ -11,6 +11,7 @@ import { dataToSettings, scopedModel } from '../../functions/routeRegistry.funct
 import { applyFormulas, formulasOf } from '../../functions/formula.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { runInScope } from '../../functions/tenantScope.function.js';
+import { MODEL_KEY } from '../../functions/projectIndexes.function.js';
 import { getS3, resolveUploadFolder } from '../../../routes-admin/file/media.helpers.js';
 import { PUBLIC_API, mergedPublicApi, readOnlyProblem } from '../builder/models.controller.js';
 import { routePermission } from '../builder/builder.controller.js';
@@ -168,7 +169,11 @@ const saveAll = async (docs: { doc: any; Model: mongoose.Model<any>; isNew: bool
 };
 
 const saveFailure = (e: any) =>
-	refuse(e?.code === 11000 ? `Nothing saved — a record with that ${Object.keys(e.keyValue || {}).join(', ') || 'value'} already exists.` : `Nothing saved — ${e?.message || 'the save failed'}.`);
+	refuse(
+		e?.code === 11000
+			? `Nothing saved — a record with that ${Object.keys(e.keyValue || {}).filter(k => k !== MODEL_KEY).join(', ') || 'value'} already exists.`
+			: `Nothing saved — ${e?.message || 'the save failed'}.`
+	);
 
 /* -------------------------------------------------------------- pages */
 

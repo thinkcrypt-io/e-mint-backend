@@ -64,11 +64,11 @@ export const removeProjectContents = async (organization: any, projectId: any) =
 		return list;
 	});
 	for (const f of files) await deleteS3ObjectIfUnused(f.key, f.bucket).catch((e: any) => console.error('project delete, S3:', e?.message));
-	// Its built models' data: t_<projectId>_<route> (README, Naming) — once their index builds are done.
+	// Its built models' data: t_<projectId> (D21), and t_<projectId>_<route> from
+	// before WO-43 (README, Naming) — once their index builds are done.
 	await settleProjectModels(projectId);
 	const db = mongoose.connection.db!;
-	const prefix = `t_${projectId}_`;
-	const collections = await db.listCollections({ name: { $regex: `^${prefix}` } }, { nameOnly: true }).toArray();
+	const collections = await db.listCollections({ name: { $regex: `^t_${projectId}(_|$)` } }, { nameOnly: true }).toArray();
 	for (const c of collections) await db.dropCollection(c.name).catch(() => undefined);
 	await projectHooks.removed(projectId);
 };

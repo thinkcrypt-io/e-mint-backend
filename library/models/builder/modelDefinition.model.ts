@@ -1,6 +1,9 @@
 import mongoose, { Schema } from 'mongoose';
 import { tenantScoped } from '../../functions/tenantScope.function.js';
 
+/** The unique index on super-admin models' collections (tenantIndexes.function.ts replaces the old global one). */
+export const PLATFORM_COLLECTION_INDEX = 'collectionName_platform';
+
 /**
  * A Mongoose model built in the admin's model builder instead of in code.
  *
@@ -49,7 +52,8 @@ const schema = new Schema<any>(
 		requestedName: { type: String, trim: true },
 		/** The admin route (and API path), e.g. 'invoices'. */
 		route: { type: String, required: true, trim: true, lowercase: true },
-		collectionName: { type: String, required: true, unique: true, trim: true },
+		/** Its own collection on the platform; a tenant project's models all share `t_<projectId>` (D21). */
+		collectionName: { type: String, required: true, trim: true },
 		title: { type: String, required: true, trim: true },
 		description: { type: String, trim: true },
 		/** Permission key: view-/create-/edit-/delete-<permission>. */
@@ -104,5 +108,7 @@ schema.plugin(tenantScoped);
 // a tenant model is compiled under an internal name (D6). Collections are global.
 schema.index({ organization: 1, project: 1, name: 1 }, { unique: true });
 schema.index({ organization: 1, project: 1, route: 1 }, { unique: true });
+// Two super-admin models never share a collection; a project's all do (D21, WO-43).
+schema.index({ collectionName: 1 }, { unique: true, partialFilterExpression: { organization: null }, name: PLATFORM_COLLECTION_INDEX });
 
 export default mongoose.model<any>('ModelDefinition', schema, 'modeldefinitions');

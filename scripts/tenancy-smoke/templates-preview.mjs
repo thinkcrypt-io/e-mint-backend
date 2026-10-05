@@ -12,7 +12,8 @@ const { MongoClient } = await import('../../node_modules/mongodb/lib/index.js');
 const uri = process.env.SMOKE_MONGO || process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev';
 const mc = await new MongoClient(uri).connect();
 const db = mc.db();
-const collectionsOf = async id => (await db.listCollections({ name: { $regex: `^t_${id}_` } }, { nameOnly: true }).toArray()).map(c => c.name);
+// A project's data collection: t_<id> since WO-43 (t_<id>_<route> before).
+const collectionsOf = async id => (await db.listCollections({ name: { $regex: `^t_${id}(_|$)` } }, { nameOnly: true }).toArray()).map(c => c.name);
 
 let r = await call('POST', `${A}/auth/login`, { email: 'admin@example.com', password: PASS });
 const T = r.body.token;
@@ -100,7 +101,7 @@ r = await call('POST', `${A}/templates/previews/${P}/open`, null, T);
 ok('reopen → a new ticket', r.status === 200 && r.body.ticket && r.body.ticket !== pv.ticket, r.status);
 r = await call('POST', '/tenant/api/auth/preview', { ticket: r.body.ticket });
 ok('new ticket works', r.status === 200, r.status);
-ok('preview has collections before delete', (await collectionsOf(P)).length >= 2);
+ok('preview has one data collection before delete', String(await collectionsOf(P)) === `t_${P}`, String(await collectionsOf(P)));
 r = await call('DELETE', `${A}/templates/previews/${P}`, null, T);
 ok('preview deleted', r.status === 200, r.status);
 ok('…its collections and documents too', (await collectionsOf(P)).length === 0 && (await db.collection('modeldefinitions').countDocuments({ project: proj._id })) === 0 && !(await db.collection('tenantprojects').findOne({ _id: proj._id })));
@@ -123,7 +124,10 @@ const brokenId = r.body.doc._id;
 r = await call('POST', `${A}/templates/${brokenId}/preview`, {}, T);
 ok('bad sample data → 400 naming the step', r.status === 400 && /Sample data/.test(r.body?.message), `${r.status} ${r.body?.message}`);
 ok('nothing left in the sandbox', (await db.collection('tenantprojects').countDocuments({ 'preview.template': { $exists: true } })) === sandboxBefore);
-ok('no gadgets collection anywhere', !(await db.listCollections({}, { nameOnly: true }).toArray()).some(c => /_gadgets$/.test(c.name)));
+const dataCollections = (await db.listCollections({ name: /^t_/ }, { nameOnly: true }).toArray()).map(c => c.name);
+let gadgets = 0;
+for (const c of dataCollections) gadgets += /_gadgets$/.test(c) ? 1 : await db.collection(c).countDocuments({ _model: 'Gadget' });
+ok('no gadgets left anywhere', gadgets === 0, gadgets);
 
 /* -------------------------------------------------------- a website template */
 r = await call('POST', `${A}/templates`, {

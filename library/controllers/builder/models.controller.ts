@@ -15,6 +15,7 @@ import { checkFormula, formulaPipeline, formulasOf } from '../../functions/formu
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { currentScope } from '../../functions/tenantScope.function.js';
+import { MODEL_KEY, dropModelIndexes, syncProjectIndexes } from '../../functions/projectIndexes.function.js';
 import {
 	ARRAY_KINDS,
 	ENUM_KINDS,
@@ -39,6 +40,7 @@ import {
 	displayFieldOf,
 	generateConfig,
 	generateSettings,
+	inProjectCollection,
 	linkTargets,
 	makeTargetLookup,
 	nextCode,
@@ -548,10 +550,15 @@ const backfillCodes = async (def: ModelDef) => {
 	return n;
 };
 
-/** Brings the collection's indexes in line; a failure is reported, not thrown. */
+/**
+ * Brings the collection's indexes in line; a failure is reported, not thrown.
+ * A project's models share a collection: only the model's own indexes there
+ * (projectIndexes.function.ts) — `syncIndexes` would drop the others'.
+ */
 const syncIndexes = async (def: ModelDef): Promise<string[]> => {
 	const Model = compiledModel(def.name);
 	if (!Model) return [];
+	if (inProjectCollection(def)) return syncProjectIndexes(def);
 	try {
 		await Model.syncIndexes();
 		return [];
@@ -594,7 +601,8 @@ const withCount = async (def: any) => {
 	const Model = compiledModel(def.name);
 	let records: number | null = null;
 	try {
-		records = Model ? await Model.estimatedDocumentCount() : null;
+		// On a project's shared collection the estimate would count every model's records.
+		records = Model ? await (inProjectCollection(def) ? Model.countDocuments() : Model.estimatedDocumentCount()) : null;
 	} catch {
 		records = null;
 	}
@@ -917,13 +925,17 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 		let codesAssigned = 0;
 		if (after.code?.enabled && !before.code?.enabled) codesAssigned = await backfillCodes(after);
 
+		// Straight to the collection below (no hooks, no timestamps) — on a
+		// project's shared one, only this model's records.
+		const own = inProjectCollection(after) ? { [MODEL_KEY]: after.name } : {};
+
 		// Records from before access was on were visible to everyone; they stay that way until their privacy is changed.
 		let madePublic = 0;
 		if (after.access?.enabled && !before.access?.enabled)
 			madePublic = (
 				await mongoose.connection
 					.collection(after.collectionName)
-					.updateMany({ privacy: { $nin: ['private', 'only-me', 'public'] } }, { $set: { privacy: 'public' } })
+					.updateMany({ ...own, privacy: { $nin: ['private', 'only-me', 'public'] } }, { $set: { privacy: 'public' } })
 			).modifiedCount;
 
 		// A formula field added or changed: every existing record's value, recalculated in the database.
@@ -938,7 +950,7 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 			const formulas = formulasOf((await generated(req.app, after)).settingsObj);
 			if (formulas.length)
 				recalculated = (
-					await mongoose.connection.collection(after.collectionName).updateMany({}, formulaPipeline(formulas))
+					await mongoose.connection.collection(after.collectionName).updateMany(own, formulaPipeline(formulas))
 				).modifiedCount;
 		}
 
@@ -999,12 +1011,20 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 			def.sidebarItem ? SidebarItem.deleteOne({ _id: def.sidebarItem }) : null,
 		]);
 
+		const shared = inProjectCollection(def);
 		if (dropData) {
 			await Counter.deleteOne({ slug: counterSlugFor(def.name) });
 			// An index build still running would make the collection again after the drop.
 			await compiledModel(def.name)?.init().catch(() => undefined);
-			await mongoose.connection.db?.dropCollection(def.collectionName).catch(() => {});
+			if (shared) {
+				// The project's other models keep the collection: only this model's records go.
+				const col = mongoose.connection.collection(def.collectionName);
+				await col.deleteMany({ [MODEL_KEY]: def.name });
+				if (!(await ModelDefinition.exists({})) && !(await col.estimatedDocumentCount())) await col.drop().catch(() => {});
+			} else await mongoose.connection.db?.dropCollection(def.collectionName).catch(() => {});
 		}
+		// Its own indexes go either way; kept records keep the name taken (checkAvailability).
+		if (shared) await dropModelIndexes(def);
 
 		await syncDynamicModels({ app: req.app, force: true });
 		return { message: dropData ? 'Model and records deleted' : 'Model deleted; its records were kept' };

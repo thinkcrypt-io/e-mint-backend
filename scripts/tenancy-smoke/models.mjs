@@ -17,7 +17,7 @@ ok('project has its sidebar section', !!section && r.body.doc.length === 1, r.bo
 r = await call('POST', P(s.crm, '/builder/models'), client, s.pat);
 ok('A: create Client model', r.status === 201 && r.body?.doc?.route === 'clients', `${r.status} ${r.body?.message || ''} ${JSON.stringify(r.body?.problems || '')}`);
 r = await call('POST', P(s.crm, '/builder/models'), { ...invoice('INV'), sidebar: { category: section } }, s.pat);
-ok('A: create Invoice model (refs Client)', r.status === 201 && r.body?.doc?.route === 'invoices' && r.body?.doc?.collectionName === `t_${s.crm}_invoices`, `${r.status} ${r.body?.message || ''} ${r.body?.doc?.collectionName || ''} ${JSON.stringify(r.body?.problems || '')}`);
+ok('A: create Invoice model (refs Client)', r.status === 201 && r.body?.doc?.route === 'invoices' && r.body?.doc?.collectionName === `t_${s.crm}`, `${r.status} ${r.body?.message || ''} ${r.body?.doc?.collectionName || ''} ${JSON.stringify(r.body?.problems || '')}`);
 // Project B (Umbrella Ops) — same names
 r = await call('POST', P(ops, '/builder/models'), client, s.other);
 ok('B: same model name in another org', r.status === 201 && r.body?.doc?.name === 'Client', `${r.status} ${r.body?.message || ''}`);

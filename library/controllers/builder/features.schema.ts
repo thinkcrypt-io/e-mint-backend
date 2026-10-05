@@ -112,7 +112,7 @@ export const catalogText = (catalog: CatalogEntry[]) =>
 
 /**
  * In a tenant project, names are the project's alone (internally
- * `T<projectId>_<Name>`, collection `t_<projectId>_<route>`), so the AI should
+ * `T<projectId>_<Name>`, in the project's own collection `t_<projectId>`), so the AI should
  * name models plainly and never dodge a clash that can't happen.
  */
 const projectNaming = () =>
