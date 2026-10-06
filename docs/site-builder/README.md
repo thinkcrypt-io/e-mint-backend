@@ -394,6 +394,7 @@ ship — the kinds don't wait for them.
    the wildcard certificate needs `sites` NS-delegated to
    `ns1/ns2.vercel-dns.com`. Note: tenant pages share the registrable domain
    `mintapp.shop` with the panel — never set cookies on `.mintapp.shop`.
-3. **Hosting plan** — the renderer serves customers' sites and custom domains;
-   Vercel's Hobby plan is for non-commercial use and caps domains per project,
-   so production likely needs Vercel Pro (or another host). Needed by SB-14.
+3. ~~**Hosting plan**~~ — answered 2026-10-06: **the current Vercel (Hobby)
+   plan for the prototype.** Hobby is for non-commercial use and caps domains
+   per project, so moving to Vercel Pro (or another host) is the step before
+   paying customers' sites and many custom domains (SB-14).

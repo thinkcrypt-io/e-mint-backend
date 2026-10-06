@@ -2,6 +2,51 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-08 — Block catalogue v1, presets, themes (2026-10-06)
+
+**What:** 19 blocks (header with a no-script phone menu, logo, menu, social
+links, breadcrumbs, card, tabs/tab, accordion/question, number, badge, quote,
+countdown, carousel, gallery with a big view, moving strip, map, contact form);
+34 new presets (37 total) with thumbnails; themes market, calm, mono, bistro
+(7 total); contrast test (4.5:1 on every text pair, light + dark — fixed
+Bright's accent text); validator warnings for alt text / heading order, tab
+and question only inside their parent; `/render` `crumbs`, `GET /pages`
+`site`; canvas `context` message; header presets placed between sections.
+
+**Files:** mint-sites `src/blocks/*` (19 folders), `src/presets/{build,sections}.ts`,
+`thumbnails.json`, `public/__mint/presets/`, `scripts/thumbnails.mjs`,
+`src/themes/{market,calm,mono,bistro,contrast}.ts`, `src/render/interactive.ts`,
+`SiteDocument.tsx` (page scripts, non-blocking fonts), fixture views
+(`?view=blocks|presets|demo`, `?preset=`, `&theme=&mode=dark`), tests
+`blocks.test.tsx`, `contrast.test.ts`; backend `validate.ts`, `render.ts`
+(`crumbsFor`), `site.ts` (`siteInfo`), router, manifest sync, tests, smoke;
+admin `SiteBuilder.tsx`, `Canvas.tsx`, `protocol.ts`, `AddPanel.tsx`, `edit.ts`,
+`DesignPanel.tsx`, `siteBuilderApi.ts`.
+
+**Verified:** mint-sites 76 tests; backend Jest 22 (every preset passes the
+validator); smoke `site-builder.mjs` all passed (incl. 6 SB-08 checks:
+catalogue, site info, preset page, lone tab refused, alt warning, crumbs).
+Fixture checked in the browser (tabs, carousel arrows, map, no hydration
+errors); all thumbnails reviewed (card edge-to-edge, pricing buttons aligned,
+filled stars fixed); spot shots in mono, calm dark, bistro dark, market,
+bright dark, editorial dark. Editor: Add tab shows thumbnails; header preset
+shows the site name and menu from pages; lands between sections.
+
+**Performance budget** (`npm run build`, `next start`, `?view=demo` = header +
+20 sections + footer): JS files 168.6 KB gzip — Next/React baseline, identical
+for a 1-section page, so blocks add 0 KB; inline scripts + RSC payload 14.8 KB
+gzip; HTML 25 KB gzip. Lighthouse 12 mobile: studio 98 / a11y 100, bright 99 /
+100, bistro dark 98 / 100, mono 99 / 100 (before non-blocking fonts: 87–91).
+The 90 KB JS target can't be met while Next's own runtime is 168 KB — noted
+for the user (SB-04 already flagged it).
+
+**Deviation:** card has plain children, not media/body/footer slots (the
+editor only drops into the children slot).
+
+**Docs:** guide `#presets` (full list with real thumbnails), `#themes`,
+`#blocks`, `#add` groups, start note (mint-docs `2586e6f`). Marketing
+(mint-webpage `ce2bbf7`): 7-theme strip (sideways row), feature card, changelog.
+
 ## 2026-10-06 — SB-07 Style and Design
 
 - **Renderer (mint-sites `9da74ae`):** themes Editorial and Bright (Studio

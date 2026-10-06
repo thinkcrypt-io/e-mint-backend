@@ -82,23 +82,41 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, SB-07 done — SB-08 next)
+## Handoff — read this first (last updated 2026-10-06, SB-08 done — SB-09 next)
 
-**Done and pushed:** SB-01…SB-07 (renderer `mint-sites`, backend storage +
+**Done and pushed:** SB-01…SB-08 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
 and moving blocks + overlays, styles + design + header/footer + saved
-sections; guide `/site-builder` with `#start`, `#live-site`, `#pages`,
-`#canvas`, `#outline`, `#props`, `#add`, `#presets`, `#move`, `#inline-text`,
-`#shortcuts`, `#overlays`, `#style`, `#breakpoints`, `#design`, `#layouts`,
-`#sections`, `#publish`; the marketing site shows the builder as available —
-no more Coming soon — with a themes strip on /features). **Next: SB-08**
-(block catalogue, presets, more themes — Studio, Editorial and Bright exist;
-add each new theme to mint-webpage `src/content/siteThemes.ts` too) → SB-09…
-The renderer isn't deployed anywhere yet (no Vercel project — ask the user;
-root domain answered: `sites.mintapp.shop`; hosting plan still open, README
-open question 3). **No image optimizer anywhere (D25)** — plain `<img>`.
-Open questions for the user are at the end of README (D4 site kinds, hosting);
-none blocks SB-08…SB-12.
+sections, the block catalogue + 34 presets + 7 themes; guide `/site-builder`
+with `#start` … `#sections`, `#themes`, `#blocks`, `#publish`; the marketing
+site shows the builder with a 7-theme strip on /features). **Next: SB-09**
+(data binding) → SB-10… The renderer isn't deployed yet. **Hosting answered
+(2026-10-06): the current Vercel Hobby plan for the prototype** (README open
+question 3); root domain `sites.mintapp.shop`. **No image optimizer anywhere
+(D25)** — plain `<img>`. Open question left: D4 site kinds (before SB-13).
+
+**How SB-08 is built:** 19 new blocks in `mint-sites/src/blocks/` (header,
+logo, nav-menu, social-links, breadcrumbs, card, tabs+tab, accordion+
+accordion-item, stat, badge, quote, countdown, carousel, gallery, marquee,
+map, form-placeholder). Tabs/accordion hold child blocks (`tab`,
+`accordion-item`, `canBeChildOf` + `slots.children.allow`) — **no named slots**
+(the card spec's media/body/footer slots became plain children: a first
+image goes edge to edge). Blocks that show site data read
+`RenderContext.site/menu/path/crumbs`: `/render` sends `crumbs`, `GET /pages`
+sends `site`, the panel builds the menu/crumbs from draft pages and sends a
+`context` message to the canvas. Interactivity without client components:
+inline scripts per block type only on pages that use them
+(`src/render/interactive.ts`, + `suppressHydrationWarning` on what they
+touch); the header's phone menu is a native popover (`popovertarget`, no
+script). Presets are written with `src/presets/build.ts` in
+`src/presets/sections.ts`; thumbnails by `npm run thumbnails` (headless
+Chrome → `public/__mint/presets/`, `thumbnails.json`). Themes: studio,
+editorial, bright, market, calm, mono, bistro — `test/contrast.test.ts`
+enforces 4.5:1 on every text pair. Fonts load without blocking first paint on
+live pages; mono font only when a page has `<code>`. Validator: alt-text and
+heading-order **warnings**; tab / question outside its parent is an error.
+Budget (CHANGELOG): blocks add 0 KB JS files; Lighthouse mobile 98–99 perf,
+100 a11y.
 
 **How SB-07 is built (read before touching the editor):** the design draft is
 its own document with its own `rev`, undo and autosave (`useDesign.ts`); a
@@ -118,8 +136,11 @@ still placed somewhere blocks Publish. Fonts come only from the manifest's
 (the Design tab has ready-made sets: corners, shadows; the validator already
 takes any value); a custom hex in the Style panel is deliberately not offered
 (colours only through the Design tab, so a theme switch still restyles);
-preset thumbnails (SB-08 generates them — the Add tab shows the label until
-then). **Deviation (SB-06):** the outline uses the browser's own drag and drop
+preset thumbnails — done in SB-08. Left after SB-08: preset variants per
+theme (all presets suit every theme for now), a real form backend (W-08;
+the contact form opens the visitor's email app), dragging into a tab from the
+canvas works only via the outline/selection (tabs show all panels in the
+editor). **Deviation (SB-06):** the outline uses the browser's own drag and drop
 (HTML5), not `@dnd-kit` — no new dependency.
 
 **Deploy notes for the user (not done — ask before doing any of it):** the
@@ -147,12 +168,12 @@ RTK `components/library/store/services/siteBuilderApi.ts`. Renderer
 `mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
 
 **Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
-`9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d` (+ handoff
+`9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d`, SB-08 `ec0b22f1` (+ handoff
 commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
-SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`; admin `main`: SB-05
-`f0b273c`, `dd5b0f0`, `0f95b8f`, SB-06 `b263ba7`, SB-07 `9be3228`; mint-docs
+SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`, SB-08 `817b136`; admin `main`: SB-05
+`f0b273c`, `dd5b0f0`, `0f95b8f`, SB-06 `b263ba7`, SB-07 `9be3228`, SB-08 `297debd` `2481981`; mint-docs
 `main`: `a029dcf`, `5a1fc10`, `b45ee19`, `1adaf97`, SB-06 `0020aef`, SB-07
-`626b81d`; mint-webpage `main`: `77be8d1`, SB-06 `a345116`, SB-07 `40a24f5`.
+`626b81d`, SB-08 `2586e6f`; mint-webpage `main`: `77be8d1`, SB-06 `a345116`, SB-07 `40a24f5`, SB-08 `ce2bbf7`.
 
 **Learned in SB-06 (applies to SB-07 on):**
 - The panel can't see pointer events over the canvas iframe: panel drags use
@@ -337,13 +358,13 @@ Renderer (`mint-sites`)
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | done 2026-10-06 (admin `0f95b8f`, mint-sites `41972a3`) |
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | done 2026-10-06 (mint-sites `2b2bdc9`, admin `b263ba7`, backend `751c88e3`) |
 | SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | done 2026-10-06 (mint-sites `9da74ae`, admin `9be3228`, backend `4a1b253d`) |
-| SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | open |
+| SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | done 2026-10-06 (mint-sites `817b136`, backend `ec0b22f1`, admin `297debd`) |
 | SB-09 | Data binding: bindings + interpolation, `collection` block, template pages `/x/[slug]`, server resolve in `/render` + editor `resolve`, Data panel | all three | L | open |
 | SB-10 | Widgets and commerce blocks: `widget`, add-to-cart, price, product gallery, account links; widget actions | mint-sites + admin | M | open |
 | SB-11 | AI: build a site, write a page, write a section, edit the selection (ops), AI panel | backend + admin | L | open |
 | SB-12 | MCP tools for the site builder | backend | M | open |
 | SB-13 | Site kinds + templates: `siteKind`, kind picker in New project, blueprint `website.builder`, apply engine, Template Studio tab, 6 kind templates | all three | L | open (confirm D4 first) |
-| SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (root domain `sites.mintapp.shop`; hosting answer pending) |
+| SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (root domain `sites.mintapp.shop`; Vercel Hobby for the prototype) |
 | SB-15 | Releases + pages: history and rollback UI, compare, duplicate page, page from preset/AI, unpublish | admin + backend | M | open |
 | SB-16 | Final pass of the guide and the marketing site (each WO updates both as it lands — see *Docs and marketing*) | mint-docs + mint-webpage + admin | M | open |
 | SB-17 | Import kit pages (`WebPage` + `WebContent` → trees) | backend + admin | M | later |
@@ -674,7 +695,7 @@ outside the fixed list.
 
 ---
 
-## SB-08 — Block catalogue v1, presets, themes (L)
+## SB-08 — Block catalogue v1, presets, themes (L) — done 2026-10-06
 
 **Why:** enough blocks and presets for real sites.
 
@@ -877,7 +898,7 @@ right away with sample data and the right widgets on; templates suites
 
 ---
 
-## SB-14 — Addresses and custom domains (M) — root domain `sites.mintapp.shop`; needs the hosting answer
+## SB-14 — Addresses and custom domains (M) — root domain `sites.mintapp.shop`; Vercel Hobby for the prototype
 
 **Where:** backend `library/siteBuilder/domains.ts` (Vercel REST:
 add/remove/verify domain on `VERCEL_SITES_PROJECT_ID`), tenant routes
