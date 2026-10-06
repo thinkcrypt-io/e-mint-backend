@@ -1,0 +1,338 @@
+# Site builder
+
+A visual website builder for **website projects**, in the spirit of Builder.io
+/ Framer: pick a theme (or a site kind that comes with one), arrange blocks on
+a canvas, style them, bind them to the project's data, let the AI build or
+edit anything, and publish to a real Next.js site on our own renderer.
+
+Read this first, then `WORK_ORDERS.md` (Handoff + Status + one spec per work
+order) and `CHANGELOG.md`. Paths are from the monorepo root
+`/Users/asifistiaque/Desktop/proj/e-mint`.
+
+## The user's words (2026-10-06)
+
+> can we build a website builder? similar to builder.io, where ai would keep
+> the components, styling modals/drawers/widgets, and connect to the website
+> api/project that we have. we'll have some built in themes, and the core
+> technology will be nextjs. choosing a theme or users can build their
+> website. connect data from their contents. so that we have a full project
+> in website?
+
+Answers given the same day: **one shared renderer**, **blocks with flex/grid**
+(not sections-only, not free positioning), **Tailwind v4 + CSS variables**,
+the renderer is **its own repo**, plan + work orders written so another agent
+can build it. The user asked whether e-commerce / business / booking sites
+should be separate project types with widgets pre-installed — answered with
+D4 (site kinds); **confirm D4 with the user before SB-13**.
+
+## What already exists (don't rebuild it)
+
+| Piece | Where | Used for |
+|---|---|---|
+| Website projects (`TenantProject.type === 'website'`, `publicSlug`, `domains[]`) | `backend/library/models/tenancy/tenantProject.model.ts` | the site's identity and address |
+| Website settings — identity, colours, font, contact, social, SEO defaults, tracking, head tags, redirects, headers | `WebsiteSettings` via `library/functions/siteConfig.function.ts` (`loadSite`/`saveSite`; secrets `select:false`) | the renderer's `site` part |
+| Website kit — `WebPage` `/pages`, `PageSeo` `/seo`, `WebContent` `/web-contents` (builder models) | `library/functions/websiteKit.function.ts` | code-built sites (WO-33); a **data source** for the builder (D6) |
+| Site API — `/site`, `/site/tags`, `/site/robots.txt`, `/site/sitemap.xml`, `/pages`, `/pages/by-path`, `/contents` | `routes-public/public.router.ts` | tags, robots, sitemap reused by the renderer |
+| Public API per model with admin-style filters (WO-11, WO-40, WO-42) | `routes-public/public.router.ts` | data binding (D8) |
+| Widgets runtime `mint.js` + login, cart, checkout, thank-you, My orders | `routes-public/mint.ts`, `routes-public/widgets/*`, `library/functions/widgets.function.ts`, `SiteWidgets` | widget blocks (D13) |
+| Payments, carts, orders (server owns prices) | `library/functions/{shop,payments}.function.ts` | shop sites |
+| Templates (blueprints, sandbox preview, `applyTemplate`) | `backend/docs/templates/`, `library/functions/applyTemplate.function.ts` | themes + site kinds (D4, D10) |
+| Website MCP tools | `library/controllers/mcp/website.tools.ts` | extended in SB-12 |
+| "Build with AI" pattern (forced tool + repair rounds, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`) | `library/controllers/builder/ai.controller.ts` | site AI (D15) |
+| Tenant panel (admin app, `NEXT_PUBLIC_PANEL=tenant`, project URLs `/<publicSlug>/<page>`) | `admin/`, `admin/src/components/library/config/lib/constants/panel.ts` | the editor lives here (D9) |
+
+## Decisions
+
+| # | Decision | Why |
+|---|---|---|
+| D1 | **One shared, multi-tenant renderer**: a Next.js 16 app in its own repo **`mint-sites`** (`e-mint/mint-sites`, GitHub `aiasifistiaque/mint-sites`, branch `main`) serves every published site. It maps the request's host to a project, asks the backend for that page, and renders it. No per-site builds. | User's call. Publishing is instant; one deploy to maintain. Download as code comes later (SB-18). |
+| D2 | **Pages are trees of blocks laid out with flex/grid** (the node shape below). No absolute positioning. | User's call. Responsive by default; reliably produced by AI. |
+| D3 | **Tailwind v4 + CSS variables.** A theme is a set of tokens written as CSS variables on `:root` (light) and `[data-theme=dark]`. Blocks use Tailwind for their *structure* and only token variables for colour, font, radius, shadow, spacing scale. A node's own style is **compiled to one scoped `<style>` block** (`[data-n="<id>"] {…}` + media queries) — **never** generate Tailwind class names at runtime (Tailwind can't see them at build time). | User's call. Theme switch = swap variables; pages stay light. |
+| D4 | **Site kinds, not new project types** *(recommended to the user — confirm before SB-13)*. `website` stays the only website project type. New project → Website asks *what kind of site*: Online shop, Business, Appointment booking, Blog, Portfolio, Restaurant. A kind is a **website template** (D10) that installs theme + pages + models + sample data + **widgets** (shop: login, cart, checkout, thank-you, My orders; booking: booking, forms, login; business: contact form, WhatsApp; blog: newsletter, search; portfolio: contact form). Stored as `TenantProject.siteKind` (informational: default suggestions, sidebar order, which presets show first). Widgets can be added or removed any time. | A business site that later sells is just "turn on the shop", not a migration. Reuses templates and W-12's `widgets` blueprint part instead of a second system. |
+| D5 | **Blocks live in the renderer repo and describe themselves.** Each block is `mint-sites/src/blocks/<type>/{index.tsx, schema.ts}`. `npm run manifest` writes `block-manifest.json` (block types, props, slots, style keys, presets, themes, icons, `version` hash). The backend keeps a **synced copy** at `backend/library/siteBuilder/blockManifest.json` (`node scripts/siteBuilder/syncManifest.mjs` copies it from `../mint-sites`) and validates every tree against it; the editor and the AI read the manifest from the backend. | One description used by the renderer, the editor's inspector, validation and the AI. The panel doesn't depend on the renderer being deployed. |
+| D6 | **New storage, not builder models**: `SitePage` (one per page — path, draft tree, published tree, SEO), `SiteDesign` (one per project — theme, token overrides, layouts = header/footer trees, global sections), `SiteRelease` (snapshot per publish). Shared collections with the `tenantScoped` plugin (like `sitecarts`), so they cost 3 collections in total, not per project. The website kit stays: code-built sites keep using it, and builder pages can bind `WebContent` records as data. | Trees are nested JSON validated against the manifest and published atomically; a builder table would let people break them. The Atlas collection cap (500) rules out per-project collections. |
+| D7 | **Draft / publish for the whole site.** Edits autosave to `SitePage.draft` / `SiteDesign.draft` with a `rev` (optimistic concurrency → 409). **Publish** validates everything, copies draft → published for every changed page + design in one go, writes a `SiteRelease` (version++), then calls the renderer's revalidate hook. Rollback = restore a release into published (and draft). | Same mental model as the route builder (`RouteVersion`). |
+| D8 | **One render call per request.** `GET /public/api/:slug/render?path=` returns site + design + layout + page tree + SEO + the **data every binding needs, resolved on the server** + widgets config + tags. Bindings may only read models whose public API allows `list`/`get` (same rules and filters as the public API, WO-40/42) — nothing private can reach a page. Client-side refinements (paging, search) call the public list API from the browser. | One round trip, cacheable by tag; the public API is already the security boundary. |
+| D9 | **The editor lives in the tenant panel** at `/<publicSlug>/site-builder` (admin app; `site-builder` joins `PROJECT_PAGES`). Its canvas is an `<iframe>` of the renderer's **edit route** `/__mint/edit`, driven entirely by `postMessage` (protocol below): the panel owns the draft, sends `{tree, data, design}`, the renderer draws it with the real blocks and reports selection, hovers, rects and drops. Both sides check origins (`NEXT_PUBLIC_SITES_URL` in the panel, `PANEL_ORIGINS` in the renderer). | What you edit is exactly what ships (same components, same theme), and the admin's Chakra never meets the site's Tailwind. |
+| D10 | **Themes are looks; templates are whole sites.** A theme (in `mint-sites/src/themes/<key>.ts`, listed in the manifest) = tokens (light + dark colours, fonts, radius, shadows, spacing, container width, button style) + preferred preset variants. Switching theme never touches content. A **site kind template** (D4) = a theme + pages + models + widgets + sample data, authored in Template Studio (blueprint `website.builder` part, SB-13). | "Choosing a theme" and "starting a shop" are different actions. |
+| D11 | **Primitives + smart blocks; sections are presets.** Block *types* are small (section, stack, grid, heading, text, image, button, …) plus a few with real behaviour (header with mobile menu, modal, drawer, tabs, accordion, carousel, collection, widget). Hero / features / pricing / FAQ / footer … are **presets** — saved trees of those blocks in the manifest — so everything inside stays editable. | Builder.io's model; one inspector for everything; themes can ship their own presets. |
+| D12 | **Overlays are blocks with ids; actions open them.** Modal, drawer and popover nodes live in the page (or the layout) and are hidden until opened. A button/link's `action` is one of `link` (page, URL, anchor, email, phone), `open` / `close` / `toggle` (a target node id), `scroll` (a node id), `widget` (e.g. add to cart). The outline lists overlays; selecting one opens it on the canvas. | Modals and drawers without code. |
+| D13 | **Widgets are blocks.** A `widget` block renders the existing `data-mint="<name>"` element; the renderer loads `/public/mint.js` for the project once. Widget options stay in `SiteWidgets` (panel `/widgets`); the block only places it. Add-to-cart = `data-mint-add` on a button bound to a product. **The server owns prices** (W-05 rule). | No second widget system. |
+| D14 | **Responsive styles per breakpoint**: `style: { base, md, lg }` (`md` ≥ 768px, `lg` ≥ 1024px), and `hidden: { base?, md?, lg? }`. Style keys are a **fixed, typed list** (see *Style*) whose values are tokens, enums or numbers with units — never raw CSS strings. | Safe (no CSS injection), small, and the AI can't invent properties. |
+| D15 | **AI edits through operations.** The backend calls Claude with forced tools (`build_site`, `write_page`, `edit_nodes`, `write_section`) that return trees or **ops** (`insert`, `update`, `move`, `remove`, `wrap`, `setDesign`) checked against the manifest, with up to 3 repair rounds (the model builder's pattern). The editor applies ops to the draft, so every AI change is one undo step. The same ops are MCP tools (SB-12). | Every AI change can be validated, previewed and undone. |
+| D16 | **Sites live on their own domain**, never under the panel's or API's: default address `<publicSlug>.<SITES_ROOT_DOMAIN>` (domain to be chosen by the user — see Open questions), plus custom domains added through the Vercel domains API (SB-14). No "custom HTML/script" block in v1; head code stays in Website settings → Head tags. | A tenant page must never share cookies or an origin with the panel, the API or another tenant's admin. |
+| D17 | **Guides and links on every step**: each editor panel and dialog links to its section of the guide on docs.mintapp.shop (`mint-docs`, via `docsPath()`); the marketing site (`mint-webpage`) is updated when the builder ships. | Standing rules: doc links on every step; update the marketing site with every product change. |
+| D18 | **Later, not now**: download a site as a standalone Next.js project (SB-18), developers registering their own React components (SB-19), multiple languages, A/B tests, per-page passwords. | Keep v1 shippable. |
+
+## Architecture
+
+```
+ tenant panel (admin, Chakra v3)               mint-sites (Next 16, Tailwind v4)            backend (Express, v3)
+ /<project>/site-builder                       ─────────────────────────────────            ─────────────────────
+ ┌───────────┬──────────────┬───────────┐      proxy.ts: host → publicSlug                  /tenant/api/p/:id/site-builder/*
+ │ Pages     │  <iframe     │ Inspector │◀──┐  (GET /public/sites/resolve, 60 s cache)        manifest, pages, design, publish,
+ │ Outline   │  /__mint/edit│ Props     │   │                                                 releases, resolve, ai
+ │ Add       │   …>         │ Style     │   │  /_s/[site]/[[...path]]  (server)            /public/api/:slug/render?path=
+ │ Design    │              │ Data      │   │    fetch render (tag site:<projectId>)          site + design + page + data
+ │ AI        │              │           │   │    <RenderTree> + compiled <style>           /public/sites/resolve?host=
+ └───────────┴──────────────┴───────────┘   │    SEO metadata, tags, mint.js                /public/mint.js, widgets (exists)
+        ▲  postMessage (D9)                 │  /__mint/edit (client, edit mode)            /public/api/:slug/<model> (exists)
+        └───────────────────────────────────┘  /api/revalidate  ◀── backend on publish
+```
+
+**Request flow (published site):** `acme.example.com/blog/hello` → renderer
+`proxy.ts` resolves the host to `acme-store` and rewrites to
+`/_s/acme-store/blog/hello` → the page fetches
+`GET {MINT_API_URL}/public/api/acme-store/render?path=/blog/hello` with
+`next: { tags: ['site:<projectId>'] }` → renders. A redirect from Website
+settings answers `{ redirect }`; no page answers 404 and the renderer shows the
+site's 404 page (a page at path `/404` if there is one).
+
+**Publish flow:** panel `POST …/site-builder/publish` → backend validates and
+copies draft → published, writes `SiteRelease` → `POST
+{SITES_RENDERER_URL}/api/revalidate` `{ tag: 'site:<projectId>' }` signed with
+`SITE_REVALIDATE_SECRET` (HMAC of the body, header `x-mint-signature`) → the
+next request renders fresh.
+
+## Data shapes
+
+### Node (one block on a page)
+
+```ts
+type Node = {
+  id: string;                  // 8-char nanoid, unique within its tree
+  type: string;                // a block type from the manifest ('section', 'heading', 'collection', …)
+  name?: string;               // label in the outline
+  props: Record<string, any>;  // checked against the block's props
+  style?: { base?: Style; md?: Style; lg?: Style };
+  hidden?: { base?: boolean; md?: boolean; lg?: boolean };
+  bind?: Record<string, Binding>;     // prop key → where its value comes from
+  children?: Node[];           // the default slot, only if the block has one
+  slots?: Record<string, Node[]>;     // named slots (tabs: one per tab; card: 'media' / 'body'…)
+  action?: Action;             // buttons, links, cards, images (D12)
+  locked?: boolean;            // can't be moved or removed in the editor
+};
+
+type Action =
+  | { type: 'link'; href: string; newTab?: boolean }   // '/about', 'https://…', '#node:<id>', 'mailto:', 'tel:'
+  | { type: 'page'; pageId: string; newTab?: boolean }
+  | { type: 'open' | 'close' | 'toggle'; target: string }  // a modal / drawer / popover node id
+  | { type: 'scroll'; target: string }
+  | { type: 'widget'; widget: 'cart' | 'login' | 'checkout' | string; op?: 'open' | 'add'; bind?: Binding };
+```
+
+Limits (validator, `backend/library/siteBuilder/validate.ts`): ≤ 1,500 nodes
+per tree, depth ≤ 30, tree JSON ≤ 512 KB, ids unique, every `type` known, every
+prop known and of the right kind, slots only where the block declares them,
+`canBeChildOf` respected, action targets exist, URLs only relative / `http(s)` /
+`mailto` / `tel` / `#node:` (no `javascript:`), rich text sanitized to an
+allowlist (p, h2–h4, strong, em, a, ul, ol, li, br, blockquote, code), embeds
+only from the manifest's allowlist (YouTube, Vimeo, Google Maps).
+
+### Style
+
+Fixed keys; values are tokens, enums or `{ n, unit }`:
+
+```
+layout     display (block|flex|grid|none) · direction · wrap · gap · align · justify · columns (1–12) · colSpan · rowGap
+spacing    padding / margin (each side) — a step of the token scale (0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32) or 'auto' for margins
+size       width · maxWidth (token: prose|sm|md|lg|xl|container|full) · minHeight · height · aspectRatio
+background color token · image (media URL) + position/size/overlay token · gradient (two tokens + angle)
+border     width (0–4) · color token · radius token · shadow token
+type       size token (xs…6xl) · weight (300–800) · align · color token · leading · tracking · transform
+effects    opacity · position (static|relative|sticky top) · zIndex (0–50) · overflow
+```
+
+`compileStyles(tree)` (renderer `src/render/compileStyles.ts`, mirrored as a
+check in the backend validator) turns these into `[data-n="<id>"] {…}` rules
+with `@media (min-width: 768px)` / `(min-width: 1024px)`.
+
+### Binding
+
+```ts
+type Binding =
+  | { from: 'record'; field: string }               // template pages: the page's record ('title', 'author.name')
+  | { from: 'item'; field: string }                 // inside a collection: the current item
+  | { from: 'site'; field: string }                 // Website settings ('identity.name', 'contact.phone')
+  | { from: 'content'; slug: string; field: string } // a WebContent record of the kit, by slug
+  | { from: 'customer'; field: string };            // the signed-in customer (client-side only, via mint.js)
+```
+
+String props may also interpolate: `"By {{record.author.name}} · {{record.createdAt | date}}"`.
+Paths only — no expressions. Filters: `date`, `datetime`, `money`, `number`,
+`upper`, `lower`, `truncate:n`, `default:'…'`. A missing value renders empty.
+
+**Collections** (the `collection` block) have
+`props.source = { model, filter: { field_op: value }, sort, limit, pageSize, search?: boolean }`
+using the public API's own filter syntax (WO-40); their `children` is the item
+template, rendered once per record with `item` in scope; `slots.empty` shows
+when there are none. **Template pages** have `source = { model, match: { param: 'slug', field: 'slug' } }`
+and a path with one parameter (`/blog/[slug]`); the record is `record` in scope,
+SEO can bind to it, no record = 404.
+
+### SitePage, SiteDesign, SiteRelease (`backend/library/models/siteBuilder/`)
+
+```ts
+SitePage {
+  organization, project,                 // tenantScoped
+  name, path,                            // '/', '/about', '/blog/[slug]'; unique per project
+  kind: 'static' | 'template',
+  source?: { model, match: { param, field } },   // template pages
+  layout: string,                        // a key in SiteDesign.layouts, default 'default'; 'none' = no header/footer
+  draft:     { tree: Node[], seo: Seo, rev: number, updatedAt, updatedBy },
+  published: { tree: Node[], seo: Seo, version: number, publishedAt } | null,
+  status: 'draft' | 'published' | 'unpublished',
+  showInMenu: boolean, menuLabel?, priority: number,
+  isHome: boolean                        // exactly one; path '/'
+}
+Seo { title, description, image, noIndex, canonical, keywords[] }  // template pages may bind (Binding)
+
+SiteDesign {                              // one per project
+  organization, project,
+  draft:     { theme: string, tokens: Partial<Tokens>, layouts: { [key]: { header: Node[], footer: Node[] } },
+               sections: { [id]: { name, tree: Node[] } }, rev },
+  published: { …same, version } | null
+}
+
+SiteRelease {                             // one per publish
+  organization, project, version, note, publishedBy, publishedAt,
+  design: SiteDesign.published, pages: [{ page, path, tree, seo }]   // full snapshot (rollback)
+}
+```
+
+Indexes: `SitePage {project, path}` unique, `{project, isHome}`;
+`SiteDesign {project}` unique; `SiteRelease {project, version}` unique. Keep the
+last 50 releases per project (older ones are pruned on publish).
+
+### Block manifest (`mint-sites/block-manifest.json`)
+
+```ts
+{
+  version: string,                       // hash of the content
+  blocks: [{
+    type, label, category: 'layout'|'basic'|'media'|'navigation'|'overlay'|'data'|'commerce'|'form'|'widget',
+    icon, description, aiHint,           // aiHint: one or two sentences for the model
+    props: PropDef[],
+    slots?: { children?: { allow?: string[] }, [name: string]: { label, allow?: string[] } },
+    canBeChildOf?: string[],
+    style: 'all' | StyleGroup[],         // which style groups the inspector shows
+    defaults: { props, style?, children? },
+    client?: boolean                     // needs JS on the page (modal, carousel…)
+  }],
+  presets: [{ key, label, category: 'header'|'hero'|'features'|'cta'|'pricing'|'testimonials'|'faq'|'team'|'stats'|'logos'|'contact'|'blog'|'products'|'footer'|…, kinds?: SiteKind[], themes?: string[], thumbnail, tree: Node[] }],
+  themes: [{ key, label, description, tokens: Tokens, preview: { bg, fg, primary, font } }],
+  tokens: TokensSchema,                  // which keys a theme has and their kinds
+  icons: string[],                       // the curated icon names (≤ 200; drawn from the renderer's own map)
+  embeds: string[],                      // allowed embed hosts
+  limits: { maxNodes, maxDepth, maxBytes }
+}
+
+PropDef = { key, label, kind: 'text'|'textarea'|'richtext'|'number'|'boolean'|'select'|'color'|'image'|'images'
+            |'video'|'link'|'icon'|'page'|'model'|'field'|'list'|'source', options?, default?, help?,
+            bindable?: boolean, min?, max?, fields?: PropDef[] /* list */ }
+```
+
+## Render API (backend → renderer)
+
+```
+GET /public/sites/resolve?host=acme.example.com
+  → { slug, projectId }                                     404 if no site claims the host
+
+GET /public/api/:slug/render?path=/blog/hello[&page=2&search=…]
+  → {
+      projectId, version,                                   // SiteRelease version (cache key)
+      redirect?: { to, status },                            // from Website settings → redirects
+      site:   { name, logo, favicon, locale, contact, social, colorScheme },   // no secrets
+      design: { theme, tokens, fonts: [{ family, weights }] },
+      layout: { header: Node[], footer: Node[] } | null,
+      page:   { id, path, name, tree: Node[], seo: SeoResolved },
+      data:   { record?: object, nodes: { [nodeId]: { items, total, page, pageSize } }, contents: { [slug]: object } },
+      menu:   [{ label, path, children? }],                  // pages with showInMenu
+      tags:   { head: string, bodyStart: string, bodyEnd: string },   // = /site/tags (pixels, track.js, head code)
+      widgets:{ enabled: string[], apiBase }                // load mint.js when non-empty
+    }
+  404 { error: 'not-found' } when no published page matches (the renderer then asks for '/404')
+
+Cache-Control: public, max-age=30 (the renderer caches by tag and is revalidated on publish)
+```
+
+Path matching: exact static path first, then template paths in `priority`
+order (`/blog/[slug]` matches `/blog/hello` with `slug = hello`).
+
+## Editor ↔ canvas protocol (`postMessage`, D9)
+
+Every message is `{ mint: 1, type, …payload }`; each side ignores messages from
+any other origin.
+
+| Direction | type | payload |
+|---|---|---|
+| canvas → panel | `ready` | `{ manifestVersion }` |
+| panel → canvas | `init` | `{ design, layout, page: { tree, seo }, data, site, device, theme: 'light'|'dark' }` |
+| panel → canvas | `tree` | `{ tree, layout?, data? }` — after every change (whole tree; small enough) |
+| panel → canvas | `design` | `{ design }` |
+| panel → canvas | `select` / `hover` | `{ id | null }` |
+| panel → canvas | `open` | `{ id | null }` — show an overlay node |
+| panel → canvas | `drag` | `{ x, y, block | preset }` — a drag from the Add panel is over the canvas |
+| panel → canvas | `dragend` | `{ drop: boolean }` |
+| canvas → panel | `click` | `{ id, shift }` |
+| canvas → panel | `hover` | `{ id | null }` |
+| canvas → panel | `rects` | `{ [id]: { x, y, w, h } }` — selected + hovered, after layout/scroll |
+| canvas → panel | `dropTarget` | `{ parentId, slot, index } | null` — while dragging |
+| canvas → panel | `move` | `{ id, parentId, slot, index }` — a drag inside the canvas |
+| canvas → panel | `text` | `{ id, prop, value }` — inline text edit (double click a heading / text / button) |
+| canvas → panel | `height` | `{ px }` |
+
+The canvas never saves; the panel owns the draft, undo/redo and autosave.
+
+## Site kinds (D4 — to be confirmed)
+
+| Kind | Theme default | Pages | Models (from templates) | Widgets |
+|---|---|---|---|---|
+| `shop` Online shop | Market | Home, Shop, Product `/products/[slug]`, Cart, Checkout, Thank you, Account, About, Contact | products, categories, orders (existing `ecommerce` template) | login, cart, checkout, thank-you, my-orders (+ search W-18) |
+| `business` Business | Studio | Home, About, Services, Service `/services/[slug]`, Contact | services, team, testimonials (`business-site`) | contact form (W-08), WhatsApp (W-10) |
+| `booking` Appointment booking | Calm | Home, Services, Book, Account, Contact | services, staff, bookings (`booking-api`) | booking (W-09), login, my bookings (W-15) |
+| `blog` Blog | Editorial | Home, Post `/blog/[slug]`, Category `/category/[slug]`, About | posts, categories, authors (`blog`) | newsletter (W-08), search (W-18) |
+| `portfolio` Portfolio | Mono | Home, Work, Project `/work/[slug]`, About, Contact | projects, testimonials (`portfolio`) | contact form (W-08) |
+| `restaurant` Restaurant | Bistro | Home, Menu, Reservations, Contact | dishes, menu sections, reservations (new template) | booking/reservations (W-09), WhatsApp |
+
+Widgets that aren't built yet (W-08 forms, W-09 booking, W-10 WhatsApp, W-15,
+W-18) show in the kind's template as "coming soon" and are installed when they
+ship — the kinds don't wait for them.
+
+## Where things are (fill in as work orders land)
+
+| What | Where |
+|---|---|
+| Plan, decisions, contracts | `backend/docs/site-builder/README.md` (this file) |
+| Work orders, Handoff, Status | `backend/docs/site-builder/WORK_ORDERS.md` |
+| Changelog | `backend/docs/site-builder/CHANGELOG.md` |
+| Renderer repo | `mint-sites/` (to be created in SB-02) |
+| Models | `backend/library/models/siteBuilder/` (SB-03) |
+| Manifest copy, validator, ops, render | `backend/library/siteBuilder/` (SB-03) |
+| Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` (SB-03) |
+| Public render + resolve | `backend/routes-public/public.router.ts` (`/render`) and `routes-public/index.ts` (`/public/sites/resolve`) (SB-03) |
+| Editor | `admin/src/app/site-builder/` (page + `_components/`), RTK `admin/src/components/library/store/services/siteBuilderApi.ts` (SB-05) |
+| Smoke suite | `backend/scripts/tenancy-smoke/site-builder.mjs` (SB-03 on) |
+| Guide | `mint-docs` → `/site-builder` (SB-16; anchors added with each WO) |
+
+## Environment
+
+| Var | Where | What |
+|---|---|---|
+| `SITES_RENDERER_URL` | backend | the renderer's base URL (revalidate calls) |
+| `SITE_REVALIDATE_SECRET` | backend + renderer | HMAC secret for `/api/revalidate` |
+| `SITES_ROOT_DOMAIN` | backend + renderer | default site addresses `<publicSlug>.<root>` |
+| `VERCEL_TOKEN`, `VERCEL_SITES_PROJECT_ID`, `VERCEL_TEAM_ID?` | backend | custom domains (SB-14) |
+| `MINT_API_URL` | renderer | the backend base URL |
+| `PANEL_ORIGINS` | renderer | comma list of panel origins allowed to drive `/__mint/edit` |
+| `NEXT_PUBLIC_SITES_URL` | admin | the renderer's base URL (canvas iframe, "View site") |
+
+## Open questions for the user
+
+1. **D4 site kinds** instead of separate project types — confirm before SB-13.
+2. **Sites' root domain** (D16) — a separate registrable domain is recommended
+   (e.g. `mintsites.app`), not a subdomain of mintapp.shop. Needed by SB-14;
+   until then the renderer serves `/_s/<slug>` paths and `localhost` hosts.
+3. **Hosting plan** — the renderer serves customers' sites and custom domains;
+   Vercel's Hobby plan is for non-commercial use and caps domains per project,
+   so production likely needs Vercel Pro (or another host). Needed by SB-14.
