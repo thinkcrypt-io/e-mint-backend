@@ -70,6 +70,7 @@ D4 (site kinds); **confirm D4 with the user before SB-13**.
 | D23 | **Motion and states are style keys too.** Fixed, typed keys for entrance animation (fade/rise/scale/slide, delay, stagger on children), hover states (lift, colour, shadow, scale, underline) and a few effects (backdrop overlay token, blend, sticky) — always respecting `prefers-reduced-motion`, still no raw CSS (D14) — SB-22. | Polish that makes a site feel designed rather than assembled, without opening CSS injection. |
 | D24 | **Brand first.** Before writing pages, the AI turns the brand (logo image, colours, words like "calm, premium") into a theme + token overrides + font pair, shown to the user to accept — SB-24. | Most of what makes a site feel bespoke is colour, type and spacing, not layout. |
 | D25 | **No image optimizer** — not `next/image`, not `/_next/image`; `images.unoptimized` is on in every Next app (mint-sites, admin, mint-docs, mint-webpage). Images are plain `<img>` straight from the media host (lazy unless `priority`). If smaller copies are ever needed, make them once at upload time and store them next to the original. | User's call (2026-10-06): Vercel bills optimization per image, and the renderer serves every tenant's pictures — the cost grows with every site. |
+| D26 | **The editor is its own app** — `mint-builder` at `builder.mintapp.shop/<project>`, in the AGS visual editor's look (Akashbari Global Services `ags-editor`): dark toolbar, warm stone page sidebar, the page on a grey stage, a white drawer for the selected block. The tenant panel's *Site builder* (and the overview's *Edit site*) opens it in a new tab and hands over the signed-in user's token by `postMessage` to the builder's exact origin (never in the URL); the builder seals it in an HttpOnly cookie and its server proxies only the builder's API paths (`site-builder/*`, `media/browse|tree`, `upload`) with it — SB-26. | User's call (2026-10-07): "the ui of the builder will be exactly like ags-editor… in a separate repo… builder.mintapp.shop… logged in with the token… with projectid and user token". A full-screen app of its own, without the panel's chrome or Chakra. |
 
 ## Builder vs hand-written sites (asked by the user, 2026-10-06)
 
@@ -364,7 +365,7 @@ ship — the kinds don't wait for them.
 | Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` |
 | Public render + resolve | `backend/routes-public/public.router.ts` (`GET /public/api/:slug/render`) and `routes-public/index.ts` (`GET /public/sites/resolve`); the site's `/site/sitemap.xml` lists builder pages |
 | Unit tests | `backend/library/siteBuilder/test/{ops,validate}.test.ts` (`npx jest library/siteBuilder --watchAll=false`) |
-| Editor | `admin/src/app/site-builder/` (page + `_components/`), RTK `admin/src/components/library/store/services/siteBuilderApi.ts` (SB-05); SB-06: `AddPanel.tsx`, `edit.ts` (new blocks, preset copies, `placeFor`, `placeProblem`, clipboard), outline drag in `Outline.tsx`, commands + shortcuts + panel drags in `SiteBuilder.tsx`; SB-07: `StylePanel.tsx` (per breakpoint), `DesignPanel.tsx` (themes, tokens), `LayoutsPanel.tsx` (layouts, saved sections), `useDesign.ts` (design draft + parts), `designTokens.ts` |
+| Editor | **`mint-builder/`** (SB-26, D26) — `src/editor/` (`Builder.tsx` shell; `Canvas`, `Outline`, `Inspector`, `StylePanel`, `DesignPanel`, `LayoutsPanel`, `PagesPanel`, `AddPanel`, `PropInputs`, `MediaLibrary`, `PageDialog`, `PublishDialog`; logic `useDraft`, `useDesign`, `tree`, `edit`, `designTokens`, `protocol`), UI kit `src/components/ui.tsx`, styles `src/app/globals.css`, RTK `src/lib/api.ts`, auth `src/lib/{auth,session,env}.ts`, handoff `src/app/auth/handoff`, proxy `src/app/api/p/[project]/[...path]`. The panel's `admin/src/app/site-builder/page.tsx` is only a launcher; `admin/src/components/library/tenant/siteBuilder.ts` opens the builder (`openSiteBuilder`). Until SB-26 the editor was in admin `src/app/site-builder/_components/` (SB-05…SB-08). |
 | Themes, fonts, saved sections (renderer) | `mint-sites/src/themes/{studio,editorial,bright,fonts}.ts`; `src/blocks/section-ref/` (draws a saved section); `SiteDocument` `sections` + `usedSections` |
 | Canvas editing (renderer) | `mint-sites/src/edit/` — `EditRoot.tsx` (selection, handle drag, inline text, overlays, key forwarding), `drop.ts` (drop targets + `placeProblem`), `protocol.ts` |
 | Overlays | blocks `mint-sites/src/blocks/{modal,drawer,popover}/` (native `<dialog>` / `popover`), live script `src/render/overlays.ts` (printed only on pages with one), styles in `globals.css` |
@@ -380,9 +381,14 @@ ship — the kinds don't wait for them.
 | `SITES_ROOT_DOMAIN` | backend + renderer | default site addresses `<publicSlug>.<root>` |
 | `VERCEL_TOKEN`, `VERCEL_SITES_PROJECT_ID`, `VERCEL_TEAM_ID?` | backend | custom domains (SB-14) |
 | `MINT_API_URL` | renderer | the backend base URL |
-| `PANEL_ORIGINS` | renderer | comma list of panel origins allowed to drive `/__mint/edit` |
+| `PANEL_ORIGINS` | renderer | comma list of origins allowed to frame and drive `/__mint/edit` — since SB-26 the **builder's** (`https://builder.mintapp.shop`) |
 | ~~`MEDIA_HOSTS`~~ | — | removed 2026-10-06 with the image optimizer (D25) |
-| `NEXT_PUBLIC_SITES_URL` | admin | the renderer's base URL (canvas iframe, "View site") |
+| `NEXT_PUBLIC_BUILDER_URL` | admin | the builder's address (default `http://localhost:3400`; production `https://builder.mintapp.shop`) |
+| `MINT_API_URL` | builder | the backend root; its server calls `<root>/tenant/api/…` with the user's token |
+| `NEXT_PUBLIC_PANEL_URL` | builder | the tenant panel — the only origin that may hand over a sign-in; where Exit goes |
+| `NEXT_PUBLIC_SITES_URL` | builder | the renderer's base URL (canvas iframe, icons, preset thumbnails) |
+| `BUILDER_ORIGIN`, `BUILDER_SESSION_SECRET` | builder | its own origin (checked on writes); 32+ chars sealing the session cookie |
+| `NEXT_PUBLIC_DOCS_URL` | builder | the user guides (the “?” links) |
 
 ## Open questions for the user
 

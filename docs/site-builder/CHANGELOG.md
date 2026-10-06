@@ -2,6 +2,34 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-26 — The editor on its own address, in the AGS editor's look (2026-10-07)
+
+**What:** new app `mint-builder` (builder.mintapp.shop) with the whole editor
+(SB-05…SB-08 behaviour) in the Akashbari `ags-editor` look; panel → builder
+sign-in by `postMessage` (token never in the URL) sealed in an HttpOnly
+cookie; a proxy that passes only the builder's API paths with it; the panel's
+Site builder page is now a launcher and *Edit site* opens the builder
+directly; the old in-panel editor is removed. Decision D26.
+
+**Files:** `mint-builder/` (all new — `src/editor/*`, `src/components/{ui,Providers}.tsx`,
+`src/lib/{api,auth,session,env,project,store}.ts`, `src/app/{[project],auth/handoff,api/session,api/p/[project]/[...path]}`,
+`globals.css`, README); admin `src/app/site-builder/page.tsx`,
+`components/library/tenant/{siteBuilder.ts,index.ts,WebsiteOverview.tsx,GuideLink.tsx}`,
+removed `src/app/site-builder/_components/*` and `store/services/siteBuilderApi.ts`.
+
+**Verified:** against backend-sb (:5031), tenant-sb (:3031) and the renderer
+(:3300, `PANEL_ORIGINS` + `http://localhost:3400`). In real Chrome
+(`agent-browser`): signed into the panel, *Open the site builder* opened a new
+tab that signed itself in and landed on `/acme-store`; Exit returned to the
+panel and a later visit was sent back to the launcher. In the pane: outline
+select → drawer, typing updates the canvas live, autosave `PUT …/pages/:id`
+200 through the proxy, undo, Style tab per breakpoint, Pages / Add / Design
+tabs, Publish dialog (not published). curl: session refused from another
+origin / for another project / with a bad token; proxy 404 for `clients` and
+`..`, 403 for a write without the builder's origin, 401 with no cookie.
+`npm run build` (mint-builder) and `tsc` (admin) clean. Not clicked: drag
+from Add onto the canvas, media upload (no S3 on the scratch backend).
+
 ## SB-08 — Block catalogue v1, presets, themes (2026-10-06)
 
 **What:** 19 blocks (header with a no-script phone menu, logo, menu, social

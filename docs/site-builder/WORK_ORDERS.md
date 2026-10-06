@@ -72,6 +72,7 @@ works, anything still being built is labelled "Coming soon". Verify with
 | SB-22 | `#style` gains *Motion* and *Hover*; reduced-motion note | Changelog; the editor drawing may show a motion control |
 | SB-23 | `#presets` and `#themes` (full lists, thumbnails) | Themes gallery in `templates.ts` / features updated; changelog |
 | SB-24 | `#ai` and `#design`: start from your brand (logo, colours, words) | `/workflow/website` "start from your brand" step; changelog |
+| SB-26 | `#start`: the builder opens full screen in its own tab, signed in; Exit returns to the panel | Changelog |
 | SB-25 | `/websites`: "builder or code?" — which to pick, with SB-25's measured numbers | `compare.ts` / `/ai` claims use the measured numbers only; changelog |
 
 Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
@@ -82,7 +83,7 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, SB-08 done — SB-09 next)
+## Handoff — read this first (last updated 2026-10-07, SB-26 done — SB-09 next)
 
 **Done and pushed:** SB-01…SB-08 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
@@ -94,6 +95,17 @@ site shows the builder with a 7-theme strip on /features). **Next: SB-09**
 (2026-10-06): the current Vercel Hobby plan for the prototype** (README open
 question 3); root domain `sites.mintapp.shop`. **No image optimizer anywhere
 (D25)** — plain `<img>`. Open question left: D4 site kinds (before SB-13).
+
+**SB-26 (2026-10-07) moved the editor out of the panel** into its own app,
+`mint-builder/` (builder.mintapp.shop, D26), in the AGS visual editor's look.
+**Every later WO that says admin `site-builder/_components/…` now means
+`mint-builder/src/editor/…`** (same file names; Chakra → plain CSS classes in
+`src/app/globals.css` and the kit in `src/components/ui.tsx`). Data panels,
+AI panel, widget picker etc. are built there. The panel keeps only the
+launcher (`admin/src/app/site-builder/page.tsx`, `openSiteBuilder` in
+`admin/src/components/library/tenant/siteBuilder.ts`). The builder reaches the
+backend only through its proxy `src/app/api/p/[project]/[...path]/route.ts` —
+**a new backend path the editor calls must be added to its `ALLOWED` list.**
 
 **How SB-08 is built:** 19 new blocks in `mint-sites/src/blocks/` (header,
 logo, nav-menu, social-links, breadcrumbs, card, tabs+tab, accordion+
@@ -147,27 +159,36 @@ editor). **Deviation (SB-06):** the outline uses the browser's own drag and drop
 renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
 `PANEL_ORIGINS`, `SITES_ROOT_DOMAIN=sites.mintapp.shop`); the backend needs `SITES_RENDERER_URL` +
 `SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy); the
-tenant panel needs `NEXT_PUBLIC_SITES_URL`. Until then the editor's canvas
-says the renderer didn't load.
+builder (SB-26) needs its own Vercel project on `builder.mintapp.shop` with
+`MINT_API_URL`, `NEXT_PUBLIC_PANEL_URL`, `NEXT_PUBLIC_SITES_URL`,
+`BUILDER_ORIGIN`, `BUILDER_SESSION_SECRET` (see `mint-builder/README.md`); the
+renderer's `PANEL_ORIGINS` must then list `https://builder.mintapp.shop`; the
+tenant panel needs `NEXT_PUBLIC_BUILDER_URL=https://builder.mintapp.shop`. Until
+then the panel's *Open the site builder* opens localhost:3400.
 
 **Not clicked in SB-05:** the image picker (the scratch backend has no S3
 bucket; the input reuses the admin's `UploadModal`) — click it once a backend
 with storage is around.
 
-**Where the editor lives** (details in CHANGELOG SB-05): admin
-`src/app/site-builder/_components/` — `SiteBuilder.tsx` (layout, page
-actions, dialogs, parts), `Canvas.tsx` (iframe + protocol; `init` waits for the
-design), `Outline.tsx`, `Inspector.tsx` (Settings / Style tabs),
-`StylePanel.tsx`, `DesignPanel.tsx`, `LayoutsPanel.tsx`, `designTokens.ts`,
-`PropInputs.tsx` (+ `ActionEditor`, `ColorPick`, `MediaPick`),
-`PagesPanel.tsx`, `PageDialog.tsx`, `PublishDialog.tsx`, `useDraft.ts` (ops,
-undo, autosave, 409), `useDesign.ts` (the design draft + parts), `tree.ts`
-(client copy of the backend's `applyOps`), `protocol.ts` (copy of mint-sites
-`src/edit/protocol.ts`), `SiteGuide.tsx`;
-RTK `components/library/store/services/siteBuilderApi.ts`. Renderer
-`mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
+**Where the editor lives** (since SB-26): `mint-builder/src/editor/` —
+`Builder.tsx` (the shell: toolbar, sidebar tabs, stage, drawer, page actions,
+dialogs, parts, shortcuts, drags), `Canvas.tsx` (iframe + protocol; `init`
+waits for the design), `Outline.tsx`, `Inspector.tsx` (the drawer: Settings /
+Style tabs, block toolbar), `StylePanel.tsx`, `DesignPanel.tsx` (+ font
+picker), `LayoutsPanel.tsx`, `designTokens.ts`, `PropInputs.tsx` (+
+`ActionEditor`, `ColorPick`, `MediaPick`), `MediaLibrary.tsx` (browse /
+upload / address), `PagesPanel.tsx`, `PageDialog.tsx`, `PublishDialog.tsx`,
+`useDraft.ts` (ops, undo, autosave, 409), `useDesign.ts` (the design draft +
+parts), `tree.ts` (client copy of the backend's `applyOps`), `protocol.ts`
+(copy of mint-sites `src/edit/protocol.ts`), `edit.ts`; RTK `src/lib/api.ts`.
+Renderer `mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
+Local run: launch config `mint-builder` (:3400, `.env.local` from
+`.env.example`, backend-sb :5031, panel tenant-sb :3031, renderer :3300 with
+`http://localhost:3400` in its `PANEL_ORIGINS`). The in-app browser pane turns
+`window.open` into a same-tab navigation (no opener), so test the panel →
+builder handoff with `agent-browser` (real tabs) — see CHANGELOG SB-26.
 
-**Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
+**Pushed hashes so far:** SB-26: mint-builder `76b58f5` (**not pushed — the GitHub repo `aiasifistiaque/mint-builder` doesn't exist yet; ask the user**), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
 `9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d`, SB-08 `ec0b22f1` (+ handoff
 commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
 SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`, SB-08 `817b136`; admin `main`: SB-05
@@ -284,6 +305,7 @@ or `.next-tenantsb/`.
 |---|---|---|---|
 | backend | `backend/` | remote `mint`, branch **`v3`** | Heroku; **production does not auto-deploy** — pushes reach prod only when the user redeploys |
 | admin (super admin + tenant panel) | `admin/` | branch **`main`** (deploys admin + tenant panel on Vercel) | the panel deploys *before* the backend: new panel pages must not break when a new endpoint 404s — show "Site builder needs the latest backend" |
+| builder (the editor, SB-26) | `mint-builder/` | GitHub `aiasifistiaque/mint-builder`, branch **`main`** (ask before creating the GitHub repo or a Vercel project) | builder.mintapp.shop |
 | renderer | `mint-sites/` (new, SB-02) | GitHub `aiasifistiaque/mint-sites`, branch **`main`** | ask the user before creating the GitHub repo or a Vercel project |
 | user guides | `mint-docs/` | `aiasifistiaque/mint-docs` `main` | every guide is edited here only |
 | marketing site | `mint-webpage/` | `aiasifistiaque/mint-website` `main` | update with every product change people would notice |
@@ -375,6 +397,7 @@ Renderer (`mint-sites`)
 | SB-22 | Motion and hover style keys (D23) | mint-sites + backend + admin | M | open (after SB-07) |
 | SB-23 | Preset library v2: ≥ 60 presets, ≥ 3 variants per section type, ≥ 8 themes, design review (D22) | mint-sites | L | open (after SB-08, SB-22) |
 | SB-24 | Brand to theme: logo/colours/words → theme + tokens + fonts (D24) | backend + admin | M | open (after SB-07, SB-11) |
+| SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` — local only, no GitHub repo yet; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1110,3 +1133,45 @@ tab flow works in the browser with a real logo.
 **Done when:** `benchmark.md` has all six builds + edits with numbers and
 screenshots, and the claims elsewhere quote it.
 
+
+
+## SB-26 — The editor on its own address (L) — done 2026-10-07
+
+**Why:** the user (2026-10-07): the builder's UI is to be *exactly like*
+ags-editor (Akashbari Global Services), in a separate repo, at
+builder.mintapp.shop, signed in with the user's token and the project id (D26).
+
+**Where:** new repo `mint-builder/` (Next 16, React 19, plain CSS, RTK Query,
+lucide icons, react-quill-new); admin `src/app/site-builder/page.tsx`
+(launcher), `src/components/library/tenant/siteBuilder.ts`, `WebsiteOverview`
+(*Edit site* opens the builder directly), `GuideLink` (`start` →
+`/site-builder`). Removed admin `src/app/site-builder/_components/` and
+`store/services/siteBuilderApi.ts` (moved into the builder).
+
+**Change:**
+1. Sign-in handoff (AGS pattern): the panel opens
+   `<builder>/auth/handoff?project=<publicSlug>` with `window.open`; the
+   handoff page posts `MINT_BUILDER_READY` to its opener at the panel's exact
+   origin; the panel answers `MINT_BUILDER_AUTH { token, project }` to the
+   builder's exact origin. `POST /api/session` checks the token with
+   `GET /tenant/api/auth/self`, that the project is in the user's list and is a
+   website, then seals the token (AES-256-GCM, 12 h) in an HttpOnly SameSite=Lax
+   cookie. Same-origin check on every write.
+2. `/<project>`: server page — no session → back to the panel's
+   `/<project>/site-builder`; read-only when the role lacks `build`.
+3. Proxy `/api/p/<project>/<path>` → `<api>/tenant/api/p/<project>/<path>` with
+   the token; only `site-builder/*`, `media/browse|tree`, `upload(/video)`.
+   A 401 shows "Your session ended" with a way back to the panel.
+4. The editor ported 1:1 in behaviour (SB-05…SB-08) to the AGS look: dark
+   64 px toolbar (brand, save status, *Changes not live*, device + dark
+   preview, undo/redo, user, View site, gold Publish, Exit), sidebar tabs
+   Pages / Outline / Add / Design with AGS page buttons and gold active state,
+   canvas bar with the breadcrumb, the drawer only while a block is selected
+   (close or Esc twice deselects). Native `<select>`, `<dialog>` and checkbox
+   switches; the media picker is the builder's own (`MediaLibrary`).
+5. Exit saves, forgets the builder's session and returns to the panel.
+
+**Done when:** the panel's Open opens a signed-in builder tab on the project;
+editing, autosave, undo, style, pages, add, design and the publish dialog work
+against a local backend; the proxy refuses other paths, other origins and
+missing sessions; `npm run build` passes in mint-builder; admin type-checks.
