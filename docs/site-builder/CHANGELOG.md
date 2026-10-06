@@ -17,6 +17,63 @@ Newest first. Each entry: what changed, where, how it was verified.
   `preview_site_page` and detail lookups; Status, Handoff and *Docs and
   marketing* rows updated.
 
+## 2026-10-06 — SB-06 Adding and moving
+
+- Renderer (mint-sites `2b2bdc9`): overlay blocks `modal` (Pop-up), `drawer`,
+  `popover` — native `<dialog>` and `popover`, server components; a ~1 KB
+  inline script (`src/render/overlays.ts`) printed only on live pages with an
+  overlay or an open/close/toggle action (opens/closes/toggles, scrim click
+  closes, popover placed under its trigger); styles in `globals.css` (dimmed
+  scrim, no blur; animations off under reduced motion). Canvas
+  (`src/edit/`): `drop.ts` (drop target under the pointer — inside a
+  container unless on its edge, else before/after in the row/column/grid
+  flow, climbing out until allowed; overlays always at the top level; the
+  header/footer refused with a reason), `EditRoot.tsx` (drop line / box /
+  red reason, drag-to-move by the selection's name tag with edge scroll,
+  double-click to type in headings / text / buttons / links, overlays shown
+  non-modally with a scrim while selected, shortcuts forwarded as `key`),
+  empty containers show "Drop blocks here" in the editor. Protocol: `init
+  readOnly`, `drag`, `dragend`, `dropTarget`, `move`, `text`, `key`. Manifest:
+  17 blocks. Tests: 42 passing (+ overlays).
+- Backend (`751c88e3`): manifest synced; validator: overlays only at the top
+  level, open/close/toggle only target an overlay (+ unit tests, 16 passing);
+  `site-builder.mjs` adds overlay checks (all passing).
+- Admin (`b263ba7`): Add tab (`AddPanel.tsx` — sections then blocks by group,
+  search; click = into the selection or after it, sections between sections;
+  drag onto the canvas), `edit.ts` (blocks from the manifest, `rekey` keeping
+  internal action targets, `placeFor`, `placeProblem`, localStorage
+  clipboard), outline drag (HTML5; before / after / inside, red + reason when
+  refused) and an Overlays group, Inspector toolbar (duplicate, copy, cut,
+  paste, move up/down, select parent, wrap in stack/section, delete),
+  shortcuts (⌘Z ⇧⌘Z ⌘C ⌘X ⌘V ⌘D, Delete, ↑/↓, ⌥↑/⌥↓, Esc) from the panel and
+  the canvas, "When clicked" open / close / toggle with a pop-up picker.
+- Verified in the browser (panel :3031 → backend :5031, renderer :3300):
+  Add → Drawer with nothing selected (top level, selected, open on the canvas
+  over a scrim); Section selected → Add → Button (inside the section);
+  When clicked → Open a pop-up or drawer → Drawer; drag Heading from the Add
+  tab onto the page (dropped where the line was); drag it by its name tag
+  into the section; double-click → typed "Our story" → Enter (inspector and
+  canvas agree, no doubled text); ⌘D, ⌥↑, ⌥↓ (order checked in the saved
+  draft); ⌘C the drawer → Contact page → ⌘V (pasted under Overlays) → ⌘Z;
+  drag a Button onto the header → refused with the reason, nothing added;
+  outline drag (by `DragEvent`s: indicator line, Button moved above Text; the
+  Drawer into the Section → red outline + "A drawer goes at the top level of
+  the page.", nothing moved); Hero section added to an empty page by a click;
+  ↓, Esc, Delete. Published → on the live page the button opens the drawer as
+  a modal (focus on Close), Esc closes and focus returns to the button, a
+  click on the scrim closes it. `next build`: renderer, tenant panel, docs and
+  marketing all pass.
+- Not done here (carried, see Handoff): paste into header/footer (SB-07),
+  preset thumbnails (SB-08). The outline uses HTML5 drag and drop instead of
+  `@dnd-kit` (no new dependency).
+- Docs (mint-docs `0020aef`): `#add`, `#presets`, `#move`, `#inline-text`,
+  `#shortcuts`, `#overlays` with 2 real screenshots; `#outline`, `#props`,
+  `#start` updated. Checked at 390 px dark; build passes. Marketing
+  (mint-webpage `a345116`): changelog "Site builder: add, move and pop-ups",
+  the editor drawing now shows the Add tab and an open drawer, the
+  `/workflow/website` step and feature card mention adding blocks and
+  drawers (still Coming soon). Build passes; no overflow at 390 px.
+
 ## 2026-10-06 — SB-05 Editor shell
 
 - Renderer (mint-sites `41972a3`): canvas route `/__mint/edit` (draws the

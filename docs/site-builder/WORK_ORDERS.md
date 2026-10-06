@@ -82,18 +82,28 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, SB-05 done — SB-06 next)
+## Handoff — read this first (last updated 2026-10-06, SB-06 done — SB-07 next)
 
-**Done and pushed:** SB-01…SB-05 (renderer `mint-sites`, backend storage +
-render API, the renderer serving published sites, the editor shell; guide
-`/site-builder` with `#start`, `#live-site`, `#pages`, `#canvas`, `#outline`,
-`#props`, `#publish`; marketing site announced the builder as Coming soon).
-**Next: SB-06** (adding and moving blocks) → SB-07 (style + design; the
-marketing card loses "Coming soon" there) → SB-08… The renderer isn't
-deployed anywhere yet (no Vercel project — ask the user; needs the root domain
-+ hosting answers, README open questions 2–3). Open questions for the user
-are at the end of README (D4 site kinds, root domain, hosting); none blocks
-SB-06…SB-12.
+**Done and pushed:** SB-01…SB-06 (renderer `mint-sites`, backend storage +
+render API, the renderer serving published sites, the editor shell, adding
+and moving blocks + overlays; guide `/site-builder` with `#start`,
+`#live-site`, `#pages`, `#canvas`, `#outline`, `#props`, `#add`, `#presets`,
+`#move`, `#inline-text`, `#shortcuts`, `#overlays`, `#publish`; marketing site
+announces the builder as Coming soon). **Next: SB-07** (style + design; the
+marketing feature card and the two `/workflow/website` steps lose "Coming
+soon" there — `soon: true` in `content/features.ts` / `content/flows.ts`) →
+SB-08… The renderer isn't deployed anywhere yet (no Vercel project — ask the
+user; needs the root domain + hosting answers, README open questions 2–3).
+Open questions for the user are at the end of README (D4 site kinds, root
+domain, hosting); none blocks SB-07…SB-12.
+
+**Carried into SB-07 from SB-06:** paste into the header / footer (layouts are
+read-only in the editor until SB-07 makes them editable — drops there are
+refused with "The header and footer can't be changed here yet"); preset
+thumbnails (SB-08 generates them — the Add tab shows the label until then).
+**Deviation:** the outline uses the browser's own drag and drop (HTML5), not
+`@dnd-kit` — no new dependency; the WO's behaviour (before / after / inside,
+red line + reason when refused) is all there.
 
 **Deploy notes for the user (not done — ask before doing any of it):** the
 renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
@@ -117,10 +127,31 @@ RTK `components/library/store/services/siteBuilderApi.ts`. Renderer
 `mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
 
 **Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
-`9e45aac1`, SB-05 `87446cdf` (+ handoff commits); mint-sites `main`: SB-02
-`02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`; admin `main`: SB-05 `f0b273c`,
-`dd5b0f0`, `0f95b8f`; mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`,
-`1adaf97`; mint-webpage `main`: `77be8d1`.
+`9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3` (+ handoff commits); mint-sites
+`main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`, SB-06 `2b2bdc9`;
+admin `main`: SB-05 `f0b273c`, `dd5b0f0`, `0f95b8f`, SB-06 `b263ba7`;
+mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`, `1adaf97`, SB-06
+`0020aef`; mint-webpage `main`: `77be8d1`, SB-06 `a345116`.
+
+**Learned in SB-06 (applies to SB-07 on):**
+- The panel can't see pointer events over the canvas iframe: panel drags use
+  pointer capture on the Add item **and** a cover over the canvas
+  (`Canvas dragging`), and send `drag { x, y }` converted to the canvas's own
+  viewport (`CanvasHandle.toCanvas`, divides by the frame's scale).
+- Keys pressed while the canvas has the focus never reach the panel's
+  `window` — the canvas forwards shortcuts as `key` messages.
+- Typing on the canvas: put back React's own DOM before reporting (`text`),
+  so React applies the new value itself; rich text uses
+  `defaultParagraphSeparator = p` (Chrome's `<div>` would be stripped).
+- Overlays: native `<dialog>.showModal()` gives the focus trap, Esc,
+  `aria-modal` and focus return for free; a click on the scrim is a click on
+  the dialog element outside its box. In the editor they're opened with
+  `show()` (non-modal) so the rest of the canvas still takes clicks.
+- The automation's mouse drag doesn't start a native HTML5 drag — test the
+  outline's drag by dispatching `DragEvent`s from script.
+- Backend runs `dist/` (`node dist/server.js`): after validator / manifest
+  changes run `npx tsc` and restart `backend-sb`. The `manifest.json` is read
+  from the source folder (cwd), not dist.
 
 **Learned in SB-05 (applies to SB-06 on):**
 - The browser pane must be **visible** for the tenant panel to render (a
@@ -283,7 +314,7 @@ Renderer (`mint-sites`)
 | SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | done 2026-10-06 |
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | done 2026-10-06 |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | done 2026-10-06 (admin `0f95b8f`, mint-sites `41972a3`) |
-| SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | open |
+| SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | done 2026-10-06 (mint-sites `2b2bdc9`, admin `b263ba7`, backend `751c88e3`) |
 | SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | open |
 | SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | open |
 | SB-09 | Data binding: bindings + interpolation, `collection` block, template pages `/x/[slug]`, server resolve in `/render` + editor `resolve`, Data panel | all three | L | open |

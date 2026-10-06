@@ -312,20 +312,21 @@ any other origin.
 | Direction | type | payload |
 |---|---|---|
 | canvas → panel | `ready` | `{ manifestVersion }` |
-| panel → canvas | `init` | `{ design, layout, page: { tree, seo }, data, site, device, theme: 'light'|'dark' }` |
+| panel → canvas | `init` | `{ design, layout, page: { tree, seo }, data, site, device, theme: 'light'|'dark', readOnly? }` |
 | panel → canvas | `tree` | `{ tree, layout?, data? }` — after every change (whole tree; small enough) |
 | panel → canvas | `design` | `{ design }` |
 | panel → canvas | `select` / `hover` | `{ id | null }` |
 | panel → canvas | `open` | `{ id | null }` — show an overlay node |
-| panel → canvas | `drag` | `{ x, y, block | preset }` — a drag from the Add panel is over the canvas |
-| panel → canvas | `dragend` | `{ drop: boolean }` |
+| panel → canvas | `drag` | `{ x, y, item: { types, label } }` — a drag from the Add panel is over the canvas (x / y in the canvas's viewport) |
+| panel → canvas | `dragend` | `{}` — stop drawing the drop line (the panel inserts at the last `dropTarget`) |
 | canvas → panel | `click` | `{ id, shift }` |
 | canvas → panel | `hover` | `{ id | null }` |
 | canvas → panel | `rects` | `{ [id]: { x, y, w, h } }` — selected + hovered, after layout/scroll |
-| canvas → panel | `dropTarget` | `{ parentId, slot, index } | null` — while dragging |
+| canvas → panel | `dropTarget` | `{ target: { parentId, slot?, index } | null, reason? }` — while dragging; `reason` says why it can't go there |
 | canvas → panel | `move` | `{ id, parentId, slot, index }` — a drag inside the canvas |
 | canvas → panel | `text` | `{ id, prop, value }` — inline text edit (double click a heading / text / button) |
 | canvas → panel | `height` | `{ px }` |
+| canvas → panel | `key` | `{ key, meta, ctrl, shift, alt }` — a shortcut pressed while the canvas has the focus (SB-06) |
 
 The canvas never saves; the panel owns the draft, undo/redo and autosave.
 
@@ -362,7 +363,9 @@ ship — the kinds don't wait for them.
 | Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` |
 | Public render + resolve | `backend/routes-public/public.router.ts` (`GET /public/api/:slug/render`) and `routes-public/index.ts` (`GET /public/sites/resolve`); the site's `/site/sitemap.xml` lists builder pages |
 | Unit tests | `backend/library/siteBuilder/test/{ops,validate}.test.ts` (`npx jest library/siteBuilder --watchAll=false`) |
-| Editor | `admin/src/app/site-builder/` (page + `_components/`), RTK `admin/src/components/library/store/services/siteBuilderApi.ts` (SB-05) |
+| Editor | `admin/src/app/site-builder/` (page + `_components/`), RTK `admin/src/components/library/store/services/siteBuilderApi.ts` (SB-05); SB-06: `AddPanel.tsx`, `edit.ts` (new blocks, preset copies, `placeFor`, `placeProblem`, clipboard), outline drag in `Outline.tsx`, commands + shortcuts + panel drags in `SiteBuilder.tsx` |
+| Canvas editing (renderer) | `mint-sites/src/edit/` — `EditRoot.tsx` (selection, handle drag, inline text, overlays, key forwarding), `drop.ts` (drop targets + `placeProblem`), `protocol.ts` |
+| Overlays | blocks `mint-sites/src/blocks/{modal,drawer,popover}/` (native `<dialog>` / `popover`), live script `src/render/overlays.ts` (printed only on pages with one), styles in `globals.css` |
 | Smoke suite | `backend/scripts/tenancy-smoke/site-builder.mjs` (in `run-all.sh`) |
 | Guide | `mint-docs/src/app/site-builder/page.tsx` → docs.mintapp.shop/site-builder (anchors added with each WO) |
 
