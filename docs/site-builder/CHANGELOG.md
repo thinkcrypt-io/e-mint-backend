@@ -2,6 +2,21 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## 2026-10-06 — Builder vs hand-written sites: D19–D24, SB-20…SB-25
+
+- Planning only, no code. The user asked whether sites built through the MCP
+  would match what Claude Code writes from scratch, and what our edge is.
+- README: new section *Builder vs hand-written sites* (comparison table,
+  token estimates marked as estimates) and decisions D19 (both ways kept),
+  D20 (the AI sees screenshots of its work), D21 (token budget: two-level
+  manifest, presets by key, compact trees), D22 (preset library targets),
+  D23 (motion + hover style keys), D24 (brand first).
+- WORK_ORDERS: SB-20 preview images, SB-21 token budget, SB-22 motion and
+  hover, SB-23 preset library v2, SB-24 brand to theme, SB-25 benchmark; SB-11
+  gains the catalogue context + a look-and-fix round; SB-12 gains
+  `preview_site_page` and detail lookups; Status, Handoff and *Docs and
+  marketing* rows updated.
+
 ## 2026-10-06 — SB-02 Renderer repo
 
 - New repo `mint-sites/` (Next 16.3, React 19.3, Tailwind 4.3, TypeScript

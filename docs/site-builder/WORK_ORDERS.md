@@ -1,6 +1,6 @@
 # Site builder — work orders
 
-Read `README.md` first (decisions D1–D18, data shapes, render API, canvas
+Read `README.md` first (decisions D1–D24, data shapes, render API, canvas
 protocol). Each item: **why → where → change → done when**. Sizes: **S** ≤ 2 h,
 **M** ≤ a day, **L** 2–3 days. Paths are from the monorepo root
 `/Users/asifistiaque/Desktop/proj/e-mint`.
@@ -67,6 +67,12 @@ works, anything still being built is labelled "Coming soon". Verify with
 | SB-14 | `#domains` (default address, custom domain, DNS records, statuses) | "Your own domain" in features; changelog |
 | SB-15 | `#history` (releases, restore, compare), `#pages` updates | Changelog |
 | SB-16 | Final pass: read the whole guide top to bottom, fix gaps, `#faq`, cross-links from `/websites` | Final pass: whole website flow reads end to end; OG images; 390 px check |
+| SB-20 | `#ai` and `#mcp`: the AI checks a screenshot of its work; `preview_site_page` in `/connect-ai` | Changelog |
+| SB-21 | `#mcp`: why the builder is cheap on tokens (short, plain words), presets by key | Changelog |
+| SB-22 | `#style` gains *Motion* and *Hover*; reduced-motion note | Changelog; the editor drawing may show a motion control |
+| SB-23 | `#presets` and `#themes` (full lists, thumbnails) | Themes gallery in `templates.ts` / features updated; changelog |
+| SB-24 | `#ai` and `#design`: start from your brand (logo, colours, words) | `/workflow/website` "start from your brand" step; changelog |
+| SB-25 | `/websites`: "builder or code?" — which to pick, with SB-25's measured numbers | `compare.ts` / `/ai` claims use the measured numbers only; changelog |
 
 Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#live-site`, `#pages`, `#canvas`, `#outline`, `#props`, `#add`, `#presets`,
@@ -77,6 +83,16 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
+
+**2026-10-06 — D19–D24 + SB-20…SB-25 added** (planning only, no code). The
+user asked whether builder-made sites would match what Claude Code writes from
+scratch and what our edge is; answer and decisions are in README *Builder vs
+hand-written sites* and D19–D24. **For SB-03 (in progress):** D21 adds
+`insert` with `{ preset, props }` in place of a node — easiest to support in
+`ops.ts` now; if SB-03 lands without it, SB-21 adds it. SB-11 and SB-12 now
+reference SB-20 (screenshot look-and-fix, `preview_site_page`) and SB-21
+(compact two-level manifest); build them in that order: SB-20/21 before or
+with SB-11/12.
 
 **2026-10-06 — SB-02 done** (renderer `mint-sites/`, `02b6a34` pushed to
 `aiasifistiaque/mint-sites` `main` — the user created the repo; no Vercel
@@ -195,6 +211,12 @@ Renderer (`mint-sites`)
 | SB-17 | Import kit pages (`WebPage` + `WebContent` → trees) | backend + admin | M | later |
 | SB-18 | Download a site as a standalone Next.js project | mint-sites + backend | L | later |
 | SB-19 | Developers' own components (register React components via an SDK) | mint-sites | L | later |
+| SB-20 | Preview images: draft page → screenshot (1280 + 390), backend endpoint, MCP image content, used by SB-11/12 (D20) | mint-sites + backend | M | open (after SB-04) |
+| SB-21 | Token budget: two-level manifest, presets by key, compact trees, budget tests (D21) | backend + mint-sites | M | open (after SB-03; before SB-11/12) |
+| SB-22 | Motion and hover style keys (D23) | mint-sites + backend + admin | M | open (after SB-07) |
+| SB-23 | Preset library v2: ≥ 60 presets, ≥ 3 variants per section type, ≥ 8 themes, design review (D22) | mint-sites | L | open (after SB-08, SB-22) |
+| SB-24 | Brand to theme: logo/colours/words → theme + tokens + fonts (D24) | backend + admin | M | open (after SB-07, SB-11) |
+| SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
 
@@ -639,6 +661,13 @@ tool, repair rounds, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`).
    published by the AI.
 6. Limits: per-organization rate limit (e.g. 30 requests / hour), token caps;
    errors when `ANTHROPIC_API_KEY` is missing say so.
+7. Context is the **compact catalogue** from SB-21 (not the full manifest);
+   the AI asks for block / preset details with a tool when it needs them, and
+   inserts presets by key.
+8. **Look-and-fix round** (D20, SB-20): after a valid `site` / `page` /
+   `section` result, render it to screenshots and send them back once with
+   "check spacing, hierarchy, contrast, mobile; return ops to fix or `ok`".
+   Skipped when the renderer is unreachable (logged, not an error).
 
 **Done when:** against a fake Anthropic API (`ANTHROPIC_BASE_URL`, as the model
 builder's tests do) the smoke suite covers site/page/section/edit, a repair
@@ -658,8 +687,11 @@ beside `website.tools.ts` (website projects only, `ToolDef.only`).
 **Tools:** `site_builder_manifest` (blocks/presets/themes, compact),
 `list_site_pages`, `get_site_page` (tree), `create_site_page`,
 `edit_site_page` (ops), `set_site_design` (theme/tokens/layouts),
-`check_site` (= `/changes` problems), `publish_site` (needs a `publish`-capable
-key scope — add the scope if the key model lacks one; default off). Every tool
+`check_site` (= `/changes` problems), `preview_site_page` (screenshots from
+SB-20, returned as MCP image content), `publish_site` (needs a `publish`-capable
+key scope — add the scope if the key model lacks one; default off).
+`site_builder_manifest` is SB-21's catalogue; details come from
+`get_site_blocks` / `get_site_presets` / `get_site_theme` by key. Every tool
 description explains itself and links the guide. `describe_website` mentions
 the builder as the no-code path.
 
@@ -763,3 +795,156 @@ with deploy steps.
 
 An SDK (`@mint/sites-sdk`) to register React components with a schema in a
 fork of the renderer, published as a separate manifest per project.
+
+---
+
+## SB-20 — Preview images (M)
+
+**Why:** D20 — the AI must see what it built.
+
+**Where:** `mint-sites/src/app/api/preview-image/route.ts` (+ `%5F_mint/preview/[token]/page.tsx`),
+backend `library/siteBuilder/preview.ts`, tenant route
+`POST /site-builder/pages/:id/preview-image`, MCP transport
+`library/controllers/mcp/transport.ts`.
+
+**Change:**
+1. Backend stores the draft to render under a short-lived token (5 min,
+   single use, signed with `SITE_REVALIDATE_SECRET`) — `{ tree, design, data }`
+   exactly as the editor's canvas gets it — and calls the renderer's
+   `/api/preview-image?token=…&widths=1280,390`.
+2. The renderer renders `/__mint/preview/<token>` (fetches the payload from
+   the backend, `noindex`, never cached) and screenshots it with
+   `puppeteer-core` + `@sparticuz/chromium` (fits a Vercel function; local dev
+   uses an installed Chrome via `CHROME_PATH`). Full page, capped at 4 000 px
+   tall, JPEG quality ~70, each image ≤ 250 KB (image tokens are part of D21's
+   budget). Widgets render their placeholders, not live carts.
+3. Returns `{ images: [{ width, mime, base64 }] }`. Timeout 20 s → a clear
+   error the callers treat as "no preview".
+4. MCP transport: let a tool's `run` return `content` items (`text` and
+   `image` `{ type: 'image', data, mimeType }`) — today it only sends
+   `out.text`. Keep `text` working for every existing tool.
+5. Rate limit per organization (e.g. 60 previews / hour).
+
+**Done when:** a smoke test gets two JPEGs for a seeded page (sizes within the
+cap); the MCP returns image content that Claude Code displays; previews never
+appear on the public site or in the sitemap.
+
+## SB-21 — Token budget (M)
+
+**Why:** D21 — the builder's main edge is cost; keep it measured.
+
+**Where:** `mint-sites/scripts/manifest.mjs` (catalogue output),
+backend `library/siteBuilder/{catalogue,compact,ops}.ts`, MCP tools from SB-12.
+
+**Change:**
+1. The manifest script also writes `block-catalogue.json`: one line per
+   block (`type — aiHint — slots`), preset (`key — section type — variant —
+   one-line look`), theme (`key — mood — fonts`), style group (keys only).
+   Synced with the manifest (`syncManifest.mjs`).
+2. Detail lookups by key: block props, a preset's tree, a theme's tokens.
+3. `insert` accepts `{ preset: key, props?, style? }` in place of a node; the
+   backend expands it from the manifest (ids generated) before validation.
+4. `compactTree(tree)` drops props/styles equal to the block's defaults and
+   empty `hidden`/`children`; `expandTree` restores them. Used for every tree
+   sent to an AI (SB-11 and the MCP).
+5. Tests: catalogue ≤ 6 000 tokens, a 20-section page compact ≤ 4 000
+   tokens, a preset insert op ≤ 200 tokens (count with the Anthropic
+   token-counting API when `ANTHROPIC_API_KEY` is set, otherwise chars ÷ 3.5
+   as a conservative stand-in; both noted in the test output).
+
+**Done when:** the budget tests pass and run in the smoke suite; SB-11 and
+SB-12 use the catalogue + compact trees.
+
+## SB-22 — Motion and hover style keys (M)
+
+**Why:** D23 — polish without raw CSS.
+
+**Where:** `mint-sites/src/render/{styleSchema,compileStyles}.ts`, a tiny
+client script for entrance animations (IntersectionObserver, ≤ 1 KB), backend
+validator (reads the manifest's `style` part), admin Style panel.
+
+**Change:**
+1. Keys: `motion.enter` (none | fade | rise | scale | slide-left | slide-right),
+   `motion.delay` (0–1000 ms, steps of 100), `motion.stagger` (children,
+   0–300 ms), `hover.lift`, `hover.scale` (1–1.1), `hover.color` /
+   `hover.background` / `hover.shadow` (tokens), `hover.underline`, `sticky`
+   (top offset token), `overlay` (token + opacity).
+2. Compiled into the node's scoped CSS; `@media (prefers-reduced-motion:
+   reduce)` turns every animation off; content is visible without JavaScript.
+3. Style panel: a *Motion* and a *Hover* group; the canvas plays the
+   animation once when the value changes.
+
+**Done when:** unit tests cover compile + reduced motion + junk values; the
+fixture shows every key; SB-08's performance budget still holds.
+
+## SB-23 — Preset library v2 (L)
+
+**Why:** D22 — the AI is only as good as the parts it has.
+
+**Where:** `mint-sites/src/presets/*`, `src/themes/*`, `docs/design-review.md`.
+
+**Change:**
+1. ≥ 60 presets; every section type (header, hero, features, logos, stats,
+   CTA, testimonials, pricing, FAQ, team, gallery, contact, newsletter, blog
+   list, product grid, footer) has ≥ 3 variants that differ in **structure**,
+   not just colour (e.g. hero: centred / split image / full-bleed / editorial
+   type-only / bento).
+2. ≥ 8 themes that don't look alike: different font pairs, radius, density,
+   colour temperature, button style (add e.g. `bold`, `soft`, `luxe`,
+   `playful` to SB-08's five).
+3. Every preset has an `aiHint` saying when to use it, and uses motion/hover
+   (SB-22) sparingly.
+4. `docs/design-review.md` checklist (spacing rhythm, type scale, contrast,
+   one focal point per section, mobile at 390 px, no orphan words in
+   headings) — every preset is checked and ticked in the PR.
+5. A gallery route `/__mint/presets?theme=` showing every preset in every
+   theme; thumbnails regenerated.
+
+**Done when:** counts met, gallery reviewed in light + dark at 390 / 1280,
+theme contrast test passes, manifest re-synced.
+
+## SB-24 — Brand to theme (M)
+
+**Why:** D24 — colour, type and spacing make a site feel bespoke.
+
+**Where:** backend `library/siteBuilder/brand.ts` (+ a forced tool in SB-11's
+AI), tenant route `POST /site-builder/ai/brand`, MCP tool `suggest_site_theme`,
+admin Design tab "Start from your brand".
+
+**Change:**
+1. Input: logo (media id; colours extracted server-side from the image — no
+   AI needed for that), up to 3 brand colours, a few mood words, the site kind.
+2. Output: best-matching theme + token overrides (primary/accent from the
+   brand, neutrals tuned, contrast ≥ 4.5:1 enforced — adjust lightness, never
+   reject) + a font pair from the manifest's font list.
+3. Shown as 3 options with a live preview; applying is a `setDesign` op (one
+   undo step). SB-11's `site` mode runs this first when a logo or colours are
+   given.
+
+**Done when:** tests cover extraction, contrast repair and the op; the Design
+tab flow works in the browser with a real logo.
+
+## SB-25 — Benchmark: hand-written vs builder (M)
+
+**Why:** marketing and the guide must quote measured numbers, not estimates
+(README *Builder vs hand-written sites*).
+
+**Where:** `backend/docs/site-builder/benchmark.md` (+ screenshots under
+`backend/docs/site-builder/benchmark/`).
+
+**Change:**
+1. Three briefs (business 5 pages, shop home + product + about, blog home +
+   post), written down exactly.
+2. Each built twice with the same model: (a) Claude Code from an empty
+   Next.js app, no Mint; (b) Claude Code through the MCP only (SB-12 tools).
+   Then one follow-up edit each ("change the hero headline and swap the
+   pricing to three tiers").
+3. Record per run: input/output tokens (from the session's usage), wall time,
+   tool calls, errors, and desktop + mobile screenshots; a short honest
+   comparison of how each looks.
+4. Feed the numbers into README's table, the `/websites` guide and the
+   marketing site's claims.
+
+**Done when:** `benchmark.md` has all six builds + edits with numbers and
+screenshots, and the claims elsewhere quote it.
+

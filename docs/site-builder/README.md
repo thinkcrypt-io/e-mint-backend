@@ -63,6 +63,45 @@ D4 (site kinds); **confirm D4 with the user before SB-13**.
 | D16 | **Sites live on their own domain**, never under the panel's or API's: default address `<publicSlug>.<SITES_ROOT_DOMAIN>` (domain to be chosen by the user — see Open questions), plus custom domains added through the Vercel domains API (SB-14). No "custom HTML/script" block in v1; head code stays in Website settings → Head tags. | A tenant page must never share cookies or an origin with the panel, the API or another tenant's admin. |
 | D17 | **Guides and links on every step**: each editor panel and dialog links to its section of the guide on docs.mintapp.shop (`mint-docs`, via `docsPath()`); the marketing site (`mint-webpage`) is updated when the builder ships. | Standing rules: doc links on every step; update the marketing site with every product change. |
 | D18 | **Later, not now**: download a site as a standalone Next.js project (SB-18), developers registering their own React components (SB-19), multiple languages, A/B tests, per-page passwords. | Keep v1 shippable. |
+| D19 | **Two ways to build a website, both kept.** (a) *Code-built*: the user's AI writes the site's code and keeps its content, SEO and data in the project through the website MCP (WO-33, `describe_website`) — unlimited design, needs a developer and their own hosting. (b) *Builder*: the AI (ours in SB-11, or the user's through SB-12) composes block trees — no code, no build, instant publish, editable by the owner. `describe_website` explains both and when to pick which. | The builder competes with Wix / Framer / Webflow AI, not with hand-written code. Agencies who want something bespoke keep (a), and get SB-19 later. See *Builder vs hand-written sites*. |
+| D20 | **The AI sees what it built.** A draft page can be rendered to a screenshot (desktop 1280 + mobile 390, JPEG, small) — SB-20. Our AI (SB-11) gets one *look-and-fix* round after a valid result; the MCP gets a `preview_site_page` tool that returns the image. | Looking at its own output and fixing it is the main reason hand-written AI sites look good; without it the AI composes blind. |
+| D21 | **Token budget is a feature.** The manifest the AI reads has two levels: a **catalogue** (one line per block / preset / theme / style group, ≤ 6 000 tokens for the whole manifest) and **details on demand** (a block's full props, a preset's tree, a theme's tokens). Presets are inserted **by key** with prop overrides (`insert` takes `{ preset, props }`), not expanded by the AI. Page trees sent to the AI omit default values. Edits are always ops, never whole trees. Budgets are checked by tests — SB-21. | The user pays with their own AI subscription; ~10× fewer tokens than writing code is our main edge, and an oversized manifest would eat it. |
+| D22 | **The preset library is the product.** Targets beyond SB-08: ≥ 60 presets, ≥ 3 genuinely different variants of every section type (hero, features, pricing, testimonials, CTA, footer, header…), ≥ 8 themes that don't look alike (type, colour, radius, density) — SB-23, with a design-review checklist. | The AI can only be as good as the parts it has; 15 presets means every site looks like one of 15. |
+| D23 | **Motion and states are style keys too.** Fixed, typed keys for entrance animation (fade/rise/scale/slide, delay, stagger on children), hover states (lift, colour, shadow, scale, underline) and a few effects (backdrop overlay token, blend, sticky) — always respecting `prefers-reduced-motion`, still no raw CSS (D14) — SB-22. | Polish that makes a site feel designed rather than assembled, without opening CSS injection. |
+| D24 | **Brand first.** Before writing pages, the AI turns the brand (logo image, colours, words like "calm, premium") into a theme + token overrides + font pair, shown to the user to accept — SB-24. | Most of what makes a site feel bespoke is colour, type and spacing, not layout. |
+
+## Builder vs hand-written sites (asked by the user, 2026-10-06)
+
+> if we have an mcp and we let claude code build the website or claude, will
+> the output be similar to what we build in claude code from scratch? and what
+> will be our advantages and upperhands? like low token usage and all
+
+**Not the same, by design.** Code written from scratch can do anything, so
+the only limit on design is the model. Through the builder the AI arranges our
+blocks, presets and themes with typed style keys (D2, D11, D14): every site
+comes out responsive and on-theme and can't break, but how good it can look
+is capped by our block library. D20–D24 exist to raise that cap.
+
+| | Hand-written (Claude Code, own code) | Builder (SB-11 / SB-12) |
+|---|---|---|
+| Design freedom | Unlimited | Our blocks, presets, themes, style keys |
+| Who can use it | Developers with Claude Code | Anyone, including Claude.ai chat on a phone |
+| Tokens, 5-page site (estimate — SB-25 measures it) | ~300k–1.5M (reads, writes, builds, fixes, screenshots) | ~30k–80k (catalogue once, compact trees, presets by key) |
+| Tokens, "change the hero headline" | ~10k–30k (grep, read, edit) | ~1k (one `update` op) |
+| Build / deploy / hosting | Theirs | None — publish is instant (D7) |
+| Breaking the site | Possible | Impossible — validated, repair rounds, undo, rollback |
+| Owner edits afterwards | Needs a developer or AI | Everything, in the editor; AI and people edit the same draft |
+| Data, login, cart, checkout, payments | To be built | Built in (D8, D13; server owns prices) |
+| Bespoke interactions, custom animation, 3D | Yes | No (SB-19 later is the escape hatch) |
+
+**Where we win:** roughly 10× fewer tokens on the user's own subscription,
+instant publish with no build or hosting, can't break, editable by the owner,
+commerce included, themes swap the look without touching content.
+**Where code wins:** one-of-a-kind design and interactions, and avoiding the
+"AI template" look — which is why the preset library (D22), the look-and-fix
+loop (D20), motion (D23) and brand-first theming (D24) matter more than any
+single MCP tool. Marketing claims about tokens and speed quote SB-25's
+measured numbers, not these estimates.
 
 ## Architecture
 
