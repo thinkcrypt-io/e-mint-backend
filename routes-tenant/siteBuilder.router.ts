@@ -18,7 +18,7 @@ import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/pub
  * old one answers 409 { rev, page } (someone else changed it).
  *
  *   GET    /manifest                  blocks, presets, themes, schemas (ETag = version)
- *   GET    /pages                     the pages (summary)
+ *   GET    /pages                     the pages (summary) and the live site's address
  *   POST   /pages                     { name, path, kind?, source?, layout?, tree?, seo?, showInMenu?, menuLabel?, priority? }
  *   GET    /pages/:id                 one page with its draft (and what's live)
  *   PUT    /pages/:id                 { rev, tree?, seo?, name?, path?, layout?, showInMenu?, menuLabel?, priority?, source?, status?: 'draft' }
@@ -103,9 +103,9 @@ router.get(
 
 router.get(
 	'/pages',
-	handle(async () => {
+	handle(async (req: any) => {
 		await ensureSite();
-		return { pages: (await livePages()).map(pageSummary) };
+		return { pages: (await livePages()).map(pageSummary), url: siteUrl(req.project) };
 	})
 );
 

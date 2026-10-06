@@ -17,6 +17,20 @@ Newest first. Each entry: what changed, where, how it was verified.
   `preview_site_page` and detail lookups; Status, Handoff and *Docs and
   marketing* rows updated.
 
+## 2026-10-06 — SB-05 Editor shell (in progress — checkpoint)
+
+- Committed so far (details in WORK_ORDERS Handoff "SB-05 state"): renderer
+  canvas `/__mint/edit` + protocol + icon route + frame headers; admin
+  `/site-builder` editor (pages, outline, canvas, inspector with every prop
+  kind, actions, page dialog, publish dialog, draft/autosave/undo/409);
+  sidebar entry, "Edit site" button, `fullBleed` Layout; `/pages` returns the
+  live `url`.
+- Verified so far: selection across canvas/outline/inspector, live typing,
+  autosave, undo/redo, reload, publish to the live site, 409 dialog, outline
+  doesn't re-render while typing (0 DOM changes over 20 keys), phone + dark
+  preview. Not yet: page actions after the add-page fix, every input kind,
+  admin `npm run build`, docs + marketing.
+
 ## 2026-10-06 — SB-04 The renderer serves published sites
 
 - mint-sites: `src/proxy.ts` (host → `GET /public/sites/resolve`, cached a
