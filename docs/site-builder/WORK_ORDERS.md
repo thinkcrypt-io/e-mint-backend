@@ -82,113 +82,62 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, SB-05 paused — pick up at "Left to do for SB-05")
+## Handoff — read this first (last updated 2026-10-06, SB-05 done — SB-06 next)
 
-**Done and pushed:** SB-01…SB-04 (renderer `mint-sites`, backend storage +
-render API, the renderer serving published sites; guide `/site-builder` with
-`#start`, `#live-site`, `#publish`). **SB-05 is in progress** (state below).
-The renderer isn't deployed anywhere yet (no Vercel project — ask the user;
-needs the root domain + hosting answers, README open questions 2–3). After
-SB-05: SB-06 → SB-07 (editor), SB-08… Open questions for the user are at the
-end of README (D4 site kinds, root domain, hosting); none blocks SB-05…SB-12.
+**Done and pushed:** SB-01…SB-05 (renderer `mint-sites`, backend storage +
+render API, the renderer serving published sites, the editor shell; guide
+`/site-builder` with `#start`, `#live-site`, `#pages`, `#canvas`, `#outline`,
+`#props`, `#publish`; marketing site announced the builder as Coming soon).
+**Next: SB-06** (adding and moving blocks) → SB-07 (style + design; the
+marketing card loses "Coming soon" there) → SB-08… The renderer isn't
+deployed anywhere yet (no Vercel project — ask the user; needs the root domain
++ hosting answers, README open questions 2–3). Open questions for the user
+are at the end of README (D4 site kinds, root domain, hosting); none blocks
+SB-06…SB-12.
 
-### SB-05 state (keep this current)
+**Deploy notes for the user (not done — ask before doing any of it):** the
+renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
+`PANEL_ORIGINS`, `MEDIA_HOSTS`); the backend needs `SITES_RENDERER_URL` +
+`SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy); the
+tenant panel needs `NEXT_PUBLIC_SITES_URL`. Until then the editor's canvas
+says the renderer didn't load.
 
-**Built (committed — see the Status row / CHANGELOG):**
-- Renderer: `mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, page
-  `src/app/%5F_mint/edit/page.tsx` (URL `/__mint/edit`; draws the draft sent
-  over postMessage with the real blocks; clicks select, nothing navigates;
-  hover + selection boxes with a label drawn inside the canvas; reports
-  `ready/click/hover/rects/height`; origins from `PANEL_ORIGINS`),
-  `src/app/%5F_mint/icon/[name]/route.ts` (one icon as SVG, for the editor's
-  icon picker), `next.config.ts` headers (`frame-ancestors` = PANEL_ORIGINS on
-  `/__mint/edit`; `X-Frame-Options: DENY` elsewhere). Protocol addition:
-  panel → canvas `{ type: 'theme', theme }` (light/dark preview).
-- Admin: `src/app/site-builder/page.tsx` (empty states: not a website / backend
-  404 "needs the latest backend" / 403) and `_components/`: `SiteBuilder.tsx`
-  (top bar: page picker, devices 390/768/1280/fit, light/dark, undo/redo, save
-  status, View site, Publish; left Pages/Outline; canvas + breadcrumb; right
-  Inspector; page actions; 409 PromptDialog; ⌘Z/⇧⌘Z), `Canvas.tsx`,
-  `Outline.tsx` (memoized rows; header/footer shown read-only, folded),
-  `Inspector.tsx`, `PropInputs.tsx` (text, textarea, richtext = compact Quill
-  sending `getSemanticHTML()`, number, boolean, select, colour swatches from the
-  theme tokens, image/images/video via `UploadModal`, link (+ page picker),
-  page, icon picker drawing icons from the renderer, list; `ActionEditor`:
-  nothing / page / link (+new tab) / scroll / widget), `PagesPanel.tsx`
-  (status chips, menu: settings, home, duplicate, take off / put back, delete),
-  `PageDialog.tsx` (add / name, address, menu, order, layout, SEO),
-  `PublishDialog.tsx` (changes, problems → jump to page+block, note),
-  `useDraft.ts` (ops, 100-step undo with typing coalesced per field, autosave
-  1.5 s with `rev`, 409 → choose theirs/mine, `flush()` before switching pages /
-  publishing / settings, beforeunload warning), `tree.ts` (client copy of the
-  backend's `applyOps`), `protocol.ts`, `SiteGuide.tsx` ("?" →
-  `${DOCS_URL}/site-builder#<anchor>`). RTK
-  `src/components/library/store/services/siteBuilderApi.ts` (all endpoints
-  `siteBuilder…`). `PROJECT_PAGES` += `site-builder`; Layout `fullBleed` prop
-  (MainBody `bare`); WebsiteOverview "Edit site" button.
-- Backend: sidebar "Site builder" first in the website's Site section
-  (`tenantNav.function.ts`, needs `build`); `GET /site-builder/pages` also
-  returns `url` (the live address).
+**Not clicked in SB-05:** the image picker (the scratch backend has no S3
+bucket; the input reuses the admin's `UploadModal`) — click it once a backend
+with storage is around.
 
-**Verified in the browser** (tenant panel `tenant-sb` :3031 → backend-sb :5031,
-renderer :3300, test account in the scratch DB): page opens with the home page
-in the canvas; click a block in the canvas → selected in canvas, outline,
-breadcrumb and inspector; editing a heading's text shows live; autosave →
-"Saved"; undo/redo (one step per typed phrase); reload keeps the draft;
-Publish dialog lists the change → publish → toast with the live URL → the
-public page shows it; a save from another tab → 409 dialog → "Load their
-version" works; typing 20 keys made 0 DOM changes in the 53-row outline;
-phone width + dark preview; adding a page (address filled from the name).
-
-**Also verified (2026-10-06, later):** add page (opens the new empty page;
-focus on Name), page settings save SEO (rev bumps, editor keeps working),
-delete from the Pages menu (prompt wording for never-published pages), status
-chips Changed / Live / Draft, icon picker (renderer-drawn icons, search, pick
-→ canvas updates). Admin `next build` (tenant) passes. Fixes committed:
-add-page jumped back to Home; dialog name focus; Publish dialog's first fetch.
-
-**Left to do for SB-05 (in this order):**
-1. **Marketing site** (`mint-webpage/`, repo `aiasifistiaque/mint-website`
-   `main`) — not started. Read its README and `docs/CONTENT_PLAN.md` first and
-   follow the rules in *Docs and marketing* above (honest claims, Coming soon
-   for anything not live, no links into the guides, no Log in links, Phosphor
-   icons, light + dark, 390 px, `npm run build`). Where: `src/content/features.ts`
-   — add a "Site builder" feature to the `live` group, labelled Coming soon
-   (the `Feature` type has no "soon" flag yet — add one and show it as a badge,
-   or put "Coming soon" in the body); an editor drawing in
-   `src/components/mock/mocks.tsx`; in `src/content/flows.ts` the `website`
-   flow (`/workflow/website`) gains "or build it visually" steps (marked Coming
-   soon); `src/content/changelog.ts` — a `RELEASES` entry (customer-facing:
-   "A visual site builder is on the way" style, honest that it's rolling out).
-2. Not clicked through in the browser yet (all API-covered by
-   `site-builder.mjs`): Pages-menu duplicate, set home, take off / put back;
-   image picker (needs the real S3 bucket — the scratch backend can't upload);
-   rich-text input; Inspector "When clicked" editor.
-3. Mark SB-05 done: Status row, CHANGELOG entry (replace the checkpoint entry;
-   screenshots are in `mint-docs/public/guides/site-builder/`), this Handoff;
-   commit + push each repo; update memory `emint-site-builder`.
-4. Deploy notes for the user (not done, ask first): the renderer needs a Vercel
-   project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`, `PANEL_ORIGINS`,
-   `MEDIA_HOSTS`); the backend needs `SITES_RENDERER_URL` +
-   `SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy);
-   the tenant panel needs `NEXT_PUBLIC_SITES_URL`. Until then the editor's
-   canvas says the renderer didn't load.
-5. Then SB-06 (adding and moving blocks).
-
-**Done since the checkpoint** (pushed): admin `dd5b0f0` (add-page race, dialog
-focus, publish-dialog fetch); mint-docs `b45ee19` (guide `#pages`, `#canvas`,
-`#outline`, `#props`, `#publish` with 3 real screenshots, `#start` note
-reworded); verified in the browser: add page, page settings (SEO saved),
-delete, status chips, icon picker; admin tenant `next build` passes.
+**Where the editor lives** (details in CHANGELOG SB-05): admin
+`src/app/site-builder/_components/` — `SiteBuilder.tsx` (layout, page
+actions, dialogs), `Canvas.tsx` (iframe + protocol; `init` waits for the
+design), `Outline.tsx`, `Inspector.tsx`, `PropInputs.tsx` (+ `ActionEditor`),
+`PagesPanel.tsx`, `PageDialog.tsx`, `PublishDialog.tsx`, `useDraft.ts` (ops,
+undo, autosave, 409), `tree.ts` (client copy of the backend's `applyOps`),
+`protocol.ts` (copy of mint-sites `src/edit/protocol.ts`), `SiteGuide.tsx`;
+RTK `components/library/store/services/siteBuilderApi.ts`. Renderer
+`mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
 
 **Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
-`9e45aac1`, SB-05 checkpoint `87446cdf` (+ handoff commits after); mint-sites
-`main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`; admin `main`: SB-05
-`f0b273c`, `dd5b0f0`; mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`.
+`9e45aac1`, SB-05 `87446cdf` (+ handoff commits); mint-sites `main`: SB-02
+`02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`; admin `main`: SB-05 `f0b273c`,
+`dd5b0f0`, `0f95b8f`; mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`,
+`1adaf97`; mint-webpage `main`: `77be8d1`.
 
-**Another session** was working in `backend/library/functions/projectLifecycle.function.ts`
-(cleaning widgets/cart/payments on project delete) — its changes are
-uncommitted in the working tree; don't stage them.
+**Learned in SB-05 (applies to SB-06 on):**
+- The browser pane must be **visible** for the tenant panel to render (a
+  hidden pane reports `visibilityState: hidden` and the page never mounts);
+  `preview_start { url }` re-shows it. The canvas's first load in dev can take
+  ~15 s (renderer compile).
+- Chakra v3 `css={{ … }}` nested selectors need `&` (`'& .ql-editor'`), or
+  they're dropped with a console error.
+- Ref clicks (`find` → `ref`) are more reliable than screenshot coordinates in
+  the pane (the screenshot is scaled from a 1024 px viewport).
+- Local test account: the one that owns `acme-store` in the scratch DB
+  (`tenantusers`), password as in `site-builder.mjs`. Scratch Mongo lives in
+  the SB-05 session's scratchpad
+  (`/private/tmp/claude-501/-Users-asifistiaque-Desktop-proj-e-mint/d125db85-687a-414f-8d3e-eac8e227e5a0/scratchpad/mongo`).
+- Marketing site: `next start` of a fresh build on its own port (launch
+  config `mint-webpage-prod-sb`, :3110) avoids clashing with another
+  session's dev server on :3100.
 
 **Local stack:** `mongod --port 28010 --dbpath <scratchpad>/mongo`; launch
 configs `backend-sb` (:5031), `mint-sites` (:3300; `.env.local`:
@@ -333,7 +282,7 @@ Renderer (`mint-sites`)
 | SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (mint-sites `02b6a34`) |
 | SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | done 2026-10-06 |
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | done 2026-10-06 |
-| SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | **in progress** — built and mostly verified, see Handoff "SB-05 state" |
+| SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | done 2026-10-06 (admin `0f95b8f`, mint-sites `41972a3`) |
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | open |
 | SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | open |
 | SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | open |

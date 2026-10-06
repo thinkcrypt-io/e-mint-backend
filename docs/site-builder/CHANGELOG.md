@@ -17,22 +17,59 @@ Newest first. Each entry: what changed, where, how it was verified.
   `preview_site_page` and detail lookups; Status, Handoff and *Docs and
   marketing* rows updated.
 
-## 2026-10-06 — SB-05 Editor shell (in progress — checkpoint)
+## 2026-10-06 — SB-05 Editor shell
 
-- Committed so far (details in WORK_ORDERS Handoff "SB-05 state"): renderer
-  canvas `/__mint/edit` + protocol + icon route + frame headers; admin
-  `/site-builder` editor (pages, outline, canvas, inspector with every prop
-  kind, actions, page dialog, publish dialog, draft/autosave/undo/409);
-  sidebar entry, "Edit site" button, `fullBleed` Layout; `/pages` returns the
-  live `url`.
-- Verified so far: selection across canvas/outline/inspector, live typing,
-  autosave, undo/redo, reload, publish to the live site, 409 dialog, outline
-  doesn't re-render while typing (0 DOM changes over 20 keys), phone + dark
-  preview. Later the same day: add page (fixed: it jumped back to Home),
-  page settings (SEO), delete, status chips, icon picker; admin `next build`
-  passes; guide sections `#pages`, `#canvas`, `#outline`, `#props`,
-  `#publish` with screenshots (mint-docs `b45ee19`). Not yet: marketing site,
-  a few Pages-menu actions and inputs clicked through — see Handoff.
+- Renderer (mint-sites `41972a3`): canvas route `/__mint/edit` (draws the
+  draft sent over postMessage with the real blocks; clicks select, nothing
+  navigates; hover + selection boxes drawn inside the canvas; reports
+  `ready/click/hover/rects/height`; origins from `PANEL_ORIGINS`),
+  `/__mint/icon/[name]` (one icon as SVG for the icon picker), frame headers
+  (`frame-ancestors` on `/__mint/edit`, `X-Frame-Options: DENY` elsewhere),
+  protocol message `theme`.
+- Admin (`f0b273c`, `dd5b0f0`, `0f95b8f`): `/site-builder` — top bar (page
+  picker, 390/768/1280/fit, light/dark, undo/redo, save status, View site,
+  Publish), Pages panel (status chips, settings, home, duplicate, take off /
+  put back, delete), Outline (memoized rows; header/footer read-only),
+  canvas + breadcrumb, Inspector with every prop kind (rich text = compact
+  Quill, colour swatches from the theme, media via `UploadModal`, link + page
+  picker, icon picker drawn by the renderer, lists) and the "When clicked"
+  action editor, page dialog (name, address, menu, layout, SEO), Publish
+  dialog (changes, problems → jump to the block, note), draft state with
+  100-step undo, 1.5 s autosave with `rev`, 409 dialog, flush before
+  switching/publishing, leave warning. Sidebar entry, "Edit site" button,
+  `fullBleed` Layout. Backend (`87446cdf`): sidebar entry, `/pages` returns
+  the live `url`.
+- Fixed while clicking through (`0f95b8f`): the canvas stayed on "didn't
+  load" when the frame said `ready` before the design had arrived (it now
+  starts once the design comes); taking a live page off now asks first
+  (`PromptDialog`, warning tone); the rich-text input's styles never applied
+  (Chakra v3 nested selectors need `&` — 5 console errors) and inline code
+  was unreadable in dark mode; the outline said "This page is empty" while a
+  page was still loading (now "Loading…"). Earlier (`dd5b0f0`): add-page
+  jumped back to Home; dialog name focus; Publish dialog's first fetch.
+- Verified in the browser (tenant panel :3031 → backend :5031, renderer
+  :3300, scratch DB): select in canvas / outline / inspector, live typing,
+  autosave, undo/redo (one step per typed phrase), reload keeps the draft,
+  publish → the live page shows it, 409 dialog from a second tab, 20 typed
+  keys made 0 DOM changes in the 53-row outline (no whole-tree re-render),
+  phone width + dark preview, add page, page settings (SEO), delete, status
+  chips, icon picker; duplicate (opens the copy with its blocks), make home
+  (old home moves to `/home`) and back, take off (live `/about` → 404 at
+  once) / put back (Draft, returns with the next publish), the new take-off
+  prompt (Cancel keeps it live), rich text (typed text saved to the draft),
+  "When clicked" → Go to a page → About (published; the live button links
+  `/about`). Not clicked: the image picker — the scratch backend has no S3
+  bucket (the input reuses the admin's `UploadModal`). Admin tenant
+  `next build` passed at the checkpoint; `tsc` clean after the fixes.
+- Docs (mint-docs `a029dcf`, `5a1fc10`, `b45ee19`, `1adaf97`): guide `#pages`,
+  `#canvas`, `#outline`, `#props`, `#publish` with 3 real screenshots
+  (`public/guides/site-builder/`). Marketing (mint-webpage `77be8d1`): first
+  announcement — "Site builder" feature card with a Coming soon badge (new
+  `soon` flag on features), an editor drawing (`SiteBuilderMock`), two
+  Coming-soon steps on `/workflow/website` ("Or build it visually",
+  "Publish when it's ready", new `soon` flag on flow steps, publish drawing),
+  changelog "A visual site builder is on the way". Build passes; checked at
+  1280 dark and 390 px (no overflow).
 
 ## 2026-10-06 — SB-04 The renderer serves published sites
 
