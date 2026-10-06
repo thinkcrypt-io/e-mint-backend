@@ -121,6 +121,31 @@ describe('validateDesign', () => {
 			'layouts.default.header[0]',
 		]);
 	});
+
+	it('only offers listed fonts, and editorial / bright are themes', () => {
+		expect(errors(validateDesign({ theme: 'editorial', tokens: { fonts: { heading: { family: 'Fraunces' }, body: { family: 'system-ui' } } } }))).toEqual([]);
+		expect(errors(validateDesign({ theme: 'bright', tokens: { fonts: { heading: { family: 'Comic Sans MS' } } } }))).toEqual([
+			'“Comic Sans MS” isn’t one of the fonts the builder offers',
+		]);
+	});
+
+	it('saved sections: no saved section or overlay inside one; layouts and pages point at ones that exist', () => {
+		const r = validateDesign({
+			sections: {
+				sec00001: { name: 'CTA', tree: [{ id: 'ref00001', type: 'section-ref', props: { section: 'sec00002' } }] },
+				sec00002: { name: 'Pop', tree: [{ id: 'moda0001', type: 'modal', props: {} }] },
+			},
+			layouts: { default: { header: [{ id: 'ref00002', type: 'section-ref', props: { section: 'gone0001' } }], footer: [] } },
+		});
+		expect(errors(r)).toEqual(['A saved section can’t hold another saved section', 'A pop-up can’t be part of a saved section']);
+		expect(r.problems.find(p => p.level === 'publish')).toMatchObject({ path: 'layouts.default.header[0].props.section', message: 'This saved section was deleted' });
+
+		const page = (section: string) => validateTree([{ id: 'ref00003', type: 'section-ref', props: { section } }], { sectionIds: new Set(['sec00001']) });
+		expect(page('sec00001').problems).toEqual([]);
+		expect(page('gone0001').problems).toMatchObject([{ level: 'publish', nodeId: 'ref00003' }]);
+		expect(page('').problems).toMatchObject([{ level: 'warning' }]);
+		expect(page('bad id!').problems).toMatchObject([{ level: 'error', message: 'Saved section must be a saved section’s id' }]);
+	});
 });
 
 describe('validatePageFields', () => {

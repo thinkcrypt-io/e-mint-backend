@@ -1,5 +1,5 @@
 {
-	"version": "9716bd98e5cc",
+	"version": "57d6c7923488",
 	"blocks": [
 		{
 			"type": "button",
@@ -1096,6 +1096,31 @@
 			}
 		},
 		{
+			"type": "section-ref",
+			"label": "Saved section",
+			"category": "layout",
+			"icon": "puzzle-piece",
+			"description": "A section saved in Design. It looks the same everywhere it’s used — change it once and every page follows.",
+			"aiHint": "Places a saved (global) section by its id from the design’s sections. To change what it shows, edit the saved section, not this block.",
+			"props": [
+				{
+					"key": "section",
+					"label": "Saved section",
+					"kind": "section",
+					"default": ""
+				}
+			],
+			"style": [
+				"spacing",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"section": ""
+				}
+			}
+		},
+		{
 			"type": "spacer",
 			"label": "Spacer",
 			"category": "layout",
@@ -1786,6 +1811,285 @@
 	],
 	"themes": [
 		{
+			"key": "bright",
+			"label": "Bright",
+			"description": "Friendly and colourful — violet and coral, round corners and pill buttons. Suits apps, shops and classes.",
+			"preview": {
+				"bg": "#fdfcff",
+				"fg": "#1c1530",
+				"primary": "#7c3aed",
+				"font": "Outfit"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#fdfcff",
+						"dark": "#120e1c"
+					},
+					"foreground": {
+						"light": "#1c1530",
+						"dark": "#ece8f7"
+					},
+					"muted": {
+						"light": "#f4f1fb",
+						"dark": "#1b1629"
+					},
+					"muted-foreground": {
+						"light": "#635a7a",
+						"dark": "#a69fbd"
+					},
+					"primary": {
+						"light": "#7c3aed",
+						"dark": "#a78bfa"
+					},
+					"primary-foreground": {
+						"light": "#ffffff",
+						"dark": "#120e1c"
+					},
+					"secondary": {
+						"light": "#ffe4dc",
+						"dark": "#3a1f1a"
+					},
+					"secondary-foreground": {
+						"light": "#7a2614",
+						"dark": "#ffd0c2"
+					},
+					"accent": {
+						"light": "#ff7a59",
+						"dark": "#ff9b80"
+					},
+					"accent-foreground": {
+						"light": "#ffffff",
+						"dark": "#1f0d08"
+					},
+					"card": {
+						"light": "#ffffff",
+						"dark": "#191427"
+					},
+					"card-foreground": {
+						"light": "#1c1530",
+						"dark": "#ece8f7"
+					},
+					"border": {
+						"light": "#e7e1f5",
+						"dark": "#2c2540"
+					},
+					"ring": {
+						"light": "#7c3aed",
+						"dark": "#a78bfa"
+					},
+					"success": {
+						"light": "#16a34a",
+						"dark": "#4ade80"
+					},
+					"warning": {
+						"light": "#d97706",
+						"dark": "#fbbf24"
+					},
+					"danger": {
+						"light": "#e11d48",
+						"dark": "#fb7185"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Outfit",
+						"weights": [
+							600,
+							700,
+							800
+						]
+					},
+					"body": {
+						"family": "DM Sans",
+						"weights": [
+							400,
+							500,
+							700
+						]
+					},
+					"mono": {
+						"family": "JetBrains Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.5rem",
+					"md": "0.875rem",
+					"lg": "1.25rem",
+					"xl": "2rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 3px rgb(76 29 149 / 0.08)",
+					"md": "0 8px 24px rgb(76 29 149 / 0.12)",
+					"lg": "0 24px 56px rgb(76 29 149 / 0.18)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1200,
+				"button": {
+					"radius": "full",
+					"weight": 700,
+					"uppercase": false
+				}
+			}
+		},
+		{
+			"key": "editorial",
+			"label": "Editorial",
+			"description": "Warm and literary — paper tones, a terracotta accent and serif type. Suits writers, studios and restaurants.",
+			"preview": {
+				"bg": "#faf6ef",
+				"fg": "#2b2118",
+				"primary": "#b4532a",
+				"font": "Fraunces"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#faf6ef",
+						"dark": "#17130f"
+					},
+					"foreground": {
+						"light": "#2b2118",
+						"dark": "#efe6d8"
+					},
+					"muted": {
+						"light": "#f1eadf",
+						"dark": "#211b16"
+					},
+					"muted-foreground": {
+						"light": "#6f6253",
+						"dark": "#b3a592"
+					},
+					"primary": {
+						"light": "#b4532a",
+						"dark": "#e58a5f"
+					},
+					"primary-foreground": {
+						"light": "#fffaf3",
+						"dark": "#1a120c"
+					},
+					"secondary": {
+						"light": "#ece3d4",
+						"dark": "#2a231c"
+					},
+					"secondary-foreground": {
+						"light": "#2b2118",
+						"dark": "#efe6d8"
+					},
+					"accent": {
+						"light": "#f6dccd",
+						"dark": "#3a2619"
+					},
+					"accent-foreground": {
+						"light": "#7a3417",
+						"dark": "#f6cdb6"
+					},
+					"card": {
+						"light": "#fffcf7",
+						"dark": "#1d1813"
+					},
+					"card-foreground": {
+						"light": "#2b2118",
+						"dark": "#efe6d8"
+					},
+					"border": {
+						"light": "#e3d8c6",
+						"dark": "#352c23"
+					},
+					"ring": {
+						"light": "#b4532a",
+						"dark": "#e58a5f"
+					},
+					"success": {
+						"light": "#3f7a3a",
+						"dark": "#8bc983"
+					},
+					"warning": {
+						"light": "#a8610b",
+						"dark": "#f0b65a"
+					},
+					"danger": {
+						"light": "#a33a2c",
+						"dark": "#ef8a7b"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Fraunces",
+						"weights": [
+							500,
+							600,
+							700
+						]
+					},
+					"body": {
+						"family": "Source Serif 4",
+						"weights": [
+							400,
+							600
+						]
+					},
+					"mono": {
+						"family": "IBM Plex Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.125rem",
+					"md": "0.25rem",
+					"lg": "0.375rem",
+					"xl": "0.75rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 2px rgb(43 33 24 / 0.06)",
+					"md": "0 6px 16px rgb(43 33 24 / 0.08)",
+					"lg": "0 20px 44px rgb(43 33 24 / 0.12)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1120,
+				"button": {
+					"radius": "sm",
+					"weight": 600,
+					"uppercase": false
+				}
+			}
+		},
+		{
 			"key": "studio",
 			"label": "Studio",
 			"description": "Clean and modern — neutral greys, an indigo accent and Inter. Fits most business sites.",
@@ -2021,6 +2325,671 @@
 			],
 			"uppercase": "boolean"
 		}
+	},
+	"fonts": {
+		"google": [
+			{
+				"family": "Inter",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Roboto",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Open Sans",
+				"category": "sans",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Lato",
+				"category": "sans",
+				"weights": [
+					100,
+					300,
+					400,
+					700,
+					900
+				]
+			},
+			{
+				"family": "Montserrat",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Poppins",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Nunito",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Work Sans",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "DM Sans",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Manrope",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Plus Jakarta Sans",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Outfit",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Figtree",
+				"category": "sans",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "IBM Plex Sans",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Source Sans 3",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Raleway",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Rubik",
+				"category": "sans",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Karla",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Space Grotesk",
+				"category": "sans",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Sora",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Lexend",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Mulish",
+				"category": "sans",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Archivo",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Public Sans",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Barlow",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Josefin Sans",
+				"category": "sans",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Playfair Display",
+				"category": "serif",
+				"weights": [
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Merriweather",
+				"category": "serif",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Lora",
+				"category": "serif",
+				"weights": [
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "EB Garamond",
+				"category": "serif",
+				"weights": [
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Cormorant Garamond",
+				"category": "serif",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Libre Baskerville",
+				"category": "serif",
+				"weights": [
+					400,
+					700
+				]
+			},
+			{
+				"family": "Fraunces",
+				"category": "serif",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Crimson Pro",
+				"category": "serif",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Source Serif 4",
+				"category": "serif",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Spectral",
+				"category": "serif",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Bitter",
+				"category": "serif",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "DM Serif Display",
+				"category": "serif",
+				"weights": [
+					400
+				]
+			},
+			{
+				"family": "Instrument Serif",
+				"category": "serif",
+				"weights": [
+					400
+				]
+			},
+			{
+				"family": "Bebas Neue",
+				"category": "display",
+				"weights": [
+					400
+				]
+			},
+			{
+				"family": "Oswald",
+				"category": "display",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Abril Fatface",
+				"category": "display",
+				"weights": [
+					400
+				]
+			},
+			{
+				"family": "Syne",
+				"category": "display",
+				"weights": [
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Unbounded",
+				"category": "display",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "JetBrains Mono",
+				"category": "mono",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800
+				]
+			},
+			{
+				"family": "Fira Code",
+				"category": "mono",
+				"weights": [
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "IBM Plex Mono",
+				"category": "mono",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Space Mono",
+				"category": "mono",
+				"weights": [
+					400,
+					700
+				]
+			},
+			{
+				"family": "Roboto Mono",
+				"category": "mono",
+				"weights": [
+					100,
+					200,
+					300,
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Source Code Pro",
+				"category": "mono",
+				"weights": [
+					200,
+					300,
+					400,
+					500,
+					600,
+					700,
+					800,
+					900
+				]
+			},
+			{
+				"family": "Caveat",
+				"category": "hand",
+				"weights": [
+					400,
+					500,
+					600,
+					700
+				]
+			},
+			{
+				"family": "Pacifico",
+				"category": "hand",
+				"weights": [
+					400
+				]
+			}
+		],
+		"system": [
+			"system-ui",
+			"sans-serif",
+			"serif",
+			"monospace",
+			"ui-sans-serif",
+			"ui-serif",
+			"ui-monospace"
+		]
 	},
 	"style": {
 		"display": {

@@ -8,7 +8,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
 import { publicManifest, manifestVersion } from '../library/siteBuilder/manifest.js';
 import { rekeyTree } from '../library/siteBuilder/ids.js';
 import { treeIds, validateDesign, validatePageFields, validateTree, type Problem } from '../library/siteBuilder/validate.js';
-import { designView, ensureSite, livePages, pageSummary, pageView, siteChanges, EMPTY_SEO } from '../library/siteBuilder/site.js';
+import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, EMPTY_SEO } from '../library/siteBuilder/site.js';
 import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/publish.js';
 
 /**
@@ -64,10 +64,14 @@ const pathTaken = async (path: string, except?: any) => !!(await SitePage.exists
 
 /** A tree for a page: errors refuse the save; publish-only problems are saved and listed. */
 const checkTree = async (tree: unknown, page: { layout?: string }) => {
-	const design: any = await SiteDesign.findOne({}, { 'draft.layouts': 1 }).lean();
+	const design: any = await SiteDesign.findOne({}, { 'draft.layouts': 1, 'draft.sections': 1 }).lean();
 	const layout = page.layout === 'none' ? null : design?.draft?.layouts?.[page.layout || 'default'];
 	const pages = await SitePage.find({ deletedAt: null }, { _id: 1 }).lean();
-	const r = validateTree(tree, { externalIds: layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined, pageIds: new Set(pages.map((p: any) => String(p._id))) });
+	const r = validateTree(tree, {
+		externalIds: layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined,
+		pageIds: new Set(pages.map((p: any) => String(p._id))),
+		sectionIds: new Set(Object.keys(design?.draft?.sections || {})),
+	});
 	const errors = r.problems.filter(p => p.level === 'error');
 	if (errors.length) throw refuse('The page has problems — nothing was saved.', errors);
 	return r.problems;
@@ -242,11 +246,14 @@ router.post(
 
 /* -------------------------------------------------------------- design */
 
+/** The design for the editor, with where each saved section is used. */
+const designWithUsage = async (design: any) => ({ ...designView(design), usage: sectionUsage(design, await livePages()) });
+
 router.get(
 	'/design',
 	handle(async () => {
 		await ensureSite();
-		return designView(await SiteDesign.findOne({}).lean());
+		return designWithUsage(await SiteDesign.findOne({}).lean());
 	})
 );
 
@@ -264,7 +271,7 @@ router.put(
 		const patch = Object.fromEntries(DESIGN_KEYS.filter(k => body[k] !== undefined).map(k => [k, body[k]]));
 		if (!Object.keys(patch).length) throw new TenancyError(400, 'Nothing to change');
 		const pages = await SitePage.find({ deletedAt: null }, { _id: 1 }).lean();
-		const r = validateDesign(patch, { pageIds: new Set(pages.map((p: any) => String(p._id))) });
+		const r = validateDesign(patch, { pageIds: new Set(pages.map((p: any) => String(p._id))), sectionIds: new Set(Object.keys(design.draft?.sections || {})) });
 		const errors = r.problems.filter(p => p.level === 'error');
 		if (errors.length) throw refuse('The design has problems — nothing was saved.', errors);
 		const $set = Object.fromEntries(Object.entries(patch).map(([k, v]) => [`draft.${k}`, v]));
@@ -273,7 +280,7 @@ router.put(
 			const now: any = await SiteDesign.findOne({}).lean();
 			throw Object.assign(new TenancyError(409, 'Someone else changed the design.'), { extra: { rev: now.draft?.rev, design: designView(now) } });
 		}
-		return { ...designView(saved), problems: r.problems };
+		return { ...(await designWithUsage(saved)), problems: r.problems };
 	})
 );
 
@@ -285,10 +292,12 @@ router.post(
 		const body = req.body || {};
 		const pages = await SitePage.find({ deletedAt: null }, { _id: 1 }).lean();
 		const pageIds = new Set(pages.map((p: any) => String(p._id)));
-		if (body.design !== undefined) return validateDesign(body.design || {}, { pageIds });
+		const d: any = await SiteDesign.findOne({}, { 'draft.sections': 1 }).lean();
+		const sectionIds = new Set(Object.keys(d?.draft?.sections || {}));
+		if (body.design !== undefined) return validateDesign(body.design || {}, { pageIds, sectionIds });
 		if (body.tree !== undefined) {
 			const externalIds = Array.isArray(body.externalIds) ? new Set<string>(body.externalIds.filter((x: any) => typeof x === 'string').slice(0, 5000)) : undefined;
-			return validateTree(body.tree, { pageIds, externalIds });
+			return validateTree(body.tree, { pageIds, externalIds, sectionIds });
 		}
 		throw new TenancyError(400, 'Send { tree } or { design }');
 	})

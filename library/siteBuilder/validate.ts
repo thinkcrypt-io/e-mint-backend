@@ -122,6 +122,8 @@ const propProblem = (def: PropDef, value: any, m: LoadedManifest, depth = 0): st
 			}
 			return null;
 		}
+		case 'section':
+			return value === '' || (typeof value === 'string' && NODE_ID.test(value)) ? null : `${def.label} must be a saved section’s id`;
 		case 'source':
 			// The collection block's data source (SB-09 checks it against the public API).
 			return isObj(value) && typeof value.model === 'string' && value.model.length <= 100 ? null : `${def.label} must name a model`;
@@ -146,6 +148,10 @@ type TreeOptions = {
 	pageIds?: Set<string>;
 	/** Where the tree sits, for messages ('page', 'header', 'footer', 'section …'). */
 	label?: string;
+	/** The design's saved sections, for section-ref blocks; unchecked when absent. */
+	sectionIds?: Set<string>;
+	/** The tree is a saved section's own: no saved sections or overlays in it. */
+	inSection?: boolean;
 };
 
 export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
@@ -194,6 +200,13 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 			if (n.locked !== undefined && typeof n.locked !== 'boolean') add('error', `${at}.locked`, 'locked is true or false', id);
 
 			// Where it sits
+			if (opts.inSection && def.type === 'section-ref') add('error', at, 'A saved section can’t hold another saved section', id);
+			if (opts.inSection && def.category === 'overlay') add('error', at, `A ${def.label.toLowerCase()} can’t be part of a saved section`, id);
+			if (def.type === 'section-ref' && !opts.inSection) {
+				const ref = isObj(n.props) ? n.props.section : undefined;
+				if (!ref) add('warning', `${at}.props.section`, 'This saved section block doesn’t show anything yet — choose a section', id);
+				else if (typeof ref === 'string' && NODE_ID.test(ref) && opts.sectionIds && !opts.sectionIds.has(ref)) add('publish', `${at}.props.section`, 'This saved section was deleted', id);
+			}
 			if (parent && def.category === 'overlay') add('error', at, `A ${def.label.toLowerCase()} goes at the top level of the page, not inside another block`, id);
 			if (parent && def.canBeChildOf?.length && !def.canBeChildOf.includes(parent.type))
 				add('error', at, `${def.label} can only go inside ${def.canBeChildOf.join(', ')}`, id);
@@ -343,6 +356,12 @@ const LENGTH = /^(0|-?[0-9]*\.?[0-9]+(px|rem|em|%))$/;
 const SHADOW = /^(none|([0-9a-z.,%#()\s/-]+))$/i;
 const FAMILY = /^([A-Za-z0-9 ]{1,40}|system-ui|sans-serif|serif|monospace|ui-sans-serif|ui-serif|ui-monospace)$/;
 const LAYOUT_KEY = /^[a-z0-9-]{1,40}$/;
+
+/** The fonts a design may use: the manifest's Google list and the system stacks. */
+const fontFamilies = () => {
+	const f: any = (loadManifest() as any).fonts;
+	return new Set<string>([...(f?.google || []).map((x: any) => x.family), ...(f?.system || [])]);
+};
 export const COLOR_SCHEMES = ['light', 'dark', 'system'];
 
 /** Token overrides (SiteDesign.tokens) — the keys a theme has, values checked like the renderer does. */
@@ -383,7 +402,9 @@ const tokenProblems = (tokens: unknown, add: (path: string, message: string) => 
 				if (!isObj(v) || Object.entries(v).some(([mode, c]) => !['light', 'dark'].includes(mode) || typeof c !== 'string' || c.length > 64 || !COLOR.test(c)))
 					add(p, 'A colour is { light, dark } with values like #0f766e');
 			} else if (group === 'fonts') {
-				if (!isObj(v) || (v.family !== undefined && !FAMILY.test(v.family)) || (v.weights !== undefined && !(Array.isArray(v.weights) && v.weights.length <= 6 && v.weights.every((w: any) => isInt(w, 100, 900) && w % 100 === 0))))
+				if (isObj(v) && v.family !== undefined && FAMILY.test(v.family) && !fontFamilies().has(v.family))
+					add(p, `“${v.family}” isn’t one of the fonts the builder offers`);
+				else if (!isObj(v) || (v.family !== undefined && !FAMILY.test(v.family)) || (v.weights !== undefined && !(Array.isArray(v.weights) && v.weights.length <= 6 && v.weights.every((w: any) => isInt(w, 100, 900) && w % 100 === 0))))
 					add(p, 'A font is { family, weights } — a Google Fonts family name and weights like 400, 700');
 			} else if (group === 'shadow') {
 				if (typeof v !== 'string' || v.length > 200 || !SHADOW.test(v) || /url|expression|var\(/i.test(v)) add(p, 'A shadow is a CSS box-shadow value');
@@ -395,7 +416,7 @@ const tokenProblems = (tokens: unknown, add: (path: string, message: string) => 
 type DesignInput = { theme?: unknown; tokens?: unknown; layouts?: unknown; sections?: unknown; colorScheme?: unknown };
 
 /** A design (or the parts of one being changed); trees are checked like pages. */
-export const validateDesign = (design: DesignInput, opts: { pageIds?: Set<string> } = {}): Result => {
+export const validateDesign = (design: DesignInput, opts: { pageIds?: Set<string>; sectionIds?: Set<string> } = {}): Result => {
 	const m = loadManifest();
 	const problems: Problem[] = [];
 	const add = (path: string, message: string) => problems.push({ level: 'error', path, message });
@@ -404,6 +425,8 @@ export const validateDesign = (design: DesignInput, opts: { pageIds?: Set<string
 		add('theme', `There is no theme “${String(design.theme).slice(0, 40)}” (themes: ${[...m.themeKeys].join(', ')})`);
 	if (design.colorScheme !== undefined && !COLOR_SCHEMES.includes(design.colorScheme as string)) add('colorScheme', 'The colour scheme is light, dark or system');
 	tokenProblems(design.tokens, add);
+	// Saved sections that section-ref blocks may place: the ones sent, else the ones the caller knows.
+	const sectionIds = isObj(design.sections) ? new Set(Object.keys(design.sections)) : opts.sectionIds;
 
 	if (design.layouts !== undefined) {
 		if (!isObj(design.layouts)) add('layouts', 'layouts must be an object');
@@ -423,7 +446,7 @@ export const validateDesign = (design: DesignInput, opts: { pageIds?: Set<string
 				const footer = layout.footer ?? [];
 				const both = treeIds(header, treeIds(footer));
 				for (const [part, tree] of [['header', header], ['footer', footer]] as const) {
-					const r = validateTree(tree, { externalIds: both, pageIds: opts.pageIds, label: `${key} ${part}` });
+					const r = validateTree(tree, { externalIds: both, pageIds: opts.pageIds, sectionIds, label: `${key} ${part}` });
 					problems.push(...r.problems.map(p => ({ ...p, path: `layouts.${key}.${part}${p.path}` })));
 				}
 			}
@@ -440,7 +463,7 @@ export const validateDesign = (design: DesignInput, opts: { pageIds?: Set<string
 				else if (!isObj(section) || typeof section.name !== 'string' || !section.name.trim() || section.name.length > 80)
 					add(`sections.${id}`, 'A section has a name (at most 80 characters) and a tree');
 				else {
-					const r = validateTree(section.tree, { pageIds: opts.pageIds, label: `section “${section.name}”` });
+					const r = validateTree(section.tree, { pageIds: opts.pageIds, inSection: true, label: `section “${section.name}”` });
 					problems.push(...r.problems.map(p => ({ ...p, path: `sections.${id}.tree${p.path}` })));
 				}
 			}

@@ -102,6 +102,28 @@ export const designView = (d: any) => {
 	};
 };
 
+/** The saved sections (section-ref blocks) a tree places, by id. */
+export const sectionRefs = (tree: unknown, out = new Set<string>()): Set<string> => {
+	if (!Array.isArray(tree)) return out;
+	for (const n of tree) {
+		if (!n || typeof n !== 'object') continue;
+		if (n.type === 'section-ref' && typeof n.props?.section === 'string' && n.props.section) out.add(n.props.section);
+		sectionRefs(n.children, out);
+		if (n.slots && typeof n.slots === 'object') Object.values(n.slots).forEach(s => sectionRefs(s, out));
+	}
+	return out;
+};
+
+/** Where each saved section is used: page drafts and layouts (the editor warns before changing a shared one). */
+export const sectionUsage = (design: any, pages: any[]) => {
+	const usage: Record<string, { pages: { id: string; name: string }[]; layouts: string[] }> = {};
+	const at = (id: string) => (usage[id] ||= { pages: [], layouts: [] });
+	for (const p of pages) for (const id of sectionRefs(p.draft?.tree)) at(id).pages.push({ id: String(p._id), name: p.name });
+	for (const [key, l] of Object.entries<any>(design?.draft?.layouts || {}))
+		for (const id of sectionRefs([...(l?.header || []), ...(l?.footer || [])])) at(id).layouts.push(key);
+	return usage;
+};
+
 export const livePages = () => SitePage.find({ deletedAt: null }).sort({ isHome: -1, priority: -1, name: 1 }).lean();
 
 /* ---------------------------------------------------------- checking */
@@ -121,7 +143,7 @@ export const siteProblems = async (pages?: any[], design?: any): Promise<SitePro
 		if (p.layout && p.layout !== 'none' && !layout)
 			out.push({ level: 'publish', path: 'layout', message: `The layout “${p.layout}” doesn’t exist any more`, page: String(p._id), pageName: p.name, part: 'page' });
 		const externalIds = layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined;
-		const r = validateTree(p.draft?.tree, { pageIds, externalIds });
+		const r = validateTree(p.draft?.tree, { pageIds, externalIds, sectionIds: new Set(Object.keys(draft.sections || {})) });
 		out.push(...r.problems.map(x => ({ ...x, page: String(p._id), pageName: p.name, part: 'page' as const })));
 	}
 	return out;

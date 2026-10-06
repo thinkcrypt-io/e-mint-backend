@@ -1,4 +1,5 @@
-// The site builder's storage, checks, publish and render API (docs/site-builder SB-03).
+// The site builder's storage, checks, publish and render API (docs/site-builder
+// SB-03), overlays (SB-06), and themes, fonts, layouts and saved sections (SB-07).
 import { call, ok, done, ROOT } from './lib.mjs';
 
 const stamp = Date.now();
@@ -16,7 +17,7 @@ const render = async (path, slug = site.publicSlug) => call('GET', `/public/api/
 /* ------------------------------------------------------------ a new site */
 r = await call('GET', SB('/manifest'), null, T);
 const manifest = r.body;
-ok('the manifest: blocks, presets, themes, style schema', r.status === 200 && manifest.blocks?.length >= 14 && manifest.presets.some(p => p.key === 'hero-centered') && manifest.themes[0]?.key === 'studio' && manifest.style?.paddingTop, `${r.status}`);
+ok('the manifest: blocks, presets, themes, style schema', r.status === 200 && manifest.blocks?.length >= 14 && manifest.presets.some(p => p.key === 'hero-centered') && manifest.themes.some(t => t.key === 'studio') && manifest.style?.paddingTop, `${r.status}`);
 const res = await fetch(ROOT + SB('/manifest'), { headers: { authorization: T, 'if-none-match': `"${manifest.version}"` } });
 ok('…with an ETag (304 when unchanged)', res.status === 304, res.status);
 
@@ -225,5 +226,43 @@ ok('the sitemap lists the builder’s live pages', xml.includes('<loc>https://ac
 r = await call('PUT', `/tenant/api/p/${site._id}/site-config`, { redirects: [{ from: '/old-about', to: '/about', permanent: true }] }, T);
 r = await render('/old-about');
 ok('a redirect from Site setup answers { redirect }', r.status === 200 && r.body.redirect?.to === '/about' && r.body.redirect.status === 308, `${r.status} ${JSON.stringify(r.body)}`);
+
+/* ------------------------------- themes, fonts, layouts, sections (SB-07) */
+ok('the manifest has three themes and the font list', ['bright', 'editorial', 'studio'].every(k => manifest.themes.some(t => t.key === k)) && manifest.fonts?.google?.length >= 40 && manifest.blocks.some(b => b.type === 'section-ref'), JSON.stringify(manifest.themes.map(t => t.key)));
+r = await call('GET', SB('/design'), null, T);
+design = r.body;
+r = await call('PUT', SB('/design'), { rev: design.draft.rev, tokens: { fonts: { heading: { family: 'Comic Sans MS' } } } }, T);
+ok('a font that isn’t on the list is refused', r.status === 400 && /isn’t one of the fonts/.test(r.body.problems?.[0]?.message), `${r.status} ${JSON.stringify(r.body.problems)}`);
+const sections = {
+	ctaSect1: { name: 'Call to action', tree: [{ id: 'ctaHead1', type: 'heading', props: { text: 'Book a table', level: 2 }, style: { md: { color: 'primary' } } }] },
+	unusedS1: { name: 'Not used', tree: [{ id: 'unusedH1', type: 'heading', props: { text: 'Never sent' } }] },
+};
+const landing = { header: [{ id: 'lndHead1', type: 'heading', props: { text: 'Landing header', level: 2 } }], footer: [] };
+r = await call('PUT', SB('/design'), { rev: design.draft.rev, theme: 'editorial', tokens: { fonts: { heading: { family: 'Playfair Display', weights: [700] } } }, sections, layouts: { ...design.draft.layouts, landing } }, T);
+ok('the design saves a theme, a listed font, saved sections and a second layout', r.status === 200 && r.body.draft.theme === 'editorial' && r.body.draft.sections.ctaSect1 && r.body.draft.layouts.landing, `${r.status} ${JSON.stringify(r.body.problems || r.body.message)}`);
+design = r.body;
+r = await call('PUT', SB('/design'), { rev: design.draft.rev, sections: { bad00001: { name: 'Nested', tree: [{ id: 'nestRef1', type: 'section-ref', props: { section: 'ctaSect1' } }] } } }, T);
+ok('a saved section can’t hold another', r.status === 400 && /can’t hold another saved section/.test(JSON.stringify(r.body.problems)), `${r.status}`);
+const refTree = [{ id: 'refBlk01', type: 'section-ref', props: { section: 'ctaSect1' } }];
+r = await call('POST', SB('/pages'), { name: 'Offer', path: '/offer', layout: 'landing', tree: refTree }, T);
+const offer = r.body;
+ok('a page on the landing layout places the saved section', r.status === 201 && offer.layout === 'landing', `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('POST', SB('/pages'), { name: 'Offer two', path: '/offer-two', tree: [{ id: 'refBlk02', type: 'section-ref', props: { section: 'ctaSect1' } }] }, T);
+r = await call('GET', SB('/design'), null, T);
+ok('/design says where each saved section is used', r.body.usage?.ctaSect1?.pages.map(p => p.name).sort().join() === 'Offer,Offer two' && !r.body.usage.unusedS1, JSON.stringify(r.body.usage));
+r = await call('POST', SB('/publish'), { note: 'sections' }, T);
+ok('…publishes', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await render('/offer');
+ok('/render: the landing layout, the theme, and only the saved sections the page uses', r.status === 200 && r.body.layout.header[0].id === 'lndHead1' && r.body.design.theme === 'editorial' && Object.keys(r.body.design.sections).join() === 'ctaSect1' && r.body.design.sections.ctaSect1.tree[0].props.text === 'Book a table', JSON.stringify(r.body.design).slice(0, 300));
+r = await render('/');
+ok('…a page that uses none gets none', r.status === 200 && Object.keys(r.body.design.sections || {}).length === 0, JSON.stringify(r.body.design?.sections));
+
+r = await call('GET', SB('/design'), null, T);
+r = await call('PUT', SB('/design'), { rev: r.body.draft.rev, sections: { unusedS1: sections.unusedS1 } }, T);
+ok('deleting a saved section that pages use saves (the editor stops you; the API lists it)', r.status === 200, `${r.status}`);
+r = await call('GET', SB('/changes'), null, T);
+ok('…and Publish is blocked: “This saved section was deleted” on both pages', r.body.canPublish === false && r.body.problems.filter(p => /saved section was deleted/.test(p.message)).length === 2, JSON.stringify(r.body.problems));
+r = await call('PUT', SB('/design'), { rev: (await call('GET', SB('/design'), null, T)).body.draft.rev, sections: { ...sections } }, T);
+ok('…put back, Publish is allowed again', r.status === 200 && (await call('GET', SB('/changes'), null, T)).body.canPublish === true, `${r.status}`);
 
 done();

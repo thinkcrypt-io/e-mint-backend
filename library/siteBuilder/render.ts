@@ -6,6 +6,7 @@ import Organization from '../models/tenancy/organization.model.js';
 import { loadSite, siteOrigin, siteTags } from '../functions/siteConfig.function.js';
 import { publicWidgets } from '../functions/widgets.function.js';
 import { manifestVersion } from './manifest.js';
+import { sectionRefs } from './site.js';
 
 /**
  * What the renderer asks for (docs/site-builder D8, "Render API"):
@@ -89,6 +90,9 @@ export const renderPage = async ({ project, path: raw, apiBase }: { project: any
 	const origin = siteOrigin(project, doc);
 	const name = identity.siteName || project.name;
 	const seo = pub.seo || {};
+	// Only the saved sections this page and its layout place.
+	const used = sectionRefs([...(pub.tree || []), ...(layout?.header || []), ...(layout?.footer || [])]);
+	const sections = Object.fromEntries([...used].filter(id => Object.prototype.hasOwnProperty.call(live.sections || {}, id)).map(id => [id, live.sections[id]]));
 
 	return {
 		projectId: String(project._id),
@@ -105,7 +109,7 @@ export const renderPage = async ({ project, path: raw, apiBase }: { project: any
 			colorScheme: live.colorScheme || 'light',
 			origin,
 		},
-		design: { theme: live.theme, tokens: live.tokens || {}, colorScheme: live.colorScheme || 'light' },
+		design: { theme: live.theme, tokens: live.tokens || {}, colorScheme: live.colorScheme || 'light', sections },
 		layout: layout ? { header: layout.header || [], footer: layout.footer || [] } : null,
 		page: {
 			id: String(page._id),
