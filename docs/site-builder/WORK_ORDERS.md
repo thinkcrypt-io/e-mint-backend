@@ -93,7 +93,8 @@ announces the builder as Coming soon). **Next: SB-07** (style + design; the
 marketing feature card and the two `/workflow/website` steps lose "Coming
 soon" there — `soon: true` in `content/features.ts` / `content/flows.ts`) →
 SB-08… The renderer isn't deployed anywhere yet (no Vercel project — ask the
-user; needs the root domain + hosting answers, README open questions 2–3).
+user; root domain answered: `sites.mintapp.shop`; hosting plan still open,
+README open question 3). **No image optimizer anywhere (D25)** — plain `<img>`.
 Open questions for the user are at the end of README (D4 site kinds, root
 domain, hosting); none blocks SB-07…SB-12.
 
@@ -107,7 +108,7 @@ red line + reason when refused) is all there.
 
 **Deploy notes for the user (not done — ask before doing any of it):** the
 renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
-`PANEL_ORIGINS`, `MEDIA_HOSTS`); the backend needs `SITES_RENDERER_URL` +
+`PANEL_ORIGINS`, `SITES_ROOT_DOMAIN=sites.mintapp.shop`); the backend needs `SITES_RENDERER_URL` +
 `SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy); the
 tenant panel needs `NEXT_PUBLIC_SITES_URL`. Until then the editor's canvas
 says the renderer didn't load.
@@ -189,7 +190,7 @@ or `.next-tenantsb/`.
   the page's `generateMetadata` (it runs for the path that 404s).
 - **No client JS from blocks unless needed**: `next/image` and `next/script`
   are client components and would put their JS on every page (7 KB + 2 KB gz);
-  the image block uses `<img srcset>` pointing at `/_next/image`, scripts are
+  the image block is a plain `<img>` (no image optimizer — D25), scripts are
   React 19 `<script async>`. A page ships only Next/React's own runtime:
   **173 KB gz on a production build** — so SB-08's "≤ 90 KB JS" budget can't
   be met by blocks alone; measure blocks' JS *on top of* that baseline (0 KB
@@ -322,7 +323,7 @@ Renderer (`mint-sites`)
 | SB-11 | AI: build a site, write a page, write a section, edit the selection (ops), AI panel | backend + admin | L | open |
 | SB-12 | MCP tools for the site builder | backend | M | open |
 | SB-13 | Site kinds + templates: `siteKind`, kind picker in New project, blueprint `website.builder`, apply engine, Template Studio tab, 6 kind templates | all three | L | open (confirm D4 first) |
-| SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (needs the root domain + hosting answers) |
+| SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (root domain `sites.mintapp.shop`; hosting answer pending) |
 | SB-15 | Releases + pages: history and rollback UI, compare, duplicate page, page from preset/AI, unpublish | admin + backend | M | open |
 | SB-16 | Final pass of the guide and the marketing site (each WO updates both as it lands — see *Docs and marketing*) | mint-docs + mint-webpage + admin | M | open |
 | SB-17 | Import kit pages (`WebPage` + `WebContent` → trees) | backend + admin | M | later |
@@ -389,7 +390,7 @@ mint-sites/
 4. Primitives (14): `section` (full-width band, inner container, background),
    `container`, `stack` (flex), `grid`, `spacer`, `divider`, `heading`
    (level 1–4), `text` (sanitized rich text), `image` (media URL, alt, fit,
-   `next/image` with the backend's media host allowed), `button` (variants
+   plain `<img>`, no image optimizer — D25), `button` (variants
    primary/secondary/outline/ghost/link, size, icon), `link`, `icon` (curated
    map ≤ 200 SVGs in `src/blocks/icon/icons.ts`, names exported to the
    manifest), `video` (YouTube/Vimeo embed or file), `embed` (allowlisted
@@ -853,7 +854,7 @@ right away with sample data and the right widgets on; templates suites
 
 ---
 
-## SB-14 — Addresses and custom domains (M) — needs the root domain + hosting answers
+## SB-14 — Addresses and custom domains (M) — root domain `sites.mintapp.shop`; needs the hosting answer
 
 **Where:** backend `library/siteBuilder/domains.ts` (Vercel REST:
 add/remove/verify domain on `VERCEL_SITES_PROJECT_ID`), tenant routes

@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## 2026-10-06 — No image optimizer (D25); root domain `sites.mintapp.shop`
+
+- User's call: no Next image optimization (Vercel bills it per image). mint-sites
+  image block is a plain `<img>` (lazy unless `priority`); `images.unoptimized`
+  on in mint-sites, admin, mint-docs and mint-webpage; `MEDIA_HOSTS` and the
+  `_next/image` proxy exclusion removed. README D25 + mint-sites README.
+- Root domain answered: `sites.mintapp.shop` (README D16 + open question 2,
+  SB-14 header, handoff deploy notes).
+- Verified: mint-sites type-check + 42 tests.
+
 ## 2026-10-06 — Builder vs hand-written sites: D19–D24, SB-20…SB-25
 
 - Planning only, no code. The user asked whether sites built through the MCP

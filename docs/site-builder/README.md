@@ -60,7 +60,7 @@ D4 (site kinds); **confirm D4 with the user before SB-13**.
 | D13 | **Widgets are blocks.** A `widget` block renders the existing `data-mint="<name>"` element; the renderer loads `/public/mint.js` for the project once. Widget options stay in `SiteWidgets` (panel `/widgets`); the block only places it. Add-to-cart = `data-mint-add` on a button bound to a product. **The server owns prices** (W-05 rule). | No second widget system. |
 | D14 | **Responsive styles per breakpoint**: `style: { base, md, lg }` (`md` ≥ 768px, `lg` ≥ 1024px), and `hidden: { base?, md?, lg? }`. Style keys are a **fixed, typed list** (see *Style*) whose values are tokens, enums or numbers with units — never raw CSS strings. | Safe (no CSS injection), small, and the AI can't invent properties. |
 | D15 | **AI edits through operations.** The backend calls Claude with forced tools (`build_site`, `write_page`, `edit_nodes`, `write_section`) that return trees or **ops** (`insert`, `update`, `move`, `remove`, `wrap`, `setDesign`) checked against the manifest, with up to 3 repair rounds (the model builder's pattern). The editor applies ops to the draft, so every AI change is one undo step. The same ops are MCP tools (SB-12). | Every AI change can be validated, previewed and undone. |
-| D16 | **Sites live on their own domain**, never under the panel's or API's: default address `<publicSlug>.<SITES_ROOT_DOMAIN>` (domain to be chosen by the user — see Open questions), plus custom domains added through the Vercel domains API (SB-14). No "custom HTML/script" block in v1; head code stays in Website settings → Head tags. | A tenant page must never share cookies or an origin with the panel, the API or another tenant's admin. |
+| D16 | **Sites live on their own domain**, never under the panel's or API's: default address `<publicSlug>.<SITES_ROOT_DOMAIN>` (**`sites.mintapp.shop`**, chosen by the user 2026-10-06), plus custom domains added through the Vercel domains API (SB-14). No "custom HTML/script" block in v1; head code stays in Website settings → Head tags. | A tenant page must never share cookies or an origin with the panel, the API or another tenant's admin. |
 | D17 | **Guides and links on every step**: each editor panel and dialog links to its section of the guide on docs.mintapp.shop (`mint-docs`, via `docsPath()`); the marketing site (`mint-webpage`) is updated when the builder ships. | Standing rules: doc links on every step; update the marketing site with every product change. |
 | D18 | **Later, not now**: download a site as a standalone Next.js project (SB-18), developers registering their own React components (SB-19), multiple languages, A/B tests, per-page passwords. | Keep v1 shippable. |
 | D19 | **Two ways to build a website, both kept.** (a) *Code-built*: the user's AI writes the site's code and keeps its content, SEO and data in the project through the website MCP (WO-33, `describe_website`) — unlimited design, needs a developer and their own hosting. (b) *Builder*: the AI (ours in SB-11, or the user's through SB-12) composes block trees — no code, no build, instant publish, editable by the owner. `describe_website` explains both and when to pick which. | The builder competes with Wix / Framer / Webflow AI, not with hand-written code. Agencies who want something bespoke keep (a), and get SB-19 later. See *Builder vs hand-written sites*. |
@@ -69,6 +69,7 @@ D4 (site kinds); **confirm D4 with the user before SB-13**.
 | D22 | **The preset library is the product.** Targets beyond SB-08: ≥ 60 presets, ≥ 3 genuinely different variants of every section type (hero, features, pricing, testimonials, CTA, footer, header…), ≥ 8 themes that don't look alike (type, colour, radius, density) — SB-23, with a design-review checklist. | The AI can only be as good as the parts it has; 15 presets means every site looks like one of 15. |
 | D23 | **Motion and states are style keys too.** Fixed, typed keys for entrance animation (fade/rise/scale/slide, delay, stagger on children), hover states (lift, colour, shadow, scale, underline) and a few effects (backdrop overlay token, blend, sticky) — always respecting `prefers-reduced-motion`, still no raw CSS (D14) — SB-22. | Polish that makes a site feel designed rather than assembled, without opening CSS injection. |
 | D24 | **Brand first.** Before writing pages, the AI turns the brand (logo image, colours, words like "calm, premium") into a theme + token overrides + font pair, shown to the user to accept — SB-24. | Most of what makes a site feel bespoke is colour, type and spacing, not layout. |
+| D25 | **No image optimizer** — not `next/image`, not `/_next/image`; `images.unoptimized` is on in every Next app (mint-sites, admin, mint-docs, mint-webpage). Images are plain `<img>` straight from the media host (lazy unless `priority`). If smaller copies are ever needed, make them once at upload time and store them next to the original. | User's call (2026-10-06): Vercel bills optimization per image, and the renderer serves every tenant's pictures — the cost grows with every site. |
 
 ## Builder vs hand-written sites (asked by the user, 2026-10-06)
 
@@ -379,14 +380,19 @@ ship — the kinds don't wait for them.
 | `VERCEL_TOKEN`, `VERCEL_SITES_PROJECT_ID`, `VERCEL_TEAM_ID?` | backend | custom domains (SB-14) |
 | `MINT_API_URL` | renderer | the backend base URL |
 | `PANEL_ORIGINS` | renderer | comma list of panel origins allowed to drive `/__mint/edit` |
+| ~~`MEDIA_HOSTS`~~ | — | removed 2026-10-06 with the image optimizer (D25) |
 | `NEXT_PUBLIC_SITES_URL` | admin | the renderer's base URL (canvas iframe, "View site") |
 
 ## Open questions for the user
 
 1. **D4 site kinds** instead of separate project types — confirm before SB-13.
-2. **Sites' root domain** (D16) — a separate registrable domain is recommended
-   (e.g. `mintsites.app`), not a subdomain of mintapp.shop. Needed by SB-14;
-   until then the renderer serves `/_s/<slug>` paths and `localhost` hosts.
+2. ~~**Sites' root domain**~~ — answered 2026-10-06: **`sites.mintapp.shop`**
+   (sites at `<publicSlug>.sites.mintapp.shop`; the bare host serves the
+   canvas `/__mint/edit` and `/api/revalidate`). Vercel needs both
+   `sites.mintapp.shop` and `*.sites.mintapp.shop` on the mint-sites project;
+   the wildcard certificate needs `sites` NS-delegated to
+   `ns1/ns2.vercel-dns.com`. Note: tenant pages share the registrable domain
+   `mintapp.shop` with the panel — never set cookies on `.mintapp.shop`.
 3. **Hosting plan** — the renderer serves customers' sites and custom domains;
    Vercel's Hobby plan is for non-commercial use and caps domains per project,
    so production likely needs Vercel Pro (or another host). Needed by SB-14.
