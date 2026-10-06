@@ -5,7 +5,7 @@ Newest first. Each entry: what changed, where, how it was verified.
 ## 2026-10-06 — SB-02 Renderer repo
 
 - New repo `mint-sites/` (Next 16.3, React 19.3, Tailwind 4.3, TypeScript
-  strict; local commit `02b6a34` on `main` — the GitHub repo isn't created yet).
+  strict; `02b6a34` on `main`, pushed to `aiasifistiaque/mint-sites`).
 - `src/types.ts`: Node, Action, Binding, Style (fixed keys), Tokens,
   TokenOverrides, PropDef, BlockDef, Preset, Theme, Manifest.
 - `src/render/`: `compileStyles` (one CSS string; `[data-n]` rules; md/lg media

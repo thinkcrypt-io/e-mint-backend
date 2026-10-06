@@ -78,9 +78,9 @@ are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
 
-**2026-10-06 — SB-02 done** (renderer `mint-sites/`, local commit `02b6a34`
-on `main`; **not pushed — the GitHub repo `aiasifistiaque/mint-sites` doesn't
-exist yet, ask the user before creating it**). 14 primitive blocks, Studio
+**2026-10-06 — SB-02 done** (renderer `mint-sites/`, `02b6a34` pushed to
+`aiasifistiaque/mint-sites` `main` — the user created the repo; no Vercel
+project yet, ask before creating one). 14 primitive blocks, Studio
 theme, `compileStyles`, tokens, sanitizer, 3 presets, `block-manifest.json`
 (version `956518cfa8cd`), fixture at `http://localhost:3300/__mint/fixture`,
 35 vitest tests, `npm run build` passes. **Next: SB-03** (backend storage +
@@ -177,7 +177,7 @@ Renderer (`mint-sites`)
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | SB-01 | Plan & docs | backend | S | done 2026-10-06 |
-| SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (local commit `02b6a34`; GitHub repo not created yet) |
+| SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (mint-sites `02b6a34`) |
 | SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | open |
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | open (after SB-02, SB-03) |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | open (after SB-04) |
