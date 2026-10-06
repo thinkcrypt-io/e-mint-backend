@@ -82,7 +82,7 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, during SB-05)
+## Handoff — read this first (last updated 2026-10-06, SB-05 paused — pick up at "Left to do for SB-05")
 
 **Done and pushed:** SB-01…SB-04 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites; guide `/site-builder` with
@@ -147,21 +147,48 @@ chips Changed / Live / Draft, icon picker (renderer-drawn icons, search, pick
 → canvas updates). Admin `next build` (tenant) passes. Fixes committed:
 add-page jumped back to Home; dialog name focus; Publish dialog's first fetch.
 
-**Left to do for SB-05:**
-1. Not clicked through yet (API-covered by `site-builder.mjs`): duplicate, set
-   home, take off / put back from the Pages menu; image picker (UploadModal
-   needs the real S3 bucket — the scratch backend can't upload), rich text.
-2. ~~Docs~~ done (mint-docs `b45ee19`: `#pages`, `#canvas`, `#outline`,
-   `#props`, `#publish` with 3 real screenshots in
-   `mint-docs/public/guides/site-builder/`). Marketing (`mint-webpage`): first announcement — `features.ts` "Site
-   builder" card (Coming soon until SB-07), editor drawing in
-   `components/mock/mocks.tsx`, `/workflow/website` "or build it visually"
-   steps, `changelog.ts` entry.
-3. Env for deploys: admin needs `NEXT_PUBLIC_SITES_URL` (renderer URL) on the
-   tenant panel's Vercel project; renderer needs `PANEL_ORIGINS` = the tenant
-   panel's origin. Until the renderer is deployed the canvas says it couldn't
-   load (and the sidebar entry only shows once the backend is redeployed).
-4. Then mark SB-05 done (Status, CHANGELOG with screenshots), commit, SB-06.
+**Left to do for SB-05 (in this order):**
+1. **Marketing site** (`mint-webpage/`, repo `aiasifistiaque/mint-website`
+   `main`) — not started. Read its README and `docs/CONTENT_PLAN.md` first and
+   follow the rules in *Docs and marketing* above (honest claims, Coming soon
+   for anything not live, no links into the guides, no Log in links, Phosphor
+   icons, light + dark, 390 px, `npm run build`). Where: `src/content/features.ts`
+   — add a "Site builder" feature to the `live` group, labelled Coming soon
+   (the `Feature` type has no "soon" flag yet — add one and show it as a badge,
+   or put "Coming soon" in the body); an editor drawing in
+   `src/components/mock/mocks.tsx`; in `src/content/flows.ts` the `website`
+   flow (`/workflow/website`) gains "or build it visually" steps (marked Coming
+   soon); `src/content/changelog.ts` — a `RELEASES` entry (customer-facing:
+   "A visual site builder is on the way" style, honest that it's rolling out).
+2. Not clicked through in the browser yet (all API-covered by
+   `site-builder.mjs`): Pages-menu duplicate, set home, take off / put back;
+   image picker (needs the real S3 bucket — the scratch backend can't upload);
+   rich-text input; Inspector "When clicked" editor.
+3. Mark SB-05 done: Status row, CHANGELOG entry (replace the checkpoint entry;
+   screenshots are in `mint-docs/public/guides/site-builder/`), this Handoff;
+   commit + push each repo; update memory `emint-site-builder`.
+4. Deploy notes for the user (not done, ask first): the renderer needs a Vercel
+   project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`, `PANEL_ORIGINS`,
+   `MEDIA_HOSTS`); the backend needs `SITES_RENDERER_URL` +
+   `SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy);
+   the tenant panel needs `NEXT_PUBLIC_SITES_URL`. Until then the editor's
+   canvas says the renderer didn't load.
+5. Then SB-06 (adding and moving blocks).
+
+**Done since the checkpoint** (pushed): admin `dd5b0f0` (add-page race, dialog
+focus, publish-dialog fetch); mint-docs `b45ee19` (guide `#pages`, `#canvas`,
+`#outline`, `#props`, `#publish` with 3 real screenshots, `#start` note
+reworded); verified in the browser: add page, page settings (SEO saved),
+delete, status chips, icon picker; admin tenant `next build` passes.
+
+**Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
+`9e45aac1`, SB-05 checkpoint `87446cdf` (+ handoff commits after); mint-sites
+`main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`; admin `main`: SB-05
+`f0b273c`, `dd5b0f0`; mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`.
+
+**Another session** was working in `backend/library/functions/projectLifecycle.function.ts`
+(cleaning widgets/cart/payments on project delete) — its changes are
+uncommitted in the working tree; don't stage them.
 
 **Local stack:** `mongod --port 28010 --dbpath <scratchpad>/mongo`; launch
 configs `backend-sb` (:5031), `mint-sites` (:3300; `.env.local`:

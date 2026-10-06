@@ -28,8 +28,11 @@ Newest first. Each entry: what changed, where, how it was verified.
 - Verified so far: selection across canvas/outline/inspector, live typing,
   autosave, undo/redo, reload, publish to the live site, 409 dialog, outline
   doesn't re-render while typing (0 DOM changes over 20 keys), phone + dark
-  preview. Not yet: page actions after the add-page fix, every input kind,
-  admin `npm run build`, docs + marketing.
+  preview. Later the same day: add page (fixed: it jumped back to Home),
+  page settings (SEO), delete, status chips, icon picker; admin `next build`
+  passes; guide sections `#pages`, `#canvas`, `#outline`, `#props`,
+  `#publish` with screenshots (mint-docs `b45ee19`). Not yet: marketing site,
+  a few Pages-menu actions and inputs clicked through — see Handoff.
 
 ## 2026-10-06 — SB-04 The renderer serves published sites
 
