@@ -82,29 +82,45 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-06, SB-06 done — SB-07 next)
+## Handoff — read this first (last updated 2026-10-06, SB-07 done — SB-08 next)
 
-**Done and pushed:** SB-01…SB-06 (renderer `mint-sites`, backend storage +
+**Done and pushed:** SB-01…SB-07 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
-and moving blocks + overlays; guide `/site-builder` with `#start`,
-`#live-site`, `#pages`, `#canvas`, `#outline`, `#props`, `#add`, `#presets`,
-`#move`, `#inline-text`, `#shortcuts`, `#overlays`, `#publish`; marketing site
-announces the builder as Coming soon). **Next: SB-07** (style + design; the
-marketing feature card and the two `/workflow/website` steps lose "Coming
-soon" there — `soon: true` in `content/features.ts` / `content/flows.ts`) →
-SB-08… The renderer isn't deployed anywhere yet (no Vercel project — ask the
-user; root domain answered: `sites.mintapp.shop`; hosting plan still open,
-README open question 3). **No image optimizer anywhere (D25)** — plain `<img>`.
-Open questions for the user are at the end of README (D4 site kinds, root
-domain, hosting); none blocks SB-07…SB-12.
+and moving blocks + overlays, styles + design + header/footer + saved
+sections; guide `/site-builder` with `#start`, `#live-site`, `#pages`,
+`#canvas`, `#outline`, `#props`, `#add`, `#presets`, `#move`, `#inline-text`,
+`#shortcuts`, `#overlays`, `#style`, `#breakpoints`, `#design`, `#layouts`,
+`#sections`, `#publish`; the marketing site shows the builder as available —
+no more Coming soon — with a themes strip on /features). **Next: SB-08**
+(block catalogue, presets, more themes — Studio, Editorial and Bright exist;
+add each new theme to mint-webpage `src/content/siteThemes.ts` too) → SB-09…
+The renderer isn't deployed anywhere yet (no Vercel project — ask the user;
+root domain answered: `sites.mintapp.shop`; hosting plan still open, README
+open question 3). **No image optimizer anywhere (D25)** — plain `<img>`.
+Open questions for the user are at the end of README (D4 site kinds, hosting);
+none blocks SB-08…SB-12.
 
-**Carried into SB-07 from SB-06:** paste into the header / footer (layouts are
-read-only in the editor until SB-07 makes them editable — drops there are
-refused with "The header and footer can't be changed here yet"); preset
-thumbnails (SB-08 generates them — the Add tab shows the label until then).
-**Deviation:** the outline uses the browser's own drag and drop (HTML5), not
-`@dnd-kit` — no new dependency; the WO's behaviour (before / after / inside,
-red line + reason when refused) is all there.
+**How SB-07 is built (read before touching the editor):** the design draft is
+its own document with its own `rev`, undo and autosave (`useDesign.ts`); a
+header, footer or saved section is a **part** (`?part=header:default`,
+`section:<id>`) edited on the canvas like a page — `SiteBuilder` swaps the
+tree and `apply` between the page draft and the part. Undo follows what's
+being edited (a part or the Design tab → design history). Saved sections are
+`section-ref` blocks (`props.section`); the renderer draws the stored tree
+(never nested — validator + renderer both refuse), the canvas treats a click
+or drop inside one as the block itself, `/render` sends only the sections a
+page and its layout use, and `GET /design` returns `usage`. A deleted section
+still placed somewhere blocks Publish. Fonts come only from the manifest's
+`fonts.google` list (52 families, weights checked against Google);
+`fontHref` asks only for weights a family has.
+
+**Left for later:** a token editor for single radius / shadow / space values
+(the Design tab has ready-made sets: corners, shadows; the validator already
+takes any value); a custom hex in the Style panel is deliberately not offered
+(colours only through the Design tab, so a theme switch still restyles);
+preset thumbnails (SB-08 generates them — the Add tab shows the label until
+then). **Deviation (SB-06):** the outline uses the browser's own drag and drop
+(HTML5), not `@dnd-kit` — no new dependency.
 
 **Deploy notes for the user (not done — ask before doing any of it):** the
 renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
@@ -119,20 +135,24 @@ with storage is around.
 
 **Where the editor lives** (details in CHANGELOG SB-05): admin
 `src/app/site-builder/_components/` — `SiteBuilder.tsx` (layout, page
-actions, dialogs), `Canvas.tsx` (iframe + protocol; `init` waits for the
-design), `Outline.tsx`, `Inspector.tsx`, `PropInputs.tsx` (+ `ActionEditor`),
+actions, dialogs, parts), `Canvas.tsx` (iframe + protocol; `init` waits for the
+design), `Outline.tsx`, `Inspector.tsx` (Settings / Style tabs),
+`StylePanel.tsx`, `DesignPanel.tsx`, `LayoutsPanel.tsx`, `designTokens.ts`,
+`PropInputs.tsx` (+ `ActionEditor`, `ColorPick`, `MediaPick`),
 `PagesPanel.tsx`, `PageDialog.tsx`, `PublishDialog.tsx`, `useDraft.ts` (ops,
-undo, autosave, 409), `tree.ts` (client copy of the backend's `applyOps`),
-`protocol.ts` (copy of mint-sites `src/edit/protocol.ts`), `SiteGuide.tsx`;
+undo, autosave, 409), `useDesign.ts` (the design draft + parts), `tree.ts`
+(client copy of the backend's `applyOps`), `protocol.ts` (copy of mint-sites
+`src/edit/protocol.ts`), `SiteGuide.tsx`;
 RTK `components/library/store/services/siteBuilderApi.ts`. Renderer
 `mint-sites/src/edit/{protocol.ts,EditRoot.tsx}`, `src/app/%5F_mint/edit/`.
 
 **Pushed hashes so far:** backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
-`9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3` (+ handoff commits); mint-sites
-`main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`, SB-06 `2b2bdc9`;
-admin `main`: SB-05 `f0b273c`, `dd5b0f0`, `0f95b8f`, SB-06 `b263ba7`;
-mint-docs `main`: `a029dcf`, `5a1fc10`, `b45ee19`, `1adaf97`, SB-06
-`0020aef`; mint-webpage `main`: `77be8d1`, SB-06 `a345116`.
+`9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d` (+ handoff
+commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
+SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`; admin `main`: SB-05
+`f0b273c`, `dd5b0f0`, `0f95b8f`, SB-06 `b263ba7`, SB-07 `9be3228`; mint-docs
+`main`: `a029dcf`, `5a1fc10`, `b45ee19`, `1adaf97`, SB-06 `0020aef`, SB-07
+`626b81d`; mint-webpage `main`: `77be8d1`, SB-06 `a345116`, SB-07 `40a24f5`.
 
 **Learned in SB-06 (applies to SB-07 on):**
 - The panel can't see pointer events over the canvas iframe: panel drags use
@@ -316,7 +336,7 @@ Renderer (`mint-sites`)
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | done 2026-10-06 |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | done 2026-10-06 (admin `0f95b8f`, mint-sites `41972a3`) |
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | done 2026-10-06 (mint-sites `2b2bdc9`, admin `b263ba7`, backend `751c88e3`) |
-| SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | open |
+| SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | done 2026-10-06 (mint-sites `9da74ae`, admin `9be3228`, backend `4a1b253d`) |
 | SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | open |
 | SB-09 | Data binding: bindings + interpolation, `collection` block, template pages `/x/[slug]`, server resolve in `/render` + editor `resolve`, Data panel | all three | L | open |
 | SB-10 | Widgets and commerce blocks: `widget`, add-to-cart, price, product gallery, account links; widget actions | mint-sites + admin | M | open |
@@ -621,7 +641,7 @@ re-keyed client-side first).
 
 ---
 
-## SB-07 — Style and Design (L)
+## SB-07 — Style and Design (L) — done 2026-10-06
 
 **Why:** "styling" from the user's request, and themes (D3, D10, D14).
 
@@ -673,9 +693,12 @@ outside the fixed list.
    blog list, product grid (filled by SB-09/10), footer ×3, 404. Thumbnails
    generated by a script that screenshots the fixture route (commit the PNGs,
    ≤ 40 KB each).
-3. Themes (5 total): `studio` (clean business), `market` (shop), `editorial`
-   (blog), `calm` (booking/wellness), `mono` (portfolio) — plus `bistro`
-   (restaurant) if time; each with light + dark tokens and preset variants.
+3. Themes (≥ 6 total): `studio` (clean business), `editorial` (blog,
+   restaurant) and `bright` (apps, classes) exist since SB-07; add `market`
+   (shop), `calm` (booking/wellness), `mono` (portfolio) — plus `bistro`
+   (restaurant) if time; each with light + dark tokens and preset variants,
+   fonts only from `src/themes/fonts.ts`, and each one copied into mint-webpage
+   `src/content/siteThemes.ts` (the /features themes strip).
 4. Accessibility: headings order, alt text required on images (validator
    warning, not error), focus styles, colour-contrast check of each theme's
    pairs (≥ 4.5:1) in a unit test.

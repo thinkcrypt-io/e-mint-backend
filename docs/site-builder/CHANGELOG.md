@@ -2,6 +2,56 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## 2026-10-06 — SB-07 Style and Design
+
+- **Renderer (mint-sites `9da74ae`):** themes Editorial and Bright (Studio
+  stays the default); `src/themes/fonts.ts` — 52 Google Fonts with the weights
+  each really has (all checked against fonts.googleapis.com), in the manifest
+  as `fonts`; `fontHref` asks only for listed families and clamps weights (one
+  bad weight fails Google's whole stylesheet). New block `section-ref` (kind
+  `section` prop): draws a saved section from `ctx.sections`, never inside
+  another; `SiteDocument` compiles styles and anchors for the sections used
+  only; the canvas selects the section-ref (not its inner blocks) and drops
+  around it. Header/footer drop message points to Pages. Tests 46.
+- **Backend (`4a1b253d`):** validator — `section` prop kind, no saved section
+  or overlay inside a saved one, a section-ref to a deleted section is a
+  publish problem (an empty one a warning), fonts only from the manifest list;
+  `sectionIds` passed wherever trees are checked (save, validate, changes,
+  design). `GET`/`PUT /design` return `usage` (pages and layouts per saved
+  section); `/render` sends only the saved sections the page and its layout
+  place. Jest 18; smoke suite 90 checks (themes, fonts, landing layout,
+  sections and their usage, render payload, deleted-section block).
+- **Editor (admin `9be3228`):** Inspector gets Settings / Style tabs and a
+  "Save as section" button. `StylePanel` — groups from the block's `style`,
+  phone / tablet / desktop switch tied to the canvas device (Fit picks by
+  width), inherited values labelled ("As on phone (lg)"), blue dot = set here
+  (reset), orange ring = a bigger size changes it, reset-a-size, "Shown on"
+  per size; only applicable keys (flex/grid keys for containers, image keys
+  once there's an image, sticky offset). `DesignPanel` — theme cards (studio
+  first), light / dark / visitor's choice, colours per token light+dark,
+  fonts (grouped, each in its own face via one `text=`-subset stylesheet),
+  corners and shadow sets, page width, buttons, reset to theme; changes stay
+  on top of a theme switch. `useDesign` — the design draft (rev, 100-step
+  undo, autosave of changed parts only, 409 dialog) and **parts**: header /
+  footer of any layout and saved sections edited on the canvas
+  (`?part=…`), picked from the page menu or Pages → Header and footer /
+  Saved sections (`LayoutsPanel`: add a layout from default's copy, delete
+  unused ones, rename / delete unused sections). Save as section replaces
+  the block with a named section-ref; Detach puts a fresh copy back.
+- **Verified in the browser** (tenant-sb :3031 + mint-sites :3300 +
+  backend-sb :5031, local test DB): theme Studio → Editorial restyled every
+  page, content unchanged; `primary` changed → canvas live; heading colour and
+  size set on Tablet → published CSS has them only inside
+  `@media (min-width:768px)` (computed: 375 px default, 1280 px teal 24px);
+  header text changed → `/`, `/contact`, `/about` all show it after publish;
+  "Feature grid" saved on Home, placed on Contact, edited once → both pages
+  show the new heading after publish. Marketing /features themes strip:
+  3 columns, no overflow at 390 px.
+- **Docs:** guide `#style`, `#breakpoints`, `#design`, `#layouts`, `#sections`
+  (mint-docs `626b81d`); marketing (mint-webpage `40a24f5`) — feature card and
+  `/workflow/website` steps no longer Coming soon, themes strip on /features,
+  changelog entry.
+
 ## 2026-10-06 — No image optimizer (D25); root domain `sites.mintapp.shop`
 
 - User's call: no Next image optimization (Vercel bills it per image). mint-sites
