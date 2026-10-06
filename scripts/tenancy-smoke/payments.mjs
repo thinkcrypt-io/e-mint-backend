@@ -215,5 +215,30 @@ r = await call('PUT', P(site._id, '/payments/settings'), { stripe: { enabled: fa
 r = await call('GET', pub('/checkout/options'));
 ok('Stripe off → nothing offered', r.body.methods.length === 0, JSON.stringify(r.body));
 
+/* ------------------- deleting the project takes its site documents with it */
+// A cart, an undo copy and a second project first; reads the scratch DB (SMOKE_MONGO).
+const { MongoClient, ObjectId } = await import('mongodb');
+const mc = await new MongoClient(process.env.SMOKE_MONGO || process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev').connect();
+const db = mc.db();
+await call('PUT', pub('/cart'), { lines: [{ product: mug, quantity: 1 }] }, S);
+r = await call('POST', P(site._id, '/products/bulk/delete'), { ids: [mug] }, T);
+ok('a product bulk-deleted (an undo copy)', r.status === 200, `${r.status} ${r.body?.message}`);
+const other = (await call('POST', '/tenant/api/projects', { name: 'Pia other', type: 'website' }, T)).body;
+await call('PUT', P(other._id, '/widgets'), { widgets: { login: { enabled: true } } }, T);
+const COLS = ['sitewidgets', 'sitecarts', 'sitepayments', 'sitepaymentsettings', 'deletedrecords'];
+const count = async filter => Object.fromEntries(await Promise.all(COLS.map(async c => [c, await db.collection(c).countDocuments(filter)])));
+const before = await count({ project: new ObjectId(site._id) });
+const outside = JSON.stringify(await count({ project: null }));
+ok('before: widgets, a cart, payments, payment settings and an undo copy', COLS.every(c => before[c] > 0), JSON.stringify(before));
+r = await call('DELETE', `/tenant/api/projects/${site._id}?force=1`, null, T);
+ok('the project is deleted', r.status === 200, `${r.status} ${r.body?.message}`);
+const after = await count({ project: new ObjectId(site._id) });
+ok('…and none of them are left (the sealed Stripe keys included)', COLS.every(c => after[c] === 0), JSON.stringify(after));
+const kept = await count({ project: new ObjectId(other._id) });
+ok('the organization’s other project keeps its widgets', kept.sitewidgets === 1, JSON.stringify(kept));
+ok('documents outside any project are untouched', JSON.stringify(await count({ project: null })) === outside, outside);
+await call('DELETE', `/tenant/api/projects/${other._id}?force=1`, null, T);
+await mc.close();
+
 fake.close();
 done();

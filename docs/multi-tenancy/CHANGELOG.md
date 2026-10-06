@@ -1116,3 +1116,29 @@ Decisions D14–D17 (README).
   - the landing page renders signed out and signed in, in light and dark,
     with no overflow at 390px.
 
+## 2026-10-06 — Deleting a project removes its site widgets, carts and payments
+- `removeProjectContents` (`library/functions/projectLifecycle.function.ts`)
+  deleted the project's documents only from the scoped collections in its
+  `SCOPED` list, and five tenantScoped models were missing, so their documents
+  outlived the project: `SiteWidgets` (`sitewidgets`), `SiteCart`
+  (`sitecarts`), `SitePayment` (`sitepayments`), `SitePaymentSettings`
+  (`sitepaymentsettings` — the project's sealed Stripe secret key and webhook
+  signing secret) and `DeletedRecord` (`deletedrecords`, bulk-delete/merge
+  undo copies). All five are in `SCOPED` now; every `schema.plugin(tenantScoped)`
+  model under `library/models` is covered (SitePage/SiteDesign/SiteRelease by
+  the site builder's `projectHooks.onRemoved`). Organization-level documents
+  have no `project`, so the project-scoped `deleteMany` never reaches them.
+- **Payments are deleted, not kept** (the user's call): the orders they point
+  to live in `t_<projectId>`, which is dropped anyway; each organization's own
+  merchant account (WD6) is the financial record; nothing can show a deleted
+  project's payments, and keeping them would keep buyers' emails.
+- Not tenantScoped and left as they are: `MailMessage` and
+  `TenantNotification` carry a `project` but are organization logs with TTLs
+  (180 days / 1 year).
+- `payments.mjs` now ends by deleting its project: before, each of the five
+  collections has the project's documents; after, none; a second project in
+  the same organization keeps its widgets; documents outside any project are
+  unchanged.
+- Verified on a private stack (Mongo :27987, backend :5041 built to a scratch
+  `dist`): `tsc --noEmit` clean; every suite in `run-all.sh` passes (the last
+  five re-run after a backend restart — sign-up rate limit, 429).

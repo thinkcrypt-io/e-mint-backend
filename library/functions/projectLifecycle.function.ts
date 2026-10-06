@@ -28,6 +28,11 @@ import '../siteBuilder/site.js';
 import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
 import WebhookDelivery from '../models/tenancy/webhookDelivery.model.js';
 import ApiCall from '../models/tenancy/apiCall.model.js';
+import SiteWidgets from '../models/tenancy/siteWidgets.model.js';
+import SiteCart from '../models/tenancy/siteCart.model.js';
+import SitePayment from '../models/tenancy/sitePayment.model.js';
+import SitePaymentSettings from '../models/tenancy/sitePaymentSettings.model.js';
+import DeletedRecord from '../models/deleted-record/model.js';
 
 /**
  * Making and removing a tenant project — one place for the projects router
@@ -35,7 +40,14 @@ import ApiCall from '../models/tenancy/apiCall.model.js';
  * so a preview project is made exactly like a tenant's.
  */
 
-/** The project's own documents in the scoped collections. */
+/**
+ * The project's own documents in the scoped collections — every tenantScoped
+ * model (organization-level documents have no `project`, so the scoped
+ * deleteMany never reaches them). The site builder's SitePage, SiteDesign and
+ * SiteRelease go in its projectHooks.onRemoved (siteBuilder/site.ts).
+ * Payments go too: their orders are in t_<projectId>, dropped below, and the
+ * organization's own merchant account keeps the financial record (WD6).
+ */
 const SCOPED = [
 	ModelDefinition,
 	RouteSettings,
@@ -54,6 +66,12 @@ const SCOPED = [
 	ProjectWebhook,
 	WebhookDelivery,
 	ApiCall,
+	DeletedRecord,
+	SiteWidgets,
+	SiteCart,
+	SitePayment,
+	// Holds the sealed Stripe secret key and webhook secret.
+	SitePaymentSettings,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */
