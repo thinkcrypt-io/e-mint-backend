@@ -151,9 +151,9 @@ add-page jumped back to Home; dialog name focus; Publish dialog's first fetch.
 1. Not clicked through yet (API-covered by `site-builder.mjs`): duplicate, set
    home, take off / put back from the Pages menu; image picker (UploadModal
    needs the real S3 bucket — the scratch backend can't upload), rich text.
-2. Docs: guide `#pages`, `#canvas`, `#outline`, `#props`, full `#publish`
-   with real screenshots under `mint-docs/public/guides/site-builder/`;
-   marketing (`mint-webpage`): first announcement — `features.ts` "Site
+2. ~~Docs~~ done (mint-docs `b45ee19`: `#pages`, `#canvas`, `#outline`,
+   `#props`, `#publish` with 3 real screenshots in
+   `mint-docs/public/guides/site-builder/`). Marketing (`mint-webpage`): first announcement — `features.ts` "Site
    builder" card (Coming soon until SB-07), editor drawing in
    `components/mock/mocks.tsx`, `/workflow/website` "or build it visually"
    steps, `changelog.ts` entry.
