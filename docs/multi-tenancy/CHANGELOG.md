@@ -1057,3 +1057,21 @@ Decisions D14–D17 (README).
   `/account#passkey-qr`.
 - Deploy order: docs site first (DEPLOY.md §2b), then admin/tenant.
 
+
+## 2026-10-06 — Sign-in and onboarding pages in the website's look
+- The user asked for the onboarding pages to look like the marketing website
+  (colours and all), keeping their structure. New admin
+  `src/components/library/ui/AuthFrame.tsx` holds the website's palette (light,
+  plus its neutral-black dark), Outfit with light uppercase headings, the
+  brand-gradient pill button, and a deep-ink band (logo, pitch, three points)
+  shown from `lg` up; on phones the logo sits above the card. The palette is
+  scoped Chakra token variables (`--chakra-colors-*`), so inputs, dropdowns and
+  chips inside follow it and colour themes elsewhere are untouched.
+- `LoginContainer` is drawn on it, so this covers sign in, sign up, forgot and
+  reset password, invitations and preview. It gains `steps` / `step`, and
+  sign-up shows "01 Your account · 02 Your business". `TwoFactorStep` uses
+  `AuthFrame` + `AuthCard`. Fields, validation and requests are unchanged.
+- Verified on a tenant dev build: login, both sign-up steps, forgot password
+  and the two-factor email step (login response stubbed in the browser), in
+  light and dark, with no overflow at 390px. `/get-started` (inside the panel)
+  is not changed.
