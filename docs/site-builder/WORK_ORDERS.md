@@ -3,13 +3,84 @@
 Read `README.md` first (decisions D1–D18, data shapes, render API, canvas
 protocol). Each item: **why → where → change → done when**. Sizes: **S** ≤ 2 h,
 **M** ≤ a day, **L** 2–3 days. Paths are from the monorepo root
-`/Users/asifistiaque/Desktop/proj/e-mint`. When an item lands: set its Status,
-add a `CHANGELOG.md` entry (what, files, how it was verified), refresh the
-Handoff, then commit and push (only your own files).
+`/Users/asifistiaque/Desktop/proj/e-mint`.
+
+**Finishing a work order — all of these, every time:**
+1. The code and its checks (the WO's *Done when*).
+2. **The user guide** in `mint-docs` and **the marketing website** in
+   `mint-webpage` — the rows for that WO in *Docs and marketing* below. A work
+   order is **not done** until both are updated (the user, 2026-10-06: "during
+   building these the agent should update the marketing website and the docs too").
+3. Its Status here, a `CHANGELOG.md` entry (what, files, how it was verified,
+   which guide sections and marketing pages changed), and the Handoff.
+4. Commit and push **each repo touched** (backend `v3` → `mint`, admin `main`,
+   `mint-sites` `main`, `mint-docs` `main`, `mint-webpage` `main`) — only your
+   own files; other sessions may have uncommitted work in the same folders.
+
+## Docs and marketing — part of every work order
+
+**User guide** — `mint-docs/` (docs.mintapp.shop; Next 16 + Tailwind, launch
+config `mint-docs` :3200). One guide, `/site-builder`
+(`mint-docs/src/app/site-builder/page.tsx`, laid out like the other guides
+there, e.g. `src/app/widgets/`), listed in `mint-docs/src/content/guides.ts`.
+Each WO adds or updates **its** sections, at the anchors below, so the panel's
+"?" links (`docsPath('/site-builder#…')`) always land on something real. Write
+for the tenant (a business owner, not a developer): what it is, step by step
+how to do it, what happens on the live site, limits, a short FAQ. Pictures:
+real screenshots of the panel or site once the feature works (saved under
+`mint-docs/public/guides/site-builder/`), never mock-ups presented as real.
+Check the page at 390 px and in dark mode; `npm run build` passes. Also update
+the guides it touches: `/websites` (the builder is now the no-code way),
+`/widgets`, `/templates`, `/connect-ai` (MCP tools), `/faq`.
+
+**Marketing website** — `mint-webpage/` (repo `aiasifistiaque/mint-website`,
+launch config `mint-webpage` :3100). Read its README and
+`docs/CONTENT_PLAN.md` first. Content lives in `src/content/*`, pages only lay
+it out. Rules from the user: colourful, modernist and slim (Outfit, h1–h3
+uppercase, extra-light headlines, **never semibold/bold**); Phosphor icons via
+`src/components/ui/icons.tsx` (no Lucide); neutral `IconTile`s, no gradient
+tiles; light + dark (`bg-panel`, `dark:` variants for hard-coded colours); no
+backdrop blur; **no Log in / dashboard links and no links into the user
+guides** (access is by waitlist); every new page gets `pageMeta()` and its own
+`opengraph-image.tsx`; perfect at 390 px; claims honest — describe only what
+works, anything still being built is labelled "Coming soon". Verify with
+`npm run build`. Where things go: `content/features.ts` (feature cards),
+`content/flows.ts` (`/workflow/website` steps — already "Build a website"),
+`content/changelog.ts` (one entry per shipped WO), `content/templates.ts`
+(themes/kinds), `content/widgets.ts`, `content/compare.ts`,
+`components/mock/mocks.tsx` (drawings of the editor).
+
+| WO | User guide (`mint-docs` `/site-builder`) | Marketing site (`mint-webpage`) |
+|---|---|---|
+| SB-02 | — (nothing a tenant can use yet) | — |
+| SB-03 | Create the guide page + `guides.ts` entry with the outline below; write `#start` (what the builder is, draft vs published) and `#publish` (publishing, what goes live, history in short) | — (nothing visible yet) |
+| SB-04 | `#live-site` — where the site lives, how changes reach it, redirects and 404 page, SEO from pages | — |
+| SB-05 | `#pages`, `#canvas`, `#outline`, `#props`, `#publish` (full) + screenshots | **First announcement**: `features.ts` card "Site builder" (Coming soon until SB-07), editor drawing in `mocks.tsx`, `/workflow/website` gains "or build it visually" steps, changelog entry |
+| SB-06 | `#add`, `#presets`, `#move`, `#inline-text`, `#shortcuts`, `#overlays` (modals, drawers, popovers) | Changelog; the editor drawing shows the Add panel and a drawer |
+| SB-07 | `#style`, `#breakpoints`, `#design` (themes, colours, fonts), `#layouts` (header/footer), `#sections` | Feature card loses "Coming soon"; a themes strip (same page, light/dark) |
+| SB-08 | `#blocks` (every block, one line each), `#presets` (full list), `#themes` | Themes gallery content in `templates.ts` / features; changelog |
+| SB-09 | `#data`, `#collections`, `#template-pages`, `#bindings` (with the filters list), and a "turn on the public API first" note | "Your data on your site" step in `/workflow/website`; changelog |
+| SB-10 | `#widgets` + update `/widgets` (placing widgets with the builder) | `widgets.ts` mentions placing widgets visually; changelog |
+| SB-11 | `#ai` (what to ask, scopes, nothing is published by the AI, limits) | AI building a site in `/workflow/website` and `/ai`; `compare.ts` if claims change; changelog |
+| SB-12 | `#mcp` + update `/connect-ai` with the new tools | `/developers` / AI pages mention the MCP tools; changelog |
+| SB-13 | `#kinds` (each kind and what it installs) + update `/templates` and `/projects` (New project → Website) | Site kinds on `/use-cases` and `templates.ts`; personas if useful; changelog |
+| SB-14 | `#domains` (default address, custom domain, DNS records, statuses) | "Your own domain" in features; changelog |
+| SB-15 | `#history` (releases, restore, compare), `#pages` updates | Changelog |
+| SB-16 | Final pass: read the whole guide top to bottom, fix gaps, `#faq`, cross-links from `/websites` | Final pass: whole website flow reads end to end; OG images; 390 px check |
+
+Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
+`#live-site`, `#pages`, `#canvas`, `#outline`, `#props`, `#add`, `#presets`,
+`#move`, `#inline-text`, `#shortcuts`, `#overlays`, `#style`, `#breakpoints`,
+`#design`, `#themes`, `#layouts`, `#sections`, `#blocks`, `#data`,
+`#collections`, `#template-pages`, `#bindings`, `#widgets`, `#ai`, `#mcp`,
+`#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
+are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
 
-**2026-10-06 — SB-01 plan written.** Nothing is built yet. **Next: SB-02
+**2026-10-06 — SB-01 plan written.** Nothing is built yet. **Every WO also
+updates the user guide (`mint-docs`) and the marketing website
+(`mint-webpage`)** — see *Finishing a work order* and *Docs and marketing*. **Next: SB-02
 (renderer repo) and SB-03 (backend storage + render API) can run in parallel**
 — they meet only at the manifest file and the render response, both fixed in
 README. Then SB-04 joins them, then the editor (SB-05 → SB-07). Open questions
@@ -104,7 +175,7 @@ Renderer (`mint-sites`)
 | SB-13 | Site kinds + templates: `siteKind`, kind picker in New project, blueprint `website.builder`, apply engine, Template Studio tab, 6 kind templates | all three | L | open (confirm D4 first) |
 | SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (needs the root domain + hosting answers) |
 | SB-15 | Releases + pages: history and rollback UI, compare, duplicate page, page from preset/AI, unpublish | admin + backend | M | open |
-| SB-16 | Guide (`mint-docs` `/site-builder`), anchors on every panel, marketing site | mint-docs + mint-webpage + admin | M | open (pieces with each WO) |
+| SB-16 | Final pass of the guide and the marketing site (each WO updates both as it lands — see *Docs and marketing*) | mint-docs + mint-webpage + admin | M | open |
 | SB-17 | Import kit pages (`WebPage` + `WebContent` → trees) | backend + admin | M | later |
 | SB-18 | Download a site as a standalone Next.js project | mint-sites + backend | L | later |
 | SB-19 | Developers' own components (register React components via an SDK) | mint-sites | L | later |
@@ -647,16 +718,14 @@ scope.
 
 ---
 
-## SB-16 — Guides and marketing (M) — pieces land with each WO
+## SB-16 — Final pass: guide and marketing site (M)
 
-`mint-docs`: `/site-builder` guide (anchors: `#start`, `#pages`, `#canvas`,
-`#outline`, `#props`, `#style`, `#design`, `#layouts`, `#sections`,
-`#overlays`, `#data`, `#collections`, `#template-pages`, `#widgets`, `#ai`,
-`#publish`, `#history`, `#domains`, `#kinds`, `#mcp`, `#faq`) + entry in
-`src/content/guides.ts`. `mint-webpage`: features, a `/workflow/website`
-update, changelog entry, the editor drawn in `components/mock/mocks.tsx`
-(colourful, slim — see that repo's README), `pageMeta()` + OG image for any new
-page; checked at 390 px.
+Every WO already updated its guide sections and marketing pages (*Docs and
+marketing* above). This one reads both end to end once the builder is
+complete: fill gaps, `#faq`, cross-links from `/websites`, `/templates`,
+`/widgets`, `/connect-ai`; check every panel's "?" link lands on a written
+anchor (grep `docsPath('/site-builder` in admin); fresh screenshots where the
+UI changed; marketing site flow, OG images, 390 px and dark mode.
 
 ---
 
