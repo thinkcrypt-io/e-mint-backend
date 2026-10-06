@@ -42,7 +42,7 @@ export const BLOCK_CATEGORIES = ['content', 'rich-content', 'list', 'card', 'ima
 export const WEBHOOK_EVENTS = ['create', 'update', 'delete'];
 export const PUBLIC_ACTIONS = ['list', 'get', 'create', 'update', 'delete'];
 /** The website kit's routes (websiteKit.function.ts) — a website template may point at them. */
-export const KIT_ROUTES: Record<string, string> = { WebPage: 'pages', PageSeo: 'seo', WebContent: 'web-contents' };
+export const KIT_ROUTES: Record<string, string> = { WebPage: 'pages', PageSeo: 'seo', WebContent: 'web-contents', SiteTheme: 'site-design' };
 
 const LIMITS = {
 	steps: TEMPLATE_MAX_STEPS + 20, // kept so validation can say "too many", not silently drop them

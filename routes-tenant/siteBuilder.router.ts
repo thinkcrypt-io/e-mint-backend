@@ -10,6 +10,8 @@ import { rekeyTree } from '../library/siteBuilder/ids.js';
 import { treeIds, validateDesign, validatePageFields, validateTree, type Problem } from '../library/siteBuilder/validate.js';
 import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, siteInfo, EMPTY_SEO } from '../library/siteBuilder/site.js';
 import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/publish.js';
+import { dataModels, resolveCollections, sampleRecord } from '../library/siteBuilder/resolve.js';
+import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
 
 /**
  * /tenant/api/p/:projectId/site-builder — the site builder (docs/site-builder
@@ -33,6 +35,14 @@ import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/pub
  *   POST   /publish                   { note? } → { version, publishedAt, url, revalidated }
  *   GET    /releases                  [{ version, note, publishedBy, publishedAt, pages, restoredFrom }]
  *   POST   /releases/:version/restore → that release live again (and the drafts), as a new version
+ *   GET    /data                      the project's models (public API, fields, a sample) and Contents records — the data pickers (SB-09)
+ *   POST   /resolve                   { tree, layout?, pageId?, recordId?, page? } → { nodes, contents, record } — the canvas's data
+ *   POST   /contents                  { records: [{ slug, … }], pageId? } → Contents records added or updated by slug
+ *
+ * The site lives in the project's models too (D27, library/siteBuilder/kit.ts):
+ * each page has a Pages record, its SEO is its SEO record, the design is the
+ * Site design record, and blocks show Contents records by slug. Records
+ * changed in the panel are pulled into the drafts when they're read.
  */
 const router = express.Router({ mergeParams: true });
 
@@ -109,7 +119,8 @@ router.get(
 	'/pages',
 	handle(async (req: any) => {
 		await ensureSite();
-		return { pages: (await livePages()).map(pageSummary), url: siteUrl(req.project), site: await siteInfo(req.project) };
+		const pages = await pullSeo(await livePages());
+		return { pages: pages.map(pageSummary), url: siteUrl(req.project), site: await siteInfo(req.project) };
 	})
 );
 
@@ -131,6 +142,7 @@ router.post(
 			draft: { tree, seo: { ...EMPTY_SEO, ...(body.seo || {}) }, rev: 1, updatedAt: new Date(), updatedBy: req.user?._id },
 		});
 		recordProjectEvent({ req, action: 'create', model: 'Site page', modelPath: 'site-builder', document: page._id, name: page.name, text: `added the page “${page.name}” (${page.path})` });
+		await (body.seo ? pushSeo(page.toObject(), page.draft.seo) : pushPage(page.toObject()));
 		res.status(201);
 		return pageView(page.toObject());
 	})
@@ -138,7 +150,7 @@ router.post(
 
 router.get(
 	'/pages/:id',
-	handle(async (req: any) => pageView(await pageOf(req.params.id)))
+	handle(async (req: any) => pageView((await pullSeo([await pageOf(req.params.id)]))[0]))
 );
 
 router.put(
@@ -170,6 +182,8 @@ router.put(
 			const now = await pageOf(req.params.id);
 			throw Object.assign(new TenancyError(409, 'Someone else changed this page.'), { extra: { rev: now.draft?.rev, page: pageView(now) } });
 		}
+		if (body.seo !== undefined) await pushSeo(saved, saved.draft.seo);
+		else if (Object.keys(fields).length) await pushPage(saved);
 		return { ...pageView(saved), problems };
 	})
 );
@@ -181,6 +195,7 @@ router.delete(
 		const page = await pageOf(req.params.id);
 		if (page.isHome) throw new TenancyError(400, 'The home page can’t be deleted — make another page the home page first');
 		await SitePage.updateOne({ _id: page._id }, { $set: { deletedAt: new Date() } });
+		await pushPage({ ...page, deletedAt: new Date() });
 		recordProjectEvent({ req, action: 'delete', model: 'Site page', modelPath: 'site-builder', document: page._id, name: page.name, text: `deleted the page “${page.name}” (${page.path})` });
 		return { deleted: true, live: !!page.published };
 	})
@@ -206,6 +221,7 @@ router.post(
 			draft: { tree: rekeyTree(page.draft?.tree || []), seo: { ...EMPTY_SEO, ...(page.draft?.seo || {}) }, rev: 1, updatedAt: new Date(), updatedBy: req.user?._id },
 		});
 		recordProjectEvent({ req, action: 'create', model: 'Site page', modelPath: 'site-builder', document: copy._id, name: copy.name, text: `duplicated “${page.name}” as “${copy.name}” (${copy.path})` });
+		await pushSeo(copy.toObject(), copy.draft.seo);
 		res.status(201);
 		return pageView(copy.toObject());
 	})
@@ -227,6 +243,9 @@ router.post(
 			await SitePage.updateOne({ _id: home._id }, { $set: { isHome: false, path }, $inc: { 'draft.rev': 1 } });
 		}
 		const saved: any = await SitePage.findOneAndUpdate({ _id: page._id }, { $set: { isHome: true, path: '/' }, $inc: { 'draft.rev': 1 } }, { new: true }).lean();
+		// The old home's record moves first, so the new one can take '/'.
+		if (home) await pushPage(await SitePage.findById(home._id).lean());
+		await pushPage(saved);
 		recordProjectEvent({ req, model: 'Site page', modelPath: 'site-builder', document: page._id, name: page.name, text: `made “${page.name}” the home page` });
 		return pageView(saved);
 	})
@@ -251,9 +270,10 @@ const designWithUsage = async (design: any) => ({ ...designView(design), usage: 
 
 router.get(
 	'/design',
-	handle(async () => {
+	handle(async (req: any) => {
 		await ensureSite();
-		return designWithUsage(await SiteDesign.findOne({}).lean());
+		if (grants(req.permissions, ['build'])) await ensureDesignModel(req);
+		return designWithUsage(await pullDesign());
 	})
 );
 
@@ -280,6 +300,7 @@ router.put(
 			const now: any = await SiteDesign.findOne({}).lean();
 			throw Object.assign(new TenancyError(409, 'Someone else changed the design.'), { extra: { rev: now.draft?.rev, design: designView(now) } });
 		}
+		if (['theme', 'tokens', 'colorScheme'].some(k => k in patch)) await pushDesign(saved.draft);
 		return { ...(await designWithUsage(saved)), problems: r.problems };
 	})
 );
@@ -307,6 +328,7 @@ router.get(
 	'/changes',
 	handle(async (req: any) => {
 		await ensureSite();
+		await Promise.all([pullDesign(), livePages().then(pullSeo)]);
 		return { ...(await siteChanges()), url: siteUrl(req.project) };
 	})
 );
@@ -316,7 +338,11 @@ router.post(
 	handle(async (req: any) => {
 		mayBuild(req);
 		await ensureSite();
-		return publishSite({ req, project: req.project, note: typeof req.body?.note === 'string' ? req.body.note.trim() : '' });
+		await Promise.all([pullDesign(), livePages().then(pullSeo)]);
+		const out = await publishSite({ req, project: req.project, note: typeof req.body?.note === 'string' ? req.body.note.trim() : '' });
+		// The Pages records show what's live now.
+		for (const p of await livePages()) await pushPage(p);
+		return out;
 	})
 );
 
@@ -345,7 +371,55 @@ router.post(
 		mayBuild(req);
 		const version = Number(req.params.version);
 		if (!Number.isInteger(version) || version < 1) throw new TenancyError(400, 'Name a version number');
-		return restoreRelease({ req, project: req.project, version });
+		const out = await restoreRelease({ req, project: req.project, version });
+		// The records follow the restored drafts, or the next read would pull the newer ones back.
+		const d: any = await SiteDesign.findOne({}).lean();
+		await pushDesign(d.draft);
+		for (const p of await livePages()) await pushSeo(p, p.draft?.seo);
+		return out;
+	})
+);
+
+/* ---------------------------------------------------------------- data */
+
+router.get(
+	'/data',
+	handle(async () => {
+		const [models, contents] = await Promise.all([dataModels(), contentList()]);
+		return { models, contents };
+	})
+);
+
+router.post(
+	'/resolve',
+	handle(async (req: any) => {
+		const body = req.body || {};
+		if (!Array.isArray(body.tree)) throw new TenancyError(400, 'Send { tree }');
+		const layout = body.layout && typeof body.layout === 'object' ? body.layout : {};
+		const design: any = await SiteDesign.findOne({}, { 'draft.sections': 1 }).lean();
+		const trees = [body.tree, layout.header || [], layout.footer || [], ...Object.values<any>(design?.draft?.sections || {}).map(x => x?.tree || [])];
+		const page: any = body.pageId && isId(body.pageId) ? await SitePage.findOne({ _id: body.pageId }, { kind: 1, source: 1 }).lean() : null;
+		const [nodes, contents, record] = await Promise.all([
+			resolveCollections(trees, { page: Number(body.page) || 1 }),
+			resolveContents(trees),
+			page?.kind === 'template' ? sampleRecord(page.source, typeof body.recordId === 'string' ? body.recordId : undefined) : null,
+		]);
+		return { nodes, contents, record };
+	})
+);
+
+router.post(
+	'/contents',
+	handle(async (req: any) => {
+		mayBuild(req);
+		const records = req.body?.records;
+		if (!Array.isArray(records) || !records.length || records.length > 100) throw new TenancyError(400, 'Send { records: [{ slug, … }] } — 1 to 100');
+		const page = req.body?.pageId ? await pageOf(String(req.body.pageId)) : null;
+		try {
+			return { records: await upsertContents(records, page) };
+		} catch (e: any) {
+			throw new TenancyError(400, e?.message || 'The contents weren’t saved');
+		}
 	})
 );
 

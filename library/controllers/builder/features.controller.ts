@@ -199,7 +199,8 @@ Answer by calling propose_feature once with the whole plan — never with plain 
 
 export const hashKey = (secret: string) => crypto.createHash('sha256').update(secret).digest('hex');
 /** read: the models · build: build and change pages · data: read records (MCP query_records), only when asked for. */
-const SCOPES = ['read', 'build', 'data'];
+// publish: a website's site builder may go live through the MCP (docs/site-builder SB-12) — off unless asked for.
+const SCOPES = ['read', 'build', 'data', 'publish'];
 const DEFAULT_SCOPES = ['read', 'build'];
 
 /** GET /builder/api-keys — the signed-in admin's keys (all keys for a '*' role). */

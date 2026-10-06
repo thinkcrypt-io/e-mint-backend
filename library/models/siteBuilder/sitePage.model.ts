@@ -43,12 +43,16 @@ const schema = new Schema<any>(
 			rev: { type: Number, default: 1 },
 			updatedAt: { type: Date, default: Date.now },
 			updatedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
+			/** When the page's SEO record (kit /seo) was last copied in or written (siteBuilder/kit.ts) */
+			seoSyncedAt: { type: Date, default: null },
 		},
 		/** { tree, seo, rev, version, publishedAt, name, path, kind, source, layout, showInMenu, menuLabel, priority } */
 		published: { type: Schema.Types.Mixed, default: null },
 		/** draft: never published or taken down and edited; published: live; unpublished: taken down (Publish skips it). */
 		status: { type: String, enum: ['draft', 'published', 'unpublished'], default: 'draft' },
 		deletedAt: { type: Date, default: null },
+		/** The project's Pages record (kit /pages) that stands for this page — its SEO record points at it (D27). */
+		kitPage: { type: Schema.Types.ObjectId, default: null },
 	},
 	{ timestamps: true, minimize: false }
 );

@@ -26,11 +26,22 @@ export type McpTool<C> = {
 	run: (req: any, args: any, caller: C) => Promise<ToolOutput>;
 };
 
+/** A ready-made request the user picks in their AI client (MCP prompts) — e.g. "Build my site". */
+export type McpPrompt = {
+	name: string;
+	title: string;
+	description: string;
+	arguments: { name: string; description: string; required?: boolean }[];
+	render: (args: Record<string, string>) => string;
+};
+
 export type McpServer<C> = {
 	info: { name: string; title: string; version: string };
 	instructions: (caller: C) => string;
 	/** The tools this caller may call. */
 	tools: (caller: C) => McpTool<C>[];
+	/** The prompts this caller is offered (none when left out). */
+	prompts?: (caller: C) => McpPrompt[];
 	/** Which of them tools/list offers (e.g. only the key's scopes); all when left out. */
 	listed?: (tool: McpTool<C>, caller: C) => boolean;
 	/** Why this caller may not run this tool (a scope, a permission), or null. */
@@ -60,7 +71,7 @@ const handle = async <C>(server: McpServer<C>, req: any, msg: any, caller: C) =>
 			const asked = String(params?.protocolVersion || '');
 			return rpcResult(id, {
 				protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
-				capabilities: { tools: { listChanged: false } },
+				capabilities: { tools: { listChanged: false }, ...(server.prompts && { prompts: { listChanged: false } }) },
 				serverInfo: server.info,
 				instructions: server.instructions(caller),
 			});
@@ -77,6 +88,19 @@ const handle = async <C>(server: McpServer<C>, req: any, msg: any, caller: C) =>
 					annotations: { title, ...annotations },
 				})),
 			});
+		case 'prompts/list':
+			return rpcResult(id, {
+				prompts: (server.prompts?.(caller) || []).map(({ name, title, description, arguments: args }) => ({ name, title, description, arguments: args })),
+			});
+		case 'prompts/get': {
+			const prompt = (server.prompts?.(caller) || []).find(p => p.name === params?.name);
+			if (!prompt) return rpcError(id, -32602, `Unknown prompt: ${params?.name}`);
+			const args: Record<string, string> = {};
+			for (const [k, v] of Object.entries<any>(params?.arguments || {})) if (typeof v === 'string') args[k] = v.slice(0, 4000);
+			const missing = prompt.arguments.find(a => a.required && !args[a.name]?.trim());
+			if (missing) return rpcError(id, -32602, `Missing argument: ${missing.name}`);
+			return rpcResult(id, { description: prompt.description, messages: [{ role: 'user', content: { type: 'text', text: prompt.render(args) } }] });
+		}
 		case 'tools/call': {
 			const tool = server.tools(caller).find(t => t.name === params?.name);
 			if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);

@@ -6,7 +6,7 @@
 # (its stand-in Stripe; ignored in production).
 cd "$(dirname "$0")" || exit 1
 fail=0
-for f in admin tenant-auth org-1 projects models media mcp public public-filters website website-mcp secrets analytics oversight access activity templates templates-preview templates-manage templates-mcp templates-apply webhooks collections migration countries widgets widgets-cart mail payments site-builder; do
+for f in admin tenant-auth org-1 projects models media mcp public public-filters website website-mcp secrets analytics oversight access activity templates templates-preview templates-manage templates-mcp templates-apply webhooks collections migration countries widgets widgets-cart mail payments site-builder site-builder-data; do
 	printf '%-12s ' "$f"
 	out=$(node "$f.mjs" 2>&1)
 	last=$(printf '%s\n' "$out" | tail -1)

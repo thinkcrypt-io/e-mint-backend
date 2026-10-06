@@ -4,6 +4,7 @@ import { planFromAi } from '../controllers/builder/features.schema.js';
 import { runInScope } from './tenantScope.function.js';
 import { syncDynamicModels } from './dynamicModels.function.js';
 import { projectHooks } from './projectHooks.function.js';
+import { SITE_DESIGN_STEP } from '../siteBuilder/kit.js';
 
 /**
  * The website kit (docs/multi-tenancy WO-18, D13): what a new **website**
@@ -13,6 +14,7 @@ import { projectHooks } from './projectHooks.function.js';
  *   WebContent    /web-contents   AGS Content — the content blocks of the site
  *   WebPage       /pages          the site's pages (path, status, template, menu)
  *   PageSeo       /seo            AGS Seo — per-page title, description, image, keywords
+ *   SiteTheme     /site-design    the site builder's theme, colours and fonts (docs/site-builder D27)
  *
  * Built through the feature builder (one plan, all or nothing). A content
  * block and an SEO entry point at their page (the "many" side), so each page's
@@ -27,7 +29,7 @@ const labelled = (pairs: [string, string][]) => pairs.map(([value, label]) => ({
 
 export const WEBSITE_KIT = (category: string) => ({
 	title: 'Website',
-	summary: 'Pages, per-page SEO and content blocks — the website kit.',
+	summary: 'Pages, per-page SEO, content blocks and the site design — the website kit.',
 	sidebarCategory: category,
 	steps: [
 		{
@@ -151,6 +153,7 @@ export const WEBSITE_KIT = (category: string) => ({
 			table: ['name', 'page', 'section', 'category', 'isVisible', 'status', 'priority'],
 			filters: ['page', 'category', 'status', 'isVisible'],
 		},
+		SITE_DESIGN_STEP(),
 	],
 });
 

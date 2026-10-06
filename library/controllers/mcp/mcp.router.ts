@@ -17,6 +17,7 @@ import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import { namingFields, refIds } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
+import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
 import { createMcpRouter } from './transport.js';
 
 /**
@@ -101,13 +102,15 @@ const can = (c: Caller, scope: Scope) => {
 	if (!c.key.scopes?.includes(scope)) return `This key doesn't have the “${scope}” scope`;
 	// Records: each page's own view permission, checked by the tool.
 	if (scope === 'data') return null;
+	// Publishing a site: the key's owner needs Build in the project (the tool checks it is a website).
+	if (scope === 'publish') return c.builder('build') ? null : `${c.user.name || 'The key’s owner'} can’t change the site`;
 	if (!c.builder(scope)) return `${c.user.name || 'The key’s owner'} doesn't have the builder permission`;
 	return null;
 };
 
 /* --------------------------------------------------------------- tools */
 
-type Scope = 'read' | 'build' | 'data';
+type Scope = 'read' | 'build' | 'data' | 'publish';
 
 type ToolDef = {
 	name: string;
@@ -638,6 +641,7 @@ const TOOLS: ToolDef[] = [
 		},
 	},
 	...WEBSITE_TOOLS,
+	...SITE_BUILDER_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */
@@ -652,7 +656,9 @@ type Authenticate = (req: Request) => Promise<Caller | { error: string }>;
 export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
-		instructions: caller => (caller.project?.type === 'website' ? INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS),
+		instructions: caller => (caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS),
+		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
+		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
 		listed: (tool, caller) => !!caller.key.scopes?.includes((tool as ToolDef).scope),
 		denied: (tool, caller) => can(caller, (tool as ToolDef).scope),

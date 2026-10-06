@@ -21,7 +21,7 @@ const pub = path => fetch(`${ROOT}/public/api/${slug}/${path}`).then(async x => 
 
 // What the AI is offered
 const init = await rpc(key, 'initialize', { protocolVersion: '2025-06-18' });
-ok('website instructions in initialize', /This project is a WEBSITE/.test(init?.instructions || ''));
+ok('website instructions in initialize', /SITE BUILDER/.test(init?.instructions || '') && /describe_website first/.test(init?.instructions || ''));
 const names = (await rpc(key, 'tools/list', {}))?.tools?.map(t => t.name) || [];
 ok('website tools listed', ['describe_website', 'get_site', 'update_site_settings', 'upsert_page', 'upload_media', 'create_records', 'set_public_api', 'site_snippets'].every(n => names.includes(n)), names.join(' '));
 const appKey = await keyFor(s.crm);

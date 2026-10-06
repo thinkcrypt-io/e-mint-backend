@@ -6,6 +6,7 @@ import { loadSite } from '../functions/siteConfig.function.js';
 import { runInScope, runUnscoped } from '../functions/tenantScope.function.js';
 import { DEFAULT_THEME, presetTree } from './manifest.js';
 import { treeIds, validateDesign, validateTree, type Problem } from './validate.js';
+import { dataProblems } from './resolve.js';
 
 /**
  * A website project's builder site (docs/site-builder SB-03): what a new one
@@ -154,6 +155,8 @@ export const siteProblems = async (pages?: any[], design?: any): Promise<SitePro
 		const r = validateTree(p.draft?.tree, { pageIds, externalIds, sectionIds: new Set(Object.keys(draft.sections || {})) });
 		out.push(...r.problems.map(x => ({ ...x, page: String(p._id), pageName: p.name, part: 'page' as const })));
 	}
+	// Lists and template pages: their models must be readable by the site (SB-09).
+	out.push(...((await dataProblems(pages, design)) as SiteProblem[]));
 	return out;
 };
 
