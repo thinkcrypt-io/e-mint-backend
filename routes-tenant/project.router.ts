@@ -29,6 +29,7 @@ import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import templatesRouter from './templates.router.js';
+import siteBuilderRouter from './siteBuilder.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -52,6 +53,7 @@ import { customQuery } from '../middleware/index.js';
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
  *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
+ *   /site-builder                 a website's builder pages, design, publish (docs/site-builder)   read; build to change
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
  */
 const router = express.Router({ mergeParams: true });
@@ -162,6 +164,8 @@ router.use(
 	})
 );
 
+// The site builder (docs/site-builder): pages, design, publish, releases.
+router.use('/site-builder', siteBuilderRouter);
 // A website project's analytics (events from /public/track.js).
 router.use('/analytics', analyticsRouter);
 // …and its setup: tags, code, SEO, redirects, headers, domains (WO-34).

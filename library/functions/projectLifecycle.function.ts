@@ -23,6 +23,8 @@ import { PANEL_PAGES, uniqueSlug } from './tenancy.function.js';
 import { projectHooks } from './projectHooks.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import './websiteKit.function.js';
+// …and the site builder's starter design and home page (docs/site-builder SB-03).
+import '../siteBuilder/site.js';
 import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
 import WebhookDelivery from '../models/tenancy/webhookDelivery.model.js';
 import ApiCall from '../models/tenancy/apiCall.model.js';

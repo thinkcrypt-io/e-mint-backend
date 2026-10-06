@@ -14,6 +14,7 @@ import { countryByCode, countryPicture, listCountries } from '../library/functio
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { stripeWebhook } from '../library/functions/payments.function.js';
+import { resolveHost } from '../library/siteBuilder/render.js';
 
 /**
  * /public — what a tenant project's own site or app talks to
@@ -126,6 +127,23 @@ router.post('/payments/stripe/:project', async (req: any, res) => {
 		if (status === 500) console.error('stripe webhook:', e);
 		// A 5xx makes Stripe try again later; a 400 (bad signature) doesn't.
 		res.status(status).json({ message: status === 500 ? 'Something went wrong' : e.message });
+	}
+});
+
+/*
+ * Which builder site a host is (docs/site-builder D1): the renderer asks this
+ * for every new host it sees (and caches the answer for a minute).
+ *   GET /sites/resolve?host=acme.example.com → { slug, projectId } | 404
+ */
+router.get('/sites/resolve', async (req, res) => {
+	try {
+		const site = await resolveHost(req.query.host);
+		if (!site) return res.status(404).json({ error: 'not-found' });
+		res.setHeader('Cache-Control', 'public, max-age=60');
+		res.json(site);
+	} catch (e: any) {
+		console.error('sites resolve:', e?.message);
+		res.status(500).json({ error: 'resolve-failed' });
 	}
 });
 

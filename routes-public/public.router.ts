@@ -30,6 +30,9 @@ import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
+import SitePage from '../library/models/siteBuilder/sitePage.model.js';
+import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
+import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 
 /**
  * Tells the project's people who can see `route` that something came in from
@@ -77,7 +80,7 @@ const router = express.Router({ mergeParams: true });
 
 const secret = () => process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542';
 const authLimit = rateLimit({ name: 'public-auth', windowMs: 15 * 60 * 1000, max: 40 });
-const apiLimit = rateLimit({ name: 'public-api', windowMs: 60 * 1000, max: 300 });
+const apiLimit = rateLimit({ name: 'public-api', windowMs: 60 * 1000, max: 300, skip: isRenderer });
 
 const check = (schema: Joi.Schema, body: any) => {
 	const { error, value } = schema.validate(body || {}, { abortEarly: true, stripUnknown: true });
@@ -502,7 +505,19 @@ router.get(
 		const seo = await kitModel(req, 'seo');
 		const list: any[] = pages?.Model ? await pages.Model.find({ status: 'published' }, { path: 1, updatedAt: 1 }).sort({ path: 1 }).limit(5000).lean() : [];
 		const hidden = new Set(seo?.Model ? (await seo.Model.distinct('page', { noIndex: true })).map(String) : []);
-		const xmlText = doc.seo?.indexing !== false && doc.seo?.sitemap !== false ? sitemapXml(origin, list.filter(p => p.path && !hidden.has(String(p._id)))) : sitemapXml(origin, []);
+		// Site builder pages (docs/site-builder SB-03): the published static ones not hidden from search.
+		const built: any[] = await SitePage.find(
+			{ published: { $ne: null }, 'published.kind': { $ne: 'template' }, 'published.seo.noIndex': { $ne: true } },
+			{ 'published.path': 1, 'published.publishedAt': 1 }
+		)
+			.limit(5000)
+			.lean();
+		const kit = list.filter(p => p.path && !hidden.has(String(p._id)));
+		const seen = new Set(kit.map(p => p.path));
+		const all = [...kit, ...built.filter(p => !seen.has(p.published.path)).map(p => ({ path: p.published.path, updatedAt: p.published.publishedAt }))].sort((a, b) =>
+			a.path.localeCompare(b.path)
+		);
+		const xmlText = doc.seo?.indexing !== false && doc.seo?.sitemap !== false ? sitemapXml(origin, all) : sitemapXml(origin, []);
 		res.setHeader('Cache-Control', 'public, max-age=300');
 		res.type('application/xml').send(xmlText);
 		return undefined;
@@ -531,6 +546,24 @@ router.get(
 		};
 	})
 );
+
+/**
+ * The site builder's render call (docs/site-builder D8, "Render API"): one
+ * published page of a builder site with everything the renderer needs —
+ * site, design, layout, tree, SEO, menu, page links, tags, widgets.
+ * 404 { error: 'not-found' } when nothing is published at the path.
+ */
+router.get('/render', async (req: any, res: any) => {
+	try {
+		const out = await renderPage({ project: req.project, path: req.query.path, apiBase: apiOrigin(req) });
+		res.setHeader('Cache-Control', 'public, max-age=30');
+		res.json(out);
+	} catch (e: any) {
+		if (e instanceof NotFound) return res.status(404).json({ error: 'not-found' });
+		console.error('site render:', e);
+		res.status(500).json({ error: 'render-failed' });
+	}
+});
 
 /* ---------------------------------------------- checkout (docs/widgets W-06) */
 

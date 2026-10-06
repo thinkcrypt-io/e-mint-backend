@@ -283,18 +283,20 @@ GET /public/api/:slug/render?path=/blog/hello[&page=2&search=…]
   → {
       projectId, version,                                   // SiteRelease version (cache key)
       redirect?: { to, status },                            // from Website settings → redirects
-      site:   { name, logo, favicon, locale, contact, social, colorScheme },   // no secrets
+      site:   { name, tagline, logo, favicon, locale, contact, social, colorScheme, origin },   // no secrets
       design: { theme, tokens, fonts: [{ family, weights }] },
       layout: { header: Node[], footer: Node[] } | null,
       page:   { id, path, name, tree: Node[], seo: SeoResolved },
       data:   { record?: object, nodes: { [nodeId]: { items, total, page, pageSize } }, contents: { [slug]: object } },
       menu:   [{ label, path, children? }],                  // pages with showInMenu
+      links:  { [pageId]: path },                           // for { type: 'page' } actions
       tags:   { head: string, bodyStart: string, bodyEnd: string },   // = /site/tags (pixels, track.js, head code)
       widgets:{ enabled: string[], apiBase }                // load mint.js when non-empty
     }
   404 { error: 'not-found' } when no published page matches (the renderer then asks for '/404')
 
 Cache-Control: public, max-age=30 (the renderer caches by tag and is revalidated on publish)
+The renderer sends x-mint-renderer: <SITE_REVALIDATE_SECRET> (skips the per-IP limit).
 ```
 
 Path matching: exact static path first, then template paths in `priority`
@@ -348,13 +350,19 @@ ship — the kinds don't wait for them.
 | Work orders, Handoff, Status | `backend/docs/site-builder/WORK_ORDERS.md` |
 | Changelog | `backend/docs/site-builder/CHANGELOG.md` |
 | Renderer repo | `mint-sites/` (SB-02) — see its README; blocks `src/blocks/<type>/`, renderer `src/render/`, themes `src/themes/`, presets `src/presets/`, manifest `block-manifest.json` (`npm run manifest`), fixture `/__mint/fixture` |
-| Models | `backend/library/models/siteBuilder/` (SB-03) |
-| Manifest copy, validator, ops, render | `backend/library/siteBuilder/` (SB-03) |
-| Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` (SB-03) |
-| Public render + resolve | `backend/routes-public/public.router.ts` (`/render`) and `routes-public/index.ts` (`/public/sites/resolve`) (SB-03) |
+| Models | `backend/library/models/siteBuilder/{sitePage,siteDesign,siteRelease}.model.ts` (collections `sitepages`, `sitedesigns`, `sitereleases`) |
+| Manifest copy + loader | `backend/library/siteBuilder/blockManifest.json` (`node scripts/siteBuilder/syncManifest.mjs`), `manifest.ts` (`loadManifest`, `publicManifest`, `presetTree`) |
+| Validator | `backend/library/siteBuilder/validate.ts` (`validateTree`, `validateDesign`, `validatePageFields`; problem levels error / publish / warning) |
+| Ops, ids | `backend/library/siteBuilder/ops.ts` (`applyOps`, `splitOps`), `ids.ts` (`newId`, `rekeyTree` — keeps actions pointing inside a copied tree) |
+| Starter site, views, changes | `backend/library/siteBuilder/site.ts` (`ensureSite`, project hooks, `siteChanges`, `siteProblems`) |
+| Publish, restore, revalidate | `backend/library/siteBuilder/publish.ts` |
+| Render, host → site | `backend/library/siteBuilder/render.ts` (`renderPage`, `resolveHost`, `isRenderer`) |
+| Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` |
+| Public render + resolve | `backend/routes-public/public.router.ts` (`GET /public/api/:slug/render`) and `routes-public/index.ts` (`GET /public/sites/resolve`); the site's `/site/sitemap.xml` lists builder pages |
+| Unit tests | `backend/library/siteBuilder/test/{ops,validate}.test.ts` (`npx jest library/siteBuilder --watchAll=false`) |
 | Editor | `admin/src/app/site-builder/` (page + `_components/`), RTK `admin/src/components/library/store/services/siteBuilderApi.ts` (SB-05) |
-| Smoke suite | `backend/scripts/tenancy-smoke/site-builder.mjs` (SB-03 on) |
-| Guide | `mint-docs` → `/site-builder` (SB-16; anchors added with each WO) |
+| Smoke suite | `backend/scripts/tenancy-smoke/site-builder.mjs` (in `run-all.sh`) |
+| Guide | `mint-docs/src/app/site-builder/page.tsx` → docs.mintapp.shop/site-builder (anchors added with each WO) |
 
 ## Environment
 

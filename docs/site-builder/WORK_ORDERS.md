@@ -84,27 +84,38 @@ are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
 
-**2026-10-06 — D19–D24 + SB-20…SB-25 added** (planning only, no code). The
-user asked whether builder-made sites would match what Claude Code writes from
-scratch and what our edge is; answer and decisions are in README *Builder vs
-hand-written sites* and D19–D24. **For SB-03 (in progress):** D21 adds
-`insert` with `{ preset, props }` in place of a node — easiest to support in
-`ops.ts` now; if SB-03 lands without it, SB-21 adds it. SB-11 and SB-12 now
-reference SB-20 (screenshot look-and-fix, `preview_site_page`) and SB-21
-(compact two-level manifest); build them in that order: SB-20/21 before or
-with SB-11/12.
+**2026-10-06 — SB-03 done** (backend; guide `/site-builder` created in
+mint-docs with `#start` and `#publish`). SB-02 done before it (renderer
+`mint-sites/`, pushed to `aiasifistiaque/mint-sites` `main`; no Vercel
+project yet — ask before creating one). **Next: SB-04** — the renderer serves
+published sites from the backend's `/render`. Then the editor (SB-05 → SB-07).
+Open questions for the user are at the end of README (site kinds D4, the
+sites' root domain, the hosting plan); none blocks SB-04…SB-12.
 
-**2026-10-06 — SB-02 done** (renderer `mint-sites/`, `02b6a34` pushed to
-`aiasifistiaque/mint-sites` `main` — the user created the repo; no Vercel
-project yet, ask before creating one). 14 primitive blocks, Studio
-theme, `compileStyles`, tokens, sanitizer, 3 presets, `block-manifest.json`
-(version `956518cfa8cd`), fixture at `http://localhost:3300/__mint/fixture`,
-35 vitest tests, `npm run build` passes. **Next: SB-03** (backend storage +
-validator + render API) — it copies `mint-sites/block-manifest.json` and seeds
-new sites with presets `header-simple`, `hero-centered`, `footer-simple`. Then
-SB-04 joins them, then the editor (SB-05 → SB-07). Open questions for the user
-are at the end of README (site kinds D4, the sites' root domain, the hosting
-plan); none blocks SB-03…SB-12.
+**Learned in SB-03 (applies to SB-04 on):**
+- `/render` answers `links: { [pageId]: path }` (for `{ type: 'page' }`
+  actions → the renderer's `ctx.pages`), `site.colorScheme` (from the design),
+  `page.seo.titleTemplate`, and `manifestVersion`; `version` is the release.
+  404 is `{ error: 'not-found' }`. The renderer must send
+  `x-mint-renderer: <SITE_REVALIDATE_SECRET>` on its backend calls — that
+  skips the public API's per-IP limit (300/min), which one renderer serving
+  every site would hit.
+- The revalidate call sends `{ tag: 'site:<projectId>', slug }`, signed
+  `x-mint-signature: hex(hmac_sha256(SITE_REVALIDATE_SECRET, rawBody))`.
+- Head tags: `tags.head` = search-engine verification metas + the
+  `/public/track.js` script; track.js injects the pixels and the tenant's own
+  code tags (and skips verification metas / favicon already on the page), so
+  the renderer must not also print the code tags.
+- Drafts vs live: each page's live copy is `SitePage.published` (with its own
+  `path`, `name`, `layout`, menu fields), so renaming or moving a draft never
+  touches the live site; `/render` matches `published.path`. Deleting sets
+  `deletedAt` (live until the next Publish removes it). Problems have a
+  `level`: `error` (never saved), `publish` (saved, blocks Publish — e.g. an
+  action target that's gone), `warning`.
+- Local runs: my own Mongo `mongod --port 28010 --dbpath <scratch>` and the
+  launch config `backend-sb` (:5031, `SITES_RENDERER_URL=http://localhost:3300`,
+  `SITE_REVALIDATE_SECRET=dev-site-secret`); `SMOKE_ROOT=http://localhost:5031
+  node site-builder.mjs`.
 
 **Learned in SB-02 (applies to SB-04/05):**
 - App Router folders starting with `_` are **private** (not routed). The
@@ -194,7 +205,7 @@ Renderer (`mint-sites`)
 |---|---|---|---|---|
 | SB-01 | Plan & docs | backend | S | done 2026-10-06 |
 | SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (mint-sites `02b6a34`) |
-| SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | open |
+| SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | done 2026-10-06 |
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | open (after SB-02, SB-03) |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | open (after SB-04) |
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | open |

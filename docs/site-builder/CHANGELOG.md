@@ -17,6 +17,52 @@ Newest first. Each entry: what changed, where, how it was verified.
   `preview_site_page` and detail lookups; Status, Handoff and *Docs and
   marketing* rows updated.
 
+## 2026-10-06 — SB-03 Backend storage, validator, tenant API, render API
+
+- Models `SitePage`, `SiteDesign`, `SiteRelease` (`library/models/siteBuilder/`,
+  shared `tenantScoped` collections). A page keeps its draft (`tree`, `seo`,
+  `rev`) and a `published` copy with its own path, name, layout and menu fields,
+  so draft renames never touch the live site; delete = `deletedAt` until the
+  next Publish. `SiteDesign.draft` also has `colorScheme`.
+- Manifest copy (`blockManifest.json`, `scripts/siteBuilder/syncManifest.mjs`)
+  and loader; validator (`validateTree` / `validateDesign` /
+  `validatePageFields` with problem levels error / publish / warning; style
+  values checked against the manifest's `style` part); `ops.ts`
+  (insert / update / move / remove / wrap, locked nodes, `splitOps`);
+  `ids.ts` (`rekeyTree` keeps open/scroll/`#node:` targets inside a copy).
+- New website projects get the Studio design (header + footer presets in the
+  `default` layout) and a home page with the hero preset (project hook);
+  older ones get them the first time the editor asks. Deleting a project
+  removes its site documents.
+- Tenant API `/tenant/api/p/:projectId/site-builder`: manifest (ETag), pages
+  CRUD with `rev` → 409, duplicate, set home, unpublish (and `status: 'draft'`
+  to bring a page back), design (`rev` → 409), validate, changes, publish
+  (problems → 400; nothing changed → 400), releases, restore (pages made since
+  stay as drafts; a clashing path moves aside). Writes need `build`, reads
+  `build` or `records:view`; website projects only. Publish and restore go to
+  the project's activity.
+- Public: `GET /public/api/:slug/render?path=` (static pages; site, design,
+  layout, tree, SEO with Website-settings defaults, menu, `links`, tags =
+  verification metas + track.js, widgets, redirects → `{ redirect }`,
+  `{ error: 'not-found' }`), `GET /public/sites/resolve?host=` (root-domain
+  subdomain, project domains, `<slug>.localhost` in development; cached 60 s).
+  `/site/sitemap.xml` lists builder pages. The renderer's calls
+  (`x-mint-renderer`) skip the public API's per-IP limit (`rateLimit` got a
+  `skip` option).
+- Publish calls `{SITES_RENDERER_URL}/api/revalidate` signed with
+  `SITE_REVALIDATE_SECRET`; a failure is logged and returned as
+  `revalidated: false`.
+- Verified: `npx jest library/siteBuilder` 15 passing (ops, rekey, validator);
+  `site-builder.mjs` 73 passing against a fresh backend (:5031, own Mongo) and
+  added to `run-all.sh`; `website`, `website-mcp`, `public`, `models`,
+  `projects`, `widgets` suites still pass; `npx tsc --noEmit` clean.
+- Docs: the `/site-builder` guide created in mint-docs (listed under Go live)
+  with `#start` (what it is, draft vs live, what a new site starts with — and a
+  note that the editor arrives in steps) and `#publish` (what Publish checks and
+  puts live, deleting / taking off / renaming, history and restore, two people
+  editing). Checked at 390 px in dark mode; `npm run build` passes.
+  Marketing: nothing for SB-03.
+
 ## 2026-10-06 — SB-02 Renderer repo
 
 - New repo `mint-sites/` (Next 16.3, React 19.3, Tailwind 4.3, TypeScript

@@ -1,0 +1,2609 @@
+{
+	"version": "956518cfa8cd",
+	"blocks": [
+		{
+			"type": "button",
+			"label": "Button",
+			"category": "basic",
+			"icon": "cursor-click",
+			"description": "A call to action: goes to a page or link, or opens a modal, drawer or widget.",
+			"aiHint": "One \"primary\" button per section, others \"outline\" or \"ghost\". Set node.action (link / page / open / scroll / widget).",
+			"props": [
+				{
+					"key": "label",
+					"label": "Label",
+					"kind": "text",
+					"default": "Get started",
+					"bindable": true
+				},
+				{
+					"key": "variant",
+					"label": "Style",
+					"kind": "select",
+					"options": [
+						{
+							"value": "primary",
+							"label": "Primary"
+						},
+						{
+							"value": "secondary",
+							"label": "Secondary"
+						},
+						{
+							"value": "outline",
+							"label": "Outline"
+						},
+						{
+							"value": "ghost",
+							"label": "Ghost"
+						},
+						{
+							"value": "link",
+							"label": "Link"
+						}
+					],
+					"default": "primary"
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "icon",
+					"label": "Icon",
+					"kind": "icon"
+				},
+				{
+					"key": "iconPosition",
+					"label": "Icon position",
+					"kind": "select",
+					"options": [
+						{
+							"value": "start",
+							"label": "Before"
+						},
+						{
+							"value": "end",
+							"label": "After"
+						}
+					],
+					"default": "end"
+				},
+				{
+					"key": "fullWidth",
+					"label": "Full width",
+					"kind": "boolean",
+					"default": false
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"effects"
+			],
+			"actions": true,
+			"defaults": {
+				"props": {
+					"label": "Get started",
+					"variant": "primary",
+					"size": "md",
+					"iconPosition": "end"
+				}
+			}
+		},
+		{
+			"type": "container",
+			"label": "Container",
+			"category": "layout",
+			"icon": "browsers",
+			"description": "Keeps its content to a maximum width, centred.",
+			"aiHint": "Use inside a full-width section to narrow a column of content (e.g. prose at \"sm\").",
+			"props": [
+				{
+					"key": "size",
+					"label": "Maximum width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						},
+						{
+							"value": "xl",
+							"label": "Extra large"
+						},
+						{
+							"value": "container",
+							"label": "Page width"
+						},
+						{
+							"value": "full",
+							"label": "Full"
+						}
+					],
+					"default": "container"
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"size": "container"
+				}
+			}
+		},
+		{
+			"type": "divider",
+			"label": "Divider",
+			"category": "layout",
+			"icon": "minus",
+			"description": "A thin horizontal line.",
+			"aiHint": "Separates groups of content, e.g. above a footer’s copyright line.",
+			"props": [
+				{
+					"key": "thickness",
+					"label": "Thickness",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "Thin"
+						},
+						{
+							"value": 2,
+							"label": "Thick"
+						}
+					],
+					"default": 1
+				},
+				{
+					"key": "lineStyle",
+					"label": "Line",
+					"kind": "select",
+					"options": [
+						{
+							"value": "solid",
+							"label": "Solid"
+						},
+						{
+							"value": "dashed",
+							"label": "Dashed"
+						},
+						{
+							"value": "dotted",
+							"label": "Dotted"
+						}
+					],
+					"default": "solid"
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"border",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"thickness": 1,
+					"lineStyle": "solid"
+				}
+			}
+		},
+		{
+			"type": "embed",
+			"label": "Embed",
+			"category": "media",
+			"icon": "code",
+			"description": "Shows a map or player from an allowed site (Google Maps, YouTube, Vimeo) by its embed link.",
+			"aiHint": "Only for embed URLs from manifest.embeds (e.g. a Google Maps \"Embed a map\" link). No other sites or custom HTML.",
+			"props": [
+				{
+					"key": "url",
+					"label": "Embed link",
+					"kind": "text",
+					"help": "The src of the embed code — Google Maps → Share → Embed a map."
+				},
+				{
+					"key": "title",
+					"label": "Title",
+					"kind": "text",
+					"default": "Embedded content"
+				},
+				{
+					"key": "height",
+					"label": "Height",
+					"kind": "select",
+					"options": [
+						{
+							"value": 240,
+							"label": "Small"
+						},
+						{
+							"value": 360,
+							"label": "Medium"
+						},
+						{
+							"value": 480,
+							"label": "Large"
+						},
+						{
+							"value": 640,
+							"label": "Extra large"
+						}
+					],
+					"default": 360
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"border",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"url": "",
+					"title": "Embedded content",
+					"height": 360
+				}
+			}
+		},
+		{
+			"type": "grid",
+			"label": "Grid",
+			"category": "layout",
+			"icon": "squares-four",
+			"description": "Lays its content out in equal columns — fewer on smaller screens.",
+			"aiHint": "For cards, features, logos and galleries: columns on desktop, columnsTablet and columnsMobile for smaller screens.",
+			"props": [
+				{
+					"key": "columns",
+					"label": "Columns (desktop)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 5,
+							"label": "5"
+						},
+						{
+							"value": 6,
+							"label": "6"
+						}
+					],
+					"default": 3
+				},
+				{
+					"key": "columnsTablet",
+					"label": "Columns (tablet)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						}
+					],
+					"default": 2
+				},
+				{
+					"key": "columnsMobile",
+					"label": "Columns (phone)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						}
+					],
+					"default": 1
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 0,
+							"label": "0"
+						},
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 6,
+							"label": "6"
+						},
+						{
+							"value": 8,
+							"label": "8"
+						},
+						{
+							"value": 12,
+							"label": "12"
+						},
+						{
+							"value": 16,
+							"label": "16"
+						}
+					],
+					"default": 6
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"columns": 3,
+					"columnsTablet": 2,
+					"columnsMobile": 1,
+					"gap": 6
+				}
+			}
+		},
+		{
+			"type": "heading",
+			"label": "Heading",
+			"category": "basic",
+			"icon": "text-h",
+			"description": "A title. Level 1 once per page, then 2–4 in order.",
+			"aiHint": "level 1 for the page title (once), 2 for section titles, 3–4 below them. Keep it short; size \"auto\" follows the level.",
+			"props": [
+				{
+					"key": "text",
+					"label": "Text",
+					"kind": "text",
+					"default": "Heading",
+					"bindable": true
+				},
+				{
+					"key": "level",
+					"label": "Level",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "H1 — page title"
+						},
+						{
+							"value": 2,
+							"label": "H2"
+						},
+						{
+							"value": 3,
+							"label": "H3"
+						},
+						{
+							"value": 4,
+							"label": "H4"
+						}
+					],
+					"default": 2
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "auto",
+							"label": "Auto (by level)"
+						},
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						},
+						{
+							"value": "xl",
+							"label": "Extra large"
+						},
+						{
+							"value": "2xl",
+							"label": "Huge"
+						}
+					],
+					"default": "auto"
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"text": "Heading",
+					"level": 2,
+					"size": "auto"
+				}
+			}
+		},
+		{
+			"type": "icon",
+			"label": "Icon",
+			"category": "basic",
+			"icon": "smiley",
+			"description": "An icon from the built-in set, in the text colour.",
+			"aiHint": "Pick a name from manifest.icons. Colour follows style.color; add a label only when the icon means something on its own.",
+			"props": [
+				{
+					"key": "name",
+					"label": "Icon",
+					"kind": "icon",
+					"default": "star"
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": 16,
+							"label": "Small"
+						},
+						{
+							"value": 24,
+							"label": "Medium"
+						},
+						{
+							"value": 32,
+							"label": "Large"
+						},
+						{
+							"value": 48,
+							"label": "Extra large"
+						}
+					],
+					"default": 24
+				},
+				{
+					"key": "label",
+					"label": "Label for screen readers",
+					"kind": "text",
+					"help": "Leave empty when the icon is decoration next to text."
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"background",
+				"border",
+				"effects"
+			],
+			"actions": true,
+			"defaults": {
+				"props": {
+					"name": "star",
+					"size": 24
+				}
+			}
+		},
+		{
+			"type": "image",
+			"label": "Image",
+			"category": "media",
+			"icon": "image",
+			"description": "A picture from your media library, optionally cropped to a shape.",
+			"aiHint": "src is a media-library URL or \"placeholder:<w>x<h>:<label>\" when no picture exists yet. Always write a short alt text describing the picture.",
+			"props": [
+				{
+					"key": "src",
+					"label": "Image",
+					"kind": "image",
+					"bindable": true
+				},
+				{
+					"key": "alt",
+					"label": "Alt text",
+					"kind": "text",
+					"bindable": true,
+					"help": "Describes the picture for screen readers and search engines."
+				},
+				{
+					"key": "ratio",
+					"label": "Shape",
+					"kind": "select",
+					"options": [
+						{
+							"value": "auto",
+							"label": "Original"
+						},
+						{
+							"value": "1/1",
+							"label": "Square"
+						},
+						{
+							"value": "4/3",
+							"label": "4:3"
+						},
+						{
+							"value": "3/2",
+							"label": "3:2"
+						},
+						{
+							"value": "16/9",
+							"label": "16:9"
+						},
+						{
+							"value": "21/9",
+							"label": "Wide"
+						},
+						{
+							"value": "3/4",
+							"label": "Portrait 3:4"
+						},
+						{
+							"value": "2/3",
+							"label": "Portrait 2:3"
+						}
+					],
+					"default": "auto"
+				},
+				{
+					"key": "fit",
+					"label": "Fit",
+					"kind": "select",
+					"options": [
+						{
+							"value": "cover",
+							"label": "Fill the shape"
+						},
+						{
+							"value": "contain",
+							"label": "Show all of it"
+						}
+					],
+					"default": "cover"
+				},
+				{
+					"key": "rounded",
+					"label": "Corners",
+					"kind": "select",
+					"options": [
+						{
+							"value": "none",
+							"label": "Square"
+						},
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						},
+						{
+							"value": "xl",
+							"label": "Extra large"
+						},
+						{
+							"value": "full",
+							"label": "Round"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "priority",
+					"label": "Load first",
+					"kind": "boolean",
+					"default": false,
+					"help": "Turn on for the big picture at the top of a page."
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"border",
+				"effects"
+			],
+			"actions": true,
+			"defaults": {
+				"props": {
+					"src": "placeholder:1200x800:Image",
+					"alt": "",
+					"ratio": "auto",
+					"fit": "cover",
+					"rounded": "md"
+				}
+			}
+		},
+		{
+			"type": "link",
+			"label": "Link",
+			"category": "basic",
+			"icon": "link",
+			"description": "A text link to a page, another site, an email address or a phone number.",
+			"aiHint": "Inline navigation (menus, footers). Set node.action to { type: \"link\", href } or { type: \"page\", pageId }.",
+			"props": [
+				{
+					"key": "text",
+					"label": "Text",
+					"kind": "text",
+					"default": "Learn more",
+					"bindable": true
+				},
+				{
+					"key": "tone",
+					"label": "Colour",
+					"kind": "select",
+					"options": [
+						{
+							"value": "foreground",
+							"label": "Text"
+						},
+						{
+							"value": "primary",
+							"label": "Primary"
+						},
+						{
+							"value": "muted",
+							"label": "Muted"
+						}
+					],
+					"default": "foreground"
+				},
+				{
+					"key": "underline",
+					"label": "Underline",
+					"kind": "select",
+					"options": [
+						{
+							"value": "hover",
+							"label": "On hover"
+						},
+						{
+							"value": "always",
+							"label": "Always"
+						},
+						{
+							"value": "none",
+							"label": "Never"
+						}
+					],
+					"default": "hover"
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"effects"
+			],
+			"actions": true,
+			"defaults": {
+				"props": {
+					"text": "Learn more",
+					"tone": "foreground",
+					"underline": "hover"
+				}
+			}
+		},
+		{
+			"type": "section",
+			"label": "Section",
+			"category": "layout",
+			"icon": "list",
+			"description": "A full-width band of the page with its content kept to a readable width.",
+			"aiHint": "Top-level building block of a page: one per band (hero, features, footer…). Set a background with style.bgColor / bgImage; put a stack or grid inside.",
+			"props": [
+				{
+					"key": "tag",
+					"label": "HTML element",
+					"kind": "select",
+					"options": [
+						{
+							"value": "section",
+							"label": "section"
+						},
+						{
+							"value": "div",
+							"label": "div"
+						},
+						{
+							"value": "header",
+							"label": "header"
+						},
+						{
+							"value": "footer",
+							"label": "footer"
+						},
+						{
+							"value": "main",
+							"label": "main"
+						},
+						{
+							"value": "aside",
+							"label": "aside"
+						}
+					],
+					"default": "section"
+				},
+				{
+					"key": "width",
+					"label": "Content width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "narrow",
+							"label": "Narrow"
+						},
+						{
+							"value": "container",
+							"label": "Normal"
+						},
+						{
+							"value": "wide",
+							"label": "Wide"
+						},
+						{
+							"value": "full",
+							"label": "Full width"
+						}
+					],
+					"default": "container"
+				},
+				{
+					"key": "paddingY",
+					"label": "Space above and below",
+					"kind": "select",
+					"options": [
+						{
+							"value": "none",
+							"label": "None"
+						},
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						},
+						{
+							"value": "xl",
+							"label": "Extra large"
+						}
+					],
+					"default": "md"
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"tag": "section",
+					"width": "container",
+					"paddingY": "md"
+				}
+			}
+		},
+		{
+			"type": "spacer",
+			"label": "Spacer",
+			"category": "layout",
+			"icon": "arrows-vertical",
+			"description": "Empty space of a fixed height.",
+			"aiHint": "Prefer gaps and padding; use a spacer only for a one-off extra gap.",
+			"props": [
+				{
+					"key": "size",
+					"label": "Height",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 6,
+							"label": "6"
+						},
+						{
+							"value": 8,
+							"label": "8"
+						},
+						{
+							"value": 12,
+							"label": "12"
+						},
+						{
+							"value": 16,
+							"label": "16"
+						},
+						{
+							"value": 24,
+							"label": "24"
+						},
+						{
+							"value": 32,
+							"label": "32"
+						}
+					],
+					"default": 8
+				}
+			],
+			"style": [
+				"spacing",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"size": 8
+				}
+			}
+		},
+		{
+			"type": "stack",
+			"label": "Stack",
+			"category": "layout",
+			"icon": "rows",
+			"description": "Lines its content up in a row or a column with even gaps.",
+			"aiHint": "Flexbox. direction \"column\" for vertical lists of text and buttons, \"row\" for button groups and side-by-side content; stackOnMobile turns a row into a column on phones.",
+			"props": [
+				{
+					"key": "direction",
+					"label": "Direction",
+					"kind": "select",
+					"options": [
+						{
+							"value": "column",
+							"label": "Column"
+						},
+						{
+							"value": "row",
+							"label": "Row"
+						}
+					],
+					"default": "column"
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 0,
+							"label": "0"
+						},
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 6,
+							"label": "6"
+						},
+						{
+							"value": 8,
+							"label": "8"
+						},
+						{
+							"value": 12,
+							"label": "12"
+						},
+						{
+							"value": 16,
+							"label": "16"
+						}
+					],
+					"default": 4
+				},
+				{
+					"key": "align",
+					"label": "Align",
+					"kind": "select",
+					"options": [
+						{
+							"value": "stretch",
+							"label": "Stretch"
+						},
+						{
+							"value": "start",
+							"label": "Start"
+						},
+						{
+							"value": "center",
+							"label": "Centre"
+						},
+						{
+							"value": "end",
+							"label": "End"
+						}
+					],
+					"default": "stretch"
+				},
+				{
+					"key": "justify",
+					"label": "Justify",
+					"kind": "select",
+					"options": [
+						{
+							"value": "start",
+							"label": "Start"
+						},
+						{
+							"value": "center",
+							"label": "Centre"
+						},
+						{
+							"value": "end",
+							"label": "End"
+						},
+						{
+							"value": "between",
+							"label": "Space between"
+						}
+					],
+					"default": "start"
+				},
+				{
+					"key": "wrap",
+					"label": "Wrap",
+					"kind": "boolean",
+					"default": false
+				},
+				{
+					"key": "stackOnMobile",
+					"label": "Column on phones",
+					"kind": "boolean",
+					"default": true,
+					"help": "A row becomes a column below 768 px."
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"direction": "column",
+					"gap": 4,
+					"align": "stretch",
+					"justify": "start"
+				}
+			}
+		},
+		{
+			"type": "text",
+			"label": "Text",
+			"category": "basic",
+			"icon": "text-t",
+			"description": "Paragraphs with bold, italics, links and lists.",
+			"aiHint": "Body copy as simple HTML: <p>, <strong>, <em>, <a href>, <ul>/<ol>/<li>, <h2>–<h4>, <blockquote>, <code>. Nothing else survives.",
+			"props": [
+				{
+					"key": "html",
+					"label": "Text",
+					"kind": "richtext",
+					"default": "<p>Write something here.</p>",
+					"bindable": true
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "base",
+							"label": "Normal"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						},
+						{
+							"value": "xl",
+							"label": "Lead"
+						}
+					],
+					"default": "base"
+				},
+				{
+					"key": "muted",
+					"label": "Muted colour",
+					"kind": "boolean",
+					"default": false
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"html": "<p>Write something here.</p>",
+					"size": "base",
+					"muted": false
+				}
+			}
+		},
+		{
+			"type": "video",
+			"label": "Video",
+			"category": "media",
+			"icon": "play-circle",
+			"description": "A YouTube or Vimeo video, or a video file from your media library.",
+			"aiHint": "url: a YouTube / Vimeo link or an .mp4/.webm file URL. Files can autoplay muted on a loop (background-style).",
+			"props": [
+				{
+					"key": "url",
+					"label": "Video link or file",
+					"kind": "video",
+					"bindable": true
+				},
+				{
+					"key": "title",
+					"label": "Title",
+					"kind": "text",
+					"default": "Video",
+					"help": "Read out by screen readers."
+				},
+				{
+					"key": "ratio",
+					"label": "Shape",
+					"kind": "select",
+					"options": [
+						{
+							"value": "16/9",
+							"label": "16:9"
+						},
+						{
+							"value": "4/3",
+							"label": "4:3"
+						},
+						{
+							"value": "1/1",
+							"label": "Square"
+						},
+						{
+							"value": "9/16",
+							"label": "Vertical"
+						}
+					],
+					"default": "16/9"
+				},
+				{
+					"key": "autoplay",
+					"label": "Autoplay muted, loop (files only)",
+					"kind": "boolean",
+					"default": false
+				},
+				{
+					"key": "rounded",
+					"label": "Rounded corners",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"border",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"url": "",
+					"title": "Video",
+					"ratio": "16/9",
+					"rounded": true
+				}
+			}
+		}
+	],
+	"presets": [
+		{
+			"key": "footer-simple",
+			"label": "Footer — name, links and copyright",
+			"category": "footer",
+			"thumbnail": "",
+			"tree": [
+				{
+					"id": "ftS0sect",
+					"type": "section",
+					"name": "Footer",
+					"props": {
+						"tag": "footer",
+						"width": "container",
+						"paddingY": "md"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"id": "ftS0stck",
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 8
+							},
+							"children": [
+								{
+									"id": "ftS0row1",
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 6,
+										"justify": "between",
+										"align": "center"
+									},
+									"children": [
+										{
+											"id": "ftS0name",
+											"type": "heading",
+											"name": "Site name",
+											"props": {
+												"text": "Your business",
+												"level": 2,
+												"size": "sm"
+											}
+										},
+										{
+											"id": "ftS0nav1",
+											"type": "stack",
+											"name": "Links",
+											"props": {
+												"direction": "row",
+												"gap": 6,
+												"wrap": true,
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"id": "ftS0lnk1",
+													"type": "link",
+													"props": {
+														"text": "About",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/about"
+													}
+												},
+												{
+													"id": "ftS0lnk2",
+													"type": "link",
+													"props": {
+														"text": "Contact",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/contact"
+													}
+												},
+												{
+													"id": "ftS0lnk3",
+													"type": "link",
+													"props": {
+														"text": "Privacy",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/privacy"
+													}
+												}
+											]
+										}
+									]
+								},
+								{
+									"id": "ftS0line",
+									"type": "divider",
+									"props": {
+										"thickness": 1
+									}
+								},
+								{
+									"id": "ftS0copy",
+									"type": "text",
+									"name": "Copyright",
+									"props": {
+										"html": "<p>© Your business. All rights reserved.</p>",
+										"size": "sm",
+										"muted": true
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "header-simple",
+			"label": "Header — name, links and a button",
+			"category": "header",
+			"thumbnail": "",
+			"tree": [
+				{
+					"id": "hdS0sect",
+					"type": "section",
+					"name": "Header",
+					"props": {
+						"tag": "header",
+						"width": "container",
+						"paddingY": "none"
+					},
+					"style": {
+						"base": {
+							"paddingTop": 4,
+							"paddingBottom": 4,
+							"borderColor": "border"
+						}
+					},
+					"children": [
+						{
+							"id": "hdS0row1",
+							"type": "stack",
+							"props": {
+								"direction": "row",
+								"gap": 6,
+								"align": "center",
+								"justify": "between",
+								"stackOnMobile": false
+							},
+							"children": [
+								{
+									"id": "hdS0name",
+									"type": "link",
+									"name": "Site name",
+									"props": {
+										"text": "Your business",
+										"tone": "foreground",
+										"underline": "none"
+									},
+									"style": {
+										"base": {
+											"fontSize": "lg",
+											"fontWeight": 600
+										}
+									},
+									"action": {
+										"type": "link",
+										"href": "/"
+									}
+								},
+								{
+									"id": "hdS0nav1",
+									"type": "stack",
+									"name": "Menu",
+									"props": {
+										"direction": "row",
+										"gap": 6,
+										"align": "center",
+										"stackOnMobile": false
+									},
+									"hidden": {
+										"base": true,
+										"md": false
+									},
+									"children": [
+										{
+											"id": "hdS0lnk1",
+											"type": "link",
+											"props": {
+												"text": "About",
+												"tone": "muted"
+											},
+											"action": {
+												"type": "link",
+												"href": "/about"
+											}
+										},
+										{
+											"id": "hdS0lnk2",
+											"type": "link",
+											"props": {
+												"text": "Services",
+												"tone": "muted"
+											},
+											"action": {
+												"type": "link",
+												"href": "/services"
+											}
+										},
+										{
+											"id": "hdS0lnk3",
+											"type": "link",
+											"props": {
+												"text": "Contact",
+												"tone": "muted"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											}
+										}
+									]
+								},
+								{
+									"id": "hdS0btn1",
+									"type": "button",
+									"props": {
+										"label": "Get in touch",
+										"variant": "primary",
+										"size": "sm"
+									},
+									"action": {
+										"type": "link",
+										"href": "/contact"
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "hero-centered",
+			"label": "Hero — centred title, text and two buttons",
+			"category": "hero",
+			"thumbnail": "",
+			"tree": [
+				{
+					"id": "hrC0sect",
+					"type": "section",
+					"name": "Hero",
+					"props": {
+						"width": "narrow",
+						"paddingY": "xl"
+					},
+					"children": [
+						{
+							"id": "hrC0stck",
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"id": "hrC0badg",
+									"type": "text",
+									"name": "Eyebrow",
+									"props": {
+										"html": "<p>Welcome</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									}
+								},
+								{
+									"id": "hrC0head",
+									"type": "heading",
+									"props": {
+										"text": "A clear promise in a few words",
+										"level": 1
+									}
+								},
+								{
+									"id": "hrC0text",
+									"type": "text",
+									"props": {
+										"html": "<p>One or two sentences on what you do, who it is for and why it is worth their time.</p>",
+										"size": "xl",
+										"muted": true
+									}
+								},
+								{
+									"id": "hrC0btns",
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 3,
+										"justify": "center",
+										"align": "center"
+									},
+									"children": [
+										{
+											"id": "hrC0btn1",
+											"type": "button",
+											"props": {
+												"label": "Get started",
+												"variant": "primary",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											}
+										},
+										{
+											"id": "hrC0btn2",
+											"type": "button",
+											"props": {
+												"label": "Learn more",
+												"variant": "outline",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/about"
+											}
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"themes": [
+		{
+			"key": "studio",
+			"label": "Studio",
+			"description": "Clean and modern — neutral greys, an indigo accent and Inter. Fits most business sites.",
+			"preview": {
+				"bg": "#ffffff",
+				"fg": "#0f172a",
+				"primary": "#4f46e5",
+				"font": "Inter"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#ffffff",
+						"dark": "#0b0d12"
+					},
+					"foreground": {
+						"light": "#0f172a",
+						"dark": "#e8eaf0"
+					},
+					"muted": {
+						"light": "#f4f5f7",
+						"dark": "#161a22"
+					},
+					"muted-foreground": {
+						"light": "#5b6474",
+						"dark": "#9aa3b2"
+					},
+					"primary": {
+						"light": "#4f46e5",
+						"dark": "#8b85ff"
+					},
+					"primary-foreground": {
+						"light": "#ffffff",
+						"dark": "#0b0d12"
+					},
+					"secondary": {
+						"light": "#eef0f4",
+						"dark": "#1d2230"
+					},
+					"secondary-foreground": {
+						"light": "#0f172a",
+						"dark": "#e8eaf0"
+					},
+					"accent": {
+						"light": "#e0e7ff",
+						"dark": "#252a4a"
+					},
+					"accent-foreground": {
+						"light": "#312e81",
+						"dark": "#d6dbff"
+					},
+					"card": {
+						"light": "#ffffff",
+						"dark": "#11141b"
+					},
+					"card-foreground": {
+						"light": "#0f172a",
+						"dark": "#e8eaf0"
+					},
+					"border": {
+						"light": "#e3e6ec",
+						"dark": "#262b37"
+					},
+					"ring": {
+						"light": "#4f46e5",
+						"dark": "#8b85ff"
+					},
+					"success": {
+						"light": "#15803d",
+						"dark": "#4ade80"
+					},
+					"warning": {
+						"light": "#b45309",
+						"dark": "#fbbf24"
+					},
+					"danger": {
+						"light": "#b91c1c",
+						"dark": "#f87171"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Inter",
+						"weights": [
+							500,
+							600,
+							700
+						]
+					},
+					"body": {
+						"family": "Inter",
+						"weights": [
+							400,
+							500,
+							600
+						]
+					},
+					"mono": {
+						"family": "JetBrains Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.25rem",
+					"md": "0.5rem",
+					"lg": "0.75rem",
+					"xl": "1.25rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 2px rgb(15 23 42 / 0.06)",
+					"md": "0 4px 12px rgb(15 23 42 / 0.08)",
+					"lg": "0 16px 40px rgb(15 23 42 / 0.12)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1200,
+				"button": {
+					"radius": "md",
+					"weight": 600,
+					"uppercase": false
+				}
+			}
+		}
+	],
+	"tokens": {
+		"colors": {
+			"keys": [
+				"background",
+				"foreground",
+				"muted",
+				"muted-foreground",
+				"primary",
+				"primary-foreground",
+				"secondary",
+				"secondary-foreground",
+				"accent",
+				"accent-foreground",
+				"card",
+				"card-foreground",
+				"border",
+				"ring",
+				"success",
+				"warning",
+				"danger"
+			],
+			"kind": "color",
+			"modes": [
+				"light",
+				"dark"
+			]
+		},
+		"fonts": {
+			"keys": [
+				"heading",
+				"body",
+				"mono"
+			],
+			"kind": "font"
+		},
+		"radius": {
+			"keys": [
+				"none",
+				"sm",
+				"md",
+				"lg",
+				"xl",
+				"full"
+			],
+			"kind": "length"
+		},
+		"shadow": {
+			"keys": [
+				"none",
+				"sm",
+				"md",
+				"lg"
+			],
+			"kind": "shadow"
+		},
+		"space": {
+			"keys": [
+				"0",
+				"1",
+				"2",
+				"3",
+				"4",
+				"6",
+				"8",
+				"12",
+				"16",
+				"24",
+				"32"
+			],
+			"kind": "length"
+		},
+		"container": {
+			"kind": "int",
+			"min": 640,
+			"max": 1920,
+			"unit": "px"
+		},
+		"button": {
+			"radius": [
+				"none",
+				"sm",
+				"md",
+				"lg",
+				"xl",
+				"full"
+			],
+			"weight": [
+				400,
+				500,
+				600,
+				700,
+				800
+			],
+			"uppercase": "boolean"
+		}
+	},
+	"style": {
+		"display": {
+			"group": "layout",
+			"kind": "enum",
+			"values": [
+				"block",
+				"flex",
+				"grid",
+				"none"
+			]
+		},
+		"direction": {
+			"group": "layout",
+			"kind": "enum",
+			"values": [
+				"row",
+				"column",
+				"row-reverse",
+				"column-reverse"
+			]
+		},
+		"wrap": {
+			"group": "layout",
+			"kind": "enum",
+			"values": [
+				"wrap",
+				"nowrap"
+			]
+		},
+		"gap": {
+			"group": "layout",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"rowGap": {
+			"group": "layout",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"align": {
+			"group": "layout",
+			"kind": "enum",
+			"values": [
+				"start",
+				"center",
+				"end",
+				"stretch",
+				"baseline"
+			]
+		},
+		"justify": {
+			"group": "layout",
+			"kind": "enum",
+			"values": [
+				"start",
+				"center",
+				"end",
+				"between",
+				"around",
+				"evenly"
+			]
+		},
+		"columns": {
+			"group": "layout",
+			"kind": "int",
+			"min": 1,
+			"max": 12
+		},
+		"colSpan": {
+			"group": "layout",
+			"kind": "int",
+			"min": 1,
+			"max": 12,
+			"also": [
+				"full"
+			]
+		},
+		"paddingTop": {
+			"group": "spacing",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"paddingRight": {
+			"group": "spacing",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"paddingBottom": {
+			"group": "spacing",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"paddingLeft": {
+			"group": "spacing",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"marginTop": {
+			"group": "spacing",
+			"kind": "space",
+			"auto": true,
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32,
+				"auto"
+			]
+		},
+		"marginRight": {
+			"group": "spacing",
+			"kind": "space",
+			"auto": true,
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32,
+				"auto"
+			]
+		},
+		"marginBottom": {
+			"group": "spacing",
+			"kind": "space",
+			"auto": true,
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32,
+				"auto"
+			]
+		},
+		"marginLeft": {
+			"group": "spacing",
+			"kind": "space",
+			"auto": true,
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32,
+				"auto"
+			]
+		},
+		"width": {
+			"group": "size",
+			"kind": "length",
+			"values": [
+				"auto",
+				"full"
+			],
+			"units": {
+				"px": 4000,
+				"rem": 250,
+				"%": 100,
+				"vh": 100,
+				"vw": 100
+			}
+		},
+		"maxWidth": {
+			"group": "size",
+			"kind": "enum",
+			"values": [
+				"prose",
+				"sm",
+				"md",
+				"lg",
+				"xl",
+				"container",
+				"full"
+			]
+		},
+		"minHeight": {
+			"group": "size",
+			"kind": "length",
+			"units": {
+				"px": 4000,
+				"rem": 250,
+				"%": 100,
+				"vh": 100,
+				"vw": 100
+			}
+		},
+		"height": {
+			"group": "size",
+			"kind": "length",
+			"values": [
+				"auto"
+			],
+			"units": {
+				"px": 4000,
+				"rem": 250,
+				"%": 100,
+				"vh": 100,
+				"vw": 100
+			}
+		},
+		"aspectRatio": {
+			"group": "size",
+			"kind": "enum",
+			"values": [
+				"1/1",
+				"4/3",
+				"3/2",
+				"16/9",
+				"21/9",
+				"3/4",
+				"2/3",
+				"9/16",
+				"auto"
+			]
+		},
+		"bgColor": {
+			"group": "background",
+			"kind": "color",
+			"values": [
+				"background",
+				"foreground",
+				"muted",
+				"muted-foreground",
+				"primary",
+				"primary-foreground",
+				"secondary",
+				"secondary-foreground",
+				"accent",
+				"accent-foreground",
+				"card",
+				"card-foreground",
+				"border",
+				"ring",
+				"success",
+				"warning",
+				"danger",
+				"transparent",
+				"white",
+				"black"
+			]
+		},
+		"bgImage": {
+			"group": "background",
+			"kind": "url"
+		},
+		"bgPosition": {
+			"group": "background",
+			"kind": "enum",
+			"values": [
+				"center",
+				"top",
+				"bottom",
+				"left",
+				"right"
+			]
+		},
+		"bgSize": {
+			"group": "background",
+			"kind": "enum",
+			"values": [
+				"cover",
+				"contain",
+				"auto"
+			]
+		},
+		"bgOverlay": {
+			"group": "background",
+			"kind": "color",
+			"values": [
+				"background",
+				"foreground",
+				"muted",
+				"muted-foreground",
+				"primary",
+				"primary-foreground",
+				"secondary",
+				"secondary-foreground",
+				"accent",
+				"accent-foreground",
+				"card",
+				"card-foreground",
+				"border",
+				"ring",
+				"success",
+				"warning",
+				"danger",
+				"transparent",
+				"white",
+				"black"
+			]
+		},
+		"bgOverlayOpacity": {
+			"group": "background",
+			"kind": "int",
+			"min": 0,
+			"max": 100
+		},
+		"gradient": {
+			"group": "background",
+			"kind": "gradient"
+		},
+		"borderWidth": {
+			"group": "border",
+			"kind": "enum",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4
+			]
+		},
+		"borderColor": {
+			"group": "border",
+			"kind": "color",
+			"values": [
+				"background",
+				"foreground",
+				"muted",
+				"muted-foreground",
+				"primary",
+				"primary-foreground",
+				"secondary",
+				"secondary-foreground",
+				"accent",
+				"accent-foreground",
+				"card",
+				"card-foreground",
+				"border",
+				"ring",
+				"success",
+				"warning",
+				"danger",
+				"transparent",
+				"white",
+				"black"
+			]
+		},
+		"radius": {
+			"group": "border",
+			"kind": "enum",
+			"values": [
+				"none",
+				"sm",
+				"md",
+				"lg",
+				"xl",
+				"full"
+			]
+		},
+		"shadow": {
+			"group": "border",
+			"kind": "enum",
+			"values": [
+				"none",
+				"sm",
+				"md",
+				"lg"
+			]
+		},
+		"fontSize": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				"xs",
+				"sm",
+				"base",
+				"lg",
+				"xl",
+				"2xl",
+				"3xl",
+				"4xl",
+				"5xl",
+				"6xl"
+			]
+		},
+		"fontWeight": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				300,
+				400,
+				500,
+				600,
+				700,
+				800
+			]
+		},
+		"textAlign": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				"left",
+				"center",
+				"right",
+				"justify"
+			]
+		},
+		"color": {
+			"group": "type",
+			"kind": "color",
+			"values": [
+				"background",
+				"foreground",
+				"muted",
+				"muted-foreground",
+				"primary",
+				"primary-foreground",
+				"secondary",
+				"secondary-foreground",
+				"accent",
+				"accent-foreground",
+				"card",
+				"card-foreground",
+				"border",
+				"ring",
+				"success",
+				"warning",
+				"danger",
+				"transparent",
+				"white",
+				"black"
+			]
+		},
+		"leading": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				"none",
+				"tight",
+				"snug",
+				"normal",
+				"relaxed",
+				"loose"
+			]
+		},
+		"tracking": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				"tighter",
+				"tight",
+				"normal",
+				"wide",
+				"wider",
+				"widest"
+			]
+		},
+		"transform": {
+			"group": "type",
+			"kind": "enum",
+			"values": [
+				"none",
+				"uppercase",
+				"lowercase",
+				"capitalize"
+			]
+		},
+		"opacity": {
+			"group": "effects",
+			"kind": "int",
+			"min": 0,
+			"max": 100
+		},
+		"position": {
+			"group": "effects",
+			"kind": "enum",
+			"values": [
+				"static",
+				"relative",
+				"sticky"
+			]
+		},
+		"top": {
+			"group": "effects",
+			"kind": "space",
+			"values": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				6,
+				8,
+				12,
+				16,
+				24,
+				32
+			]
+		},
+		"zIndex": {
+			"group": "effects",
+			"kind": "int",
+			"min": 0,
+			"max": 50
+		},
+		"overflow": {
+			"group": "effects",
+			"kind": "enum",
+			"values": [
+				"visible",
+				"hidden",
+				"auto",
+				"clip"
+			]
+		}
+	},
+	"icons": [
+		"airplane",
+		"app-window",
+		"apple-logo",
+		"arrow-down",
+		"arrow-left",
+		"arrow-right",
+		"arrow-square-out",
+		"arrow-up",
+		"arrow-up-right",
+		"arrows-vertical",
+		"article",
+		"at",
+		"baby",
+		"barbell",
+		"behance-logo",
+		"bell",
+		"bicycle",
+		"boat",
+		"book-open",
+		"bookmark",
+		"books",
+		"briefcase",
+		"browsers",
+		"building-office",
+		"buildings",
+		"calendar",
+		"calendar-check",
+		"camera",
+		"car",
+		"cards",
+		"caret-down",
+		"caret-left",
+		"caret-right",
+		"caret-up",
+		"certificate",
+		"chalkboard-teacher",
+		"chart-bar",
+		"chart-line",
+		"chart-pie",
+		"chat-circle",
+		"chats",
+		"check",
+		"check-circle",
+		"check-square",
+		"clock",
+		"cloud",
+		"cloud-arrow-up",
+		"code",
+		"coffee",
+		"columns",
+		"compass",
+		"cooking-pot",
+		"copy",
+		"credit-card",
+		"crown",
+		"currency-dollar",
+		"cursor-click",
+		"database",
+		"desktop",
+		"device-mobile",
+		"diamond",
+		"discord-logo",
+		"dog",
+		"dots-three",
+		"download-simple",
+		"dress",
+		"dribbble-logo",
+		"drop",
+		"envelope",
+		"envelope-simple",
+		"eye",
+		"facebook-logo",
+		"factory",
+		"file-text",
+		"fire",
+		"first-aid",
+		"flower",
+		"fork-knife",
+		"funnel",
+		"gear",
+		"gift",
+		"github-logo",
+		"globe",
+		"google-logo",
+		"graduation-cap",
+		"hamburger",
+		"hammer",
+		"handshake",
+		"hash",
+		"headphones",
+		"heart",
+		"heartbeat",
+		"house",
+		"image",
+		"images",
+		"info",
+		"instagram-logo",
+		"key",
+		"laptop",
+		"leaf",
+		"lightbulb",
+		"lightning",
+		"link",
+		"link-simple",
+		"linkedin-logo",
+		"list",
+		"list-checks",
+		"lock",
+		"lock-open",
+		"magnifying-glass",
+		"map-pin",
+		"map-trifold",
+		"medal",
+		"microphone",
+		"minus",
+		"monitor",
+		"moon",
+		"mountains",
+		"music-note",
+		"newspaper",
+		"package",
+		"paint-brush",
+		"palette",
+		"paper-plane-tilt",
+		"pause",
+		"paw-print",
+		"pen-nib",
+		"pencil",
+		"percent",
+		"person-simple-run",
+		"phone",
+		"pill",
+		"pinterest-logo",
+		"pizza",
+		"plant",
+		"play",
+		"play-circle",
+		"plus",
+		"presentation-chart",
+		"puzzle-piece",
+		"question",
+		"quotes",
+		"receipt",
+		"rocket",
+		"rows",
+		"scissors",
+		"seal-check",
+		"share-network",
+		"shield-check",
+		"shopping-bag",
+		"shopping-cart",
+		"sidebar-simple",
+		"sliders",
+		"slideshow",
+		"smiley",
+		"snapchat-logo",
+		"sparkle",
+		"spotify-logo",
+		"squares-four",
+		"star",
+		"stethoscope",
+		"storefront",
+		"student",
+		"sun",
+		"t-shirt",
+		"tag",
+		"target",
+		"telegram-logo",
+		"terminal-window",
+		"text-h",
+		"text-t",
+		"threads-logo",
+		"thumbs-up",
+		"tiktok-logo",
+		"timer",
+		"train",
+		"trash",
+		"tree",
+		"trend-up",
+		"trophy",
+		"truck",
+		"umbrella",
+		"upload-simple",
+		"user",
+		"user-circle",
+		"users",
+		"video-camera",
+		"wallet",
+		"warning",
+		"warning-circle",
+		"whatsapp-logo",
+		"wine",
+		"wrench",
+		"x",
+		"x-circle",
+		"x-logo",
+		"youtube-logo"
+	],
+	"embeds": [
+		"maps.google.com",
+		"player.vimeo.com",
+		"www.google.com/maps/embed",
+		"www.youtube-nocookie.com",
+		"www.youtube.com"
+	],
+	"limits": {
+		"maxNodes": 1500,
+		"maxDepth": 30,
+		"maxBytes": 524288
+	}
+}

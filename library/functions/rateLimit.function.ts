@@ -10,8 +10,9 @@ const buckets = new Map<string, { count: number; resetAt: number }>();
 const MAX_KEYS = 50_000;
 
 export const rateLimit =
-	({ windowMs, max, name }: { windowMs: number; max: number; name: string }) =>
+	({ windowMs, max, name, skip }: { windowMs: number; max: number; name: string; skip?: (req: any) => boolean }) =>
 	(req: any, res: any, next: any) => {
+		if (skip?.(req)) return next();
 		const key = `${name}:${clientIp(req)}`;
 		const now = Date.now();
 		let b = buckets.get(key);
