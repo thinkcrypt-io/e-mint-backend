@@ -161,7 +161,7 @@ renderer needs a Vercel project (+ `MINT_API_URL`, `SITE_REVALIDATE_SECRET`,
 `SITE_REVALIDATE_SECRET` and a redeploy (production doesn't auto-deploy); the
 builder (SB-26) needs its own Vercel project on `builder.mintapp.shop` with
 `MINT_API_URL`, `NEXT_PUBLIC_PANEL_URL`, `NEXT_PUBLIC_SITES_URL`,
-`BUILDER_ORIGIN`, `BUILDER_SESSION_SECRET` (see `mint-builder/README.md`); the
+`BUILDER_ORIGIN`, `BUILDER_SESSION_SECRET` (production values per app: `mint-builder/README.md` → *Production env*); the
 renderer's `PANEL_ORIGINS` must then list `https://builder.mintapp.shop`; the
 tenant panel needs `NEXT_PUBLIC_BUILDER_URL=https://builder.mintapp.shop`. Until
 then the panel's *Open the site builder* opens localhost:3400.
@@ -188,7 +188,7 @@ Local run: launch config `mint-builder` (:3400, `.env.local` from
 `window.open` into a same-tab navigation (no opener), so test the panel →
 builder handoff with `agent-browser` (real tabs) — see CHANGELOG SB-26.
 
-**Pushed hashes so far:** SB-26: mint-builder `76b58f5` (**not pushed — the GitHub repo `aiasifistiaque/mint-builder` doesn't exist yet; ask the user**), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
+**Pushed hashes so far:** SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
 `9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d`, SB-08 `ec0b22f1` (+ handoff
 commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
 SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`, SB-08 `817b136`; admin `main`: SB-05
@@ -305,7 +305,7 @@ or `.next-tenantsb/`.
 |---|---|---|---|
 | backend | `backend/` | remote `mint`, branch **`v3`** | Heroku; **production does not auto-deploy** — pushes reach prod only when the user redeploys |
 | admin (super admin + tenant panel) | `admin/` | branch **`main`** (deploys admin + tenant panel on Vercel) | the panel deploys *before* the backend: new panel pages must not break when a new endpoint 404s — show "Site builder needs the latest backend" |
-| builder (the editor, SB-26) | `mint-builder/` | GitHub `aiasifistiaque/mint-builder`, branch **`main`** (ask before creating the GitHub repo or a Vercel project) | builder.mintapp.shop |
+| builder (the editor, SB-26) | `mint-builder/` | GitHub `aiasifistiaque/mint-builder`, branch **`main`** (ask before creating a Vercel project) | builder.mintapp.shop |
 | renderer | `mint-sites/` (new, SB-02) | GitHub `aiasifistiaque/mint-sites`, branch **`main`** | ask the user before creating the GitHub repo or a Vercel project |
 | user guides | `mint-docs/` | `aiasifistiaque/mint-docs` `main` | every guide is edited here only |
 | marketing site | `mint-webpage/` | `aiasifistiaque/mint-website` `main` | update with every product change people would notice |
@@ -397,7 +397,7 @@ Renderer (`mint-sites`)
 | SB-22 | Motion and hover style keys (D23) | mint-sites + backend + admin | M | open (after SB-07) |
 | SB-23 | Preset library v2: ≥ 60 presets, ≥ 3 variants per section type, ≥ 8 themes, design review (D22) | mint-sites | L | open (after SB-08, SB-22) |
 | SB-24 | Brand to theme: logo/colours/words → theme + tokens + fonts (D24) | backend + admin | M | open (after SB-07, SB-11) |
-| SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` — local only, no GitHub repo yet; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
+| SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` on GitHub; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
