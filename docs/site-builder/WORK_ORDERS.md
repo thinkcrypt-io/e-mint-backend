@@ -78,14 +78,30 @@ are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
 
-**2026-10-06 — SB-01 plan written.** Nothing is built yet. **Every WO also
-updates the user guide (`mint-docs`) and the marketing website
-(`mint-webpage`)** — see *Finishing a work order* and *Docs and marketing*. **Next: SB-02
-(renderer repo) and SB-03 (backend storage + render API) can run in parallel**
-— they meet only at the manifest file and the render response, both fixed in
-README. Then SB-04 joins them, then the editor (SB-05 → SB-07). Open questions
-for the user are at the end of README (site kinds D4, the sites' root domain,
-the hosting plan); none blocks SB-02…SB-12.
+**2026-10-06 — SB-02 done** (renderer `mint-sites/`, local commit `02b6a34`
+on `main`; **not pushed — the GitHub repo `aiasifistiaque/mint-sites` doesn't
+exist yet, ask the user before creating it**). 14 primitive blocks, Studio
+theme, `compileStyles`, tokens, sanitizer, 3 presets, `block-manifest.json`
+(version `956518cfa8cd`), fixture at `http://localhost:3300/__mint/fixture`,
+35 vitest tests, `npm run build` passes. **Next: SB-03** (backend storage +
+validator + render API) — it copies `mint-sites/block-manifest.json` and seeds
+new sites with presets `header-simple`, `hero-centered`, `footer-simple`. Then
+SB-04 joins them, then the editor (SB-05 → SB-07). Open questions for the user
+are at the end of README (site kinds D4, the sites' root domain, the hosting
+plan); none blocks SB-03…SB-12.
+
+**Learned in SB-02 (applies to SB-04/05):**
+- App Router folders starting with `_` are **private** (not routed). The
+  `/__mint/*` routes live in `src/app/%5F_mint/…` and the published-site route
+  must be `src/app/%5Fs/[site]/[[...path]]/` (URL `/_s/…`), not `_s/`.
+- The manifest has a `style` part (every style key → group, kind, allowed
+  values; from `src/render/styleSchema.ts`) — the backend validator should
+  check node styles against it rather than re-listing the keys.
+- Hand-written CSS in the renderer reads `--mint-*` variables, never
+  Tailwind's `--color-*` aliases (those resolve at `:root`, so dark mode on a
+  wrapper wouldn't reach them).
+- Tailwind's spacing unit is tied to the theme (`--spacing: var(--mint-space-1)`),
+  so `p-4` follows the theme's space scale.
 
 ### Repos and branches
 
@@ -161,7 +177,7 @@ Renderer (`mint-sites`)
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | SB-01 | Plan & docs | backend | S | done 2026-10-06 |
-| SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | open |
+| SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (local commit `02b6a34`; GitHub repo not created yet) |
 | SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | open |
 | SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | open (after SB-02, SB-03) |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | open (after SB-04) |
@@ -201,7 +217,7 @@ Tailwind v4, `nanoid`. No component library.
 mint-sites/
   src/app/layout.tsx                    html/body, no fonts at build time
   src/app/_s/[site]/[[...path]]/page.tsx   (SB-04) published pages
-  src/app/__mint/fixture/page.tsx       renders fixtures/home.json (dev only, 404 in production)
+  src/app/%5F_mint/fixture/page.tsx     renders fixtures/home.json (dev only, 404 in production) — URL /__mint/fixture
   src/blocks/<type>/index.tsx           the component
   src/blocks/<type>/schema.ts           BlockDef (README "Block manifest")
   src/blocks/registry.ts                type → { Component, def } (explicit imports; client blocks via next/dynamic)
@@ -336,8 +352,9 @@ ids get 404; `/sites/resolve` maps `acme.localhost`. `ops.ts` unit-tested
 
 **Why:** join SB-02 and SB-03 into a working public site.
 
-**Where:** `mint-sites/src/proxy.ts`, `src/app/_s/[site]/[[...path]]/page.tsx`,
-`src/app/_s/[site]/[[...path]]/not-found.tsx`, `src/lib/api.ts`,
+**Where:** `mint-sites/src/proxy.ts`, `src/app/%5Fs/[site]/[[...path]]/page.tsx`
+(URL `/_s/…`; a plain `_s` folder is private and never routed),
+`src/app/%5Fs/[site]/[[...path]]/not-found.tsx`, `src/lib/api.ts`,
 `src/app/api/revalidate/route.ts`, `src/app/sitemap.xml/route.ts`,
 `src/app/robots.txt/route.ts`, `src/render/Head.tsx`.
 
@@ -384,7 +401,7 @@ save, publish.
   (endpoint names prefixed `siteBuilder…` — grep first).
 - `PROJECT_PAGES` += `'site-builder'`; sidebar entry in the website project's
   "Website" category ("Site builder", first); website overview card "Edit site".
-- Renderer: `mint-sites/src/app/__mint/edit/page.tsx` (client), `src/edit/*`
+- Renderer: `mint-sites/src/app/%5F_mint/edit/page.tsx` (client; URL `/__mint/edit`), `src/edit/*`
   (`protocol.ts`, `EditRoot.tsx`, selection/hover outlines, rect reporting via
   `ResizeObserver` + scroll, origin check against `PANEL_ORIGINS`).
 

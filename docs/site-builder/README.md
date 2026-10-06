@@ -131,7 +131,8 @@ only from the manifest's allowlist (YouTube, Vimeo, Google Maps).
 
 ### Style
 
-Fixed keys; values are tokens, enums or `{ n, unit }`:
+Fixed keys; values are tokens, enums or `{ n, unit }` (exact names and allowed
+values: `mint-sites/src/types.ts` `Style` and the manifest's `style` part):
 
 ```
 layout     display (block|flex|grid|none) · direction · wrap · gap · align · justify · columns (1–12) · colSpan · rowGap
@@ -222,6 +223,7 @@ last 50 releases per project (older ones are pruned on publish).
   presets: [{ key, label, category: 'header'|'hero'|'features'|'cta'|'pricing'|'testimonials'|'faq'|'team'|'stats'|'logos'|'contact'|'blog'|'products'|'footer'|…, kinds?: SiteKind[], themes?: string[], thumbnail, tree: Node[] }],
   themes: [{ key, label, description, tokens: Tokens, preview: { bg, fg, primary, font } }],
   tokens: TokensSchema,                  // which keys a theme has and their kinds
+  style: { [key]: { group, kind, values?, min?, max?, also?, units? } },  // the fixed style keys (src/render/styleSchema.ts)
   icons: string[],                       // the curated icon names (≤ 200; drawn from the renderer's own map)
   embeds: string[],                      // allowed embed hosts
   limits: { maxNodes, maxDepth, maxBytes }
@@ -306,7 +308,7 @@ ship — the kinds don't wait for them.
 | Plan, decisions, contracts | `backend/docs/site-builder/README.md` (this file) |
 | Work orders, Handoff, Status | `backend/docs/site-builder/WORK_ORDERS.md` |
 | Changelog | `backend/docs/site-builder/CHANGELOG.md` |
-| Renderer repo | `mint-sites/` (to be created in SB-02) |
+| Renderer repo | `mint-sites/` (SB-02) — see its README; blocks `src/blocks/<type>/`, renderer `src/render/`, themes `src/themes/`, presets `src/presets/`, manifest `block-manifest.json` (`npm run manifest`), fixture `/__mint/fixture` |
 | Models | `backend/library/models/siteBuilder/` (SB-03) |
 | Manifest copy, validator, ops, render | `backend/library/siteBuilder/` (SB-03) |
 | Tenant API | `backend/routes-tenant/siteBuilder.router.ts` → `/tenant/api/p/:projectId/site-builder` (SB-03) |
