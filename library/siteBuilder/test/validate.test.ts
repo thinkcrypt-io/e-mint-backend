@@ -159,3 +159,54 @@ describe('validatePageFields', () => {
 		expect(validatePageFields({ path: '/x', layout: 'landing' }, { layouts: ['default'] }).problems[0].path).toBe('layout');
 	});
 });
+
+describe('SB-08 catalogue', () => {
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const { loadManifest } = require('../manifest');
+	const { crumbsFor } = require('../render');
+
+	it('every preset passes the validator with no errors', () => {
+		for (const p of loadManifest().presets) {
+			const r = validateTree(p.tree, { label: p.category === 'header' || p.category === 'footer' ? `default ${p.category}` : undefined });
+			expect([p.key, errors(r)]).toEqual([p.key, []]);
+		}
+	});
+
+	it('a tab or a question only goes inside its tabs / accordion — never at the top', () => {
+		expect(errors(validateTree([{ id: 'tab00001', type: 'tab', props: {} }]))).toEqual([expect.stringMatching(/Tab can only go inside tabs/)]);
+		expect(
+			errors(validateTree([{ id: 'tabs0001', type: 'tabs', props: {}, children: [{ id: 'txt00001', type: 'text', props: {} }] }]))
+		).toEqual([expect.stringMatching(/Text can’t go in there \(allowed: tab\)/)]);
+	});
+
+	it('warns (never blocks) about missing alt text and heading order', () => {
+		const r = validateTree([
+			{ id: 'img00001', type: 'image', props: { src: 'placeholder:10x10:x' } },
+			{ id: 'gal00001', type: 'gallery', props: { items: [{ src: 'placeholder:10x10:x', alt: '' }] } },
+			{ id: 'hd000001', type: 'heading', props: { text: 'A', level: 1 } },
+			{ id: 'hd000002', type: 'heading', props: { text: 'B', level: 3 } },
+			{ id: 'hd000003', type: 'heading', props: { text: 'C', level: 1 } },
+		]);
+		expect(r.ok).toBe(true);
+		expect(r.problems.map(p => [p.level, p.nodeId])).toEqual([
+			['warning', 'img00001'],
+			['warning', 'gal00001'],
+			['warning', 'hd000003'],
+			['warning', 'hd000002'],
+		]);
+	});
+
+	it('breadcrumbs list the pages above that exist', () => {
+		const pages = [
+			{ published: { path: '/', name: 'Home' } },
+			{ published: { path: '/menu', name: 'Menu' } },
+			{ published: { path: '/menu/lunch/today', name: 'Today' } },
+		];
+		expect(crumbsFor('/menu/lunch/today', pages)).toEqual([
+			{ label: 'Home', path: '/' },
+			{ label: 'Menu', path: '/menu' },
+			{ label: 'Today', path: '/menu/lunch/today' },
+		]);
+		expect(crumbsFor('/', pages)).toEqual([{ label: 'Home', path: '/' }]);
+	});
+});

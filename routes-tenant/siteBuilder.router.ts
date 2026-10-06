@@ -8,7 +8,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
 import { publicManifest, manifestVersion } from '../library/siteBuilder/manifest.js';
 import { rekeyTree } from '../library/siteBuilder/ids.js';
 import { treeIds, validateDesign, validatePageFields, validateTree, type Problem } from '../library/siteBuilder/validate.js';
-import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, EMPTY_SEO } from '../library/siteBuilder/site.js';
+import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, siteInfo, EMPTY_SEO } from '../library/siteBuilder/site.js';
 import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/publish.js';
 
 /**
@@ -109,7 +109,7 @@ router.get(
 	'/pages',
 	handle(async (req: any) => {
 		await ensureSite();
-		return { pages: (await livePages()).map(pageSummary), url: siteUrl(req.project) };
+		return { pages: (await livePages()).map(pageSummary), url: siteUrl(req.project), site: await siteInfo(req.project) };
 	})
 );
 

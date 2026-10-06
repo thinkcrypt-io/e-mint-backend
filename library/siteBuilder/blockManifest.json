@@ -1,6 +1,269 @@
 {
-	"version": "57d6c7923488",
+	"version": "12979278b99a",
 	"blocks": [
+		{
+			"type": "accordion",
+			"label": "Accordion",
+			"category": "layout",
+			"icon": "list-checks",
+			"description": "Questions that open to show their answers — FAQs, details, policies.",
+			"aiHint": "children are accordion-item blocks (title + answer). single true closes the others when one opens.",
+			"props": [
+				{
+					"key": "single",
+					"label": "One open at a time",
+					"kind": "boolean",
+					"default": false
+				}
+			],
+			"slots": {
+				"children": {
+					"allow": [
+						"accordion-item"
+					]
+				}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"single": false
+				},
+				"children": [
+					{
+						"id": "acc0qst1",
+						"type": "accordion-item",
+						"props": {
+							"title": "How long does it take?"
+						},
+						"children": [
+							{
+								"id": "acc0ans1",
+								"type": "text",
+								"props": {
+									"html": "<p>Most orders are ready within a week.</p>",
+									"muted": true
+								}
+							}
+						]
+					},
+					{
+						"id": "acc0qst2",
+						"type": "accordion-item",
+						"props": {
+							"title": "Can I change my booking?"
+						},
+						"children": [
+							{
+								"id": "acc0ans2",
+								"type": "text",
+								"props": {
+									"html": "<p>Yes — up to a day before, at no cost.</p>",
+									"muted": true
+								}
+							}
+						]
+					},
+					{
+						"id": "acc0qst3",
+						"type": "accordion-item",
+						"props": {
+							"title": "Do you deliver?"
+						},
+						"children": [
+							{
+								"id": "acc0ans3",
+								"type": "text",
+								"props": {
+									"html": "<p>We deliver across the city; elsewhere by post.</p>",
+									"muted": true
+								}
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"type": "accordion-item",
+			"label": "Question",
+			"category": "layout",
+			"icon": "caret-down",
+			"description": "One row of an accordion: a title that opens to show its content.",
+			"aiHint": "Only inside accordion. title is the question; children hold the answer (usually one text block).",
+			"props": [
+				{
+					"key": "title",
+					"label": "Title",
+					"kind": "text",
+					"default": "A question people ask",
+					"bindable": true
+				},
+				{
+					"key": "open",
+					"label": "Open at first",
+					"kind": "boolean",
+					"default": false
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"canBeChildOf": [
+				"accordion"
+			],
+			"style": [
+				"spacing",
+				"type"
+			],
+			"defaults": {
+				"props": {
+					"title": "A question people ask",
+					"open": false
+				},
+				"children": [
+					{
+						"id": "acI0text",
+						"type": "text",
+						"props": {
+							"html": "<p>The answer, in a sentence or two.</p>",
+							"muted": true
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "badge",
+			"label": "Badge",
+			"category": "basic",
+			"icon": "tag",
+			"description": "A small label — “New”, “Popular”, “Sold out”.",
+			"aiHint": "One or two words. tone primary for highlights, muted for tags; variant soft by default.",
+			"props": [
+				{
+					"key": "text",
+					"label": "Text",
+					"kind": "text",
+					"default": "New",
+					"bindable": true
+				},
+				{
+					"key": "tone",
+					"label": "Colour",
+					"kind": "select",
+					"options": [
+						{
+							"value": "primary",
+							"label": "Primary"
+						},
+						{
+							"value": "accent",
+							"label": "Accent"
+						},
+						{
+							"value": "muted",
+							"label": "Muted"
+						},
+						{
+							"value": "success",
+							"label": "Success"
+						},
+						{
+							"value": "warning",
+							"label": "Warning"
+						},
+						{
+							"value": "danger",
+							"label": "Danger"
+						}
+					],
+					"default": "primary"
+				},
+				{
+					"key": "variant",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "soft",
+							"label": "Soft"
+						},
+						{
+							"value": "solid",
+							"label": "Solid"
+						},
+						{
+							"value": "outline",
+							"label": "Outline"
+						}
+					],
+					"default": "soft"
+				},
+				{
+					"key": "icon",
+					"label": "Icon",
+					"kind": "icon"
+				}
+			],
+			"style": [
+				"spacing",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"text": "New",
+					"tone": "primary",
+					"variant": "soft"
+				}
+			}
+		},
+		{
+			"type": "breadcrumbs",
+			"label": "Breadcrumbs",
+			"category": "navigation",
+			"icon": "caret-right",
+			"description": "Home › Section › This page — the trail to the page, from its address.",
+			"aiHint": "Built from the page path and page names; put it at the top of inner pages.",
+			"props": [
+				{
+					"key": "separator",
+					"label": "Between items",
+					"kind": "select",
+					"options": [
+						{
+							"value": "chevron",
+							"label": "›"
+						},
+						{
+							"value": "slash",
+							"label": "/"
+						},
+						{
+							"value": "dot",
+							"label": "·"
+						}
+					],
+					"default": "chevron"
+				},
+				{
+					"key": "homeLabel",
+					"label": "First item",
+					"kind": "text",
+					"default": "Home"
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"separator": "chevron",
+					"homeLabel": "Home"
+				}
+			}
+		},
 		{
 			"type": "button",
 			"label": "Button",
@@ -108,6 +371,280 @@
 			}
 		},
 		{
+			"type": "card",
+			"label": "Card",
+			"category": "layout",
+			"icon": "cards",
+			"description": "A box that groups a picture, text and buttons. The whole card can be a link.",
+			"aiHint": "For features, products, posts, team members, prices. Children in order: optional image (edge to edge when it comes first), then heading / text / buttons. If node.action is set the whole card is the link — then don’t put buttons in it.",
+			"props": [
+				{
+					"key": "variant",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "outline",
+							"label": "Outlined"
+						},
+						{
+							"value": "elevated",
+							"label": "Shadow"
+						},
+						{
+							"value": "filled",
+							"label": "Filled"
+						},
+						{
+							"value": "plain",
+							"label": "Plain"
+						}
+					],
+					"default": "outline"
+				},
+				{
+					"key": "padding",
+					"label": "Padding",
+					"kind": "select",
+					"options": [
+						{
+							"value": "none",
+							"label": "None"
+						},
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "Small"
+						},
+						{
+							"value": 3,
+							"label": "Medium"
+						},
+						{
+							"value": 4,
+							"label": "Large"
+						},
+						{
+							"value": 6,
+							"label": "Extra large"
+						}
+					],
+					"default": 3
+				},
+				{
+					"key": "align",
+					"label": "Align",
+					"kind": "select",
+					"options": [
+						{
+							"value": "start",
+							"label": "Left"
+						},
+						{
+							"value": "center",
+							"label": "Centre"
+						}
+					],
+					"default": "start"
+				},
+				{
+					"key": "lift",
+					"label": "Lift on hover",
+					"kind": "boolean",
+					"default": false
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"actions": true,
+			"defaults": {
+				"props": {
+					"variant": "outline",
+					"padding": "md",
+					"gap": 3,
+					"align": "start"
+				},
+				"children": [
+					{
+						"id": "crd0head",
+						"type": "heading",
+						"props": {
+							"text": "Card title",
+							"level": 3,
+							"size": "sm"
+						}
+					},
+					{
+						"id": "crd0text",
+						"type": "text",
+						"props": {
+							"html": "<p>A sentence or two about this.</p>",
+							"muted": true
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "carousel",
+			"label": "Carousel",
+			"category": "media",
+			"icon": "slideshow",
+			"description": "A row of slides people swipe or step through with arrows — pictures, cards, quotes.",
+			"aiHint": "Each child is one slide (image, card, quote…). perView sets how many show at once on desktop; phones show one and a peek of the next.",
+			"client": true,
+			"props": [
+				{
+					"key": "perView",
+					"label": "Slides at once (desktop)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						}
+					],
+					"default": 3
+				},
+				{
+					"key": "perViewTablet",
+					"label": "Slides at once (tablet)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 1,
+							"label": "1"
+						},
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						}
+					],
+					"default": 2
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "Small"
+						},
+						{
+							"value": 4,
+							"label": "Medium"
+						},
+						{
+							"value": 6,
+							"label": "Large"
+						}
+					],
+					"default": 4
+				},
+				{
+					"key": "arrows",
+					"label": "Arrow buttons",
+					"kind": "boolean",
+					"default": true
+				},
+				{
+					"key": "label",
+					"label": "Name for screen readers",
+					"kind": "text",
+					"default": "Slides"
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"perView": 3,
+					"perViewTablet": 2,
+					"gap": 4,
+					"arrows": true,
+					"label": "Slides"
+				},
+				"children": [
+					{
+						"id": "crs0img1",
+						"type": "image",
+						"props": {
+							"src": "placeholder:800x600:Slide 1",
+							"alt": "",
+							"ratio": "4/3"
+						}
+					},
+					{
+						"id": "crs0img2",
+						"type": "image",
+						"props": {
+							"src": "placeholder:800x600:Slide 2",
+							"alt": "",
+							"ratio": "4/3"
+						}
+					},
+					{
+						"id": "crs0img3",
+						"type": "image",
+						"props": {
+							"src": "placeholder:800x600:Slide 3",
+							"alt": "",
+							"ratio": "4/3"
+						}
+					},
+					{
+						"id": "crs0img4",
+						"type": "image",
+						"props": {
+							"src": "placeholder:800x600:Slide 4",
+							"alt": "",
+							"ratio": "4/3"
+						}
+					}
+				]
+			}
+		},
+		{
 			"type": "container",
 			"label": "Container",
 			"category": "layout",
@@ -155,6 +692,68 @@
 			"defaults": {
 				"props": {
 					"size": "container"
+				}
+			}
+		},
+		{
+			"type": "countdown",
+			"label": "Countdown",
+			"category": "basic",
+			"icon": "timer",
+			"description": "Days, hours, minutes and seconds until a date — a launch, a sale, an event.",
+			"aiHint": "to is an ISO date-time with the business’s offset, e.g. \"2026-12-24T18:00:00+06:00\". endedText shows once it has passed.",
+			"client": true,
+			"props": [
+				{
+					"key": "to",
+					"label": "Counts down to",
+					"kind": "text",
+					"default": "",
+					"help": "Like 2026-12-24T18:00 — add your time zone, e.g. 2026-12-24T18:00+06:00."
+				},
+				{
+					"key": "endedText",
+					"label": "When it’s over",
+					"kind": "text",
+					"default": "It’s here!"
+				},
+				{
+					"key": "seconds",
+					"label": "Show seconds",
+					"kind": "boolean",
+					"default": true
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "boxed",
+					"label": "In boxes",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"to": "",
+					"endedText": "It’s here!",
+					"seconds": true,
+					"size": "md",
+					"boxed": true
 				}
 			}
 		},
@@ -371,6 +970,202 @@
 			}
 		},
 		{
+			"type": "form-placeholder",
+			"label": "Contact form",
+			"category": "form",
+			"icon": "envelope",
+			"description": "Name, email and message fields. Until built-in forms arrive, sending opens the visitor’s email app, addressed to you.",
+			"aiHint": "kind \"contact\" (name, email, message) or \"newsletter\" (email only, inline). Sends to the site’s email from Website settings. Real form handling comes later (W-08).",
+			"props": [
+				{
+					"key": "kind",
+					"label": "Fields",
+					"kind": "select",
+					"options": [
+						{
+							"value": "contact",
+							"label": "Name, email, message"
+						},
+						{
+							"value": "newsletter",
+							"label": "Email only"
+						}
+					],
+					"default": "contact"
+				},
+				{
+					"key": "button",
+					"label": "Button",
+					"kind": "text",
+					"default": "Send"
+				},
+				{
+					"key": "to",
+					"label": "Send to",
+					"kind": "text",
+					"help": "Leave empty to use the email in Website settings."
+				},
+				{
+					"key": "note",
+					"label": "Small print",
+					"kind": "text",
+					"default": ""
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"kind": "contact",
+					"button": "Send",
+					"to": "",
+					"note": ""
+				}
+			}
+		},
+		{
+			"type": "gallery",
+			"label": "Gallery",
+			"category": "media",
+			"icon": "images",
+			"description": "A grid of pictures; a click opens them big, one by one.",
+			"aiHint": "items [{ src, alt, caption? }] — media URLs or placeholders; always write alt text. 6–12 pictures.",
+			"client": true,
+			"props": [
+				{
+					"key": "items",
+					"label": "Pictures",
+					"kind": "list",
+					"fields": [
+						{
+							"key": "src",
+							"label": "Picture",
+							"kind": "image"
+						},
+						{
+							"key": "alt",
+							"label": "Alt text",
+							"kind": "text"
+						},
+						{
+							"key": "caption",
+							"label": "Caption",
+							"kind": "text"
+						}
+					],
+					"default": []
+				},
+				{
+					"key": "columns",
+					"label": "Columns (desktop)",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "2"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 5,
+							"label": "5"
+						}
+					],
+					"default": 3
+				},
+				{
+					"key": "ratio",
+					"label": "Shape",
+					"kind": "select",
+					"options": [
+						{
+							"value": "1/1",
+							"label": "Square"
+						},
+						{
+							"value": "4/3",
+							"label": "4:3"
+						},
+						{
+							"value": "3/4",
+							"label": "Portrait"
+						},
+						{
+							"value": "16/9",
+							"label": "Wide"
+						}
+					],
+					"default": "1/1"
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "Small"
+						},
+						{
+							"value": 4,
+							"label": "Medium"
+						},
+						{
+							"value": 6,
+							"label": "Large"
+						}
+					],
+					"default": 4
+				},
+				{
+					"key": "lightbox",
+					"label": "Open big on click",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"items": [
+						{
+							"src": "placeholder:800x800:Photo 1",
+							"alt": "Photo 1"
+						},
+						{
+							"src": "placeholder:800x800:Photo 2",
+							"alt": "Photo 2"
+						},
+						{
+							"src": "placeholder:800x800:Photo 3",
+							"alt": "Photo 3"
+						},
+						{
+							"src": "placeholder:800x800:Photo 4",
+							"alt": "Photo 4"
+						},
+						{
+							"src": "placeholder:800x800:Photo 5",
+							"alt": "Photo 5"
+						},
+						{
+							"src": "placeholder:800x800:Photo 6",
+							"alt": "Photo 6"
+						}
+					],
+					"columns": 3,
+					"ratio": "1/1",
+					"gap": 4,
+					"lightbox": true
+				}
+			}
+		},
+		{
 			"type": "grid",
 			"label": "Grid",
 			"category": "layout",
@@ -506,6 +1301,181 @@
 					"columnsMobile": 1,
 					"gap": 6
 				}
+			}
+		},
+		{
+			"type": "header",
+			"label": "Header",
+			"category": "navigation",
+			"icon": "browsers",
+			"description": "The top of every page: logo, menu and buttons. On phones the menu folds into a ☰ button.",
+			"aiHint": "Put one in the layout header. Logo + name come from Website settings, the menu from pages marked showInMenu (source \"site\"). Children are the buttons on the right (1–2 buttons). layout \"split\" | \"center\" | \"stacked\".",
+			"props": [
+				{
+					"key": "layout",
+					"label": "Layout",
+					"kind": "select",
+					"options": [
+						{
+							"value": "split",
+							"label": "Logo left, menu right"
+						},
+						{
+							"value": "center",
+							"label": "Menu in the middle"
+						},
+						{
+							"value": "stacked",
+							"label": "Logo above the menu"
+						}
+					],
+					"default": "split"
+				},
+				{
+					"key": "show",
+					"label": "Logo shows",
+					"kind": "select",
+					"options": [
+						{
+							"value": "both",
+							"label": "Logo and name"
+						},
+						{
+							"value": "logo",
+							"label": "Logo only"
+						},
+						{
+							"value": "name",
+							"label": "Name only"
+						}
+					],
+					"default": "both"
+				},
+				{
+					"key": "logoSize",
+					"label": "Logo size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "source",
+					"label": "Links from",
+					"kind": "select",
+					"options": [
+						{
+							"value": "site",
+							"label": "Pages in the menu"
+						},
+						{
+							"value": "custom",
+							"label": "These links"
+						}
+					],
+					"default": "site",
+					"help": "“Pages in the menu” follows each page’s “Show in the menu” setting."
+				},
+				{
+					"key": "items",
+					"label": "Links",
+					"kind": "list",
+					"help": "Used when “Links from” is “These links”.",
+					"fields": [
+						{
+							"key": "label",
+							"label": "Text",
+							"kind": "text"
+						},
+						{
+							"key": "href",
+							"label": "Goes to",
+							"kind": "link"
+						}
+					],
+					"default": []
+				},
+				{
+					"key": "sticky",
+					"label": "Stays at the top when scrolling",
+					"kind": "boolean",
+					"default": false
+				},
+				{
+					"key": "border",
+					"label": "Line underneath",
+					"kind": "boolean",
+					"default": true
+				},
+				{
+					"key": "width",
+					"label": "Content width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "container",
+							"label": "Normal"
+						},
+						{
+							"value": "wide",
+							"label": "Wide"
+						},
+						{
+							"value": "full",
+							"label": "Full width"
+						}
+					],
+					"default": "container"
+				}
+			],
+			"slots": {
+				"children": {
+					"label": "Buttons"
+				}
+			},
+			"style": [
+				"spacing",
+				"background",
+				"type",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"layout": "split",
+					"show": "both",
+					"logoSize": "md",
+					"source": "site",
+					"sticky": false,
+					"border": true,
+					"width": "container"
+				},
+				"children": [
+					{
+						"id": "hdr0btn1",
+						"type": "button",
+						"props": {
+							"label": "Get in touch",
+							"variant": "primary",
+							"size": "sm"
+						},
+						"action": {
+							"type": "link",
+							"href": "/contact"
+						}
+					}
+				]
 			}
 		},
 		{
@@ -854,6 +1824,283 @@
 			}
 		},
 		{
+			"type": "logo",
+			"label": "Logo",
+			"category": "navigation",
+			"icon": "crown",
+			"description": "Your logo and/or site name from Website settings, linking to the home page.",
+			"aiHint": "The site’s logo and name (from Website settings unless set here). Links home unless node.action says otherwise.",
+			"props": [
+				{
+					"key": "show",
+					"label": "Show",
+					"kind": "select",
+					"options": [
+						{
+							"value": "both",
+							"label": "Logo and name"
+						},
+						{
+							"value": "logo",
+							"label": "Logo only"
+						},
+						{
+							"value": "name",
+							"label": "Name only"
+						}
+					],
+					"default": "both"
+				},
+				{
+					"key": "src",
+					"label": "Logo",
+					"kind": "image",
+					"help": "Leave empty to use the logo from Website settings."
+				},
+				{
+					"key": "text",
+					"label": "Name",
+					"kind": "text",
+					"help": "Leave empty to use the site name from Website settings."
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"effects"
+			],
+			"actions": true,
+			"defaults": {
+				"props": {
+					"show": "both",
+					"size": "md"
+				}
+			}
+		},
+		{
+			"type": "map",
+			"label": "Map",
+			"category": "media",
+			"icon": "map-pin",
+			"description": "A Google map of your address from Website settings (or one you type here).",
+			"aiHint": "Shows the site’s address (Website settings → Contact) unless address is set. No API key needed.",
+			"props": [
+				{
+					"key": "address",
+					"label": "Address",
+					"kind": "text",
+					"help": "Leave empty to use the address in Website settings."
+				},
+				{
+					"key": "zoom",
+					"label": "Zoom",
+					"kind": "select",
+					"options": [
+						{
+							"value": 12,
+							"label": "City"
+						},
+						{
+							"value": 14,
+							"label": "Neighbourhood"
+						},
+						{
+							"value": 16,
+							"label": "Street"
+						},
+						{
+							"value": 18,
+							"label": "Building"
+						}
+					],
+					"default": 16
+				},
+				{
+					"key": "height",
+					"label": "Height",
+					"kind": "select",
+					"options": [
+						{
+							"value": 240,
+							"label": "Small"
+						},
+						{
+							"value": 360,
+							"label": "Medium"
+						},
+						{
+							"value": 480,
+							"label": "Large"
+						}
+					],
+					"default": 360
+				}
+			],
+			"style": [
+				"spacing",
+				"size",
+				"border",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"address": "",
+					"zoom": 16,
+					"height": 360
+				}
+			}
+		},
+		{
+			"type": "marquee",
+			"label": "Moving strip",
+			"category": "media",
+			"icon": "arrows-vertical",
+			"description": "A strip that slowly scrolls sideways — customer logos, press mentions. Stops for people who prefer less motion.",
+			"aiHint": "Children are logos (image blocks, small) or short text. 5–10 items. Stands still with prefers-reduced-motion.",
+			"props": [
+				{
+					"key": "speed",
+					"label": "Speed",
+					"kind": "select",
+					"options": [
+						{
+							"value": "slow",
+							"label": "Slow"
+						},
+						{
+							"value": "normal",
+							"label": "Normal"
+						},
+						{
+							"value": "fast",
+							"label": "Fast"
+						}
+					],
+					"default": "normal"
+				},
+				{
+					"key": "reverse",
+					"label": "Move to the right",
+					"kind": "boolean",
+					"default": false
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 6,
+							"label": "Small"
+						},
+						{
+							"value": 12,
+							"label": "Medium"
+						},
+						{
+							"value": 16,
+							"label": "Large"
+						}
+					],
+					"default": 12
+				},
+				{
+					"key": "fade",
+					"label": "Fade the edges",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"speed": "normal",
+					"reverse": false,
+					"gap": 12,
+					"fade": true
+				},
+				"children": [
+					{
+						"id": "mrq0lg00",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Northwind</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					},
+					{
+						"id": "mrq0lg01",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Acme</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					},
+					{
+						"id": "mrq0lg02",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Globex</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					},
+					{
+						"id": "mrq0lg03",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Initech</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					},
+					{
+						"id": "mrq0lg04",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Umbrella</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					},
+					{
+						"id": "mrq0lg05",
+						"type": "text",
+						"props": {
+							"html": "<p><strong>Hooli</strong></p>",
+							"size": "lg",
+							"muted": true
+						}
+					}
+				]
+			}
+		},
+		{
 			"type": "modal",
 			"label": "Pop-up",
 			"category": "overlay",
@@ -932,6 +2179,125 @@
 			}
 		},
 		{
+			"type": "nav-menu",
+			"label": "Menu",
+			"category": "navigation",
+			"icon": "list",
+			"description": "A row or column of links — your pages marked “Show in the menu”, or links you choose.",
+			"aiHint": "source \"site\" lists the pages marked showInMenu (preferred); \"custom\" uses items [{ label, href }]. direction \"row\" for headers, \"column\" for footers.",
+			"props": [
+				{
+					"key": "source",
+					"label": "Links from",
+					"kind": "select",
+					"options": [
+						{
+							"value": "site",
+							"label": "Pages in the menu"
+						},
+						{
+							"value": "custom",
+							"label": "These links"
+						}
+					],
+					"default": "site",
+					"help": "“Pages in the menu” follows each page’s “Show in the menu” setting."
+				},
+				{
+					"key": "items",
+					"label": "Links",
+					"kind": "list",
+					"help": "Used when “Links from” is “These links”.",
+					"fields": [
+						{
+							"key": "label",
+							"label": "Text",
+							"kind": "text"
+						},
+						{
+							"key": "href",
+							"label": "Goes to",
+							"kind": "link"
+						}
+					],
+					"default": []
+				},
+				{
+					"key": "direction",
+					"label": "Direction",
+					"kind": "select",
+					"options": [
+						{
+							"value": "row",
+							"label": "Row"
+						},
+						{
+							"value": "column",
+							"label": "Column"
+						}
+					],
+					"default": "row"
+				},
+				{
+					"key": "tone",
+					"label": "Colour",
+					"kind": "select",
+					"options": [
+						{
+							"value": "muted",
+							"label": "Muted"
+						},
+						{
+							"value": "foreground",
+							"label": "Text"
+						},
+						{
+							"value": "primary",
+							"label": "Primary"
+						}
+					],
+					"default": "muted"
+				},
+				{
+					"key": "gap",
+					"label": "Gap",
+					"kind": "select",
+					"options": [
+						{
+							"value": 2,
+							"label": "Small"
+						},
+						{
+							"value": 4,
+							"label": "Medium"
+						},
+						{
+							"value": 6,
+							"label": "Large"
+						},
+						{
+							"value": 8,
+							"label": "Extra large"
+						}
+					],
+					"default": 6
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"source": "site",
+					"direction": "row",
+					"tone": "muted",
+					"gap": 6
+				}
+			}
+		},
+		{
 			"type": "popover",
 			"label": "Popover",
 			"category": "overlay",
@@ -988,6 +2354,97 @@
 						}
 					}
 				]
+			}
+		},
+		{
+			"type": "quote",
+			"label": "Quote",
+			"category": "basic",
+			"icon": "quotes",
+			"description": "What a customer said, with their name, role and photo.",
+			"aiHint": "Testimonials: text in the customer’s words (1–3 sentences), author, role (\"Owner, Café Nord\"). rating 0 hides the stars.",
+			"props": [
+				{
+					"key": "text",
+					"label": "Quote",
+					"kind": "textarea",
+					"default": "They were quick, friendly and the result was better than we hoped.",
+					"bindable": true
+				},
+				{
+					"key": "author",
+					"label": "Name",
+					"kind": "text",
+					"default": "Sam Rivera",
+					"bindable": true
+				},
+				{
+					"key": "role",
+					"label": "Role or company",
+					"kind": "text",
+					"default": "Customer",
+					"bindable": true
+				},
+				{
+					"key": "avatar",
+					"label": "Photo",
+					"kind": "image",
+					"bindable": true
+				},
+				{
+					"key": "rating",
+					"label": "Stars",
+					"kind": "select",
+					"options": [
+						{
+							"value": 0,
+							"label": "None"
+						},
+						{
+							"value": 3,
+							"label": "3"
+						},
+						{
+							"value": 4,
+							"label": "4"
+						},
+						{
+							"value": 5,
+							"label": "5"
+						}
+					],
+					"default": 0
+				},
+				{
+					"key": "variant",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "card",
+							"label": "Card"
+						},
+						{
+							"value": "plain",
+							"label": "Plain"
+						},
+						{
+							"value": "large",
+							"label": "Large, centred"
+						}
+					],
+					"default": "card"
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"text": "They were quick, friendly and the result was better than we hoped.",
+					"author": "Sam Rivera",
+					"role": "Customer",
+					"rating": 0,
+					"variant": "card"
+				}
 			}
 		},
 		{
@@ -1117,6 +2574,169 @@
 			"defaults": {
 				"props": {
 					"section": ""
+				}
+			}
+		},
+		{
+			"type": "social-links",
+			"label": "Social links",
+			"category": "navigation",
+			"icon": "share-network",
+			"description": "Icons linking to your social profiles — from Website settings, or links you add here.",
+			"aiHint": "source \"site\" uses the profiles in Website settings (preferred); \"custom\" uses items [{ network, url }].",
+			"props": [
+				{
+					"key": "source",
+					"label": "Links from",
+					"kind": "select",
+					"options": [
+						{
+							"value": "site",
+							"label": "Website settings"
+						},
+						{
+							"value": "custom",
+							"label": "These links"
+						}
+					],
+					"default": "site"
+				},
+				{
+					"key": "items",
+					"label": "Profiles",
+					"kind": "list",
+					"help": "Used when “Links from” is “These links”.",
+					"fields": [
+						{
+							"key": "network",
+							"label": "Network",
+							"kind": "select",
+							"options": [
+								{
+									"value": "facebook",
+									"label": "Facebook"
+								},
+								{
+									"value": "instagram",
+									"label": "Instagram"
+								},
+								{
+									"value": "x",
+									"label": "X"
+								},
+								{
+									"value": "linkedin",
+									"label": "LinkedIn"
+								},
+								{
+									"value": "youtube",
+									"label": "YouTube"
+								},
+								{
+									"value": "tiktok",
+									"label": "TikTok"
+								},
+								{
+									"value": "pinterest",
+									"label": "Pinterest"
+								},
+								{
+									"value": "whatsapp",
+									"label": "WhatsApp"
+								},
+								{
+									"value": "threads",
+									"label": "Threads"
+								},
+								{
+									"value": "telegram",
+									"label": "Telegram"
+								},
+								{
+									"value": "github",
+									"label": "GitHub"
+								},
+								{
+									"value": "dribbble",
+									"label": "Dribbble"
+								},
+								{
+									"value": "behance",
+									"label": "Behance"
+								},
+								{
+									"value": "spotify",
+									"label": "Spotify"
+								},
+								{
+									"value": "discord",
+									"label": "Discord"
+								},
+								{
+									"value": "email",
+									"label": "Email"
+								}
+							]
+						},
+						{
+							"key": "url",
+							"label": "Address",
+							"kind": "link"
+						}
+					],
+					"default": []
+				},
+				{
+					"key": "variant",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "plain",
+							"label": "Icons"
+						},
+						{
+							"value": "circle",
+							"label": "Circles"
+						},
+						{
+							"value": "square",
+							"label": "Squares"
+						}
+					],
+					"default": "plain"
+				},
+				{
+					"key": "size",
+					"label": "Size",
+					"kind": "select",
+					"options": [
+						{
+							"value": 16,
+							"label": "Small"
+						},
+						{
+							"value": 20,
+							"label": "Medium"
+						},
+						{
+							"value": 24,
+							"label": "Large"
+						}
+					],
+					"default": 20
+				}
+			],
+			"style": [
+				"spacing",
+				"type",
+				"effects"
+			],
+			"defaults": {
+				"props": {
+					"source": "site",
+					"variant": "plain",
+					"size": 20
 				}
 			}
 		},
@@ -1323,6 +2943,224 @@
 			}
 		},
 		{
+			"type": "stat",
+			"label": "Number",
+			"category": "basic",
+			"icon": "chart-bar",
+			"description": "A big number with a label — “12 years”, “4.9 ★”, “2,000 customers”.",
+			"aiHint": "value is short (\"98%\", \"12k+\"); label says what it counts. Use 3–4 in a grid.",
+			"props": [
+				{
+					"key": "value",
+					"label": "Number",
+					"kind": "text",
+					"default": "98%",
+					"bindable": true
+				},
+				{
+					"key": "label",
+					"label": "Label",
+					"kind": "text",
+					"default": "happy customers",
+					"bindable": true
+				},
+				{
+					"key": "description",
+					"label": "More detail",
+					"kind": "textarea"
+				},
+				{
+					"key": "tone",
+					"label": "Number colour",
+					"kind": "select",
+					"options": [
+						{
+							"value": "foreground",
+							"label": "Text"
+						},
+						{
+							"value": "primary",
+							"label": "Primary"
+						}
+					],
+					"default": "foreground"
+				},
+				{
+					"key": "align",
+					"label": "Align",
+					"kind": "select",
+					"options": [
+						{
+							"value": "start",
+							"label": "Left"
+						},
+						{
+							"value": "center",
+							"label": "Centre"
+						}
+					],
+					"default": "start"
+				}
+			],
+			"style": "all",
+			"defaults": {
+				"props": {
+					"value": "98%",
+					"label": "happy customers",
+					"tone": "foreground",
+					"align": "start"
+				}
+			}
+		},
+		{
+			"type": "tab",
+			"label": "Tab",
+			"category": "layout",
+			"icon": "browsers",
+			"description": "One tab of a Tabs block: its title and what shows when it’s chosen.",
+			"aiHint": "Only inside tabs. label is the tab’s title; children are its content.",
+			"props": [
+				{
+					"key": "label",
+					"label": "Title",
+					"kind": "text",
+					"default": "Tab"
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"canBeChildOf": [
+				"tabs"
+			],
+			"style": [
+				"spacing",
+				"layout",
+				"type"
+			],
+			"defaults": {
+				"props": {
+					"label": "Tab"
+				},
+				"children": [
+					{
+						"id": "tab0text",
+						"type": "text",
+						"props": {
+							"html": "<p>What this tab is about.</p>"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "tabs",
+			"label": "Tabs",
+			"category": "layout",
+			"icon": "browsers",
+			"description": "Content in tabs: visitors pick a title to see its part. Each tab is a block inside.",
+			"aiHint": "children are tab blocks (2–6), each with a short label. For services, menus by meal, plans by audience.",
+			"client": true,
+			"props": [
+				{
+					"key": "variant",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "line",
+							"label": "Underlined"
+						},
+						{
+							"value": "pills",
+							"label": "Pills"
+						}
+					],
+					"default": "line"
+				},
+				{
+					"key": "align",
+					"label": "Titles",
+					"kind": "select",
+					"options": [
+						{
+							"value": "start",
+							"label": "Left"
+						},
+						{
+							"value": "center",
+							"label": "Centre"
+						}
+					],
+					"default": "start"
+				}
+			],
+			"slots": {
+				"children": {
+					"allow": [
+						"tab"
+					]
+				}
+			},
+			"style": "all",
+			"defaults": {
+				"props": {
+					"variant": "line",
+					"align": "start"
+				},
+				"children": [
+					{
+						"id": "tbs0tab1",
+						"type": "tab",
+						"props": {
+							"label": "First"
+						},
+						"children": [
+							{
+								"id": "tbs0txt1",
+								"type": "text",
+								"props": {
+									"html": "<p>What the first tab is about.</p>"
+								}
+							}
+						]
+					},
+					{
+						"id": "tbs0tab2",
+						"type": "tab",
+						"props": {
+							"label": "Second"
+						},
+						"children": [
+							{
+								"id": "tbs0txt2",
+								"type": "text",
+								"props": {
+									"html": "<p>What the second tab is about.</p>"
+								}
+							}
+						]
+					},
+					{
+						"id": "tbs0tab3",
+						"type": "tab",
+						"props": {
+							"label": "Third"
+						},
+						"children": [
+							{
+								"id": "tbs0txt3",
+								"type": "text",
+								"props": {
+									"html": "<p>What the third tab is about.</p>"
+								}
+							}
+						]
+					}
+				]
+			}
+		},
+		{
 			"type": "text",
 			"label": "Text",
 			"category": "basic",
@@ -1453,10 +3291,1805 @@
 	],
 	"presets": [
 		{
+			"key": "blog-list",
+			"label": "Blog — three latest posts",
+			"category": "blog",
+			"thumbnail": "/__mint/presets/blog-list.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Blog",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "row",
+								"gap": 3,
+								"align": "end",
+								"justify": "between",
+								"wrap": true
+							},
+							"style": {
+								"base": {
+									"marginBottom": 8
+								}
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 2
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Blog</p>",
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"color": "primary",
+													"fontWeight": 600,
+													"tracking": "wide",
+													"transform": "uppercase"
+												}
+											},
+											"id": "blg00004"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Latest stories",
+												"level": 2
+											},
+											"id": "blg00005"
+										}
+									],
+									"id": "blg00003"
+								},
+								{
+									"type": "link",
+									"props": {
+										"text": "All posts →",
+										"tone": "primary"
+									},
+									"action": {
+										"type": "link",
+										"href": "/blog"
+									},
+									"id": "blg00006"
+								}
+							],
+							"id": "blg00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 8
+							},
+							"children": [
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 3
+									},
+									"action": {
+										"type": "link",
+										"href": "/blog"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:How we started",
+												"alt": "How we started",
+												"ratio": "16/9",
+												"rounded": "lg"
+											},
+											"id": "blg00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>March 2026</p>",
+												"size": "sm",
+												"muted": true
+											},
+											"id": "blg00010"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "How we started",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "blg00011"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>The first line or two of the post, to make people want to read on.</p>",
+												"muted": true
+											},
+											"id": "blg00012"
+										}
+									],
+									"id": "blg00008"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 3
+									},
+									"action": {
+										"type": "link",
+										"href": "/blog"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:Five tips for spring",
+												"alt": "Five tips for spring",
+												"ratio": "16/9",
+												"rounded": "lg"
+											},
+											"id": "blg00014"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>April 2026</p>",
+												"size": "sm",
+												"muted": true
+											},
+											"id": "blg00015"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Five tips for spring",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "blg00016"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>The first line or two of the post, to make people want to read on.</p>",
+												"muted": true
+											},
+											"id": "blg00017"
+										}
+									],
+									"id": "blg00013"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 3
+									},
+									"action": {
+										"type": "link",
+										"href": "/blog"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:Behind the scenes",
+												"alt": "Behind the scenes",
+												"ratio": "16/9",
+												"rounded": "lg"
+											},
+											"id": "blg00019"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>May 2026</p>",
+												"size": "sm",
+												"muted": true
+											},
+											"id": "blg00020"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Behind the scenes",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "blg00021"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>The first line or two of the post, to make people want to read on.</p>",
+												"muted": true
+											},
+											"id": "blg00022"
+										}
+									],
+									"id": "blg00018"
+								}
+							],
+							"id": "blg00007"
+						}
+					],
+					"id": "blg00001"
+				}
+			]
+		},
+		{
+			"key": "contact",
+			"label": "Contact — details, map and a form",
+			"category": "contact",
+			"thumbnail": "/__mint/presets/contact.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Contact",
+					"props": {},
+					"children": [
+						{
+							"type": "grid",
+							"props": {
+								"columns": 2,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 12
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 6
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Contact</p>",
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"color": "primary",
+													"fontWeight": 600,
+													"tracking": "wide",
+													"transform": "uppercase"
+												}
+											},
+											"id": "con00004"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Come and say hello",
+												"level": 2
+											},
+											"id": "con00005"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p><strong>Address</strong><br>12 Market Street, Your City</p><p><strong>Opening hours</strong><br>Mon–Fri 9–18 · Sat 10–16</p><p><strong>Phone</strong><br><a href=\"tel:+10000000000\">+1 000 000 0000</a></p>"
+											},
+											"id": "con00006"
+										},
+										{
+											"type": "social-links",
+											"props": {
+												"source": "site",
+												"variant": "circle",
+												"size": 20
+											},
+											"id": "con00007"
+										},
+										{
+											"type": "map",
+											"props": {
+												"address": "",
+												"zoom": 16,
+												"height": 240
+											},
+											"id": "con00008"
+										}
+									],
+									"id": "con00003"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "outline",
+										"padding": "lg",
+										"gap": 4
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Send us a message",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "con00010"
+										},
+										{
+											"type": "form-placeholder",
+											"props": {
+												"kind": "contact",
+												"button": "Send message"
+											},
+											"id": "con00011"
+										}
+									],
+									"id": "con00009"
+								}
+							],
+							"id": "con00002"
+						}
+					],
+					"id": "con00001"
+				}
+			]
+		},
+		{
+			"key": "countdown-banner",
+			"label": "Event — countdown to a date",
+			"category": "cta",
+			"thumbnail": "/__mint/presets/countdown-banner.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Countdown",
+					"props": {
+						"width": "narrow",
+						"paddingY": "lg"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Grand opening</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "cdb00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Doors open in",
+										"level": 2
+									},
+									"id": "cdb00004"
+								},
+								{
+									"type": "countdown",
+									"props": {
+										"to": "2027-01-01T10:00:00Z",
+										"endedText": "We’re open — come and see us!",
+										"size": "lg"
+									},
+									"id": "cdb00005"
+								},
+								{
+									"type": "button",
+									"props": {
+										"label": "Add to calendar",
+										"variant": "primary",
+										"size": "md"
+									},
+									"action": {
+										"type": "link",
+										"href": "/contact"
+									},
+									"id": "cdb00006"
+								}
+							],
+							"id": "cdb00002"
+						}
+					],
+					"id": "cdb00001"
+				}
+			]
+		},
+		{
+			"key": "cta-banner",
+			"label": "Call to action — coloured band",
+			"category": "cta",
+			"thumbnail": "/__mint/presets/cta-banner.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Call to action",
+					"props": {
+						"width": "narrow",
+						"paddingY": "lg"
+					},
+					"style": {
+						"base": {
+							"bgColor": "primary"
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "heading",
+									"props": {
+										"text": "Ready when you are",
+										"level": 2
+									},
+									"style": {
+										"base": {
+											"color": "primary-foreground"
+										}
+									},
+									"id": "ctb00003"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>One line that makes the next step feel easy.</p>",
+										"size": "lg"
+									},
+									"style": {
+										"base": {
+											"color": "primary-foreground",
+											"opacity": 90
+										}
+									},
+									"id": "ctb00004"
+								},
+								{
+									"type": "button",
+									"props": {
+										"label": "Get started",
+										"variant": "secondary",
+										"size": "lg"
+									},
+									"action": {
+										"type": "link",
+										"href": "/contact"
+									},
+									"id": "ctb00005"
+								}
+							],
+							"id": "ctb00002"
+						}
+					],
+					"id": "ctb00001"
+				}
+			]
+		},
+		{
+			"key": "cta-card",
+			"label": "Call to action — card with two buttons",
+			"category": "cta",
+			"thumbnail": "/__mint/presets/cta-card.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Call to action",
+					"props": {},
+					"children": [
+						{
+							"type": "card",
+							"props": {
+								"variant": "filled",
+								"padding": "lg",
+								"gap": 6
+							},
+							"style": {
+								"base": {
+									"radius": "xl"
+								}
+							},
+							"children": [
+								{
+									"type": "grid",
+									"props": {
+										"columns": 2,
+										"columnsTablet": 2,
+										"columnsMobile": 1,
+										"gap": 6
+									},
+									"style": {
+										"base": {
+											"align": "center"
+										}
+									},
+									"children": [
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 3
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "Have a question?",
+														"level": 2,
+														"size": "lg"
+													},
+													"id": "ctc00005"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>We usually answer within a few hours on weekdays.</p>",
+														"muted": true
+													},
+													"id": "ctc00006"
+												}
+											],
+											"id": "ctc00004"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 3,
+												"align": "center",
+												"justify": "end",
+												"wrap": true
+											},
+											"children": [
+												{
+													"type": "button",
+													"props": {
+														"label": "Call us",
+														"variant": "outline",
+														"size": "md"
+													},
+													"action": {
+														"type": "link",
+														"href": "tel:+10000000000"
+													},
+													"id": "ctc00008"
+												},
+												{
+													"type": "button",
+													"props": {
+														"label": "Send a message",
+														"variant": "primary",
+														"size": "md"
+													},
+													"action": {
+														"type": "link",
+														"href": "/contact"
+													},
+													"id": "ctc00009"
+												}
+											],
+											"id": "ctc00007"
+										}
+									],
+									"id": "ctc00003"
+								}
+							],
+							"id": "ctc00002"
+						}
+					],
+					"id": "ctc00001"
+				}
+			]
+		},
+		{
+			"key": "faq",
+			"label": "Questions — an accordion of answers",
+			"category": "faq",
+			"thumbnail": "/__mint/presets/faq.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Questions",
+					"props": {
+						"width": "narrow"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Questions</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "faq00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Things people ask us",
+										"level": 2
+									},
+									"id": "faq00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Can’t find an answer? Just get in touch.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "faq00005"
+								}
+							],
+							"id": "faq00002"
+						},
+						{
+							"type": "accordion",
+							"props": {
+								"single": true
+							},
+							"children": [
+								{
+									"type": "accordion-item",
+									"props": {
+										"title": "How do I book?"
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Use the button at the top of any page, or call us during opening hours.</p>",
+												"muted": true
+											},
+											"id": "faq00008"
+										}
+									],
+									"id": "faq00007"
+								},
+								{
+									"type": "accordion-item",
+									"props": {
+										"title": "What does it cost?"
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Prices are on our pricing page; we always confirm before starting.</p>",
+												"muted": true
+											},
+											"id": "faq00010"
+										}
+									],
+									"id": "faq00009"
+								},
+								{
+									"type": "accordion-item",
+									"props": {
+										"title": "Can I cancel?"
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Yes — free of charge up to 24 hours before.</p>",
+												"muted": true
+											},
+											"id": "faq00012"
+										}
+									],
+									"id": "faq00011"
+								},
+								{
+									"type": "accordion-item",
+									"props": {
+										"title": "Where are you?"
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Our address and a map are on the contact page.</p>",
+												"muted": true
+											},
+											"id": "faq00014"
+										}
+									],
+									"id": "faq00013"
+								}
+							],
+							"id": "faq00006"
+						}
+					],
+					"id": "faq00001"
+				}
+			]
+		},
+		{
+			"key": "features-cards",
+			"label": "Features — three cards with pictures",
+			"category": "features",
+			"thumbnail": "/__mint/presets/features-cards.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Features",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>What we offer</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "fca00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Three ways we can help",
+										"level": 2
+									},
+									"id": "fca00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Pick the one that fits — or ask and we will suggest one.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "fca00005"
+								}
+							],
+							"id": "fca00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 6
+							},
+							"children": [
+								{
+									"type": "card",
+									"props": {
+										"variant": "elevated",
+										"padding": "md",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:Consulting",
+												"alt": "Consulting",
+												"ratio": "16/9"
+											},
+											"id": "fca00008"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Consulting",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fca00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A sentence about this service and who it is for.</p>",
+												"muted": true
+											},
+											"id": "fca00010"
+										},
+										{
+											"type": "link",
+											"props": {
+												"text": "Learn more →",
+												"tone": "primary"
+											},
+											"action": {
+												"type": "link",
+												"href": "/services"
+											},
+											"id": "fca00011"
+										}
+									],
+									"id": "fca00007"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "elevated",
+										"padding": "md",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:Design",
+												"alt": "Design",
+												"ratio": "16/9"
+											},
+											"id": "fca00013"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Design",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fca00014"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A sentence about this service and who it is for.</p>",
+												"muted": true
+											},
+											"id": "fca00015"
+										},
+										{
+											"type": "link",
+											"props": {
+												"text": "Learn more →",
+												"tone": "primary"
+											},
+											"action": {
+												"type": "link",
+												"href": "/services"
+											},
+											"id": "fca00016"
+										}
+									],
+									"id": "fca00012"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "elevated",
+										"padding": "md",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x500:Support",
+												"alt": "Support",
+												"ratio": "16/9"
+											},
+											"id": "fca00018"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Support",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fca00019"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A sentence about this service and who it is for.</p>",
+												"muted": true
+											},
+											"id": "fca00020"
+										},
+										{
+											"type": "link",
+											"props": {
+												"text": "Learn more →",
+												"tone": "primary"
+											},
+											"action": {
+												"type": "link",
+												"href": "/services"
+											},
+											"id": "fca00021"
+										}
+									],
+									"id": "fca00017"
+								}
+							],
+							"id": "fca00006"
+						}
+					],
+					"id": "fca00001"
+				}
+			]
+		},
+		{
+			"key": "features-grid",
+			"label": "Features — six points with icons",
+			"category": "features",
+			"thumbnail": "/__mint/presets/features-grid.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Features",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Why us</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "fgr00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Everything you need, nothing you don’t",
+										"level": 2
+									},
+									"id": "fgr00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Three to six reasons people choose you, one line each.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "fgr00005"
+								}
+							],
+							"id": "fgr00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 12
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "lightning",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00008"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Fast",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Most jobs are done the same week you ask.</p>",
+												"muted": true
+											},
+											"id": "fgr00010"
+										}
+									],
+									"id": "fgr00007"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "shield-check",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00012"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Reliable",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00013"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Fully insured and guaranteed for a year.</p>",
+												"muted": true
+											},
+											"id": "fgr00014"
+										}
+									],
+									"id": "fgr00011"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "chat-circle",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00016"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Personal",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00017"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>You talk to the person who does the work.</p>",
+												"muted": true
+											},
+											"id": "fgr00018"
+										}
+									],
+									"id": "fgr00015"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "leaf",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00020"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Sustainable",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00021"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Local materials and as little waste as we can.</p>",
+												"muted": true
+											},
+											"id": "fgr00022"
+										}
+									],
+									"id": "fgr00019"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "currency-dollar",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00024"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Clear prices",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00025"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A fixed quote before anything starts.</p>",
+												"muted": true
+											},
+											"id": "fgr00026"
+										}
+									],
+									"id": "fgr00023"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "icon",
+											"props": {
+												"name": "star",
+												"size": 32
+											},
+											"style": {
+												"base": {
+													"color": "primary"
+												}
+											},
+											"id": "fgr00028"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Loved",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "fgr00029"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Rated 4.9 by more than 300 customers.</p>",
+												"muted": true
+											},
+											"id": "fgr00030"
+										}
+									],
+									"id": "fgr00027"
+								}
+							],
+							"id": "fgr00006"
+						}
+					],
+					"id": "fgr00001"
+				}
+			]
+		},
+		{
+			"key": "features-split",
+			"label": "Features — picture beside a checklist",
+			"category": "features",
+			"thumbnail": "/__mint/presets/features-split.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Features",
+					"props": {},
+					"children": [
+						{
+							"type": "grid",
+							"props": {
+								"columns": 2,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 12
+							},
+							"style": {
+								"base": {
+									"align": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "image",
+									"props": {
+										"src": "placeholder:1000x900:Your work in action",
+										"alt": "Your work in action",
+										"ratio": "4/3",
+										"rounded": "lg"
+									},
+									"id": "fsp00003"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 6,
+										"justify": "center"
+									},
+									"children": [
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>How it works</p>",
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"color": "primary",
+													"fontWeight": 600,
+													"tracking": "wide",
+													"transform": "uppercase"
+												}
+											},
+											"id": "fsp00005"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Built around the way you work",
+												"level": 2
+											},
+											"id": "fsp00006"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li><strong>Tell us what you need</strong> — a short call or a message.</li><li><strong>Get a clear plan</strong> — with a fixed price and a date.</li><li><strong>Relax</strong> — we keep you posted until it is done.</li></ul>",
+												"size": "lg"
+											},
+											"id": "fsp00007"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Start now",
+												"variant": "primary",
+												"size": "md"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "fsp00008"
+										}
+									],
+									"id": "fsp00004"
+								}
+							],
+							"id": "fsp00002"
+						}
+					],
+					"id": "fsp00001"
+				}
+			]
+		},
+		{
+			"key": "footer-centered",
+			"label": "Footer — centred menu and socials",
+			"category": "footer",
+			"thumbnail": "/__mint/presets/footer-centered.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Footer",
+					"props": {
+						"tag": "footer",
+						"paddingY": "md"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "logo",
+									"props": {
+										"show": "name",
+										"size": "lg"
+									},
+									"id": "fce00003"
+								},
+								{
+									"type": "nav-menu",
+									"props": {
+										"source": "site",
+										"direction": "row",
+										"gap": 6
+									},
+									"id": "fce00004"
+								},
+								{
+									"type": "social-links",
+									"props": {
+										"source": "site",
+										"variant": "circle"
+									},
+									"id": "fce00005"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>© Your business</p>",
+										"size": "sm",
+										"muted": true
+									},
+									"id": "fce00006"
+								}
+							],
+							"id": "fce00002"
+						}
+					],
+					"id": "fce00001"
+				}
+			]
+		},
+		{
+			"key": "footer-columns",
+			"label": "Footer — logo, link columns and socials",
+			"category": "footer",
+			"thumbnail": "/__mint/presets/footer-columns.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Footer",
+					"props": {
+						"tag": "footer",
+						"paddingY": "md"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "grid",
+							"props": {
+								"columns": 4,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 8
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 4
+									},
+									"children": [
+										{
+											"type": "logo",
+											"props": {
+												"show": "both"
+											},
+											"id": "fco00004"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A line about what you do and where.</p>",
+												"size": "sm",
+												"muted": true
+											},
+											"id": "fco00005"
+										},
+										{
+											"type": "social-links",
+											"props": {
+												"source": "site"
+											},
+											"id": "fco00006"
+										}
+									],
+									"id": "fco00003"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Company",
+												"level": 2,
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"fontSize": "sm"
+												}
+											},
+											"id": "fco00008"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 2
+											},
+											"children": [
+												{
+													"type": "link",
+													"props": {
+														"text": "About",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/about"
+													},
+													"id": "fco00010"
+												},
+												{
+													"type": "link",
+													"props": {
+														"text": "Team",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/about#team"
+													},
+													"id": "fco00011"
+												},
+												{
+													"type": "link",
+													"props": {
+														"text": "Careers",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/careers"
+													},
+													"id": "fco00012"
+												}
+											],
+											"id": "fco00009"
+										}
+									],
+									"id": "fco00007"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Help",
+												"level": 2,
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"fontSize": "sm"
+												}
+											},
+											"id": "fco00014"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 2
+											},
+											"children": [
+												{
+													"type": "link",
+													"props": {
+														"text": "Contact",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/contact"
+													},
+													"id": "fco00016"
+												},
+												{
+													"type": "link",
+													"props": {
+														"text": "FAQ",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/faq"
+													},
+													"id": "fco00017"
+												},
+												{
+													"type": "link",
+													"props": {
+														"text": "Shipping",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/shipping"
+													},
+													"id": "fco00018"
+												}
+											],
+											"id": "fco00015"
+										}
+									],
+									"id": "fco00013"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Legal",
+												"level": 2,
+												"size": "sm"
+											},
+											"style": {
+												"base": {
+													"fontSize": "sm"
+												}
+											},
+											"id": "fco00020"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 2
+											},
+											"children": [
+												{
+													"type": "link",
+													"props": {
+														"text": "Privacy",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/privacy"
+													},
+													"id": "fco00022"
+												},
+												{
+													"type": "link",
+													"props": {
+														"text": "Terms",
+														"tone": "muted"
+													},
+													"action": {
+														"type": "link",
+														"href": "/terms"
+													},
+													"id": "fco00023"
+												}
+											],
+											"id": "fco00021"
+										}
+									],
+									"id": "fco00019"
+								}
+							],
+							"id": "fco00002"
+						},
+						{
+							"type": "divider",
+							"props": {
+								"thickness": 1
+							},
+							"style": {
+								"base": {
+									"marginTop": 12,
+									"marginBottom": 6
+								}
+							},
+							"id": "fco00024"
+						},
+						{
+							"type": "text",
+							"props": {
+								"html": "<p>© Your business. All rights reserved.</p>",
+								"size": "sm",
+								"muted": true
+							},
+							"id": "fco00025"
+						}
+					],
+					"id": "fco00001"
+				}
+			]
+		},
+		{
 			"key": "footer-simple",
 			"label": "Footer — name, links and copyright",
 			"category": "footer",
-			"thumbnail": "",
+			"thumbnail": "/__mint/presets/footer-simple.png",
 			"tree": [
 				{
 					"id": "ftS0sect",
@@ -1576,10 +5209,203 @@
 			]
 		},
 		{
+			"key": "gallery",
+			"label": "Gallery — a grid of photos that open big",
+			"category": "gallery",
+			"thumbnail": "/__mint/presets/gallery.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Gallery",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Gallery</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "gal00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "A look inside",
+										"level": 2
+									},
+									"id": "gal00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>A few of our favourite moments.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "gal00005"
+								}
+							],
+							"id": "gal00002"
+						},
+						{
+							"type": "gallery",
+							"props": {
+								"items": [
+									{
+										"src": "placeholder:800x800:Photo 1",
+										"alt": "Photo 1"
+									},
+									{
+										"src": "placeholder:800x800:Photo 2",
+										"alt": "Photo 2"
+									},
+									{
+										"src": "placeholder:800x800:Photo 3",
+										"alt": "Photo 3"
+									},
+									{
+										"src": "placeholder:800x800:Photo 4",
+										"alt": "Photo 4"
+									},
+									{
+										"src": "placeholder:800x800:Photo 5",
+										"alt": "Photo 5"
+									},
+									{
+										"src": "placeholder:800x800:Photo 6",
+										"alt": "Photo 6"
+									},
+									{
+										"src": "placeholder:800x800:Photo 7",
+										"alt": "Photo 7"
+									},
+									{
+										"src": "placeholder:800x800:Photo 8",
+										"alt": "Photo 8"
+									}
+								],
+								"columns": 4,
+								"ratio": "1/1",
+								"gap": 4,
+								"lightbox": true
+							},
+							"id": "gal00006"
+						}
+					],
+					"id": "gal00001"
+				}
+			]
+		},
+		{
+			"key": "header-bar",
+			"label": "Header — logo, menu from your pages, button",
+			"category": "header",
+			"thumbnail": "/__mint/presets/header-bar.png",
+			"tree": [
+				{
+					"type": "header",
+					"props": {
+						"layout": "split",
+						"show": "both",
+						"source": "site",
+						"border": true,
+						"sticky": true
+					},
+					"children": [
+						{
+							"type": "button",
+							"props": {
+								"label": "Get in touch",
+								"variant": "primary",
+								"size": "sm"
+							},
+							"action": {
+								"type": "link",
+								"href": "/contact"
+							},
+							"id": "hba00002"
+						}
+					],
+					"id": "hba00001"
+				}
+			]
+		},
+		{
+			"key": "header-centered",
+			"label": "Header — menu in the middle, two buttons",
+			"category": "header",
+			"thumbnail": "/__mint/presets/header-centered.png",
+			"tree": [
+				{
+					"type": "header",
+					"props": {
+						"layout": "center",
+						"show": "both",
+						"source": "site",
+						"border": false
+					},
+					"children": [
+						{
+							"type": "button",
+							"props": {
+								"label": "Log in",
+								"variant": "ghost",
+								"size": "sm"
+							},
+							"action": {
+								"type": "link",
+								"href": "/account"
+							},
+							"id": "hce00002"
+						},
+						{
+							"type": "button",
+							"props": {
+								"label": "Book now",
+								"variant": "primary",
+								"size": "sm"
+							},
+							"action": {
+								"type": "link",
+								"href": "/contact"
+							},
+							"id": "hce00003"
+						}
+					],
+					"id": "hce00001"
+				}
+			]
+		},
+		{
 			"key": "header-simple",
 			"label": "Header — name, links and a button",
 			"category": "header",
-			"thumbnail": "",
+			"thumbnail": "/__mint/presets/header-simple.png",
 			"tree": [
 				{
 					"id": "hdS0sect",
@@ -1702,10 +5528,29 @@
 			]
 		},
 		{
+			"key": "header-stacked",
+			"label": "Header — logo above a centred menu",
+			"category": "header",
+			"thumbnail": "/__mint/presets/header-stacked.png",
+			"tree": [
+				{
+					"type": "header",
+					"props": {
+						"layout": "stacked",
+						"show": "name",
+						"logoSize": "lg",
+						"source": "site",
+						"border": true
+					},
+					"id": "hst00001"
+				}
+			]
+		},
+		{
 			"key": "hero-centered",
 			"label": "Hero — centred title, text and two buttons",
 			"category": "hero",
-			"thumbnail": "",
+			"thumbnail": "/__mint/presets/hero-centered.png",
 			"tree": [
 				{
 					"id": "hrC0sect",
@@ -1807,9 +5652,3033 @@
 					]
 				}
 			]
+		},
+		{
+			"key": "hero-image",
+			"label": "Hero — big photo behind the title",
+			"category": "hero",
+			"thumbnail": "/__mint/presets/hero-image.jpg",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Hero — add your photo under Style → Background",
+					"props": {
+						"width": "container",
+						"paddingY": "xl"
+					},
+					"style": {
+						"base": {
+							"bgColor": "black",
+							"gradient": {
+								"from": "primary",
+								"to": "black",
+								"angle": 135
+							},
+							"bgPosition": "center",
+							"bgSize": "cover",
+							"bgOverlay": "black",
+							"bgOverlayOpacity": 35
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "start"
+							},
+							"style": {
+								"base": {
+									"minHeight": {
+										"n": 50,
+										"unit": "vh"
+									},
+									"justify": "end"
+								}
+							},
+							"children": [
+								{
+									"type": "heading",
+									"props": {
+										"text": "A place worth the trip",
+										"level": 1
+									},
+									"style": {
+										"base": {
+											"color": "white",
+											"maxWidth": "md"
+										}
+									},
+									"id": "him00003"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Tell people what they will find here, in one inviting sentence.</p>",
+										"size": "xl"
+									},
+									"style": {
+										"base": {
+											"color": "white",
+											"maxWidth": "md"
+										}
+									},
+									"id": "him00004"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 3,
+										"align": "center"
+									},
+									"children": [
+										{
+											"type": "button",
+											"props": {
+												"label": "Plan your visit",
+												"variant": "primary",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "him00006"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Our story",
+												"variant": "secondary",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/about"
+											},
+											"id": "him00007"
+										}
+									],
+									"id": "him00005"
+								}
+							],
+							"id": "him00002"
+						}
+					],
+					"id": "him00001"
+				}
+			]
+		},
+		{
+			"key": "hero-minimal",
+			"label": "Hero — big type, nothing else",
+			"category": "hero",
+			"thumbnail": "/__mint/presets/hero-minimal.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Hero",
+					"props": {
+						"width": "container",
+						"paddingY": "xl"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 8
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Studio for brands and products</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "hmi00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "We design things people remember.",
+										"level": 1,
+										"size": "2xl"
+									},
+									"style": {
+										"base": {
+											"maxWidth": "lg",
+											"leading": "tight"
+										}
+									},
+									"id": "hmi00004"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 6,
+										"align": "center"
+									},
+									"children": [
+										{
+											"type": "link",
+											"props": {
+												"text": "See the work →",
+												"tone": "primary"
+											},
+											"action": {
+												"type": "link",
+												"href": "/work"
+											},
+											"id": "hmi00006"
+										},
+										{
+											"type": "link",
+											"props": {
+												"text": "Get in touch",
+												"tone": "foreground"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "hmi00007"
+										}
+									],
+									"id": "hmi00005"
+								}
+							],
+							"id": "hmi00002"
+						}
+					],
+					"id": "hmi00001"
+				}
+			]
+		},
+		{
+			"key": "hero-signup",
+			"label": "Hero — title with an email sign-up",
+			"category": "hero",
+			"thumbnail": "/__mint/presets/hero-signup.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Hero",
+					"props": {
+						"width": "narrow",
+						"paddingY": "xl"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "badge",
+									"props": {
+										"text": "Launching soon",
+										"tone": "accent",
+										"variant": "solid"
+									},
+									"id": "hsu00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Be the first to know",
+										"level": 1
+									},
+									"id": "hsu00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Leave your email and we will tell you the day it opens. No spam, ever.</p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "hsu00005"
+								},
+								{
+									"type": "form-placeholder",
+									"props": {
+										"kind": "newsletter",
+										"button": "Notify me"
+									},
+									"style": {
+										"base": {
+											"maxWidth": "sm",
+											"width": "full"
+										}
+									},
+									"id": "hsu00006"
+								}
+							],
+							"id": "hsu00002"
+						}
+					],
+					"id": "hsu00001"
+				}
+			]
+		},
+		{
+			"key": "hero-split",
+			"label": "Hero — text beside a picture",
+			"category": "hero",
+			"thumbnail": "/__mint/presets/hero-split.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Hero",
+					"props": {
+						"paddingY": "lg"
+					},
+					"children": [
+						{
+							"type": "grid",
+							"props": {
+								"columns": 2,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 12
+							},
+							"style": {
+								"base": {
+									"align": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 6,
+										"justify": "center"
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "New this season",
+												"tone": "primary",
+												"variant": "soft"
+											},
+											"id": "hsp00004"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Say what you do in one clear line",
+												"level": 1
+											},
+											"id": "hsp00005"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>A sentence or two on who it is for and what changes for them. Keep it short and concrete.</p>",
+												"size": "xl",
+												"muted": true
+											},
+											"id": "hsp00006"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 3,
+												"align": "center",
+												"wrap": true
+											},
+											"children": [
+												{
+													"type": "button",
+													"props": {
+														"label": "Get started",
+														"variant": "primary",
+														"size": "lg"
+													},
+													"action": {
+														"type": "link",
+														"href": "/contact"
+													},
+													"id": "hsp00008"
+												},
+												{
+													"type": "button",
+													"props": {
+														"label": "See how it works",
+														"variant": "outline",
+														"size": "lg"
+													},
+													"action": {
+														"type": "link",
+														"href": "#how"
+													},
+													"id": "hsp00009"
+												}
+											],
+											"id": "hsp00007"
+										}
+									],
+									"id": "hsp00003"
+								},
+								{
+									"type": "image",
+									"props": {
+										"src": "placeholder:1200x1000:Your best photo",
+										"alt": "Your best photo",
+										"ratio": "4/3",
+										"rounded": "xl",
+										"priority": true
+									},
+									"id": "hsp00010"
+								}
+							],
+							"id": "hsp00002"
+						}
+					],
+					"id": "hsp00001"
+				}
+			]
+		},
+		{
+			"key": "hero-stats",
+			"label": "Hero — title, buttons and three numbers",
+			"category": "hero",
+			"thumbnail": "/__mint/presets/hero-stats.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Hero",
+					"props": {
+						"width": "narrow",
+						"paddingY": "xl"
+					},
+					"style": {
+						"base": {
+							"gradient": {
+								"from": "accent",
+								"to": "background",
+								"angle": 180
+							}
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "heading",
+									"props": {
+										"text": "Results you can measure",
+										"level": 1
+									},
+									"id": "hss00003"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>What you offer and the difference it makes, said simply.</p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "hss00004"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 3,
+										"align": "center",
+										"justify": "center"
+									},
+									"children": [
+										{
+											"type": "button",
+											"props": {
+												"label": "Start today",
+												"variant": "primary",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "hss00006"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Talk to us",
+												"variant": "outline",
+												"size": "lg"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "hss00007"
+										}
+									],
+									"id": "hss00005"
+								}
+							],
+							"id": "hss00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 3,
+								"columnsMobile": 1,
+								"gap": 6
+							},
+							"style": {
+								"base": {
+									"marginTop": 16
+								}
+							},
+							"children": [
+								{
+									"type": "stat",
+									"props": {
+										"value": "12 yrs",
+										"label": "in business",
+										"align": "center"
+									},
+									"id": "hss00009"
+								},
+								{
+									"type": "stat",
+									"props": {
+										"value": "2,400+",
+										"label": "happy customers",
+										"align": "center"
+									},
+									"id": "hss00010"
+								},
+								{
+									"type": "stat",
+									"props": {
+										"value": "4.9 ★",
+										"label": "average review",
+										"align": "center"
+									},
+									"id": "hss00011"
+								}
+							],
+							"id": "hss00008"
+						}
+					],
+					"id": "hss00001"
+				}
+			]
+		},
+		{
+			"key": "logos",
+			"label": "Logos — a moving strip of customers",
+			"category": "logos",
+			"thumbnail": "/__mint/presets/logos.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Logos",
+					"props": {
+						"paddingY": "sm"
+					},
+					"children": [
+						{
+							"type": "text",
+							"props": {
+								"html": "<p>Trusted by teams at</p>",
+								"size": "sm",
+								"muted": true
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 6
+								}
+							},
+							"id": "lgo00002"
+						},
+						{
+							"type": "marquee",
+							"props": {
+								"speed": "slow",
+								"gap": 12,
+								"fade": true
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Northwind</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Acme</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00005"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Globex</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00006"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Initech</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00007"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Umbrella</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00008"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Hooli</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00009"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p><strong>Stark</strong></p>",
+										"size": "xl",
+										"muted": true
+									},
+									"id": "lgo00010"
+								}
+							],
+							"id": "lgo00003"
+						}
+					],
+					"id": "lgo00001"
+				}
+			]
+		},
+		{
+			"key": "newsletter",
+			"label": "Newsletter — email sign-up band",
+			"category": "contact",
+			"thumbnail": "/__mint/presets/newsletter.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Newsletter",
+					"props": {
+						"width": "narrow",
+						"paddingY": "lg"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 4,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "icon",
+									"props": {
+										"name": "envelope-simple",
+										"size": 32
+									},
+									"style": {
+										"base": {
+											"color": "primary"
+										}
+									},
+									"id": "nws00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Get our monthly letter",
+										"level": 2,
+										"size": "lg"
+									},
+									"id": "nws00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>News, offers and the odd useful tip. One email a month.</p>",
+										"muted": true
+									},
+									"id": "nws00005"
+								},
+								{
+									"type": "form-placeholder",
+									"props": {
+										"kind": "newsletter",
+										"button": "Subscribe",
+										"note": "You can unsubscribe at any time."
+									},
+									"style": {
+										"base": {
+											"maxWidth": "sm",
+											"width": "full"
+										}
+									},
+									"id": "nws00006"
+								}
+							],
+							"id": "nws00002"
+						}
+					],
+					"id": "nws00001"
+				}
+			]
+		},
+		{
+			"key": "not-found",
+			"label": "Page not found (404)",
+			"category": "pages",
+			"thumbnail": "/__mint/presets/not-found.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Not found",
+					"props": {
+						"width": "narrow",
+						"paddingY": "xl"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 6,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>404</p>"
+									},
+									"style": {
+										"base": {
+											"fontSize": "6xl",
+											"fontWeight": 700,
+											"color": "primary",
+											"leading": "none"
+										}
+									},
+									"id": "nfd00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "We can’t find that page",
+										"level": 1,
+										"size": "lg"
+									},
+									"id": "nfd00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>It may have moved, or the link might be wrong.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "nfd00005"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "row",
+										"gap": 3,
+										"align": "center",
+										"justify": "center"
+									},
+									"children": [
+										{
+											"type": "button",
+											"props": {
+												"label": "Go to the home page",
+												"variant": "primary",
+												"size": "md"
+											},
+											"action": {
+												"type": "link",
+												"href": "/"
+											},
+											"id": "nfd00007"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Contact us",
+												"variant": "outline",
+												"size": "md"
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"id": "nfd00008"
+										}
+									],
+									"id": "nfd00006"
+								}
+							],
+							"id": "nfd00002"
+						}
+					],
+					"id": "nfd00001"
+				}
+			]
+		},
+		{
+			"key": "page-title",
+			"label": "Page title — breadcrumbs, title and intro",
+			"category": "pages",
+			"thumbnail": "/__mint/presets/page-title.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Page title",
+					"props": {
+						"paddingY": "md"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 4
+							},
+							"children": [
+								{
+									"type": "breadcrumbs",
+									"props": {},
+									"id": "ptl00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Page title",
+										"level": 1,
+										"size": "xl"
+									},
+									"id": "ptl00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>One sentence on what this page is about.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"style": {
+										"base": {
+											"maxWidth": "md"
+										}
+									},
+									"id": "ptl00005"
+								}
+							],
+							"id": "ptl00002"
+						}
+					],
+					"id": "ptl00001"
+				}
+			]
+		},
+		{
+			"key": "pricing-three",
+			"label": "Pricing — three plans",
+			"category": "pricing",
+			"thumbnail": "/__mint/presets/pricing-three.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Pricing",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Pricing</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "prt00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Simple, honest prices",
+										"level": 2
+									},
+									"id": "prt00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>No setup fees. Cancel any time.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "prt00005"
+								}
+							],
+							"id": "prt00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 6
+							},
+							"style": {
+								"base": {
+									"align": "stretch"
+								}
+							},
+							"children": [
+								{
+									"type": "card",
+									"props": {
+										"variant": "outline",
+										"padding": "lg",
+										"gap": 4
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Starter",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "prt00008"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 2,
+												"align": "end",
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "$19",
+														"level": 4,
+														"size": "xl"
+													},
+													"id": "prt00010"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>/ month</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "prt00011"
+												}
+											],
+											"id": "prt00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>For trying it out.</p>",
+												"muted": true
+											},
+											"id": "prt00012"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li>One location</li><li>Email support</li><li>Basic reports</li></ul>",
+												"size": "sm"
+											},
+											"id": "prt00013"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Choose Starter",
+												"variant": "outline",
+												"size": "md",
+												"fullWidth": true
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"style": {
+												"base": {
+													"marginTop": "auto"
+												}
+											},
+											"id": "prt00014"
+										}
+									],
+									"id": "prt00007"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "elevated",
+										"padding": "lg",
+										"gap": 4
+									},
+									"style": {
+										"base": {
+											"borderWidth": 2,
+											"borderColor": "primary"
+										}
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "Most popular",
+												"tone": "primary",
+												"variant": "solid"
+											},
+											"id": "prt00016"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Growth",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "prt00017"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 2,
+												"align": "end",
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "$49",
+														"level": 4,
+														"size": "xl"
+													},
+													"id": "prt00019"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>/ month</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "prt00020"
+												}
+											],
+											"id": "prt00018"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>For most small businesses.</p>",
+												"muted": true
+											},
+											"id": "prt00021"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li>Three locations</li><li>Priority support</li><li>All reports</li><li>Online booking</li></ul>",
+												"size": "sm"
+											},
+											"id": "prt00022"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Choose Growth",
+												"variant": "primary",
+												"size": "md",
+												"fullWidth": true
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"style": {
+												"base": {
+													"marginTop": "auto"
+												}
+											},
+											"id": "prt00023"
+										}
+									],
+									"id": "prt00015"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "outline",
+										"padding": "lg",
+										"gap": 4
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Pro",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "prt00025"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 2,
+												"align": "end",
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "$99",
+														"level": 4,
+														"size": "xl"
+													},
+													"id": "prt00027"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>/ month</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "prt00028"
+												}
+											],
+											"id": "prt00026"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>For busy teams.</p>",
+												"muted": true
+											},
+											"id": "prt00029"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li>Unlimited locations</li><li>Phone support</li><li>Custom reports</li><li>A personal account manager</li></ul>",
+												"size": "sm"
+											},
+											"id": "prt00030"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Choose Pro",
+												"variant": "outline",
+												"size": "md",
+												"fullWidth": true
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"style": {
+												"base": {
+													"marginTop": "auto"
+												}
+											},
+											"id": "prt00031"
+										}
+									],
+									"id": "prt00024"
+								}
+							],
+							"id": "prt00006"
+						}
+					],
+					"id": "prt00001"
+				}
+			]
+		},
+		{
+			"key": "pricing-two",
+			"label": "Pricing — two options side by side",
+			"category": "pricing",
+			"thumbnail": "/__mint/presets/pricing-two.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Pricing",
+					"props": {
+						"width": "narrow"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Prices</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "prw00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Pick what suits you",
+										"level": 2
+									},
+									"id": "prw00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Both include everything you need to get going.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "prw00005"
+								}
+							],
+							"id": "prw00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 2,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 6
+							},
+							"children": [
+								{
+									"type": "card",
+									"props": {
+										"variant": "outline",
+										"padding": "lg",
+										"gap": 4
+									},
+									"children": [
+										{
+											"type": "heading",
+											"props": {
+												"text": "Single",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "prw00008"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 2,
+												"align": "end",
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "$30",
+														"level": 4,
+														"size": "xl"
+													},
+													"id": "prw00010"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>/ month</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "prw00011"
+												}
+											],
+											"id": "prw00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>One visit, no commitment.</p>",
+												"muted": true
+											},
+											"id": "prw00012"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li>60 minutes</li><li>Free first consultation</li></ul>",
+												"size": "sm"
+											},
+											"id": "prw00013"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Choose Single",
+												"variant": "outline",
+												"size": "md",
+												"fullWidth": true
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"style": {
+												"base": {
+													"marginTop": "auto"
+												}
+											},
+											"id": "prw00014"
+										}
+									],
+									"id": "prw00007"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "elevated",
+										"padding": "lg",
+										"gap": 4
+									},
+									"style": {
+										"base": {
+											"borderWidth": 2,
+											"borderColor": "primary"
+										}
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "Most popular",
+												"tone": "primary",
+												"variant": "solid"
+											},
+											"id": "prw00016"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Membership",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "prw00017"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "row",
+												"gap": 2,
+												"align": "end",
+												"stackOnMobile": false
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "$90",
+														"level": 4,
+														"size": "xl"
+													},
+													"id": "prw00019"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>/ month</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "prw00020"
+												}
+											],
+											"id": "prw00018"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Four visits a month.</p>",
+												"muted": true
+											},
+											"id": "prw00021"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<ul><li>4 × 60 minutes</li><li>Book any time</li><li>10% off products</li></ul>",
+												"size": "sm"
+											},
+											"id": "prw00022"
+										},
+										{
+											"type": "button",
+											"props": {
+												"label": "Choose Membership",
+												"variant": "primary",
+												"size": "md",
+												"fullWidth": true
+											},
+											"action": {
+												"type": "link",
+												"href": "/contact"
+											},
+											"style": {
+												"base": {
+													"marginTop": "auto"
+												}
+											},
+											"id": "prw00023"
+										}
+									],
+									"id": "prw00015"
+								}
+							],
+							"id": "prw00006"
+						}
+					],
+					"id": "prw00001"
+				}
+			]
+		},
+		{
+			"key": "product-grid",
+			"label": "Products — four items in a grid",
+			"category": "products",
+			"thumbnail": "/__mint/presets/product-grid.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Products",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "row",
+								"gap": 3,
+								"align": "end",
+								"justify": "between",
+								"wrap": true
+							},
+							"style": {
+								"base": {
+									"marginBottom": 8
+								}
+							},
+							"children": [
+								{
+									"type": "heading",
+									"props": {
+										"text": "Best sellers",
+										"level": 2
+									},
+									"id": "pgr00003"
+								},
+								{
+									"type": "link",
+									"props": {
+										"text": "Shop all →",
+										"tone": "primary"
+									},
+									"action": {
+										"type": "link",
+										"href": "/shop"
+									},
+									"id": "pgr00004"
+								}
+							],
+							"id": "pgr00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 4,
+								"columnsTablet": 2,
+								"columnsMobile": 2,
+								"gap": 6
+							},
+							"children": [
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 2
+									},
+									"action": {
+										"type": "link",
+										"href": "/shop"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x800:Linen shirt",
+												"alt": "Linen shirt",
+												"ratio": "1/1",
+												"rounded": "lg"
+											},
+											"id": "pgr00007"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Linen shirt",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "pgr00008"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>$48</p>",
+												"muted": true
+											},
+											"id": "pgr00009"
+										}
+									],
+									"id": "pgr00006"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 2
+									},
+									"action": {
+										"type": "link",
+										"href": "/shop"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x800:Canvas tote",
+												"alt": "Canvas tote",
+												"ratio": "1/1",
+												"rounded": "lg"
+											},
+											"id": "pgr00011"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Canvas tote",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "pgr00012"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>$24</p>",
+												"muted": true
+											},
+											"id": "pgr00013"
+										}
+									],
+									"id": "pgr00010"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 2
+									},
+									"action": {
+										"type": "link",
+										"href": "/shop"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x800:Ceramic mug",
+												"alt": "Ceramic mug",
+												"ratio": "1/1",
+												"rounded": "lg"
+											},
+											"id": "pgr00015"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Ceramic mug",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "pgr00016"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>$18</p>",
+												"muted": true
+											},
+											"id": "pgr00017"
+										}
+									],
+									"id": "pgr00014"
+								},
+								{
+									"type": "card",
+									"props": {
+										"variant": "plain",
+										"padding": "none",
+										"gap": 2
+									},
+									"action": {
+										"type": "link",
+										"href": "/shop"
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:800x800:Wool scarf",
+												"alt": "Wool scarf",
+												"ratio": "1/1",
+												"rounded": "lg"
+											},
+											"id": "pgr00019"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Wool scarf",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "pgr00020"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>$36</p>",
+												"muted": true
+											},
+											"id": "pgr00021"
+										}
+									],
+									"id": "pgr00018"
+								}
+							],
+							"id": "pgr00005"
+						}
+					],
+					"id": "pgr00001"
+				}
+			]
+		},
+		{
+			"key": "services-tabs",
+			"label": "Services — in tabs",
+			"category": "features",
+			"thumbnail": "/__mint/presets/services-tabs.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Services",
+					"props": {
+						"width": "narrow"
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Services</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "svt00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Something for every need",
+										"level": 2
+									},
+									"id": "svt00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Choose a tab to see the details.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "svt00005"
+								}
+							],
+							"id": "svt00002"
+						},
+						{
+							"type": "tabs",
+							"props": {
+								"variant": "pills",
+								"align": "center"
+							},
+							"children": [
+								{
+									"type": "tab",
+									"props": {
+										"label": "For homes"
+									},
+									"children": [
+										{
+											"type": "grid",
+											"props": {
+												"columns": 2,
+												"columnsTablet": 2,
+												"columnsMobile": 1,
+												"gap": 8
+											},
+											"style": {
+												"base": {
+													"align": "center"
+												}
+											},
+											"children": [
+												{
+													"type": "image",
+													"props": {
+														"src": "placeholder:800x600:For homes",
+														"alt": "For homes",
+														"ratio": "4/3"
+													},
+													"id": "svt00009"
+												},
+												{
+													"type": "stack",
+													"props": {
+														"direction": "column",
+														"gap": 4,
+														"justify": "center"
+													},
+													"children": [
+														{
+															"type": "heading",
+															"props": {
+																"text": "For homes",
+																"level": 3
+															},
+															"id": "svt00011"
+														},
+														{
+															"type": "text",
+															"props": {
+																"html": "<p>Describe what is included, how long it takes and what it costs.</p>",
+																"muted": true
+															},
+															"id": "svt00012"
+														},
+														{
+															"type": "button",
+															"props": {
+																"label": "Ask for a quote",
+																"variant": "outline",
+																"size": "md"
+															},
+															"action": {
+																"type": "link",
+																"href": "/contact"
+															},
+															"id": "svt00013"
+														}
+													],
+													"id": "svt00010"
+												}
+											],
+											"id": "svt00008"
+										}
+									],
+									"id": "svt00007"
+								},
+								{
+									"type": "tab",
+									"props": {
+										"label": "For offices"
+									},
+									"children": [
+										{
+											"type": "grid",
+											"props": {
+												"columns": 2,
+												"columnsTablet": 2,
+												"columnsMobile": 1,
+												"gap": 8
+											},
+											"style": {
+												"base": {
+													"align": "center"
+												}
+											},
+											"children": [
+												{
+													"type": "image",
+													"props": {
+														"src": "placeholder:800x600:For offices",
+														"alt": "For offices",
+														"ratio": "4/3"
+													},
+													"id": "svt00016"
+												},
+												{
+													"type": "stack",
+													"props": {
+														"direction": "column",
+														"gap": 4,
+														"justify": "center"
+													},
+													"children": [
+														{
+															"type": "heading",
+															"props": {
+																"text": "For offices",
+																"level": 3
+															},
+															"id": "svt00018"
+														},
+														{
+															"type": "text",
+															"props": {
+																"html": "<p>Describe what is included, how long it takes and what it costs.</p>",
+																"muted": true
+															},
+															"id": "svt00019"
+														},
+														{
+															"type": "button",
+															"props": {
+																"label": "Ask for a quote",
+																"variant": "outline",
+																"size": "md"
+															},
+															"action": {
+																"type": "link",
+																"href": "/contact"
+															},
+															"id": "svt00020"
+														}
+													],
+													"id": "svt00017"
+												}
+											],
+											"id": "svt00015"
+										}
+									],
+									"id": "svt00014"
+								},
+								{
+									"type": "tab",
+									"props": {
+										"label": "For events"
+									},
+									"children": [
+										{
+											"type": "grid",
+											"props": {
+												"columns": 2,
+												"columnsTablet": 2,
+												"columnsMobile": 1,
+												"gap": 8
+											},
+											"style": {
+												"base": {
+													"align": "center"
+												}
+											},
+											"children": [
+												{
+													"type": "image",
+													"props": {
+														"src": "placeholder:800x600:For events",
+														"alt": "For events",
+														"ratio": "4/3"
+													},
+													"id": "svt00023"
+												},
+												{
+													"type": "stack",
+													"props": {
+														"direction": "column",
+														"gap": 4,
+														"justify": "center"
+													},
+													"children": [
+														{
+															"type": "heading",
+															"props": {
+																"text": "For events",
+																"level": 3
+															},
+															"id": "svt00025"
+														},
+														{
+															"type": "text",
+															"props": {
+																"html": "<p>Describe what is included, how long it takes and what it costs.</p>",
+																"muted": true
+															},
+															"id": "svt00026"
+														},
+														{
+															"type": "button",
+															"props": {
+																"label": "Ask for a quote",
+																"variant": "outline",
+																"size": "md"
+															},
+															"action": {
+																"type": "link",
+																"href": "/contact"
+															},
+															"id": "svt00027"
+														}
+													],
+													"id": "svt00024"
+												}
+											],
+											"id": "svt00022"
+										}
+									],
+									"id": "svt00021"
+								}
+							],
+							"id": "svt00006"
+						}
+					],
+					"id": "svt00001"
+				}
+			]
+		},
+		{
+			"key": "stats",
+			"label": "Numbers — four figures in a row",
+			"category": "stats",
+			"thumbnail": "/__mint/presets/stats.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Numbers",
+					"props": {},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "grid",
+							"props": {
+								"columns": 4,
+								"columnsTablet": 2,
+								"columnsMobile": 2,
+								"gap": 8
+							},
+							"children": [
+								{
+									"type": "stat",
+									"props": {
+										"value": "15k",
+										"label": "orders delivered",
+										"tone": "primary"
+									},
+									"id": "sta00003"
+								},
+								{
+									"type": "stat",
+									"props": {
+										"value": "98%",
+										"label": "would recommend us",
+										"tone": "primary"
+									},
+									"id": "sta00004"
+								},
+								{
+									"type": "stat",
+									"props": {
+										"value": "24 h",
+										"label": "average reply time",
+										"tone": "primary"
+									},
+									"id": "sta00005"
+								},
+								{
+									"type": "stat",
+									"props": {
+										"value": "40+",
+										"label": "cities served",
+										"tone": "primary"
+									},
+									"id": "sta00006"
+								}
+							],
+							"id": "sta00002"
+						}
+					],
+					"id": "sta00001"
+				}
+			]
+		},
+		{
+			"key": "steps",
+			"label": "Steps — how it works in three steps",
+			"category": "features",
+			"thumbnail": "/__mint/presets/steps.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Steps",
+					"props": {},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>How it works</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "stp00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Three simple steps",
+										"level": 2
+									},
+									"id": "stp00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>From the first hello to the finished job.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "stp00005"
+								}
+							],
+							"id": "stp00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 8
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "Step 1",
+												"tone": "primary",
+												"variant": "soft"
+											},
+											"id": "stp00008"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Book a call",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "stp00009"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>Pick a time that suits you — it takes two minutes.</p>",
+												"muted": true
+											},
+											"id": "stp00010"
+										}
+									],
+									"id": "stp00007"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "Step 2",
+												"tone": "primary",
+												"variant": "soft"
+											},
+											"id": "stp00012"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Get your plan",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "stp00013"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>We send a clear proposal with a price and a date.</p>",
+												"muted": true
+											},
+											"id": "stp00014"
+										}
+									],
+									"id": "stp00011"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "badge",
+											"props": {
+												"text": "Step 3",
+												"tone": "primary",
+												"variant": "soft"
+											},
+											"id": "stp00016"
+										},
+										{
+											"type": "heading",
+											"props": {
+												"text": "Enjoy the result",
+												"level": 3,
+												"size": "sm"
+											},
+											"id": "stp00017"
+										},
+										{
+											"type": "text",
+											"props": {
+												"html": "<p>We do the work and check in until you are happy.</p>",
+												"muted": true
+											},
+											"id": "stp00018"
+										}
+									],
+									"id": "stp00015"
+								}
+							],
+							"id": "stp00006"
+						}
+					],
+					"id": "stp00001"
+				}
+			]
+		},
+		{
+			"key": "team",
+			"label": "Team — people with photos",
+			"category": "team",
+			"thumbnail": "/__mint/presets/team.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Team",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Our team</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "tea00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "The people behind it",
+										"level": 2
+									},
+									"id": "tea00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Small, friendly and good at what we do.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "tea00005"
+								}
+							],
+							"id": "tea00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 4,
+								"columnsTablet": 2,
+								"columnsMobile": 2,
+								"gap": 6
+							},
+							"children": [
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:600x700:Alex Morgan",
+												"alt": "Alex Morgan",
+												"ratio": "3/4",
+												"rounded": "lg"
+											},
+											"id": "tea00008"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 1
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "Alex Morgan",
+														"level": 3,
+														"size": "sm"
+													},
+													"id": "tea00010"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>Founder</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "tea00011"
+												}
+											],
+											"id": "tea00009"
+										}
+									],
+									"id": "tea00007"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:600x700:Jamie Chen",
+												"alt": "Jamie Chen",
+												"ratio": "3/4",
+												"rounded": "lg"
+											},
+											"id": "tea00013"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 1
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "Jamie Chen",
+														"level": 3,
+														"size": "sm"
+													},
+													"id": "tea00015"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>Lead designer</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "tea00016"
+												}
+											],
+											"id": "tea00014"
+										}
+									],
+									"id": "tea00012"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:600x700:Sara Ali",
+												"alt": "Sara Ali",
+												"ratio": "3/4",
+												"rounded": "lg"
+											},
+											"id": "tea00018"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 1
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "Sara Ali",
+														"level": 3,
+														"size": "sm"
+													},
+													"id": "tea00020"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>Customer care</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "tea00021"
+												}
+											],
+											"id": "tea00019"
+										}
+									],
+									"id": "tea00017"
+								},
+								{
+									"type": "stack",
+									"props": {
+										"direction": "column",
+										"gap": 3
+									},
+									"children": [
+										{
+											"type": "image",
+											"props": {
+												"src": "placeholder:600x700:Noah Weber",
+												"alt": "Noah Weber",
+												"ratio": "3/4",
+												"rounded": "lg"
+											},
+											"id": "tea00023"
+										},
+										{
+											"type": "stack",
+											"props": {
+												"direction": "column",
+												"gap": 1
+											},
+											"children": [
+												{
+													"type": "heading",
+													"props": {
+														"text": "Noah Weber",
+														"level": 3,
+														"size": "sm"
+													},
+													"id": "tea00025"
+												},
+												{
+													"type": "text",
+													"props": {
+														"html": "<p>Operations</p>",
+														"size": "sm",
+														"muted": true
+													},
+													"id": "tea00026"
+												}
+											],
+											"id": "tea00024"
+										}
+									],
+									"id": "tea00022"
+								}
+							],
+							"id": "tea00006"
+						}
+					],
+					"id": "tea00001"
+				}
+			]
+		},
+		{
+			"key": "testimonial-single",
+			"label": "Testimonial — one big quote",
+			"category": "testimonials",
+			"thumbnail": "/__mint/presets/testimonial-single.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Testimonial",
+					"props": {
+						"width": "narrow",
+						"paddingY": "lg"
+					},
+					"style": {
+						"base": {
+							"bgColor": "muted"
+						}
+					},
+					"children": [
+						{
+							"type": "quote",
+							"props": {
+								"text": "Working with them changed how we run the whole business. I wish we had found them years ago.",
+								"author": "Daniel Okafor",
+								"role": "Founder, Okafor & Sons",
+								"variant": "large"
+							},
+							"id": "tsg00002"
+						}
+					],
+					"id": "tsg00001"
+				}
+			]
+		},
+		{
+			"key": "testimonials-carousel",
+			"label": "Testimonials — a carousel of reviews",
+			"category": "testimonials",
+			"thumbnail": "/__mint/presets/testimonials-carousel.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Testimonials",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Reviews</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "tca00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "Loved by our customers",
+										"level": 2
+									},
+									"id": "tca00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Swipe through what people say.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "tca00005"
+								}
+							],
+							"id": "tca00002"
+						},
+						{
+							"type": "carousel",
+							"props": {
+								"perView": 3,
+								"perViewTablet": 2,
+								"gap": 4,
+								"arrows": true,
+								"label": "Customer reviews"
+							},
+							"children": [
+								{
+									"type": "quote",
+									"props": {
+										"text": "The easiest booking I have ever made.",
+										"author": "Priya Nair",
+										"role": "Customer",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tca00007"
+								},
+								{
+									"type": "quote",
+									"props": {
+										"text": "Great value and a lovely team.",
+										"author": "Marco Rossi",
+										"role": "Customer",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tca00008"
+								},
+								{
+									"type": "quote",
+									"props": {
+										"text": "Five stars, would come back tomorrow.",
+										"author": "Ella Johansson",
+										"role": "Customer",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tca00009"
+								},
+								{
+									"type": "quote",
+									"props": {
+										"text": "They went the extra mile for us.",
+										"author": "Kofi Mensah",
+										"role": "Customer",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tca00010"
+								}
+							],
+							"id": "tca00006"
+						}
+					],
+					"id": "tca00001"
+				}
+			]
+		},
+		{
+			"key": "testimonials-grid",
+			"label": "Testimonials — three reviews",
+			"category": "testimonials",
+			"thumbnail": "/__mint/presets/testimonials-grid.png",
+			"tree": [
+				{
+					"type": "section",
+					"name": "Testimonials",
+					"props": {},
+					"children": [
+						{
+							"type": "stack",
+							"props": {
+								"direction": "column",
+								"gap": 3,
+								"align": "center"
+							},
+							"style": {
+								"base": {
+									"textAlign": "center",
+									"marginBottom": 12,
+									"maxWidth": "md",
+									"marginLeft": "auto",
+									"marginRight": "auto"
+								}
+							},
+							"children": [
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Reviews</p>",
+										"size": "sm"
+									},
+									"style": {
+										"base": {
+											"color": "primary",
+											"fontWeight": 600,
+											"tracking": "wide",
+											"transform": "uppercase"
+										}
+									},
+									"id": "tgr00003"
+								},
+								{
+									"type": "heading",
+									"props": {
+										"text": "What our customers say",
+										"level": 2
+									},
+									"id": "tgr00004"
+								},
+								{
+									"type": "text",
+									"props": {
+										"html": "<p>Real words from real people.</p>",
+										"size": "lg",
+										"muted": true
+									},
+									"id": "tgr00005"
+								}
+							],
+							"id": "tgr00002"
+						},
+						{
+							"type": "grid",
+							"props": {
+								"columns": 3,
+								"columnsTablet": 2,
+								"columnsMobile": 1,
+								"gap": 6
+							},
+							"children": [
+								{
+									"type": "quote",
+									"props": {
+										"text": "Friendly, on time and the result was even better than the pictures.",
+										"author": "Amira Hassan",
+										"role": "Homeowner",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tgr00007"
+								},
+								{
+									"type": "quote",
+									"props": {
+										"text": "They listened, explained everything and stuck to the price. Rare!",
+										"author": "Tom Becker",
+										"role": "Café owner",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tgr00008"
+								},
+								{
+									"type": "quote",
+									"props": {
+										"text": "I have recommended them to three friends already.",
+										"author": "Lena Park",
+										"role": "Customer since 2021",
+										"rating": 5,
+										"variant": "card"
+									},
+									"id": "tgr00009"
+								}
+							],
+							"id": "tgr00006"
+						}
+					],
+					"id": "tgr00001"
+				}
+			]
 		}
 	],
 	"themes": [
+		{
+			"key": "bistro",
+			"label": "Bistro",
+			"description": "Warm and inviting — wine red, brass and cream with classic serif headings. Made for restaurants and bars.",
+			"preview": {
+				"bg": "#fbf6ee",
+				"fg": "#2a1a17",
+				"primary": "#8c1c2c",
+				"font": "Playfair Display"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#fbf6ee",
+						"dark": "#160f0d"
+					},
+					"foreground": {
+						"light": "#2a1a17",
+						"dark": "#f1e6da"
+					},
+					"muted": {
+						"light": "#f3ebdf",
+						"dark": "#201714"
+					},
+					"muted-foreground": {
+						"light": "#6b5750",
+						"dark": "#bba899"
+					},
+					"primary": {
+						"light": "#8c1c2c",
+						"dark": "#e5868f"
+					},
+					"primary-foreground": {
+						"light": "#fff7ef",
+						"dark": "#1f0b0e"
+					},
+					"secondary": {
+						"light": "#efe2cf",
+						"dark": "#2b201b"
+					},
+					"secondary-foreground": {
+						"light": "#3d2a22",
+						"dark": "#f1e6da"
+					},
+					"accent": {
+						"light": "#b8893a",
+						"dark": "#d6a855"
+					},
+					"accent-foreground": {
+						"light": "#1f1405",
+						"dark": "#1f1405"
+					},
+					"card": {
+						"light": "#fffdf9",
+						"dark": "#1c1411"
+					},
+					"card-foreground": {
+						"light": "#2a1a17",
+						"dark": "#f1e6da"
+					},
+					"border": {
+						"light": "#e8dccb",
+						"dark": "#33261f"
+					},
+					"ring": {
+						"light": "#8c1c2c",
+						"dark": "#e5868f"
+					},
+					"success": {
+						"light": "#2f7a4a",
+						"dark": "#7fd19d"
+					},
+					"warning": {
+						"light": "#9a5b10",
+						"dark": "#f0bf6a"
+					},
+					"danger": {
+						"light": "#b3261e",
+						"dark": "#f28b82"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Playfair Display",
+						"weights": [
+							500,
+							600,
+							700
+						]
+					},
+					"body": {
+						"family": "Lato",
+						"weights": [
+							400,
+							700
+						]
+					},
+					"mono": {
+						"family": "IBM Plex Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.125rem",
+					"md": "0.25rem",
+					"lg": "0.5rem",
+					"xl": "0.75rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 2px rgb(42 26 23 / 0.08)",
+					"md": "0 8px 22px rgb(42 26 23 / 0.10)",
+					"lg": "0 22px 50px rgb(42 26 23 / 0.16)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1160,
+				"button": {
+					"radius": "sm",
+					"weight": 700,
+					"uppercase": true
+				}
+			}
+		},
 		{
 			"key": "bright",
 			"label": "Bright",
@@ -1859,7 +8728,7 @@
 						"dark": "#ff9b80"
 					},
 					"accent-foreground": {
-						"light": "#ffffff",
+						"light": "#2a0d05",
 						"dark": "#1f0d08"
 					},
 					"card": {
@@ -1946,6 +8815,146 @@
 				"button": {
 					"radius": "full",
 					"weight": 700,
+					"uppercase": false
+				}
+			}
+		},
+		{
+			"key": "calm",
+			"label": "Calm",
+			"description": "Soft and unhurried — sage, sand and gentle serif headings. Suits bookings, wellness and care.",
+			"preview": {
+				"bg": "#f7f5f0",
+				"fg": "#26302b",
+				"primary": "#4d6b5a",
+				"font": "Lora"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#f7f5f0",
+						"dark": "#121614"
+					},
+					"foreground": {
+						"light": "#26302b",
+						"dark": "#e4e9e5"
+					},
+					"muted": {
+						"light": "#eeebe3",
+						"dark": "#1a201d"
+					},
+					"muted-foreground": {
+						"light": "#5d6862",
+						"dark": "#a5b0aa"
+					},
+					"primary": {
+						"light": "#4d6b5a",
+						"dark": "#9cc3ad"
+					},
+					"primary-foreground": {
+						"light": "#ffffff",
+						"dark": "#0f1a14"
+					},
+					"secondary": {
+						"light": "#e7ece6",
+						"dark": "#1f2823"
+					},
+					"secondary-foreground": {
+						"light": "#2f4237",
+						"dark": "#d7e4dc"
+					},
+					"accent": {
+						"light": "#ead9c6",
+						"dark": "#3a2f24"
+					},
+					"accent-foreground": {
+						"light": "#4a3520",
+						"dark": "#f0dfcb"
+					},
+					"card": {
+						"light": "#fdfcf9",
+						"dark": "#171c19"
+					},
+					"card-foreground": {
+						"light": "#26302b",
+						"dark": "#e4e9e5"
+					},
+					"border": {
+						"light": "#e2ded3",
+						"dark": "#29312c"
+					},
+					"ring": {
+						"light": "#4d6b5a",
+						"dark": "#9cc3ad"
+					},
+					"success": {
+						"light": "#3f7a52",
+						"dark": "#86d0a0"
+					},
+					"warning": {
+						"light": "#a25a14",
+						"dark": "#f2c26b"
+					},
+					"danger": {
+						"light": "#b23b3b",
+						"dark": "#f19999"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Lora",
+						"weights": [
+							500,
+							600,
+							700
+						]
+					},
+					"body": {
+						"family": "Nunito",
+						"weights": [
+							400,
+							600,
+							700
+						]
+					},
+					"mono": {
+						"family": "IBM Plex Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.5rem",
+					"md": "0.875rem",
+					"lg": "1.5rem",
+					"xl": "2.25rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 2px rgb(38 48 43 / 0.05)",
+					"md": "0 6px 20px rgb(38 48 43 / 0.06)",
+					"lg": "0 18px 44px rgb(38 48 43 / 0.09)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1120,
+				"button": {
+					"radius": "full",
+					"weight": 600,
 					"uppercase": false
 				}
 			}
@@ -2086,6 +9095,286 @@
 					"radius": "sm",
 					"weight": 600,
 					"uppercase": false
+				}
+			}
+		},
+		{
+			"key": "market",
+			"label": "Market",
+			"description": "Fresh and trustworthy — deep green, warm amber and Manrope. Made for shops and products.",
+			"preview": {
+				"bg": "#fbfaf7",
+				"fg": "#14201a",
+				"primary": "#166534",
+				"font": "Manrope"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#fbfaf7",
+						"dark": "#0d1310"
+					},
+					"foreground": {
+						"light": "#14201a",
+						"dark": "#e6efe9"
+					},
+					"muted": {
+						"light": "#f1efe8",
+						"dark": "#151d18"
+					},
+					"muted-foreground": {
+						"light": "#55625a",
+						"dark": "#9fb0a6"
+					},
+					"primary": {
+						"light": "#166534",
+						"dark": "#4ade80"
+					},
+					"primary-foreground": {
+						"light": "#ffffff",
+						"dark": "#06210f"
+					},
+					"secondary": {
+						"light": "#e8f3ec",
+						"dark": "#1a2a20"
+					},
+					"secondary-foreground": {
+						"light": "#14532d",
+						"dark": "#d1f0dc"
+					},
+					"accent": {
+						"light": "#fde68a",
+						"dark": "#f59e0b"
+					},
+					"accent-foreground": {
+						"light": "#422006",
+						"dark": "#1c1003"
+					},
+					"card": {
+						"light": "#ffffff",
+						"dark": "#121a15"
+					},
+					"card-foreground": {
+						"light": "#14201a",
+						"dark": "#e6efe9"
+					},
+					"border": {
+						"light": "#e4e1d8",
+						"dark": "#24302a"
+					},
+					"ring": {
+						"light": "#166534",
+						"dark": "#4ade80"
+					},
+					"success": {
+						"light": "#15803d",
+						"dark": "#4ade80"
+					},
+					"warning": {
+						"light": "#b45309",
+						"dark": "#fbbf24"
+					},
+					"danger": {
+						"light": "#b91c1c",
+						"dark": "#f87171"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Manrope",
+						"weights": [
+							600,
+							700,
+							800
+						]
+					},
+					"body": {
+						"family": "Manrope",
+						"weights": [
+							400,
+							500,
+							600
+						]
+					},
+					"mono": {
+						"family": "JetBrains Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0.25rem",
+					"md": "0.5rem",
+					"lg": "0.875rem",
+					"xl": "1.25rem",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "0 1px 2px rgb(20 32 26 / 0.06)",
+					"md": "0 6px 18px rgb(20 32 26 / 0.09)",
+					"lg": "0 20px 48px rgb(20 32 26 / 0.14)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1280,
+				"button": {
+					"radius": "md",
+					"weight": 700,
+					"uppercase": false
+				}
+			}
+		},
+		{
+			"key": "mono",
+			"label": "Mono",
+			"description": "Stark and precise — black and white, square corners and a grotesk typeface. Lets portfolio work speak.",
+			"preview": {
+				"bg": "#ffffff",
+				"fg": "#0a0a0a",
+				"primary": "#0a0a0a",
+				"font": "Space Grotesk"
+			},
+			"tokens": {
+				"colors": {
+					"background": {
+						"light": "#ffffff",
+						"dark": "#0a0a0a"
+					},
+					"foreground": {
+						"light": "#0a0a0a",
+						"dark": "#f5f5f5"
+					},
+					"muted": {
+						"light": "#f4f4f4",
+						"dark": "#161616"
+					},
+					"muted-foreground": {
+						"light": "#5c5c5c",
+						"dark": "#a3a3a3"
+					},
+					"primary": {
+						"light": "#0a0a0a",
+						"dark": "#f5f5f5"
+					},
+					"primary-foreground": {
+						"light": "#ffffff",
+						"dark": "#0a0a0a"
+					},
+					"secondary": {
+						"light": "#ececec",
+						"dark": "#202020"
+					},
+					"secondary-foreground": {
+						"light": "#0a0a0a",
+						"dark": "#f5f5f5"
+					},
+					"accent": {
+						"light": "#ff4d00",
+						"dark": "#ff6a2b"
+					},
+					"accent-foreground": {
+						"light": "#000000",
+						"dark": "#000000"
+					},
+					"card": {
+						"light": "#ffffff",
+						"dark": "#111111"
+					},
+					"card-foreground": {
+						"light": "#0a0a0a",
+						"dark": "#f5f5f5"
+					},
+					"border": {
+						"light": "#e2e2e2",
+						"dark": "#2a2a2a"
+					},
+					"ring": {
+						"light": "#ff4d00",
+						"dark": "#ff6a2b"
+					},
+					"success": {
+						"light": "#157a3c",
+						"dark": "#5fd38d"
+					},
+					"warning": {
+						"light": "#a85a00",
+						"dark": "#f5b84d"
+					},
+					"danger": {
+						"light": "#c0282d",
+						"dark": "#ff7b7f"
+					}
+				},
+				"fonts": {
+					"heading": {
+						"family": "Space Grotesk",
+						"weights": [
+							500,
+							600,
+							700
+						]
+					},
+					"body": {
+						"family": "IBM Plex Sans",
+						"weights": [
+							400,
+							500,
+							600
+						]
+					},
+					"mono": {
+						"family": "IBM Plex Mono",
+						"weights": [
+							400
+						]
+					}
+				},
+				"radius": {
+					"none": "0px",
+					"sm": "0px",
+					"md": "0px",
+					"lg": "0px",
+					"xl": "0px",
+					"full": "9999px"
+				},
+				"shadow": {
+					"none": "none",
+					"sm": "none",
+					"md": "none",
+					"lg": "0 0 0 1px rgb(0 0 0 / 0.08)"
+				},
+				"space": {
+					"0": "0rem",
+					"1": "0.25rem",
+					"2": "0.5rem",
+					"3": "0.75rem",
+					"4": "1rem",
+					"6": "1.5rem",
+					"8": "2rem",
+					"12": "3rem",
+					"16": "4rem",
+					"24": "6rem",
+					"32": "8rem"
+				},
+				"container": 1280,
+				"button": {
+					"radius": "none",
+					"weight": 500,
+					"uppercase": true
 				}
 			}
 		},

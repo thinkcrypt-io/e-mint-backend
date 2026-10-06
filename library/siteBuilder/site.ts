@@ -2,6 +2,7 @@ import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import SiteRelease from '../models/siteBuilder/siteRelease.model.js';
 import { projectHooks } from '../functions/projectHooks.function.js';
+import { loadSite } from '../functions/siteConfig.function.js';
 import { runInScope, runUnscoped } from '../functions/tenantScope.function.js';
 import { DEFAULT_THEME, presetTree } from './manifest.js';
 import { treeIds, validateDesign, validateTree, type Problem } from './validate.js';
@@ -11,6 +12,13 @@ import { treeIds, validateDesign, validateTree, type Problem } from './validate.
  * starts with, how pages and the design are shown to the editor, and what
  * Publish would change. Every function here runs inside the project's scope.
  */
+
+/** What blocks show from Website settings (name, logo, contact, social) — the editor's canvas gets it with the pages (SB-08). */
+export const siteInfo = async (project: any) => {
+	const doc: any = await loadSite(project, { cached: true });
+	const identity = doc.identity || {};
+	return { name: identity.siteName || project.name, tagline: identity.tagline || '', logo: identity.logo || '', contact: doc.contact || {}, social: doc.social || {} };
+};
 
 export const EMPTY_SEO = { title: '', description: '', image: '', noIndex: false, canonical: '', keywords: [] as string[] };
 

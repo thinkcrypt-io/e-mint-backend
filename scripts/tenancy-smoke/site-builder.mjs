@@ -1,5 +1,6 @@
 // The site builder's storage, checks, publish and render API (docs/site-builder
-// SB-03), overlays (SB-06), and themes, fonts, layouts and saved sections (SB-07).
+// SB-03), overlays (SB-06), themes, fonts, layouts and saved sections (SB-07),
+// and the block catalogue, presets and accessibility hints (SB-08).
 import { call, ok, done, ROOT } from './lib.mjs';
 
 const stamp = Date.now();
@@ -264,5 +265,21 @@ r = await call('GET', SB('/changes'), null, T);
 ok('…and Publish is blocked: “This saved section was deleted” on both pages', r.body.canPublish === false && r.body.problems.filter(p => /saved section was deleted/.test(p.message)).length === 2, JSON.stringify(r.body.problems));
 r = await call('PUT', SB('/design'), { rev: (await call('GET', SB('/design'), null, T)).body.draft.rev, sections: { ...sections } }, T);
 ok('…put back, Publish is allowed again', r.status === 200 && (await call('GET', SB('/changes'), null, T)).body.canPublish === true, `${r.status}`);
+
+/* ------------------------------------ catalogue, presets, a11y (SB-08) */
+ok('the manifest has the SB-08 catalogue: ≥ 30 presets with thumbnails, 7 themes, the new blocks', manifest.presets.length >= 30 && manifest.presets.every(p => /^\/__mint\/presets\//.test(p.thumbnail)) && manifest.themes.length >= 6 && ['header', 'tabs', 'accordion', 'carousel', 'gallery', 'card', 'map', 'countdown', 'marquee', 'breadcrumbs', 'form-placeholder'].every(t => manifest.blocks.some(b => b.type === t)), `${manifest.presets.length} presets, ${manifest.themes.length} themes`);
+r = await call('GET', SB('/pages'), null, T);
+ok('GET /pages carries the site’s name and contact for the canvas', typeof r.body.site?.name === 'string' && r.body.site.name.length > 0 && 'contact' in r.body.site, JSON.stringify(r.body.site));
+const presetOf = key => manifest.presets.find(p => p.key === key).tree;
+const faqTree = [...presetOf('page-title'), ...presetOf('faq'), ...presetOf('pricing-three')];
+r = await call('POST', SB('/pages'), { name: 'Help', path: '/offer/help', tree: faqTree }, T);
+ok('a page built from presets saves', r.status === 201, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('POST', SB('/pages'), { name: 'Bad tab', path: '/bad-tab', tree: [{ id: 'lonelyT1', type: 'tab', props: {} }] }, T);
+ok('a tab outside tabs is refused', r.status === 400 && /can only go inside tabs/.test(JSON.stringify(r.body.problems)), `${r.status}`);
+r = await call('POST', SB('/validate'), { tree: [{ id: 'noAlt001', type: 'image', props: { src: 'placeholder:10x10:x' } }] }, T);
+ok('a picture without alt text is a warning, not an error', r.status === 200 && r.body.ok === true && r.body.problems.some(p => p.level === 'warning' && /alt text/.test(p.message)), JSON.stringify(r.body));
+r = await call('POST', SB('/publish'), { note: 'presets' }, T);
+r = await render('/offer/help');
+ok('/render: breadcrumbs from the pages above (Home › Offer › Help)', r.status === 200 && r.body.crumbs?.map(c => c.label).join(' › ') === 'Home › Offer › Help', JSON.stringify(r.body.crumbs));
 
 done();

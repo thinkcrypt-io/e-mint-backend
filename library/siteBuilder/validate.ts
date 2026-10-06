@@ -175,6 +175,7 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 	const ids = new Set<string>();
 	const typeOf = new Map<string, string>();
 	const actions: { node: any; path: string }[] = [];
+	const headings: { level: number; at: string; id?: string }[] = [];
 	let count = 0;
 
 	const visit = (nodes: unknown, path: string, depth: number, parent: any, slot: string | null) => {
@@ -208,8 +209,8 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 				else if (typeof ref === 'string' && NODE_ID.test(ref) && opts.sectionIds && !opts.sectionIds.has(ref)) add('publish', `${at}.props.section`, 'This saved section was deleted', id);
 			}
 			if (parent && def.category === 'overlay') add('error', at, `A ${def.label.toLowerCase()} goes at the top level of the page, not inside another block`, id);
-			if (parent && def.canBeChildOf?.length && !def.canBeChildOf.includes(parent.type))
-				add('error', at, `${def.label} can only go inside ${def.canBeChildOf.join(', ')}`, id);
+			if (def.canBeChildOf?.length && (!parent || !def.canBeChildOf.includes(parent.type)))
+				add('error', at, `${def.label} can only go inside ${def.canBeChildOf.map(t => m.byType.get(t)?.label.toLowerCase() || t).join(' or ')}`, id);
 			if (parent) {
 				const allow = slot === null ? m.byType.get(parent.type)?.slots?.children?.allow : m.byType.get(parent.type)?.slots?.[slot]?.allow;
 				if (allow?.length && !allow.includes(n.type)) add('error', at, `${def.label} can’t go in ${slot ? `“${slot}”` : 'there'} (allowed: ${allow.join(', ')})`, id);
@@ -228,6 +229,14 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 						if (why) add('error', `${at}.props.${k}`, why, id);
 					}
 				}
+
+			// Accessibility hints (SB-08) — warnings, never blocking
+			const props = isObj(n.props) ? n.props : {};
+			if (def.type === 'image' && !(isObj(n.bind) && 'alt' in n.bind) && !(typeof props.alt === 'string' && props.alt.trim()))
+				add('warning', `${at}.props.alt`, 'This picture has no alt text — describe it for people who can’t see it', id);
+			if (def.type === 'gallery' && Array.isArray(props.items) && props.items.some((r: any) => isObj(r) && !(typeof r.alt === 'string' && r.alt.trim())))
+				add('warning', `${at}.props.items`, 'Some pictures in this gallery have no alt text — describe each one', id);
+			if (def.type === 'heading') headings.push({ level: [1, 2, 3, 4].includes(props.level) ? props.level : 2, at, id });
 
 			// Bindings
 			if (n.bind !== undefined) {
@@ -292,6 +301,16 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 		});
 	};
 	visit(tree, '', 1, null, null);
+
+	// Headings in order (a page's own tree only — the header and footer sit around it).
+	if (where === 'page') {
+		const h1 = headings.filter(h => h.level === 1);
+		if (h1.length > 1) add('warning', h1[1].at, 'A page should have one main title (level 1) — make this one level 2', h1[1].id);
+		headings.forEach((h, i) => {
+			const prev = i ? headings[i - 1].level : 1;
+			if (h.level > prev + 1) add('warning', h.at, `This heading skips a level (H${prev} → H${h.level}) — screen readers use the levels to find their way`, h.id);
+		});
+	}
 
 	// Actions last: their targets may come later in the tree.
 	const exists = (target: string) => ids.has(target) || !!opts.externalIds?.has(target);

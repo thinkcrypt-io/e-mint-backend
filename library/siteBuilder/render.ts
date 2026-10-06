@@ -60,6 +60,14 @@ const headTags = (apiBase: string, project: any, doc: any) => {
 	return { head: parts.join('\n'), bodyStart: '', bodyEnd: '', verification, tracker };
 };
 
+/** The pages above `path` that exist, home first, this page last (the breadcrumbs block). */
+export const crumbsFor = (path: string, pages: { published?: { path: string; name: string } }[]) => {
+	const byPath = new Map(pages.filter(p => p.published).map(p => [p.published!.path, p.published!.name]));
+	const parts = path.split('/').filter(Boolean);
+	const paths = ['/', ...parts.map((_, i) => `/${parts.slice(0, i + 1).join('/')}`)];
+	return paths.filter(p => byPath.has(p)).map(p => ({ label: byPath.get(p)!, path: p }));
+};
+
 const MENU_FIELDS = { 'published.name': 1, 'published.path': 1, 'published.menuLabel': 1, 'published.priority': 1 };
 
 export const renderPage = async ({ project, path: raw, apiBase }: { project: any; path: unknown; apiBase: string }) => {
@@ -77,7 +85,7 @@ export const renderPage = async ({ project, path: raw, apiBase }: { project: any
 	const [page, menuPages, links, widgets]: any = await Promise.all([
 		SitePage.findOne({ 'published.path': path, 'published.kind': { $ne: 'template' } }, { published: 1 }).lean(),
 		SitePage.find({ 'published.showInMenu': true, 'published.kind': { $ne: 'template' } }, MENU_FIELDS).lean(),
-		SitePage.find({ published: { $ne: null }, 'published.kind': { $ne: 'template' } }, { 'published.path': 1 }).lean(),
+		SitePage.find({ published: { $ne: null }, 'published.kind': { $ne: 'template' } }, { 'published.path': 1, 'published.name': 1 }).lean(),
 		publicWidgets(project).catch(() => ({ widgets: {} })),
 	]);
 	if (!page?.published) throw new NotFound();
@@ -131,6 +139,7 @@ export const renderPage = async ({ project, path: raw, apiBase }: { project: any
 			.map(p => p.published)
 			.sort((a, b) => (b.priority || 0) - (a.priority || 0) || String(a.name).localeCompare(String(b.name)))
 			.map(p => ({ label: p.menuLabel || p.name, path: p.path })),
+		crumbs: crumbsFor(pub.path, links as any[]),
 		/** page id → live path, for buttons and links that point at a page ({ type: 'page' }) */
 		links: Object.fromEntries((links as any[]).map(p => [String(p._id), p.published.path])),
 		tags: headTags(apiBase, project, doc),
