@@ -1075,3 +1075,44 @@ Decisions D14–D17 (README).
   and the two-factor email step (login response stubbed in the browser), in
   light and dark, with no overflow at 390px. `/get-started` (inside the panel)
   is not changed.
+
+## 2026-10-06 — First steps: welcome email, first-run guide, simple landing page
+- **Welcome email** (`library/functions/welcomeMail.function.ts`, sent from
+  `routes-tenant/auth` at sign-up): what MINT is, six steps to a first project
+  (create a project, describe your data, add records, shape the panel, invite
+  your team, go live), each with its guide on the docs site (`DOCS_URL`), a
+  "Build your first project" button to `/dashboard`, the docs link and support.
+  Drawn like the website (ink header, numbered steps).
+- **First-run guide** (admin `library/tenant/FirstSteps.tsx`). With no project
+  yet, the tenant home (`ProjectsBoard welcome`) shows the whole welcome:
+  - what MINT is,
+  - "Step 1 · Choose what to build": app / website / API cards, each opening
+    New project with that kind chosen (`ProjectDialog initialType`),
+  - the later steps explained, with points and guide links.
+
+  With a project, it becomes a "Getting started" checklist (x of 6, progress
+  bar). It shows on the org home and on every project dashboard, until done or
+  hidden. Three steps tick themselves: project created, a model exists, and a
+  teammate or invitation exists. The others are ticked by hand, kept in
+  localStorage per organization. Steps' buttons open the current project's
+  screens. Only for people who can create projects.
+- **Landing page** (`app/_landing/Landing.tsx`): replaced the long feature
+  page with the basics, in the website's look (AuthFrame now exports
+  `SITE_STYLE`, `INK_BAND`, `Wordmark`):
+  - a header with Log in / Sign up,
+  - a hero,
+  - "What you can build" (4 plain cards),
+  - "Your first app in four steps",
+  - a closing ink band,
+  - a small footer (website, guides, terms, privacy, status).
+
+  Signed in, the buttons say Dashboard / Open your dashboard.
+- Verified on a private stack (Mongo 27996, backend 5031, tenant 3346):
+  - a real sign-up logged the welcome email (example.com address);
+  - the first-run page showed for the new organization;
+  - "Start an app" opened New project with App chosen, and creating it went
+    to Get started;
+  - the project dashboard showed the checklist at 1 of 6;
+  - the landing page renders signed out and signed in, in light and dark,
+    with no overflow at 390px.
+
