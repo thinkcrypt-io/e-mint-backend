@@ -140,24 +140,28 @@ public page shows it; a save from another tab → 409 dialog → "Load their
 version" works; typing 20 keys made 0 DOM changes in the 53-row outline;
 phone width + dark preview; adding a page (address filled from the name).
 
+**Also verified (2026-10-06, later):** add page (opens the new empty page;
+focus on Name), page settings save SEO (rev bumps, editor keeps working),
+delete from the Pages menu (prompt wording for never-published pages), status
+chips Changed / Live / Draft, icon picker (renderer-drawn icons, search, pick
+→ canvas updates). Admin `next build` (tenant) passes. Fixes committed:
+add-page jumped back to Home; dialog name focus; Publish dialog's first fetch.
+
 **Left to do for SB-05:**
-1. Re-test "Add a page" after the fix (it used to jump back to Home before the
-   list refreshed — fixed with `pagesFetching` guard in SiteBuilder.tsx, not
-   re-tested yet); page settings dialog (save SEO, then reopen shows it);
-   duplicate, set home, take off / put back, delete from the Pages menu.
-2. Check the Inspector's other inputs once (image picker, icon picker, select,
-   rich text, action editor) and the PageDialog's name autofocus (focus arrives
-   late in the dialog; a first keystroke can be lost).
-3. Screenshots for CHANGELOG; `npm run build` in admin (only `tsc` so far).
-4. Docs: guide `#pages`, `#canvas`, `#outline`, `#props`, full `#publish` with
-   real screenshots under `mint-docs/public/guides/site-builder/`; marketing
-   (`mint-webpage`): first announcement — `features.ts` "Site builder" card
-   (Coming soon until SB-07), editor drawing in `components/mock/mocks.tsx`,
-   `/workflow/website` "or build it visually" steps, `changelog.ts` entry.
-5. Env for deploys: admin needs `NEXT_PUBLIC_SITES_URL` (renderer URL) on the
+1. Not clicked through yet (API-covered by `site-builder.mjs`): duplicate, set
+   home, take off / put back from the Pages menu; image picker (UploadModal
+   needs the real S3 bucket — the scratch backend can't upload), rich text.
+2. Docs: guide `#pages`, `#canvas`, `#outline`, `#props`, full `#publish`
+   with real screenshots under `mint-docs/public/guides/site-builder/`;
+   marketing (`mint-webpage`): first announcement — `features.ts` "Site
+   builder" card (Coming soon until SB-07), editor drawing in
+   `components/mock/mocks.tsx`, `/workflow/website` "or build it visually"
+   steps, `changelog.ts` entry.
+3. Env for deploys: admin needs `NEXT_PUBLIC_SITES_URL` (renderer URL) on the
    tenant panel's Vercel project; renderer needs `PANEL_ORIGINS` = the tenant
    panel's origin. Until the renderer is deployed the canvas says it couldn't
    load (and the sidebar entry only shows once the backend is redeployed).
+4. Then mark SB-05 done (Status, CHANGELOG with screenshots), commit, SB-06.
 
 **Local stack:** `mongod --port 28010 --dbpath <scratchpad>/mongo`; launch
 configs `backend-sb` (:5031), `mint-sites` (:3300; `.env.local`:
