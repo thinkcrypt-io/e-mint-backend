@@ -2,6 +2,60 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-27, SB-28 — Connect your AI in the builder; theme demo sites (2026-10-07)
+
+**What:** the builder's toolbar gets an **AI** menu and **Settings**; *Connect
+your AI* makes a project key (optionally allowed to publish — new key scope
+`publish`), shows the steps for Claude, Claude Code, ChatGPT, Cursor and any
+MCP client with the key filled in, and a ready prompt with the chosen theme.
+The MCP offers prompts (`build_site`, `add_site_list`) and `start_from_theme`.
+Picking a theme asks: load its **demo site** (pages, a list model with sample
+records and its public API on, every text in Contents, SEO records) or only
+change the look. Adding a section asks where it goes and scrolls to it; a
+shared header/footer block can be deleted (asks first).
+
+**Files:** backend `library/siteBuilder/starter.ts`, `routes-tenant/siteBuilder.router.ts`
+(`/starters`, `/starter`), `library/controllers/mcp/{siteBuilder.tools,transport}.ts`;
+mint-builder `src/editor/{ConnectAi,ThemeDialog,AddDialog,DataInputs}.tsx`, `Builder.tsx`,
+`Inspector.tsx`, `PropInputs.tsx`, `DesignPanel.tsx`, `Canvas.tsx`, `protocol.ts`,
+`src/lib/{api,env}.ts`, proxy `ALLOWED` + `builder/api-keys`; mint-sites
+`src/edit/EditRoot.tsx` (scroll to a new block), `RenderTree.tsx` ({{ }} in link addresses).
+
+**Verified:** `site-builder-starter.mjs` 50/50 (every theme's demo loads,
+passes Publish's checks, publishes, renders its list, Contents and a record's
+page; `replace` rules; MCP `start_from_theme`). Browser (builder :3400 →
+backend :5031): add-section dialog + scroll, header delete + undo, Connect
+dialog (key made, steps, prompt with the theme, keys list). Not clicked yet:
+the theme dialog and data pickers against the new backend (no free dev-server
+slot). `next build` clean in mint-builder and mint-sites.
+
+## SB-09, SB-12 — Data on pages, the site in the project's models, MCP tools (2026-10-07)
+
+**What:** D27 — the website kit's new **Site design** model holds the theme;
+each builder page has a Pages record and its SEO is its SEO record (panel
+edits are pulled into the drafts); blocks bind to **Contents** records by slug
+(live without a Publish). `collection` block (List of records) shows a model
+through the public API's rules — a private model is a publish problem with a
+plain message; template pages `/x/[slug]` render their record with SEO from
+it, 404 without one; `{{ }}` with filters in text and links; `?page=`. The
+editor's *Use data*, *Save it in Contents* and Records inputs; the canvas gets
+the data from `POST /resolve`. MCP: `site_builder_guide`, `get_site_builder`,
+`get_site_page`, `get_site_blocks`, `get_site_presets`, `set_site_design`,
+`set_site_contents`, `save_site_page`, `check_site`, `publish_site`.
+
+**Files:** backend `library/functions/publicRecords.function.ts` (moved out of
+`routes-public/public.router.ts`), `library/siteBuilder/{resolve,kit,bind}.ts`,
+`render.ts`, `site.ts`, `models/siteBuilder/sitePage.model.ts` (`kitPage`,
+`draft.seoSyncedAt`), `functions/websiteKit.function.ts` (+ Site design),
+`models/builder/apiKey.model.ts` (`publish`), `controllers/mcp/*`; mint-sites
+`src/render/bind.ts`, `RenderTree.tsx`, `src/blocks/collection/*`, live and edit paths.
+
+**Verified:** `site-builder-data.mjs` 47/47, `site-builder.mjs` 96/96 (after
+fixing restore so the records follow the restored drafts), jest siteBuilder
+22/22, vitest 80/80 (new `bind.test.ts`). Found on the way: a field key
+`tokens` is taken for a secret by the builder's checks (renamed `advanced`);
+upserts can't filter on `archivedAt`.
+
 ## SB-26 — The editor on its own address, in the AGS editor's look (2026-10-07)
 
 **What:** new app `mint-builder` (builder.mintapp.shop) with the whole editor

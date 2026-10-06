@@ -73,6 +73,8 @@ works, anything still being built is labelled "Coming soon". Verify with
 | SB-23 | `#presets` and `#themes` (full lists, thumbnails) | Themes gallery in `templates.ts` / features updated; changelog |
 | SB-24 | `#ai` and `#design`: start from your brand (logo, colours, words) | `/workflow/website` "start from your brand" step; changelog |
 | SB-26 | `#start`: the builder opens full screen in its own tab, signed in; Exit returns to the panel | Changelog |
+| SB-27 | `#ai`: the AI menu and Settings → Connect your AI, a key, the steps per client, the ready prompt with the theme | changelog entry |
+| SB-28 | `#themes`: picking a theme loads its demo site or only changes the look; `#add`: adding a section asks where, then scrolls to it | changelog entry |
 | SB-25 | `/websites`: "builder or code?" — which to pick, with SB-25's measured numbers | `compare.ts` / `/ai` claims use the measured numbers only; changelog |
 
 Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
@@ -188,7 +190,16 @@ Local run: launch config `mint-builder` (:3400, `.env.local` from
 `window.open` into a same-tab navigation (no opener), so test the panel →
 builder handoff with `agent-browser` (real tabs) — see CHANGELOG SB-26.
 
-**Pushed hashes so far:** SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
+**Since SB-26 (2026-10-07):** SB-09 data (D27: the site in the kit's models —
+Site design, Pages, SEO, Contents; lists through the public API's rules),
+SB-12 MCP tools + prompts, SB-27 Connect your AI in the builder, SB-28 theme
+demo sites — see their sections at the end. Smoke: `site-builder-data.mjs`,
+`site-builder-starter.mjs` (run against a backend on the new `dist/`, e.g.
+the `backend-sb2` launch config on :5032). Open: the data pickers and theme
+dialog weren't clicked against the new backend yet; no `search` block;
+sitemap doesn't list template records; SB-20 previews for the MCP.
+
+**Pushed hashes so far:** SB-28: backend `6d24ab07`, mint-sites `707f457` + `58bff32`, mint-builder `c9158ba`. SB-09/12: backend `efaf82ba`, mint-sites `9442c41`. SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
 `9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d`, SB-08 `ec0b22f1` (+ handoff
 commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
 SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`, SB-08 `817b136`; admin `main`: SB-05
@@ -381,10 +392,10 @@ Renderer (`mint-sites`)
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | done 2026-10-06 (mint-sites `2b2bdc9`, admin `b263ba7`, backend `751c88e3`) |
 | SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | done 2026-10-06 (mint-sites `9da74ae`, admin `9be3228`, backend `4a1b253d`) |
 | SB-08 | Block catalogue v1 + presets + 4 more themes; Lighthouse budget | mint-sites | L | done 2026-10-06 (mint-sites `817b136`, backend `ec0b22f1`, admin `297debd`) |
-| SB-09 | Data binding: bindings + interpolation, `collection` block, template pages `/x/[slug]`, server resolve in `/render` + editor `resolve`, Data panel | all three | L | open |
+| SB-09 | Data binding: bindings + interpolation, `collection` block, template pages `/x/[slug]`, server resolve in `/render` + editor `resolve`, Data panel | all three | L | done 2026-10-07 (backend `efaf82ba`, mint-sites `9442c41`, mint-builder `c9158ba`) — with D27: data in the kit models; no search block yet, sitemap doesn't list template records yet |
 | SB-10 | Widgets and commerce blocks: `widget`, add-to-cart, price, product gallery, account links; widget actions | mint-sites + admin | M | open |
 | SB-11 | AI: build a site, write a page, write a section, edit the selection (ops), AI panel | backend + admin | L | open |
-| SB-12 | MCP tools for the site builder | backend | M | open |
+| SB-12 | MCP tools for the site builder | backend | M | done 2026-10-07 (backend `efaf82ba`, `6d24ab07`) — no `preview_site_page` yet (needs SB-20) |
 | SB-13 | Site kinds + templates: `siteKind`, kind picker in New project, blueprint `website.builder`, apply engine, Template Studio tab, 6 kind templates | all three | L | open (confirm D4 first) |
 | SB-14 | Addresses + domains: default subdomain, custom domains via Vercel API, verification, Domains card | backend + admin + mint-sites | M | open (root domain `sites.mintapp.shop`; Vercel Hobby for the prototype) |
 | SB-15 | Releases + pages: history and rollback UI, compare, duplicate page, page from preset/AI, unpublish | admin + backend | M | open |
@@ -398,6 +409,8 @@ Renderer (`mint-sites`)
 | SB-23 | Preset library v2: ≥ 60 presets, ≥ 3 variants per section type, ≥ 8 themes, design review (D22) | mint-sites | L | open (after SB-08, SB-22) |
 | SB-24 | Brand to theme: logo/colours/words → theme + tokens + fonts (D24) | backend + admin | M | open (after SB-07, SB-11) |
 | SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` on GitHub; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
+| SB-27 | Connect your AI in the builder: toolbar AI menu + Settings → keys, client steps, a prompt with the theme; MCP prompts | mint-builder + backend | M | done 2026-10-07 (mint-builder `c9158ba`, backend `efaf82ba`) |
+| SB-28 | Theme demo sites: choosing a theme loads a whole demo site (pages, a list model with records, Contents) | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `6d24ab07`, mint-builder `c9158ba`, mint-sites `707f457`) |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1175,3 +1188,61 @@ lucide icons, react-quill-new); admin `src/app/site-builder/page.tsx`
 editing, autosave, undo, style, pages, add, design and the publish dialog work
 against a local backend; the proxy refuses other paths, other origins and
 missing sessions; `npm run build` passes in mint-builder; admin type-checks.
+
+---
+
+## SB-27 — Connect your AI in the builder (M) — done 2026-10-07
+
+**Why:** the user (2026-10-07): "add mcp for the site builder, should show
+details on how to add to claude or any other ai from builder, should have
+settings option then connect ai, or from navbar an icon of ai… then when
+prompted should have the theme ready build with ai".
+
+**Done:** mint-builder `src/editor/ConnectAi.tsx` — toolbar **AI** menu
+(Connect your AI · Build with AI — copy a prompt · Your AI keys · How it
+works) and a **Settings** menu (Connect your AI, Pages and menu, the panel's
+Site setup and Contents). The dialog makes a project key (`builder/api-keys`
+through the proxy; *It may publish* adds the new `publish` scope), shows it
+once, gives the steps for Claude, Claude Code, ChatGPT, Cursor and any MCP
+client with the key filled in, a prompt with the theme picked (the current
+one by default), and the keys with Revoke. Roles without `manage-api-keys`
+see the steps but no key. The MCP address comes from the server
+(`MINT_PUBLIC_API_URL` or `MINT_API_URL` + `/tenant/mcp`). Backend: MCP
+**prompts** (`prompts/list`, `prompts/get` in `transport.ts`) — `build_site`
+{brief, theme?} and `add_site_list` {what, page?} for website projects.
+
+## SB-28 — Theme demo sites (M) — done 2026-10-07
+
+**Why:** the user (2026-10-07): "after choosing a theme, the theme with demo
+content should be added and loaded instead of a blank site".
+
+**Done:** backend `library/siteBuilder/starter.ts` — per theme a business
+(studio: consulting, bistro: restaurant, editorial: journal, market: shop,
+calm: wellness classes, bright: app, mono: architecture portfolio), its pages
+from presets with the hero / CTA / page titles rewritten, a list model that
+suits it (services, menu, posts, products, classes, features, work) built with
+its public API (list, get) and sample records (only if the model is empty), a
+template page per record (`/<route>/[slug]`), every text a Contents record
+bound to its block, each page's SEO in its SEO record. `GET /site-builder/starters`,
+`POST /site-builder/starter { theme, replace? }` (a site with pages needs
+`replace: true`; replaced pages leave the live site at the next Publish; the
+home page keeps its id). MCP `start_from_theme`. Editor: picking a theme in
+the Design tab asks — *Load the demo site* / *Replace with the demo* / *Only
+change the look* (`ThemeDialog.tsx`).
+
+**Also in this round (the user's editor requests, 2026-10-07):** adding a
+section from the Add tab asks where it goes (after the selection, top, end —
+`AddDialog.tsx`) and the canvas scrolls to it (mint-sites `EditRoot` waits for
+the new block, then centres it); a block of the shared header/footer can be
+deleted from the page's drawer (asks first, then opens the part so Undo
+reaches it).
+
+**Verified:** `scripts/tenancy-smoke/site-builder-starter.mjs` (50 checks: all
+7 demos load, pass Publish's checks, publish, render home with its list and
+Contents and a record's own page; replace rules; MCP). In the browser (mint-builder
+:3400 against backend-sb :5031): the add-section dialog and scroll, the shared
+delete + undo, the Connect dialog (key made, steps, prompt, keys). **Not yet
+clicked:** the data pickers and the theme dialog against the new backend — the
+dev-server limit was full (other chats' servers); their backend side is covered
+by the smoke tests.
+
