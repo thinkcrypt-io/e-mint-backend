@@ -44,6 +44,8 @@ const checks = [
 	['a duplicate id', [{ id: 'aaaa0001', type: 'heading', props: {} }, { id: 'aaaa0001', type: 'text', props: {} }], /Two blocks have the id/],
 	['nesting too deep', [deep], /nested too deep/],
 	['a style value outside the list', [{ id: 'aaaa0001', type: 'section', props: {}, style: { base: { paddingTop: 7 } } }], /isn’t an allowed paddingTop/],
+	['a drawer inside a section (SB-06)', [{ id: 'aaaa0001', type: 'section', props: {}, children: [{ id: 'aaaa0002', type: 'drawer', props: {}, children: [] }] }], /goes at the top level/],
+	['opening a block that isn’t an overlay', [{ id: 'aaaa0001', type: 'button', props: {}, action: { type: 'open', target: 'aaaa0002' } }, { id: 'aaaa0002', type: 'heading', props: {} }], /Only a pop-up, drawer or popover/],
 ];
 for (const [what, tree, re] of checks) {
 	const out = await v(tree);
@@ -193,6 +195,22 @@ r = await call('PUT', SB(`/pages/${home.id}`, other._id), { rev: 1, tree: [] }, 
 ok('…or change them', r.status === 404, `${r.status}`);
 r = await render('/', other.publicSlug);
 ok('…and its own site is not live', r.status === 404);
+
+/* ------------------------------------------------ overlays (SB-06) */
+r = await call('POST', SB('/pages'), {
+	name: 'Menu test',
+	path: '/menu-test',
+	tree: [
+		{ id: 'ovlBtn01', type: 'button', props: { label: 'Menu' }, action: { type: 'open', target: 'ovlDrw01' } },
+		{ id: 'ovlDrw01', type: 'drawer', props: { side: 'left' }, children: [{ id: 'ovlTxt01', type: 'text', props: { html: '<p>Links</p>' } }] },
+		{ id: 'ovlPop01', type: 'popover', props: {}, children: [] },
+	],
+}, T);
+ok('a page with a button that opens a drawer is saved', r.status === 201, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('POST', SB('/publish'), { note: 'overlays' }, T);
+ok('…and publishes', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await render('/menu-test');
+ok('…and /render returns the drawer at the top level with the opener', r.status === 200 && r.body.page.tree[1]?.type === 'drawer' && r.body.page.tree[0]?.action?.target === 'ovlDrw01', `${r.status}`);
 
 r = await call('GET', `/public/sites/resolve?host=${site.publicSlug}.localhost:3300`);
 ok('/sites/resolve maps <slug>.localhost (development)', r.status === 200 && r.body.slug === site.publicSlug && r.body.projectId === site._id, `${r.status} ${JSON.stringify(r.body)}`);

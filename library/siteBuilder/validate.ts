@@ -167,6 +167,7 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 	}
 
 	const ids = new Set<string>();
+	const typeOf = new Map<string, string>();
 	const actions: { node: any; path: string }[] = [];
 	let count = 0;
 
@@ -186,12 +187,14 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 
 			const def = m.byType.get(n.type);
 			if (!def) return add('error', at, `There is no block type “${String(n.type).slice(0, 40)}”`, id);
+			if (id) typeOf.set(id, n.type);
 
 			for (const k of Object.keys(n)) if (!NODE_KEYS.has(k)) add('error', `${at}.${k}`, `A block has no “${k}”`, id);
 			if (n.name !== undefined && (typeof n.name !== 'string' || n.name.length > 80)) add('error', `${at}.name`, 'A name is text of at most 80 characters', id);
 			if (n.locked !== undefined && typeof n.locked !== 'boolean') add('error', `${at}.locked`, 'locked is true or false', id);
 
 			// Where it sits
+			if (parent && def.category === 'overlay') add('error', at, `A ${def.label.toLowerCase()} goes at the top level of the page, not inside another block`, id);
 			if (parent && def.canBeChildOf?.length && !def.canBeChildOf.includes(parent.type))
 				add('error', at, `${def.label} can only go inside ${def.canBeChildOf.join(', ')}`, id);
 			if (parent) {
@@ -302,6 +305,8 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 			case 'scroll':
 				if (typeof a.target !== 'string' || !NODE_ID.test(a.target)) add('error', path, `A ${a.type} action names the block it ${a.type === 'scroll' ? 'scrolls to' : 'opens or closes'}`, id);
 				else if (!exists(a.target)) add('publish', path, `This ${a.type === 'scroll' ? 'scrolls to' : 'opens'} a block that no longer exists`, id);
+				else if (a.type !== 'scroll' && typeOf.has(a.target) && m.byType.get(typeOf.get(a.target)!)?.category !== 'overlay')
+					add('error', path, `Only a pop-up, drawer or popover can be opened or closed — “${a.target}” is a ${m.byType.get(typeOf.get(a.target)!)?.label.toLowerCase()}`, id);
 				break;
 			case 'widget':
 				if (typeof a.widget !== 'string' || !WIDGET.test(a.widget)) add('error', path, 'A widget action names the widget (cart, login …)', id);

@@ -72,6 +72,19 @@ describe('validateTree', () => {
 		expect(validateTree([{ id: 'butn0001', type: 'button', props: {}, action: { type: 'open', target: 'gone0001' } }], { externalIds: new Set(['gone0001']) }).ok).toBe(true);
 	});
 
+	it('overlays sit at the top level, and only overlays open or close', () => {
+		const drawer = { id: 'drwr0001', type: 'drawer', props: { side: 'left' }, children: [{ id: 'text0001', type: 'text', props: { html: '<p>Hi</p>' } }] };
+		const opener = { id: 'butn0001', type: 'button', props: {}, action: { type: 'toggle', target: 'drwr0001' } };
+		expect(validateTree([opener, drawer]).ok).toBe(true);
+		expect(errors(validateTree([{ id: 'sect0001', type: 'section', props: {}, children: [drawer] }]))).toEqual([
+			'A drawer goes at the top level of the page, not inside another block',
+		]);
+		expect(errors(validateTree([{ ...opener, action: { type: 'open', target: 'text0001' } }, drawer]))).toEqual([
+			'Only a pop-up, drawer or popover can be opened or closed — “text0001” is a text',
+		]);
+		expect(validateTree([{ ...opener, action: { type: 'scroll', target: 'text0001' } }, drawer]).ok).toBe(true);
+	});
+
 	it('refuses too many nodes and too many bytes', () => {
 		const many = Array.from({ length: 1501 }, (_, i) => ({ id: `n${String(i).padStart(7, '0')}`, type: 'spacer', props: {} }));
 		expect(errors(validateTree(many))).toContain('The page has too many blocks (the limit is 1500)');

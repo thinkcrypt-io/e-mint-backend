@@ -1,5 +1,5 @@
 {
-	"version": "956518cfa8cd",
+	"version": "9716bd98e5cc",
 	"blocks": [
 		{
 			"type": "button",
@@ -214,6 +214,101 @@
 					"thickness": 1,
 					"lineStyle": "solid"
 				}
+			}
+		},
+		{
+			"type": "drawer",
+			"label": "Drawer",
+			"category": "overlay",
+			"icon": "sidebar-simple",
+			"description": "A panel that slides in from the side, opened by a button or link — menus, carts, filters.",
+			"aiHint": "A side panel. Put it at the top level of the page; open it with { type: \"open\", target: <this id> } on a button. side \"left\" for menus, \"right\" for carts and details.",
+			"props": [
+				{
+					"key": "title",
+					"label": "Name for screen readers",
+					"kind": "text",
+					"default": "Drawer",
+					"help": "Read out when it opens; not shown."
+				},
+				{
+					"key": "side",
+					"label": "Side",
+					"kind": "select",
+					"options": [
+						{
+							"value": "right",
+							"label": "Right"
+						},
+						{
+							"value": "left",
+							"label": "Left"
+						}
+					],
+					"default": "right"
+				},
+				{
+					"key": "size",
+					"label": "Width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Narrow"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Wide"
+						}
+					],
+					"default": "sm"
+				},
+				{
+					"key": "closeButton",
+					"label": "Close button (×)",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": [
+				"spacing",
+				"background",
+				"border",
+				"type"
+			],
+			"client": true,
+			"defaults": {
+				"props": {
+					"title": "Drawer",
+					"side": "right",
+					"size": "sm",
+					"closeButton": true
+				},
+				"children": [
+					{
+						"id": "drw0head",
+						"type": "heading",
+						"props": {
+							"text": "Drawer",
+							"level": 2,
+							"size": "sm"
+						}
+					},
+					{
+						"id": "drw0text",
+						"type": "text",
+						"props": {
+							"html": "<p>Anything can go in here.</p>"
+						}
+					}
+				]
 			}
 		},
 		{
@@ -756,6 +851,143 @@
 					"tone": "foreground",
 					"underline": "hover"
 				}
+			}
+		},
+		{
+			"type": "modal",
+			"label": "Pop-up",
+			"category": "overlay",
+			"icon": "app-window",
+			"description": "A window over the page, opened by a button or link. Closes with its × button, Esc or a click outside.",
+			"aiHint": "A modal dialog. Put it at the top level of the page; open it with a button whose action is { type: \"open\", target: <this id> }. Hidden until opened. Good for sign-up forms, video, details.",
+			"props": [
+				{
+					"key": "title",
+					"label": "Name for screen readers",
+					"kind": "text",
+					"default": "Pop-up",
+					"help": "Read out when it opens; not shown."
+				},
+				{
+					"key": "size",
+					"label": "Width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						},
+						{
+							"value": "lg",
+							"label": "Large"
+						}
+					],
+					"default": "md"
+				},
+				{
+					"key": "closeButton",
+					"label": "Close button (×)",
+					"kind": "boolean",
+					"default": true
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": [
+				"spacing",
+				"background",
+				"border",
+				"type"
+			],
+			"client": true,
+			"defaults": {
+				"props": {
+					"title": "Pop-up",
+					"size": "md",
+					"closeButton": true
+				},
+				"children": [
+					{
+						"id": "mdl0head",
+						"type": "heading",
+						"props": {
+							"text": "Pop-up title",
+							"level": 2,
+							"size": "md"
+						}
+					},
+					{
+						"id": "mdl0text",
+						"type": "text",
+						"props": {
+							"html": "<p>Say what this is about.</p>"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "popover",
+			"label": "Popover",
+			"category": "overlay",
+			"icon": "chat-circle",
+			"description": "A small panel that opens just below the button or link that opens it. Closes with Esc or a click elsewhere.",
+			"aiHint": "A small floating panel under its trigger. Put it at the top level of the page; a button with { type: \"toggle\", target: <this id> } opens and closes it. For short menus, hints and details.",
+			"props": [
+				{
+					"key": "title",
+					"label": "Name for screen readers",
+					"kind": "text",
+					"default": "Popover",
+					"help": "Read out when it opens; not shown."
+				},
+				{
+					"key": "size",
+					"label": "Width",
+					"kind": "select",
+					"options": [
+						{
+							"value": "sm",
+							"label": "Small"
+						},
+						{
+							"value": "md",
+							"label": "Medium"
+						}
+					],
+					"default": "sm"
+				}
+			],
+			"slots": {
+				"children": {}
+			},
+			"style": [
+				"spacing",
+				"background",
+				"border",
+				"type"
+			],
+			"client": true,
+			"defaults": {
+				"props": {
+					"title": "Popover",
+					"size": "sm"
+				},
+				"children": [
+					{
+						"id": "pop0text",
+						"type": "text",
+						"props": {
+							"html": "<p>A short note.</p>",
+							"size": "sm"
+						}
+					}
+				]
 			}
 		},
 		{
