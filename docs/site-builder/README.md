@@ -290,7 +290,9 @@ GET /public/api/:slug/render?path=/blog/hello[&page=2&search=…]
       data:   { record?: object, nodes: { [nodeId]: { items, total, page, pageSize } }, contents: { [slug]: object } },
       menu:   [{ label, path, children? }],                  // pages with showInMenu
       links:  { [pageId]: path },                           // for { type: 'page' } actions
-      tags:   { head: string, bodyStart: string, bodyEnd: string },   // = /site/tags (pixels, track.js, head code)
+      tags:   { head, bodyStart, bodyEnd,                   // HTML: verification metas + the track.js tag
+                verification: { google, bing },             // structured, for the renderer's metadata
+                tracker: { src, project } | null },         // track.js loads pixels + the tenant's code tags
       widgets:{ enabled: string[], apiBase }                // load mint.js when non-empty
     }
   404 { error: 'not-found' } when no published page matches (the renderer then asks for '/404')
@@ -349,7 +351,7 @@ ship — the kinds don't wait for them.
 | Plan, decisions, contracts | `backend/docs/site-builder/README.md` (this file) |
 | Work orders, Handoff, Status | `backend/docs/site-builder/WORK_ORDERS.md` |
 | Changelog | `backend/docs/site-builder/CHANGELOG.md` |
-| Renderer repo | `mint-sites/` (SB-02) — see its README; blocks `src/blocks/<type>/`, renderer `src/render/`, themes `src/themes/`, presets `src/presets/`, manifest `block-manifest.json` (`npm run manifest`), fixture `/__mint/fixture` |
+| Renderer repo | `mint-sites/` (SB-02, SB-04) — see its README ("How a published page is served"); proxy `src/proxy.ts`, published pages `src/app/%5Fs/[site]/`, revalidate `src/app/api/revalidate`, backend calls `src/lib/api.ts`; blocks `src/blocks/<type>/`, renderer `src/render/`, themes `src/themes/`, presets `src/presets/`, manifest `block-manifest.json` (`npm run manifest`), fixture `/__mint/fixture` |
 | Models | `backend/library/models/siteBuilder/{sitePage,siteDesign,siteRelease}.model.ts` (collections `sitepages`, `sitedesigns`, `sitereleases`) |
 | Manifest copy + loader | `backend/library/siteBuilder/blockManifest.json` (`node scripts/siteBuilder/syncManifest.mjs`), `manifest.ts` (`loadManifest`, `publicManifest`, `presetTree`) |
 | Validator | `backend/library/siteBuilder/validate.ts` (`validateTree`, `validateDesign`, `validatePageFields`; problem levels error / publish / warning) |

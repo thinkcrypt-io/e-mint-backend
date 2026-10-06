@@ -84,13 +84,35 @@ are left out of the page (not shown empty).
 
 ## Handoff — read this first (last updated 2026-10-06)
 
-**2026-10-06 — SB-03 done** (backend; guide `/site-builder` created in
-mint-docs with `#start` and `#publish`). SB-02 done before it (renderer
-`mint-sites/`, pushed to `aiasifistiaque/mint-sites` `main`; no Vercel
-project yet — ask before creating one). **Next: SB-04** — the renderer serves
-published sites from the backend's `/render`. Then the editor (SB-05 → SB-07).
-Open questions for the user are at the end of README (site kinds D4, the
-sites' root domain, the hosting plan); none blocks SB-04…SB-12.
+**2026-10-06 — SB-04 done**: the renderer serves published sites —
+`http://<publicSlug>.localhost:3300/` in development (proxy → resolve →
+`/_s/<slug>/…` → render API, cached per site until Publish revalidates it).
+SB-02, SB-03 done before it (pushed: mint-sites `main`, backend `v3` →
+`mint` `51d4d01c` for SB-03, mint-docs `a029dcf`). The renderer isn't
+deployed anywhere yet (no Vercel project — ask the user before creating one;
+it needs the root domain + hosting answers, README open questions 2–3).
+**Next: SB-05** (the editor shell in the tenant panel + the renderer's
+`/__mint/edit` canvas). Open questions for the user are at the end of README
+(site kinds D4, the sites' root domain, the hosting plan); none blocks
+SB-05…SB-12.
+
+**Learned in SB-04 (applies to SB-05 on):**
+- The renderer is a Next 16 app whose pages are dynamic per request (the
+  proxy passes the site in request headers), with the backend's answer in the
+  data cache (`fetch` `next.tags` + `revalidate: 300`); Publish clears it with
+  `revalidateTag(tag, { expire: 0 })` — measured: 5 views → 2 backend calls.
+- Only `global-not-found` can export metadata; the site 404's title comes from
+  the page's `generateMetadata` (it runs for the path that 404s).
+- **No client JS from blocks unless needed**: `next/image` and `next/script`
+  are client components and would put their JS on every page (7 KB + 2 KB gz);
+  the image block uses `<img srcset>` pointing at `/_next/image`, scripts are
+  React 19 `<script async>`. A page ships only Next/React's own runtime:
+  **173 KB gz on a production build** — so SB-08's "≤ 90 KB JS" budget can't
+  be met by blocks alone; measure blocks' JS *on top of* that baseline (0 KB
+  today) and decide with the user whether the baseline matters.
+- Renderer env: `MINT_API_URL`, `SITE_REVALIDATE_SECRET` (`.env.local`,
+  git-ignored). Launch configs: `mint-sites` (:3300 dev), `mint-sites-prod`
+  (:3301, `next start` of the last `npm run build`), `backend-sb` (:5031).
 
 **Learned in SB-03 (applies to SB-04 on):**
 - `/render` answers `links: { [pageId]: path }` (for `{ type: 'page' }`
@@ -206,7 +228,7 @@ Renderer (`mint-sites`)
 | SB-01 | Plan & docs | backend | S | done 2026-10-06 |
 | SB-02 | Renderer repo: Next 16 + Tailwind v4, tree renderer, `compileStyles`, tokens → CSS variables, 14 primitive blocks, 1 theme, manifest script, fixture page | mint-sites | L | done 2026-10-06 (mint-sites `02b6a34`) |
 | SB-03 | Backend: `SitePage` / `SiteDesign` / `SiteRelease`, manifest copy + validator, tenant API (pages, design, publish, releases, rollback), `/render` (static pages), `/sites/resolve`, revalidate call, smoke suite | backend | L | done 2026-10-06 |
-| SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | open (after SB-02, SB-03) |
+| SB-04 | Renderer ↔ backend: host routing, render fetch + cache tags, SEO metadata, layouts, menu, redirects, 404, sitemap/robots, tags + mint.js, `/api/revalidate` | mint-sites | M | done 2026-10-06 |
 | SB-05 | Editor shell: `/site-builder` page, Pages panel, canvas iframe + protocol, select/hover overlays, Outline, Inspector (props from the manifest), autosave, undo/redo, device switch, Publish dialog | admin + mint-sites | L | open (after SB-04) |
 | SB-06 | Adding and moving: Add panel (blocks + presets), drag from panel to canvas, drag inside canvas + outline, inline text editing, copy/paste/duplicate, keyboard, overlays in the outline | admin + mint-sites | L | open |
 | SB-07 | Style + Design: Style panel per breakpoint, Design tab (theme picker, token editor, fonts, light/dark), header/footer layouts, global sections | admin + mint-sites + backend | L | open |

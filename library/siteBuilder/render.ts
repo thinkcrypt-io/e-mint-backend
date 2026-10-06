@@ -41,19 +41,22 @@ export const normalizePath = (raw: unknown) => {
 };
 
 /**
- * The site's tags for the page head: search-engine verification metas
- * (server-rendered, so Google sees them) and the tracker script, which loads
- * the pixels and the tenant's own code tags exactly as on a code-built site
- * (it skips what's already on the page).
+ * The site's tags. Structured for the renderer — search-engine verification
+ * (rendered as metadata, so Google sees it server-side) and the tracker
+ * script, which loads the pixels and the tenant's own code tags exactly as on
+ * a code-built site (skipping what's already on the page) — and the same as
+ * HTML in `head` for anything that just prints it.
  */
 const headTags = (apiBase: string, project: any, doc: any) => {
 	const t: any = siteTags(doc);
-	const parts: string[] = [];
-	if (t.googleVerification) parts.push(`<meta name="google-site-verification" content="${esc(t.googleVerification)}">`);
-	if (t.bingVerification) parts.push(`<meta name="msvalidate.01" content="${esc(t.bingVerification)}">`);
+	const verification = { google: t.googleVerification || '', bing: t.bingVerification || '' };
 	const anything = t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification'].includes(k));
-	if (anything) parts.push(`<script src="${esc(apiBase)}/public/track.js" data-project="${esc(project.publicSlug)}" defer></script>`);
-	return { head: parts.join('\n'), bodyStart: '', bodyEnd: '' };
+	const tracker = anything ? { src: `${apiBase}/public/track.js`, project: project.publicSlug } : null;
+	const parts: string[] = [];
+	if (verification.google) parts.push(`<meta name="google-site-verification" content="${esc(verification.google)}">`);
+	if (verification.bing) parts.push(`<meta name="msvalidate.01" content="${esc(verification.bing)}">`);
+	if (tracker) parts.push(`<script src="${esc(tracker.src)}" data-project="${esc(tracker.project)}" defer></script>`);
+	return { head: parts.join('\n'), bodyStart: '', bodyEnd: '', verification, tracker };
 };
 
 const MENU_FIELDS = { 'published.name': 1, 'published.path': 1, 'published.menuLabel': 1, 'published.priority': 1 };

@@ -17,6 +17,42 @@ Newest first. Each entry: what changed, where, how it was verified.
   `preview_site_page` and detail lookups; Status, Handoff and *Docs and
   marketing* rows updated.
 
+## 2026-10-06 — SB-04 The renderer serves published sites
+
+- mint-sites: `src/proxy.ts` (host → `GET /public/sites/resolve`, cached a
+  minute → rewrite to `/_s/<slug>/<path>` with `x-mint-site`,
+  `x-mint-project`, `x-mint-origin`; unknown hosts → "No site here" 404;
+  `/__mint` and `/api` are the renderer's own), `src/lib/api.ts` (render +
+  resolve; `x-mint-renderer` on every call), `src/app/%5Fs/[site]/[[...path]]/`
+  (page + `generateMetadata` + `not-found.tsx`: the site's `/404` page or a
+  themed "Page not found"), `sitemap.xml` / `robots.txt` route handlers (the
+  backend's, with the request's address), `src/app/api/revalidate` (HMAC check,
+  `revalidateTag(…, { expire: 0 })`), `src/render/LivePage.tsx`,
+  `src/render/metadata.ts` (title template, canonical, robots, OG/Twitter,
+  favicon, verification). Light/dark follows the design's colour scheme.
+- The image block now uses `<img srcset>` against `/_next/image` instead of
+  `next/image`, and scripts are plain `<script async>` instead of `next/script`
+  — both were client components that put JS on every page.
+- Backend: `/render`'s `tags` also carry `verification` and `tracker`
+  (structured), so the renderer puts verification in the page head as metadata.
+- Verified against a local backend (:5031) with a published two-page site
+  (`acme-store`): `http://acme-store.localhost:3300/` renders the theme,
+  header, footer, fonts and SEO tags (title, description, canonical, OG);
+  `/about` gets the title template; publishing a change shows on the next
+  request (renderer log `revalidated site:<id>, site-slug:acme-store`; 5 views
+  → 2 backend render calls); `/old-about` → 308 `/about`; `/nowhere` → 404 in
+  the site's look; `/_s/other/x` on the site's host → 404 (no cross-site
+  view); `localhost:3300` → "No site here"; sitemap/robots carry the request's
+  address; the production build (`next start`) has one `<style>` for nodes
+  and no block JS (6 chunks, 173 KB gz — all Next/React runtime); track.js
+  loads in `<head>` with `data-project` and records the view; no horizontal
+  scroll at 390 px. `npm test` 37 passing (+ metadata); `npm run build`
+  passes; `site-builder.mjs` still all passing.
+- Docs: guide `#live-site` (how it's hosted, how changes reach it, where each
+  head tag comes from, sitemap/robots, redirects, the 404 page and `/404`,
+  light/dark). Checked at 390 px dark; build passes. Marketing: nothing yet
+  (first announcement comes with the editor, SB-05).
+
 ## 2026-10-06 — SB-03 Backend storage, validator, tenant API, render API
 
 - Models `SitePage`, `SiteDesign`, `SiteRelease` (`library/models/siteBuilder/`,

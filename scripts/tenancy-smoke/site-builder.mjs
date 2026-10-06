@@ -106,7 +106,7 @@ r = await render('/');
 const live1 = r.body;
 ok('/render: the published home tree', r.status === 200 && live1.page.tree[0].children[0].props.text === 'Version one' && live1.page.id === home.id, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
 ok('…with the layout, the design and the menu', live1.layout.header.length && live1.layout.footer.length && live1.design.theme === 'studio' && live1.menu.length === 1 && live1.menu[0].path === '/about', JSON.stringify({ menu: live1.menu, d: live1.design }));
-ok('…tags (the tracker), widgets, links, site, version', live1.tags.head.includes('/public/track.js') && live1.tags.head.includes(`data-project="${site.publicSlug}"`) && Array.isArray(live1.widgets.enabled) && live1.links[about.id] === '/about' && live1.site.name && live1.version === 1, JSON.stringify({ t: live1.tags, w: live1.widgets, s: live1.site }));
+ok('…tags (the tracker), widgets, links, site, version', live1.tags.head.includes('/public/track.js') && live1.tags.head.includes(`data-project="${site.publicSlug}"`) && live1.tags.tracker?.project === site.publicSlug && live1.tags.verification?.google === '' && Array.isArray(live1.widgets.enabled) && live1.links[about.id] === '/about' && live1.site.name && live1.version === 1, JSON.stringify({ t: live1.tags, w: live1.widgets, s: live1.site }));
 ok('…SEO resolved', live1.page.seo.title && 'canonical' in live1.page.seo && live1.page.seo.noIndex === false, JSON.stringify(live1.page.seo));
 r = await render('/about/');
 ok('/render of /about/ (trailing slash): its SEO', r.status === 200 && r.body.page.seo.title === 'About us' && r.body.page.seo.description === 'Who we are', `${r.status} ${JSON.stringify(r.body?.page?.seo)}`);
