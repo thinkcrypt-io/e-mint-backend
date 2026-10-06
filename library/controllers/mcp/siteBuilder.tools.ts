@@ -8,6 +8,7 @@ import { treeIds, validateDesign, validatePageFields, validateTree, type Problem
 import { EMPTY_SEO, designView, ensureSite, livePages, pageSummary, pageView, siteChanges } from '../../siteBuilder/site.js';
 import { publishSite, siteUrl } from '../../siteBuilder/publish.js';
 import { dataModels, dataProblems } from '../../siteBuilder/resolve.js';
+import { applyStarter, starterSummaries } from '../../siteBuilder/starter.js';
 import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, upsertContents } from '../../siteBuilder/kit.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
@@ -80,7 +81,7 @@ The site is made of pages; a page is a tree of blocks (nodes). Build it here wit
 - Detail pages for a list: a template page — path "/services/[slug]", kind "template", source { "model": "<route>", "match": { "param": "slug", "field": "slug" } }; inside it, bind to \`{ "from": "record", "field": "title" }\` or write "{{record.title}}".
 
 ## Steps
-1. get_site_builder — pages, design, models, contents already here. Reuse; building again updates, never duplicates.
+1. get_site_builder — pages, design, models, contents already here. Reuse; building again updates, never duplicates. For a new site, start_from_theme loads a theme's whole demo site (pages, a list model, contents) — then rewrite it for the business.
 2. Agree the pages, sections and lists with the user (show them first).
 3. set_site_design — theme (pick from the list below to suit the business), colours, fonts, header and footer.
 4. Models for the lists (build_feature, publicApi on) + create_records.
@@ -345,6 +346,19 @@ const publish = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	}
 };
 
+const startFromTheme = async (req: any, args: any, caller: Caller): Promise<Out> => {
+	await ensureDesignModel(req);
+	try {
+		const out = await applyStarter(req, String(args.theme || ''), { replace: args.replace === true });
+		return {
+			text: `Loaded the ${out.theme} demo site (dressed as “${out.business}”): ${out.pages.map(p => `${p.name} ${p.path}`).join(', ')}; the ${out.list.title} model (public list/get on) with sample records; ${out.contents} Contents records bound to the blocks. Now change the words (set_site_contents on the same slugs — get_site_builder lists them), the list's records (create_records with matchOn "slug") and the design. Editor: ${builderUrl(caller.project, out.home)}`,
+			data: out,
+		};
+	} catch (e: any) {
+		return refuse(e?.message || 'The demo site wasn’t loaded');
+	}
+};
+
 const blocksTool = async (_req: any, args: any): Promise<Out> => {
 	const m = loadManifest();
 	const types: string[] = Array.isArray(args.types) ? args.types : [];
@@ -484,6 +498,16 @@ export const SITE_BUILDER_TOOLS: ToolDef[] = [
 		run: savePage,
 	},
 	{
+		name: 'start_from_theme',
+		title: 'Start from a theme’s demo site',
+		description: `Loads a theme's whole demo site in place of the pages — home and the other pages built from presets, a list model that suits it (menu, services, products, classes, posts, projects, features) with sample records and its public API on, every text as a Contents record bound to its block. The quickest start: then rewrite the words and records for the user's business. replace: true is needed when the site already has pages (they go off the site at the next Publish). Themes: ${Object.entries(starterSummaries()).map(([k, v]) => `${k} (${v.business}: ${v.pages.join(', ')})`).join('; ')}.`,
+		scope: 'build',
+		only: 'website',
+		inputSchema: { type: 'object', required: ['theme'], properties: { theme: { type: 'string' }, replace: { type: 'boolean' } } },
+		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+		run: startFromTheme,
+	},
+	{
 		name: 'check_site',
 		title: 'Check the site',
 		description: 'What Publish would change and what stops it: blocks with problems, lists whose model the site can’t read (turn on its public API), template pages without a model.',
@@ -533,7 +557,7 @@ ${theme ? `Use the ${theme.label} theme (${theme.key}) — ${theme.description}`
 How:
 1. Read site_builder_guide and get_site_builder.
 2. Propose the pages, each page's sections, and the lists that need a model of their own (services, team, testimonials…). Wait for my OK.
-3. set_site_design with the theme, colours and fonts, header and footer.
+3. If the site is still blank, start_from_theme with that theme for a full demo to work from; then set_site_design for the colours, fonts, header and footer.
 4. Build the list models with their public API on (list, get) and fill them with create_records.
 5. Save every text and picture as Contents records (set_site_contents) and bind the blocks to them, so I can edit the words in the panel.
 6. save_site_page for each page with its SEO; template pages for detail pages of a list.

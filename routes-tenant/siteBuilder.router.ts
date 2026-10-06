@@ -11,6 +11,7 @@ import { treeIds, validateDesign, validatePageFields, validateTree, type Problem
 import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, siteInfo, EMPTY_SEO } from '../library/siteBuilder/site.js';
 import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/publish.js';
 import { dataModels, resolveCollections, sampleRecord } from '../library/siteBuilder/resolve.js';
+import { applyStarter, isBlankSite, starterSummaries } from '../library/siteBuilder/starter.js';
 import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
 
 /**
@@ -38,6 +39,8 @@ import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPa
  *   GET    /data                      the project's models (public API, fields, a sample) and Contents records — the data pickers (SB-09)
  *   POST   /resolve                   { tree, layout?, pageId?, recordId?, page? } → { nodes, contents, record } — the canvas's data
  *   POST   /contents                  { records: [{ slug, … }], pageId? } → Contents records added or updated by slug
+ *   GET    /starters                  each theme's demo site (business, pages, list) and whether the site is still blank
+ *   POST   /starter                   { theme, replace? } → the theme's demo site in place of the pages (SB-28)
  *
  * The site lives in the project's models too (D27, library/siteBuilder/kit.ts):
  * each page has a Pages record, its SEO is its SEO record, the design is the
@@ -376,6 +379,24 @@ router.post(
 		const d: any = await SiteDesign.findOne({}).lean();
 		await pushDesign(d.draft);
 		for (const p of await livePages()) await pushSeo(p, p.draft?.seo);
+		return out;
+	})
+);
+
+/* -------------------------------------------------------- theme demos */
+
+router.get(
+	'/starters',
+	handle(async () => ({ starters: starterSummaries(), blank: await isBlankSite() }))
+);
+
+router.post(
+	'/starter',
+	handle(async (req: any) => {
+		mayBuild(req);
+		await ensureDesignModel(req);
+		const out = await applyStarter(req, String(req.body?.theme || ''), { replace: req.body?.replace === true });
+		recordProjectEvent({ req, model: 'Site', modelPath: 'site-builder', document: req.project._id, name: 'Site', text: `loaded the ${out.theme} theme’s demo site` });
 		return out;
 	})
 );
