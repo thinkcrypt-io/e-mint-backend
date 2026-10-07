@@ -85,14 +85,14 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-07, SB-26 done — SB-09 next)
+## Handoff — read this first (last updated 2026-10-07, SB-09, SB-12, SB-27, SB-28 done — SB-14 or SB-10 next)
 
 **Done and pushed:** SB-01…SB-08 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
 and moving blocks + overlays, styles + design + header/footer + saved
 sections, the block catalogue + 34 presets + 7 themes; guide `/site-builder`
 with `#start` … `#sections`, `#themes`, `#blocks`, `#publish`; the marketing
-site shows the builder with a 7-theme strip on /features). **Next: SB-09**
+site shows the builder with a 7-theme strip on /features). **Next: SB-14 (domains) or SB-10 (shop blocks); SB-20 → SB-21 before more MCP work**
 (data binding) → SB-10… The renderer isn't deployed yet. **Hosting answered
 (2026-10-06): the current Vercel Hobby plan for the prototype** (README open
 question 3); root domain `sites.mintapp.shop`. **No image optimizer anywhere
