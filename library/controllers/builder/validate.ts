@@ -128,6 +128,14 @@ const viewTabSchema = Joi.object({
 	// linked to this record. Only for `foreignField` tabs — see getViewTab.
 	allowAdd: Joi.boolean(),
 	addLabel: Joi.string().allow('').max(60),
+	// Reached through a route in between (a client's documents, through its
+	// projects): `via` links that route to this record; foreignField /
+	// localField then link the tab's records to it. The add button is muted.
+	via: Joi.object({
+		route: Joi.string().required(),
+		foreignField: Joi.string(),
+		localField: Joi.string(),
+	}).xor('foreignField', 'localField'),
 }).xor('foreignField', 'localField');
 
 export const configDraftSchema = Joi.object({

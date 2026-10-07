@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-06)
+## Handoff — read this first (kept current; last updated 2026-10-08)
 
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
@@ -75,6 +75,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 **Marketing website** (`mint-webpage/`, WO-41): its own repo (aiasifistiaque/mint-website, branch `main`), launch config `mint-webpage` (:3100). When a product change ships, update the site in the same piece of work — `src/content/*` (features, changelog, workflow, personas) and the drawings in `src/components/mock/mocks.tsx`; see its README.
 
 **User docs site** (`mint-docs/`, WO-44, 2026-10-06): the 19 user guides as their own static site for **docs.mintapp.shop** (Next 16 + Tailwind, the marketing site's look), launch config `mint-docs` (:3200). Repo `aiasifistiaque/mint-docs`, branch `main` (`55cc671`, pushed) — no Vercel project or DNS yet. Paths and `#anchors` match the app's `/user-docs/*` without the prefix. Since 2026-10-06 the app redirects `/user-docs/*` there (admin `next.config.mjs`, `NEXT_PUBLIC_DOCS_URL`) and `docsPath()` links straight to it, so **guides are edited in `mint-docs` only**; admin `src/app/user-docs/*` is no longer served (kept for now; delete once nothing edits it). A new guide needs its entry in `mint-docs/src/content/guides.ts`. See its README and DEPLOY.md §2b.
+
+**View tabs through another route** (2026-10-08): `viewTabs[].via = { route, foreignField | localField }` lets a record page list records two links away (a client's documents through its projects); add button muted. See CHANGELOG 2026-10-08. Remember a tenant Project model's address is `projects2` (`/projects` is reserved).
 
 **Conventions that bite:**
 - Tenant code runs inside a scope (AsyncLocalStorage, `tenantScoped`

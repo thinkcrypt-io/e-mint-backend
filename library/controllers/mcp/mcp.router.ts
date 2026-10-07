@@ -334,7 +334,7 @@ const TOOLS: ToolDef[] = [
 				page: {
 					url: caller.page(m.route),
 					table: config?.table || [],
-					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField })),
+					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField, ...(t.via?.route && { via: t.via.route }) })),
 				},
 				linkedBy,
 			};

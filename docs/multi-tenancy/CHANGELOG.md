@@ -1289,3 +1289,34 @@ Decisions D14–D17 (README).
   buttons. Page builder → Table page → Add button: new **Form heading** and **Form description**
   (`button.prompt.title/description`), used by the drawer, the edit-from-menu drawer and the add page.
   Verified: tsc + eslint (both apps), mock page in dark mode.
+
+## 2026-10-08 — Record page: documents as tiles; view tabs through another route
+- **Documents on the record page.** `file` / `file-array` fields get a panel of
+  their own (BLOCK_TYPES in ViewPageBasicInfo + ConfiguredView) and render as
+  media-manager tiles (`DocumentTiles`): kind icon + extension, the name (upload
+  `<timestamp>_` prefix stripped), opening in a new tab; pictures show
+  themselves, broken ones fall back to the icon. Kind icons moved to
+  `pages/media/fileKinds.tsx` (shared with MediaItems). admin + mint-tenant.
+- **Third-tier view tabs** (`viewTabs[].via`). A tab can reach its records
+  through a route in between: `via: { route, foreignField | localField }` links
+  that route to this record; the tab's own `foreignField` / `localField` then
+  link its records to the route in between (client → projects → documents).
+  `relatedPage` looks up the middle records first (view permission on that
+  route + its record access; capped at 5000), then the tab's records. Tab
+  counts, search, paging and populate as before; the response carries `via`.
+  The add button comes back `{ allowed: false, nested: true, via: <title> }` —
+  shown muted with the reason on hover. Joi: `via` is optional, xor its two
+  link fields. MCP `get_page` lists a tab's `via`.
+- Page builder (ViewTabsEditor): *Linked by* gains "Through another route"
+  options (from the backlinks of this model and of the tab's model, plus this
+  model's own reference fields), a path line under the choice, auto-pick when
+  that's the only way, the middle link column kept as a column choice, and the
+  add-button note. `useLazyGetBuilderBacklinksQuery` exported.
+- Tab "Open … →" links now use `pagePath` (they went to `/<route>`, outside the
+  project, in the tenant panel).
+- Verified: private backend (own Mongo :27996, server :5041) — models Client,
+  Project (`projects2`: `/projects` is reserved), Document; via tab counts 3 for
+  Acme, lists A1/A2/B1, populated project column, search, Beta sees only C1, a
+  `via` without a link refused (400), add muted with the title. Mock pages for
+  the editor (auto-picked path, saved shape) and the muted tab button; tsc +
+  lint in both apps and the backend.

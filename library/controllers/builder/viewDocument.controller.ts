@@ -99,6 +99,46 @@ type RelatedItem = {
 	/** View tabs only: the add button (on unless false) and its text. */
 	allowAdd?: boolean;
 	addLabel?: string;
+	/**
+	 * A tab reaching its records through a route in between (a client's
+	 * documents, through its projects): `via` links that route to this record,
+	 * either way round, and `foreignField` / `localField` above then link the
+	 * tab's records to *it* (Document.project), not to this record.
+	 */
+	via?: { route: string; foreignField?: string; localField?: string };
+};
+
+/** Most records a tab looks through on its way (the projects a client has). */
+const MAX_VIA = 5000;
+
+const idsOf = (raw: any): any[] => (Array.isArray(raw) ? raw : raw ? [raw] : []).map((x: any) => x?._id || x).filter(Boolean);
+
+/**
+ * The records in between for a `via` tab — the client's projects — through
+ * that route's own read rules: its view permission and record access. Null
+ * when the link is broken or the caller may not see them.
+ */
+const viaIds = async (
+	req: any,
+	via: NonNullable<RelatedItem['via']>,
+	id: string,
+	parent: any,
+	canRead: (e: ResourceRouteEntry, verb?: 'view' | 'create') => boolean
+): Promise<{ entry: ResourceRouteEntry; ids: any[] } | null> => {
+	const entry = resources(req.app).get(via.route);
+	if (!entry || !canRead(entry)) return null;
+	const Mid = entry.source.Model;
+	const and: any[] = [];
+	if (via.foreignField) {
+		if (!Mid.schema.path(via.foreignField)) return null;
+		and.push({ [via.foreignField]: id });
+	} else if (via.localField) {
+		if (!parent) return null;
+		and.push({ _id: { $in: idsOf(parent[via.localField]) } });
+	} else return null;
+	if (isAccessRestricted(Mid)) and.push(accessRule(req.user?._id));
+	const ids = (await Mid.find(and.length > 1 ? { $and: and } : and[0]).select('_id').limit(MAX_VIA).lean()).map((d: any) => d._id);
+	return { entry, ids };
 };
 
 const IMAGE_TYPES = ['image', 'image-text', 'imageKey'];
@@ -157,20 +197,36 @@ const relatedPage = async (
 	const Related = entry.source.Model;
 
 	let link: any;
-	if (item.foreignField) {
+	let viaAllowed = true;
+	if (item.via?.route) {
+		// Two steps: this record → the records in between → the tab's records.
+		const mid = await viaIds(req, item.via, id, parent, canRead);
+		if (!mid) {
+			if (!resources(req.app).get(item.via.route)) return null;
+			viaAllowed = false;
+			link = { _id: null };
+		} else if (item.foreignField) {
+			if (!Related.schema.path(item.foreignField)) return null;
+			link = { [item.foreignField]: { $in: mid.ids } };
+		} else if (item.localField) {
+			const held = await mid.entry.source.Model.find({ _id: { $in: mid.ids } })
+				.select(item.localField)
+				.lean();
+			link = { _id: { $in: held.flatMap((d: any) => idsOf(d[item.localField as string])) } };
+		} else return null;
+	} else if (item.foreignField) {
 		if (!Related.schema.path(item.foreignField)) return null;
 		link = { [item.foreignField]: id };
 	} else if (item.localField) {
 		if (!parent) return null;
-		const raw = parent[item.localField];
-		const ids = (Array.isArray(raw) ? raw : raw ? [raw] : []).map((x: any) => x?._id || x).filter(Boolean);
-		link = { _id: { $in: ids } };
+		link = { _id: { $in: idsOf(parent[item.localField]) } };
 	} else return null;
 
 	const relatedResolved = await resolveOther(entry);
 	const settings = relatedResolved.settings || {};
 	const columns: string[] = (item.columns || []).filter(readable(Related, settings));
-	const allowed = canRead(entry);
+	// A via tab also needs the route in between to be readable.
+	const allowed = canRead(entry) && viaAllowed;
 	let rows: any[] = [];
 	let total = 0;
 	if (allowed) {
@@ -212,6 +268,7 @@ const relatedPage = async (
 		route: item.related,
 		foreignField: item.foreignField,
 		localField: item.localField,
+		...(item.via?.route && { via: item.via.route }),
 		allowed,
 		total,
 		columns: columns.map(k => ({
@@ -246,7 +303,7 @@ const permissionsOf = async (req: any) => {
  * record, so it has none. `allowed` is the caller's create permission on
  * that route; the button still shows without it, disabled.
  */
-const addButtonOf = (
+const addButtonOf = async (
 	req: any,
 	item: RelatedItem,
 	can: (e: ResourceRouteEntry, verb?: 'view' | 'create') => boolean
@@ -255,6 +312,21 @@ const addButtonOf = (
 	const entry = resources(req.app).get(item.related);
 	const path: any = entry?.source.Model.schema.path(item.foreignField);
 	if (!entry || !path) return null;
+	// Reached through another route: a new record would link to one of *those*
+	// (which project?), not to this record — so the button shows, muted.
+	if (item.via?.route) {
+		const mid = resources(req.app).get(item.via.route);
+		const midTitle = mid && (await resolveOther(mid)).frontendConfig?.route?.title;
+		return {
+			label: item.addLabel?.trim() || '',
+			field: item.foreignField,
+			many: path.instance === 'Array',
+			allowed: false,
+			nested: true,
+			// Its name for the reason on hover ("…this record’s projects").
+			via: String(midTitle || item.via.route).toLowerCase(),
+		};
+	}
 	return {
 		label: item.addLabel?.trim() || '',
 		field: item.foreignField,
@@ -390,7 +462,7 @@ export const getViewTab = ({ resolved, Model }: { resolved: ResolvedRoute; Model
 			// The record must be readable by the caller; its link field is read when
 			// the tab lists what the record itself holds.
 			const parent = await Model.findOne({ ...(req.queryHelper || {}), _id: id })
-				.select(item.localField ? `_id ${item.localField}` : '_id')
+				.select(['_id', item.via?.route ? item.via.localField : item.localField].filter(Boolean).join(' '))
 				.lean();
 			if (!parent) return res.status(404).json({ message: 'Document not found' });
 
@@ -407,7 +479,7 @@ export const getViewTab = ({ resolved, Model }: { resolved: ResolvedRoute; Model
 
 			return res.status(200).json({
 				...tab,
-				add: addButtonOf(req, item, can),
+				add: await addButtonOf(req, item, can),
 				page,
 				limit,
 				totalPages: Math.max(1, Math.ceil(tab.total / limit)),
