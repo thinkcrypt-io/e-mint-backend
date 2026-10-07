@@ -1237,3 +1237,24 @@ Decisions D14–D17 (README).
   all three steps, Preview, Create request body, done screen; add page fill +
   Save → `POST customers {name}` and back to the table); 375px no side scroll.
   Not verified signed in.
+
+## 2026-10-07 — Project dashboard suggestion cards; tenant favicon and tab titles
+- New `components/library/tenant/ProjectSuggestions.tsx` on a project's dashboard (replaces the org checklist
+  there; FirstSteps stays on the home page): coloured cards per project kind — app: first model, first records
+  (opens the add page of its first model), sidebar, dashboard, team, connect AI, public API, guides; api: model,
+  records, endpoints, webhooks, team, AI, guides; website: site setup, site builder, dashboard, team, AI, guides.
+  The next one is highlighted ("Start here"). Auto-ticks: model exists, any model has records, dashboard saved
+  with widgets, members > 1 or an invitation; the rest Mark done. Per project in localStorage
+  `mint-project-steps:<projectId>`; Hide → "Show suggestions". Heading "<Project> is ready — here's what to do
+  next" while a project has no model.
+- Tab titles (tenant panel): Layout sets `document.title` via `panel.ts tabTitle` — "Customers · Acme Store ·
+  MINT" (organization outside a project). Root metadata `{ default: 'MINT', template: '%s · MINT' }`; sign-in
+  pages get segment `layout.tsx` titles (Sign in, Create your account, Forgot your password, Choose a new
+  password, Join your team, Passkey, Preview); landing keeps its title (`absolute`). Admin's root metadata branches
+  on IS_TENANT_PANEL — the live tenant build no longer shows "ADMIN | MINT | TC".
+- Icon: the website's MINT mark (`app/icon.svg`, `app/apple-icon.png` 180px full-bleed) replaces the old
+  `favicon.ico` in mint-tenant and admin (so the super-admin panel shows it too).
+- Guide: mint-docs getting-started.
+- Verified: tsc + eslint (both apps); dev: /auth/login tab "Sign in · MINT", icon and apple-touch-icon links;
+  cards on a mock project page (app with a model, fresh app, website; Mark done, Hide/Show; 375px no side
+  scroll). Not verified signed in.
