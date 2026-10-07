@@ -93,7 +93,7 @@ and moving blocks + overlays, styles + design + header/footer + saved
 sections, the block catalogue + 34 presets + 7 themes; guide `/site-builder`
 with `#start` … `#sections`, `#themes`, `#blocks`, `#publish`; the marketing
 site shows the builder with a 7-theme strip on /features). **Next: SB-14 (domains) or SB-10 (shop blocks); SB-20 → SB-21 before more MCP work**
-(data binding) → SB-10… The renderer isn't deployed yet. **Hosting answered
+The renderer is deployed on Vercel (`sites.mintapp.shop`). **Hosting answered
 (2026-10-06): the current Vercel Hobby plan for the prototype** (README open
 question 3); root domain `sites.mintapp.shop`. **No image optimizer anywhere
 (D25)** — plain `<img>`. Open question left: D4 site kinds (before SB-13).
