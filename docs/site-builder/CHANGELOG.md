@@ -2,6 +2,33 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-29 — Every word in Contents (2026-10-07)
+
+**What:** every heading, text, button, picture, number and review a page shows
+is a Contents record bound by slug — made when a block or section is added
+(with demo words; rich text as lorem ipsum), when a copy is pasted (its own
+records), when a theme's demo loads, when the AI saves a page, and for older
+pages the first time the builder opens them. Grids of look-alike cards become
+lists of cards kept in one Contents record (`source: { content }`), editable
+in the builder's *Records* panel or the panel's Contents, and a list can switch
+to any model with a public API (Services…) and back. The builder edits bound
+words in place; saves write them into Contents, panel edits come back on open.
+A new site opens as its theme's whole demo (every page, its SEO, its list), and
+a website template's build ends with the builder's pages, reusing its models.
+
+**Files:** backend `library/siteBuilder/{connect,starter,kit,resolve,validate}.ts`,
+`routes-tenant/siteBuilder.router.ts` (`/connect`, sync on GET, push on PUT,
+`untouched`), `library/functions/applyTemplate.function.ts` (step 11),
+`library/controllers/mcp/siteBuilder.tools.ts`, `test/connect.test.ts`,
+smoke `site-builder-connect.mjs` (+ updated `site-builder`, `site-builder-starter`,
+`projects`); mint-sites `src/render/bind.ts`, `src/blocks/collection/*`, manifest;
+mint-builder `src/editor/{Builder,DataInputs,Inspector}.tsx`, `src/lib/api.ts`, `globals.css`.
+
+**Verified:** smoke `site-builder-connect` 35/35 and the site-builder,
+template and MCP suites; jest 27; browser walk-through (new site → demo,
+cards editor, list → Services → cards, Team section → list of cards, bound
+heading edit → Contents); `next build` clean in mint-builder and mint-sites.
+
 ## SB-27, SB-28 — Connect your AI in the builder; theme demo sites (2026-10-07)
 
 **What:** the builder's toolbar gets an **AI** menu and **Settings**; *Connect

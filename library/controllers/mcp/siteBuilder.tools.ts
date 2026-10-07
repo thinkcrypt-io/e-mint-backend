@@ -5,6 +5,7 @@ import { loadManifest, presetTree } from '../../siteBuilder/manifest.js';
 import { NODE_ID, newId } from '../../siteBuilder/ids.js';
 import { applyOps, OpsError } from '../../siteBuilder/ops.js';
 import { treeIds, validateDesign, validatePageFields, validateTree, type Problem } from '../../siteBuilder/validate.js';
+import { pushTreeContents, syncPage } from '../../siteBuilder/connect.js';
 import { EMPTY_SEO, designView, ensureSite, livePages, pageSummary, pageView, siteChanges } from '../../siteBuilder/site.js';
 import { publishSite, siteUrl } from '../../siteBuilder/publish.js';
 import { dataModels, dataProblems } from '../../siteBuilder/resolve.js';
@@ -75,6 +76,7 @@ The site is made of pages; a page is a tree of blocks (nodes). Build it here wit
 
 ## Where the content goes (always)
 - Texts, headings, button labels, pictures of each section → **Contents** records (/web-contents), one record per piece, with a stable slug like "home-hero". Save them with set_site_contents, then bind the blocks to them: \`"bind": { "text": { "from": "content", "slug": "home-hero", "field": "content" } }\`. The team then edits the words in the panel's Contents table. Fields: content (main text), subContent, btnText, url, image, richContent (HTML), list (strings), card ([{image,title,subTitle,description}]). Contents need no public API.
+- **save_site_page keeps every word in Contents by itself**: any heading, text, button label, picture… you leave unbound gets a Contents record (slug from the page and section) and is bound to it, and a grid of look-alike cards becomes a list of cards — one Contents record whose \`card\` list holds them, shown by a collection with \`"source": { "content": "<slug>" }\`. The saved page comes back bound; change the words afterwards with set_site_contents (or save the page with new text — a bound block's text is written into its record).
 - Each page's SEO → its **SEO** record: send \`seo\` with save_site_page (title ≤ 120, description ≤ 320, image, keywords).
 - The theme, colour scheme, colours and fonts → the **Site design** record: set_site_design.
 - Anything that repeats or grows — services, team, products, projects, testimonials, FAQs, posts — is a **model of its own**: plan_feature then build_feature with publicApi {"enabled": true, "actions": ["list","get"]} (or set_public_api on an existing one), fill it with create_records (matchOn "slug"), and show it with a \`collection\` block. **A list model must have public list and get, or the site can't show it** (check_site says so).
@@ -92,7 +94,7 @@ The site is made of pages; a page is a tree of blocks (nodes). Build it here wit
 ## Nodes
 { "id"?: 4–32 of A-Za-z0-9_- (left out: made for you), "type", "name"?, "props": {…}, "bind"?: { prop: binding }, "style"?: { "base"|"md"|"lg": { key: value } }, "children"?: [nodes], "slots"?: { name: [nodes] }, "action"?: { "type": "link", "href" } | { "type": "page", "pageId" } | { "type": "scroll"|"open"|"close"|"toggle", "target": nodeId } }
 Bindings: { "from": "content", "slug", "field" } · { "from": "item", "field" } (inside a collection) · { "from": "record", "field" } (template pages) · { "from": "site", "field": "name"|"tagline"|"email"|"phone"|"address" }. Text may also hold "{{item.title}}", "{{record.price | money}}", "{{content.home-hero.content}}" — filters date, money, number, upper, lower, truncate:n, default:'…'.
-A collection: { "type": "collection", "props": { "source": { "model": "services", "sort": "-createdAt", "pageSize": 6, "filter": { "featured": true } }, "columns": 3 }, "children": [ one card bound to item fields ] }.
+A collection: { "type": "collection", "props": { "source": { "model": "services", "sort": "-createdAt", "pageSize": 6, "filter": { "featured": true } }, "columns": 3 }, "children": [ one card bound to item fields ] } — or \`"source": { "content": "<slug>" }\` for cards kept in a Contents record (item fields title, subTitle, description, image).
 Edits: save_site_page with "ops": [{ "op": "insert", "parentId": id|null, "index"?, "slot"?, "node" } | { "op": "update", "id", "props"?, "bind"?, "style"?, "action"? } | { "op": "move", "id", "parentId", "index" } | { "op": "remove", "id" }].
 Limits: ${c.limits.maxNodes} blocks, depth ${c.limits.maxDepth}. Images: URLs from upload_media (or https). Props marked * can be bound to data.
 
@@ -184,7 +186,7 @@ const getPage = async (_req: any, args: any, caller: Caller): Promise<Out> => {
 	const page = await findPage(args.page);
 	if (!page) return refuse(`No page “${args.page}” — get_site_builder lists them`);
 	const [fresh] = await pullSeo([page]);
-	const view = pageView(fresh);
+	const view = pageView(await syncPage(fresh, { connect: false }));
 	return { text: JSON.stringify({ ...view, editor: builderUrl(caller.project, view.id) }), data: { ...view, editor: builderUrl(caller.project, view.id) } };
 };
 
@@ -244,6 +246,10 @@ const savePage = async (req: any, args: any, caller: Caller): Promise<Out> => {
 		saved = doc.toObject();
 	}
 	await (seo ? pushSeo(saved, saved.draft.seo) : pushPage(saved));
+	// Its words into Contents: what changed, and every word not bound yet (SB-29).
+	await pushTreeContents([existing?.draft?.tree || []], [saved.draft.tree], saved);
+	saved = await syncPage(saved, { connect: true });
+	tree = saved.draft.tree;
 	recordProjectEvent({
 		req,
 		action: existing ? 'update' : 'create',

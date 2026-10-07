@@ -19,7 +19,7 @@ ok('bad domain refused', r.status === 400, r.body?.message);
 r = await call('POST', '/tenant/api/projects', { name: 'Bad', type: 'spaceship' }, pat);
 ok('bad type refused', r.status === 400);
 r = await call('GET', '/tenant/api/projects', null, pat);
-ok('list: three projects with model counts (the website has its kit)', r.status === 200 && r.body?.doc?.length === 3 && r.body.doc.every(p => p.models === (p.type === 'website' ? 3 : 0)), JSON.stringify(r.body?.doc?.map(p => p.models)));
+ok('list: three projects with model counts (the website has its kit: pages, SEO, contents, site design)', r.status === 200 && r.body?.doc?.length === 3 && r.body.doc.every(p => p.models === (p.type === 'website' ? 4 : 0)), JSON.stringify(r.body?.doc?.map(p => p.models)));
 r = await call('GET', '/tenant/api/auth/self', null, pat);
 ok('self lists the projects', r.body?.projects?.length === 3);
 r = await call('GET', `/tenant/api/projects/${crm}`, null, other);

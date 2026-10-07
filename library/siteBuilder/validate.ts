@@ -126,6 +126,7 @@ const propProblem = (def: PropDef, value: any, m: LoadedManifest, depth = 0): st
 			return value === '' || (typeof value === 'string' && NODE_ID.test(value)) ? null : `${def.label} must be a saved section’s id`;
 		case 'source':
 			// The collection block's data source (SB-09 checks it against the public API).
+			if (isObj(value) && typeof value.content === 'string') return /^[a-z0-9-]{1,120}$/.test(value.content) ? null : `${def.label} must name the cards’ Contents slug`;
 			return isObj(value) && typeof value.model === 'string' && value.model.length <= 100 ? null : `${def.label} must name a model`;
 		default:
 			return `${def.label} has a kind the builder doesn’t know (${def.kind})`;

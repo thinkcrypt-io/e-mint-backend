@@ -75,6 +75,7 @@ works, anything still being built is labelled "Coming soon". Verify with
 | SB-26 | `#start`: the builder opens full screen in its own tab, signed in; Exit returns to the panel | Changelog |
 | SB-27 | `#ai`: the AI menu and Settings → Connect your AI, a key, the steps per client, the ready prompt with the theme | changelog entry |
 | SB-28 | `#themes`: picking a theme loads its demo site or only changes the look; `#add`: adding a section asks where, then scrolls to it | changelog entry |
+| SB-29 | `#data`: every word in Contents, lists of cards, switching a list to a model; `#start`: a new site opens as its theme's demo | changelog entry |
 | SB-25 | `/websites`: "builder or code?" — which to pick, with SB-25's measured numbers | `compare.ts` / `/ai` claims use the measured numbers only; changelog |
 
 Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
@@ -85,7 +86,7 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-07, SB-09, SB-12, SB-27, SB-28 done — SB-14 or SB-10 next)
+## Handoff — read this first (last updated 2026-10-07, SB-09, SB-12, SB-27, SB-28, SB-29 done — SB-14 or SB-10 next)
 
 **Done and pushed:** SB-01…SB-08 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
@@ -193,10 +194,14 @@ builder handoff with `agent-browser` (real tabs) — see CHANGELOG SB-26.
 **Since SB-26 (2026-10-07):** SB-09 data (D27: the site in the kit's models —
 Site design, Pages, SEO, Contents; lists through the public API's rules),
 SB-12 MCP tools + prompts, SB-27 Connect your AI in the builder, SB-28 theme
-demo sites — see their sections at the end. Smoke: `site-builder-data.mjs`,
+demo sites, SB-29 every word in Contents (`library/siteBuilder/connect.ts`:
+blocks are bound to Contents records when they reach a page; card grids become
+lists of cards, `source: { content }`; GET page pulls panel edits and connects
+loose words — a new draft rev; PUT pushes changed bound values) — see their
+sections at the end. Smoke: `site-builder-data.mjs`,
 `site-builder-starter.mjs` (run against a backend on the new `dist/`, e.g.
 the `backend-sb2` launch config on :5032). Open: the data pickers and theme
-dialog weren't clicked against the new backend yet; no `search` block;
+dialog were clicked in SB-29 (they work); no `search` block;
 sitemap doesn't list template records; SB-20 previews for the MCP.
 
 **Pushed hashes so far:** SB-28: backend `6d24ab07`, mint-sites `707f457` + `58bff32`, mint-builder `c9158ba`. SB-09/12: backend `efaf82ba`, mint-sites `9442c41`. SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
@@ -411,6 +416,7 @@ Renderer (`mint-sites`)
 | SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` on GitHub; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
 | SB-27 | Connect your AI in the builder: toolbar AI menu + Settings → keys, client steps, a prompt with the theme; MCP prompts | mint-builder + backend | M | done 2026-10-07 (mint-builder `c9158ba`, backend `efaf82ba`) |
 | SB-28 | Theme demo sites: choosing a theme loads a whole demo site (pages, a list model with records, Contents) | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `6d24ab07`, mint-builder `c9158ba`, mint-sites `707f457`) |
+| SB-29 | Every word in Contents: blocks connected when added (lists of cards for card grids, demo words), copies get their own records, builder ⇄ panel edits, list source cards ⇄ model, a new site (or a template's build) opens as its theme's demo with every page and its SEO | backend + mint-builder + mint-sites | M | done 2026-10-07 |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1246,3 +1252,71 @@ clicked:** the data pickers and the theme dialog against the new backend — the
 dev-server limit was full (other chats' servers); their backend side is covered
 by the smoke tests.
 
+
+## SB-29 — Every word in Contents (M) — done 2026-10-07
+
+**Why:** the user (2026-10-07), after making a site from the Business site
+template: the pages weren't connected to data and the Services page had no
+cards — "if a new block, new container, new section is added, it must be
+connect to a content entry which will be auto generated with a slug… if has
+cards then should pre built to lists… demo entries, if rich text then rich
+text should have lorem ipsum", "connect other model which has a public api",
+"create all the pages while initialization", "also the seo", "the template
+blocks must have their own demo contents". D28.
+
+**Done:**
+- backend `library/siteBuilder/connect.ts`: `connectTree` binds every bindable
+  word of a block (heading, text, button, link, badge, stat, quote,
+  accordion item, image — the manifest's `bindable` props only) to a new
+  Contents record, slug `<page>-<section>-<n|random>`; a `grid` whose children
+  look alike (same blocks in the same places) becomes a `collection` with
+  `source: { content: <slug> }` and one record of category `card` whose `card`
+  list holds the cards (varying words → title, subTitle, description, image by
+  role); a new empty list gets three demo cards; rich text that's empty or the
+  block's placeholder becomes lorem ipsum, an empty heading demo words;
+  `fresh` (a copy) re-binds to new records and copies a list's cards.
+  `connectNodes` saves the records; `syncPage` / `syncLayouts` pull the
+  panel's edits into a page / the header and footer and connect loose words
+  (a new rev); `pushTreeContents` writes the bound values a save changed
+  (only bindings the page already had).
+- Routes: `POST /site-builder/connect { nodes, pageId?, part?, fresh? }`;
+  `GET /pages/:id` and `GET /design` sync (connect only with `build`);
+  `PUT /pages/:id` and `PUT /design` push; `GET /starters` adds `untouched`.
+  Resolve reads `source.content` lists from Contents (`readCards`); validate
+  accepts them; Publish doesn't ask for a public API for them.
+- `starter.ts` uses `connectTree` (card grids → lists; header and footer
+  connected); dressed as the site's own name (Website settings); a list model
+  already at the route (a template's) is reused with its own fields
+  (`fieldMapOf`: name/title, description/summary, image, price, slug or _id).
+  `applyTemplate` step 11: a website template's build ends with the builder's
+  pages (if the builder site is still blank).
+- `kit.ts`: `upsertContents` sets defaults only on create (an update no
+  longer resets status/category); `pushPage` never takes a published Pages
+  record (a template's) off the public API unless the builder's page is
+  unpublished.
+- MCP: `save_site_page` pushes and connects; the guide says so and documents
+  `source: { content }`.
+- mint-sites: in the editor a Contents binding shows the tree's own copy
+  (inline editing works); the collection block names its cards source.
+- mint-builder: every insert (Add tab block or section, drag, paste,
+  duplicate) goes through `/connect`; Contents-bound settings stay editable
+  with an *In Contents · Open* chip; a list's *Records* picks **Cards kept in
+  Contents** or a model with a public API, with a cards editor (title, sub
+  title, description, picture; add, remove, order) and the card's fields
+  remapped by meaning when the source changes (`remapItems`); an untouched
+  site loads its theme's demo on the first open (after the page and design
+  are in the editor); after any demo the design and home page are reloaded.
+
+**Verified:** `scripts/tenancy-smoke/site-builder-connect.mjs` (35 checks:
+the demo's words all bound, card lists, header/footer, Services model list,
+SEO records, render, builder edit → record → live, panel edit → page,
+connect / demo words / card grid / empty list / fresh copy, a loose page
+connected on open, a website template's build makes the builder's pages with
+the template's Services by their fields); `site-builder`, `-data`,
+`-starter`, `templates-apply`, `website`, `website-mcp`, `mcp` pass; jest 27
+(new `test/connect.test.ts`: every preset connects into a valid tree). In
+the browser (builder :3400 → backend :5031): a new site opens as the demo
+named after the site; number and review cards render from Contents; the cards
+editor saves and the canvas follows; switching a list to Services and back to
+cards; adding the Team section makes a list of cards; editing a bound heading
+reaches its Contents record. `next build` clean in mint-builder and mint-sites.

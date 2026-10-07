@@ -29,7 +29,8 @@ for (const theme of themes) {
 	r = await call('GET', `/public/api/${site.publicSlug}/render?path=/`);
 	const nodes = Object.values(r.body?.data?.nodes || {});
 	ok(`${theme}: home renders its list and its contents`, r.status === 200 && nodes.some(n => n.items?.length === 3) && Object.keys(r.body?.data?.contents || {}).length > 3 && r.body?.design?.theme === theme, `${r.status} ${nodes.map(n => n.items?.length + (n.problem || '')).join()}`);
-	const item = nodes[0]?.items?.[0];
+	// (the home page has lists of cards from Contents too — the model's list is the one whose items have a slug)
+	const item = nodes.find(n => n.items?.[0]?.slug)?.items?.[0];
 	r = await call('GET', `/public/api/${site.publicSlug}/render?path=${encodeURIComponent(`/${out.list.model}/${item?.slug}`)}`);
 	ok(`${theme}: a record's own page`, r.status === 200 && r.body?.data?.record?.title === item?.title && r.body.page.seo.title.startsWith(item?.title), `${r.status} ${r.body?.page?.seo?.title}`);
 	r = await call("GET", `/tenant/api/p/${site._id}/web-contents?limit=200`, null, T);

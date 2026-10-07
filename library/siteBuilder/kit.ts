@@ -209,9 +209,11 @@ export const pushPage = async (page: any) => {
 		...(has(kit, 'template') && { template: page.isHome ? 'home' : 'default' }),
 	};
 	for (const k of Object.keys(fields)) if (!has(kit, k)) delete fields[k];
-	let rec: any = page.kitPage ? await kit.Model.findById(page.kitPage, { _id: 1 }).lean() : null;
-	// A Pages record already at this path (the kit's own, or made by the AI for a coded site) is adopted.
-	if (!rec && !page.deletedAt) rec = await kit.Model.findOne({ path: page.path, archivedAt: null }, { _id: 1 }).lean();
+	let rec: any = page.kitPage ? await kit.Model.findById(page.kitPage, { _id: 1, status: 1 }).lean() : null;
+	// A Pages record already at this path (the kit's own, a template's, or made by the AI for a coded site) is adopted.
+	if (!rec && !page.deletedAt) rec = await kit.Model.findOne({ path: page.path, archivedAt: null }, { _id: 1, status: 1 }).lean();
+	// A published record stays published until the builder's page is taken off the site or deleted (the public API serves it).
+	if (rec?.status === 'published' && fields.status === 'draft' && page.status !== 'unpublished') delete fields.status;
 	try {
 		if (rec) await kit.Model.updateOne({ _id: rec._id }, { $set: fields });
 		else if (!page.deletedAt) rec = await kit.Model.create(fields);
@@ -324,11 +326,14 @@ export const upsertContents = async (records: any[], page?: any) => {
 		const slug = String(r?.slug || '').trim();
 		if (!/^[a-z0-9-]{1,120}$/.test(slug)) throw new Error(`“${slug || '(empty)'}” isn’t a content slug — lowercase letters, digits and dashes`);
 		const fields: any = Object.fromEntries(Object.entries<any>(r).filter(([k, v]) => allowed.has(k) && v !== undefined));
-		if (!fields.name) fields.name = slug;
-		if (kitPage && allowed.has('page') && !fields.page) fields.page = kitPage;
-		if (allowed.has('category') && !fields.category) fields.category = 'content';
-		if (allowed.has('status') && !fields.status) fields.status = 'published';
 		const current: any = await kit.Model.findOne({ slug, archivedAt: null }, { _id: 1 }).lean();
+		// A new record gets a name, its page, a category and "published"; an update changes only what was sent.
+		if (!current) {
+			if (!fields.name) fields.name = slug;
+			if (kitPage && allowed.has('page') && !fields.page) fields.page = kitPage;
+			if (allowed.has('category') && !fields.category) fields.category = 'content';
+			if (allowed.has('status') && !fields.status) fields.status = 'published';
+		}
 		const saved = current
 			? await kit.Model.findOneAndUpdate({ _id: current._id }, { $set: fields }, { new: true, runValidators: true }).lean()
 			: (await kit.Model.create({ slug, ...fields })).toObject();

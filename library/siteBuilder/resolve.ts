@@ -2,6 +2,7 @@ import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel } from '../functions/dynamicModels.function.js';
 import { isId, listFilters, listSort, outKeys, publicDefs, publicReach, refPopulates, shape } from '../functions/publicRecords.function.js';
 import { TenancyError } from '../functions/tenancy.function.js';
+import { KIT_ROUTES, kitModel } from './kit.js';
 
 /**
  * The data a builder page shows (docs/site-builder SB-09, D8): the records of
@@ -13,6 +14,7 @@ import { TenancyError } from '../functions/tenancy.function.js';
  * public API would. Runs inside the project's scope.
  *
  *   collection.props.source = { model, filter?: { <field>[_<op>]: value }, sort?: '-price,name', pageSize? }
+ *                           | { content: <slug> }   a Contents record's cards (SB-29) — read by the backend, no public API
  *   page.source             = { model, match: { param: 'slug', field: 'slug' } }
  */
 
@@ -81,10 +83,31 @@ const pageSizeOf = (props: any) => {
 
 const empty = (pageSize: number, problem?: string): CollectionData => ({ items: [], total: 0, page: 1, pageSize, totalPages: 1, ...(problem && { problem }) });
 
+/** A list of cards kept in one Contents record (`card`): each card is an item. */
+const readCards = async (slug: string, props: any, page: number): Promise<CollectionData> => {
+	const kit = await kitModel(KIT_ROUTES.contents);
+	if (!kit) return empty(DEFAULT_PAGE_SIZE, 'This project has no Contents model (web-contents) for these cards');
+	const cond: any = { slug, archivedAt: null };
+	const has = (k: string) => kit.def.fields.some((f: any) => f.key === k);
+	if (has('status')) cond.status = { $nin: ['draft', 'archived'] };
+	if (has('isVisible')) cond.isVisible = { $ne: false };
+	const rec: any = await kit.Model.findOne(cond, { card: 1 }).lean();
+	if (!rec) return empty(DEFAULT_PAGE_SIZE, `The cards’ Contents record “${slug}” is gone, hidden or a draft`);
+	const cards = (Array.isArray(rec.card) ? rec.card : []).map((c: any, i: number) => {
+		const { _id, ...rest } = c || {};
+		return { _id: `${rec._id}-${i}`, ...rest };
+	});
+	const n = Number(props.source?.pageSize);
+	const pageSize = Number.isInteger(n) && n > 0 ? Math.min(n, MAX_PAGE_SIZE) : MAX_PAGE_SIZE;
+	const current = props.pagination ? Math.max(1, Math.min(page || 1, 1000)) : 1;
+	return { items: cards.slice((current - 1) * pageSize, current * pageSize), total: cards.length, page: current, pageSize, totalPages: Math.ceil(cards.length / pageSize) || 1 };
+};
+
 /** One collection's records: its source's filter, sort and page size; `page` only when it pages. */
 const readCollection = async (node: any, defs: Map<string, any>, page: number, all: () => Promise<Map<string, any>>): Promise<CollectionData> => {
 	const props = node.props || {};
 	const source = props.source || {};
+	if (typeof source.content === 'string' && source.content) return readCards(source.content, props, page);
 	const pageSize = pageSizeOf(props);
 	if (typeof source.model !== 'string' || !source.model) return empty(pageSize, 'Pick the model this list shows');
 	const def = defs.get(source.model);
@@ -224,7 +247,8 @@ export const dataProblems = async (pages: any[], design: any) => {
 		const { found, nested } = collectionsIn(trees);
 		found.forEach((n, i) => {
 			const model = n.props?.source?.model;
-			const why = !model ? 'Pick the model this list of records shows' : sourceProblem(model, 'list', defs, all);
+			const cards = typeof n.props?.source?.content === 'string' && n.props.source.content;
+			const why = cards ? null : !model ? 'Pick the model this list of records shows' : sourceProblem(model, 'list', defs, all);
 			if (why) out.push({ level: 'publish', path: `${n.id}.props.source`, message: why, nodeId: n.id, ...where });
 			else if (i >= MAX_COLLECTIONS) out.push({ level: 'publish', path: `${n.id}`, message: `At most ${MAX_COLLECTIONS} lists of records on one page`, nodeId: n.id, ...where });
 		});

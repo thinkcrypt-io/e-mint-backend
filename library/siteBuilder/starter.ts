@@ -1,6 +1,7 @@
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
+import SiteRelease from '../models/siteBuilder/siteRelease.model.js';
 import { compiledModel, syncDynamicModels } from '../functions/dynamicModels.function.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
@@ -10,18 +11,45 @@ import { newId } from './ids.js';
 import { EMPTY_SEO, ensureSite } from './site.js';
 import { validateTree } from './validate.js';
 import { kitModel, KIT_ROUTES, pushDesign, pushSeo, upsertContents } from './kit.js';
+import { connectTree, holdsCards } from './connect.js';
+import { loadSite } from '../functions/siteConfig.function.js';
 
 /**
  * A theme's demo site (docs/site-builder SB-28): choosing a theme can load a
  * whole site in it instead of a blank page — pages built from the theme's
  * kind of presets, a list model that suits it (a menu, services, products…)
  * with its public API on and sample records, and every demo text saved as a
- * Contents record its block is bound to, so the team changes the words in the
- * panel. Nothing goes live until Publish. Runs inside the project's scope.
+ * Contents record its block is bound to (connect.ts — grids of cards become
+ * lists of cards in Contents), so the team changes the words in the panel or
+ * the builder. The site's name (Website settings) replaces the demo
+ * business's. Nothing goes live until Publish. Runs inside the project's scope.
  */
 
 type Field = { key: string; label: string; kind: string; required?: boolean; options?: { value: string; label: string }[] };
-type ListSpec = { name: string; route: string; title: string; one: string; fields: Field[]; price?: boolean; records: Record<string, any>[] };
+type ListSpec = { name: string; route: string; title: string; one: string; fields: Field[]; price?: boolean; records: Record<string, any>[]; f?: FieldMap };
+/** Which of the list model's fields the cards show — the demo's own, or the closest of a model that was already there. */
+type FieldMap = { title: string; summary: string | null; image: string | null; price: string | null; slug: string };
+
+const DEMO_FIELDS: FieldMap = { title: 'title', summary: 'summary', image: 'image', price: 'price', slug: 'slug' };
+
+/** A model that was already at the list's route (a template's Services…): its fields for title, summary, picture, price and address. */
+const fieldMapOf = (def: any): FieldMap => {
+	const fields: any[] = def?.fields || [];
+	const pick = (keys: string[], kinds?: string[]) => {
+		for (const k of keys) {
+			const f = fields.find(x => x.key.toLowerCase() === k.toLowerCase() && (!kinds || kinds.includes(x.kind)));
+			if (f) return f.kind === 'images' ? `${f.key}.0` : f.key;
+		}
+		return null;
+	};
+	return {
+		title: pick(['title', 'name', def?.displayField || 'title']) || '_id',
+		summary: pick(['summary', 'shortDescription', 'excerpt', 'subtitle', 'description', 'content', 'body'], ['text', 'textarea', 'editor']),
+		image: pick(['image', 'picture', 'photo', 'thumbnail', 'cover', 'images', 'gallery'], ['image', 'images', 'url']),
+		price: pick(['price', 'amount', 'cost', 'fee'], ['number']),
+		slug: pick(['slug'], ['text']) || '_id',
+	};
+};
 type Section = string | { list: 'featured' | 'all'; title: string; intro?: string };
 type PageSpec = { name: string; path: string; sections: Section[]; seo: { title: string; description: string } };
 type Starter = {
@@ -209,13 +237,14 @@ const node = (type: string, props: Record<string, any> = {}, extra: Record<strin
 
 /** A section with a title and the list model's records as cards; `featured` shows three. */
 const listSection = (list: ListSpec, s: { list: 'featured' | 'all'; title: string; intro?: string }) => {
+	const f = list.f || DEMO_FIELDS;
 	const card = node('card', { variant: 'elevated' }, {
 		children: [
-			node('image', { src: 'placeholder:800x600:Picture', alt: list.one, ratio: '4/3', rounded: 'lg' }, { bind: { src: { from: 'item', field: 'image' }, alt: { from: 'item', field: 'title' } } }),
-			node('heading', { text: '{{item.title}}', level: 3 }),
-			node('text', { html: '<p>{{item.summary}}</p>', muted: true }),
-			...(list.price ? [node('text', { html: '<p><strong>{{item.price | money}}</strong></p>' })] : []),
-			node('link', { text: 'More →' }, { action: { type: 'link', href: `/${list.route}/{{item.slug}}` } }),
+			...(f.image ? [node('image', { src: 'placeholder:800x600:Picture', alt: list.one, ratio: '4/3', rounded: 'lg' }, { bind: { src: { from: 'item', field: f.image }, alt: { from: 'item', field: f.title } } })] : []),
+			node('heading', { text: `{{item.${f.title}}}`, level: 3 }),
+			...(f.summary ? [node('text', { html: `<p>{{item.${f.summary} | truncate:160}}</p>`, muted: true })] : []),
+			...(list.price && f.price ? [node('text', { html: `<p><strong>{{item.${f.price} | money}}</strong></p>` })] : []),
+			node('link', { text: 'More →' }, { action: { type: 'link', href: `/${list.route}/{{item.${f.slug}}}` } }),
 		],
 	});
 	return node('section', { paddingY: 'lg' }, {
@@ -236,55 +265,23 @@ const listSection = (list: ListSpec, s: { list: 'featured' | 'all'; title: strin
 };
 
 /** The detail page of one record: /<route>/[slug]. */
-const detailTree = (list: ListSpec) => [
+const detailTree = (list: ListSpec, f: FieldMap = list.f || DEMO_FIELDS) => [
 	node('section', { paddingY: 'lg', width: 'narrow' }, {
 		name: list.title,
 		children: [
 			node('stack', { direction: 'column', gap: 6 }, {
 				children: [
 					node('link', { text: `← All ${list.title.toLowerCase()}` }, { action: { type: 'link', href: `/${list.route}` } }),
-					node('heading', { text: '{{record.title}}', level: 1 }),
-					node('image', { src: 'placeholder:1200x800:Picture', alt: list.one, ratio: '16/9', rounded: 'xl' }, { bind: { src: { from: 'record', field: 'image' }, alt: { from: 'record', field: 'title' } } }),
-					node('text', { html: '<p>{{record.summary}}</p>', size: 'lg' }),
-					...(list.price ? [node('text', { html: '<p><strong>{{record.price | money}}</strong></p>' })] : []),
+					node('heading', { text: `{{record.${f.title}}}`, level: 1 }),
+					...(f.image ? [node('image', { src: 'placeholder:1200x800:Picture', alt: list.one, ratio: '16/9', rounded: 'xl' }, { bind: { src: { from: 'record', field: f.image }, alt: { from: 'record', field: f.title } } })] : []),
+					...(f.summary && f.summary !== 'body' ? [node('text', { html: '', size: 'lg' }, { bind: { html: { from: 'record', field: f.summary } } })] : []),
+					...(list.price && f.price ? [node('text', { html: `<p><strong>{{record.${f.price} | money}}</strong></p>` })] : []),
 					...(list.fields.some(f => f.key === 'body') ? [node('text', { html: '' }, { bind: { html: { from: 'record', field: 'body' } } })] : []),
 				],
 			}),
 		],
 	}),
 ];
-
-/**
- * The page's own texts as Contents records, each block bound to its record by
- * slug (headings → content, texts → richContent, buttons → btnText + url,
- * quotes → content + subContent). What's inside a list stays bound to the list.
- */
-const contentsFor = (tree: any[], pageKey: string, pageName: string) => {
-	const records: any[] = [];
-	let n = 0;
-	const visit = (nodes: any[], section: string, inList: boolean) =>
-		(nodes || []).forEach(x => {
-			if (!x || typeof x !== 'object') return;
-			const listHere = inList || x.type === 'collection';
-			const sec = section || slug(x.name || x.type);
-			const add = (fields: Record<string, any>, bind: Record<string, any>) => {
-				const s = `${pageKey}-${sec}-${++n}`.slice(0, 120);
-				records.push({ slug: s, name: `${pageName} — ${x.name || sec} ${n}`, section: sec, ...fields });
-				x.bind = { ...(x.bind || {}), ...Object.fromEntries(Object.entries(bind).map(([prop, field]) => [prop, { from: 'content', slug: s, field }])) };
-			};
-			if (!listHere) {
-				const p = x.props || {};
-				if (x.type === 'heading' && typeof p.text === 'string' && p.text && !p.text.includes('{{')) add({ category: 'content', content: p.text }, { text: 'content' });
-				else if (x.type === 'text' && typeof p.html === 'string' && p.html && !p.html.includes('{{')) add({ category: 'rich-content', richContent: p.html }, { html: 'richContent' });
-				else if (x.type === 'button' && typeof p.label === 'string' && p.label) add({ category: 'content', btnText: p.label, ...(x.action?.href && { url: x.action.href }) }, { label: 'btnText' });
-				else if (x.type === 'quote' && typeof p.text === 'string') add({ category: 'content', content: p.text, subContent: p.author || '' }, { text: 'content', author: 'subContent' });
-			}
-			visit(x.children, sec, listHere);
-			Object.values<any>(x.slots || {}).forEach(s => visit(s, sec, listHere));
-		});
-	tree.forEach(top => visit([top], slug(top?.name || top?.type || 'section'), false));
-	return records;
-};
 
 /* --------------------------------------------------------------- apply */
 
@@ -323,24 +320,47 @@ export const isBlankSite = async () => {
 };
 
 /**
+ * Whether nobody has worked on the site yet — the home page a new project
+ * starts with, never published, barely saved: the builder loads the theme's
+ * demo site by itself the first time it opens one (SB-29).
+ */
+export const isUntouchedSite = async () => {
+	const pages: any[] = await SitePage.find({}, { deletedAt: 1, published: 1, 'draft.rev': 1 }).limit(2).lean();
+	if (pages.length !== 1 || pages[0].deletedAt || pages[0].published || (pages[0].draft?.rev || 1) > 3) return false;
+	return !(await SiteRelease.exists({}));
+};
+
+/**
  * Loads `theme`'s demo site. Its pages replace the site's (the old ones go off
  * the site at the next Publish; nothing is live until then), the home page
  * keeps its id. `replace` must be sent unless the site is still blank.
  */
-export const applyStarter = async (req: any, theme: string, { replace = false }: { replace?: boolean } = {}) => {
-	const starter = STARTERS[theme];
-	if (!starter || !loadManifest().themeKeys.has(theme)) throw new TenancyError(400, `There is no demo site for the theme “${theme}”`);
+export const applyStarter = async (req: any, theme: string, { replace = false, project = req.project }: { replace?: boolean; project?: any } = {}) => {
+	const demo = STARTERS[theme];
+	if (!demo || !loadManifest().themeKeys.has(theme)) throw new TenancyError(400, `There is no demo site for the theme “${theme}”`);
+	// Dressed as the project's own business when Website settings name it.
+	const own = project ? String(((await loadSite(project, { cached: true })) as any)?.identity?.siteName || '').trim() : '';
+	const starter: Starter = own && !own.includes('{{') ? JSON.parse(JSON.stringify(demo).split(demo.business).join(own.replace(/["\\]/g, ''))) : demo;
 	await ensureSite();
 	if (!replace && !(await isBlankSite())) throw new TenancyError(409, 'The site already has pages — send replace: true to put the demo in their place');
 
 	const kitPages: any = await ModelDefinition.findOne({ route: KIT_ROUTES.pages }, { sidebarCategory: 1 }).lean();
 	const list = await ensureList(req, starter.list, kitPages?.sidebarCategory || 'Website');
 	// The route the model has (a list model that was already there keeps its own).
-	const listSpec = { ...starter.list, route: list.route };
+	const listSpec: ListSpec = { ...starter.list, route: list.route, f: fieldMapOf(list) };
+	const f = listSpec.f!;
 
-	// The design: the theme as it comes, its header and footer.
+	const contents = await kitModel(KIT_ROUTES.contents);
+	const cards = holdsCards(contents?.def);
+
+	// The design: the theme as it comes, its header and footer (their words in Contents too).
 	const design: any = await SiteDesign.findOne({}).lean();
-	const draft = { ...design.draft, theme, tokens: {}, layouts: { ...(design.draft?.layouts || {}), default: { header: presetTree(starter.header), footer: presetTree(starter.footer) } } };
+	const header = presetTree(starter.header);
+	const footer = presetTree(starter.footer);
+	const layoutRecords = contents
+		? [...connectTree(header, { pageKey: 'header', pageName: 'Header', slugs: 'count', cards }).records, ...connectTree(footer, { pageKey: 'footer', pageName: 'Footer', slugs: 'count', cards }).records]
+		: [];
+	const draft = { ...design.draft, theme, tokens: {}, layouts: { ...(design.draft?.layouts || {}), default: { header, footer } } };
 	const savedDesign: any = await SiteDesign.findOneAndUpdate({ _id: design._id }, { $set: { draft: { ...draft, rev: (design.draft?.rev || 1) + 1 } } }, { new: true }).lean();
 	await pushDesign(savedDesign.draft);
 
@@ -363,7 +383,7 @@ export const applyStarter = async (req: any, theme: string, { replace = false }:
 				tree.push(...t);
 			} else tree.push(listSection(listSpec, s));
 		}
-		const records = contentsFor(tree, slug(spec.name) || 'home', spec.name);
+		const records = contents ? connectTree(tree, { pageKey: slug(spec.name) || 'home', pageName: spec.name, slugs: 'count', cards }).records : [];
 		const errors = validateTree(tree).problems.filter(p => p.level === 'error');
 		if (errors.length) throw new TenancyError(500, `The ${theme} demo’s ${spec.name} page has problems: ${errors.slice(0, 3).map(e => e.message).join('; ')}`);
 		const fields = { name: spec.name, path: spec.path, kind: 'static', showInMenu: true, menuLabel: '', priority: priority--, layout: 'default' };
@@ -382,31 +402,21 @@ export const applyStarter = async (req: any, theme: string, { replace = false }:
 		name: starter.list.title.replace(/s$/, ''),
 		path: `/${listSpec.route}/[slug]`,
 		kind: 'template',
-		source: { model: list.route, match: { param: 'slug', field: 'slug' } },
+		source: { model: list.route, match: { param: 'slug', field: f.slug } },
 		showInMenu: false,
 		priority: 0,
 		isHome: false,
-		draft: { tree: detailTree(listSpec), seo: { ...EMPTY_SEO, title: `{{record.title}} — ${starter.business}`, description: '{{record.summary}}' }, rev: 1, updatedAt: now, updatedBy: req.user?._id },
+		draft: { tree: detailTree(listSpec), seo: { ...EMPTY_SEO, title: `{{record.${f.title}}} — ${starter.business}`, description: f.summary ? `{{record.${f.summary} | truncate:300}}` : '' }, rev: 1, updatedAt: now, updatedBy: req.user?._id },
 	})).toObject();
 	made.push(detail);
 
 	// The words into Contents, and each page's SEO into its SEO record.
-	const contents = await kitModel(KIT_ROUTES.contents);
 	let saved = 0;
+	if (layoutRecords.length) saved += (await upsertContents(layoutRecords)).length;
 	for (const { page, records } of contentRecords) {
 		if (contents && records.length) saved += (await upsertContents(records, page)).length;
 		await pushSeo(page, page.draft.seo);
 	}
 	await pushSeo(detail, detail.draft.seo);
-	if (!contents)
-		// No Contents model (renamed or deleted): the texts stay in the blocks.
-		for (const { page } of contentRecords) {
-			const tree = JSON.parse(JSON.stringify(page.draft.tree));
-			walk(tree, n => {
-				for (const [k, b] of Object.entries<any>(n.bind || {})) if (b?.from === 'content') delete n.bind[k];
-				if (n.bind && !Object.keys(n.bind).length) delete n.bind;
-			});
-			await SitePage.updateOne({ _id: page._id }, { $set: { 'draft.tree': tree } });
-		}
 	return { theme, business: starter.business, pages: made.map(p => ({ id: String(p._id), name: p.name, path: p.path })), list: { model: list.route, title: list.title }, contents: saved, home: String(made[0]._id) };
 };

@@ -359,6 +359,25 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				},
 			}
 		);
+		/* 11. A website's builder site: every page made and connected — texts in Contents, each page's SEO record,
+		   lists from the template's own models where it has them (site builder SB-29). */
+		if (template.type === 'website' && !opts.preview) {
+			step = 'Site builder pages';
+			try {
+				await runInScope(scope, async () => {
+					const { applyStarter, isBlankSite } = await import('../siteBuilder/starter.js');
+					const { ensureDesignModel } = await import('../siteBuilder/kit.js');
+					const { DEFAULT_THEME } = await import('../siteBuilder/manifest.js');
+					const SiteDesign = (await import('../models/siteBuilder/siteDesign.model.js')).default;
+					if (!(await isBlankSite())) return;
+					await ensureDesignModel(req);
+					const design: any = await SiteDesign.findOne({}, { 'draft.theme': 1 }).lean();
+					await applyStarter(req, design?.draft?.theme || DEFAULT_THEME, { replace: true, project });
+				});
+			} catch (e: any) {
+				result.warnings.push(`The site builder’s pages weren’t made (${e?.message || 'unknown error'}) — pick a theme in the builder to load them.`);
+			}
+		}
 		await ProjectTemplate.updateOne(
 			{ _id: template._id },
 			opts.preview ? { $inc: { 'usage.previews': 1 } } : { $inc: { 'usage.applied': 1 }, $set: { 'usage.lastAppliedAt': new Date() } }

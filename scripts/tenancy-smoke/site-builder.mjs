@@ -58,6 +58,8 @@ ok('validate passes a good tree', (await v([{ id: 'good0001', type: 'heading', p
 /* ------------------------------------------------------- pages and drafts */
 r = await call('GET', SB(`/pages/${home.id}`), null, T);
 const homeTree = r.body.draft.tree;
+// Opening a page connects its words to Contents (SB-29) — a new rev the first time.
+const homeRev = r.body.draft.rev;
 ok('the home page draft has the hero preset with fresh ids', homeTree.length === 1 && homeTree[0].type === 'section' && homeTree[0].id !== 'hrC0sect', JSON.stringify(homeTree).slice(0, 120));
 
 const aboutTree = [
@@ -85,11 +87,11 @@ const contact = r.body;
 ok('a path is made from the name when none is given', r.status === 201 && contact.path === '/contact', `${r.status} ${contact?.path}`);
 
 const edited = [{ ...homeTree[0], children: [{ id: 'homeHd01', type: 'heading', props: { text: 'Version one', level: 1 } }] }];
-r = await call('PUT', SB(`/pages/${home.id}`), { rev: 1, tree: edited }, T);
-ok('a draft saves with the current rev (rev goes up)', r.status === 200 && r.body.draft.rev === 2 && r.body.changed, `${r.status} ${r.body?.message}`);
+r = await call('PUT', SB(`/pages/${home.id}`), { rev: homeRev, tree: edited }, T);
+ok('a draft saves with the current rev (rev goes up)', r.status === 200 && r.body.draft.rev === homeRev + 1 && r.body.changed, `${r.status} ${r.body?.message}`);
 r = await call('PUT', SB(`/pages/${home.id}`), { rev: 1, tree: [] }, T);
-ok('a save with a stale rev gets 409 with the current page', r.status === 409 && r.body.rev === 2 && r.body.page?.draft?.tree?.length === 1, `${r.status} ${JSON.stringify(r.body).slice(0, 160)}`);
-r = await call('PUT', SB(`/pages/${home.id}`), { rev: 2, path: '/home' }, T);
+ok('a save with a stale rev gets 409 with the current page', r.status === 409 && r.body.rev === homeRev + 1 && r.body.page?.draft?.tree?.length === 1, `${r.status} ${JSON.stringify(r.body).slice(0, 160)}`);
+r = await call('PUT', SB(`/pages/${home.id}`), { rev: homeRev + 1, path: '/home' }, T);
 ok('the home page stays at /', r.status === 400, `${r.status} ${r.body?.message}`);
 r = await call('PUT', SB(`/pages/${about.id}`), { rev: 1, tree: [...aboutTree, { id: 'abtBtn01', type: 'button', props: { label: 'Open' }, action: { type: 'open', target: 'gone0001' } }] }, T);
 ok('a missing action target saves as a draft, listed as a problem', r.status === 200 && r.body.problems.some(p => p.level === 'publish'), `${r.status} ${JSON.stringify(r.body.problems)}`);
@@ -119,7 +121,7 @@ ok('an unknown path is 404 { error: not-found }', r.status === 404 && r.body.err
 r = await call('POST', SB('/publish'), {}, T);
 ok('Publish with nothing changed is refused', r.status === 400 && /Nothing has changed/.test(r.body.message), `${r.status} ${r.body?.message}`);
 
-r = await call('PUT', SB(`/pages/${home.id}`), { rev: 2, tree: [{ ...edited[0], children: [{ id: 'homeHd01', type: 'heading', props: { text: 'Version two', level: 1 } }] }] }, T);
+r = await call('PUT', SB(`/pages/${home.id}`), { rev: homeRev + 1, tree: [{ ...edited[0], children: [{ id: 'homeHd01', type: 'heading', props: { text: 'Version two', level: 1 } }] }] }, T);
 ok('the home draft changed again', r.status === 200, `${r.status} ${r.body?.message}`);
 r = await render('/');
 ok('…the live site still shows version one', r.body.page.tree[0].children[0].props.text === 'Version one');

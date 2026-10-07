@@ -11,7 +11,8 @@ import { treeIds, validateDesign, validatePageFields, validateTree, type Problem
 import { designView, ensureSite, livePages, pageSummary, pageView, sectionUsage, siteChanges, siteInfo, EMPTY_SEO } from '../library/siteBuilder/site.js';
 import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/publish.js';
 import { dataModels, resolveCollections, sampleRecord } from '../library/siteBuilder/resolve.js';
-import { applyStarter, isBlankSite, starterSummaries } from '../library/siteBuilder/starter.js';
+import { applyStarter, isBlankSite, isUntouchedSite, starterSummaries } from '../library/siteBuilder/starter.js';
+import { connectNodes, layoutTrees, pushTreeContents, syncLayouts, syncPage } from '../library/siteBuilder/connect.js';
 import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
 
 /**
@@ -151,9 +152,13 @@ router.post(
 	})
 );
 
+// Opening a page reads the panel's Contents changes into it and connects any word not in Contents yet (SB-29).
 router.get(
 	'/pages/:id',
-	handle(async (req: any) => pageView((await pullSeo([await pageOf(req.params.id)]))[0]))
+	handle(async (req: any) => {
+		const [page] = await pullSeo([await pageOf(req.params.id)]);
+		return pageView(await syncPage(page, { connect: grants(req.permissions, ['build']) }));
+	})
 );
 
 router.put(
@@ -187,6 +192,8 @@ router.put(
 		}
 		if (body.seo !== undefined) await pushSeo(saved, saved.draft.seo);
 		else if (Object.keys(fields).length) await pushPage(saved);
+		// The words edited in the builder, into their Contents records.
+		if (body.tree !== undefined) await pushTreeContents([page.draft?.tree || []], [saved.draft.tree], saved);
 		return { ...pageView(saved), problems };
 	})
 );
@@ -275,8 +282,9 @@ router.get(
 	'/design',
 	handle(async (req: any) => {
 		await ensureSite();
-		if (grants(req.permissions, ['build'])) await ensureDesignModel(req);
-		return designWithUsage(await pullDesign());
+		const build = grants(req.permissions, ['build']);
+		if (build) await ensureDesignModel(req);
+		return designWithUsage(await syncLayouts(await pullDesign(), { connect: build }));
 	})
 );
 
@@ -304,6 +312,7 @@ router.put(
 			throw Object.assign(new TenancyError(409, 'Someone else changed the design.'), { extra: { rev: now.draft?.rev, design: designView(now) } });
 		}
 		if (['theme', 'tokens', 'colorScheme'].some(k => k in patch)) await pushDesign(saved.draft);
+		if ('layouts' in patch) await pushTreeContents(layoutTrees(design.draft?.layouts), layoutTrees(saved.draft.layouts));
 		return { ...(await designWithUsage(saved)), problems: r.problems };
 	})
 );
@@ -387,7 +396,7 @@ router.post(
 
 router.get(
 	'/starters',
-	handle(async () => ({ starters: starterSummaries(), blank: await isBlankSite() }))
+	handle(async () => ({ starters: starterSummaries(), blank: await isBlankSite(), untouched: await isUntouchedSite() }))
 );
 
 router.post(
@@ -426,6 +435,31 @@ router.post(
 			page?.kind === 'template' ? sampleRecord(page.source, typeof body.recordId === 'string' ? body.recordId : undefined) : null,
 		]);
 		return { nodes, contents, record };
+	})
+);
+
+/**
+ * Blocks about to be added (a section, a block, a pasted copy): their words
+ * become Contents records and grids of look-alike cards lists of cards
+ * (SB-29). `fresh` for copies — their Contents bindings get records of their own.
+ */
+router.post(
+	'/connect',
+	handle(async (req: any) => {
+		mayBuild(req);
+		const nodes = req.body?.nodes;
+		if (!Array.isArray(nodes) || !nodes.length || nodes.length > 50) throw new TenancyError(400, 'Send { nodes: [...] } — 1 to 50 blocks');
+		const part = ['header', 'footer'].includes(req.body?.part) ? req.body.part : null;
+		const page = !part && req.body?.pageId ? await pageOf(String(req.body.pageId)) : null;
+		const key = part || (page ? (page.isHome ? 'home' : page.name) : 'site');
+		const out = await connectNodes(nodes, {
+			pageKey: key,
+			pageName: part ? (part === 'header' ? 'Header' : 'Footer') : page?.name || 'Site',
+			page,
+			slugs: 'random',
+			fresh: req.body?.fresh === true,
+		});
+		return { nodes: out.nodes, records: out.records };
 	})
 );
 
