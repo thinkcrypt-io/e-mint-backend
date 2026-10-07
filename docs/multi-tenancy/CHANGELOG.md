@@ -1193,3 +1193,15 @@ Decisions D14–D17 (README).
 - Verified: tsc + eslint clean in both repos; mint-tenant dev rendered `RouteEditorView` on a throwaway page with
   API answers captured from a scratch backend (no login): overview, Table/Form tabs, all three previews with real
   records, live edit → bar, 375px with no sideways scroll.
+
+## 2026-10-07 — Fields & rules (route builder settings) made easier (admin + mint-tenant, UI only)
+- `SettingsEditor` rows: input icon (colour by input group, `settingsMeta.tsx`), title with the key under it, "Asked as"
+  (input; "(automatic)" when none), Required and "Can be changed later" (edit) as switches, other rules that are on as
+  coloured chips, More/Less. Details grouped: Rules (each with a sentence; why it's locked when it is), How it looks,
+  Limits/Length (text/number inputs only), Picking a linked record, folded Advanced (data type in plain words, populate,
+  schema JSON, reset). Header row, field count summary, "Find a field". Same behaviour: system/sensitive locks, formulas,
+  sections, memoized rows with stable actions.
+- Table-cell names in plain words; `modelLabel` drops the `T<projectId>_` prefix (record pickers, dashboard builder).
+- Guides: mint-docs `pages#settings`, admin `/docs/builder#settings`.
+- Verified: tsc + eslint clean in both repos; throwaway mock page: rows, expanded groups, Advanced, a rule switched on
+  (count + unsaved bar update), readable linked model name.
