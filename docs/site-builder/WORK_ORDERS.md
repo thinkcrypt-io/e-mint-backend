@@ -204,7 +204,7 @@ the `backend-sb2` launch config on :5032). Open: the data pickers and theme
 dialog were clicked in SB-29 (they work); no `search` block;
 sitemap doesn't list template records; SB-20 previews for the MCP.
 
-**Pushed hashes so far:** SB-28: backend `6d24ab07`, mint-sites `707f457` + `58bff32`, mint-builder `c9158ba`. SB-09/12: backend `efaf82ba`, mint-sites `9442c41`. SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
+**Pushed hashes so far:** SB-29: backend `7bf30cc0`, mint-builder `bfd18dc`, mint-sites `12623ba`. SB-28: backend `6d24ab07`, mint-sites `707f457` + `58bff32`, mint-builder `c9158ba`. SB-09/12: backend `efaf82ba`, mint-sites `9442c41`. SB-26: mint-builder `76b58f5` (pushed to GitHub `aiasifistiaque/mint-builder` `main` 2026-10-07), admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`. backend `v3` → `mint`: SB-03 `51d4d01c`, SB-04
 `9e45aac1`, SB-05 `87446cdf`, SB-06 `751c88e3`, SB-07 `4a1b253d`, SB-08 `ec0b22f1` (+ handoff
 commits); mint-sites `main`: SB-02 `02b6a34`, SB-04 `b2dbc1e`, SB-05 `41972a3`,
 SB-06 `2b2bdc9`, D25 `2e01d20`, SB-07 `9da74ae`, SB-08 `817b136`; admin `main`: SB-05
@@ -416,7 +416,7 @@ Renderer (`mint-sites`)
 | SB-26 | The editor as its own app `mint-builder` (builder.mintapp.shop) in the AGS editor's look; panel → builder sign-in handoff; proxy (D26) | mint-builder + admin | L | done 2026-10-07 (mint-builder `76b58f5` on GitHub; admin `266cbfd`, mint-docs `d82881a`, mint-webpage `3bc895d`) |
 | SB-27 | Connect your AI in the builder: toolbar AI menu + Settings → keys, client steps, a prompt with the theme; MCP prompts | mint-builder + backend | M | done 2026-10-07 (mint-builder `c9158ba`, backend `efaf82ba`) |
 | SB-28 | Theme demo sites: choosing a theme loads a whole demo site (pages, a list model with records, Contents) | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `6d24ab07`, mint-builder `c9158ba`, mint-sites `707f457`) |
-| SB-29 | Every word in Contents: blocks connected when added (lists of cards for card grids, demo words), copies get their own records, builder ⇄ panel edits, list source cards ⇄ model, a new site (or a template's build) opens as its theme's demo with every page and its SEO | backend + mint-builder + mint-sites | M | done 2026-10-07 |
+| SB-29 | Every word in Contents: blocks connected when added (lists of cards for card grids, demo words), copies get their own records, builder ⇄ panel edits, list source cards ⇄ model, a new site (or a template's build) opens as its theme's demo with every page and its SEO | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `7bf30cc0`, mint-builder `bfd18dc`, mint-sites `12623ba`, mint-docs `b89e115`, mint-webpage `4cb33d3`) |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
