@@ -106,6 +106,63 @@ type RelatedItem = {
 	 * tab's records to *it* (Document.project), not to this record.
 	 */
 	via?: { route: string; foreignField?: string; localField?: string };
+	/** View tabs only: conditions every listed record must meet ("status is due"). */
+	where?: TabCondition[];
+};
+
+export type TabCondition = { field: string; op: string; value?: any };
+
+/** What a tab condition can say. `is` conditions also fill the add form. */
+export const TAB_OPS = ['is', 'not', 'in', 'gt', 'gte', 'lt', 'lte', 'contains', 'empty', 'filled'] as const;
+
+/** A condition's value as the field stores it: a number, a date, yes/no, an id. */
+const castFor = (model: mongoose.Model<any>, path: string, v: any): any => {
+	const type: any = model.schema.path(path);
+	const instance = type?.instance === 'Array' ? type?.caster?.instance : type?.instance;
+	if (Array.isArray(v)) return v.map(x => castFor(model, path, x));
+	if (v === null || v === undefined || v === '') return v;
+	if (instance === 'Number') return Number.isFinite(Number(v)) ? Number(v) : undefined;
+	if (instance === 'Boolean') return v === true || v === 'true' || v === 'yes';
+	if (instance === 'Date') {
+		const d = new Date(v);
+		return Number.isNaN(d.getTime()) ? undefined : d;
+	}
+	if (instance === 'ObjectId') return mongoose.isValidObjectId(v) ? new mongoose.Types.ObjectId(String(v)) : undefined;
+	return String(v);
+};
+
+/**
+ * A tab's conditions as a query — only on fields the tab may show (not secret,
+ * not hidden); a condition on anything else, or with a value that doesn't fit
+ * the field, is left out rather than failing the page.
+ */
+const conditionsQuery = (model: mongoose.Model<any>, settings: Record<string, any>, where: TabCondition[] = []) => {
+	const ok = readable(model, settings);
+	const out: any[] = [];
+	for (const c of where.slice(0, 10)) {
+		if (!c?.field || !ok(c.field) || !model.schema.path(c.field)) continue;
+		const f = c.field;
+		// Empty means what it can for the field: no list items, no text, no value.
+		const type: any = model.schema.path(f);
+		const isList = type?.instance === 'Array';
+		const isText = type?.instance === 'String';
+		if (c.op === 'empty') {
+			out.push({ $or: [{ [f]: null }, ...(isList ? [{ [f]: { $size: 0 } }] : isText ? [{ [f]: '' }] : [])] });
+			continue;
+		}
+		if (c.op === 'filled') {
+			out.push(isList ? { [`${f}.0`]: { $exists: true } } : { [f]: { $ne: null, ...(isText && { $nin: [''] }) } });
+			continue;
+		}
+		const value = castFor(model, f, c.op === 'in' ? (Array.isArray(c.value) ? c.value : String(c.value ?? '').split(',').map(x => x.trim()).filter(Boolean)) : c.value);
+		if (value === undefined || value === null || value === '') continue;
+		if (c.op === 'is') out.push({ [f]: value });
+		else if (c.op === 'not') out.push({ [f]: { $ne: value } });
+		else if (c.op === 'in') out.push({ [f]: { $in: value } });
+		else if (c.op === 'contains') out.push({ [f]: new RegExp(escapeRx(String(c.value)), 'i') });
+		else if (['gt', 'gte', 'lt', 'lte'].includes(c.op)) out.push({ [f]: { [`$${c.op}`]: value } });
+	}
+	return out;
 };
 
 /** Most records a tab looks through on its way (the projects a client has). */
@@ -230,7 +287,7 @@ const relatedPage = async (
 	let rows: any[] = [];
 	let total = 0;
 	if (allowed) {
-		const and: any[] = [link];
+		const and: any[] = [link, ...conditionsQuery(Related, settings, item.where)];
 		if (isAccessRestricted(Related)) and.push(accessRule(req.user?._id));
 		// Search: the route's own searchable text fields, plus the text columns shown.
 		const term = String(search || '').trim().slice(0, 100);
@@ -327,11 +384,18 @@ const addButtonOf = async (
 			via: String(midTitle || item.via.route).toLowerCase(),
 		};
 	}
+	// A "Due bills" tab adds a bill that's already due: its `is` conditions fill the form.
+	const defaults: Record<string, any> = {};
+	(item.where || []).forEach(c => {
+		if (c?.op === 'is' && c.field && c.value !== undefined && c.value !== '' && entry.source.Model.schema.path(c.field))
+			defaults[c.field] = castFor(entry.source.Model, c.field, c.value); // "false" → false, "100" → 100
+	});
 	return {
 		label: item.addLabel?.trim() || '',
 		field: item.foreignField,
 		many: path.instance === 'Array',
 		allowed: can(entry, 'create'),
+		...(Object.keys(defaults).length && { defaults }),
 	};
 };
 

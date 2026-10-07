@@ -131,6 +131,17 @@ const viewTabSchema = Joi.object({
 	// Reached through a route in between (a client's documents, through its
 	// projects): `via` links that route to this record; foreignField /
 	// localField then link the tab's records to it. The add button is muted.
+	// Conditions every listed record must meet ("status is due") — a "Due
+	// bills" tab beside "All bills". `is` conditions also fill the add form.
+	where: Joi.array()
+		.items(
+			Joi.object({
+				field: Joi.string().required(),
+				op: Joi.string().valid('is', 'not', 'in', 'gt', 'gte', 'lt', 'lte', 'contains', 'empty', 'filled').required(),
+				value: Joi.alternatives(Joi.string().allow(''), Joi.number(), Joi.boolean(), Joi.array().items(Joi.string())),
+			})
+		)
+		.max(10),
 	via: Joi.object({
 		route: Joi.string().required(),
 		foreignField: Joi.string(),

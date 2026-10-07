@@ -1342,3 +1342,22 @@ Decisions D14–D17 (README).
   top (sticky, focused on open) over name, id, group and description; name
   matches rank first and Enter picks the best ("link" → Link); "No type
   matches" when empty. admin + mint-tenant. Verified on a mock page.
+
+## 2026-10-08 — View tab conditions ("Due bills")
+- `viewTabs[].where: [{ field, op, value }]` (max 10, all must hold); ops
+  is / not / in / gt / gte / lt / lte / contains / empty / filled. Values cast
+  to the field's type (number, date, yes/no, id); conditions on unreadable
+  (secret, excluded) or unknown fields, or with values that don't fit, are
+  skipped. Empty/filled are type-aware (lists by size, text by '' too —
+  `$size` on a String path throws in Mongoose). Works with direct and `via`
+  tabs, counts, search and paging.
+- The add button's form gets the tab's `is` conditions as `add.defaults`
+  (cast: "false" → false), so *Add bill* on *Due bills* starts as due.
+- Page builder: *Show only* row in each tab (field, test by field type —
+  choice values / Yes-No / date / number inputs — value, *And…*), with
+  problems for a missing field or value.
+- Verified: private backend (where.mjs) — counts for nine tabs on one client
+  (all, due, due ≥ 100, no status, not settled, one of, contains, has status,
+  no amount), rows, defaults, search, another client isolated, unknown op 400;
+  nested.mjs still passes. Mock page for the editor's controls. tsc both apps
+  + backend.
