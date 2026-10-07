@@ -1176,3 +1176,20 @@ Decisions D14–D17 (README).
   with a real login: signing the browser pane in was refused by the permission check.
 - Seen in passing (not fixed): in mint-tenant `next dev`, `/auth/login` 404s — the proxy reads `auth` as a project
   slug (`NEXT_PUBLIC_APP_PAGES` looks empty in the dev proxy).
+
+## 2026-10-07 — Page builder made easier to read, with Preview and colour (admin + mint-tenant, UI only)
+- `/builder/<route>` (`RouteEditor.tsx`, now `RouteEditorView` + a thin data wrapper): tabs renamed and coloured by part —
+  Table page (teal), Form (orange), Record page (pink), Filters (purple), Fields & rules = settings (blue), Versions
+  (cyan); `areas.tsx` holds each part's colour, icon, sentence and guide anchor. Each tab opens with an `AreaIntro`
+  banner; overview cards are coloured, clickable, with Change it / Preview. One-time "How changes go live" note
+  (localStorage `route-editor-intro-hidden`), Live / Draft status dot, sticky unsaved bar (Undo all, Preview, Save draft,
+  Publish). Tenant meta shows the model as people know it (strips `T<projectId>_`).
+- `PagePreview.tsx`: a modal drawing the table page, the form and a record page from the working copy (saved or not),
+  filled with the route's 5 latest records (`useGetAllQuery`, only once opened; placeholders when empty).
+- Panel headings get coloured tiles (`ToneTitle`) in the builder panels and on the model page (also coloured tab icons
+  there); `cl/Panel` `title` is a ReactNode now (`Omit<BoxProps,'title'>`). Tenant wording: "It starts on", "Starting
+  columns/menu/form/setup" instead of code-file words; the list is "Pages" in the tenant panel, with one Status column.
+- Guides: mint-docs `pages` (tab colours, Preview section, new names) and admin `/docs/builder`.
+- Verified: tsc + eslint clean in both repos; mint-tenant dev rendered `RouteEditorView` on a throwaway page with
+  API answers captured from a scratch backend (no login): overview, Table/Form tabs, all three previews with real
+  records, live edit → bar, 375px with no sideways scroll.
