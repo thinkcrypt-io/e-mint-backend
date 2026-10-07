@@ -1258,3 +1258,20 @@ Decisions D14–D17 (README).
 - Verified: tsc + eslint (both apps); dev: /auth/login tab "Sign in · MINT", icon and apple-touch-icon links;
   cards on a mock project page (app with a model, fresh app, website; Mark done, Hide/Show; 375px no side
   scroll). Not verified signed in.
+
+## 2026-10-07 — "No image" placeholder; the wizard's pages step goes part by part
+- **Broken images:** an empty image fell back to `PLACEHOLDER_IMAGE`, a hotlinked freepik stock image that no
+  longer loads, so records without a picture showed a broken image. New `containers/NoImage.tsx` (dashed box,
+  crossed-out picture, "No image", theme tokens). `ImageContainer` shows it with no `src` (or the placeholder),
+  and "Image not found" when the picture fails to load (onError, plus a post-mount `complete && naturalWidth 0`
+  check confirmed with `decode()` for failures before hydration). Record page (`renderViewItem`): empty `image`
+  → NoImage at the picture's size with no full-screen viewer; empty `image-array` → "No images" (it used to
+  print "--"); `ViewRow` keeps the box for an empty image instead of the dash. `PLACEHOLDER_IMAGE` is now an
+  inline SVG data URI ("No image") for the plain `<img>` users (table cells, POS cards, Details).
+- **Wizard:** step 2 walks its parts in order — Overview → Table page → Form → Record page → Filters → Fields
+  & rules. Next/Back move between parts (bar: "part 2 of 6: Table page"); later tabs are locked
+  (`ConsoleTabs` tabs take `disabled`), overview cards for parts not reached yet say "one part at a time";
+  Finish (Next or the stepper) opens only once every part was seen. Seen parts saved with the progress
+  (`seen`); an AI draft also starts at the overview. Guides: mint-docs models, admin /docs/builder.
+- Verified: tsc + eslint (both apps); mock pages: empty photo, empty gallery, broken link, 40/100px boxes,
+  inline placeholder; wizard part-by-part (card jump refused, stepper Finish refused, Next ×5, Back, Finish).
