@@ -1411,3 +1411,22 @@ Decisions D14–D17 (README).
   a ticked list, nested.mjs. Record view renders the rollup (mock); the real
   table page stays on its skeleton while the browser pane is hidden (all
   routes), so it was checked through the API instead.
+
+## 2026-10-08 — Fields that can't be changed stay muted
+- New `utils/inputs/VMuted.tsx`: the same input box as every other field, but
+  greyed (bg.muted / fg.muted), read only, not focusable (tabIndex -1), no
+  focus ring, not-allowed cursor, an icon at the end and the reason under it.
+  Used by `read-only`, `locked`, `rollup` (Σ) and `formula` (calculator).
+- The record drawer and table-menu edit form is `CreateModal`, not
+  BackendCreateModal — the lockWhen mapping now runs in both, through
+  `mutedForUpdate(fields, record)` (panel `functions/fieldLocks.ts`): a field
+  the record's state locks, or one with "Can be changed later" off
+  (`noEdit`, from `/get/config` and `/get/schema`), shows muted when editing
+  ("Can’t be changed after it’s created." / "Locked: …"). Plain inputs only —
+  images, sections and editors keep their own look; the server refuses those
+  changes regardless. No route replaces the update controller, so `edit` is
+  always the rule. getSchema now also passes lockWhen/lockMatch; the panel's
+  createFormFields keeps noEdit/lockWhen/lockMatch.
+- Verified: mock edit drawer for a paid bill — title/amount editable; code,
+  status, formula, rollup, read-only note muted (read only, tabIndex -1,
+  greyed) with their reasons. tsc both apps + backend.

@@ -26,6 +26,11 @@ const getSchema = ({ settings, formRules }: { settings: any; formRules?: any }) 
 							? settings[key].schema.renderCondition.toString()
 							: undefined,
 						...settings[key]?.schema,
+						// For the edit form: muted when it can't be changed — never after
+						// creation (`edit` off), or not while the record meets `lockWhen`.
+						...(!settings[key]?.edit && { noEdit: true }),
+						...(settings[key]?.lockWhen?.length && { lockWhen: settings[key].lockWhen }),
+						...(settings[key]?.lockMatch === 'any' && { lockMatch: 'any' }),
 					};
 
 					acc[key] = constructSchema;

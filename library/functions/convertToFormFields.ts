@@ -74,6 +74,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
 							...(fieldConfig?.lockMatch && { lockMatch: fieldConfig.lockMatch }),
+							...(fieldConfig?.noEdit && { noEdit: true }),
 						});
 					}
 				});
@@ -117,6 +118,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
 							...(fieldConfig?.lockMatch && { lockMatch: fieldConfig.lockMatch }),
+							...(fieldConfig?.noEdit && { noEdit: true }),
 						endOfSection: lastElement,
 					});
 				}
