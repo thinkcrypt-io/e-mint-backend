@@ -1333,3 +1333,12 @@ Decisions D14–D17 (README).
 - Verified: real `/get/view` + `/get/schema` responses from a private backend
   (Project Document with project link + files) rendered on a mock page — the
   project shows as a link chip, documents as tiles. tsc in both apps.
+
+## 2026-10-08 — Navbar back button; search in the field-type picker
+- Layout's navbar: a back arrow before the page title — `router.back()` like
+  the browser's, or HOME when the tab has no earlier page in the panel (opened
+  from a link / bookmark). admin + mint-tenant.
+- Model builder KindPicker ("What will this field hold?"): a search box at the
+  top (sticky, focused on open) over name, id, group and description; name
+  matches rank first and Enter picks the best ("link" → Link); "No type
+  matches" when empty. admin + mint-tenant. Verified on a mock page.
