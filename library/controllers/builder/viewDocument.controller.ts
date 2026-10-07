@@ -4,7 +4,8 @@ import { accessRule, isAccessRestricted } from '../../functions/recordAccess.fun
 import Role from '../../models/admin-role/model.js';
 import constructConfig from '../../../lib/configurator/constructConfig.js';
 import { collectResourceRoutes, getDynamicVersion, ResourceRouteEntry, scopedModel } from '../../functions/routeRegistry.function.js';
-import { scopeKey } from '../../functions/tenantScope.function.js';
+import { currentScope, scopeKey } from '../../functions/tenantScope.function.js';
+import { grants } from '../../functions/tenantPermissions.function.js';
 import { resolveRoute, ResolvedRoute } from '../../functions/resolveRoute.function.js';
 
 /**
@@ -225,6 +226,13 @@ const relatedPage = async (
 
 /** Whether the caller may `verb` (view by default) in a route — the same names the route's own endpoints check. */
 const permissionsOf = async (req: any) => {
+	// In a tenant project the caller is an organization member: their role's
+	// permissions are on the request already (tenantProtect), checked the way
+	// every project endpoint checks them. Looking them up as an admin Role found
+	// nothing, so even the owner was told they couldn't see linked records.
+	if (currentScope())
+		return (entry: ResourceRouteEntry, verb: 'view' | 'create' = 'view') =>
+			grants(req.permissions || [], [`${verb}-${entry.source.permission}`]);
 	const role: any = await Role.findById(req.user?.role).select('permissions').lean();
 	const permissions: string[] = role?.permissions || [];
 	return (entry: ResourceRouteEntry, verb: 'view' | 'create' = 'view') =>

@@ -1275,3 +1275,17 @@ Decisions D14–D17 (README).
   (`seen`); an AI draft also starts at the overview. Guides: mint-docs models, admin /docs/builder.
 - Verified: tsc + eslint (both apps); mock pages: empty photo, empty gallery, broken link, 40/100px boxes,
   inline placeholder; wizard part-by-part (card jump refused, stepper Finish refused, Next ×5, Back, Finish).
+
+## 2026-10-08 — Add drawer header; linked-records tabs refused project owners
+- **Bug (backend):** `viewDocument.controller.ts` `permissionsOf` read the caller's permissions from the admin
+  `Role` model, which a tenant member doesn't have — so inside a project every linked-records tab (and related
+  list on the record overview) answered `allowed: false`, "You don't have access to …", even for the owner.
+  In a tenant scope it now checks `req.permissions` (set by tenantProtect) with `grants()`, like every project
+  endpoint (`*` for owner/admin, `records:view` for members). Admin path unchanged. Verified: backend tsc; not
+  run against a live project.
+- **Add drawer:** `BackendCreateModal` gets the edit drawer's header — Plus tile, divider, the page's name as one
+  record ("New Customer", `singularOf` in CreateModal.tsx, not the route like "Create projects2") and a line under
+  it (the page's subtitle, else "Fill in the details, then press Create — it's added to …"); Cancel / Create
+  buttons. Page builder → Table page → Add button: new **Form heading** and **Form description**
+  (`button.prompt.title/description`), used by the drawer, the edit-from-menu drawer and the add page.
+  Verified: tsc + eslint (both apps), mock page in dark mode.
