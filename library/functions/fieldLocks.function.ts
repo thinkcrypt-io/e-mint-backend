@@ -93,12 +93,15 @@ const holds = (raw: any, c: LockCondition): boolean => {
 
 const get = (doc: any, path: string) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), doc);
 
-/** Whether a record meets every condition (none: never). */
-export const meets = (doc: any, conds?: LockCondition[]): boolean =>
-	Array.isArray(conds) && conds.length > 0 && conds.every(c => c?.field && holds(get(doc, c.field), c));
+/** Whether a record meets the conditions — all of them, or with `any` one is enough (none: never). */
+export const meets = (doc: any, conds?: LockCondition[], match: 'all' | 'any' = 'all'): boolean => {
+	if (!Array.isArray(conds) || !conds.length) return false;
+	const one = (c: LockCondition) => !!c?.field && holds(get(doc, c.field), c);
+	return match === 'any' ? conds.some(one) : conds.every(one);
+};
 
 /** "status is one of void, paid" — for the refusal and the form's hint. */
-export const lockText = (conds: LockCondition[] = []) =>
+export const lockText = (conds: LockCondition[] = [], match: 'all' | 'any' = 'all') =>
 	conds
 		.map(c => {
 			const op = OP_TEXT[c.op] || c.op;
@@ -106,7 +109,7 @@ export const lockText = (conds: LockCondition[] = []) =>
 			const value = Array.isArray(c.value) ? c.value.join(', ') : c.value;
 			return `${c.field} ${op} ${value ?? ''}`.trim();
 		})
-		.join(' and ');
+		.join(match === 'any' ? ' or ' : ' and ');
 
 const same = (a: any, b: any) => JSON.stringify(plain(a) ?? null) === JSON.stringify(plain(b) ?? null);
 
@@ -123,9 +126,10 @@ export const lockedChanges = (
 	const out: { field: string; label: string; why: string }[] = [];
 	for (const key of Object.keys(updates)) {
 		const conds: LockCondition[] | undefined = settings[key]?.lockWhen;
-		if (!conds?.length || !meets(before, conds)) continue;
+		const match = settings[key]?.lockMatch === 'any' ? 'any' : 'all';
+		if (!conds?.length || !meets(before, conds, match)) continue;
 		if (same(get(before, key), updates[key])) continue;
-		out.push({ field: key, label: settings[key]?.schema?.label || settings[key]?.title || key, why: lockText(conds) });
+		out.push({ field: key, label: settings[key]?.schema?.label || settings[key]?.title || key, why: lockText(conds, match) });
 	}
 	return out;
 };

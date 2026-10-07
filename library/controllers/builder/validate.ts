@@ -57,6 +57,24 @@ const fieldSchema = Joi.object({
 	min: Joi.number(),
 	max: Joi.number(),
 	populate: Joi.alternatives(Joi.string(), Joi.object()),
+	// Worked out from linked records on read, never stored (rollups.function).
+	rollup: Joi.object({
+		// Empty while it's being set up — checkSettings names what's missing.
+		from: Joi.string().allow('').required(),
+		via: Joi.string().allow('').required(),
+		value: Joi.string().allow(''),
+		op: Joi.string().valid('count', 'sum', 'avg', 'min', 'max').required(),
+		where: Joi.array()
+			.items(
+				Joi.object({
+					field: Joi.string().required(),
+					op: Joi.string().valid('is', 'not', 'in', 'gt', 'gte', 'lt', 'lte', 'contains', 'empty', 'filled').required(),
+					value: Joi.alternatives(Joi.string().allow(''), Joi.number(), Joi.boolean(), Joi.array().items(Joi.string())),
+				})
+			)
+			.max(10),
+		match: Joi.string().valid('all', 'any'),
+	}),
 	// Conditional read-only: changeable until the record meets these (all of
 	// them) — a bill's status locks once it is void or paid. fieldLocks.function.
 	lockWhen: Joi.array()
@@ -68,6 +86,8 @@ const fieldSchema = Joi.object({
 			})
 		)
 		.max(10),
+	// How lockWhen combines: all (default) or any — "status is void" or "status is paid".
+	lockMatch: Joi.string().valid('all', 'any'),
 	// Presentation for the admin (label, input type, table cell, options…) —
 	// free-form, as it is in the settings files.
 	schema: Joi.object().unknown(true),
@@ -139,6 +159,8 @@ const viewTabSchema = Joi.object({
 	// linked to this record. Only for `foreignField` tabs — see getViewTab.
 	allowAdd: Joi.boolean(),
 	addLabel: Joi.string().allow('').max(60),
+	// How `where` combines: all (default) or any.
+	match: Joi.string().valid('all', 'any'),
 	// Reached through a route in between (a client's documents, through its
 	// projects): `via` links that route to this record; foreignField /
 	// localField then link the tab's records to it. The add button is muted.
@@ -306,7 +328,15 @@ export const checkSettings = ({
 		if (seen.has(key)) problems.push(`'${key}' is listed twice.`);
 		seen.add(key);
 
-		if (!allowed.has(key)) problems.push(`'${key}' is not a field of this model.`);
+		// A rollup is worked out from linked records, not stored: a new name, never one the model stores.
+		if (field.rollup) {
+			if (!field.rollup.from || !field.rollup.via) problems.push(`'${key}': pick the linked records it's worked out from.`);
+			if (model?.schema?.path(key)) problems.push(`'${key}' is stored by the model, so it can't be worked out from linked records — pick a new name.`);
+			if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) problems.push(`'${key}': a field name is letters, digits and _, starting with a letter.`);
+			if (field.rollup.op !== 'count' && !field.rollup.value) problems.push(`'${key}': pick the field to ${field.rollup.op === 'avg' ? 'average' : field.rollup.op === 'sum' ? 'add up' : `take the ${field.rollup.op} of`}.`);
+			if (field.edit) problems.push(`'${key}' is worked out, so it can't be changeable.`);
+			if (field.required) problems.push(`'${key}' is worked out, so it can't be required.`);
+		} else if (!allowed.has(key)) problems.push(`'${key}' is not a field of this model.`);
 
 		const code = codeSettings?.[key] || {};
 		if (locked.includes(key)) {

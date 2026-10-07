@@ -1384,3 +1384,30 @@ Decisions D14–D17 (README).
   goes through, then status/amount refused, unchanged values pass, bulk edit
   with a void bill refused). Mock page: Locked when group, edit form locked
   with the reason. tsc both apps + backend.
+
+## 2026-10-08 — Any/all conditions; fields from linked records (rollups)
+- **Match any.** Conditions only combined with AND, so "status is void" and
+  "status is paid" never held (user report). A *Match: All / Any of these*
+  switch on every condition list: `viewTabs[].match`, settings `lockMatch`,
+  `rollup.match` (`'any'`; all is the default). `conditionsQuery(..., match)`
+  wraps an `$or`; `meets(doc, conds, match)` / `lockText(…, match)` read
+  "status is void or status is paid". Add-form defaults only with all. "is
+  one of" on a choice field is now tick-several (value saved as a list). The
+  editor warns when two "is" conditions on one field are ANDed.
+- **Rollups.** Settings field `rollup: { from, via, op: count|sum|avg|min|max,
+  value, where, match }` — e.g. a client's `duePayment`: sum of bills.amount
+  where status is due. Not stored: `rollupResponses` (routes-admin router)
+  fills it into GET responses (list, one record, view) with one aggregate per
+  rollup per page; own records only (`ownRecordsOf`), archived left out, view
+  permission on `from` (else null) and its record access; stripped from write
+  bodies. checkSettings: new key only (not a model path), not edit/required,
+  `from`/`via` and the summed field named. getConfig/table/view/form work as
+  for any settings field; panel type `rollup` (number/date cell, shown on the
+  form). Settings editor: *Add a field from linked records* + RollupEditor
+  (from, work out, of the field, conditions, API name, "reads as").
+- Verified: private backend — rollups.mjs (13: values per client, zero/empty,
+  one record, view, config, ignored on write, current after a new bill),
+  locks.mjs with "void or paid" + lockMatch any, where.mjs with match any and
+  a ticked list, nested.mjs. Record view renders the rollup (mock); the real
+  table page stays on its skeleton while the browser pane is hidden (all
+  routes), so it was checked through the API instead.

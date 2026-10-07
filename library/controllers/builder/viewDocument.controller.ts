@@ -35,7 +35,7 @@ const MAX_TAB_PAGE = 100;
 // Rebuilt when a model-builder route is added, changed or removed. Per scope:
 // a tenant project's routes are its own (docs/multi-tenancy).
 const registries = new Map<string, { version: number; map: Map<string, ResourceRouteEntry> }>();
-const resources = (app: any) => {
+export const resources = (app: any) => {
 	const key = scopeKey();
 	let registry = registries.get(key);
 	if (registry?.version !== getDynamicVersion()) {
@@ -47,7 +47,7 @@ const resources = (app: any) => {
 
 // Keyed by the Model too: a built model is recompiled when it changes.
 const codeBuilt = new Map<string, { Model: any; built: any }>();
-const resolveOther = (entry: ResourceRouteEntry): Promise<ResolvedRoute> => {
+export const resolveOther = (entry: ResourceRouteEntry): Promise<ResolvedRoute> => {
 	const key = `${scopeKey()}|${entry.route}`;
 	let hit = codeBuilt.get(key);
 	if (!hit || hit.Model !== entry.source.Model) {
@@ -108,6 +108,8 @@ type RelatedItem = {
 	via?: { route: string; foreignField?: string; localField?: string };
 	/** View tabs only: conditions every listed record must meet ("status is due"). */
 	where?: TabCondition[];
+	/** How `where` combines: every condition (default) or any one. */
+	match?: 'all' | 'any';
 };
 
 export type TabCondition = { field: string; op: string; value?: any };
@@ -136,7 +138,12 @@ const castFor = (model: mongoose.Model<any>, path: string, v: any): any => {
  * not hidden); a condition on anything else, or with a value that doesn't fit
  * the field, is left out rather than failing the page.
  */
-const conditionsQuery = (model: mongoose.Model<any>, settings: Record<string, any>, where: TabCondition[] = []) => {
+export const conditionsQuery = (
+	model: mongoose.Model<any>,
+	settings: Record<string, any>,
+	where: TabCondition[] = [],
+	match: 'all' | 'any' = 'all'
+) => {
 	const ok = readable(model, settings);
 	const out: any[] = [];
 	for (const c of where.slice(0, 10)) {
@@ -162,7 +169,8 @@ const conditionsQuery = (model: mongoose.Model<any>, settings: Record<string, an
 		else if (c.op === 'contains') out.push({ [f]: new RegExp(escapeRx(String(c.value)), 'i') });
 		else if (['gt', 'gte', 'lt', 'lte'].includes(c.op)) out.push({ [f]: { [`$${c.op}`]: value } });
 	}
-	return out;
+	// Any one is enough: one $or over them (an unusable condition is left out either way).
+	return match === 'any' && out.length > 1 ? [{ $or: out }] : out;
 };
 
 /** Most records a tab looks through on its way (the projects a client has). */
@@ -287,7 +295,7 @@ const relatedPage = async (
 	let rows: any[] = [];
 	let total = 0;
 	if (allowed) {
-		const and: any[] = [link, ...conditionsQuery(Related, settings, item.where)];
+		const and: any[] = [link, ...conditionsQuery(Related, settings, item.where, item.match)];
 		if (isAccessRestricted(Related)) and.push(accessRule(req.user?._id));
 		// Search: the route's own searchable text fields, plus the text columns shown.
 		const term = String(search || '').trim().slice(0, 100);
@@ -339,7 +347,7 @@ const relatedPage = async (
 };
 
 /** Whether the caller may `verb` (view by default) in a route — the same names the route's own endpoints check. */
-const permissionsOf = async (req: any) => {
+export const permissionsOf = async (req: any) => {
 	// In a tenant project the caller is an organization member: their role's
 	// permissions are on the request already (tenantProtect), checked the way
 	// every project endpoint checks them. Looking them up as an admin Role found
@@ -386,7 +394,8 @@ const addButtonOf = async (
 	}
 	// A "Due bills" tab adds a bill that's already due: its `is` conditions fill the form.
 	const defaults: Record<string, any> = {};
-	(item.where || []).forEach(c => {
+	// (Only when all must hold — with "any", no one value is implied.)
+	(item.match === 'any' ? [] : item.where || []).forEach(c => {
 		if (c?.op === 'is' && c.field && c.value !== undefined && c.value !== '' && entry.source.Model.schema.path(c.field))
 			defaults[c.field] = castFor(entry.source.Model, c.field, c.value); // "false" → false, "100" → 100
 	});

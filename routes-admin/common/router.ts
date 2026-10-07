@@ -35,6 +35,7 @@ import { constructPermissions, constructConfig, SettingsType } from '../../impor
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
+import { rollupResponses, rollupsOf } from '../../library/functions/rollups.function.js';
 import getStats from '../../library/controllers/aggregate/getStats.controller.js';
 import getTotals from '../../library/controllers/aggregate/getTotals.controller.js';
 import {
@@ -156,6 +157,10 @@ const defineRoutes = ({
 		}
 	});
 
+	// Fields worked out from linked records (settings `rollup`): filled in on
+	// every read — the list, one record, its page (rollups.function.ts).
+	router.use(rollupResponses);
+
 	// A middleware or controller built from the resolved route at request time
 	// instead of from the code config at boot. The factories are closures over
 	// their options, so building one per request costs nothing worth caching.
@@ -168,6 +173,11 @@ const defineRoutes = ({
 	// route's formulas to the controller that saves.
 	const formulas = (req: any, _res: any, next: any) => {
 		req.formulas = formulasOf(req.resolvedRoute?.settings);
+		// Rollups are worked out on read, never stored: whatever a form sends back for one goes.
+		for (const r of rollupsOf(req.resolvedRoute?.settings)) {
+			if (req.body && typeof req.body === 'object') delete req.body[r.key];
+			if (req.body?.updates && typeof req.body.updates === 'object') delete req.body.updates[r.key];
+		}
 		if (req.formulas.length) {
 			stripFormulaKeys(req.body, req.formulas);
 			stripFormulaKeys(req.body?.updates, req.formulas);
