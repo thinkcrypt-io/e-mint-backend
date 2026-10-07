@@ -1205,3 +1205,35 @@ Decisions D14–D17 (README).
 - Guides: mint-docs `pages#settings`, admin `/docs/builder#settings`.
 - Verified: tsc + eslint clean in both repos; throwaway mock page: rows, expanded groups, Advanced, a rule switched on
   (count + unsaved bar update), readable linked model name.
+
+## 2026-10-07 — Add page for "Opens: its own page", and a three-step new-model wizard
+- **Bug:** a table's add button set to open a page (page builder → Table page →
+  Opens) linked to `/<route>/create`, which no app page served — in the tenant
+  panel the proxy read `<route>` as a project and landed on the home page; in the
+  super-admin panel it 404'd. New `components/library/pages/CreateRecordPage.tsx`:
+  the route's form config (same form as the add modal) in the normal layout, with
+  a sticky Cancel / Save bar, starting values and excluded fields handled like the
+  modal, back to the table on save. Served at `app/t/[slug]/create` (both repos)
+  and `app/[slug]/create` (admin). `panel.ts`: `projectPagePath` maps
+  `/<project>/<route>/create` → `/t/<route>/create`, `projectHref` the reverse,
+  new `createPath(route)` and `addButtonHref(href, route)` (the builder's default
+  `/<route>/create` → the built-in page; anything else taken as written, inside
+  the project). `ServerPageHeading` links through `addButtonHref`. The builder's
+  Opens choices now read "A pop-up over the table" / "Its own page".
+- **Wizard:** `ModelWizard.tsx` went from 8 steps to 3 — What it stores (basics +
+  fields with the live FormPreview; names/route/display field, record numbers and
+  privacy under "More options" via new `ModelPanels` `namesApart` + panel
+  `'names'`), Check the pages (AreaCard overview + coloured tabs reusing the page
+  builder's editors, PagePreview modal), Finish (sidebar, plain-sentence summary,
+  Create). Done screen: "Add the first …" (createPath), Open the table, Change the
+  fields / pages — tenant links now go through `projectHref`/`pagePath` (they were
+  bare `/route`). Saved progress from the 8-step version is mapped (`v: 2`).
+  `AreaCard` moved from RouteEditor into `areas.tsx`. Config is compared to the
+  generated copy after the same filter round-trip, so an untouched config is no
+  longer published as a "customized" version 1.
+- Files (admin + mint-tenant): the above, PagePanels, RouteEditor, areas;
+  guides mint-docs models/pages, admin /docs/builder.
+- Verified: tsc + eslint (both apps); mock pages without sign-in (wizard through
+  all three steps, Preview, Create request body, done screen; add page fill +
+  Save → `POST customers {name}` and back to the table); 375px no side scroll.
+  Not verified signed in.
