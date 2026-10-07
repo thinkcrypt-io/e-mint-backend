@@ -29,6 +29,10 @@ changed. Never leave work done but untracked here.
   app, `NEXT_PUBLIC_PANEL=tenant`). Remote `origin`
   (aiasifistiaque/mint-admin). **Branch `main`** — the deploy branch for both
   panels (Vercel). `v3` is frozen.
+- `mint-tenant/` — **the tenant panel on its own** (since 2026-10-07, WO-45/46): the tenant pages
+  from admin, `IS_TENANT_PANEL` always on, styled like the marketing website. Remote `origin`
+  (aiasifistiaque/mint-tenant), branch `main`, dev :3500. Not deployed yet — until it is, the live
+  tenant panel still builds from `admin/`, and a shared component change goes into both repos.
 - `backend/` — Express + Mongoose. Remote **`mint`**
   (thinkcrypt-io/e-mint-backend), **branch `v3`**. Never push to `origin` or
   `boilerplate`.
@@ -134,6 +138,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 42 | **Public API read-only fields (`publicApi.readOnlyFields`, template `endpoints[].readOnly`): a customer can't create an order as `paid`** | both | M | done (pushed: backend `a4e012bf`, admin `136e33f`) |
 | 43 | **One collection per project (D21): a project's models share `t_<projectId>` with a `_model` field; per-model index manager; migration of existing projects** | both | L | done (scratch-verified; production migration pending the user's yes — DEPLOY.md §1.5) |
 | — | **Bug: deleting a project left its site widgets, carts, payments, payment settings (sealed Stripe keys) and undo copies behind** (`SCOPED` in `projectLifecycle.function.ts`) | backend | S | done (2026-10-06) |
+| 45 | **Tenant panel in its own repo `mint-tenant`** (aiasifistiaque/mint-tenant `main` `6d07f7f`): the tenant pages only, `IS_TENANT_PANEL` always on | tenant | M | done (2026-10-07; not deployed — the live tenant panel still builds from mint-admin) |
+| 46 | **Tenant panel in the marketing website's look** — same components, the website's palette, Outfit/JetBrains Mono, uppercase light headlines, pill buttons, colour tones | tenant | M | done (2026-10-07) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -952,6 +958,38 @@ data are byte-for-byte as before (checked as above); the migration has run on
 the scratch DB and (on the user's yes) production; all smoke suites pass;
 README D21 is marked done and this Handoff, CHANGELOG and DEPLOY.md
 (migration step) are updated. Size L (~1–2 days).
+
+## WO-45 — Tenant panel in its own repo (M) — done
+
+The user (2026-10-07): "we'll separate the tenant panel from the superadmin. push the tenant pages to
+https://github.com/aiasifistiaque/mint-tenant".
+
+- New folder `mint-tenant/` (own git repo, remote `origin` = aiasifistiaque/mint-tenant, branch `main`),
+  copied from admin `main` `266cbfd`. Removed every super-admin page folder (`ADMIN_ONLY_PAGES`), `/docs`,
+  `/user-docs` (redirected to mint-docs), `[slug]`, `sidebaritems`, `sidebarcategories`, `layouts/test.jsx`.
+- `panel.ts`: `PANEL = 'tenant'`, `IS_TENANT_PANEL = true` (no env switch). `NEXT_DIST_DIR` dropped; the
+  Turbopack root is the repo's own folder. Dev port 3500 (`npm run dev`, launch config `mint-tenant`).
+- `.env.example` lists the env; README has the production env.
+- **Still open:** a Vercel project for mint-tenant (ask the user first), then point the tenant domain at it;
+  only after that remove the tenant-only code from mint-admin (its `NEXT_PUBLIC_PANEL=tenant` deployment
+  is still the live tenant panel). Until then a change to a shared component goes into both repos.
+
+## WO-46 — Tenant panel in the website's look (M) — done
+
+The user: "the tenant ui must be the ui of the marketing website. the ui features must be same. the
+components remains same the styling must change". Done at the theme level so every screen follows:
+
+- `src/theme/palettes.ts` — the built-in theme (id `default`, now named MINT) is the website palette;
+  `colors.theme.ts` + `index.ts` paint it into the tokens through the role map now in `roles.ts`
+  (shared with `applyTheme.ts`), so first paint is right. Other colour themes still work.
+- Type: Outfit + JetBrains Mono via next/font (`app/layout.tsx`); h1–h3 uppercase extra-light; weight
+  tokens 500→400, 600/700/800→500; field labels and table headers in mono caps.
+- `recipes.ts` — pill buttons (ink solid with a violet hover glow; hairline outline), light uppercase
+  dialog/drawer titles; radii l1/l2/l3 = 8/12/20px; `radius` constants 16px panels, pill buttons.
+- `src/theme/tones.ts` — the website's six tones, `CAPS`, `MONO_CAPS`, `GLYPH`. Sidebar: MINT mark +
+  organization name in caps (`SidebarBrand`), section headings in caps with the icon in a tone, the
+  current page as a white pill with its section's dot. Project cards: glyph tiles by kind. Charts: tone series.
+  Navbar title in caps; footer © MINT.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

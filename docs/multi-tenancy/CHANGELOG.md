@@ -1142,3 +1142,18 @@ Decisions D14–D17 (README).
 - Verified on a private stack (Mongo :27987, backend :5041 built to a scratch
   `dist`): `tsc --noEmit` clean; every suite in `run-all.sh` passes (the last
   five re-run after a backend restart — sign-up rate limit, 429).
+
+## 2026-10-07 — WO-45 Tenant panel in its own repo
+- `mint-tenant/` (aiasifistiaque/mint-tenant `main`), copied from admin `main` `266cbfd` without the
+  super-admin pages; `IS_TENANT_PANEL` fixed on; port 3500; README, `.env.example`, `docs/MULTI_TENANCY.md`.
+- Verified: `tsc --noEmit` clean; `next build` passes; signed in as a scratch tenant (private backend :5041,
+  Mongo :27997) and opened the landing page, sign-in, projects, a project dashboard, a model table, the
+  new-record drawer and the model builder at 1440px and 390px (no horizontal overflow).
+- Not deployed; mint-admin unchanged (it still serves the live tenant panel).
+
+## 2026-10-07 — WO-46 Tenant panel in the website's look
+- Files (mint-tenant): `src/theme/{palettes,colors.theme,index,recipes,roles,tones,applyTheme}.ts`,
+  `src/app/{layout.tsx,globals.css}`, `constants.tsx` (radius, modal button), `nav/Layout.tsx`,
+  `nav/sidebar/{Sidebar,SidebarItem,SideDrawer,EditorSidebar}.tsx`, `sidebar-components/{SidebarSection,SidebarBrand}.tsx`,
+  `nav/EditorLayoutFetching.tsx`, `nav/Footer.tsx`, `cl/PageHeader.tsx`, `tenant/ProjectsBoard.tsx`, `dashboard/charts.tsx`.
+- Verified by screenshots in light and dark (agent-browser) — see WO-45.
