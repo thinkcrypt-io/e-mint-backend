@@ -8,6 +8,7 @@ const invoiceStatus = [
 	{ label: 'Paid', value: 'paid' },
 	{ label: 'Partial', value: 'partial' },
 	{ label: 'Cancelled', value: 'cancelled' },
+	{ label: 'Due', value: 'due' },
 	{ label: 'Overdue', value: 'overdue' },
 ];
 
@@ -57,7 +58,7 @@ const schema = new Schema<Type>(
 		items: { type: [InvoiceItemSchema], default: [] },
 		status: {
 			type: String,
-			enum: ['draft', 'sent', 'paid', 'partial', 'cancelled', 'overdue'],
+			enum: ['draft', 'sent', 'paid', 'partial', 'due', 'cancelled', 'overdue'],
 			required: true,
 			default: 'draft',
 		},
@@ -145,7 +146,7 @@ type Type = {
 		rate: number;
 		total: number;
 	};
-	status: 'draft' | 'sent' | 'paid' | 'partial' | 'cancelled' | 'overdue';
+	status: 'draft' | 'sent' | 'paid' | 'partial' | 'due' | 'cancelled' | 'overdue';
 	docType: 'bill' | 'invoice' | 'receipt';
 	paymentMethod?: string;
 	bank?: {
