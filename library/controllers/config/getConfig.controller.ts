@@ -47,6 +47,8 @@ const getConfig = ({
 							? settings[key].schema.renderCondition.toString()
 							: undefined,
 						...settings[key]?.schema,
+						// Conditional read-only — the edit form shows the field locked when the record meets it.
+						...(settings[key]?.lockWhen?.length && { lockWhen: settings[key].lockWhen }),
 					};
 
 					acc[key] = constructSchema;

@@ -57,6 +57,17 @@ const fieldSchema = Joi.object({
 	min: Joi.number(),
 	max: Joi.number(),
 	populate: Joi.alternatives(Joi.string(), Joi.object()),
+	// Conditional read-only: changeable until the record meets these (all of
+	// them) — a bill's status locks once it is void or paid. fieldLocks.function.
+	lockWhen: Joi.array()
+		.items(
+			Joi.object({
+				field: Joi.string().required(),
+				op: Joi.string().valid('is', 'not', 'in', 'gt', 'gte', 'lt', 'lte', 'contains', 'empty', 'filled').required(),
+				value: Joi.alternatives(Joi.string().allow(''), Joi.number(), Joi.boolean(), Joi.array().items(Joi.string())),
+			})
+		)
+		.max(10),
 	// Presentation for the admin (label, input type, table cell, options…) —
 	// free-form, as it is in the settings files.
 	schema: Joi.object().unknown(true),

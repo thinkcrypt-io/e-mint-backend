@@ -413,6 +413,13 @@ const makePatchers = async (
 		if (!Array.isArray(data?.fields)) return data;
 		let fields = data.fields
 			.filter((f: any) => !removed.has(f.key))
+			// A lock testing a removed field goes too ("is empty" would hold for good).
+			.map((f: any) => {
+				if (!Array.isArray(f.lockWhen) || !f.lockWhen.some((c: any) => removed.has(c?.field))) return f;
+				const lockWhen = f.lockWhen.filter((c: any) => !removed.has(c?.field));
+				const { lockWhen: _gone, ...rest } = f;
+				return lockWhen.length ? { ...rest, lockWhen } : rest;
+			})
 			.map((f: any) => {
 				const gen = genByKey.get(f.key);
 				if (!gen || !changed.has(f.key)) return f;

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../functions/recordHistory.function.js';
+import { lockedChanges, lockedMessage } from '../../functions/fieldLocks.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -36,6 +37,11 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			// Snapshot before the assignments below mutate `data` in place —
 			// after them there is nothing left to compare the new values against.
 			const before = data.toObject();
+
+			// Conditional read-only: a field locked by the record's current state
+			// (a paid bill's status) keeps its value.
+			const locked = lockedChanges(settings, before, req.body);
+			if (locked.length) return res.status(400).json({ message: lockedMessage(locked), locked });
 
 			updates.forEach((update: any) => (data[update] = req.body[update]));
 

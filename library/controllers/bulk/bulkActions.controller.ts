@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import DeletedRecord from '../../models/deleted-record/model.js';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { ownRecordsOf } from '../../functions/projectIndexes.function.js';
+import { lockedChanges } from '../../functions/fieldLocks.function.js';
 
 /**
  * Bulk actions on the rows ticked in a table (admin selection bar):
@@ -339,10 +340,13 @@ export const mergeRecords = ({ Model, ownerOnly }: Opts) => async (req: any, res
 		const values = req.body?.values && typeof req.body.values === 'object' ? req.body.values : {};
 		const set: Record<string, any> = {};
 		const changes: any[] = [];
+		const lockSettings = settingsOf(req);
 		for (const [field, from] of Object.entries(values)) {
 			if (!allowEdits.includes(field) || String(from) === keep) continue;
 			const src = mergeDocs.find((d: any) => String(d._id) === String(from));
 			if (!src) continue;
+			// A field locked on the kept record (its status once paid) keeps its value.
+			if (lockedChanges(lockSettings, keepDoc, { [field]: src[field] }).length) continue;
 			set[field] = src[field];
 			changes.push({ field, label: labelOf(req, field), from: text(keepDoc[field]), to: text(src[field]) });
 		}

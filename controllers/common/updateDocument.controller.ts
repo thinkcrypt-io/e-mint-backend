@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { applyFormulas } from '../../library/functions/formula.function.js';
 import { secretPaths } from '../../library/functions/secretFields.function.js';
+import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -38,6 +39,11 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			// Snapshot before the assignments below mutate `data` in place —
 			// after them there is nothing left to compare the new values against.
 			const before = data.toObject();
+
+			// Conditional read-only (settings `lockWhen`): a field the record's
+			// current state has locked — a paid bill's status — keeps its value.
+			const locked = lockedChanges(settings, before, req.body);
+			if (locked.length) return res.status(400).json({ message: lockedMessage(locked), locked });
 
 			updates.forEach((update: any) => (data[update] = req.body[update]));
 			// Formula fields, from the record as it now stands.

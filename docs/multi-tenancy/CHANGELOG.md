@@ -1361,3 +1361,26 @@ Decisions D14–D17 (README).
   no amount), rows, defaults, search, another client isolated, unknown op 400;
   nested.mjs still passes. Mock page for the editor's controls. tsc both apps
   + backend.
+
+## 2026-10-08 — Conditional read-only fields (`lockWhen`)
+- A settings field can carry `lockWhen: [{ field, op, value }]` (ops as view
+  tab conditions; all must hold). When the *stored* record meets them, the
+  field keeps its value: a bill's status locks once void or paid
+  (`status in void, paid`), its amount once paid. `library/functions/
+  fieldLocks.function.ts` (`meets`, `lockedChanges`, `lockText`); a copy for
+  the panel in `components/library/functions/fieldLocks.ts` — keep in step.
+- Enforced in the live update controllers (`controllers/common/
+  updateDocument` + `updateManyDocuments` — the routes-admin router uses
+  these, not `library/controllers/crud`; both copies patched), merge (locked
+  values kept on the kept record), and the public API PUT (dropped silently,
+  like `publicApi.readOnlyFields`). Unchanged values pass. 400 message:
+  "Status can’t be changed any more (status is one of void, paid)".
+- `/get/config` passes `lockWhen` into the schema and form fields; the edit
+  drawer (BackendCreateModal) shows a locked field as the new `locked` input
+  (value as words, reason as helper). Settings editor: *Locked when* group
+  under More (shared `ConditionsEditor`, moved out of ViewTabsEditor). Joi
+  validates `lockWhen`; model changes drop conditions on removed fields.
+- Verified: private backend (locks.mjs, 15 checks — allowed while open, paid
+  goes through, then status/amount refused, unchanged values pass, bulk edit
+  with a void bill refused). Mock page: Locked when group, edit form locked
+  with the reason. tsc both apps + backend.

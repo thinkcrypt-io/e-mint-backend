@@ -1,4 +1,5 @@
 import express from 'express';
+import { lockedChanges } from '../library/functions/fieldLocks.function.js';
 import Joi from 'joi';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
@@ -607,7 +608,7 @@ router.get(
 
 /* ------------------------------------------------------- model routes */
 
-type Ctx = { def: any; Model: mongoose.Model<any>; customer: any | null; formulas: any[] };
+type Ctx = { def: any; Model: mongoose.Model<any>; customer: any | null; settings: Record<string, any>; formulas: any[] };
 
 /** The model behind `/:route`, if `action` is public — and the customer when it needs one. */
 const open = async (req: any, action: string): Promise<Ctx> => {
@@ -621,7 +622,7 @@ const open = async (req: any, action: string): Promise<Ctx> => {
 	// The route's settings as the panels use them (a published copy, or generated) — for formulas.
 	const published = await getActiveSettings(def.route);
 	const settings = published?.data ? dataToSettings(published.data) : generateSettings(def, makeTargetLookup(req.app, [def]));
-	return { def, Model, customer, formulas: formulasOf(settings) };
+	return { def, Model, customer, settings, formulas: formulasOf(settings) };
 };
 
 /**
@@ -727,7 +728,10 @@ router.put(
 		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
 		const doc: any = await ctx.Model.findOne({ _id: req.params.id, ...owned(ctx) });
 		if (!doc) throw new TenancyError(404, 'Not found');
-		doc.set(bodyOf(req, ctx));
+		const body = bodyOf(req, ctx);
+		// Locked by the record's state (a paid order's status): kept as it is, like a read-only field.
+		for (const l of lockedChanges(ctx.settings, doc.toObject(), body)) delete body[l.field];
+		doc.set(body);
 		applyFormulas(doc, ctx.formulas);
 		const changed = doc.isModified();
 		try {

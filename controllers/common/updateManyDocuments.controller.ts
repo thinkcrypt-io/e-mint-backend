@@ -2,6 +2,7 @@ import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 import { formulaPipeline } from '../../library/functions/formula.function.js';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
+import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -28,6 +29,18 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 				return res.status(400).json({
 					message: `Invalid fields: '${invalidUpdates.join(', ')}' not allowed`,
 				});
+			}
+
+			// Conditional read-only: refused when any selected record has the field locked.
+			if (updateKeys.some(k => settings?.[k]?.lockWhen?.length)) {
+				const current = await model.find({ _id: { $in: ids }, store: req.store }).lean();
+				for (const d of current) {
+					const locked = lockedChanges(settings, d, updates);
+					if (locked.length)
+						return res
+							.status(400)
+							.json({ message: `${lockedMessage(locked)} — on at least one of the selected records`, locked });
+				}
 			}
 
 			const updateData: any = {};

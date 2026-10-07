@@ -1,13 +1,15 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
+import { lockedChanges, lockedMessage } from '../../functions/fieldLocks.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
 	select?: string;
 	allowEdits: string[];
+	settings?: Record<string, any>;
 };
 
-const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
+const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			const { ids, updates, type: keyType = 'string' } = req.body;
@@ -24,6 +26,18 @@ const updateManyDocuments = ({ model, allowEdits }: EndwareType) => {
 				return res.status(400).json({
 					message: `Invalid fields: '${invalidUpdates.join(', ')}' not allowed`,
 				});
+			}
+
+			// Conditional read-only: refused when any selected record has the field locked.
+			if (updateKeys.some(k => settings?.[k]?.lockWhen?.length)) {
+				const current = await model.find({ _id: { $in: ids }, store: req.store }).lean();
+				for (const d of current) {
+					const locked = lockedChanges(settings, d, updates);
+					if (locked.length)
+						return res
+							.status(400)
+							.json({ message: `${lockedMessage(locked)} — on at least one of the selected records`, locked });
+				}
 			}
 
 			const updateData: any = {};
