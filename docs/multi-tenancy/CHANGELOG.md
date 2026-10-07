@@ -1157,3 +1157,22 @@ Decisions D14–D17 (README).
   `nav/sidebar/{Sidebar,SidebarItem,SideDrawer,EditorSidebar}.tsx`, `sidebar-components/{SidebarSection,SidebarBrand}.tsx`,
   `nav/EditorLayoutFetching.tsx`, `nav/Footer.tsx`, `cl/PageHeader.tsx`, `tenant/ProjectsBoard.tsx`, `dashboard/charts.tsx`.
 - Verified by screenshots in light and dark (agent-browser) — see WO-45.
+
+## 2026-10-07 — Model page made easier to read (admin + mint-tenant, UI only)
+- `/model-builder/[id]` (`ModelEditor.tsx`) is now tabs: **Fields** (with a live `FormPreview` beside the list on xl
+  screens and a Page layout link), **Settings** (Basics / Record numbers / Who sees each record), **Connections** (links
+  out from reference fields, links in from `referencedBy`), **Advanced** (model name, address, collection, version;
+  Turn off / Delete). `?tab=` keeps the tab. One-time intro note (localStorage `model-editor-intro-hidden`), sticky
+  "unsaved changes" bar with Undo all / Save, ⌘S, a beforeunload warning, red error counts on tabs.
+- `ModelPanels` takes `only` (which panels) and `hideIdentity`; the wizard and FeatureWizard still render all of them.
+- `FieldsEditor`: kind picture per row (`KindIcon`), column titles, the key shown as "API name" under the label and
+  edited in More → API name, More/Less button, details grouped (In the form, Limits/Length, options, Table and search,
+  API name), "Add a field" opens `KindPicker` (type cards) first. Plainer kind hints and key error messages in
+  `modelKinds.ts`; link targets show titles only in the tenant panel.
+- Records link fixed for the tenant panel (`projectHref('/t/<route>')`; was `/<route>`, read as a project).
+- Guides: mint-docs `models` page and admin `/docs/builder` relabelled to match.
+- Verified: tsc + eslint clean in both repos; mint-tenant dev rendered `ModelEditorView` on a throwaway mock page (no
+  login): all four tabs, add-a-field flow, save bar, light/dark, 375px with no sideways scroll. Not clicked through
+  with a real login: signing the browser pane in was refused by the permission check.
+- Seen in passing (not fixed): in mint-tenant `next dev`, `/auth/login` 404s — the proxy reads `auth` as a project
+  slug (`NEXT_PUBLIC_APP_PAGES` looks empty in the dev proxy).
