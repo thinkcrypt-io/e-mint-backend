@@ -1320,3 +1320,16 @@ Decisions D14–D17 (README).
   `via` without a link refused (400), add muted with the title. Mock pages for
   the editor (auto-picked path, saved shape) and the muted tab button; tsc +
   lint in both apps and the backend.
+
+## 2026-10-08 — Link fields missing from the record page and drawer
+- A model-builder link field (`project`) never showed on a record's Overview
+  or in the quick-view drawer, though the table showed it. Its view field's
+  `dataKey` is `project.name` (from `tableKey`) while the view config and form
+  layout name it `project`; ConfiguredView and ViewPageBasicInfo looked fields
+  up by dataKey only and skipped what they didn't find. New
+  `viewFieldsByKey(keys, viewFields)` (view-page/sections.ts) indexes by schema
+  key and dataKey; the leftover "Other" section is computed from schema keys
+  too. admin + mint-tenant; frontend only.
+- Verified: real `/get/view` + `/get/schema` responses from a private backend
+  (Project Document with project link + files) rendered on a mock page — the
+  project shows as a link chip, documents as tiles. tsc in both apps.
