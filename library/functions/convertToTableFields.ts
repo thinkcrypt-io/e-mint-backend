@@ -25,6 +25,12 @@ const createTableField = ({ key, field }: { key: string; field: any }): any => {
 		// a second field in small type under it (the email under a name).
 		...(field?.affix && { affix: field.affix }),
 		...(field?.subtitle && { subtitle: field.subtitle }),
+		// Coloured tags (settings schema.colorTags): each option's colour, picked or default.
+		...(field?.colorTags && {
+			colorTags: true,
+			...(field?.options && { options: field.options }),
+			...(field?.optionColors && { optionColors: field.optionColors }),
+		}),
 	};
 };
 

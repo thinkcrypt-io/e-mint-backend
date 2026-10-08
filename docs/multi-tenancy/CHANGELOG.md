@@ -1543,3 +1543,21 @@ Decisions D14–D17 (README).
   pickers (VDataMenu/VDataTags .new) already apply optionFilters.
 - Verified: mock page — the suggestion shows for Project and writes the
   filter; tsc tenant + admin.
+
+## 2026-10-08 — Coloured tags for choice fields
+- Settings `schema.colorTags` (on/off) and `schema.optionColors` ({ value:
+  palette }, only the colours someone picked). `convertToTableFields` /
+  `convertToViewFields` (backend + panel) pass `colorTags`, `options`,
+  `optionColors`; the table row (CustomTd) and ViewRow / ModalViewItem draw
+  `OptionTags` — a subtle Badge per value in its colour, the option's label.
+- Defaults (`defaultTagColor`): by meaning — paid/active/yes green,
+  void/cancelled/failed red, due/pending orange, draft/inactive/no gray,
+  new/in progress blue — else a rotation by option order. Booleans get
+  Yes/No; model enums work without a settings option list.
+- Builder: `TagColorsEditor` under a field's How it looks (fields with
+  options, an enum or a yes/no): the switch, each option as its tag with 10
+  swatches and a Default reset. Swatches use `<palette>.fg` — the theme maps
+  gray/green `.solid` onto the brand black.
+- Verified: mock page — paid green, due orange → purple when picked, void
+  red, draft gray, Yes/No green/gray, in table and record row; dark and
+  light. tsc tenant + admin + backend.

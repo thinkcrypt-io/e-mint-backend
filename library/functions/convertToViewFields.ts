@@ -30,6 +30,12 @@ const createViewField = ({ key, field }: { key: string; field: any }): any => {
 		...(field?.dataModel && { dataModel: field.dataModel }),
 		// Words or another field's value before/after the value ("BDT 1,200").
 		...(field?.affix && { affix: field.affix }),
+		// Coloured tags (settings schema.colorTags): each option's colour, picked or default.
+		...(field?.colorTags && {
+			colorTags: true,
+			...(field?.options && { options: field.options }),
+			...(field?.optionColors && { optionColors: field.optionColors }),
+		}),
 		// A section list's row fields, for its table.
 		...(field?.section?.dataModel && { dataModel: field.section.dataModel }),
 	};
