@@ -1583,3 +1583,10 @@ Decisions D14–D17 (README).
   required; /get/config form carries fillFrom). Mock form: picking bills
   fills 1000 then 60; loading a saved payment keeps 77; picking after load
   fills. tsc tenant + admin + backend.
+
+## 2026-10-08 — Status tags restyled
+- `StatusTag` (functions/optionColors.tsx): a rounded pill tinted in its
+  colour (`<palette>.subtle`), a 1.5px border, text and a leading dot in
+  `<palette>.fg` (gray: fg.muted on bg.muted) — the "design status tag" look
+  the user asked for. `OptionTags` (table, record page, quick view) and the
+  settings colour preview both use it. Checked dark and light on a mock.
