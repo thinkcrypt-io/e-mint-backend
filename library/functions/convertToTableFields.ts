@@ -21,6 +21,10 @@ const createTableField = ({ key, field }: { key: string; field: any }): any => {
 		...(field?.tooltip && { tooltip: field.tooltip }),
 		...(field?.displayValue && { displayValue: field.displayValue }),
 		...(field?.bold && { bold: true }),
+		// Words or another field's value before/after the value ("BDT 1,200"), and
+		// a second field in small type under it (the email under a name).
+		...(field?.affix && { affix: field.affix }),
+		...(field?.subtitle && { subtitle: field.subtitle }),
 	};
 };
 

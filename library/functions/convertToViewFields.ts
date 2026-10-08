@@ -28,6 +28,8 @@ const createViewField = ({ key, field }: { key: string; field: any }): any => {
 		...(field?.path && { path: field.path }),
 		...(field?.model && { model: field.model }),
 		...(field?.dataModel && { dataModel: field.dataModel }),
+		// Words or another field's value before/after the value ("BDT 1,200").
+		...(field?.affix && { affix: field.affix }),
 		// A section list's row fields, for its table.
 		...(field?.section?.dataModel && { dataModel: field.section.dataModel }),
 	};

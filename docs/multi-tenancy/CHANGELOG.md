@@ -1460,3 +1460,25 @@ Decisions D14–D17 (README).
   writing `route.guidelines` with a custom title ("View billing rules").
   tsc tenant + admin + backend. Not run against a live backend (the private
   one was cleared); storage is the existing config draft/publish path.
+
+## 2026-10-08 — Around a value: before/after words and a subtitle
+- Settings field `schema.affix = { before?, after? }`, each `{ text }` or
+  `{ field }` (another field of the same record — an amount with its
+  currency), and `schema.subtitle` (a field key shown small under the table
+  cell — the email under a name). Display only; stored values, search, sort,
+  filters and exports are unchanged.
+- Backend `convertToTableFields` passes `affix` + `subtitle`,
+  `convertToViewFields` passes `affix` (also the panel's own converters, for
+  /get/schema-built views like the quick view).
+- Panel `functions/affix.tsx` (`affixOf`, `fieldText`, `Affixed`):
+  `TableRowComponent` works out the words per row (none on an empty value)
+  and `CustomTd` wraps the value (Checkbox/Tag cells forward them too);
+  `ViewRow` and `ModalViewItem` wrap the view value.
+- Builder: `ValueDisplayPanel` ("Advanced: around a value", folded unless
+  set) at the bottom of the Fields & rules and Table tabs, editing the
+  settings draft: before / after (nothing, words, another field), under it
+  in the table (a field), with a "Reads as" line.
+- Verified: mock page — "BDT 1,200" / "USD 0" from each row's currency,
+  "3 pcs", email under the name, "--" alone for an empty total, desktop and
+  375px cards; editing "after" to "units" re-renders every row. tsc tenant +
+  admin + backend.
