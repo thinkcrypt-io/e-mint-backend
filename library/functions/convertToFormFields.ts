@@ -72,6 +72,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig.folder && { folder: fieldConfig.folder }),
 							...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
+							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
 							...(fieldConfig?.lockMatch && { lockMatch: fieldConfig.lockMatch }),
 							...(fieldConfig?.noEdit && { noEdit: true }),
@@ -116,6 +117,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 						// Which linked records a picker offers (the route builder's Settings).
 						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
+							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
 							...(fieldConfig?.lockMatch && { lockMatch: fieldConfig.lockMatch }),
 							...(fieldConfig?.noEdit && { noEdit: true }),

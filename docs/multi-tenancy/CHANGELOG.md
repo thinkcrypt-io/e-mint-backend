@@ -1561,3 +1561,25 @@ Decisions D14–D17 (README).
 - Verified: mock page — paid green, due orange → purple when picked, void
   red, draft gray, Yes/No green/gray, in table and record row; dark and
   light. tsc tenant + admin + backend.
+
+## 2026-10-08 — Filled in from a linked record
+- Settings `schema.fillFrom = { from, formula }`: `from` a record-picker
+  field of the same record, `formula` one field of the picked record (copied
+  as it is) or a formula over its number fields (formula engine) — a
+  payment's amount = the bill's `total - paid`.
+- Server: `library/functions/linkedFill.function.ts`, `linkedFills` in the
+  routes-admin POST chain after formRules and before validation: fills empty
+  fields from the picked record (same route resolution and read checks as
+  rollups: `resources`, `permissionsOf`, own-records, access rule). Values
+  sent are kept. `convertToFormFields` passes `fillFrom`.
+- Panel: `LinkedFiller` in FormMain watches each `from` picker and fills
+  (form data + changed data) when it changes in the form; a record loading
+  into the edit form never overwrites what it holds. `functions/linkedFill.ts`
+  mirrors `fillValue`. Builder: `FillFromEditor` ("Filled in from a linked
+  record") in a field's details, for non-picker, non-formula fields — the
+  picker, then "Its <field>" or a formula checked live.
+- Verified: private backend fillfrom.mjs, 9 checks (left empty → 1000 from
+  1200 − 200 and memo = bill title; typed values kept; no bill → still
+  required; /get/config form carries fillFrom). Mock form: picking bills
+  fills 1000 then 60; loading a saved payment keeps 77; picking after load
+  fills. tsc tenant + admin + backend.

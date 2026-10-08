@@ -51,6 +51,7 @@ import exportRows from '../../library/controllers/export/exportRows.controller.j
 import { importRows, importTemplate } from '../../library/controllers/bulk/importRows.controller.js';
 import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
+import { fillLinked } from '../../library/functions/linkedFill.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import {
 	resolveRoute,
@@ -202,6 +203,16 @@ const defineRoutes = ({
 			next(e);
 		}
 	};
+	// Fields filled from a linked record (settings schema.fillFrom), left empty on
+	// create: filled from the picked record, before validation checks them.
+	const linkedFills = async (req: any, _res: any, next: any) => {
+		try {
+			await fillLinked(req, req.resolvedRoute?.settings, req.body);
+			next();
+		} catch (e) {
+			next(e);
+		}
+	};
 	/** A validator with the hidden fields made optional. */
 	const relaxed = (schema: any, hidden: string[] = []) =>
 		hidden.reduce((s, key) => {
@@ -219,6 +230,7 @@ const defineRoutes = ({
 			protect,
 			formulas,
 			formRules,
+			linkedFills,
 			R(c => (req: any, res: any, next: any) => validate(relaxed(c.VALIDATORS.POST, req.formHidden))(req, res, next)),
 			R(c => ifExists(c.EXIST_OPTIONS)),
 			hasPermission([permissions.create]),
