@@ -364,7 +364,7 @@ const defineRoutes = ({
 	);
 	router.get(
 		'/get/schema',
-		replaceController?.schema || R((c, r) => getSchema({ ...c.SCHEMA, formRules: r.frontendConfig?.formRules }))
+		replaceController?.schema || R((c, r) => getSchema({ ...c.SCHEMA, formRules: r.frontendConfig?.formRules, form: r.frontendConfig?.form }))
 	);
 	// Registered for every route, not only those with a config file: a
 	// RouteConfig published in the builder makes any route a generic page.

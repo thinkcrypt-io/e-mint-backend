@@ -1482,3 +1482,28 @@ Decisions D14–D17 (README).
   "3 pcs", email under the name, "--" alone for an empty total, desktop and
   375px cards; editing "after" to "units" re-renders every row. tsc tenant +
   admin + backend.
+
+## 2026-10-08 — Pick linked records by name in conditions; sections that show when needed
+- Builder `RecordPicker` (Chakra Combobox): searches the linked route as you
+  type (its search fields, 20 at a time), shows the picked record's name,
+  stores its id; several as chips for "is one of". The route comes from
+  `useLinkModels` (model name → route, display field) or is given.
+  Used by `ConditionsEditor` for ref fields (Locked when, tab Show only,
+  rollup conditions — ref fields now also get "is one of"; switching into /
+  out of it turns the value into a list / its first item) and by form rules
+  for record pickers (`RuleField.route` = settings `schema.model`; ops now
+  is, is not, is one of, is none of, filled, empty).
+- Form sections can carry `showIf` (a rule, as formRules). `rulesOf`
+  (backend + panel copy) gives it to every field of the section, ANDed with
+  the field's own rule — so save drops hidden values, required only while
+  shown, bulk import too — and `FormMain` hides a section whose fields are
+  all hidden. `formSectionSchema.showIf: ruleSchema`; getSchema gets `form`
+  so hand-written layouts follow it. Builder: `SectionRulesPanel` on the
+  Form tab (conditions on fields outside the section; own-field conditions
+  flagged and refused on save via `sectionRuleProblems`); `RuleConditions`
+  extracted from FormRulesPanel for both. `SectionsEditor` now keeps keys it
+  doesn't edit (showIf) on each section.
+- Verified: mock page — searching "ba" lists Bank transfer, picking it
+  stores the id and shows the name; a section rule "Method is Bank
+  transfer" hides Bank details until the form's method is that id, and
+  hides it again when it changes. tsc tenant + admin + backend.

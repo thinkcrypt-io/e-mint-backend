@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
 import { FieldInfo, checkFormula, format, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
-import { rulesSchema } from '../../functions/formRules.function.js';
+import { ruleSchema, rulesSchema } from '../../functions/formRules.function.js';
 
 /**
  * What a draft may contain, and the safety rules that keep a published
@@ -116,6 +116,8 @@ const formSectionSchema = Joi.object({
 	sectionTitle: Joi.string().allow(''),
 	description: Joi.string().allow(''),
 	fields: Joi.array().items(Joi.alternatives(Joi.string(), Joi.array().items(Joi.string()))),
+	// Shown only when this holds — the whole section hides (formRules.function rulesOf).
+	showIf: ruleSchema,
 }).unknown(true);
 
 // A view section's items: an own field, fields of a referenced record, or a
