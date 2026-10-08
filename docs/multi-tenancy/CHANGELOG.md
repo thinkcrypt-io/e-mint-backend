@@ -1590,3 +1590,16 @@ Decisions D14–D17 (README).
   `<palette>.fg` (gray: fg.muted on bg.muted) — the "design status tag" look
   the user asked for. `OptionTags` (table, record page, quick view) and the
   settings colour preview both use it. Checked dark and light on a mock.
+
+## 2026-10-08 — Fill-from switch; formula input can be undone
+- `FillFromEditor`: "Filled in from a linked record" starts with a switch
+  ("Fill this from a linked record"), off unless the field has `fillFrom`;
+  the pickers show only when it's on, and turning it off clears `fillFrom`.
+- `SettingsEditor`: a formula field's "Asked as" stays a dropdown (value
+  Formula) with a calculator button beside it to edit the formula — before,
+  the dropdown became a button that only reopened the formula window, so the
+  field couldn't be turned back. Cancelling the formula window right after
+  picking Formula restores the field as it was (`formulaUndo`).
+- Verified on a mock: switch off → no pickers, on → pickers; Formula then
+  Cancel → back to Number (automatic); saved formula then Number → plain
+  number, formula dropped. tsc tenant clean.
