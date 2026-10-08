@@ -1531,3 +1531,15 @@ Decisions D14–D17 (README).
   malformed section rule is refused. Mock page: Copy details copied the
   six filled lines ("Balance: BDT 12,500", empty Note left out), the switch
   and the visibility panel write copy / hideEmpty / showIf. tsc all three.
+
+## 2026-10-08 — Form tab: pickers that depend on other fields
+- Builder only. `PickerFiltersPanel` on the Form tab lists the form's
+  record pickers with their `schema.optionFilters` (the settings' "Which
+  records are offered"), edited with `OptionFiltersEditor`, now extracted
+  from `LinkedRecordsEditor` and shared. It suggests the usual link in one
+  click: when the linked model has a picker to what another form picker
+  picks (Project.client → clients, form has Client), "Only where Client is
+  this form's Client" adds `{ field: 'client', from: 'client' }`. The form's
+  pickers (VDataMenu/VDataTags .new) already apply optionFilters.
+- Verified: mock page — the suggestion shows for Project and writes the
+  filter; tsc tenant + admin.
