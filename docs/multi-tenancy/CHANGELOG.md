@@ -1430,3 +1430,33 @@ Decisions D14–D17 (README).
 - Verified: mock edit drawer for a paid bill — title/amount editable; code,
   status, formula, rollup, read-only note muted (read only, tabIndex -1,
   greyed) with their reasons. tsc both apps + backend.
+
+## 2026-10-08 — Muted links by name, locked section lists, user guidelines
+- A muted (locked / noEdit / read-only) linked field showed the record's id:
+  the form holds the id. `useLinkedNames` in `descriptors/text.tsx` shows the
+  name — from the record as loaded when it came populated (`recordValue`,
+  set by `mutedForUpdate`), else `GET <model>/<id>` for one, the linked list
+  (limit 999, cached with the picker's) for several.
+- Richer inputs locked the same way now get `locked: true` instead of the
+  muted box: section lists (`custom-section-array`, `section-data-array`)
+  pass `isDisabled`, which hides add, edit and delete; a single section
+  (`section-object`) shows its own fields as read-only.
+- User guidelines: config `route.guidelines = { title?, items: [{ title,
+  text? }] }` — plain-words rules for the people using a page ("A void
+  invoice can't be reversed"). Edited in the page builder's Fields & rules
+  tab (`GuidelinesEditor`: title, add/reorder/remove; disabled without a
+  table header). Read through `/get/route` (no backend change: `route` is
+  free-form in the draft schema). Panel `components/guidelines/Guidelines.tsx`
+  — `GuidelinesDialog` (centred dialog; bottom SheetContent on a phone),
+  `GuidelinesLink`, `viewLabel` ("View billing rules"). Shown in the table
+  header's ⋯ menu (the menu now appears with guidelines or bulk upload, and
+  takes Export with it), above the CreateModal / BackendCreateModal forms,
+  and on the new-record page. MCP `update_page` takes `guidelines` (false
+  removes; ≤50, title 200 / text 2000 chars; skipped with a note on a page
+  without `route`).
+- Verified: mock page — locked client reads "Acme Ltd" (fetched by id), a
+  locked section list has no add/edit/delete, ⋯ menu "View user guidelines"
+  + Export, the dialog on desktop and the bottom sheet at 375px, the editor
+  writing `route.guidelines` with a custom title ("View billing rules").
+  tsc tenant + admin + backend. Not run against a live backend (the private
+  one was cleared); storage is the existing config draft/publish path.

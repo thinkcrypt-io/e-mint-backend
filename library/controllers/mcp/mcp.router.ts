@@ -50,7 +50,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, form or detail layout, or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
+Use update_page for later changes to a page's columns, form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -149,6 +149,21 @@ const planText = (plan: FeaturePlan) => {
 	if (plan.problems.length) out.push('', '## Problems', ...plan.problems.map(p => `- ${p}`));
 	out.push('', plan.ok ? 'The plan is valid. Walk the user through it step by step before building.' : 'Fix the problems and check again.');
 	return out.join('\n');
+};
+
+/** update_page's `guidelines`, tidied: up to 50, each a title (and words under it); none → removed. */
+const guidelinesOf = (v: any): { title?: string; items: { title: string; text?: string }[] } | null => {
+	if (!v || typeof v !== 'object') return null;
+	const items = (Array.isArray(v.items) ? v.items : [])
+		.map((i: any) => ({
+			title: String(i?.title ?? '').trim().slice(0, 200),
+			...(String(i?.text ?? '').trim() && { text: String(i.text).trim().slice(0, 2000) }),
+		}))
+		.filter((i: any) => i.title)
+		.slice(0, 50);
+	if (!items.length) return null;
+	const title = String(v.title ?? '').trim().slice(0, 60);
+	return { ...(title && { title }), items };
 };
 
 /**
@@ -441,7 +456,7 @@ const TOOLS: ToolDef[] = [
 		name: 'update_page',
 		title: 'Change a page layout',
 		description:
-			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, or Bulk upload (on/off and its options). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
+			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, user guidelines, or Bulk upload (on/off and its options). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -452,6 +467,23 @@ const TOOLS: ToolDef[] = [
 				form: (FEATURE_SCHEMA as any).properties.steps.items.properties.form,
 				view: (FEATURE_SCHEMA as any).properties.steps.items.properties.view,
 				buttonTitle: { type: 'string' },
+				guidelines: {
+					description:
+						'The page’s user guidelines — rules in plain words for the people using it ("A void invoice can’t be reversed"), read from the table’s ⋯ menu and the add/edit forms. Words only: they don’t enforce anything. false removes them; otherwise `items` replaces the list, `title` names it (default "User guidelines").',
+					anyOf: [
+						{ type: 'boolean', enum: [false] },
+						{
+							type: 'object',
+							properties: {
+								title: { type: 'string' },
+								items: {
+									type: 'array',
+									items: { type: 'object', required: ['title'], properties: { title: { type: 'string' }, text: { type: 'string' } } },
+								},
+							},
+						},
+					],
+				},
 				bulkUpload: {
 					description:
 						'The table’s Bulk upload (Excel, CSV or JSON files, every row checked, all or nothing): false to turn it off, true to turn it on, or options — `columns` maps a file’s column names to field keys ({"rme_size_grp": "sizeBand"}); `missing` lists cell values read as empty in number, date and yes/no columns (["C", ".."]); `missingFlag` is a yes/no field ticked on rows that had one; `matchOn` lists fields that together identify a record, so a row matching an existing record (or another row) is refused; `maxRows` (up to 50000, default 2000); `title` names the menu item.',
@@ -486,6 +518,7 @@ const TOOLS: ToolDef[] = [
 				upload = bulkUploadOf(args.bulkUpload, known);
 				if (typeof upload === 'string') return { text: upload, isError: true };
 			}
+			let noGuidelines = false;
 			try {
 				await publishConfigPatch(
 					req,
@@ -512,6 +545,12 @@ const TOOLS: ToolDef[] = [
 								}))
 								.filter((s: any) => s.fields.length);
 						if (args.buttonTitle) next.route = { ...(next.route || {}), button: { ...(next.route?.button || {}), title: String(args.buttonTitle).slice(0, 60) } };
+						// Only a page with a table header: guidelines alone would give it one, untitled.
+						if (args?.guidelines !== undefined && next.route) {
+							const { guidelines, ...rest } = next.route;
+							const g = guidelinesOf(args.guidelines);
+							next.route = g ? { ...rest, guidelines: g } : rest;
+						} else if (args?.guidelines) noGuidelines = true;
 						if (upload !== undefined) {
 							const { bulkUpload, ...rest } = next.route || {};
 							next.route = upload ? { ...rest, bulkUpload: upload } : rest;
@@ -524,7 +563,9 @@ const TOOLS: ToolDef[] = [
 				return { text: e?.message || 'Could not change the page', isError: true };
 			}
 			return {
-				text: `Updated /${route}: ${caller.page(route)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}`,
+				text: `Updated /${route}: ${caller.page(route)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}${
+					noGuidelines ? '\nGuidelines not saved: this page has no table header to show them from.' : ''
+				}`,
 			};
 		},
 	},

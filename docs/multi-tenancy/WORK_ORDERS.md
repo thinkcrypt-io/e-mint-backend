@@ -78,6 +78,8 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 
 **View tabs through another route** (2026-10-08): `viewTabs[].via = { route, foreignField | localField }` lets a record page list records two links away (a client's documents through its projects); add button muted. See CHANGELOG 2026-10-08. Remember a tenant Project model's address is `projects2` (`/projects` is reserved).
 
+**Field rules & user guidelines** (2026-10-08): settings `lockWhen`/`lockMatch` (conditional read-only, `fieldLocks.function.ts` + panel copy), `rollup` fields from linked records (`rollups.function.ts`, worked out on read), muted inputs (`VMuted`, `mutedForUpdate` in CreateModal), and per-page user guidelines in config `route.guidelines` (Fields & rules tab; table ⋯ menu, add/edit forms; MCP `update_page.guidelines`). See CHANGELOG 2026-10-08.
+
 **Conventions that bite:**
 - Tenant code runs inside a scope (AsyncLocalStorage, `tenantScoped`
   plugin). Never `mongoose.models[name]` in code a project reaches — use
