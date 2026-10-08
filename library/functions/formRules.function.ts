@@ -37,7 +37,7 @@ export const ruleSchema: Joi.Schema = Joi.alternatives(
 ).id('rule');
 export const rulesSchema = Joi.object().pattern(Joi.string(), ruleSchema);
 
-const isEmpty = (v: any) =>
+export const isEmpty = (v: any) =>
 	v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0) || (typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !v._id && !Object.keys(v).length);
 
 /** A picked record compares by its id. */
@@ -95,7 +95,7 @@ export const fieldsOfRule = (rule: Rule | undefined, out = new Set<string>()): S
 	return out;
 };
 
-const valueAt = (values: any, key: string) => key.split('.').reduce((o, k) => (o == null ? undefined : o[k]), values);
+export const valueAt = (values: any, key: string) => key.split('.').reduce((o, k) => (o == null ? undefined : o[k]), values);
 
 /**
  * The fields hidden by the rules for these values. A rule reads a field that

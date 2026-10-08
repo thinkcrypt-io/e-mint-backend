@@ -1507,3 +1507,27 @@ Decisions D14–D17 (README).
   stores the id and shows the name; a section rule "Method is Bank
   transfer" hides Bank details until the form's method is that id, and
   hides it again when it changes. tsc tenant + admin + backend.
+
+## 2026-10-08 — Record page: shown only when needed; Copy details
+- View sections take `showIf` (a rule, as formRules), `hideEmpty` and
+  `copy`; the config takes `viewRules` ({ field: rule }). `getViewDocument`
+  applies them to the loaded record: rollups worked out first (so rules can
+  read them), field rules chained via `hiddenFields`, `hideEmpty` drops
+  fields with no value and related lists with no records, and a section
+  left with nothing goes. Record page and quick view both read it. Display
+  only. `formRules.function` now exports `isEmpty` and `valueAt`; validate:
+  `viewSectionSchema.showIf/hideEmpty/copy`, `configDraftSchema.viewRules`.
+- Builder (View tab): `ViewSectionRulesPanel` (per section: "Hide fields
+  with no value", "Show only when…" with RuleConditions over every field) and
+  `FormRulesPanel forView` for field rules; save refuses incomplete ones.
+  The view layout editor gets a per-section "Copy button" switch.
+- Panel `CopyDetails`: "Copy details" at a copy section's top right — its
+  fields as "Title: value" lines (affix words kept, empty fields left out,
+  editor/file fields skipped), clipboard with a textarea fallback.
+- Verified: private backend (own Mongo :27996, server :5041) —
+  viewrules.mjs, 11 checks: a bank account shows Bank details and hides
+  Closing and its empty note; a cash account the reverse; IBAN hidden by its
+  field rule while there's no bank name; `copy` reaches the page; a
+  malformed section rule is refused. Mock page: Copy details copied the
+  six filled lines ("Balance: BDT 12,500", empty Note left out), the switch
+  and the visibility panel write copy / hideEmpty / showIf. tsc all three.

@@ -143,6 +143,12 @@ const viewSectionSchema = Joi.object({
 	description: Joi.string().allow(''),
 	columns: Joi.number().integer().min(1).max(3),
 	fields: Joi.array().items(viewItemSchema).required(),
+	// Shown only when this holds, against the record (viewDocument.controller).
+	showIf: ruleSchema,
+	// Leave out fields with no value (and linked lists with no records).
+	hideEmpty: Joi.boolean(),
+	// A "Copy details" button: the section's fields as "Title: value" lines.
+	copy: Joi.boolean(),
 });
 
 // A tab on the detail page, after Overview: another route's records that
@@ -195,6 +201,8 @@ export const configDraftSchema = Joi.object({
 	viewTabs: Joi.array().items(viewTabSchema),
 	// Conditional form fields: { field: rule } — shown only while the rule holds.
 	formRules: rulesSchema,
+	// The same for the record page and quick view: { field: rule }.
+	viewRules: rulesSchema,
 	filters: Joi.array().items(filterSchema),
 });
 

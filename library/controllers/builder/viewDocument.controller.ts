@@ -7,6 +7,8 @@ import { collectResourceRoutes, getDynamicVersion, ResourceRouteEntry, scopedMod
 import { currentScope, scopeKey } from '../../functions/tenantScope.function.js';
 import { grants } from '../../functions/tenantPermissions.function.js';
 import { resolveRoute, ResolvedRoute } from '../../functions/resolveRoute.function.js';
+import { Rules, hiddenFields, isEmpty, ruleMatches, valueAt } from '../../functions/formRules.function.js';
+import { rollupsOf, withRollups } from '../../functions/rollups.function.js';
 
 /**
  * GET /<route>/get/view/:id — one record, laid out by the route's `view`
@@ -474,6 +476,7 @@ const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: 
 					title: section.title || '',
 					description: section.description || '',
 					columns: section.columns || 2,
+					...(section.copy && { copy: true }),
 					items,
 				});
 			}
@@ -489,6 +492,35 @@ const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: 
 				.populate([...ownPopulate, ...refPopulates])
 				.lean();
 			if (!doc) return res.status(404).json({ message: 'Document not found' });
+
+			// Shown only when needed: a section's `showIf`, a field's `viewRules`
+			// (chained as the form's are), and a section's "hide fields with no
+			// value". Fields from linked records are worked out first so rules can
+			// read them. A section left with nothing to show is left out.
+			const viewRules: Rules = resolved.frontendConfig?.viewRules || {};
+			const conditional = Object.keys(viewRules).length || layout.some((s: any) => s?.showIf || s?.hideEmpty);
+			let shownSections = sections;
+			if (conditional) {
+				const rollups = rollupsOf(resolved.settings);
+				if (rollups.length) await withRollups(req, { doc }, rollups).catch(() => null);
+				const hidden = new Set(hiddenFields(viewRules, doc));
+				const read = (f: string) => (hidden.has(f) ? undefined : valueAt(doc, f));
+				shownSections = sections
+					.map((sec: any, i: number) => {
+						const src = layout[i] || {};
+						if (src.showIf && !ruleMatches(src.showIf, read)) return null;
+						const items = sec.items.filter((it: any) => {
+							const key = it.kind === 'field' || it.kind === 'ref' ? it.key : undefined;
+							if (key && hidden.has(key)) return false;
+							if (!src.hideEmpty) return true;
+							if (key) return !isEmpty(valueAt(doc, key));
+							if (it.kind === 'related') return !!it.total;
+							return true;
+						});
+						return items.length || !sec.items.length ? { ...sec, items } : null;
+					})
+					.filter(Boolean);
+			}
 
 			// Tabs: titles and counts only — each tab's rows load when it's opened.
 			const tabs = (
@@ -510,7 +542,7 @@ const getViewDocument = ({ resolved, Model }: { resolved: ResolvedRoute; Model: 
 				)
 			).filter(Boolean);
 
-			return res.status(200).json({ doc, sections, tabs });
+			return res.status(200).json({ doc, sections: shownSections, tabs });
 		} catch (e: any) {
 			console.error(e.message);
 			return res.status(500).json({ message: e.message });
