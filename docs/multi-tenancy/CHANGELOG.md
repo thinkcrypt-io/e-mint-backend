@@ -1603,3 +1603,21 @@ Decisions D14–D17 (README).
 - Verified on a mock: switch off → no pickers, on → pickers; Formula then
   Cancel → back to Number (automatic); saved formula then Number → plain
   number, formula dropped. tsc tenant clean.
+
+## 2026-10-09 — Details under each record in a picker
+- Settings `schema.pickerDetails` (keys of the linked model's fields, up to
+  4): shown in small type under each record's name in the picker's list —
+  "Total 1,200 · Paid 200". Set in Fields & rules → a picker field →
+  Linked records → "Shown under the name in the list".
+- Panel: `functions/pickerDetails.tsx` (`detailText` — choice names, dates,
+  numbers; `usePickerDetails` reads labels from the linked page's config);
+  used by `VDataMenu.new` and `VDataTags.new`; `createFormFields` passes it;
+  `LinkedRecordsEditor` gets `PickerDetailsEditor`.
+- Backend `convertToFormFields` passes `pickerDetails` (both branches).
+- Also checked fillFrom end to end in the real panel against a private
+  backend: picking a bill in New payment filled amount 1000 (1200 − 200) and
+  memo. A user report of "total not calculated" is most likely an undeployed
+  backend (an old one drops fillFrom from the form).
+- Verified: private backend details.mjs (save, publish, /get/config form
+  carries pickerDetails, fillFrom intact); tsc tenant + admin. The list's
+  look not yet checked on screen (browser pane hidden).
