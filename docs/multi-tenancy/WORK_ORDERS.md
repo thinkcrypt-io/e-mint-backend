@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-08)
+## Handoff — read this first (kept current; last updated 2026-10-10)
 
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
@@ -42,6 +42,8 @@ changed. Never leave work done but untracked here.
 **Where it stands:** WO-01…33 done; WO-01…32 pushed (backend `v3` `942ba57e`,
 admin `main` `007fa59`). **Open:** nothing numbered. WO-01…37 pushed (backend `v3` `9d7e6915`, admin
 `main` `a3327d4`; sticky footer `ba88b4b`). **WO-38 and WO-39 pushed** (backend `v3` `27a9d495`, admin `main` `835b64b`). **WO-40 pushed** (public API list filters + docs, 2026-10-04: backend `v3` `65c397dc`, admin `main` `3b902d8`). **WO-42 pushed** (public API read-only fields, 2026-10-05: backend `v3` `a4e012bf`, admin `main` `136e33f`; not deployed). **WO-43 done 2026-10-06** (one collection per project, D21; admin `main` `e847dcb`): code, `scripts/migrateProjectCollections.js`, `collections.mjs` + `migration.mjs` suites; rehearsed on the scratch DB. **Production migration not run** — only on the user's yes, after the backend is deployed (DEPLOY.md §1.5). Anything new that calls a model's collection directly must add `ownRecordsOf(Model)` (`projectIndexes.function.ts`); never `syncIndexes()` a project model. **Widgets W-06 payments core done 2026-10-06** (docs/widgets CHANGELOG; shared `sitepayments`, `sitepaymentsettings`). **Messaging M-02 done 2026-10-06** (docs/messaging CHANGELOG): Organization → Email, each organization's own SMTP via nodemailer; shared `mailsettings` / `mailmessages`. **Site widgets W-05 (shop + cart) done 2026-10-05** (docs/widgets CHANGELOG): adds one shared scoped collection `sitecarts`; `functions/shop.function.ts` reads and writes tenant models only through their compiled Mongoose models (safe under WO-43's discriminators). **Project delete fixed 2026-10-06** (CHANGELOG): `SCOPED` in `projectLifecycle.function.ts` must list every tenantScoped model — add any new one there (or in a `projectHooks.onRemoved`). Next candidates: Known gaps, Follow-ups — ask the user. See the Status table.
+
+**Picker layout + name field pushed 2026-10-10** (CHANGELOG): details under picker records show values only; `pickerDetailsLayout` inline/stacked; the builder picks the name field (`menuKey` + `labelKey`). Also the empty-table "No records found" fix. Touches tenant + admin (identical files), backend `convertToFormFields`, mint-docs `pages` guide.
 
 **Not deployed yet** (DEPLOY.md): the backend `v3` on Heroku (its first boot
 swaps the old global unique indexes, `ensureTenantIndexes`) with

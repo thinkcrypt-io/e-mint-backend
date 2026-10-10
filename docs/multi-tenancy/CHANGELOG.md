@@ -1621,3 +1621,29 @@ Decisions D14–D17 (README).
 - Verified: private backend details.mjs (save, publish, /get/config form
   carries pickerDetails, fillFrom intact); tsc tenant + admin. The list's
   look not yet checked on screen (browser pane hidden).
+
+## 2026-10-10 — Picker: values only, layout, and the name field
+- The details under each record show values only, no field names:
+  "1,200 · 12 Oct 2026".
+- New settings `schema.pickerDetailsLayout`: `inline` (default, not stored:
+  one line, dot-separated) or `stacked` (one per line). The builder offers it
+  ("Show them") once two or more details are picked.
+- "Name shown in the picker": the builder now lets the user pick the field
+  that names each record (`schema.menuKey` + `labelKey`, both set together;
+  `name` when unset). Picking a field that was a detail drops it from the
+  details. Both pickers sort by it and format it like a detail (dates,
+  numbers). Typing in the picker still searches the linked model's own
+  searchable fields, so a non-name primary field should be searchable there.
+- Files: panel `functions/pickerDetails.tsx`, `VDataMenu.new`,
+  `VDataTags.new`, `createFormFields`, `fields/registry/descriptors/choice.tsx`
+  (nested-data-menu now gets `item`, so it shows details too),
+  `builder/_components/LinkedRecordsEditor.tsx` (tenant + admin, identical);
+  backend `library/functions/convertToFormFields.ts` passes
+  `pickerDetailsLayout` (both branches); mint-docs `pages` guide.
+- Also: an empty table now shows "No records found" when the list comes
+  back empty even without `docsInPage` (`CustomTable`), and an error uses a
+  warning icon (`TableErrorMessage`).
+- Verified on a mocked page in mint-tenant: the builder panel saves menuKey,
+  labelKey, pickerDetailsLayout; the list shows "1,200 · 12 Oct 2026", then
+  one per line; the input shows INV-0001 after picking. tsc tenant, admin,
+  backend, mint-docs clean for the touched files.
