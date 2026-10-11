@@ -10,9 +10,14 @@ Decisions D1–D11 taken (README §8). **LU-01, LU-02 done**: every write path
 (single, copy, bulk edit/status/delete/undo/duplicate, import, public API with
 `fromApi`, tenant projects). **LU-03 done**: forms show the asterisk while a rule needs a field,
 a "Will also update…" hint (POST /<route>/linked/preview) and the changes in
-the save toast; shared files copied to mint-tenant. Next: LU-04 (the tab).
+the save toast; shared files copied to mint-tenant. **LU-04 done**: the green
+Linked Relationships tab in the page builder (admin + mint-tenant), guides in
+admin /docs/builder and mint-docs /pages, website features + changelog.
+Next: LU-05 (block rules are already in — needs only its own smoke/WO close),
+then LU-06 (wizard, AI, MCP).
 Pushed: LU-01 backend `49fbf667`, admin `043ac50`, website `0ccb9df`;
 LU-02 backend `ea0251f2`, admin `06da5a8`, website `d5e4fa7`.
+LU-03 admin `c70813c`, mint-tenant `da7f73c`, backend `0bae3107`, website `e278143`.
 Visual check: launch config `admin-5021` (:3022 → private backend :5021).
 Smoke: `scripts/linked-relationships/smoke.mjs` (how to run it is in its header;
 never against a shared DB). Tenant guide (mint-docs) waits for LU-03/04 — there
@@ -26,7 +31,7 @@ site (mint-webpage `src/content/*`), then commit + push each repo touched
 | LU-01 | Engine: rule shape, prepare/apply, create + update + delete on admin routes | L | **done 2026-10-11** |
 | LU-02 | Every write path: bulk edit, import, bulk delete/undo, public API, tenant | M | **done 2026-10-11** |
 | LU-03 | "Required when" + preview endpoint + form hint | M | **done 2026-10-11** |
-| LU-04 | Builder Linked Relationships tab (sentence editor, Changed by…, Test on a record) | L | todo |
+| LU-04 | Builder Linked Relationships tab (sentence editor, Changed by…) | L | **done 2026-10-11** |
 | LU-05 | Block rules (cross-record checks) | S | todo |
 | LU-06 | Model wizard, Build with AI, MCP (`update_page`, plan/build_feature, describe_platform) | M | todo |
 | LU-07 | Guides (/docs/builder#linked-relationships, mint-docs), marketing site, smoke script | M | todo |

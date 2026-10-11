@@ -95,3 +95,34 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   admin `tsc` clean.
 - Docs: admin guide `#linked-form`. Website changelog item. mint-docs still
   waits for LU-04 (tenants can't make rules before the tab exists).
+
+## 2026-10-11 — LU-04 the Linked Relationships tab
+- Backend: `GET /builder/linked/incoming?route=` (linkedCheck.ts
+  `getIncomingLinked`) — published rules on other pages that write to this one.
+- Admin (+ mint-tenant, same files): area `linked` (green, Link2 icon, guide
+  `linked-relationships`) between Filters and Fields & rules, with its
+  overview card. `LinkedRelationshipsPanel` — "This page changes…" (each rule
+  as its sentence, badges Off / Refuses / Website saves too / Allowed anyway,
+  edit, delete through PromptDialog), "Changed by…", the rollup tip.
+  `LinkedRuleDialog` (portalled Chakra Dialog, ModalFooter, placement top) —
+  the sentence on top, name, when, if (ConditionsEditor), picker field (only
+  fields with a linked page), only-if on the linked record, change rows (field
+  of the linked page — editable, not formula/rollup — and Set to / Copy from /
+  Add / Work out / Empty, value inputs that fit the field) or refuse with a
+  message, when it stops holding, the three switches. `linkedRules.ts` holds
+  the shape, sentence, problems and clean-up; RouteEditor holds a save back
+  while a rule is incomplete (jumps to the tab). ModelWizard's guide map got
+  the key (the wizard's own tab list doesn't show it — LU-06).
+- Fixed on the way: "added and edited" → "added or edited"; conditions read
+  with labels; no false "pick when it runs" on rules using the default.
+- Checked in the browser (admin-5021): the tab lists the three rules as
+  sentences; a new rule built only with the dialog (Invoice → Last payment
+  note ← Note), saved, published (config v10) and then a payment saved through
+  the API filled the invoice's note; editing the refusing rule loads its
+  message and condition. Smoke: 74 checks, all pass (F3 incoming). admin +
+  mint-tenant `tsc` clean; website and mint-docs `next build` pass.
+- Docs: admin guide `#linked-tab` (making a rule; the "tab coming" note
+  removed); mint-docs `/pages#linked-relationships` with `#linked-tab`,
+  `#linked-rule`, `#linked-form`, `#linked-where` (the tenant panel's doc links
+  land there) + guides.ts topic. Website: Forms feature + Backend feature
+  "Linked Relationships", changelog entry rewritten for the tab.

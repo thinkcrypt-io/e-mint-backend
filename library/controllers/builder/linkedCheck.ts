@@ -2,6 +2,7 @@ import { PROTECTED_ROUTES } from './validate.js';
 import { resolveOther, resources } from './viewDocument.controller.js';
 import { LinkedRule, linkedRulesOf, targetRouteOf } from '../../functions/linkedRelationships.function.js';
 import { parse, refsOf } from '../../functions/formula.function.js';
+import { collectResourceRoutes } from '../../functions/routeRegistry.function.js';
 
 /**
  * The checks a route's Linked Relationships get when its config is saved or
@@ -99,4 +100,35 @@ export const checkLinkedRelationships = async (app: any, route: string, config: 
 	if (await leadsBack(route, 0)) problems.push(`The rules lead back to ${route} — a record would change itself through another page. Remove one step of the loop.`);
 
 	return problems;
+};
+
+/**
+ * GET /builder/linked/incoming?route= — the rules on other pages that change
+ * this page's records ("Payments can change: Status, Payment date"), so the
+ * people shaping a page know what else writes to it. Published copies only.
+ */
+export const getIncomingLinked = async (req: any, res: any) => {
+	try {
+		const route = String(req.query.route || '').trim();
+		if (!route) return res.status(400).json({ message: 'route is required' });
+		const doc: any[] = [];
+		for (const e of collectResourceRoutes(req.app)) {
+			if (e.route === route) continue;
+			const r = await resolveOther(resources(req.app).get(e.route) || e);
+			for (const rule of linkedRulesOf(r.frontendConfig)) {
+				if (targetRouteOf(rule, r.settings) !== route) continue;
+				doc.push({
+					route: e.route,
+					title: r.frontendConfig?.route?.title || e.route,
+					rule: rule.name || rule.id,
+					via: rule.target.via,
+					block: !!rule.block,
+					fields: (rule.set || []).map(a => a.field),
+				});
+			}
+		}
+		return res.status(200).json({ doc });
+	} catch (e: any) {
+		return res.status(500).json({ message: e?.message || 'Could not list the rules' });
+	}
 };

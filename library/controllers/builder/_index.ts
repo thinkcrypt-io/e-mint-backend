@@ -1,4 +1,5 @@
 import express from 'express';
+import { getIncomingLinked } from './linkedCheck.js';
 import { adminProtect, adminPermissions } from '../../../middleware/index.js';
 import {
 	getBuilderRoutes,
@@ -115,6 +116,8 @@ export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
 	router.get('/versions', ...view, getBuilderVersions);
 	router.get('/model/:name', ...view, getBuilderModelFields);
 	router.get('/backlinks/:name', ...view, getBuilderBacklinks);
+	// Rules on other pages that change this page's records (Linked Relationships).
+	router.get('/linked/incoming', ...view, getIncomingLinked);
 	router.get('/state', ...view, getBuilderState);
 	router.get('/compare', ...view, compareBuilderRoute);
 

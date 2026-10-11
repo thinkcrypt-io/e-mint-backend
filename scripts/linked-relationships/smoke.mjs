@@ -348,6 +348,11 @@ ok('(F2) preview of unticking an existing payment: puts Q back', r.body?.changes
 r = await call('POST', `/${cust.route}/linked/preview`, { values: { name: 'x' } }, T);
 ok('(F2) a page without rules answers empty', r.status === 200 && r.body.changes.length === 0, r.body);
 
+// LU-04: the builder's "Changed by…" list
+r = await call('GET', `/builder/linked/incoming?route=${inv.route}`, null, T);
+ok('(F3) invoices list the payment rules that change them', r.status === 200 && r.body.doc.some(x => x.route === pay.route && x.rule === 'Mark invoice paid' && x.fields.includes('status')), r.body);
+ok('(F3) …and the refusing rule as one', r.body.doc.some(x => x.block && x.rule === 'No payments on cancelled invoices'), r.body);
+
 // ---------------------------------------------------------- a tenant project + the public API
 const TPASS = 'tenant-pass-123';
 const reg = async (n, org) => (await fetch(ROOT + '/tenant/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: n, email: `${n.toLowerCase()}${stamp}@example.com`, password: TPASS, organization: org, country: 'BD' }) }).then(x => x.json())).token;
