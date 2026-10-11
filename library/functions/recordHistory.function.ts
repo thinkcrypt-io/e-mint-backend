@@ -15,6 +15,7 @@ import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 const SKIP_MODELS = new Set([
 	'History',
 	'DeletedRecord',
+	'LinkedChange',
 	'ApiKey',
 	'View',
 	'Views',
@@ -163,6 +164,10 @@ type RecordArgs = {
 	model: string;
 	doc: any;
 	changes?: HistoryChange[];
+	/** The route the record is served under, when it isn't the request's own (a Linked Relationship's target). */
+	modelPath?: string;
+	/** Added to the sentence: "(by rule Mark invoice paid from Payment PAY-0012)". */
+	note?: string;
 };
 
 /**
@@ -172,7 +177,7 @@ type RecordArgs = {
  * failing a save the user already completed, so a broken write is logged and
  * swallowed. Callers do not await it.
  */
-export const recordHistory = ({ req, action, model, doc, changes = [] }: RecordArgs): void => {
+export const recordHistory = ({ req, action, model, doc, changes = [], modelPath, note }: RecordArgs): void => {
 	try {
 		if (!doc || SKIP_MODELS.has(model)) return;
 
@@ -185,14 +190,14 @@ export const recordHistory = ({ req, action, model, doc, changes = [] }: RecordA
 		const userName = req?.user?.name || req?.user?.username || 'Someone';
 		// Inside a project the model is `T<projectId>_Client`: kept and shown as `Client` (WO-36).
 		model = displayModelName(model);
-		const text = buildHistoryText({ userName, action, model, doc, changes });
+		const text = buildHistoryText({ userName, action, model, doc, changes }) + (note ? ` ${note}` : '');
 
 		History.create({
 			user: req?.user?._id,
 			userName,
 			action,
 			model,
-			modelPath: pathFromRequest(req),
+			modelPath: modelPath || pathFromRequest(req),
 			document: doc?._id,
 			documentName: documentName(doc),
 			documentCode: doc?.code ? String(doc.code) : '',

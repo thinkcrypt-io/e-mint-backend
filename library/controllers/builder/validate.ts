@@ -4,6 +4,7 @@ import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.fu
 import { settingsToData } from '../../functions/routeRegistry.function.js';
 import { FieldInfo, checkFormula, format, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
 import { ruleSchema, rulesSchema } from '../../functions/formRules.function.js';
+import { linkedRulesSchema } from '../../functions/linkedRelationships.function.js';
 
 /**
  * What a draft may contain, and the safety rules that keep a published
@@ -204,6 +205,8 @@ export const configDraftSchema = Joi.object({
 	// The same for the record page and quick view: { field: rule }.
 	viewRules: rulesSchema,
 	filters: Joi.array().items(filterSchema),
+	// Saving a record changes the records it picks (linkedRelationships.function.ts).
+	linkedRelationships: linkedRulesSchema,
 });
 
 /** Keys a settings field may use: what the code declares plus the model's paths. */

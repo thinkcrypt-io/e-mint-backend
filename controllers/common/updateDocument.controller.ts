@@ -4,6 +4,7 @@ import recordHistory, { diffFields } from '../../library/functions/recordHistory
 import { applyFormulas } from '../../library/functions/formula.function.js';
 import { secretPaths } from '../../library/functions/secretFields.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
+import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -39,6 +40,8 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			// Snapshot before the assignments below mutate `data` in place —
 			// after them there is nothing left to compare the new values against.
 			const before = data.toObject();
+			// As stored, to put back exactly if a linked record can't be updated.
+			const beforeRaw = hasLinkedRules(req) ? await model.collection.findOne({ _id: data._id }) : null;
 
 			// Conditional read-only (settings `lockWhen`): a field the record's
 			// current state has locked — a paid bill's status — keeps its value.
@@ -50,9 +53,24 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			applyFormulas(data, req.formulas);
 			// Fields hidden by the form's conditions aren't required (formRules.function.ts).
 			const hidden: string[] = req.formHidden || [];
-			if (hidden.length) await data.validate({ pathsToSkip: hidden });
+			// Linked Relationships: what this change does to the records it picks,
+			// worked out from the checked record before anything is written.
+			const rules = hasLinkedRules(req);
+			if (hidden.length || rules) await data.validate(hidden.length ? { pathsToSkip: hidden } : undefined);
+			const plan = rules ? await linkedFor(req, model, 'update', before, data.toObject()) : null;
+			if (plan?.error) return res.status(400).json(plan.error);
 
-			const saved = await data.save(hidden.length ? { validateBeforeSave: false } : undefined);
+			const saved = await data.save(hidden.length || rules ? { validateBeforeSave: false } : undefined);
+
+			let also: any[] = [];
+			if (plan)
+				try {
+					also = await plan.apply(saved);
+				} catch (e) {
+					// The record goes back to how it was, with the rest.
+					if (beforeRaw) await model.collection.replaceOne({ _id: saved._id }, beforeRaw);
+					return linkedFailure(res, e);
+				}
 
 			recordHistory({
 				req,
@@ -70,7 +88,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 				}),
 			});
 
-			return res.status(200).json({ message: 'Information Updated Successfylly', doc: saved });
+			return res.status(200).json({ message: 'Information Updated Successfylly', doc: saved, ...(also.length > 0 && { linked: also }) });
 		} catch (e: any) {
 			console.error(e.message);
 			// A value the model refuses (outside its allowed values, the wrong type) is the request's fault.

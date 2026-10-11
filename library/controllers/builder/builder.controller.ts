@@ -17,6 +17,7 @@ import {
 } from '../../functions/routeRegistry.function.js';
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { PROTECTED_ROUTES, checkSettings, validateDraft, withSystemFields } from './validate.js';
+import { checkLinkedRelationships } from './linkedCheck.js';
 import { formulaPipeline, formulasOf, subFieldsOf } from '../../functions/formula.function.js';
 import { scopeKey } from '../../functions/tenantScope.function.js';
 
@@ -232,6 +233,8 @@ export const saveBuilderDraft = async (req: any, res: Response): Promise<Respons
 
 		const { value, problems } = check(req, route, k, req.body?.draft);
 		if (problems) return fail(res, 400, 'The draft has problems', problems);
+		const linked = k === 'config' ? await checkLinkedRelationships(req.app, route, value) : [];
+		if (linked.length) return fail(res, 400, 'The Linked Relationships have problems', linked);
 
 		const doc = await modelFor(k).findOneAndUpdate(
 			{ route },
@@ -308,6 +311,8 @@ export const publishBuilderRoute = async (req: any, res: Response): Promise<Resp
 		for (const { k, doc } of pending) {
 			const { problems, value } = check(req, route, k, doc.draft);
 			if (problems) return fail(res, 400, `The ${k} draft has problems`, problems);
+			const linked = k === 'config' ? await checkLinkedRelationships(req.app, route, value) : [];
+			if (linked.length) return fail(res, 400, 'The Linked Relationships have problems', linked);
 			checked.set(k, value);
 		}
 
@@ -670,6 +675,8 @@ export const publishConfigPatch = async (
 	const current = structuredClone(doc?.data || code.config || {});
 	const { problems, value } = check(req, route, 'config', patch(current));
 	if (problems) throw Object.assign(new Error(`The ${route} page config has problems: ${problems.join('; ')}`), { status: 400, problems });
+	const linked = await checkLinkedRelationships(req.app, route, value);
+	if (linked.length) throw Object.assign(new Error(`The ${route} Linked Relationships have problems: ${linked.join('; ')}`), { status: 400, problems: linked });
 
 	let draft = doc?.draft || null;
 	if (draft) {
