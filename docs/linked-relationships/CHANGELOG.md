@@ -162,3 +162,10 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   run it is in its header (private server + scratch mongod only).
 - Nothing deployed. Test servers stopped; launch config `admin-5021` kept in
   e-mint/.claude/launch.json for the next visual check.
+
+## 2026-10-12 — fix: the rule dialog scrolls inside
+- Reported: a long rule pushed the dialog past the screen, the page scrolled
+  behind it, and the lower rows and the Save button were out of reach.
+- `LinkedRuleDialog.tsx` (admin + mint-tenant): `scrollBehavior='inside'`, so
+  the body scrolls within the shared 90vh modal and the footer stays put —
+  the same set-up as the widget and quick-add dialogs.
