@@ -126,3 +126,27 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   `#linked-rule`, `#linked-form`, `#linked-where` (the tenant panel's doc links
   land there) + guides.ts topic. Website: Forms feature + Backend feature
   "Linked Relationships", changelog entry rewritten for the tab.
+
+## 2026-10-11 — LU-05 refusing rules
+- Built with the engine (LU-01: `block` + `target.when`), on every write path
+  (LU-02) and in the tab (LU-04: "Refuse the save" + message). Closed with
+  smoke F4: the form's preview carries the refusal before saving. 75 checks.
+
+## 2026-10-11 — LU-06 your AI (MCP)
+- `update_page` takes `linkedRelationships` (array replaces the page's rules,
+  false or [] removes them; full JSON schema in the tool) — published through
+  `publishConfigPatch`, so configDraftSchema + linkedCheck refuse a rule that
+  doesn't fit, with the problems in the tool's answer.
+- `get_model` lists the rules ("Mark invoice paid → via invoice: status,
+  paymentDate"; refusing ones marked) and returns them as
+  `page.linkedRelationships`. `describe_platform` (platformGuide) says when
+  to plan one: a stored yes/no trigger field on the picking model, the rule
+  added with update_page after the build; totals stay rollups.
+- Not done, on purpose (D14): the new-model wizard, Build with AI and feature
+  plans — models must exist first; the wizard's steps are forced.
+- Noticed: two rules setting the same field of one record — the later rule in
+  the list wins. Left as is; worth a publish warning later.
+- Checked: smoke 81 checks, all pass (M1 tools/list + describe_platform, M2
+  get_model, M3 refused bad rule, a rule set over MCP runs, rules put back).
+- Docs: admin guide (#linked-relationships "Your AI (MCP)", the MCP tool
+  table), mint-docs connect-ai tool table, website changelog item.

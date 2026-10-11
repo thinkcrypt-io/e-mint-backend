@@ -13,8 +13,10 @@ a "Will also update…" hint (POST /<route>/linked/preview) and the changes in
 the save toast; shared files copied to mint-tenant. **LU-04 done**: the green
 Linked Relationships tab in the page builder (admin + mint-tenant), guides in
 admin /docs/builder and mint-docs /pages, website features + changelog.
-Next: LU-05 (block rules are already in — needs only its own smoke/WO close),
-then LU-06 (wizard, AI, MCP).
+LU-05 closed (built with the engine), **LU-06 done** (MCP). Next: LU-07
+(final pass over guides/site). The hosted /mcp only gets the new tool options
+after a backend deploy — deploying is the user's call.
+LU-04 backend `295cc140`, admin `5fa0a98`, mint-tenant `a01a585`, mint-docs `cb92a45`, website `9f7cfbf`.
 Pushed: LU-01 backend `49fbf667`, admin `043ac50`, website `0ccb9df`;
 LU-02 backend `ea0251f2`, admin `06da5a8`, website `d5e4fa7`.
 LU-03 admin `c70813c`, mint-tenant `da7f73c`, backend `0bae3107`, website `e278143`.
@@ -32,8 +34,8 @@ site (mint-webpage `src/content/*`), then commit + push each repo touched
 | LU-02 | Every write path: bulk edit, import, bulk delete/undo, public API, tenant | M | **done 2026-10-11** |
 | LU-03 | "Required when" + preview endpoint + form hint | M | **done 2026-10-11** |
 | LU-04 | Builder Linked Relationships tab (sentence editor, Changed by…) | L | **done 2026-10-11** |
-| LU-05 | Block rules (cross-record checks) | S | todo |
-| LU-06 | Model wizard, Build with AI, MCP (`update_page`, plan/build_feature, describe_platform) | M | todo |
+| LU-05 | Block rules (cross-record checks) | S | **done 2026-10-11** (built in LU-01; F4 checks the form hint) |
+| LU-06 | MCP (`update_page`, `get_model`, describe_platform); wizard/plans left out (D14) | M | **done 2026-10-11** |
 | LU-07 | Guides (/docs/builder#linked-relationships, mint-docs), marketing site, smoke script | M | todo |
 
 ---

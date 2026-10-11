@@ -350,6 +350,7 @@ const TOOLS: ToolDef[] = [
 					url: caller.page(m.route),
 					table: config?.table || [],
 					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField, ...(t.via?.route && { via: t.via.route }) })),
+					linkedRelationships: config?.linkedRelationships || [],
 				},
 				linkedBy,
 			};
@@ -362,6 +363,11 @@ const TOOLS: ToolDef[] = [
 					`Table columns: ${(data.page.table || []).join(', ') || '—'}`,
 					`Tabs: ${data.page.tabs.map((t: any) => t.title).join(', ') || '—'}`,
 					`Linked from: ${linkedBy.join(', ') || '—'}`,
+					`Linked Relationships (rules on save): ${
+						(data.page.linkedRelationships || [])
+							.map((r: any) => `${r.name || r.id} → via ${r.target?.via}${r.block ? ' (refuses)' : `: ${(r.set || []).map((a: any) => a.field).join(', ')}`}`)
+							.join('; ') || '—'
+					}`,
 				].join('\n'),
 				data,
 			};
@@ -456,7 +462,7 @@ const TOOLS: ToolDef[] = [
 		name: 'update_page',
 		title: 'Change a page layout',
 		description:
-			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, user guidelines, or Bulk upload (on/off and its options). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
+			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, user guidelines, Bulk upload (on/off and its options), or its Linked Relationships (rules that update the records it picks on save). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -479,6 +485,51 @@ const TOOLS: ToolDef[] = [
 								items: {
 									type: 'array',
 									items: { type: 'object', required: ['title'], properties: { title: { type: 'string' }, text: { type: 'string' } } },
+								},
+							},
+						},
+					],
+				},
+				linkedRelationships: {
+					description:
+						'Linked Relationships: rules that run when a record of this page is saved and change the record it picks — "when a payment is added or edited, if markPaid is true, set its invoice’s status to paid and its paymentDate to the payment’s paymentDate". Replaces the page’s rules (false removes them all). Each rule: `id` (stable, short), `name`, `on` (create/update/delete; default create+update), `when` + `match` (conditions on this record: {field, op: is|not|in|gt|gte|lt|lte|contains|empty|filled, value}), `target.via` (a reference field of this page), `target.when` (conditions on the picked record), then either `set` — [{field, value} | {field, from: thisRecordField} | {field, inc: number|thisRecordNumberField} | {field, formula: "target.x + this.y"} | {field, clear: true}] on fields that can be edited on the linked page — or `block: {message}` to refuse the save. `undo`: revert (default) | keep | block — what happens when the rule stops holding. `asSystem`: run even if the person can’t edit the linked page. `fromApi`: also for public-API saves. Every save is checked first and all or nothing; the publish is refused with the problems if a field or link doesn’t fit.',
+					anyOf: [
+						{ type: 'boolean', enum: [false] },
+						{
+							type: 'array',
+							maxItems: 50,
+							items: {
+								type: 'object',
+								required: ['id', 'target'],
+								properties: {
+									id: { type: 'string' },
+									name: { type: 'string' },
+									enabled: { type: 'boolean' },
+									on: { type: 'array', items: { type: 'string', enum: ['create', 'update', 'delete'] } },
+									when: { type: 'array', items: { type: 'object', required: ['field', 'op'], properties: { field: { type: 'string' }, op: { type: 'string' }, value: {} } } },
+									match: { type: 'string', enum: ['all', 'any'] },
+									target: {
+										type: 'object',
+										required: ['via'],
+										properties: {
+											via: { type: 'string' },
+											when: { type: 'array', items: { type: 'object', required: ['field', 'op'], properties: { field: { type: 'string' }, op: { type: 'string' }, value: {} } } },
+											match: { type: 'string', enum: ['all', 'any'] },
+										},
+									},
+									set: {
+										type: 'array',
+										items: {
+											type: 'object',
+											required: ['field'],
+											properties: { field: { type: 'string' }, value: {}, from: { type: 'string' }, formula: { type: 'string' }, inc: { anyOf: [{ type: 'number' }, { type: 'string' }] }, clear: { type: 'boolean' } },
+										},
+									},
+									block: { type: 'object', required: ['message'], properties: { message: { type: 'string' } } },
+									undo: { type: 'string', enum: ['revert', 'keep', 'block'] },
+									require: { type: 'array', items: { type: 'string' } },
+									asSystem: { type: 'boolean' },
+									fromApi: { type: 'boolean' },
 								},
 							},
 						},
@@ -555,6 +606,9 @@ const TOOLS: ToolDef[] = [
 							const { bulkUpload, ...rest } = next.route || {};
 							next.route = upload ? { ...rest, bulkUpload: upload } : rest;
 						}
+						// Checked like a builder publish (configDraftSchema + linkedCheck): a field or link that doesn't fit refuses it.
+						if (args?.linkedRelationships === false || (Array.isArray(args?.linkedRelationships) && !args.linkedRelationships.length)) delete next.linkedRelationships;
+						else if (Array.isArray(args?.linkedRelationships)) next.linkedRelationships = args.linkedRelationships;
 						return next;
 					},
 					'Changed by an AI client over MCP'

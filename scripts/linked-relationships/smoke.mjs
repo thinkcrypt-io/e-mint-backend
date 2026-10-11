@@ -348,10 +348,38 @@ ok('(F2) preview of unticking an existing payment: puts Q back', r.body?.changes
 r = await call('POST', `/${cust.route}/linked/preview`, { values: { name: 'x' } }, T);
 ok('(F2) a page without rules answers empty', r.status === 200 && r.body.changes.length === 0, r.body);
 
+// LU-05: a refusing rule shows in the form's hint too
+const zc = (await call('POST', I, { title: 'Z', status: 'cancelled' }, T)).body.doc;
+r = await call('POST', `${P}/linked/preview`, { values: { invoice: zc._id, amount: 1, paymentDate: '2026-10-15' } }, T);
+ok('(F4) the form hears “cancelled” before saving', /cancelled/.test(r.body?.error?.message || ''), r.body);
+
 // LU-04: the builder's "Changed by…" list
 r = await call('GET', `/builder/linked/incoming?route=${inv.route}`, null, T);
 ok('(F3) invoices list the payment rules that change them', r.status === 200 && r.body.doc.some(x => x.route === pay.route && x.rule === 'Mark invoice paid' && x.fields.includes('status')), r.body);
 ok('(F3) …and the refusing rule as one', r.body.doc.some(x => x.block && x.rule === 'No payments on cancelled invoices'), r.body);
+
+// LU-06: over MCP — what a user's own AI sees and sets
+{
+	const key = await call('POST', '/builder/api-keys', { name: 'LR smoke', scopes: ['read', 'build'] }, T);
+	let n = 1;
+	const rpc = async (method, params) =>
+		(await fetch(`${ROOT}/mcp`, { method: 'POST', headers: { authorization: `Bearer ${key.body.secret}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: n++, method, params }) }).then(x => x.json())).result;
+	const tool = (name, args) => rpc('tools/call', { name, arguments: args });
+	ok('(M1) update_page offers linkedRelationships', !!(await rpc('tools/list', {})).tools.find(t => t.name === 'update_page')?.inputSchema?.properties?.linkedRelationships);
+	ok('(M1) describe_platform explains them', /Linked Relationships/.test((await tool('describe_platform', {})).content[0].text));
+	const gm = await tool('get_model', { name: pay.route });
+	ok('(M2) get_model lists the rules', /Mark invoice paid/.test(gm.content[0].text) && gm.structuredContent?.page?.linkedRelationships?.length === 3, gm.structuredContent?.page?.linkedRelationships?.length);
+	const rules = gm.structuredContent.page.linkedRelationships;
+	let m = await tool('update_page', { route: pay.route, linkedRelationships: [{ id: 'bad', target: { via: 'invoice' }, set: [{ field: 'nope', value: 1 }] }] });
+	ok('(M3) update_page refuses a field the invoice lacks', m.isError && /nope/.test(m.content[0].text), m.content[0].text);
+	m = await tool('update_page', { route: pay.route, linkedRelationships: [...rules, { id: 'mcp', name: 'MCP note', target: { via: 'invoice' }, set: [{ field: 'lastPaymentNote', value: 'set over MCP' }] }] });
+	const mi = (await call('POST', I, { title: 'MCP' }, T)).body.doc;
+	await call('POST', P, { invoice: mi._id, amount: 1, paymentDate: '2026-10-11' }, T);
+	ok('(M3) a rule set over MCP runs', !m.isError && (await get(mi._id)).lastPaymentNote === 'set over MCP', m.content[0].text);
+	m = await tool('update_page', { route: pay.route, linkedRelationships: rules });
+	ok('(M3) and the rules are put back', !m.isError);
+	await call('DELETE', `/builder/api-keys/${key.body.doc._id}`, null, T);
+}
 
 // ---------------------------------------------------------- a tenant project + the public API
 const TPASS = 'tenant-pass-123';
