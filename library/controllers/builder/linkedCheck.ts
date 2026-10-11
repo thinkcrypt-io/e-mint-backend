@@ -2,6 +2,7 @@ import { PROTECTED_ROUTES } from './validate.js';
 import { resolveOther, resources } from './viewDocument.controller.js';
 import { LinkedRule, linkedRulesOf, targetRouteOf } from '../../functions/linkedRelationships.function.js';
 import { parse, refsOf } from '../../functions/formula.function.js';
+import { isRef } from '../../functions/fieldLocks.function.js';
 import { collectResourceRoutes } from '../../functions/routeRegistry.function.js';
 
 /**
@@ -52,6 +53,13 @@ export const checkLinkedRelationships = async (app: any, route: string, config: 
 		for (const c of rule.when || []) if (!has(source.settings, Model, c.field)) say(`the condition's field '${c.field}' isn't on this page.`);
 		for (const f of rule.require || []) if (!has(source.settings, Model, f)) say(`the required field '${f}' isn't on this page.`);
 		for (const c of rule.target.when || []) if (!has(target.settings, TModel, c.field)) say(`the condition's field '${c.field}' isn't on ${targetRoute}.`);
+		// A condition compared with one of this record's fields: `{ ref: 'this.amount' }`.
+		for (const c of [...(rule.when || []), ...(rule.target.when || [])])
+			if (isRef(c.value)) {
+				const [side, ...rest] = c.value.ref.split('.');
+				if (side !== 'this' || !rest.length || !has(source.settings, Model, rest.join('.')))
+					say(`the condition on '${c.field}' compares with '${c.value.ref}' — use this.<field> with a field of this page.`);
+			}
 
 		for (const a of rule.set || []) {
 			const f = a.field;
@@ -61,10 +69,13 @@ export const checkLinkedRelationships = async (app: any, route: string, config: 
 			else if (s?.schema?.type === 'formula' || s?.rollup) say(`'${f}' on ${targetRoute} is worked out by itself and can't be set.`);
 			else if (!allow.includes(f)) say(`'${f}' can't be edited on ${targetRoute} — turn on editing for it there first.`);
 			if (a.from && !has(source.settings, Model, a.from)) say(`it copies '${a.from}', which isn't on this page.`);
-			if (a.inc !== undefined) {
-				if (TModel.schema.path(f)?.instance !== 'Number') say(`'${f}' must be a number to add to it.`);
-				if (typeof a.inc === 'string' && !Number.isFinite(Number(a.inc)) && !has(source.settings, Model, a.inc)) say(`it adds '${a.inc}', which isn't on this page.`);
-			}
+			const step = a.dec !== undefined ? a.dec : a.inc;
+			if (step !== undefined) {
+				const take = a.dec !== undefined;
+				if (TModel.schema.path(f)?.instance !== 'Number') say(`'${f}' must be a number to ${take ? 'take from' : 'add to'} it.`);
+				if (typeof step === 'string' && !Number.isFinite(Number(step)) && !has(source.settings, Model, step))
+					say(`it ${take ? 'takes off' : 'adds'} '${step}', which isn't on this page.`);
+			} else if (a.min !== undefined) say(`'${f}' has a lowest value, which only works when the rule adds to it or takes from it.`);
 			if (a.formula)
 				try {
 					for (const ref of refsOf(parse(a.formula))) {

@@ -1,4 +1,4 @@
-// Linked Relationships smoke test (backend/docs/linked-relationships, LU-01/LU-02).
+// Linked Relationships smoke test (backend/docs/linked-relationships, LU-01/02/08/09).
 // Runs against a throwaway local server + database only (never a shared one):
 //   mongod --dbpath <scratch> --port 27997
 //   npx tsc --outDir <scratch>/be/dist, then from <scratch>/be (node_modules, .env, docs, public symlinked):
@@ -440,6 +440,89 @@ PB = (await tcall('GET', TP(`/${tinv.route}/${pb._id}`), null, tok)).body;
 ok('(T3) with it on, the website save marks the bill paid', t.status === 201 && PB?.status === 'paid' && String(PB.paymentDate).startsWith('2026-10-12'), { s: t.status, m: t.body?.message, PB });
 t = await tcall('POST', `/public/api/${slug}/${tpay.route}`, { bill: ob._id, paymentDate: '2026-10-12', markPaid: true });
 ok('(T3) …but not another project’s bill', t.status >= 400 && (await tcall('GET', `/tenant/api/p/${t2}/${otherBill.route}/${ob._id}`, null, tok)).body?.status === 'unpaid', { s: t.status, m: t.body?.message });
+
+// ------------------------------------------ LU-08/09: the wizard, transfers
+// In its own block: its names are short and the earlier sections use some of them.
+{
+	// An account page, and a transfer page made in the wizard with its two rules.
+	const acct = await mk({
+		title: `LR Account ${stamp}`,
+		name: `LrAccount${stamp}`,
+		fields: [
+			{ key: 'title', label: 'Title', kind: 'text', required: true },
+			{ key: 'balance', label: 'Balance', kind: 'number', default: 0 },
+		],
+	});
+	const A = `/${acct.route}`;
+	const xferDef = {
+		title: `LR Transfer ${stamp}`,
+		name: `LrTransfer${stamp}`,
+		fields: [
+			{ key: 'fromAccount', label: 'From account', kind: 'reference', ref: acct.name, required: true },
+			{ key: 'toAccount', label: 'To account', kind: 'reference', ref: acct.name, required: true },
+			{ key: 'amount', label: 'Amount', kind: 'number', required: true },
+		],
+	};
+	const pv = await call('POST', '/builder/models/preview', xferDef, T);
+	ok('(W) the wizard makes the transfer pages', pv.status === 200 && !!pv.body?.config, pv.body?.message);
+	const takeOff = { id: 'take', name: 'Take from the sending account', target: { via: 'fromAccount' }, set: [{ field: 'balance', dec: 'amount', min: 0 }] };
+	const giveTo = { id: 'give', name: 'Give to the receiving account', target: { via: 'toAccount' }, set: [{ field: 'balance', inc: 'amount' }] };
+	let w = await call('POST', '/builder/models', { ...xferDef, config: { ...pv.body.config, linkedRelationships: [{ ...takeOff, set: [{ field: 'nope', dec: 'amount' }] }] } }, T);
+	ok('(W1) the wizard refuses a rule on a field the account doesn’t have', w.status === 400 && JSON.stringify(w.body).includes('nope'), w.body);
+	w = await call('POST', '/builder/models', { ...xferDef, config: { ...pv.body.config, linkedRelationships: [takeOff, giveTo] } }, T);
+	ok('(W2) …and made nothing: the same name is free, and the page comes with its two rules', w.status === 201 && w.body?.doc?.name === xferDef.name, { s: w.status, b: w.body?.message || w.body?.doc?.name, p: w.body?.problems });
+	const xfer = w.body.doc;
+	const X = `/${xfer.route}`;
+	ok('(W2) the rules are published with the page', (await configOf(xfer.route)).linkedRelationships?.length === 2);
+
+	const mkAcct = async (title, balance) => (await call('POST', A, { title, balance }, T)).body?.doc;
+	const bal = async id => (await call('GET', `${A}/${id}`, null, T)).body?.balance;
+	const cash = await mkAcct('Cash', 100);
+	const bank = await mkAcct('Bank', 0);
+	let x = await call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 30 }, T);
+	const x1 = x.body?.doc;
+	ok('(X1) a transfer moves the amount', x.status === 201 && (await bal(cash._id)) === 70 && (await bal(bank._id)) === 30, { s: x.status, m: x.body?.message });
+	x = await call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 80 }, T);
+	ok('(X2) more than the balance is refused, under Amount, and nothing moves', x.status === 400 && /Not enough Balance/.test(x.body?.message) && !!x.body?.fields?.amount && (await bal(cash._id)) === 70 && (await bal(bank._id)) === 30, x.body);
+	x = await call('PUT', `${X}/${x1._id}`, { amount: 60 }, T);
+	ok('(X3) editing 30 → 60 moves only the 30 more', x.status === 200 && (await bal(cash._id)) === 40 && (await bal(bank._id)) === 60, { s: x.status, m: x.body?.message });
+	x = await call('PUT', `${X}/${x1._id}`, { amount: 200 }, T);
+	ok('(X4) editing to more than is left is refused', x.status === 400 && (await bal(cash._id)) === 40 && (await call('GET', `${X}/${x1._id}`, null, T)).body?.amount === 60, x.body?.message);
+	x = await call('DELETE', `${X}/${x1._id}`, null, T);
+	ok('(X5) deleting the transfer gives it back', x.status === 200 && (await bal(cash._id)) === 100 && (await bal(bank._id)) === 0, { s: x.status, m: x.body?.message });
+	const both = await Promise.all([1, 2].map(() => call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 60 }, T)));
+	ok('(X6) two transfers of 60 at once from 100: one goes through', both.filter(b => b.status === 201).length === 1 && (await bal(cash._id)) === 40 && (await bal(bank._id)) === 60, both.map(b => [b.status, b.body?.message]));
+	const xferCount = async () => (await call('GET', `${X}?limit=100`, null, T)).body?.doc?.length;
+	ok('(X6) …and the other leaves no transfer behind', (await xferCount()) === 1, await xferCount());
+
+	// Its own message; the receiving side can have a floor too (taking a transfer back).
+	let rr = await publishRules(xfer.route, [{ ...takeOff, set: [{ field: 'balance', dec: 'amount', min: 0, message: 'Not enough money in the sending account.' }] }, { ...giveTo, set: [{ field: 'balance', inc: 'amount', min: 0 }] }]);
+	ok('floors with a message publish', rr.status === 200, rr.body);
+	x = await call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 1000 }, T);
+	ok('(X7) the refusal says the rule’s own message', x.status === 400 && x.body?.message === 'Not enough money in the sending account.', x.body?.message);
+	const spent = (await call('GET', `${X}?limit=1`, null, T)).body?.doc?.[0];
+	await call('PUT', `${A}/${bank._id}`, { balance: 10 }, T);
+	x = await call('DELETE', `${X}/${spent._id}`, null, T);
+	ok('(X8) a transfer whose money was spent can’t be taken back below 0', x.status === 400 && /taken back/.test(x.body?.message) && (await bal(bank._id)) === 10 && (await bal(cash._id)) === 40, x.body?.message);
+
+	// Conditions compared with this record's fields.
+	rr = await publishRules(xfer.route, [{ ...takeOff, set: [{ field: 'balance', value: 1, min: 0 }] }]);
+	ok('a floor on a plain value is refused', rr.status === 400, rr.body?.message);
+	rr = await publishRules(xfer.route, [{ id: 'bad-ref', name: 'Bad ref', target: { via: 'fromAccount', when: [{ field: 'balance', op: 'lt', value: { ref: 'this.nope' } }] }, block: { message: 'x' } }]);
+	ok('a condition comparing with a field this page lacks is refused', rr.status === 400 && JSON.stringify(rr.body).includes('this.nope'), rr.body?.problems);
+	const enough = { id: 'enough', name: 'Enough to send', on: ['create'], target: { via: 'fromAccount', when: [{ field: 'balance', op: 'lt', value: { ref: 'this.amount' } }] }, block: { message: 'Balance too low (condition).' } };
+	const twoAccounts = { id: 'two', name: 'Two different accounts', target: { via: 'toAccount', when: [{ field: '_id', op: 'is', value: { ref: 'this.fromAccount' } }] }, block: { message: 'Pick two different accounts.' } };
+	rr = await publishRules(xfer.route, [{ ...takeOff, set: [{ field: 'balance', dec: 'amount' }] }, giveTo, enough, twoAccounts]);
+	ok('conditions compared with this record publish', rr.status === 200, rr.body);
+	x = await call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 41 }, T);
+	ok('(C1) Balance is less than this transfer’s Amount: refused', x.status === 400 && x.body?.message === 'Balance too low (condition).' && (await bal(cash._id)) === 40, x.body?.message);
+	x = await call('POST', X, { fromAccount: cash._id, toAccount: bank._id, amount: 40 }, T);
+	ok('(C1) …exactly the balance goes through', x.status === 201 && (await bal(cash._id)) === 0 && (await bal(bank._id)) === 50, x.body?.message);
+	x = await call('POST', X, { fromAccount: bank._id, toAccount: bank._id, amount: 5 }, T);
+	ok('(C2) the same account on both sides is refused', x.status === 400 && /two different accounts/.test(x.body?.message) && (await bal(bank._id)) === 50, x.body?.message);
+	const hints = (await call('GET', `${X}/get/schema`, null, T)).body;
+	ok('(C3) the form knows Amount is read by the rules', JSON.stringify(hints || {}).includes('linkedReads'), Object.keys(hints || {}).slice(0, 5));
+}
 
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 await mongoose.disconnect();

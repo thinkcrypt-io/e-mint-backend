@@ -81,7 +81,8 @@ type Rule = {
   target: {
     via: string;           // a ref field on this record: 'invoice' (one or many)
     route?: string;        // default: the ref field's schema.model; checked at publish
-    when?: Condition[];    // on the target: "only if invoice status ≠ cancelled"
+    when?: Condition[];    // on the target: "only if invoice status ≠ cancelled";
+                           //   a value { ref: 'this.amount' } compares with this record (D16)
     match?: 'all' | 'any';
   };
   set: Assignment[];       // what changes on the target
@@ -95,9 +96,26 @@ type Assignment =
   | { field: string; value: any }                 // set Status to "paid"
   | { field: string; from: string }               // copy this record's Payment date
   | { field: string; formula: string }            // over `this.*` and `target.*`
-  | { field: string; inc: string | number }       // atomic $inc — stock, counters
+  | { field: string; inc: string | number; min?: number; message?: string }  // atomic $inc — stock, counters
+  | { field: string; dec: string | number; min?: number; message?: string }  // take off — a balance (D15)
   | { field: string; clear: true };
 ```
+
+**Moving a number between two records** (D15) — a transfer from one account
+to another is two rules on the Transfer page:
+
+```ts
+{ id: 'take', target: { via: 'fromAccount' }, set: [{ field: 'balance', dec: 'amount', min: 0,
+    message: 'Not enough money in the sending account.' }] },
+{ id: 'give', target: { via: 'toAccount' },   set: [{ field: 'balance', inc: 'amount' }] },
+```
+
+`min` is a floor: a save that would take the field below it is refused (under
+the Amount field when the amount is one of this record's fields). It's checked
+when the save is prepared — on the difference, so editing 30 → 60 needs 30
+more, not 60 — and again in the write itself (`updateOne({ balance: { $gte } })`),
+so two transfers at once can't both spend the same balance. A floor on an add
+also holds when the add is taken back (deleting a transfer whose money was spent).
 
 Ops: is, not, in, gt, gte, lt, lte, contains, empty, filled (`fieldLocks.function.ts`),
 so the builder can reuse the shared ConditionsEditor.
@@ -222,4 +240,8 @@ find every place to wire in. There are duplicate controller trees, though
 | D12 | Public-API saves start only rules with `fromApi: true` ("Also for website and API saves"), which then run as the system; rules those changes trigger in turn run as usual. Off by default: a site could otherwise send any record's id | **decided 2026-10-11** |
 | D13 | A copy (row-menu Copy, bulk Duplicate) is a new record and runs the rules; Archive and Merge run none (merge documented as a gap) | **decided 2026-10-11** |
 | D14 | Rules aren't part of the new-model wizard, Build with AI or feature plans (the models must exist first, and the wizard's steps are forced); they're added after a build in the tab or over MCP `update_page`. `describe_platform` tells the AI to plan the trigger field and add the rule after | **decided 2026-10-11** |
+| D15 | A field can be **taken off** (`dec`), and an add or take-off can have a **floor** (`min`, with its own `message`). The floor is checked on the difference at prepare time and again atomically in the `$inc`, so concurrent saves can't overdraw. This — not a target condition — is how "refuse a transfer bigger than the balance" is built: a condition sees the balance after earlier transfers, so it can't tell an edit's difference | **decided 2026-10-12** |
+| D16 | A condition's value can be `{ ref: 'this.<field>' }` — compared with the record being saved ("Balance is less than this Transfer's Amount", "the To account is this Transfer's From account"). Works in `when` and `target.when`; the form's asterisk resolves it against the form | **decided 2026-10-12** |
+| D17 | Supersedes D14 for the model wizard: the pages step ends with a Linked Relationships part (optional, last). Rules are checked once the new route is registered, before its copies are written; a bad rule removes the new model again. Build with AI and feature plans still leave them out | **decided 2026-10-12** |
+| D18 | Rollback puts back only what a run touched — the fields it set, `$inc` reversed — not the whole document, so another save on the same record meanwhile keeps its change | **decided 2026-10-12** |
 | D9 | Every step is logged in `CHANGELOG.md`, and the marketing site (mint-webpage) and the guides (admin /docs/builder, mint-docs) are updated as each WO lands, not at the end | **decided 2026-10-11 (user)** |

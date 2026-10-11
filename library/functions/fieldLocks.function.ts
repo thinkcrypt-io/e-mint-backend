@@ -93,10 +93,25 @@ const holds = (raw: any, c: LockCondition): boolean => {
 
 const get = (doc: any, path: string) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), doc);
 
-/** Whether a record meets the conditions — all of them, or with `any` one is enough (none: never). */
-export const meets = (doc: any, conds?: LockCondition[], match: 'all' | 'any' = 'all'): boolean => {
+/** A value that names another field instead — `{ ref: 'this.amount' }` (Linked Relationships). */
+export const isRef = (v: any): v is { ref: string } => !!v && typeof v === 'object' && !Array.isArray(v) && typeof v.ref === 'string';
+
+/**
+ * Whether a record meets the conditions — all of them, or with `any` one is
+ * enough (none: never). A condition whose value is `{ ref: 'this.amount' }`
+ * compares with that field of `ctx.this` (the record being saved); without
+ * it, it never holds.
+ */
+export const meets = (doc: any, conds?: LockCondition[], match: 'all' | 'any' = 'all', ctx?: { this?: any }): boolean => {
 	if (!Array.isArray(conds) || !conds.length) return false;
-	const one = (c: LockCondition) => !!c?.field && holds(get(doc, c.field), c);
+	const one = (c: LockCondition) => {
+		if (!c?.field) return false;
+		if (!isRef(c.value)) return holds(get(doc, c.field), c);
+		const [side, ...rest] = c.value.ref.split('.');
+		if (side !== 'this' || !ctx?.this || !rest.length) return false;
+		const value = plain(get(ctx.this, rest.join('.')));
+		return holds(get(doc, c.field), { ...c, value: value ?? '' });
+	};
 	return match === 'any' ? conds.some(one) : conds.every(one);
 };
 
@@ -106,7 +121,7 @@ export const lockText = (conds: LockCondition[] = [], match: 'all' | 'any' = 'al
 		.map(c => {
 			const op = OP_TEXT[c.op] || c.op;
 			if (c.op === 'empty' || c.op === 'filled') return `${c.field} ${op}`;
-			const value = Array.isArray(c.value) ? c.value.join(', ') : c.value;
+			const value = isRef(c.value) ? c.value.ref : Array.isArray(c.value) ? c.value.join(', ') : c.value;
 			return `${c.field} ${op} ${value ?? ''}`.trim();
 		})
 		.join(match === 'any' ? ' or ' : ' and ');

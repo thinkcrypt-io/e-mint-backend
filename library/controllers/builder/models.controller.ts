@@ -9,6 +9,7 @@ import SidebarCategory from '../../models/sidebarcategories/model.js';
 import Counter from '../../../models/counter/counter.model.js';
 import { configToData, listModelFields, scopedModelNames, settingsToData } from '../../functions/routeRegistry.function.js';
 import { checkSettings, validateDraft, withSystemFields } from './validate.js';
+import { checkLinkedRelationships } from './linkedCheck.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
 import { fieldsOfRule } from '../../functions/formRules.function.js';
 import { checkFormula, formulaPipeline, formulasOf } from '../../functions/formula.function.js';
@@ -814,6 +815,15 @@ export const createModelCore = async (
 			await syncDynamicModels({ app: req.app, force: true });
 			created = null;
 			throw new BuildError(400, `The model couldn’t be registered: ${error}`);
+		}
+
+		// Linked Relationships set in the wizard: checked once the route exists, as a publish would.
+		const linked = (copies as any).config ? await checkLinkedRelationships(req.app, created.route, (copies as any).config) : [];
+		if (linked.length) {
+			await ModelDefinition.deleteOne({ _id: created._id });
+			await syncDynamicModels({ app: req.app, force: true });
+			created = null;
+			throw new BuildError(400, 'A linked relationship isn’t valid', linked.map(p => `Linked Relationships: ${p}`));
 		}
 
 		if (!currentScope())

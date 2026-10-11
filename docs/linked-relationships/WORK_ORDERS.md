@@ -4,7 +4,13 @@ Read `README.md` first. Each item has: **why → files → change → done when*
 Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Commit and push each WO when it's done.
 
-## Handoff (last updated 2026-10-11)
+## Handoff (last updated 2026-10-12)
+
+**2026-10-12: LU-08 + LU-09 done** (user asked: rules in the model wizard, and
+transfers between accounts that fail when the amount is more than the balance).
+Wizard part + server check (D17), take off + floors (D15), conditions compared
+with this record (D16), field-level rollback (D18). Smoke 102/102.
+LU-08/09: admin `49f356e`, mint-tenant `1e7da32`, mint-docs `a651625`, website `4ba3439`, backend (this commit).
 
 Decisions D1–D11 taken (README §8). **LU-01, LU-02 done**: every write path
 (single, copy, bulk edit/status/delete/undo/duplicate, import, public API with
@@ -37,6 +43,8 @@ site (mint-webpage `src/content/*`), then commit + push each repo touched
 | LU-05 | Block rules (cross-record checks) | S | **done 2026-10-11** (built in LU-01; F4 checks the form hint) |
 | LU-06 | MCP (`update_page`, `get_model`, describe_platform); wizard/plans left out (D14) | M | **done 2026-10-11** |
 | LU-07 | Guides (/docs/builder#linked-relationships, mint-docs), marketing site, smoke script | M | **done 2026-10-11** (done step by step with each WO) |
+| LU-08 | Linked Relationships in the new-model wizard (D17) | S | **done 2026-10-12** |
+| LU-09 | Transfers: take off, floors, conditions compared with this record, field-level rollback (D15, D16, D18) | M | **done 2026-10-12** |
 
 ---
 
@@ -109,6 +117,18 @@ endpoint names are unused before adding.
 `/docs/builder#linked-relationships` (+ anchors per dialog), a mint-docs tenant
 guide, and a feature section on mint-website. Add the smoke script to
 `scripts/`.
+
+### LU-08 — In the model wizard (S)
+The pages step gets a seventh part, Linked Relationships (after Fields & rules,
+optional). `POST /builder/models` checks the rules with
+`checkLinkedRelationships` once the new route is registered; problems remove
+the model again and come back as `Linked Relationships: …`.
+
+### LU-09 — Transfers (M)
+`dec` (Take off) beside `inc`, `min` + `message` on both, `{ ref: 'this.x' }`
+condition values (engine, publish check, form asterisk, ConditionsEditor
+"compare with this record's…"), the guarded `$inc` and field-level rollback.
+Smoke X1–X8, C1–C3, W1–W2.
 
 ## Later (not planned yet)
 - Deploy the backend so the hosted /mcp and the live panels get all of this

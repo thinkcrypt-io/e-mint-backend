@@ -144,7 +144,7 @@ ${projectNaming()}- Put a link on the "many" side as a single reference (LeaveRe
 - Access on (per-record owner/privacy/sharing) for personal or confidential records; it adds privacy, access and addedBy itself.
 - Line items: a sectionlist with row fields and a row formula; a record formula adds them up (subtotal = sum(items.total)).
 - Order steps so the models others link to come first. At most ${MAX_STEPS} steps.
-- Linked Relationships: when saving one record should change the record it picks (a payment ticked "Mark as paid" sets its invoice's status to paid and copies the payment date), plan a stored yes/no field for the trigger on the picking model, and after the build add the rule with update_page { route, linkedRelationships }. Totals that must always be right (amount paid) are rollups, not rules.
+- Linked Relationships: when saving one record should change the record it picks (a payment ticked "Mark as paid" sets its invoice's status to paid and copies the payment date), plan a stored yes/no field for the trigger on the picking model, and after the build add the rule with update_page { route, linkedRelationships }. Totals that must always be right (amount paid) are rollups, not rules. Moving a number between two records (a transfer from one account to another) is two rules on the transfer: take the amount off the from-account's balance with a floor (dec + min 0 refuses a transfer bigger than the balance) and add it to the to-account's.
 - Each step's rationale tells the user, in their language, why it's there.`;
 
 /**

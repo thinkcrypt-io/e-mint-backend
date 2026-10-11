@@ -169,3 +169,37 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - `LinkedRuleDialog.tsx` (admin + mint-tenant): `scrollBehavior='inside'`, so
   the body scrolls within the shared 90vh modal and the footer stays put —
   the same set-up as the widget and quick-add dialogs.
+
+## 2026-10-12 — LU-08 in the model wizard, LU-09 transfers
+- Asked: Linked Relationships didn't show in the new-model wizard; and a
+  transfer between two accounts should take the amount from one and give it to
+  the other, and fail when the amount is more than the sending balance.
+- LU-08 (D17): `ModelWizard.tsx` pages step ends with a Linked Relationships
+  part (overview card, `linkedProblems` hold Next, the panel without
+  "Changed by…" — `showIncoming={false}`). `models.controller.ts`
+  `createModelCore` runs `checkLinkedRelationships` once the route is
+  registered and removes the model again on a problem.
+- LU-09 (D15, D16, D18), `linkedRelationships.function.ts`:
+  - `dec` (Take off), and `min` + `message` on inc/dec. The floor is checked
+    on the difference in prepare (refusal under the source field, e.g. Amount)
+    and again in the write: `updateOne({ _id, balance: { $gte: min - d } })`.
+    Taking an add back respects its floor too.
+  - The fields an add/take-off reads are required while the rule holds.
+  - Conditions with `{ ref: 'this.<field>' }` (`fieldLocks` `meets(…, ctx)` in
+    backend and admin; `refsIn` → `fieldsRead`).
+  - Rollback is field-level (`set` back / `$inc` reversed) instead of
+    replacing the target document — found by the concurrency check: the
+    refused transfer's rollback wiped the other transfer's take-off.
+- `linkedCheck.ts`: take-off on a non-number, `min` on a plain set, and refs to
+  fields this page lacks are refused at publish. Joi: `dec`, `min`, `message`.
+- Builder: `linkedRules.ts` (Take off, floor in the sentence, refs read as
+  "this Transfer's Amount"), `LinkedRuleDialog.tsx` (Never below + message
+  line), `ConditionsEditor.tsx` (`compareWith`: "a value" / "this Transfer's…").
+  FormMain resolves refs for the asterisk. All copied to mint-tenant.
+- MCP `update_page` describes `dec`/`min`/`message`/refs with the transfer
+  example; `platformGuide` says how to plan a transfer.
+- Checked: smoke 102/102 (new: W1–W2, X1–X8 incl. two transfers at once,
+  C1–C3); in the browser (admin-5021) a Transfers model built in the wizard
+  with both rules, the dialog scrolling inside, compare-with offered; then 20
+  moved Wallet 50→30 / Savings 0→20 and 100 refused with the rule's message
+  under Amount. admin + mint-tenant tsc clean.

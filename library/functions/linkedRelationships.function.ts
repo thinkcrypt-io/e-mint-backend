@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
 import LinkedChange from '../models/linked-change/model.js';
-import { LOCK_OPS, LockCondition, meets, lockedChanges, lockedMessage } from './fieldLocks.function.js';
+import { LOCK_OPS, LockCondition, isRef, meets, lockedChanges, lockedMessage } from './fieldLocks.function.js';
 import { accessRule, isAccessRestricted } from './recordAccess.function.js';
 import { ownRecordsOf } from './projectIndexes.function.js';
 import { applyFormulas, evaluate, formulasOf, parse, refsOf } from './formula.function.js';
@@ -66,6 +66,12 @@ export type Assignment = {
 	formula?: string;
 	/** Add this number (or this record's number field) — taken off again on undo. */
 	inc?: string | number;
+	/** Take this number (or this record's number field) off — given back on undo. */
+	dec?: string | number;
+	/** With inc / dec: the field never goes below this — the save is refused instead (a balance can't go under 0). */
+	min?: number;
+	/** What the refusal says, instead of "not enough …". */
+	message?: string;
 	/** Empty the field. */
 	clear?: boolean;
 };
@@ -102,8 +108,16 @@ const assignmentSchema = Joi.object({
 	from: Joi.string(),
 	formula: Joi.string().max(500),
 	inc: Joi.alternatives(Joi.number(), Joi.string()),
+	dec: Joi.alternatives(Joi.number(), Joi.string()),
+	min: Joi.number(),
+	message: Joi.string().allow('').max(300),
 	clear: Joi.boolean().valid(true),
-}).xor('value', 'from', 'formula', 'inc', 'clear');
+})
+	.xor('value', 'from', 'formula', 'inc', 'dec', 'clear')
+	.oxor('min', 'value')
+	.oxor('min', 'from')
+	.oxor('min', 'formula')
+	.oxor('min', 'clear');
 
 export const linkedRuleSchema = Joi.object({
 	id: Joi.string().max(60).required(),
@@ -171,15 +185,32 @@ const idsOf = (v: any): string[] =>
 /** A populated record copied over is its id. */
 const asStored = (v: any) => (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && v._id ? v._id : v);
 
-const holds = (doc: any, conds?: LockCondition[], match?: 'all' | 'any') => !conds?.length || meets(doc, conds, match === 'any' ? 'any' : 'all');
+/** Conditions on `doc`; a value `{ ref: 'this.amount' }` compares with the record being saved (`self`, the doc itself by default). */
+const holds = (doc: any, conds?: LockCondition[], match?: 'all' | 'any', self?: any) =>
+	!conds?.length || meets(doc, conds, match === 'any' ? 'any' : 'all', { this: self ?? doc });
+
+/** This record's fields a condition list compares with (`{ ref: 'this.amount' }`). */
+const refsIn = (conds?: LockCondition[]) =>
+	(conds || []).flatMap(c => (isRef(c?.value) && c.value.ref.startsWith('this.') ? [c.value.ref.slice(5)] : []));
+
+/** An add or a take-off: the amount as written (a number, or this record's field). */
+const stepOf = (a: Assignment) => (a.dec !== undefined ? a.dec : a.inc);
+const isStep = (a: Assignment) => a.inc !== undefined || a.dec !== undefined;
+/** This record's field an add or take-off reads, if it reads one. */
+const stepField = (a: Assignment): string | undefined => {
+	const v = stepOf(a);
+	return typeof v === 'string' && v && !Number.isFinite(Number(v)) ? v : undefined;
+};
 
 /** Every field of this record a rule reads — an update re-runs it only when one of them changed. */
 export const fieldsRead = (r: LinkedRule): string[] => {
 	const out = new Set<string>([r.target.via, ...(r.require || [])]);
 	(r.when || []).forEach(c => c?.field && out.add(c.field));
+	[...refsIn(r.when), ...refsIn(r.target.when)].forEach(f => out.add(f));
 	for (const a of r.set || []) {
 		if (a.from) out.add(a.from);
-		if (typeof a.inc === 'string' && !Number.isFinite(Number(a.inc))) out.add(a.inc);
+		const f = stepField(a);
+		if (f) out.add(f);
 		if (a.formula)
 			try {
 				refsOf(parse(a.formula)).forEach(k => k.startsWith('this.') && out.add(k.slice(5)));
@@ -201,12 +232,16 @@ const valueOf = (a: Assignment, source: any, target: any) => {
 	return a.value;
 };
 
+/** What an add (or, negative, a take-off) does to the field. */
 const incOf = (a: Assignment, source: any): number => {
-	if (typeof a.inc === 'number') return a.inc;
-	const n = Number(a.inc);
-	if (Number.isFinite(n)) return n;
-	return Number(get(source, String(a.inc))) || 0;
+	const v = stepOf(a);
+	const n = typeof v === 'number' ? v : Number.isFinite(Number(v)) && String(v).trim() !== '' ? Number(v) : Number(get(source, String(v))) || 0;
+	return a.dec !== undefined ? -n : n;
 };
+
+/** Fields this record must fill in while a rule holds: what it copies, adds or takes off, and asks for. */
+const neededBy = (r: LinkedRule): string[] =>
+	r.block ? [] : [...(r.require || []), ...(r.set || []).flatMap(a => [a.from, stepField(a)]).filter((x): x is string => !!x)];
 
 const labelOf = (settings: Record<string, any> | undefined, key: string) =>
 	settings?.[key]?.title || settings?.[key]?.schema?.label || settings?.[key]?.label || key;
@@ -239,7 +274,14 @@ export type LinkedSummary = {
 	changes: { field: string; label: string; from: string; to: string }[];
 };
 
-type Journal = { Model: mongoose.Model<any>; id: any; raw: any | null }[];
+/**
+ * What a run wrote, to put back if it fails. A whole document (`raw`, null:
+ * it didn't exist) for the change log; for a target only the fields the run
+ * touched — `set` back to what they held, `inc` taken off again — so another
+ * save that changed the same record meanwhile (a second transfer on the same
+ * account) keeps its change.
+ */
+type Journal = { Model: mongoose.Model<any>; id: any; raw?: any | null; set?: Record<string, any>; inc?: Record<string, number> }[];
 
 type Run = {
 	req: any;
@@ -274,6 +316,8 @@ type Step = {
 	asserted: Record<string, any>;
 	/** The logged change this continues (apply) or takes back (undo). */
 	change?: any;
+	/** Fields that mustn't go below a number (`min`): checked here, and again in the write itself. */
+	floors: Record<string, { min: number; message?: string }>;
 };
 
 type Source = { route: string; Model: mongoose.Model<any>; settings: Record<string, any>; label: string; id: any; values: any };
@@ -347,6 +391,23 @@ const checkTarget = async (step: Step, checkEditable: boolean) => {
 		const first: any = Object.values(e?.errors || {})[0];
 		throw new LinkedError(`${label}: ${first?.message || e.message}`);
 	}
+};
+
+/** Floors (`min`) on the fields this rule adds to or takes off. */
+const floorsOf = (rule: LinkedRule): Step['floors'] =>
+	Object.fromEntries((rule.set || []).filter(a => isStep(a) && typeof a.min === 'number').map(a => [a.field, { min: a.min as number, message: a.message || undefined }]));
+
+/**
+ * A take-off that would leave a field below its floor: the refusal. "Not
+ * enough Balance on Account Cash: it has 50, this needs 80."
+ */
+const floorProblem = (step: Step, field: string, d: number, now = Number(get(step.before, field)) || 0): string | null => {
+	const floor = step.floors[field];
+	if (!floor || d >= 0 || now + d >= floor.min) return null;
+	if (floor.message) return floor.message;
+	const label = labelOf(step.resolved.settings, field);
+	const keep = floor.min ? ` and keep ${floor.min}` : '';
+	return `Not enough ${label} on ${recordLabel(step.Model, step.before)}: it has ${now}, this needs ${-d}${keep}.`;
 };
 
 const summaryOf = (step: Step, after: any): LinkedSummary => ({
@@ -427,7 +488,7 @@ export const prepareLinked = async ({
 			for (const id of idsOf(get(values, rule.target.via)))
 				try {
 					const t = await loadTarget(run, { ...rule, asSystem: true }, source, id, 'view');
-					if (holds(t.doc.toObject(), rule.target.when, rule.target.match)) messages.push(rule.block.message);
+					if (holds(t.doc.toObject(), rule.target.when, rule.target.match, values)) messages.push(rule.block.message);
 				} catch (e) {
 					fail(e);
 				}
@@ -447,7 +508,7 @@ export const prepareLinked = async ({
 			}
 			try {
 				const t = await loadTarget(run, rule, source, String(change.target), 'edit');
-				const step: Step = { kind: 'undo', rule, ...t, before: t.doc.toObject(), sets: {}, incs: {}, asserted: {}, change };
+				const step: Step = { kind: 'undo', rule, ...t, before: t.doc.toObject(), sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule) };
 				const others = await LinkedChange.find({ rule: rule.id, target: change.target, revertedAt: null, _id: { $ne: change._id } }).lean();
 				for (const [f, v] of Object.entries(change.after || {})) {
 					// Someone changed it since, or another record's rule still holds it: left as it is.
@@ -455,6 +516,11 @@ export const prepareLinked = async ({
 					step.sets[f] = (change.before || {})[f] ?? null;
 				}
 				for (const [f, d] of Object.entries(change.incs || {})) if (Number(d)) step.incs[f] = -Number(d);
+				// Giving back what was added can't take a field below its floor either.
+				for (const [f, d] of Object.entries(step.incs)) {
+					const problem = floorProblem(step, f, d);
+					if (problem) throw new LinkedError(`“${name}” can't be taken back: ${problem}`);
+				}
 				await checkTarget(step, false);
 				steps.push(step);
 			} catch (e) {
@@ -474,8 +540,7 @@ export const prepareLinked = async ({
 
 		// Fields the rule copies or asks for are required while it holds.
 		if (now && action !== 'delete')
-			for (const f of [...(rule.require || []), ...(rule.set || []).map(a => a.from).filter((x): x is string => !!x)])
-				if (blank(get(values, f))) fields[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
+			for (const f of neededBy(rule)) if (blank(get(values, f))) fields[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
 
 		const targets = now ? idsOf(get(values, rule.target.via)) : [];
 		if (action !== 'delete') for (const c of mine) if (!targets.includes(String(c.target))) await takeBack(c);
@@ -487,14 +552,23 @@ export const prepareLinked = async ({
 			try {
 				const t = await loadTarget(run, rule, source, id, 'edit');
 				const targetBefore = t.doc.toObject();
-				if (!holds(targetBefore, rule.target.when, rule.target.match)) continue;
+				if (!holds(targetBefore, rule.target.when, rule.target.match, values)) continue;
 				const change = mine.find(c => String(c.target) === id);
-				const step: Step = { kind: 'apply', rule, ...t, before: targetBefore, sets: {}, incs: {}, asserted: {}, change };
+				const step: Step = { kind: 'apply', rule, ...t, before: targetBefore, sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule) };
+				let short = false;
 				for (const a of rule.set || []) {
-					if (a.inc !== undefined) {
+					if (isStep(a)) {
 						// Only the difference from what this record added last time.
 						const d = incOf(a, values) - (Number(change?.incs?.[a.field]) || 0);
-						if (d) step.incs[a.field] = d;
+						if (d) step.incs[a.field] = (step.incs[a.field] || 0) + d;
+						const problem = floorProblem(step, a.field, step.incs[a.field] || 0);
+						if (problem) {
+							// Said under the field it takes off, when it's one of this record's.
+							const f = stepField(a);
+							if (f && !fields[f]) fields[f] = problem;
+							else messages.push(problem);
+							short = true;
+						}
 					} else {
 						const v = valueOf(a, values, targetBefore);
 						step.asserted[a.field] = v;
@@ -505,6 +579,7 @@ export const prepareLinked = async ({
 				// logged yet: it's logged without a write, so it holds those values too.)
 				const unchanged = !Object.keys(step.sets).length && !Object.keys(step.incs).length;
 				if (unchanged && (change ? Object.entries(step.asserted).every(([k, v]) => same((change.after || {})[k], v)) : !Object.keys(step.asserted).length)) continue;
+				if (short) continue;
 				await checkTarget(step, true);
 				steps.push(step);
 			} catch (e) {
@@ -548,8 +623,6 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 		run.journal.push({ Model: LinkedChange, id: doc._id, raw });
 	};
 
-	run.journal.push({ Model, id, raw: (await Model.collection.findOne({ _id: id })) || null });
-
 	// Written from the record as it is now, not as it was when checked: in a
 	// batch an earlier row may have changed it (or its log) since.
 	const current = await Model.findById(id);
@@ -570,13 +643,31 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 
 	let doc = current;
 	if (Object.keys(step.incs).length) {
-		// Added in the database, so two payments at once both count.
-		await Model.updateOne({ _id: id }, { $inc: step.incs });
+		// Added in the database, so two payments at once both count. A field
+		// with a floor is only taken down while it still has enough: two
+		// transfers at once can't both spend the same balance.
+		const guard: Record<string, any> = { _id: id };
+		for (const [f, d] of Object.entries(step.incs)) if (step.floors[f] && d < 0) guard[f] = { $gte: step.floors[f].min - d };
+		const done = await Model.updateOne(guard, { $inc: step.incs });
+		if (done.matchedCount) run.journal.push({ Model, id, inc: Object.fromEntries(Object.entries(step.incs).map(([k, d]) => [k, -d])) });
+		else {
+			const fresh = await Model.findById(id).lean();
+			if (fresh) step.before = fresh;
+			const problem = Object.entries(step.incs)
+				.map(([f, d]) => floorProblem(step, f, d))
+				.find(Boolean);
+			throw new LinkedError(problem || `${recordLabel(Model, step.before)} changed while this was being saved — try again.`, 409);
+		}
 		doc = await Model.findById(id);
 	}
 	for (const [k, v] of Object.entries(step.sets)) doc.set(k, v === null ? undefined : v);
 	applyFormulas(doc, formulasOf(resolved.settings));
+	// What the save sets (the rule's fields and the formulas they move), as they were.
+	const paths: string[] = doc.modifiedPaths();
+	const touched = paths.filter(k => !paths.some(p => k !== p && k.startsWith(`${p}.`)));
+	const was = touched.length ? await Model.collection.findOne({ _id: id }, { projection: Object.fromEntries(touched.map(k => [k, 1])) }) : null;
 	const after = (await doc.save()).toObject();
+	if (touched.length) run.journal.push({ Model, id, set: Object.fromEntries(touched.map((k: string) => [k, get(was, k)])) });
 
 	if (step.kind === 'undo') {
 		await log(step.change._id, { $set: { revertedAt: new Date() } });
@@ -631,7 +722,17 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 const rollback = async (journal: Journal) => {
 	for (const j of [...journal].reverse()) {
 		try {
-			if (j.raw) await j.Model.collection.replaceOne({ _id: j.id }, j.raw);
+			if (j.set || j.inc) {
+				const $set: Record<string, any> = {};
+				const $unset: Record<string, ''> = {};
+				for (const [k, v] of Object.entries(j.set || {})) if (v === undefined) $unset[k] = '';
+				else $set[k] = v;
+				const update: any = {};
+				if (Object.keys($set).length) update.$set = $set;
+				if (Object.keys($unset).length) update.$unset = $unset;
+				if (j.inc && Object.keys(j.inc).length) update.$inc = j.inc;
+				if (Object.keys(update).length) await j.Model.collection.updateOne({ _id: j.id }, update);
+			} else if (j.raw) await j.Model.collection.replaceOne({ _id: j.id }, j.raw);
 			else await j.Model.collection.deleteOne({ _id: j.id });
 		} catch (e: any) {
 			console.error('Linked Relationships: putting back', j.Model.modelName, String(j.id), 'failed:', e?.message);
@@ -694,10 +795,9 @@ export const withLinkedHints = (schema: Record<string, any>, config: any, route?
 	const out: Record<string, any> = { ...schema };
 	for (const r of rules) {
 		const name = r.name || r.id;
-		if (!r.block)
-			for (const f of [...(r.require || []), ...(r.set || []).map(a => a.from).filter((x): x is string => !!x)])
-				if (out[f])
-					out[f] = { ...out[f], requiredIf: [...(out[f].requiredIf || []), { when: r.when || [], match: r.match === 'any' ? 'any' : 'all', rule: name }] };
+		for (const f of neededBy(r))
+			if (out[f])
+				out[f] = { ...out[f], requiredIf: [...(out[f].requiredIf || []), { when: r.when || [], match: r.match === 'any' ? 'any' : 'all', rule: name }] };
 		for (const f of fieldsRead(r))
 			if (out[f]) out[f] = { ...out[f], linkedReads: [...new Set([...(out[f].linkedReads || []), name])], ...(route && { linkedRoute: route }) };
 	}
