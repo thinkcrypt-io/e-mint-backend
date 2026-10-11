@@ -39,3 +39,30 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   `tsc --noEmit` clean.
 - Docs: admin `/docs/builder#linked-relationships` (new section, #linked-rule).
   Website: changelog entry 2026-10-11.
+
+## 2026-10-11 — LU-02 every write path
+- Engine: `linkedMany` (batch: prepare all → caller saves → apply in order,
+  one rollback for the batch), `linkedForApi` + rule flag `fromApi` (D12),
+  `seen` keyed by source so a batch's rows on one target all log. Undo now
+  works out what to put back at write time from the fresh target and log
+  (a bulk delete of two payments on one paid invoice used to leave it paid —
+  each saw the other still holding it).
+- Wired: `controllers/common/updateManyDocuments` (bulk edit; restores raw
+  rows on failure), `controllers/common/duplicateDocument` (row-menu Copy),
+  `library/controllers/bulk/bulkActions` (delete + undo, duplicate, status —
+  status now loads whole records when rules exist), `importRows` (step 5:
+  rows' rules checked in the dry run too, field "Linked records"; applied after
+  every row is saved; all-or-nothing), `routes-public/public.router.ts`
+  (create/update/delete; `hasApiRules` skips everything when no rule opts in).
+- Not run: Archive (records stay), Merge (documented gap, D13).
+- Bug met on the way: bulk edit copied each record with `structuredClone`,
+  which turns ObjectIds into plain objects, so the rule saw no invoice — uses
+  `hydrate({ ...b })` now.
+- Checked: smoke now 64 checks, all pass — bulk edit tick (B1) and a refused
+  row leaving the rest untouched (B2), bulk delete + undo (B3), Duplicate and
+  Copy (B4), bulk status running the invoice's own rule (B5), import dry run /
+  refused / good (B6), a tenant project (T1), another project's bill never
+  reached from the panel or the public API (T2, T3), public API with and
+  without `fromApi` (T3). `tsc --noEmit` clean; website `next build` passes.
+- Docs: admin guide `#linked-where` (where rules run) + the `fromApi` row.
+  Website changelog entry extended.

@@ -1,6 +1,7 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
-import { formulaPipeline } from '../../library/functions/formula.function.js';
+import { applyFormulas, formulaPipeline } from '../../library/functions/formula.function.js';
+import { hasLinkedRules, linkedFailure, linkedMany } from '../../library/functions/linkedRelationships.function.js';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 
@@ -62,6 +63,23 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 			const scope = { _id: { $in: ids }, store: req.store };
 			const before = await model.find(scope).lean();
 
+			// Linked Relationships: each record as it will be, checked before anything is written.
+			const linked = hasLinkedRules(req)
+				? await linkedMany(
+						req,
+						model,
+						before.map((b: any) => {
+							const doc: any = model.hydrate({ ...b });
+							for (const k of updateKeys)
+								if (keyType === 'array') doc.set(k, [...(doc.get(k) || []), ...(Array.isArray(updates[k]) ? updates[k] : [updates[k]])]);
+								else doc.set(k, updates[k]);
+							applyFormulas(doc, req.formulas);
+							return { action: 'update' as const, before: b, after: doc.toObject(), label: String(b.name || b.title || b.code || b._id) };
+						})
+				  )
+				: null;
+			if (linked?.error) return res.status(400).json(linked.error);
+
 			if (keyType === 'array') {
 				result = await model.updateMany(
 					{ _id: { $in: ids }, store: req.store },
@@ -87,6 +105,17 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 			const beforeById = new Map(before.map((doc: any) => [String(doc._id), doc]));
 			const fields = [...updateKeys, ...(req.formulas || []).map((f: any) => f.key)];
 			const after = await model.find(scope);
+
+			let also: any[] = [];
+			if (linked?.any)
+				try {
+					const byId = new Map(after.map((d: any) => [String(d._id), d]));
+					also = await linked.apply(before.map((b: any) => byId.get(String(b._id))));
+				} catch (e) {
+					// The records go back to how they were, with the rest.
+					for (const b of before as any[]) await model.collection.replaceOne({ _id: b._id }, b);
+					return linkedFailure(res, e);
+				}
 			after.forEach((doc: any) =>
 				recordHistory({
 					req,
@@ -102,7 +131,7 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 				})
 			);
 
-			return res.status(200).json({ message: 'Batch Update Completed', result });
+			return res.status(200).json({ message: 'Batch Update Completed', result, ...(also.length > 0 && { linked: also }) });
 		} catch (e: any) {
 			console.error(e.message);
 			return res.status(500).json({ message: e.message });

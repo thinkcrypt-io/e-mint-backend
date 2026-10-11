@@ -26,6 +26,8 @@ import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
+import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
+import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
@@ -689,6 +691,39 @@ const invalid = (e: any) => {
 	return e;
 };
 
+/**
+ * Linked Relationships for a public-API save (docs/linked-relationships, D12):
+ * only the rules marked "Also for website and API saves" start, as the
+ * system — a site never gets to change records through rules nobody opted in.
+ * Null when there are none. A refusal is a 400 with the rule's message.
+ */
+const apiLinked = async (req: any, ctx: Ctx, action: 'create' | 'update' | 'delete', before: any, after: any) => {
+	const entry = resources(req.app).get(ctx.def.route);
+	if (!entry) return null;
+	const resolved = await resolveOther(entry);
+	if (!linkedRulesOf(resolved.frontendConfig).some(r => r.fromApi)) return null;
+	const plan = await linkedForApi(req, resolved, ctx.Model, action, before, after);
+	if (plan?.error) throw new TenancyError(400, plan.error.message);
+	return plan;
+};
+
+/** Whether this model has a rule that runs for public-API saves — everything else skips the extra work. */
+const hasApiRules = async (req: any, ctx: Ctx) => {
+	const entry = resources(req.app).get(ctx.def.route);
+	return !!entry && linkedRulesOf((await resolveOther(entry)).frontendConfig).some(r => r.fromApi);
+};
+
+/** Runs a prepared plan after the save; on failure `undo` puts the record back and the error is answered. */
+const applyLinked = async (plan: any, saved: any, undo: () => Promise<any>) => {
+	if (!plan) return;
+	try {
+		await plan.apply(saved);
+	} catch (e: any) {
+		await undo();
+		throw new TenancyError(e instanceof LinkedError ? e.status : 500, e?.message || 'A linked record could not be updated');
+	}
+};
+
 router.post(
 	'/:route',
 	handle(async (req, res) => {
@@ -700,11 +735,17 @@ router.post(
 			...(ctx.def.access?.enabled && { privacy: 'public' }),
 		});
 		applyFormulas(doc, ctx.formulas);
+		let plan: any = null;
 		try {
+			if (await hasApiRules(req, ctx)) {
+				await doc.validate();
+				plan = await apiLinked(req, ctx, 'create', null, doc.toObject());
+			}
 			await doc.save();
 		} catch (e) {
 			throw invalid(e);
 		}
+		await applyLinked(plan, doc, () => ctx.Model.collection.deleteOne({ _id: doc._id }));
 		res.status(201);
 		const label = doc.get?.(displayFieldOf(ctx.def));
 		tellTeam(req, {
@@ -731,14 +772,22 @@ router.put(
 		const body = bodyOf(req, ctx);
 		// Locked by the record's state (a paid order's status): kept as it is, like a read-only field.
 		for (const l of lockedChanges(ctx.settings, doc.toObject(), body)) delete body[l.field];
+		const before = doc.toObject();
+		const raw = (await hasApiRules(req, ctx)) ? await ctx.Model.collection.findOne({ _id: doc._id }) : null;
 		doc.set(body);
 		applyFormulas(doc, ctx.formulas);
 		const changed = doc.isModified();
+		let plan: any = null;
 		try {
+			if (raw) {
+				await doc.validate();
+				plan = await apiLinked(req, ctx, 'update', before, doc.toObject());
+			}
 			await doc.save();
 		} catch (e) {
 			throw invalid(e);
 		}
+		await applyLinked(plan, doc, () => ctx.Model.collection.replaceOne({ _id: doc._id }, raw as any));
 		if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
 		return shape(doc.toObject(), ctx.def);
 	})
@@ -749,8 +798,17 @@ router.delete(
 	handle(async req => {
 		const ctx = await open(req, 'delete');
 		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
+		let plan: any = null;
+		let raw: any = null;
+		if (await hasApiRules(req, ctx)) {
+			const current = await ctx.Model.findOne({ _id: req.params.id, ...owned(ctx) });
+			if (!current) throw new TenancyError(404, 'Not found');
+			raw = await ctx.Model.collection.findOne({ _id: current._id });
+			plan = await apiLinked(req, ctx, 'delete', current.toObject(), null);
+		}
 		const gone = await ctx.Model.findOneAndDelete({ _id: req.params.id, ...owned(ctx) });
 		if (!gone) throw new TenancyError(404, 'Not found');
+		await applyLinked(plan, gone, () => ctx.Model.collection.insertOne(raw));
 		fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
 		return { message: 'Deleted' };
 	})

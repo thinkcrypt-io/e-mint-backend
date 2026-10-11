@@ -110,6 +110,10 @@ so the builder can reuse the shared ConditionsEditor.
   the rule no longer holds) is **taken back** per `undo`.
 - delete: rules with `on: delete` run on the deleted record's picks; every
   other rule takes back what it did, per `undo`.
+- many records at once (`linkedMany`): every record is prepared first, then
+  saved, then applied in order; what to put back on an undo is worked out at
+  write time from fresh records, so two rows of one batch on the same target
+  stack correctly. One failure rolls back the batch.
 - `undo`: `revert` (default) puts back fields that still hold what the rule set
   and takes an `inc` off; `keep` leaves them; `block` refuses the change.
   A field another record's same rule still holds is left (two payments
@@ -215,4 +219,6 @@ find every place to wire in. There are duplicate controller trees, though
 | D8 | Phase 1 targets only records **this record picks** (`via` a ref field). Reverse targets (an invoice cancelled → its payments void) and "create a record" (a payment adds a ledger line) come later | **decided** |
 | D10 | All-or-nothing by compensation (journal + put back), not Mongo transactions: every write in the chain (history, webhooks, counters, hooks) would need the session, and local dev Mongo is standalone | **decided 2026-10-11** |
 | D11 | Rule conditions use the field-lock/view-tab shape (`{field, op, value}` + `match`), not formRules', so the builder's shared ConditionsEditor fits | **decided 2026-10-11** |
+| D12 | Public-API saves start only rules with `fromApi: true` ("Also for website and API saves"), which then run as the system; rules those changes trigger in turn run as usual. Off by default: a site could otherwise send any record's id | **decided 2026-10-11** |
+| D13 | A copy (row-menu Copy, bulk Duplicate) is a new record and runs the rules; Archive and Merge run none (merge documented as a gap) | **decided 2026-10-11** |
 | D9 | Every step is logged in `CHANGELOG.md`, and the marketing site (mint-webpage) and the guides (admin /docs/builder, mint-docs) are updated as each WO lands, not at the end | **decided 2026-10-11 (user)** |

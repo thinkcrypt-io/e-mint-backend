@@ -83,6 +83,8 @@ export type LinkedRule = {
 	undo?: 'revert' | 'keep' | 'block';
 	require?: string[];
 	asSystem?: boolean;
+	/** Also run for saves through the public API (a website, an app) — as the system. Off by default. */
+	fromApi?: boolean;
 };
 
 /* ------------------------------------------------------------ the shape */
@@ -124,6 +126,7 @@ export const linkedRuleSchema = Joi.object({
 	undo: Joi.string().valid('revert', 'keep', 'block'),
 	require: Joi.array().items(Joi.string()).max(30),
 	asSystem: Joi.boolean(),
+	fromApi: Joi.boolean(),
 }).xor('set', 'block');
 
 export const linkedRulesSchema = Joi.array().items(linkedRuleSchema).max(50).unique('id');
@@ -246,9 +249,13 @@ type Run = {
 	summary: LinkedSummary[];
 	history: (() => void)[];
 	depth: number;
+	/** Many records in one go (bulk edit, import…): the caller applies, finishes and rolls back. */
+	batch?: boolean;
+	/** A public-API save: only rules with `fromApi` start, and they run as the system. */
+	api?: boolean;
 };
 
-const newRun = (req: any): Run => ({ req, seen: new Set(), journal: [], summary: [], history: [], depth: 0 });
+const newRun = (req: any, extra: Partial<Run> = {}): Run => ({ req, seen: new Set(), journal: [], summary: [], history: [], depth: 0, ...extra });
 
 type Step = {
 	kind: 'apply' | 'undo';
@@ -297,11 +304,12 @@ const loadTarget = async (run: Run, rule: LinkedRule, source: Source, id: string
 	const entry = route ? resources(run.req.app).get(route) : undefined;
 	if (!entry) throw new LinkedError(`“${rule.name || rule.id}” points at a page that doesn't exist (${route || rule.target.via}).`);
 	const title = displayModelName(entry.source.Model.modelName);
-	if (!rule.asSystem && !(await can(run, entry, verb)))
+	const system = rule.asSystem || run.api;
+	if (!system && !(await can(run, entry, verb)))
 		throw new LinkedError(`You can't ${verb === 'edit' ? 'change' : 'see'} ${title} records, so “${rule.name || rule.id}” can't run.`, 403);
 	const Model = entry.source.Model;
 	const and: any[] = [{ _id: id }, ownRecordsOf(Model)];
-	if (!rule.asSystem && isAccessRestricted(Model)) and.push(accessRule(run.req.user?._id));
+	if (!system && isAccessRestricted(Model)) and.push(accessRule(run.req.user?._id));
 	const doc = await Model.findOne({ $and: and.filter(x => Object.keys(x).length) });
 	if (!doc) throw new LinkedError(`${title} ${id} wasn't found, so “${rule.name || rule.id}” can't run.`, 404);
 	return { entry, Model, doc, resolved: await resolveOther(entry) };
@@ -380,7 +388,8 @@ export const prepareLinked = async ({
 	after: any;
 	run?: Run;
 }): Promise<Prepared | null> => {
-	const rules = linkedRulesOf(resolved?.frontendConfig);
+	// A public-API save starts only the rules that opt in; what they change in turn runs as usual.
+	const rules = linkedRulesOf(resolved?.frontendConfig).filter(r => !run.api || run.depth > 0 || r.fromApi);
 	if (!rules.length || !resolved) return null;
 	if (run.depth >= MAX_DEPTH) throw new LinkedError(`Linked Relationships went more than ${MAX_DEPTH} steps deep — check the rules for a loop.`);
 
@@ -472,7 +481,7 @@ export const prepareLinked = async ({
 		if (action !== 'delete') for (const c of mine) if (!targets.includes(String(c.target))) await takeBack(c);
 
 		for (const id of targets) {
-			const key = `${rule.id}:${id}`;
+			const key = `${source.id}:${rule.id}:${id}`;
 			if (run.seen.has(key)) continue;
 			run.seen.add(key);
 			try {
@@ -510,7 +519,7 @@ export const prepareLinked = async ({
 		error,
 		preview: steps.map(s => summaryOf(s, s.doc.toObject())).filter(s => s.changes.length),
 		apply: async (saved?: any) => {
-			const top = run.depth === 0;
+			const top = run.depth === 0 && !run.batch;
 			try {
 				for (const change of ended) {
 					run.journal.push({ Model: LinkedChange, id: change._id, raw: await LinkedChange.findById(change._id).lean() });
@@ -541,22 +550,35 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 
 	run.journal.push({ Model, id, raw: (await Model.collection.findOne({ _id: id })) || null });
 
-	let doc = step.doc;
+	// Written from the record as it is now, not as it was when checked: in a
+	// batch an earlier row may have changed it (or its log) since.
+	const current = await Model.findById(id);
+	if (!current) throw new LinkedError(`${recordLabel(Model, step.before)} was removed while this was being saved.`, 409);
+	step.before = current.toObject();
+	if (step.kind === 'undo') {
+		// Fields that still hold what this change set, and that no other record's change holds.
+		step.change = (await LinkedChange.findById(step.change._id).lean()) || step.change;
+		const others = await LinkedChange.find({ rule: rule.id, target: id, revertedAt: null, _id: { $ne: step.change._id } }).lean();
+		step.sets = {};
+		for (const [f, v] of Object.entries(step.change.after || {}))
+			if (same(get(step.before, f), v) && !others.some((o: any) => f in (o.after || {}))) step.sets[f] = (step.change.before || {})[f] ?? null;
+		// Another record's change on this field took over from this one: hand it the value from before both.
+		for (const o of others)
+			for (const [f, v] of Object.entries(step.change.after || {}))
+				if (f in (o.after || {}) && same((o.before || {})[f], v)) await log(o._id, { $set: { [`before.${f}`]: (step.change.before || {})[f] ?? null } });
+	}
+
+	let doc = current;
 	if (Object.keys(step.incs).length) {
 		// Added in the database, so two payments at once both count.
 		await Model.updateOne({ _id: id }, { $inc: step.incs });
 		doc = await Model.findById(id);
-		for (const [k, v] of Object.entries(step.sets)) doc.set(k, v === null ? undefined : v);
-		applyFormulas(doc, formulasOf(resolved.settings));
 	}
+	for (const [k, v] of Object.entries(step.sets)) doc.set(k, v === null ? undefined : v);
+	applyFormulas(doc, formulasOf(resolved.settings));
 	const after = (await doc.save()).toObject();
 
 	if (step.kind === 'undo') {
-		// Another record's change on this field took over from this one: hand it the value from before both.
-		const others = await LinkedChange.find({ rule: rule.id, target: id, revertedAt: null, _id: { $ne: step.change._id } }).lean();
-		for (const o of others)
-			for (const [f, v] of Object.entries(step.change.after || {}))
-				if (f in (o.after || {}) && same((o.before || {})[f], v)) await log(o._id, { $set: { [`before.${f}`]: (step.change.before || {})[f] ?? null } });
 		await log(step.change._id, { $set: { revertedAt: new Date() } });
 	} else if (step.change) {
 		const set: any = {};
@@ -616,6 +638,48 @@ const rollback = async (journal: Journal) => {
 		}
 	}
 };
+
+/**
+ * Many records saved in one go — bulk edit, status, delete and undo, import.
+ * Every record is prepared first (`error` lists the rows that can't go
+ * ahead, nothing written), then the caller saves them all and calls `apply`
+ * with the saved records in the same order. One failure puts back every
+ * linked change of the batch and throws; the caller puts its own rows back.
+ */
+export const linkedMany = async (
+	req: any,
+	Model: mongoose.Model<any>,
+	items: { action: LinkedAction; before: any; after: any; label?: string }[],
+	opts: { resolved?: ResolvedRoute; api?: boolean } = {}
+) => {
+	const run = newRun(req, { batch: true, api: opts.api });
+	const resolved = opts.resolved || req.resolvedRoute;
+	const plans: (Prepared | null)[] = [];
+	const problems: { index: number; message: string; fields?: Record<string, string> }[] = [];
+	for (const [index, it] of items.entries()) {
+		const plan = await prepareLinked({ req, resolved, Model, action: it.action, before: it.before, after: it.after, run });
+		if (plan?.error) problems.push({ index, ...plan.error, message: it.label ? `${it.label}: ${plan.error.message}` : plan.error.message });
+		plans.push(plan);
+	}
+	return {
+		error: problems.length ? { message: problems.map(p => p.message).join(' '), problems } : null,
+		any: plans.some(Boolean),
+		apply: async (saved: any[] = []) => {
+			try {
+				for (const [i, plan] of plans.entries()) if (plan) await plan.apply(saved[i]);
+				run.history.forEach(h => h());
+				return run.summary;
+			} catch (e) {
+				await rollback(run.journal);
+				throw e;
+			}
+		},
+	};
+};
+
+/** One public-API save: only rules with `fromApi`, run as the system. */
+export const linkedForApi = (req: any, resolved: ResolvedRoute, Model: mongoose.Model<any>, action: LinkedAction, before: any, after: any) =>
+	prepareLinked({ req, resolved, Model, action, before, after, run: newRun(req, { api: true }) });
 
 /** Whether the request's route has rules on — the controllers skip all of this when not. */
 export const hasLinkedRules = (req: any) => linkedRulesOf(req?.resolvedRoute?.frontendConfig).length > 0;

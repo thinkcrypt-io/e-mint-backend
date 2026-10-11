@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
 import recordHistory from '../../library/functions/recordHistory.function.js';
+import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -43,7 +44,18 @@ const duplicateDocument = ({ model, unique = '' }: any) => {
 				updatedAt: new Date(),
 			});
 
+			// A copy is a new record: its Linked Relationships run (linkedRelationships.function.ts).
+			const plan = hasLinkedRules(req) ? (await newDocument.validate(), await linkedFor(req, model, 'create', null, newDocument.toObject())) : null;
+			if (plan?.error) return res.status(400).json(plan.error);
+
 			const saved = await newDocument.save();
+			if (plan)
+				try {
+					await plan.apply(saved);
+				} catch (e) {
+					await model.collection.deleteOne({ _id: saved._id });
+					return linkedFailure(res, e);
+				}
 
 			// A copy is a new record as far as its history is concerned.
 			recordHistory({ req, action: 'create', model: model.modelName, doc: saved });

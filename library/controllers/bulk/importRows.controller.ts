@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { scopedModel } from '../../functions/routeRegistry.function.js';
 import ExcelJS from 'exceljs';
 import recordHistory from '../../functions/recordHistory.function.js';
+import { hasLinkedRules, LinkedError, linkedMany } from '../../functions/linkedRelationships.function.js';
 import { applyFormulas, formulasOf, stripFormulaKeys } from '../../functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../functions/formRules.function.js';
 
@@ -273,7 +274,16 @@ const coerce = (v: any, col: Column, path: any): any => {
 
 /* -------------------------------------------------------------- the check */
 
-type Checked = { rows: any[]; hidden: string[][]; problems: Problem[]; ignored: string[]; used: Column[]; total: number };
+type Checked = {
+	rows: any[];
+	hidden: string[][];
+	problems: Problem[];
+	ignored: string[];
+	used: Column[];
+	total: number;
+	/** The rows' Linked Relationships, prepared (docs/linked-relationships); applied after every row is saved. */
+	linked?: Awaited<ReturnType<typeof linkedMany>> | null;
+};
 
 const check = async (req: any, Model: mongoose.Model<any>, format: string, content: any): Promise<Checked> => {
 	const { headers, rows: raw }: { headers: string[]; rows: any[] } = await parse(format, content);
@@ -456,6 +466,7 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 	const validator = req.resolvedRoute?.built?.VALIDATORS?.POST;
 	const labelOf = (k: string) => used.find(c => c.key === k)?.label || columns.find(c => c.key === k)?.label || settings[k]?.title || k;
 	const hidden: string[][] = [];
+	const drafts: any[] = [];
 	rows.forEach((row, i) => {
 		const skip = Object.keys(rules).length ? hiddenFields(rules, row) : [];
 		skip.forEach(k => delete row[k]);
@@ -486,6 +497,7 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 
 		const doc = new Model({ ...row, addedBy: req.user?._id });
 		applyFormulas(doc, formulas);
+		drafts.push(doc);
 		const err: any = doc.validateSync(skip.length ? { pathsToSkip: skip } : undefined);
 		for (const [path, e] of Object.entries<any>(err?.errors || {})) {
 			const label = labelOf(path.split('.')[0]);
@@ -506,8 +518,20 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 		}
 	});
 
+	// 5. Linked Relationships: what each row would change in the records it picks
+	// (a payment marking its invoice paid) — checked for every row that passed.
+	let linked: Checked['linked'] = null;
+	if (!problems.length && rows.length && hasLinkedRules(req)) {
+		linked = await linkedMany(
+			req,
+			Model,
+			drafts.map(d => ({ action: 'create' as const, before: null, after: d.toObject() }))
+		);
+		for (const p of linked.error?.problems || []) add({ row: p.index + 2, field: 'Linked records', message: p.message });
+	}
+
 	problems.sort((a, b) => a.row - b.row);
-	return { rows, hidden, problems, ignored, used, total: raw.length };
+	return { rows, hidden, problems, ignored, used, total: raw.length, linked };
 };
 
 /* ------------------------------------------------------------ controllers */
@@ -537,7 +561,7 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 		return fail(res, 400, message, { problems: [], stage: 'read' });
 	}
 
-	const { rows, hidden, problems, ignored, used, total } = result;
+	const { rows, hidden, problems, ignored, used, total, linked } = result;
 	const badRows = new Set(problems.map(p => p.row)).size;
 	const summary = {
 		total,
@@ -556,13 +580,16 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 	// Save through the model (its hooks number codes, set slugs…), a batch at a
 	// time so a large file doesn't take one round trip per row.
 	const created: any[] = [];
+	const savedRows: any[] = [];
 	const formulas = formulasOf(req.resolvedRoute?.settings);
 	const saveRow = async (i: number) => {
 		const doc = new Model({ ...rows[i], addedBy: req.user?._id });
 		applyFormulas(doc, formulas);
 		const skip = hidden[i];
 		if (skip.length) await doc.validate({ pathsToSkip: skip });
-		created.push(await doc.save(skip.length ? { validateBeforeSave: false } : undefined));
+		const saved = await doc.save(skip.length ? { validateBeforeSave: false } : undefined);
+		created.push(saved);
+		savedRows[i] = saved;
 	};
 	for (let start = 0; start < rows.length; start += SAVE_BATCH) {
 		const batch = rows.slice(start, start + SAVE_BATCH).map((_, j) => start + j);
@@ -579,6 +606,17 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 			});
 		}
 	}
+	let also: any[] = [];
+	if (linked?.any)
+		try {
+			also = await linked.apply(savedRows);
+		} catch (e: any) {
+			await Model.deleteMany({ _id: { $in: created.map(d => d._id) } }).catch(() => undefined);
+			return fail(res, e instanceof LinkedError ? e.status : 500, `Nothing was imported — ${e?.message || 'a linked record could not be updated'}`, {
+				...summary,
+				stage: 'save',
+			});
+		}
 	created.forEach(doc => recordHistory({ req, action: 'create', model: Model.modelName, doc }));
-	return res.status(201).json({ ...summary, created: created.length });
+	return res.status(201).json({ ...summary, created: created.length, ...(also.length > 0 && { linked: also.length }) });
 };

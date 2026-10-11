@@ -5,6 +5,7 @@ import DeletedRecord from '../../models/deleted-record/model.js';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { ownRecordsOf } from '../../functions/projectIndexes.function.js';
 import { lockedChanges } from '../../functions/fieldLocks.function.js';
+import { hasLinkedRules, LinkedError, linkedFor, linkedMany } from '../../functions/linkedRelationships.function.js';
 
 /**
  * Bulk actions on the rows ticked in a table (admin selection bar):
@@ -20,7 +21,9 @@ import { lockedChanges } from '../../functions/fieldLocks.function.js';
  * Every action is scoped to `req.queryHelper` — the list's access rules — so
  * an id the admin couldn't see isn't touched; on access-restricted routes
  * deleting and merging are also the owner's alone (`ownerOnly`). Changes go to
- * the records' History.
+ * the records' History. Linked Relationships (docs/linked-relationships) run
+ * for delete, restore, duplicate and status like a single save would: checked
+ * for every row before anything is written, all or nothing.
  */
 
 const MAX_IDS = 1000;
@@ -28,7 +31,10 @@ const MAX_MERGE = 10;
 
 type Opts = { Model: mongoose.Model<any>; ownerOnly?: boolean };
 
-const fail = (res: Response, status: number, message: string) => res.status(status).json({ message });
+const fail = (res: Response, status: number, message: string, extra: any = {}) => res.status(status).json({ message, ...extra });
+/** A refusal or failed write from Linked Relationships. */
+const linkedFail = (res: Response, e: any) =>
+	e instanceof LinkedError ? fail(res, e.status, e.message) : fail(res, 500, e?.message || 'A linked record could not be updated');
 const oid = (id: any) => new mongoose.Types.ObjectId(String(id));
 const validIds = (ids: any): string[] =>
 	Array.isArray(ids) ? [...new Set(ids.filter((id: any) => mongoose.isValidObjectId(id)).map(String))] : [];
@@ -57,6 +63,12 @@ export const bulkDelete = ({ Model, ownerOnly }: Opts) => async (req: any, res: 
 		const docs = await Model.find(scopeOf(req, ids, ownerOnly)).lean();
 		if (!docs.length) return fail(res, 404, ownerOnly ? 'None of these records are yours to delete' : 'None of these records were found');
 
+		// What deleting them does to the records they changed — refused before anything goes.
+		const linked = hasLinkedRules(req)
+			? await linkedMany(req, Model, (docs as any[]).map(d => ({ action: 'delete' as const, before: d, after: null, label: nameOf(d) })))
+			: null;
+		if (linked?.error) return fail(res, 400, linked.error.message, { problems: linked.error.problems });
+
 		const batch = crypto.randomUUID();
 		await DeletedRecord.insertMany(
 			docs.map((doc: any) => ({
@@ -70,9 +82,18 @@ export const bulkDelete = ({ Model, ownerOnly }: Opts) => async (req: any, res: 
 			}))
 		);
 		const { deletedCount } = await Model.deleteMany({ _id: { $in: docs.map((d: any) => d._id) } });
+		let also: any[] = [];
+		if (linked?.any)
+			try {
+				also = await linked.apply(docs);
+			} catch (e) {
+				await Model.collection.insertMany(docs as any[], { ordered: false }).catch(() => undefined);
+				await DeletedRecord.deleteMany({ batch });
+				return linkedFail(res, e);
+			}
 		docs.forEach(doc => recordHistory({ req, action: 'delete', model: Model.modelName, doc }));
 
-		return res.status(200).json({ batch, deleted: deletedCount, skipped: ids.length - docs.length });
+		return res.status(200).json({ batch, deleted: deletedCount, skipped: ids.length - docs.length, ...(also.length > 0 && { linked: also }) });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not delete these records');
 	}
@@ -98,12 +119,25 @@ export const bulkRestore = ({ Model }: Opts) => async (req: any, res: Response) 
 		// as its model's (a snapshot from before WO-43 has no `_model`).
 		const own = ownRecordsOf(Model);
 		const back = snaps.filter((s: any) => !existing.has(String(s.docId))).map((s: any) => ({ ...s.doc, ...own }));
+		// Back again, its Linked Relationships run again, as when it was first saved.
+		const linked = hasLinkedRules(req)
+			? await linkedMany(req, Model, back.map((d: any) => ({ action: 'create' as const, before: null, after: Model.hydrate(d).toObject(), label: nameOf(d) })))
+			: null;
+		if (linked?.error) return fail(res, 400, linked.error.message, { problems: linked.error.problems });
 		// Straight into the collection: exactly what was deleted, no hooks re-numbering codes.
 		if (back.length) await Model.collection.insertMany(back as any[], { ordered: false });
+		let also: any[] = [];
+		if (linked?.any)
+			try {
+				also = await linked.apply(back);
+			} catch (e) {
+				await Model.collection.deleteMany({ _id: { $in: back.map((d: any) => d._id) } });
+				return linkedFail(res, e);
+			}
 		await DeletedRecord.deleteMany({ _id: { $in: snaps.map((s: any) => s._id) } });
 		back.forEach(doc => recordHistory({ req, action: 'create', model: Model.modelName, doc }));
 
-		return res.status(200).json({ restored: back.length });
+		return res.status(200).json({ restored: back.length, ...(also.length > 0 && { linked: also }) });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not restore these records');
 	}
@@ -156,7 +190,18 @@ export const bulkDuplicate = ({ Model }: Opts) => async (req: any, res: Response
 			Object.assign(copy, overrides);
 			if ('addedBy' in doc && req.user?._id) copy.addedBy = req.user._id;
 			try {
-				const saved = await new Model(copy).save();
+				// A copy is a new record: its Linked Relationships run, each copy on its own.
+				const fresh = new Model(copy);
+				const plan = hasLinkedRules(req) ? (await fresh.validate(), await linkedFor(req, Model, 'create', null, fresh.toObject())) : null;
+				if (plan?.error) throw new Error(plan.error.message);
+				const saved = await fresh.save();
+				if (plan)
+					try {
+						await plan.apply(saved);
+					} catch (e) {
+						await Model.collection.deleteOne({ _id: saved._id });
+						throw e;
+					}
 				created.push(String(saved._id));
 				recordHistory({ req, action: 'create', model: Model.modelName, doc: saved });
 			} catch (e: any) {
@@ -238,7 +283,9 @@ export const bulkStatus = ({ Model }: Opts) => async (req: any, res: Response) =
 		const reason = String(req.body?.reason || '').trim();
 		if (cfg.requireReason && !reason) return fail(res, 400, 'A reason is required for this change');
 
-		const docs = await Model.find(scopeOf(req, ids)).select(`name title code ${cfg.field}`).lean();
+		const rules = hasLinkedRules(req);
+		// With Linked Relationships the whole record is needed — the rules read any field.
+		const docs = rules ? await Model.find(scopeOf(req, ids)).lean() : await Model.find(scopeOf(req, ids)).select(`name title code ${cfg.field}`).lean();
 		const allowed: any[] = [];
 		const skipped: { id: string; name: string; from: string; why: string }[] = [];
 		for (const doc of docs as any[]) {
@@ -248,7 +295,20 @@ export const bulkStatus = ({ Model }: Opts) => async (req: any, res: Response) =
 				skipped.push({ id: String(doc._id), name: nameOf(doc), from, why: `can’t move from ${from || 'empty'} to ${to}` });
 			else allowed.push(doc);
 		}
+		const linked =
+			rules && allowed.length
+				? await linkedMany(req, Model, allowed.map(d => ({ action: 'update' as const, before: d, after: Model.hydrate({ ...d, [cfg.field]: to }).toObject(), label: nameOf(d) })))
+				: null;
+		if (linked?.error) return fail(res, 400, linked.error.message, { problems: linked.error.problems });
 		if (allowed.length) await Model.updateMany({ _id: { $in: allowed.map(d => d._id) } }, { $set: { [cfg.field]: to } });
+		let also: any[] = [];
+		if (linked?.any)
+			try {
+				also = await linked.apply(allowed);
+			} catch (e) {
+				for (const d of allowed) await Model.collection.replaceOne({ _id: d._id }, d);
+				return linkedFail(res, e);
+			}
 		const label = labelOf(req, cfg.field);
 		allowed.forEach(doc =>
 			recordHistory({
@@ -263,7 +323,7 @@ export const bulkStatus = ({ Model }: Opts) => async (req: any, res: Response) =
 			skipped.push({ id, name: id, from: '', why: 'not found or not yours to edit' })
 		);
 
-		return res.status(200).json({ changed: allowed.length, skipped });
+		return res.status(200).json({ changed: allowed.length, skipped, ...(also.length > 0 && { linked: also }) });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not change the status');
 	}

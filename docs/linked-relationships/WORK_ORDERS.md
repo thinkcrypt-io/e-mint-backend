@@ -6,8 +6,10 @@ Commit and push each WO when it's done.
 
 ## Handoff (last updated 2026-10-11)
 
-Decisions D1–D11 taken (README §8). **LU-01 done** (single create/update/delete
-on every defineRoutes route, tenant routes included). Next: LU-02.
+Decisions D1–D11 taken (README §8). **LU-01, LU-02 done**: every write path
+(single, copy, bulk edit/status/delete/undo/duplicate, import, public API with
+`fromApi`, tenant projects). Next: LU-03 (required-when + preview + form hint).
+Pushed: LU-01 backend `49fbf667`, admin `043ac50`, website `0ccb9df`.
 Smoke: `scripts/linked-relationships/smoke.mjs` (how to run it is in its header;
 never against a shared DB). Tenant guide (mint-docs) waits for LU-03/04 — there
 is nothing a tenant can switch on before the tab exists. After each WO: CHANGELOG
@@ -18,7 +20,7 @@ site (mint-webpage `src/content/*`), then commit + push each repo touched
 | WO | Title | Size | Status |
 |---|---|---|---|
 | LU-01 | Engine: rule shape, prepare/apply, create + update + delete on admin routes | L | **done 2026-10-11** |
-| LU-02 | Every write path: bulk edit, import, bulk delete/undo, public API, tenant | M | todo |
+| LU-02 | Every write path: bulk edit, import, bulk delete/undo, public API, tenant | M | **done 2026-10-11** |
 | LU-03 | "Required when" in formRules + preview endpoint + form hint | M | todo |
 | LU-04 | Builder Linked Relationships tab (sentence editor, Changed by…, Test on a record) | L | todo |
 | LU-05 | Block rules (cross-record checks) | S | todo |

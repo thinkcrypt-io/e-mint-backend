@@ -257,6 +257,136 @@ ok('(13) payment → invoice paid → client’s last paid date', String(K.lastP
 r = await publishRules(cust.route, [{ id: 'loop', name: 'Loop', target: { via: 'name' }, set: [{ field: 'x', value: 1 }] }]);
 ok('a broken rule on another page is refused', r.status === 400);
 
+
+// ================================================================= LU-02: every write path
+console.log('\n— LU-02: bulk edit, status, delete + undo, duplicate, import, tenant project, public API');
+await publishRules(pay.route, [markPaid, addAmount, noCancelled]);
+const oidOf = id => new mongoose.Types.ObjectId(id);
+const h = (await call('POST', I, { title: 'H' }, T)).body.doc;
+const h1 = (await call('POST', P, { invoice: h._id, amount: 10, paymentDate: '2026-10-01' }, T)).body.doc;
+const h2 = (await call('POST', P, { invoice: h._id, amount: 15, paymentDate: '2026-10-02' }, T)).body.doc;
+let H = await get(h._id);
+ok('setup: two unticked payments add 25', H.paidAmount === 25 && H.status === 'unpaid', H);
+
+// bulk edit: tick both
+r = await call('PUT', `${P}/update/many`, { ids: [h1._id, h2._id], updates: { markPaid: true } }, T);
+H = await get(h._id);
+ok('(B1) bulk edit ticking both marks the invoice paid', r.status === 200 && H.status === 'paid', { s: r.status, b: r.body?.message, H });
+ok('(B1) the bulk answer lists the linked change', Array.isArray(r.body?.linked) && r.body.linked.length >= 1, r.body?.linked);
+// bulk edit refused for one row → nothing changes
+await db.collection(inv.collectionName).updateOne({ _id: oidOf(b._id) }, { $set: { status: 'cancelled' } });
+const b1 = (await db.collection(pay.collectionName).insertOne({ invoice: oidOf(b._id), amount: 1, note: 'raw' })).insertedId;
+r = await call('PUT', `${P}/update/many`, { ids: [h1._id, String(b1)], updates: { invoice: b._id } }, T);
+ok('(B2) bulk edit with a row on a cancelled invoice is refused', r.status === 400 && /cancelled/.test(r.body?.message), r.body);
+ok('(B2) the other row was not changed', String((await db.collection(pay.collectionName).findOne({ _id: oidOf(h1._id) })).invoice) === h._id);
+await db.collection(inv.collectionName).updateOne({ _id: oidOf(b._id) }, { $set: { status: 'unpaid' } });
+await db.collection(pay.collectionName).deleteOne({ _id: b1 });
+
+// bulk delete + undo
+r = await call('POST', `${P}/bulk/delete`, { ids: [h1._id, h2._id] }, T);
+H = await get(h._id);
+ok('(B3) bulk delete takes both back: unpaid, 0', r.status === 200 && H.status === 'unpaid' && H.paidAmount === 0, { s: r.status, m: r.body?.message, H });
+r = await call('POST', `${P}/bulk/restore`, { batch: r.body?.batch }, T);
+H = await get(h._id);
+ok('(B3) undo puts them back and the rules run again', r.status === 200 && H.status === 'paid' && H.paidAmount === 25, { s: r.status, m: r.body?.message, H });
+
+// bulk duplicate: a copy is a new payment
+r = await call('POST', `${P}/bulk/duplicate`, { ids: [h1._id] }, T);
+H = await get(h._id);
+ok('(B4) duplicating a payment adds its amount again', r.status === 200 && r.body?.created?.length === 1 && H.paidAmount === 35, { b: r.body, H });
+// single copy route
+r = await call('PUT', `${P}/copy/${h2._id}`, null, T);
+H = await get(h._id);
+ok('(B4) the single copy (row menu) too: +15', r.status === 200 && H.paidAmount === 50, { s: r.status, H });
+
+// bulk status on invoices: their own rule (status paid → client's last paid) runs
+const invCfg = await configOf(inv.route);
+r = await call('PUT', '/builder/draft', { route: inv.route, kind: 'config', draft: { ...invCfg, route: { ...(invCfg.route || {}), status: { field: 'status' } } } }, T);
+r = await call('POST', '/builder/publish', { route: inv.route, kinds: ['config'] }, T);
+const k2 = (await call('POST', `/${cust.route}`, { name: 'Lee' }, T)).body.doc;
+const j = (await call('POST', I, { title: 'J', client: k2._id, paymentDate: '2026-09-30' }, T)).body.doc;
+r = await call('POST', `${I}/bulk/status`, { ids: [j._id], to: 'paid' }, T);
+const K2 = (await call('GET', `/${cust.route}/${k2._id}`, null, T)).body;
+ok('(B5) bulk status → paid runs the invoice’s rule on the client', r.status === 200 && String(K2.lastPaid).startsWith('2026-09-30'), { b: r.body, K2 });
+
+// import: all-or-nothing with the rules
+const m = (await call('POST', I, { title: 'M' }, T)).body.doc;
+const n = (await call('POST', I, { title: 'N', status: 'cancelled' }, T)).body.doc;
+const before3 = await db.collection(pay.collectionName).countDocuments();
+const rows = [
+	{ invoice: m._id, amount: 4, paymentDate: '2026-10-05', markPaid: true },
+	{ invoice: m._id, amount: 6, paymentDate: '2026-10-06' },
+	{ invoice: n._id, amount: 1, paymentDate: '2026-10-07' },
+];
+r = await call('POST', `${P}/bulk/import`, { format: 'json', content: JSON.stringify(rows), dryRun: true }, T);
+ok('(B6) dry run shows the cancelled invoice row', r.status === 200 && r.body?.problems?.some(p => p.row === 4 && /cancelled/.test(p.message)), r.body?.problems);
+r = await call('POST', `${P}/bulk/import`, { format: 'json', content: JSON.stringify(rows), dryRun: false }, T);
+ok('(B6) the whole file is refused', r.status === 400 && (await db.collection(pay.collectionName).countDocuments()) === before3, r.body?.message);
+ok('(B6) invoice M untouched', (await get(m._id)).status === 'unpaid');
+r = await call('POST', `${P}/bulk/import`, { format: 'json', content: JSON.stringify(rows.slice(0, 2)), dryRun: false }, T);
+const M = await get(m._id);
+ok('(B6) two good rows: M paid with 10 added', r.status === 201 && M.status === 'paid' && M.paidAmount === 10, { b: r.body?.message, M });
+
+// ---------------------------------------------------------- a tenant project + the public API
+const TPASS = 'tenant-pass-123';
+const reg = async (n, org) => (await fetch(ROOT + '/tenant/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: n, email: `${n.toLowerCase()}${stamp}@example.com`, password: TPASS, organization: org, country: 'BD' }) }).then(x => x.json())).token;
+const tcall = async (method, path, body, token) => {
+	const x = await fetch(ROOT + path, { method, headers: { 'content-type': 'application/json', ...(token && { authorization: token }) }, body: body && JSON.stringify(body) });
+	return { status: x.status, body: await x.json().catch(() => null) };
+};
+const tok = await reg('Lin', 'Linked Co');
+let t = await tcall('POST', '/tenant/api/projects', { name: 'Books', type: 'app' }, tok);
+const pid = t.body?._id;
+const slug = t.body?.publicSlug;
+const TP = path => `/tenant/api/p/${pid}${path}`;
+const tmk = async body => (await tcall('POST', TP('/builder/models'), body, tok)).body?.doc;
+const tinv = await tmk({ name: 'Bill', title: 'Bills', fields: [
+	{ key: 'title', label: 'Title', kind: 'text', required: true },
+	{ key: 'status', label: 'Status', kind: 'select', options: [{ value: 'unpaid' }, { value: 'paid' }], default: 'unpaid' },
+	{ key: 'paymentDate', label: 'Payment date', kind: 'date' },
+] });
+const tpay = await tmk({ name: 'Receipt', title: 'Receipts', fields: [
+	{ key: 'bill', label: 'Bill', kind: 'reference', ref: 'Bill', required: true },
+	{ key: 'paymentDate', label: 'Payment date', kind: 'date' },
+	{ key: 'markPaid', label: 'Mark as paid', kind: 'boolean' },
+] });
+ok('tenant: models made', !!tinv?.route && !!tpay?.route, { tinv: tinv?.route, tpay: tpay?.route });
+const tRule = { id: 'paid', name: 'Mark bill paid', when: [{ field: 'markPaid', op: 'is', value: true }], target: { via: 'bill' }, set: [{ field: 'status', value: 'paid' }, { field: 'paymentDate', from: 'paymentDate' }] };
+const tPublish = async rules => {
+	const cfg = (await tcall('GET', TP(`/builder/route?route=${tpay.route}`), null, tok)).body;
+	const draft = { ...(cfg?.config?.data || cfg?.code?.config || {}), linkedRelationships: rules };
+	const d = await tcall('PUT', TP('/builder/draft'), { route: tpay.route, kind: 'config', draft }, tok);
+	if (d.status !== 200) return d;
+	return tcall('POST', TP('/builder/publish'), { route: tpay.route, kinds: ['config'] }, tok);
+};
+t = await tPublish([tRule]);
+ok('tenant: rule published', t.status === 200, t.body);
+const tb = (await tcall('POST', TP(`/${tinv.route}`), { title: 'Rent' }, tok)).body?.doc;
+t = await tcall('POST', TP(`/${tpay.route}`), { bill: tb._id, paymentDate: '2026-10-11', markPaid: true }, tok);
+let TB = (await tcall('GET', TP(`/${tinv.route}/${tb._id}`), null, tok)).body;
+ok('(T1) tenant: receipt marks the bill paid', t.status === 201 && TB?.status === 'paid', { s: t.status, m: t.body?.message, TB });
+// another project's bill can't be reached
+const t2 = (await tcall('POST', '/tenant/api/projects', { name: 'Other books', type: 'app' }, tok)).body?._id;
+const otherBill = (await tcall('POST', `/tenant/api/p/${t2}/builder/models`, { name: 'Bill', title: 'Bills', fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }, { key: 'status', label: 'Status', kind: 'select', options: [{ value: 'unpaid' }, { value: 'paid' }], default: 'unpaid' }] }, tok)).body?.doc;
+const ob = (await tcall('POST', `/tenant/api/p/${t2}/${otherBill.route}`, { title: 'Theirs' }, tok)).body?.doc;
+t = await tcall('POST', TP(`/${tpay.route}`), { bill: ob._id, paymentDate: '2026-10-11', markPaid: true }, tok);
+const OB = (await tcall('GET', `/tenant/api/p/${t2}/${otherBill.route}/${ob._id}`, null, tok)).body;
+ok('(T2) a bill in another project is never changed', t.status >= 400 && OB?.status === 'unpaid', { s: t.status, m: t.body?.message, OB });
+
+// public API: rules start only when they opt in
+t = await tcall('PUT', TP(`/builder/models/${tpay._id}/public-api`), { enabled: true, actions: ['create'], auth: 'none' }, tok);
+ok('public API on for receipts', t.status === 200, t.body?.message);
+const pb = (await tcall('POST', TP(`/${tinv.route}`), { title: 'Web' }, tok)).body?.doc;
+t = await tcall('POST', `/public/api/${slug}/${tpay.route}`, { bill: pb._id, paymentDate: '2026-10-11', markPaid: true });
+let PB = (await tcall('GET', TP(`/${tinv.route}/${pb._id}`), null, tok)).body;
+ok('(T3) a website save leaves the bill alone without “also for website saves”', t.status === 201 && PB?.status === 'unpaid', { s: t.status, m: t.body?.message, PB });
+t = await tPublish([{ ...tRule, fromApi: true }]);
+t = await tcall('POST', `/public/api/${slug}/${tpay.route}`, { bill: pb._id, paymentDate: '2026-10-12', markPaid: true });
+PB = (await tcall('GET', TP(`/${tinv.route}/${pb._id}`), null, tok)).body;
+ok('(T3) with it on, the website save marks the bill paid', t.status === 201 && PB?.status === 'paid' && String(PB.paymentDate).startsWith('2026-10-12'), { s: t.status, m: t.body?.message, PB });
+t = await tcall('POST', `/public/api/${slug}/${tpay.route}`, { bill: ob._id, paymentDate: '2026-10-12', markPaid: true });
+ok('(T3) …but not another project’s bill', t.status >= 400 && (await tcall('GET', `/tenant/api/p/${t2}/${otherBill.route}/${ob._id}`, null, tok)).body?.status === 'unpaid', { s: t.status, m: t.body?.message });
+
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 await mongoose.disconnect();
 process.exit(fails ? 1 : 0);
