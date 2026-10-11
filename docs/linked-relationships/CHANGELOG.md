@@ -150,3 +150,15 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   get_model, M3 refused bad rule, a rule set over MCP runs, rules put back).
 - Docs: admin guide (#linked-relationships "Your AI (MCP)", the MCP tool
   table), mint-docs connect-ai tool table, website changelog item.
+
+## 2026-10-11 — LU-07 guides, site, smoke (closing)
+- Guides and site were updated with every WO (D9), not at the end: admin
+  /docs/builder#linked-relationships (+ #linked-tab #linked-rule #linked-form
+  #linked-where), mint-docs /pages#linked-relationships (same anchors — the
+  tenant panel's links land there) and connect-ai; website changelog entry,
+  Forms and Backend feature cards. Checked every anchor the app links to
+  exists on both sites.
+- `scripts/linked-relationships/smoke.mjs`: 81 checks over LU-01…06; how to
+  run it is in its header (private server + scratch mongod only).
+- Nothing deployed. Test servers stopped; launch config `admin-5021` kept in
+  e-mint/.claude/launch.json for the next visual check.

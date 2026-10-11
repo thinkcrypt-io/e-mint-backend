@@ -13,8 +13,8 @@ a "Will also update…" hint (POST /<route>/linked/preview) and the changes in
 the save toast; shared files copied to mint-tenant. **LU-04 done**: the green
 Linked Relationships tab in the page builder (admin + mint-tenant), guides in
 admin /docs/builder and mint-docs /pages, website features + changelog.
-LU-05 closed (built with the engine), **LU-06 done** (MCP). Next: LU-07
-(final pass over guides/site). The hosted /mcp only gets the new tool options
+LU-05 closed (built with the engine), **LU-06 done** (MCP). **LU-07 done** — all
+seven work orders are done. Open items are under "Later" below. The hosted /mcp only gets the new tool options
 after a backend deploy — deploying is the user's call.
 LU-04 backend `295cc140`, admin `5fa0a98`, mint-tenant `a01a585`, mint-docs `cb92a45`, website `9f7cfbf`.
 Pushed: LU-01 backend `49fbf667`, admin `043ac50`, website `0ccb9df`;
@@ -36,7 +36,7 @@ site (mint-webpage `src/content/*`), then commit + push each repo touched
 | LU-04 | Builder Linked Relationships tab (sentence editor, Changed by…) | L | **done 2026-10-11** |
 | LU-05 | Block rules (cross-record checks) | S | **done 2026-10-11** (built in LU-01; F4 checks the form hint) |
 | LU-06 | MCP (`update_page`, `get_model`, describe_platform); wizard/plans left out (D14) | M | **done 2026-10-11** |
-| LU-07 | Guides (/docs/builder#linked-relationships, mint-docs), marketing site, smoke script | M | todo |
+| LU-07 | Guides (/docs/builder#linked-relationships, mint-docs), marketing site, smoke script | M | **done 2026-10-11** (done step by step with each WO) |
 
 ---
 
@@ -111,6 +111,10 @@ guide, and a feature section on mint-website. Add the smoke script to
 `scripts/`.
 
 ## Later (not planned yet)
+- Deploy the backend so the hosted /mcp and the live panels get all of this
+  (the user's call — nothing was deployed).
+- A publish warning when two rules set the same field of one record (the later wins).
+- Merge runs no rules (D13).
 Reverse targets (records that pick this one), a "create a record" action
 (payment → ledger line), "send email" action through messaging, scheduled
 rules ("if unpaid 30 days after due → Overdue"), a two-way field sync
