@@ -60,6 +60,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
 							...(fieldConfig?.renderIf && { renderIf: fieldConfig.renderIf }),
+							...(fieldConfig?.requiredIf && { requiredIf: fieldConfig.requiredIf }),
+							...(fieldConfig?.linkedReads && { linkedReads: fieldConfig.linkedReads, linkedRoute: fieldConfig.linkedRoute }),
 							...(fieldConfig?.value && { value: fieldConfig.value }),
 							...(fieldConfig?.fetch && { fetch: fieldConfig.fetch }),
 							...(fieldConfig?.isExcluded && { isExcluded: fieldConfig.isExcluded }),
@@ -105,6 +107,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
 						// Declarative, so it survives a settings copy in the DB: shown while formData[field] equals value.
 						...(fieldConfig?.renderIf && { renderIf: fieldConfig.renderIf }),
+							...(fieldConfig?.requiredIf && { requiredIf: fieldConfig.requiredIf }),
+							...(fieldConfig?.linkedReads && { linkedReads: fieldConfig.linkedReads, linkedRoute: fieldConfig.linkedRoute }),
 						...(fieldConfig?.value && { value: fieldConfig.value }),
 						...(fieldConfig?.fetch && { fetch: fieldConfig.fetch }),
 						...(fieldConfig?.isExcluded && { isExcluded: fieldConfig.isExcluded }),

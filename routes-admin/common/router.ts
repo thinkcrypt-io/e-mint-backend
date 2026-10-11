@@ -53,6 +53,7 @@ import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { fillLinked } from '../../library/functions/linkedFill.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
+import { previewLinked } from '../../library/functions/linkedRelationships.function.js';
 import {
 	resolveRoute,
 	resourceRouteKey,
@@ -376,7 +377,15 @@ const defineRoutes = ({
 	);
 	router.get(
 		'/get/schema',
-		replaceController?.schema || R((c, r) => getSchema({ ...c.SCHEMA, formRules: r.frontendConfig?.formRules, form: r.frontendConfig?.form }))
+		replaceController?.schema || R((c, r) =>
+				getSchema({
+					...c.SCHEMA,
+					formRules: r.frontendConfig?.formRules,
+					form: r.frontendConfig?.form,
+					linkedRelationships: r.frontendConfig?.linkedRelationships,
+					route: r.key,
+				})
+			)
 	);
 	// Registered for every route, not only those with a config file: a
 	// RouteConfig published in the builder makes any route a generic page.
@@ -452,6 +461,10 @@ const defineRoutes = ({
 	router.post('/bulk/status', ...bulk(permissions.update), bulkStatus(bulkOpts));
 	router.post('/bulk/merge/preview', ...bulk(permissions.delete), mergePreview(bulkOpts));
 	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
+
+	// Linked Relationships: what saving the form's values would change in the
+	// records they pick — the form's hint. Nothing is written.
+	router.post('/linked/preview', protect, hasPermission([permissions.read]), previewLinked(config.MODEL));
 
 	// Bulk upload from a CSV, Excel or JSON file (importRows.controller.ts):
 	// the create permission; checked row by row like the create form, saved

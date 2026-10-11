@@ -1,9 +1,23 @@
 import { Response } from 'express';
 import { convertType } from '../../functions/_index.js';
 import { rulesOf, withRenderIf } from '../../functions/formRules.function.js';
+import { withLinkedHints } from '../../functions/linkedRelationships.function.js';
 
 /** `formRules` (and `form`'s section `showIf`): the route config's conditional fields, set as each field's `renderIf` for hand-written form layouts. */
-const getSchema = ({ settings, formRules, form }: { settings: any; formRules?: any; form?: any }) => {
+const getSchema = ({
+	settings,
+	formRules,
+	form,
+	linkedRelationships,
+	route,
+}: {
+	settings: any;
+	formRules?: any;
+	form?: any;
+	/** Linked Relationships: required-while and "saving updates…" hints (linkedRelationships.function). */
+	linkedRelationships?: any;
+	route?: string | null;
+}) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
 			let keys: string[] = [];
@@ -46,7 +60,9 @@ const getSchema = ({ settings, formRules, form }: { settings: any; formRules?: a
 				return res.status(200).json({ keys });
 			}
 
-			return res.status(200).json(withRenderIf(schema, rulesOf(settings, { formRules, form })));
+			return res
+				.status(200)
+				.json(withLinkedHints(withRenderIf(schema, rulesOf(settings, { formRules, form })), { linkedRelationships }, route));
 		} catch (e: any) {
 			console.error(e.message);
 			return res.status(500).json({ message: e.message });

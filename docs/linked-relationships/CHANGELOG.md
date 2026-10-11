@@ -66,3 +66,32 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   without `fromApi` (T3). `tsc --noEmit` clean; website `next build` passes.
 - Docs: admin guide `#linked-where` (where rules run) + the `fromApi` row.
   Website changelog entry extended.
+
+## 2026-10-11 — LU-03 the form's side
+- Backend: `withLinkedHints` puts `requiredIf` (`[{ when, match, rule }]`) on
+  fields a rule copies or requires, and `linkedReads` + `linkedRoute` on
+  fields a rule reads — in `/get/schema` (getSchema takes
+  `linkedRelationships`, `route`) and `/get/config` (form fields; both
+  convertToFormFields branches pass them). `POST /<route>/linked/preview
+  { id?, values }` → `{ changes, error }`, nothing written (`previewLinked`;
+  read permission; a page without rules answers empty).
+- Admin (+ mint-tenant, same files): `FormMain` marks a field required while
+  any of its `requiredIf` holds (fieldLocks `meets`) and renders
+  `LinkedPreview` — asks the preview 500 ms after a field a rule reads changes;
+  one line per record ("Will also update Invoice A: Status → paid, Payment
+  date → 20 Oct 2026 — Mark invoice paid", or "Will put back…"), or the
+  refusal. `useCustomToast` adds "Also updated Invoice A (Status, …)" from a
+  save's `linked`; post/update/delete/bulk-edit mutations also refresh the
+  changed pages (`linkedRoutes`). New mutation `linkedPreview` (name checked
+  unused). createFormFields/assertSchema know the three props.
+- Decided: the hint uses the form's raw option values ("paid"), not labels —
+  good enough for now.
+- Checked: smoke 72 checks, all pass (F1 schema/config hints, F2 preview:
+  would-change, writes nothing, needs the date, untick previews a put-back,
+  no-rules page). In the browser (admin-5021 against the private server):
+  ticking Mark as paid adds the asterisk and "Payment date is needed…";
+  picking invoice A shows the hint; Create → toast "Also updated … A (Status,
+  Payment date, Paid amount)"; two rules on one invoice show as one line.
+  admin `tsc` clean.
+- Docs: admin guide `#linked-form`. Website changelog item. mint-docs still
+  waits for LU-04 (tenants can't make rules before the tab exists).

@@ -327,6 +327,27 @@ r = await call('POST', `${P}/bulk/import`, { format: 'json', content: JSON.strin
 const M = await get(m._id);
 ok('(B6) two good rows: M paid with 10 added', r.status === 201 && M.status === 'paid' && M.paidAmount === 10, { b: r.body?.message, M });
 
+// ================================================================= LU-03: the form's side
+console.log('\n— LU-03: required-while, hints, preview');
+await publishRules(pay.route, [markPaid, addAmount, noCancelled]);
+const sch = (await call('GET', `${P}/get/schema`, null, T)).body;
+ok('(F1) schema: Payment date is required while Mark as paid is ticked', sch?.paymentDate?.requiredIf?.[0]?.when?.[0]?.field === 'markPaid', sch?.paymentDate);
+ok('(F1) schema: Mark as paid is read by the rule, with the route', sch?.markPaid?.linkedReads?.includes('Mark invoice paid') && sch?.markPaid?.linkedRoute === pay.route, sch?.markPaid);
+const cfgForm = (await call('GET', `${P}/get/config`, null, T)).body?.form;
+ok('(F1) config form carries them too', JSON.stringify(cfgForm || '').includes('requiredIf') && JSON.stringify(cfgForm).includes('linkedReads'), JSON.stringify(cfgForm || '').slice(0, 200));
+const q = (await call('POST', I, { title: 'Q' }, T)).body.doc;
+const countQ = await db.collection('linkedchanges').countDocuments();
+r = await call('POST', `${P}/linked/preview`, { values: { invoice: q._id, amount: 9, paymentDate: '2026-10-15', markPaid: true } }, T);
+ok('(F2) preview: would mark Q paid and add 9', r.status === 200 && r.body.changes.some(c => c.changes.some(x => x.field === 'status' && x.to === 'paid')) && r.body.changes.some(c => c.changes.some(x => x.field === 'paidAmount' && x.to === '9')), r.body);
+ok('(F2) preview wrote nothing', (await get(q._id)).status === 'unpaid' && (await db.collection('linkedchanges').countDocuments()) === countQ);
+r = await call('POST', `${P}/linked/preview`, { values: { invoice: q._id, amount: 9, markPaid: true } }, T);
+ok('(F2) preview says the date is needed', r.body?.error?.fields?.paymentDate, r.body);
+const qp = (await call('POST', P, { invoice: q._id, amount: 9, paymentDate: '2026-10-15', markPaid: true }, T)).body.doc;
+r = await call('POST', `${P}/linked/preview`, { id: qp._id, values: { markPaid: false } }, T);
+ok('(F2) preview of unticking an existing payment: puts Q back', r.body?.changes?.some(c => c.undo && c.changes.some(x => x.field === 'status' && x.to === 'unpaid')), r.body);
+r = await call('POST', `/${cust.route}/linked/preview`, { values: { name: 'x' } }, T);
+ok('(F2) a page without rules answers empty', r.status === 200 && r.body.changes.length === 0, r.body);
+
 // ---------------------------------------------------------- a tenant project + the public API
 const TPASS = 'tenant-pass-123';
 const reg = async (n, org) => (await fetch(ROOT + '/tenant/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: n, email: `${n.toLowerCase()}${stamp}@example.com`, password: TPASS, organization: org, country: 'BD' }) }).then(x => x.json())).token;

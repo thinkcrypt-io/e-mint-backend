@@ -8,6 +8,7 @@ import {
 
 import { Config } from '../../models/_index.js';
 import { rulesOf, withRenderIf } from '../../functions/formRules.function.js';
+import { withLinkedHints } from '../../functions/linkedRelationships.function.js';
 
 type ConfigType = {
 	table: string[];
@@ -120,7 +121,7 @@ const getConfig = ({
 
 				// Conditional fields: the config's formRules over the settings' renderIf.
 				const formFields = convertToFormFields({
-					schema: withRenderIf(schm, rulesOf(settings, config)),
+					schema: withLinkedHints(withRenderIf(schm, rulesOf(settings, config)), config, req.resolvedRoute?.key || route),
 					layout: filteredConfig?.form,
 				});
 

@@ -681,6 +681,62 @@ export const linkedMany = async (
 export const linkedForApi = (req: any, resolved: ResolvedRoute, Model: mongoose.Model<any>, action: LinkedAction, before: any, after: any) =>
 	prepareLinked({ req, resolved, Model, action, before, after, run: newRun(req, { api: true }) });
 
+/**
+ * The form's side of the rules, set on the schema the forms are built from:
+ * `requiredIf` on a field a rule copies or asks for (required while the
+ * rule's conditions hold — the panel shows the asterisk), and `linkedReads`
+ * + `linkedRoute` on a field a rule reads, so the form can show what saving
+ * will change in the records it picks (POST /<route>/linked/preview).
+ */
+export const withLinkedHints = (schema: Record<string, any>, config: any, route?: string | null) => {
+	const rules = linkedRulesOf(config);
+	if (!rules.length) return schema;
+	const out: Record<string, any> = { ...schema };
+	for (const r of rules) {
+		const name = r.name || r.id;
+		if (!r.block)
+			for (const f of [...(r.require || []), ...(r.set || []).map(a => a.from).filter((x): x is string => !!x)])
+				if (out[f])
+					out[f] = { ...out[f], requiredIf: [...(out[f].requiredIf || []), { when: r.when || [], match: r.match === 'any' ? 'any' : 'all', rule: name }] };
+		for (const f of fieldsRead(r))
+			if (out[f]) out[f] = { ...out[f], linkedReads: [...new Set([...(out[f].linkedReads || []), name])], ...(route && { linkedRoute: route }) };
+	}
+	return out;
+};
+
+/**
+ * POST /<route>/linked/preview { id?, values } — what saving these form
+ * values would change in the records they pick, or why it would be refused.
+ * Nothing is written. `id` for an edit (the values go over the stored record).
+ */
+export const previewLinked = (Model: mongoose.Model<any>) => async (req: any, res: any) => {
+	try {
+		if (!hasLinkedRules(req)) return res.status(200).json({ changes: [], error: null });
+		const values = { ...(req.body?.values && typeof req.body.values === 'object' ? req.body.values : {}) };
+		for (const k of ['_id', 'id', '__v', 'createdAt', 'updatedAt', 'addedBy']) delete values[k];
+		const id = req.body?.id;
+		let before: any = null;
+		let doc: any;
+		if (id && mongoose.isValidObjectId(id)) {
+			doc = await Model.findOne({ $and: [{ _id: id }, ownRecordsOf(Model)].filter(x => Object.keys(x).length) });
+			if (!doc) return res.status(404).json({ message: 'Record not found' });
+			before = doc.toObject();
+			for (const [k, v] of Object.entries(values)) {
+				try {
+					doc.set(k, v);
+				} catch {
+					/* a value the field can't take: the save will say so */
+				}
+			}
+		} else doc = new Model({ ...values, addedBy: req.user?._id });
+		applyFormulas(doc, formulasOf(req.resolvedRoute?.settings));
+		const plan = await prepareLinked({ req, resolved: req.resolvedRoute, Model, action: before ? 'update' : 'create', before, after: doc.toObject() });
+		return res.status(200).json({ changes: plan?.preview || [], error: plan?.error || null });
+	} catch (e: any) {
+		return res.status(500).json({ message: e?.message || 'Could not work out the linked changes' });
+	}
+};
+
 /** Whether the request's route has rules on — the controllers skip all of this when not. */
 export const hasLinkedRules = (req: any) => linkedRulesOf(req?.resolvedRoute?.frontendConfig).length > 0;
 
