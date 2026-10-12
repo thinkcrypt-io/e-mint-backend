@@ -216,3 +216,7 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   change." (or "…to see the rest." under the changes).
 - Checked: smoke all passed (F2 now: preview asks for the date with no error;
   saving without it still 400 under `paymentDate`). admin + mint-tenant tsc clean.
+- Follow-up (user): no message at all before the form is filled. `FormMain`
+  passes `ready` (every shown required field filled, `requiredIf` included);
+  `LinkedPreview` neither asks nor shows anything until then, and the muted
+  "Fill in …" lines are gone. Works against the old backend too.
