@@ -6,6 +6,7 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
 import { canOpenProject, publicProject, isId, projectPeople } from '../library/functions/tenancy.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
+import { makePdfTemplatesRouter } from '../library/controllers/pdfTemplates/_index.js';
 import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
 import { tenantLead, tenantNav } from '../library/functions/tenantNav.function.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
@@ -48,6 +49,7 @@ import { customQuery } from '../middleware/index.js';
  *   /sidebar/:platform/:type      the project's sidebar, filtered by role
  *   /sidebarcategories, /sidebaritems   the sidebar builder's CRUD            build
  *   /dashboard                    the dashboard builder                       read; build to change
+ *   /pdf-templates                PDF templates (docs/pdf-templates)          read; build to change
  *   /upload, /media, /files       uploads and the media manager over the project's own files —
  *                                 or the organization's shared library (mediaScope, WO-23)
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
@@ -92,6 +94,8 @@ router.use(
 );
 
 router.use('/dashboard', makeDashboardRouter({ read: [], edit: build }));
+// PDF templates (docs/pdf-templates): anyone in the project reads them; building changes them.
+router.use('/pdf-templates', makePdfTemplatesRouter({ read: [], edit: build }));
 
 // The project's own sections, then the tenant panel's fixed ones (tenantNav).
 // Only 'server' — the other types are the admin panel's built-in navigation.

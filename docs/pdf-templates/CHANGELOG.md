@@ -31,3 +31,31 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   "Page 3 of 4"), two records in one file; a broken template returns six
   readable errors. Fixed on the way: value columns 6 pt past the edge,
   letter-spaced words running together, bold labels left grey.
+
+## 2026-10-13 — PT-02 storage + API, PT-03 record data, PT-04 starters
+- Models `library/models/pdf-templates`: `PdfTemplate` (route, alias,
+  isDefault, blocks, lists, slots/sample, `gallery.published/order`, `key`,
+  `from`) and `PdfSettings` (key `default`), both tenantScoped.
+- `/pdf-templates` (`library/controllers/pdfTemplates`, admin + tenant
+  project router): list (?route=), get, create, update, delete (the default
+  passes on), `:id/default`, `:id/duplicate`, `settings` GET/PUT, `gallery`
+  (super admin's published, else the code starters as `starter:<key>`),
+  `gallery/starters` (super admin only: adds the missing built-ins,
+  published), `fields/:route`, `render` (sample data, inline or by id),
+  `guess`, `use`. Handlers can't crash the process (`safe`).
+- Per page: `POST /<route>/export/template { ids, template?, tz? }` behind the
+  page's export middleware; no template → the page's default.
+- `data.ts`: paths the template reads → populate (two steps, readable fields
+  only, access-restricted targets matched), `cleanRecord`, declared `lists`
+  (only for readers of that page), the field tree with section lists' fields
+  and backlinking pages. `mapping.ts`: synonym/type guesses per slot,
+  rewriting tokens (filters' field arguments too) and adding a list when a
+  slot is matched to another page.
+- `viewDocument.controller.ts` now exports `readable`, `refModelOf`,
+  `routeForModel`, `labelOf`, `instanceOf` for reuse.
+- Checked: smoke 23/23 on the private server (:5021, Mongo :27997) — gallery
+  fallback + seeding, guesses (total→grandTotal, client.name, items →
+  item.unitPrice / lineTotal), use-a-starter, downloads (one / two records),
+  a payments list, a password token printing nothing, permissions (reader
+  lists + downloads, can't edit; no read → 403), one default per page.
+  Downloaded files looked at as images.

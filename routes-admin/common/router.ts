@@ -50,6 +50,7 @@ import {
 import exportRows from '../../library/controllers/export/exportRows.controller.js';
 import { importRows, importTemplate } from '../../library/controllers/bulk/importRows.controller.js';
 import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
+import exportTemplate from '../../library/controllers/pdfTemplates/exportTemplate.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { fillLinked } from '../../library/functions/linkedFill.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
@@ -476,6 +477,8 @@ const defineRoutes = ({
 	// the list's filters and access let the admin see.
 	router.post('/export/rows', ...middlewares.export, exportRows(config.MODEL));
 	router.post('/export/records', ...middlewares.export, exportRecordsPdf(config.MODEL));
+	// Records printed with a PDF template (docs/pdf-templates) — reading them, like the rest.
+	router.post('/export/template', ...middlewares.export, exportTemplate(config.MODEL));
 
 	//Get distinct values for a field
 	router.get(

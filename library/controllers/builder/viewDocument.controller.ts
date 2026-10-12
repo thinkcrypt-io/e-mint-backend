@@ -63,7 +63,7 @@ export const resolveOther = (entry: ResourceRouteEntry): Promise<ResolvedRoute> 
 };
 
 /** Model paths that may be shown: not select:false, not secret-looking. */
-const readable = (model: mongoose.Model<any>, settings: Record<string, any> = {}) => (path: string) => {
+export const readable = (model: mongoose.Model<any>, settings: Record<string, any> = {}) => (path: string) => {
 	if (!path || path.startsWith('+') || path.startsWith('-') || SENSITIVE.test(path)) return false;
 	if (settings[path]?.exclude) return false;
 	const type: any = model.schema.path(path);
@@ -71,21 +71,21 @@ const readable = (model: mongoose.Model<any>, settings: Record<string, any> = {}
 	return true;
 };
 
-const instanceOf = (model: mongoose.Model<any>, path: string) => {
+export const instanceOf = (model: mongoose.Model<any>, path: string) => {
 	const type: any = model.schema.path(path);
 	return type?.caster?.instance && type.instance === 'Array' ? type.caster.instance : type?.instance || 'String';
 };
 
-const labelOf = (settings: Record<string, any>, key: string) =>
+export const labelOf = (settings: Record<string, any>, key: string) =>
 	settings[key]?.schema?.label || settings[key]?.title || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
 
-const refModelOf = (model: mongoose.Model<any>, path: string): mongoose.Model<any> | null => {
+export const refModelOf = (model: mongoose.Model<any>, path: string): mongoose.Model<any> | null => {
 	const type: any = model.schema.path(path);
 	const ref = type?.options?.ref || type?.caster?.options?.ref;
 	return typeof ref === 'string' ? scopedModel(ref) : null;
 };
 
-const routeForModel = (app: any, modelName: string) =>
+export const routeForModel = (app: any, modelName: string) =>
 	[...resources(app).values()].find(e => e.source.Model.modelName === modelName);
 
 type RelatedItem = {

@@ -275,6 +275,7 @@ import {
 import { getDocumentHistory } from '../library/controllers/history/_index.js';
 import builderRouter from '../library/controllers/builder/_index.js';
 import dashboardRouter from '../library/controllers/dashboard/_index.js';
+import pdfTemplatesRouter from '../library/controllers/pdfTemplates/_index.js';
 import templatesRouter from '../library/controllers/templates/templates.router.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import { Organization, TenantUser, TenantProject } from '../library/models/tenancy/_index.js';
@@ -312,6 +313,8 @@ router.post('/whatsapp/send', sendWhatsapp);
 
 router.use('/builder', builderRouter);
 router.use('/dashboard', dashboardRouter);
+// PDF templates (docs/pdf-templates): designed invoices, bills, receipts.
+router.use('/pdf-templates', pdfTemplatesRouter);
 // Template Studio (docs/templates): blueprints only — nothing here builds a model.
 router.use('/templates', templatesRouter);
 

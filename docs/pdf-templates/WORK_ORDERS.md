@@ -11,14 +11,14 @@ guides (admin `/docs/pdf-templates`, mint-docs) and the marketing site
 Plan written 2026-10-13 (user asked: visually designed invoice / bill / receipt
 PDFs with `{{invoice.total}}`-style data, pre-built templates added from the
 admin panel, users edit / build their own / let AI build, Download makes the
-PDF). **PT-01 done** (engine + the five starters' layouts, rendered and looked at).
+PDF). **PT-01…PT-04 done** — engine, storage + API, record data, starters + gallery + use-a-starter mapping. Backend only so far; smoke `scripts/pdf-templates/smoke.mjs` 23/23. Next: PT-05/06 (admin list + designer).
 
 | WO | Title | Size | Status |
 |---|---|---|---|
 | PT-01 | Engine: template shape + checks, tokens + filters, pdfkit renderer, fonts, images | L | **done 2026-10-13** |
-| PT-02 | Storage + API: PdfTemplate, PdfSettings, CRUD, render, per-page export | M | todo |
-| PT-03 | Record data: references, lists, permission-safe; the field tree for the designer | M | todo |
-| PT-04 | Starters: Invoice ×2, Bill, Receipt ×2 with slots + sample; gallery + seed; use-a-starter mapping | M | todo |
+| PT-02 | Storage + API: PdfTemplate, PdfSettings, CRUD, render, per-page export | M | **done 2026-10-13** |
+| PT-03 | Record data: references, lists, permission-safe; the field tree for the designer | M | **done 2026-10-13** |
+| PT-04 | Starters: Invoice ×2, Bill, Receipt ×2 with slots + sample; gallery + seed; use-a-starter mapping | M | **done 2026-10-13** |
 | PT-05 | Admin: /pdf-templates list, gallery, business settings | M | todo |
 | PT-06 | Admin: the designer | L | todo |
 | PT-07 | Downloads: view page button, row menu `download-pdf`, Print / PDF with a template | M | todo |
