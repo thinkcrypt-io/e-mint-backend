@@ -257,3 +257,17 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   locked "Set from MCP"; saving amount 5 created the payment for MCP, the rule
   moved MCP's paid amount 1 → 6 and the table refreshed. tsc clean in admin,
   mint-tenant, mint-docs, mint-webpage.
+
+## 2026-10-12 — row menu "Set a field" (LU-10 follow-up)
+- User asked: "Mark as void" on bills that aren't paid, from builder settings.
+  New row-menu type `set-field` `{ key, value, fieldLabel, valueLabel,
+  prompt? }`: field picker, value from the field's options / Yes-No / typed,
+  default confirmation "Mark as void? Status becomes Void." and success
+  "Status is now Void"; hidden on rows that already have the value; runs as
+  DecisionModal's PUT (locks, permissions, Linked Relationships apply) and
+  refreshes the table. admin + mint-tenant `menuTypes.ts`,
+  `MenuItemsEditor.tsx`, `TableMenu.tsx`; guides + website line.
+- Checked in the browser on the private smoke backend: built "Mark as void"
+  (Status → Cancelled, Show only when status is not paid), published; paid
+  and cancelled rows don't offer it, the unpaid row does; confirming set MCP
+  to cancelled and the table refreshed. tsc clean admin + mint-tenant + docs + site.
