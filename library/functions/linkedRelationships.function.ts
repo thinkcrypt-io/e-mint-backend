@@ -327,6 +327,10 @@ export type Prepared = {
 	error: { message: string; fields?: Record<string, string> } | null;
 	/** What would change — the form's hint. */
 	preview: LinkedSummary[];
+	/** The form's hint before saving: only what's wrong, not what's still to fill in. */
+	previewError: { message: string; fields?: Record<string, string> } | null;
+	/** Labels of the fields the rules still need — the hint asks for them instead. */
+	missing: string[];
 	/** Writes the changes; on failure puts back what it wrote and throws. */
 	apply: (saved?: any) => Promise<LinkedSummary[]>;
 };
@@ -470,6 +474,8 @@ export const prepareLinked = async ({
 	const ended: any[] = [];
 	const messages: string[] = [];
 	const fields: Record<string, string> = {};
+	/** Blank fields a rule needs: refused on save, only asked for in the preview. */
+	const needed: Record<string, string> = {};
 
 	const fail = (e: any) => {
 		if (e instanceof LinkedError) messages.push(e.message);
@@ -540,7 +546,7 @@ export const prepareLinked = async ({
 
 		// Fields the rule copies or asks for are required while it holds.
 		if (now && action !== 'delete')
-			for (const f of neededBy(rule)) if (blank(get(values, f))) fields[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
+			for (const f of neededBy(rule)) if (blank(get(values, f))) needed[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
 
 		const targets = now ? idsOf(get(values, rule.target.via)) : [];
 		if (action !== 'delete') for (const c of mine) if (!targets.includes(String(c.target))) await takeBack(c);
@@ -565,7 +571,7 @@ export const prepareLinked = async ({
 						if (problem) {
 							// Said under the field it takes off, when it's one of this record's.
 							const f = stepField(a);
-							if (f && !fields[f]) fields[f] = problem;
+							if (f && !fields[f] && !needed[f]) fields[f] = problem;
 							else messages.push(problem);
 							short = true;
 						}
@@ -588,10 +594,13 @@ export const prepareLinked = async ({
 		}
 	}
 
-	const error = messages.length || Object.keys(fields).length ? { message: [...messages, ...Object.values(fields)].join(' '), ...(Object.keys(fields).length > 0 && { fields }) } : null;
+	const errorOf = (fields: Record<string, string>) =>
+		messages.length || Object.keys(fields).length ? { message: [...messages, ...Object.values(fields)].join(' '), ...(Object.keys(fields).length > 0 && { fields }) } : null;
 
 	return {
-		error,
+		error: errorOf({ ...needed, ...fields }),
+		previewError: errorOf(fields),
+		missing: [...new Set(Object.keys(needed).map(f => labelOf(source.settings, f)))],
 		preview: steps.map(s => summaryOf(s, s.doc.toObject())).filter(s => s.changes.length),
 		apply: async (saved?: any) => {
 			const top = run.depth === 0 && !run.batch;
@@ -831,7 +840,7 @@ export const previewLinked = (Model: mongoose.Model<any>) => async (req: any, re
 		} else doc = new Model({ ...values, addedBy: req.user?._id });
 		applyFormulas(doc, formulasOf(req.resolvedRoute?.settings));
 		const plan = await prepareLinked({ req, resolved: req.resolvedRoute, Model, action: before ? 'update' : 'create', before, after: doc.toObject() });
-		return res.status(200).json({ changes: plan?.preview || [], error: plan?.error || null });
+		return res.status(200).json({ changes: plan?.preview || [], error: plan?.previewError || null, missing: plan?.missing || [] });
 	} catch (e: any) {
 		return res.status(500).json({ message: e?.message || 'Could not work out the linked changes' });
 	}

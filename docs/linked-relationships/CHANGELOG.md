@@ -203,3 +203,16 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   with both rules, the dialog scrolling inside, compare-with offered; then 20
   moved Wallet 50→30 / Savings 0→20 and 100 refused with the rule's message
   under Amount. admin + mint-tenant tsc clean.
+
+## 2026-10-12 — form hint no longer shows blanks as errors
+- The form's preview showed "Transfer Amount is needed for “…”" in red before
+  anything was submitted. `prepareLinked` now keeps blank-but-needed fields
+  apart (`needed`) and returns `previewError` (without them) and `missing`
+  (their labels); the save's `error` is unchanged and still refuses with the
+  message under the field. `POST /<route>/linked/preview` answers
+  `{ changes, error: previewError, missing }`.
+- `LinkedPreview.tsx` (admin + mint-tenant): only real problems in red;
+  missing fields as a muted "Fill in Amount to see what saving will also
+  change." (or "…to see the rest." under the changes).
+- Checked: smoke all passed (F2 now: preview asks for the date with no error;
+  saving without it still 400 under `paymentDate`). admin + mint-tenant tsc clean.

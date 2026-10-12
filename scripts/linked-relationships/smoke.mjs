@@ -341,7 +341,9 @@ r = await call('POST', `${P}/linked/preview`, { values: { invoice: q._id, amount
 ok('(F2) preview: would mark Q paid and add 9', r.status === 200 && r.body.changes.some(c => c.changes.some(x => x.field === 'status' && x.to === 'paid')) && r.body.changes.some(c => c.changes.some(x => x.field === 'paidAmount' && x.to === '9')), r.body);
 ok('(F2) preview wrote nothing', (await get(q._id)).status === 'unpaid' && (await db.collection('linkedchanges').countDocuments()) === countQ);
 r = await call('POST', `${P}/linked/preview`, { values: { invoice: q._id, amount: 9, markPaid: true } }, T);
-ok('(F2) preview says the date is needed', r.body?.error?.fields?.paymentDate, r.body);
+ok('(F2) preview asks for the date instead of erroring', !r.body?.error && r.body?.missing?.length === 1, r.body);
+r = await call('POST', P, { invoice: q._id, amount: 9, markPaid: true }, T);
+ok('(F2) saving without the date is still refused under it', r.status === 400 && r.body?.fields?.paymentDate, r.body);
 const qp = (await call('POST', P, { invoice: q._id, amount: 9, paymentDate: '2026-10-15', markPaid: true }, T)).body.doc;
 r = await call('POST', `${P}/linked/preview`, { id: qp._id, values: { markPaid: false } }, T);
 ok('(F2) preview of unticking an existing payment: puts Q back', r.body?.changes?.some(c => c.undo && c.changes.some(x => x.field === 'status' && x.to === 'unpaid')), r.body);
