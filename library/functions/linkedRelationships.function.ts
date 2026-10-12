@@ -397,9 +397,23 @@ const checkTarget = async (step: Step, checkEditable: boolean) => {
 	}
 };
 
-/** Floors (`min`) on the fields this rule adds to or takes off. */
-const floorsOf = (rule: LinkedRule): Step['floors'] =>
-	Object.fromEntries((rule.set || []).filter(a => isStep(a) && typeof a.min === 'number').map(a => [a.field, { min: a.min as number, message: a.message || undefined }]));
+/**
+ * Floors (`min`) on the fields this rule adds to or takes off — its own, then
+ * any other rule on the page sets for the same field of the same page: "Never
+ * below 0" on the sender's Balance also holds when the receiver's add is taken
+ * back (a transfer deleted after the money was spent). Borrowed floors keep
+ * the plain message, since theirs was written for the other record.
+ */
+const floorsOf = (rule: LinkedRule, rules: LinkedRule[], settings: Record<string, any> | undefined): Step['floors'] => {
+	const route = targetRouteOf(rule, settings);
+	const out: Step['floors'] = {};
+	for (const r of rules)
+		if (r !== rule && route && targetRouteOf(r, settings) === route)
+			for (const a of r.set || [])
+				if (isStep(a) && typeof a.min === 'number' && !(a.min <= (out[a.field]?.min ?? -Infinity))) out[a.field] = { min: a.min };
+	for (const a of rule.set || []) if (isStep(a) && typeof a.min === 'number') out[a.field] = { min: a.min, message: a.message || undefined };
+	return out;
+};
 
 /**
  * A take-off that would leave a field below its floor: the refusal. "Not
@@ -514,7 +528,7 @@ export const prepareLinked = async ({
 			}
 			try {
 				const t = await loadTarget(run, rule, source, String(change.target), 'edit');
-				const step: Step = { kind: 'undo', rule, ...t, before: t.doc.toObject(), sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule) };
+				const step: Step = { kind: 'undo', rule, ...t, before: t.doc.toObject(), sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule, rules, source.settings) };
 				const others = await LinkedChange.find({ rule: rule.id, target: change.target, revertedAt: null, _id: { $ne: change._id } }).lean();
 				for (const [f, v] of Object.entries(change.after || {})) {
 					// Someone changed it since, or another record's rule still holds it: left as it is.
@@ -560,7 +574,7 @@ export const prepareLinked = async ({
 				const targetBefore = t.doc.toObject();
 				if (!holds(targetBefore, rule.target.when, rule.target.match, values)) continue;
 				const change = mine.find(c => String(c.target) === id);
-				const step: Step = { kind: 'apply', rule, ...t, before: targetBefore, sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule) };
+				const step: Step = { kind: 'apply', rule, ...t, before: targetBefore, sets: {}, incs: {}, asserted: {}, change, floors: floorsOf(rule, rules, source.settings) };
 				let short = false;
 				for (const a of rule.set || []) {
 					if (isStep(a)) {

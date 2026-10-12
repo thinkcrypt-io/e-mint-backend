@@ -220,3 +220,14 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   passes `ready` (every shown required field filled, `requiredIf` included);
   `LinkedPreview` neither asks nor shows anything until then, and the muted
   "Fill in …" lines are gone. Works against the old backend too.
+
+## 2026-10-12 — a floor covers the field, not just its rule
+- Found from a live account at −5,000: the tenant's "Decrease Sender Account
+  Balance" had no Never below (config, not a bug). But even with one, the
+  receiving rule's take-back (transfer deleted after the money was spent) had
+  no floor of its own. `floorsOf(rule, rules, settings)` now also takes floors
+  other rules on the page set for the same field of the same target page (the
+  highest; plain message), the rule's own first. Same in the atomic `$inc` guard.
+- Docs: README D15 paragraph, admin /docs/builder transfer example.
+- Checked: smoke all passed, new X9 (floor only on the take-off; deleting a
+  spent transfer is refused, balances unchanged).

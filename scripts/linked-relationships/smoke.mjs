@@ -506,6 +506,10 @@ ok('(T3) …but not another project’s bill', t.status >= 400 && (await tcall('
 	await call('PUT', `${A}/${bank._id}`, { balance: 10 }, T);
 	x = await call('DELETE', `${X}/${spent._id}`, null, T);
 	ok('(X8) a transfer whose money was spent can’t be taken back below 0', x.status === 400 && /taken back/.test(x.body?.message) && (await bal(bank._id)) === 10 && (await bal(cash._id)) === 40, x.body?.message);
+	// The floor is the field's on this page: set only on the take-off, it still holds the receiver's take-back.
+	rr = await publishRules(xfer.route, [{ ...takeOff, set: [{ field: 'balance', dec: 'amount', min: 0, message: 'Not enough money in the sending account.' }] }, giveTo]);
+	x = await call('DELETE', `${X}/${spent._id}`, null, T);
+	ok('(X9) a floor on the take-off alone also stops the receiver going below 0', rr.status === 200 && x.status === 400 && /Not enough Balance/.test(x.body?.message) && (await bal(bank._id)) === 10 && (await bal(cash._id)) === 40, x.body?.message);
 
 	// Conditions compared with this record's fields.
 	rr = await publishRules(xfer.route, [{ ...takeOff, set: [{ field: 'balance', value: 1, min: 0 }] }]);

@@ -114,8 +114,11 @@ to another is two rules on the Transfer page:
 the Amount field when the amount is one of this record's fields). It's checked
 when the save is prepared — on the difference, so editing 30 → 60 needs 30
 more, not 60 — and again in the write itself (`updateOne({ balance: { $gte } })`),
-so two transfers at once can't both spend the same balance. A floor on an add
-also holds when the add is taken back (deleting a transfer whose money was spent).
+so two transfers at once can't both spend the same balance. A floor belongs to
+the field on that page: set once (on the take-off), it also holds for every
+other rule on the page that changes the same field — so the receiver's add
+can't be taken back below it either (deleting a transfer whose money was
+spent). Borrowed floors use the plain message.
 
 Ops: is, not, in, gt, gte, lt, lte, contains, empty, filled (`fieldLocks.function.ts`),
 so the builder can reuse the shared ConditionsEditor.
