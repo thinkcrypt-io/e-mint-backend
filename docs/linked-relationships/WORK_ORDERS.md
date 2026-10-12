@@ -6,6 +6,11 @@ Commit and push each WO when it's done.
 
 ## Handoff (last updated 2026-10-12)
 
+**2026-10-12: LU-10 + LU-11 done** — row menu "Add a linked record" (another
+page's add form filled in from the row, locked fields) and "Show only when" on
+every row-menu item. Front end only; checked in the browser on the private
+smoke backend. Next idea: MCP `update_page` can't set row menus yet.
+
 **2026-10-12: LU-08 + LU-09 done** (user asked: rules in the model wizard, and
 transfers between accounts that fail when the amount is more than the balance).
 Wizard part + server check (D17), take off + floors (D15), conditions compared
@@ -130,11 +135,41 @@ condition values (engine, publish check, form asterisk, ConditionsEditor
 "compare with this record's…"), the guarded `$inc` and field-level rollback.
 Smoke X1–X8, C1–C3, W1–W2.
 
+### LU-10 — Row menu: "Add a linked record" + "Show only when" (M)
+**Why (user, 2026-10-12):** on Bills, a row's ⋯ menu offers "Add payment" only
+while the bill isn't paid; it opens the Payment drawer with the bill (and any
+other field) filled in. Generic: any page, any target page, any presets.
+**Shape** (config `route.menu[]`, plain data — publishable):
+```ts
+{ type: 'add-related', title: 'Add payment', route: 'payments',
+  presets: [{ field: 'invoice', from: '_id', lock: true },   // this row
+            { field: 'amount', from: 'dueAmount' },          // a field of this row
+            { field: 'method', value: 'cash' }],              // a fixed value
+  showIf: [{ field: 'status', op: 'not', value: 'paid' }], showMatch: 'all' }  // on any item
+```
+**Files:** admin + mint-tenant `menuTypes.ts` (type + `route`/`presets` params,
+validation), `MenuItemsEditor.tsx` (page picker, presets rows, "Show only when"
+on every row-menu item via ConditionsEditor), `PagePanels.tsx`/`RouteEditor.tsx`/
+`ModelWizard.tsx` (pass model fields + this route), `TableMenu.tsx` (`showIf`
+via `meets`; the drawer = the target's own create form with presets; locked
+ones read-only), `CreateModal.tsx` (`defaults` in controlled mode),
+`fieldLocks.ts` (`presetLocked`).
+**Not:** a server rule. "Show only when" only hides the option; to refuse the
+save itself use a Refuse rule on the target page (LU-05) — the guide says so.
+**Done when:** Bills' "Add payment" shows only on unpaid rows, opens Payment
+with the bill locked in, saving refreshes Bills (its linked rules too); tsc
+clean in admin + mint-tenant.
+
+### LU-11 — Guides and site for LU-10 (S)
+admin /docs/builder (row menu section + anchor), mint-docs pages guide,
+website (mint-webpage) one line; doc link on the Row menu panel.
+
 ## Later (not planned yet)
 - Deploy the backend so the hosted /mcp and the live panels get all of this
   (the user's call — nothing was deployed).
 - A publish warning when two rules set the same field of one record (the later wins).
 - Merge runs no rules (D13).
+- MCP `update_page` can't edit the row menu (so an AI can't add "Add payment" yet).
 Reverse targets (records that pick this one), a "create a record" action
 (payment → ledger line), "send email" action through messaging, scheduled
 rules ("if unpaid 30 days after due → Overdue"), a two-way field sync

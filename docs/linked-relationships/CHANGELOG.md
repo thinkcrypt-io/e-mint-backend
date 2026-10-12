@@ -231,3 +231,29 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Docs: README D15 paragraph, admin /docs/builder transfer example.
 - Checked: smoke all passed, new X9 (floor only on the take-off; deleting a
   spent transfer is refused, balances unchanged).
+
+## 2026-10-12 — LU-10/11 row menu: "Add a linked record" + "Show only when"
+- User asked: on Bills, a row's ⋯ offers "Add payment" only while the bill
+  isn't paid, opening the Payment drawer with the bill filled in — generic.
+- Config (plain data in `route.menu[]`): `{ type: 'add-related', title,
+  route, presets: [{ field, from? ('_id' = the row, or a row field), value?,
+  lock? }] }`; `showIf` + `showMatch` on any row-menu item. No backend change.
+- admin + mint-tenant: `menuTypes.ts` (type, `route`/`presets` params,
+  checks), `MenuItemsEditor.tsx` (page picker that pre-fills the link back,
+  locked; "Filled in" rows with Yes/No and option pickers; "Show only when"
+  via ConditionsEditor; options open on picking a type with settings),
+  `PagePanels.tsx` (model fields, route, record name, doc link #row-menu),
+  `RouteEditor.tsx`/`ModelWizard.tsx`, `TableMenu.tsx` (`showIf` via `meets`),
+  new `menu/AddRelatedDialog.tsx` (target's own create form, presets as
+  `defaults`, locked → `lockedPresets`, unseen preset fields still sent,
+  invalidates this page), `CreateModal.tsx` (`defaults` + `description` in
+  controlled mode), `fieldLocks.ts` (`lockedPresets`).
+- Docs: admin /docs/builder#row-menu, mint-docs pages#row-menu; website
+  changelog + feature line.
+- Checked in the browser (admin-5021 against the private smoke backend): built
+  "Add payment" on LR Invoice in the builder (page pick pre-filled Invoice ←
+  This invoice, locked; Show only when status is not paid), published; paid
+  rows' ⋯ have no Add payment, unpaid rows do; the drawer opened with Invoice
+  locked "Set from MCP"; saving amount 5 created the payment for MCP, the rule
+  moved MCP's paid amount 1 → 6 and the table refreshed. tsc clean in admin,
+  mint-tenant, mint-docs, mint-webpage.
