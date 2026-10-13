@@ -589,3 +589,28 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Checked: a render of every family regular and bold italic, with ৳ falling
   back to Noto Bengali, an unknown font → the page's, fields in Times, a table
   in Mono; tsc clean (backend, admin, tenant) for the touched files.
+
+## 2026-10-14 — PT-33 draft / published (D23)
+- The user: templates must have a status; only published ones show on the
+  linked page's download; a download link is to one template.
+- Backend: `status` on PdfTemplate (none = published); normalizeTemplate keeps
+  it only when given (a save without it leaves it). Create / use / duplicate
+  start as drafts (`status: 'published'` in the body publishes at once).
+  GET /pdf-templates?published=1. export/template: no template → the default
+  among published; a draft by id → 400 "“X” is a draft — publish it to
+  download with it" (the designer's `as: 'data'` and inline templates still
+  work). MCP: list shows the status, use_pdf_starter / save_pdf_template take
+  `status`, new ones are drafts, the reply says when it isn't on Download PDF.
+- Admin (copied to mint-tenant): designer badge Draft / Published, Publish
+  (saves too) and Unpublish (confirm, says row menus hide too); list badge;
+  DownloadPdfButton and Print / PDF ask for published only; the row menu
+  hides Download PDF for a draft (or when the page has none published) —
+  asked once the menu opens; the route builder's template picker lists
+  published ones and warns when the linked one is a draft or deleted.
+- Smoke 54/54 (9 new: starts as a draft, ?published=1, no default download,
+  draft by id refused, designer data still read, copy is a draft, publish,
+  a save without status keeps it, listed once published). Headless Chrome as
+  the made-up super admin: the record page offered the two published
+  templates, not the draft copy; Publish → "Published — It’s offered on
+  /ptbillmv6ryun2’s Download PDF now", the record page then offered three;
+  Unpublish asked first and went back to Draft; the list showed the badges.
