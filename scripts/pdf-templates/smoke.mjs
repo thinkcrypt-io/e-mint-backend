@@ -130,15 +130,35 @@ ok('saved texts: keys from labels, unique, cleaned', JSON.stringify(r.body.texts
 // -------------------------------------------------------------- gallery
 r = await call('GET', '/pdf-templates/gallery', null, T);
 // A fresh database shows the built-in starters; one this script ran on before already has them.
-ok('the gallery has the five starters', r.status === 200 && r.body.templates.length >= 5 && (r.body.builtIn ? r.body.templates[0]._id.startsWith('starter:') : true), r.body?.templates?.map(t => t._id));
+ok('the gallery has the starters', r.status === 200 && r.body.templates.length >= 5 && (r.body.builtIn ? r.body.templates[0]._id.startsWith('starter:') : true), r.body?.templates?.map(t => t._id));
 r = await call('POST', '/pdf-templates/gallery/starters', {}, T);
 ok('super admin adds the starters to the gallery', r.status === 200 && r.body.added >= 0, r.body);
 r = await call('GET', '/pdf-templates/gallery', null, T);
 const classic = r.body.templates.find(t => t.key === 'invoice-classic');
 ok('gallery now comes from the database', r.body.builtIn === false && !!classic?._id && !String(classic._id).startsWith('starter:'), r.body?.templates?.length);
+const galleryList = r.body.templates;
 r = await call('POST', '/pdf-templates/render', { template: classic._id }, T);
 ok('gallery preview renders with sample data', r.status === 200 && r.pdf?.length > 5000);
 save('gallery-classic', r);
+ok('every starter is in the gallery, each under a category', ['invoice-minimal', 'quote-standard', 'quote-modern', 'receipt-money'].every(k => galleryList.some(t => t.key === k)) && galleryList.every(t => ['invoice', 'receipt', 'quotation'].includes(t.kind)), galleryList.map(t => `${t.key}:${t.kind}`));
+for (const key of ['invoice-minimal', 'quote-standard', 'quote-modern', 'receipt-money']) {
+	const g = galleryList.find(t => t.key === key);
+	const out = await call('POST', '/pdf-templates/render', { template: g?._id }, T);
+	ok(`starter ${key} renders with its sample`, isPdf(out) && out.pdf.length > 4000);
+	save(`starter-${key}`, out);
+}
+
+// --------------------------------------------------- categories (D21)
+r = await call('GET', '/pdf-templates/categories', null, T);
+ok('categories: Invoices, Receipts, Quotations to start with', r.status === 200 && ['invoice', 'receipt', 'quotation'].every(k => r.body.categories.some(c => c.key === k)) && r.body.canEdit === true, r.body);
+r = await call('POST', '/pdf-templates/categories', { name: 'Smoke Notes' }, T);
+ok('the super admin adds a category (key from the name)', r.status === 200 && r.body.key === 'smoke-notes', r.body);
+r = await call('PUT', '/pdf-templates/categories/smoke-notes', { name: 'Smoke notes', order: 9 }, T);
+ok('and renames it', r.status === 200 && r.body.name === 'Smoke notes' && r.body.order === 9, r.body);
+r = await call('GET', '/pdf-templates/gallery', null, T);
+ok('the gallery brings the categories along', r.body.categories?.some(c => c.key === 'smoke-notes'));
+r = await call('DELETE', '/pdf-templates/categories/smoke-notes', null, T);
+ok('and removes it', r.status === 200 && r.body.removed === 1, r.body);
 
 // ------------------------------------------------------- fields + guess
 r = await call('GET', `/pdf-templates/fields/${bill.route}`, null, T);
@@ -234,6 +254,8 @@ ok('one default per page', r.body.templates.filter(t => t.isDefault).length === 
 const reader = (await roles.insertOne({ name: `PT reader ${stamp}`, permissions: [`view-${bill.permission}`], isActive: true })).insertedId;
 const readerAdmin = (await admins.insertOne({ name: 'PT Reader', email: `ptr-${stamp}@example.com`, role: reader, isActive: true })).insertedId;
 const R = sign(readerAdmin);
+r = await call('POST', '/pdf-templates/categories', { name: 'Reader category' }, R);
+ok('a reader can’t add a category', r.status === 403, r.status);
 r = await call('GET', `/pdf-templates?route=${bill.route}`, null, R);
 ok('a reader lists the templates', r.status === 200 && r.body.templates.length === 2);
 r = await call('PUT', `/pdf-templates/${t1._id}`, { ...t1, name: 'Hijack' }, R);

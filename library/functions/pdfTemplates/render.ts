@@ -33,6 +33,8 @@ const NOTHING: Laid = { height: 0, draw: () => {} };
 const HAIRLINE = '#e5e7eb';
 const ZEBRA = '#f6f7f9';
 const SKEW = 0.2;
+/** Rounding room when asking whether a block fits — a block filled to the page bottom (D19) fits exactly. */
+const FIT = 0.5;
 
 /* ------------------------------------------------------------------ text */
 
@@ -707,14 +709,14 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 			if (b.type === 'table') {
 				const t = layoutTableRows(ctx, b, width);
 				const first = t.rows[0]?.height || 0;
-				if (y + t.header.height + first > bottom && y > top && !newPage()) {
+				if (y + t.header.height + first > bottom + FIT && y > top && !newPage()) {
 					full = true;
 					break;
 				}
 				t.header.draw(ml, y);
 				y += t.header.height;
 				for (const r of t.rows) {
-					if (y + r.height > bottom && y > top + t.header.height) {
+					if (y + r.height > bottom + FIT && y > top + t.header.height) {
 						if (!newPage()) {
 							full = true;
 							break;
@@ -737,7 +739,7 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 						laid = b.type === 'box' ? layoutBox(ctx, b, width, h) : { height: h, draw: laid.draw };
 					}
 				}
-				if (y + laid.height > bottom && y > top && !newPage()) {
+				if (y + laid.height > bottom + FIT && y > top && !newPage()) {
 					full = true;
 					break;
 				}

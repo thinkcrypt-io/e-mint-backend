@@ -2,11 +2,12 @@ import mongoose from 'mongoose';
 import { PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { fieldTree, FieldNode } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping } from '../../functions/pdfTemplates/mapping.js';
-import { aliasOf, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
+import { aliasOf, categoryKey, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
 import { FILTERS } from '../../functions/pdfTemplates/tokens.js';
 import { findTemplate, loadSettings, storeSettings } from '../pdfTemplates/pdfTemplates.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { withoutScope } from '../../functions/tenantScope.function.js';
+import { keepsGallery, loadCategories, removeCategory, saveCategory } from '../pdfTemplates/categories.controller.js';
 import type { ToolDef } from './mcp.router.js';
 
 /**
@@ -17,7 +18,7 @@ import type { ToolDef } from './mcp.router.js';
  */
 
 const GUIDE = `PDF templates print a page's records as designed documents (invoice, bill, receipt…). A template is JSON:
-{ name, description, kind: invoice|bill|receipt|quote|statement|other, route (the page), alias (the record's token root, e.g. "bill"),
+{ name, description, kind (a category key from list_pdf_categories — invoice, receipt, quotation…), route (the page), alias (the record's token root, e.g. "bill"),
   page: { size: A4|Letter|Legal|A5, orientation, margin: [t,r,b,l] pt }, style: { font: sans|mono|helvetica|times|courier, size, color, muted, accent, lineHeight },
   lists: [{ name, route, foreignField, sort, limit }]  — records of another page that point at this one,
   header: [blocks] (every page), body: [blocks], footer: [blocks] (every page; "Page {{page}} of {{pages}}") }
@@ -47,9 +48,17 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 		inputSchema: { type: 'object', properties: {} },
 		annotations: { readOnlyHint: true, openWorldHint: false },
 		run: async () => {
-			const [gallery, settings] = await Promise.all([findGallery(), loadSettings()]);
+			const [gallery, settings, categories] = await Promise.all([findGallery(), loadSettings(), loadCategories()]);
 			const texts = settings.texts.map(t => `- {{texts.${t.key}}} — ${t.label}`).join('\n') || '(none yet)';
-			return { text: `${GUIDE}\n\nGallery:\n${gallery.map(g => `- ${g.id} — ${g.name}: ${g.description}`).join('\n')}\n\nSaved texts:\n${texts}`, data: { gallery, texts: settings.texts } };
+			const known = new Set(categories.map(c => c.key));
+			const groups = [...categories.map(c => ({ title: `${c.name} (kind "${c.key}")`, list: gallery.filter(g => g.kind === c.key) })), { title: 'Other', list: gallery.filter(g => !known.has(g.kind)) }]
+				.filter(g => g.list.length)
+				.map(g => `${g.title}:\n${g.list.map(x => `- ${x.id} — ${x.name}: ${x.description}`).join('\n')}`)
+				.join('\n');
+			return {
+				text: `${GUIDE}\n\nCategories (a template's "kind"): ${categories.map(c => `${c.key} = ${c.name}`).join(', ')}\n\nGallery by category:\n${groups}\n\nSaved texts:\n${texts}`,
+				data: { gallery, categories, texts: settings.texts },
+			};
 		},
 	},
 	{
@@ -202,12 +211,76 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			};
 		},
 	},
+	{
+		name: 'list_pdf_categories',
+		title: 'List the PDF gallery’s categories',
+		description: 'The gallery’s categories (Invoices, Receipts, Quotations…) — a template’s `kind` is one of their keys.',
+		scope: 'read',
+		inputSchema: { type: 'object', properties: {} },
+		annotations: { readOnlyHint: true, openWorldHint: false },
+		run: async () => {
+			const categories = await loadCategories();
+			return { text: categories.map(c => `- ${c.key} — ${c.name}${c.description ? `: ${c.description}` : ''}`).join('\n'), data: { categories, canEdit: keepsGallery() } };
+		},
+	},
+	{
+		name: 'save_pdf_category',
+		title: 'Add, change or remove a PDF gallery category',
+		description:
+			'Super admin only (not inside a project). Adds a category or changes one by `key` (name, description, order); `remove: true` deletes it — its templates stay, shown under Other. Show the user the change first.',
+		scope: 'build',
+		inputSchema: {
+			type: 'object',
+			properties: {
+				key: { type: 'string', description: 'e.g. "delivery-note"; made from the name when left out' },
+				name: { type: 'string', description: 'e.g. "Delivery notes"' },
+				description: { type: 'string' },
+				order: { type: 'number', description: 'Its place in the list (0 first)' },
+				remove: { type: 'boolean' },
+			},
+		},
+		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+		run: async (_req, args) => {
+			if (args?.remove) {
+				const r = await removeCategory(String(args?.key || ''));
+				return r.error ? { text: r.error, isError: true } : { text: r.removed ? `Removed “${args.key}”.` : 'No category with that key.', data: r };
+			}
+			const r = await saveCategory(args || {});
+			return r.error ? { text: r.error, isError: true } : { text: `Saved the category ${r.category!.key} — “${r.category!.name}”.`, data: r.category };
+		},
+	},
+	{
+		name: 'publish_pdf_template',
+		title: 'Put a PDF template in the gallery (or take it out)',
+		description:
+			'Super admin only. Shows one of the super admin’s templates (id from list_pdf_templates) in the gallery every project starts from — under `category` (a key from list_pdf_categories), at `order` — or takes it out with `published: false`. A gallery template should print sample data: give it `slots` and `sample` with save_pdf_template so projects can match it to their fields. Only when the user says so.',
+		scope: 'build',
+		inputSchema: {
+			type: 'object',
+			required: ['id'],
+			properties: { id: { type: 'string' }, published: { type: 'boolean', description: 'Default true' }, category: { type: 'string' }, order: { type: 'number' } },
+		},
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+		run: async (_req, args, caller) => {
+			if (!keepsGallery()) return { text: 'Only the super admin keeps the gallery.', isError: true };
+			const id = String(args?.id || '');
+			if (!mongoose.isValidObjectId(id)) return { text: 'No template with that id.', isError: true };
+			const categories = await loadCategories();
+			const kind = args?.category !== undefined ? categoryKey(args.category) : undefined;
+			if (kind && !categories.some(c => c.key === kind)) return { text: `No category “${kind}” — add it with save_pdf_category, or pick one of: ${categories.map(c => c.key).join(', ')}.`, isError: true };
+			const published = args?.published !== false;
+			const set: any = { 'gallery.published': published, updatedBy: caller.user?._id, ...(kind && { kind }), ...(Number.isFinite(Number(args?.order)) && { 'gallery.order': Number(args.order) }) };
+			const doc: any = await PdfTemplate.findByIdAndUpdate(id, { $set: set }, { new: true }).lean();
+			if (!doc) return { text: 'No template with that id.', isError: true };
+			return { text: published ? `“${doc.name}” is in the gallery under ${doc.kind}.` : `“${doc.name}” is out of the gallery.`, data: short(doc) };
+		},
+	},
 ];
 
 /** The gallery, short: the super admin's published designs, else the built-in starters. */
 const findGallery = async () => {
 	const published: any[] = await withoutScope(() => PdfTemplate.find({ 'gallery.published': true }).sort({ 'gallery.order': 1, name: 1 }).lean());
 	return published.length
-		? published.map(t => ({ id: String(t._id), name: t.name, description: t.description || '', kind: t.kind }))
+		? published.map(t => ({ id: String(t._id), name: t.name, description: t.description || '', kind: categoryKey(t.kind) || 'other' }))
 		: STARTERS.map(s => ({ id: `starter:${s.key}`, name: s.name, description: s.description, kind: s.kind }));
 };

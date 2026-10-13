@@ -353,3 +353,27 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - mint-tenant: PdfPage, types, Properties, AddPanel, Outline, the designer
   page and the new dnd.ts copied (their HEAD copies matched admin's before
   the change); typechecks.
+
+## 2026-10-13 — PT-23 gallery categories + more starters (D21)
+- The user asked for categories (Invoice, Receipt, Quotation for now, more
+  later) that the super admin adds from the admin panel and over MCP, a
+  Quotation template, and more templates.
+- `PdfCategory` (global, not per project) + `categories.controller.ts`:
+  seeded with Invoices / Receipts / Quotations on first read; GET
+  /pdf-templates/categories for everyone, POST / PUT /:key / DELETE /:key for
+  the super admin (refused inside a project). A template's `kind` is a
+  category key (`categoryKey`; old quote → quotation, bill → invoice). The
+  gallery answer brings the categories along.
+- MCP: `list_pdf_categories`, `save_pdf_category` (add / change / remove),
+  `publish_pdf_template` (in / out of the gallery, under a category);
+  describe_pdf_templates lists the gallery by category.
+- Starters (rows and filling space): Invoice — Minimal, Quotation,
+  Quotation — Modern, Money receipt (A5 landscape, Bangladesh style) — nine
+  in all: four invoices (Bill among them), three receipts, two quotations.
+  A statement and a delivery note were drafted and left out until there are
+  categories for them.
+- Fix: a block filled to the page bottom fitted only to a rounding error and
+  went to a page 2 — the fit checks get 0.5pt of room.
+- Smoke 42/42: categories (defaults, add, rename, gallery, remove, a reader
+  refused), every new starter in the gallery under a category and rendering
+  with its sample; the four looked at as images.
