@@ -541,3 +541,37 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   **Receipt — Mono** (6ace81e39ea0618e13cd7dfc) were saved over MCP with it;
   production (not yet deployed) dropped `lineColor`, so re-save them after
   the deploy.
+
+## 2026-10-14 — PT-32 field chips, layered field menu, Layers follows
+- The user: selecting a block showed raw keys like {{texts.invoice_terms}} —
+  confusing; let people choose from models etc. in a dropdown / popover with
+  layers, with a switch to type the key raw. And: with Layers open, a block
+  selected on the page should scroll into view there.
+- `designer/TokenText.tsx`: a contentEditable box — text as it is, each
+  {{token}} a chip in words ("Business · Logo", "Saved text · Invoice terms",
+  "Status UPPER CASE"; the record's own fields carry no group; an unknown key
+  shows orange). A click on a chip opens the field menu beside it and swaps
+  the token; Field inserts at the cursor; Enter is refused on one-line boxes,
+  paste is plain text, keys typed by hand turn into chips on blur. The Keys
+  switch (remembered in this browser) shows the old raw input.
+- `designer/FieldPicker.tsx`: `fieldMenu` — layers: This row (in a table),
+  This <record>, Lists, Business, Saved texts (new — they weren't offered
+  before), Page & date; a reference opens into its fields (› button), a back
+  arrow and the trail; search flattens every layer with its trail. Opened
+  from a chip it starts at the chip's layer. `describeToken` for the chips.
+  The designer's picker context now carries the saved texts.
+- `designer/Outline.tsx`: rows carry `data-layer`; selecting changes scroll
+  the row into view (`nearest`, smooth, 8px scroll margin).
+- Checked in headless Chrome as the made-up super admin (the pane was
+  hidden): the logo's Source showed "Business · Logo"; its chip opened the
+  menu at Business; back → the groups; Saved texts → Invoice terms swapped it
+  to {{texts.invoice_terms}} (Keys on showed exactly that); a mixed block
+  "Status: {{… | upper}}" took typed text and Field → Page & date → Today at
+  the cursor → `Status: {{ptBillMv6ryun2.status | upper}} — thanks{{today |
+  date}}`, the page printing "Status: UNPAID — thanks14/10/2026". Layers:
+  selecting the footer line on the page scrolled the list 0 → 953 and back up
+  for the first block. Fixed on the way: the chip's group text took a global
+  span size; the menu's anchor is a Popover.Anchor at the chip.
+- Test harness note: the headless profile kept an expired token the app
+  restored before a script could set the new one — set it with
+  Page.addScriptToEvaluateOnNewDocument instead.
