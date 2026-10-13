@@ -316,3 +316,27 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Checked in the browser (admin-5021 on the scratch server): a test
   template drew as the PDF does; Width → Fixed made a 120pt slot; the Row
   panel; the Signature piece; undo.
+
+## 2026-10-13 — PT-21 moving on the page (D20)
+- Admin `_components/designer/dnd.ts`: `dropAt` reads the page's markup
+  (`data-block` + `data-flow`, `data-container` + `data-dir` / `data-column`,
+  `data-part`) — before / after a block along the way its list runs (left /
+  right in a row), inside a box / column / part at the pointer's place, beside
+  a box when within 8px of its edge; never into the block being moved; a page
+  break only in the body. `clipText` / `clipBlock` (JSON on the system
+  clipboard), `pastePlace` (inside a selected box at its end, a columns
+  block's first empty column, else after the selected block, else the body).
+- `PdfPage`: blocks draggable in the designer; while dragging, an empty
+  header / footer shows as a drop place drawn in the page margin (nothing
+  moves under the pointer — a first version put it above the body and the
+  drop landed one row up).
+- Designer: a line (or the empty box) shows where it lands; Add tiles drag
+  onto the page; ⌘C / ⌘X / ⌘V (not while typing, in a dialog or with words
+  selected); block bar Copy and, on a box or columns block with something
+  copied, Paste inside.
+- Checked in the browser (admin-5021, events dispatched — the pane's
+  automated mouse drag doesn't start HTML drag and drop): Right moved before
+  Left in a row; a row moved into a box with a min height; a Text tile
+  dropped between two blocks of a row; INVOICE copied and pasted inside a
+  box; saved without problems; the saved template rendered as a PDF and
+  matched the page.

@@ -34,7 +34,7 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-18 | Preview: a button on every template (list, gallery, designer) opening the real PDF in a new tab, every field filled with dummy data made from the page's fields when the template's sample doesn't cover them (user, 2026-10-13) | M | **done 2026-10-13** |
 | PT-19 | Flexible layout engine (D19): box stack / row, gap, valign, justify, min height; `grow` + `basis` on any block; Space fills (in a row, a box, the page body); schema, pdfkit renderer, the designer's HTML page, smoke | M | **done 2026-10-13** |
 | PT-20 | Designer controls for D19: Box → Layout (Stack / Row), gap, align, spread, min height; "Width in the row" (fit / fill / fixed); Space → size + "Fill the free space"; Row and "Push to the bottom" in Add; ← → in a row | M | **done 2026-10-13** |
-| PT-21 | Moving on the page (D20): drag blocks on the page (before / after, left / right in a row, into boxes and columns, from the Add panel), ⌘C / ⌘X / ⌘V with paste inside a box or column, block bar "Paste inside" | M | open |
+| PT-21 | Moving on the page (D20): drag blocks on the page (before / after, left / right in a row, into boxes and columns, from the Add panel), ⌘C / ⌘X / ⌘V with paste inside a box or column, block bar "Paste inside" | M | **done 2026-10-13** |
 | PT-22 | Guides (admin docs + mint-docs), website, MCP guide text, mint-tenant copies | S | open |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
