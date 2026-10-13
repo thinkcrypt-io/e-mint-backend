@@ -10,6 +10,7 @@ import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplate
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
 import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
+import { previewRoots } from '../../functions/pdfTemplates/preview.js';
 import { resources } from '../builder/viewDocument.controller.js';
 
 /**
@@ -275,6 +276,7 @@ const businessFor = (settings: PdfSettingsData, sample: any) => (settings.busine
  * POST /render — a template (inline or by id) drawn with sample data: the
  * gallery's previews, the designer before the page has records. `data` is
  * used as the roots when given; otherwise the template's own sample.
+ * `dummy: true` — Preview: every field the page has, filled (preview.ts).
  */
 export const renderSample = async (req: any, res: Response) => {
 	try {
@@ -285,7 +287,11 @@ export const renderSample = async (req: any, res: Response) => {
 		const settings = await loadSettings();
 		const data = req.body?.data && typeof req.body.data === 'object' ? req.body.data : template.sample || raw.sample || {};
 		const record = data[template.alias] ?? {};
-		const roots = { ...data, [template.alias]: record, record, business: businessFor(settings, data), texts: textsRoot(settings), today: new Date(), now: new Date(), template: { name: template.name } };
+		// Preview (PT-18): every field filled — from the page's fields, the sample over them.
+		const roots =
+			req.body?.dummy === true
+				? await previewRoots(req, template, settings, data)
+				: { ...data, [template.alias]: record, record, business: businessFor(settings, data), texts: textsRoot(settings), today: new Date(), now: new Date(), template: { name: template.name } };
 		const pdf = await renderPdf({ template, records: [{ roots }], settings, tz: zoneOf(settings, req.body?.tz) });
 		sendPdf(res, pdf, `${template.name || 'preview'}.pdf`, req.query.inline === '1');
 	} catch (e: any) {

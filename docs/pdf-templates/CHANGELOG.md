@@ -186,3 +186,16 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   tab and saved (GET /org returns it); inside the project the page shows the
   project's copy, the sidebar links Project settings and not the
   organization's.
+
+## 2026-10-13 — PT-18 preview data (backend)
+- `library/functions/pdfTemplates/preview.ts`: `previewRoots` — a record made
+  from the page's field tree (`dummyValue` by key and kind: names, emails,
+  phones, addresses, codes, dates, 3 line items), totals that add up
+  (`balance`: rows qty × price, total = sum, paid half, due the rest), the
+  template's sample over it; lists two rows each; business details the
+  scope's own with the empty ones filled (a "YOUR LOGO" badge when there's no
+  logo); saved texts the template prints but the scope hasn't written.
+- POST /pdf-templates/render takes `dummy: true`.
+- Checked: a starter applied to a page rendered both ways — the old sample
+  path was blank for the page's fields; the preview fills every one (looked
+  at as an image). Admin side not started.
