@@ -64,7 +64,9 @@ export const dummyRecord = (nodes: FieldNode[], i = 0): Record<string, any> => {
  * Totals that add up: rows' amount = qty × price, and the record's total /
  * subtotal / amount the rows' sum, paid half, due the rest.
  */
-const balance = (record: Record<string, any>) => {
+type Totals = { sum: number; paid: number };
+
+const balance = (record: Record<string, any>): Totals => {
 	let sum = 0;
 	for (const v of Object.values(record)) {
 		if (!Array.isArray(v) || !v.length || typeof v[0] !== 'object') continue;
@@ -79,7 +81,7 @@ const balance = (record: Record<string, any>) => {
 		}
 		if (sum) break;
 	}
-	if (!sum) return record;
+	if (!sum) return { sum: 0, paid: 0 };
 	const paidKey = Object.keys(record).find(k => typeof record[k] === 'number' && /paid/i.test(k));
 	const paid = Math.round(sum / 2);
 	for (const [k, v] of Object.entries(record)) {
@@ -91,7 +93,7 @@ const balance = (record: Record<string, any>) => {
 		else if (/discount/i.test(k)) record[k] = 0;
 		else if (/^(sub)?total$|grand|amount$|payable|net/i.test(k)) record[k] = sum;
 	}
-	return record;
+	return { sum, paid: paidKey ? paid : 0 };
 };
 
 /** `a` with `b`'s values over it, objects merged, lists and values replaced. */
@@ -118,10 +120,43 @@ const SAMPLE_LOGO = `data:image/svg+xml;base64,${Buffer.from(
 	'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" rx="14" fill="#e5e7eb"/><text x="150" y="62" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#6b7280" text-anchor="middle" letter-spacing="4">YOUR LOGO</text></svg>'
 ).toString('base64')}`;
 
+const FIXED = new Set(['business', 'texts', 'today', 'now', 'page', 'pages', 'template', 'item', 'index']);
+
+/**
+ * What the template prints that's still empty — a starter's slot left
+ * unmatched ({{invoice.due}} on a page without it), a field the page doesn't
+ * have: filled too, by its name, so the preview has no holes. Real downloads
+ * still print those blank.
+ */
+const fillGaps = (template: PdfTemplateData, roots: Record<string, any>, totals: Totals) => {
+	// Amounts that agree with the line items: total = their sum, paid, due = the rest.
+	const value = (key: string) => {
+		if (/date|day|on$|at$/i.test(key)) return dummyValue(key, key, 'date');
+		if (totals.sum && MONEYISH.test(key)) {
+			if (/paid/i.test(key)) return totals.paid;
+			if (/due|balance|remaining|outstanding/i.test(key)) return totals.sum - totals.paid;
+			if (/tax|vat|discount|fee/i.test(key)) return 0;
+			return totals.sum;
+		}
+		return dummyValue(key, key, MONEYISH.test(key) ? 'number' : 'text');
+	};
+	const lists = new Set((template.lists || []).map(l => l.name));
+	for (const p of templatePaths(template)) {
+		const keys = p.split('.');
+		if (keys.length < 2 || FIXED.has(keys[0]) || lists.has(keys[0])) continue;
+		let at: any = roots;
+		for (let i = 0; i < keys.length - 1 && at && typeof at === 'object' && !Array.isArray(at); i++) at = at[keys[i]] ??= {};
+		const last = keys[keys.length - 1];
+		if (!at || typeof at !== 'object' || Array.isArray(at) || (at[last] !== undefined && at[last] !== '')) continue;
+		at[last] = value(last);
+	}
+};
+
 /** Every root a template prints, for a preview. */
 export const previewRoots = async (req: any, template: PdfTemplateData, settings: PdfSettingsData, sample: any = {}) => {
 	const tree = template.route ? await fieldTree(req, template.route).catch(() => null) : null;
-	let record: Record<string, any> = tree ? balance(dummyRecord(tree.fields)) : {};
+	let record: Record<string, any> = tree ? dummyRecord(tree.fields) : {};
+	const totals = balance(record);
 	record = over(record, sample?.[template.alias]);
 
 	const lists: Record<string, any[]> = {};
@@ -141,5 +176,7 @@ export const previewRoots = async (req: any, template: PdfTemplateData, settings
 		if (p.startsWith('texts.') && !texts[p.slice(6)]) texts[p.slice(6)] = `Sample ${p.slice(6).replace(/_/g, ' ')}: payment is due within 14 days. Goods once sold are not returnable.`;
 
 	const now = new Date();
-	return { ...sample, ...lists, [template.alias]: record, record, business, texts, today: now, now, template: { name: template.name } };
+	const roots: Record<string, any> = { ...sample, ...lists, [template.alias]: record, record, business, texts, today: now, now, template: { name: template.name } };
+	fillGaps(template, roots, totals);
+	return roots;
 };

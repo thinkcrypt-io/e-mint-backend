@@ -31,7 +31,7 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-15 | PDF Business details dialog: logo upload, tabs Business / Saved texts / Money & dates, opens at the field clicked | S | todo |
 | PT-16 | Designer full page + reorganised (D17): toolbar, Add / Layers, Document panel, block bar, placeholders, ready-made pieces (computer-generated note, signature, terms) | L | todo |
 | PT-17 | Guides (admin docs + mint-docs), website, mint-tenant copies, smoke | M | todo |
-| PT-18 | Preview: a button on every template (list, gallery, designer) opening the real PDF in a new tab, every field filled with dummy data made from the page's fields when the template's sample doesn't cover them (user, 2026-10-13) | M | **backend done** (`preview.ts`, POST /render `dummy: true`); admin Preview button + `/pdf-templates/[id]/preview` page (new tab, blob in a full-window iframe, designer passes its working copy via localStorage) still todo |
+| PT-18 | Preview: a button on every template (list, gallery, designer) opening the real PDF in a new tab, every field filled with dummy data made from the page's fields when the template's sample doesn't cover them (user, 2026-10-13) | M | **done 2026-10-13** |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 

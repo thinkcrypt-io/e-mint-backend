@@ -199,3 +199,24 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Checked: a starter applied to a page rendered both ways — the old sample
   path was blank for the page's fields; the preview fills every one (looked
   at as an image). Admin side not started.
+
+## 2026-10-13 — PT-18 Preview (admin) + no holes
+- `preview.ts`: `fillGaps` — anything the template prints that's still
+  empty (a starter's slot left unmatched, {{invoice.due}}; a field the page
+  doesn't have) is filled by its name; amounts agree with the line items
+  (`balance` returns the sum and paid: total = sum, due = sum − paid, tax /
+  discount 0); dates before amounts ("dueDate" is a date). Real downloads
+  still print those blank.
+- Admin + mint-tenant: `ui.tsx` `previewHref` / `openPreview` (the designer
+  leaves its unsaved copy in localStorage `MINT_PDF_PREVIEW_<id>`); new page
+  `/pdf-templates/[id]/preview` — full width (sidebar behind the menu
+  button), name, Again, Designer, Download, the PDF in a full-height frame;
+  an eye (Preview) on every card, yours and the gallery's; Preview in the
+  designer's toolbar. `renderPdfSample` takes `dummy` and returns the file's
+  name (`filename*`).
+- Guides: admin docs + mint-docs `#preview`.
+- Checked: the list's cards show the eye; the preview page opened in the
+  browser pane (window.open doesn't make tabs in the pane, so opened by
+  address) with the PDF; the same render looked at as an image — every field
+  filled, subtotal = total = the rows' sum, paid half, balance due the rest,
+  due date two weeks on.
