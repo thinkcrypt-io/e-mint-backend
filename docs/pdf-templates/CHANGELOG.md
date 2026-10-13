@@ -402,3 +402,30 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   the edges, page 1 of 1); the Banner template in the designer — header band
   edge to edge, the footer band's box exactly the page's left / right /
   bottom; the Box panel's values.
+
+## 2026-10-13 — PT-24 categories in the panel, PT-29 several blocks at once
+- PT-24: the gallery tab and New template show category chips (All ·
+  Invoices · Receipts · Quotations · Other, empty ones hidden) and a
+  category badge on gallery cards; the super admin's **Categories** dialog
+  (rename and describe in place, reorder, add, delete — its templates fall to
+  Other); the designer's Document → **Category** (from the list; an unknown
+  key shows as Other). The gallery answer also says how many built-in
+  starters the gallery doesn't have yet (`newStarters`), and the super admin
+  gets "Add N new built-in starters" — before, starters shipped after the
+  first "Add the built-in starters" could never be added.
+- PT-29 (user: "select two items and push them inside a container like
+  Figma"): ⇧ / ⌘ click selects more blocks (page and Layers; the extra ones
+  outlined dashed); dragging any selected block moves them all (in the page's
+  order; a block inside another selected one moves with it); ⌘G groups them
+  in a box, ⇧⌘G in a row, where the first was; Delete, ⌘C / ⌘X act on all;
+  the clipboard carries several blocks (`mintPdfBlocks`, one block from
+  before still pastes). A bar on the page and the right panel offer the
+  same. types.ts: `topSelected`, `relocateMany`, `groupBlocks`.
+- Checked: smoke for the categories API (PT-23); the gallery's chips and
+  filter in the browser (All 9 · Invoices 4 · Receipts 3 · Quotations 2,
+  Quotations → the two quotations); `relocateMany` / `groupBlocks` unit
+  checks 7/7 (into a box in page order, down the same list, a nested
+  selected block, never into themselves, into a column, ⌘G, ⇧⌘G across a box
+  and a column). The Categories dialog and the multi-select bar are not yet
+  seen in the browser — the pane was hidden (pages there don't render while
+  it is).
