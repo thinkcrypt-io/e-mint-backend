@@ -220,3 +220,20 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   address) with the PDF; the same render looked at as an image — every field
   filled, subtotal = total = the rows' sum, paid half, balance due the rest,
   due date two weeks on.
+
+## 2026-10-13 — PT-15 Business details dialog
+- Admin + mint-tenant `SettingsDialog.tsx`: tabs Business (BusinessFields
+  with the logo upload — the media picker opens over the dialog — plus the
+  bank note; in a project "this project's business details — Project
+  settings shows the same"), Saved texts (name, the field with a copy
+  button, the words; a new text's key follows its name until saved, then
+  stays; one-click suggestions: Terms & conditions, Computer generated,
+  Payment instructions, Return policy, Thank you; same-name refused), Money
+  & dates. `focus` opens it at a field: `business.logo` (cursor there),
+  `texts.<key>` (the Saved texts tab, the text made if missing).
+- Guides (admin docs + mint-docs): Business details rewritten (upload,
+  project's own), new `#texts` Saved texts.
+- Checked in the browser (script clicks — the pane was collapsed): tabs,
+  Upload logo → the picker over the dialog → From URL → the logo back in the
+  form; Computer generated added; Save → GET /settings has the logo and
+  `computer_generated`.
