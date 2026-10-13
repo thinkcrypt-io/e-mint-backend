@@ -15,6 +15,8 @@ const schema = new Schema<any>(
 		route: { type: String, default: '', index: true },
 		alias: { type: String, default: 'record' },
 		isDefault: { type: Boolean, default: false },
+		/** Draft or published (PT-33): only published ones are offered where the page downloads PDFs. None (older ones) = published. */
+		status: { type: String, enum: ['draft', 'published'], default: undefined },
 		page: { type: Schema.Types.Mixed, default: {} },
 		style: { type: Schema.Types.Mixed, default: {} },
 		lists: { type: [Schema.Types.Mixed], default: [] },

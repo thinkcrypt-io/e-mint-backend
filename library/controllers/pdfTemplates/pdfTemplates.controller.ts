@@ -98,10 +98,17 @@ export const findTemplate = async (id: string, { gallery = false } = {}): Promis
 
 /* -------------------------------------------------------------- list */
 
+/** Offered for download (PT-33): published, or saved before templates had a status. */
+export const PUBLISHED = { status: { $ne: 'draft' } };
+/** New, copied and from-the-gallery templates start as drafts unless asked otherwise. */
+const startStatus = (raw: any): 'draft' | 'published' => (raw?.status === 'published' ? 'published' : 'draft');
+
 export const listTemplates = async (req: Request, res: Response) => {
 	try {
 		const route = typeof req.query.route === 'string' ? req.query.route.replace(/^\/+|\/+$/g, '') : '';
-		const docs = await PdfTemplate.find(route ? { route } : {})
+		// ?published=1: only the ones a page offers for download.
+		const published = req.query.published === '1' || req.query.published === 'true';
+		const docs = await PdfTemplate.find({ ...(route && { route }), ...(published && PUBLISHED) })
 			.sort({ route: 1, isDefault: -1, name: 1 })
 			.lean();
 		return res.status(200).json({ templates: docs });
@@ -138,6 +145,7 @@ export const createTemplate = async (req: any, res: Response) => {
 		const doc = await PdfTemplate.create({
 			...template,
 			...(typeof req.body?.from === 'string' && { from: req.body.from.slice(0, 80) }),
+			status: startStatus(req.body),
 			isDefault: first,
 			gallery: galleryOf(req.body),
 			createdBy: userId(req),
@@ -191,7 +199,7 @@ export const duplicateTemplate = async (req: any, res: Response) => {
 	const doc: any = await findTemplate(String(req.params.id), { gallery: true }).catch(() => null);
 	if (!doc) return fail(res, 404, 'Template not found');
 	const { _id, createdAt, updatedAt, organization, project, key, builtIn, gallery, isDefault, ...rest } = doc;
-	const copy = await PdfTemplate.create({ ...rest, name: `${doc.name} (copy)`.slice(0, 120), isDefault: false, from: String(_id), createdBy: userId(req), updatedBy: userId(req) });
+	const copy = await PdfTemplate.create({ ...rest, name: `${doc.name} (copy)`.slice(0, 120), status: 'draft', isDefault: false, from: String(_id), createdBy: userId(req), updatedBy: userId(req) });
 	return res.status(201).json(copy.toObject());
 };
 
@@ -268,7 +276,7 @@ export const useTemplate = async (req: any, res: Response) => {
 		const { template, errors } = normalizeTemplate({ ...mapped, name });
 		if (errors.length) return fail(res, 400, errors[0], { errors });
 		const first = !(await PdfTemplate.exists({ route }));
-		const doc = await PdfTemplate.create({ ...template, from: String(from._id), isDefault: first, createdBy: userId(req), updatedBy: userId(req) });
+		const doc = await PdfTemplate.create({ ...template, status: startStatus(req.body), from: String(from._id), isDefault: first, createdBy: userId(req), updatedBy: userId(req) });
 		return res.status(201).json(doc.toObject());
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not use the template');

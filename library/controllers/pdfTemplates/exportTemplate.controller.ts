@@ -5,7 +5,7 @@ import { cleanRecord, loadLists, populateFor, templatePaths, under } from '../..
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
 import { LIMITS, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
 import { tokenPaths } from '../../functions/pdfTemplates/tokens.js';
-import { findTemplate, loadSettings, sendPdf, zoneOf } from './pdfTemplates.controller.js';
+import { PUBLISHED, findTemplate, loadSettings, sendPdf, zoneOf } from './pdfTemplates.controller.js';
 
 /**
  * POST /<route>/export/template — records of this page printed with a PDF
@@ -35,9 +35,14 @@ const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Res
 
 		let raw: any = null;
 		if (req.body?.template && typeof req.body.template === 'object') raw = req.body.template;
-		else if (typeof req.body?.template === 'string') raw = await findTemplate(req.body.template, { gallery: false });
-		else raw = await PdfTemplate.findOne({ route }).sort({ isDefault: -1, updatedAt: -1 }).lean();
-		if (!raw) return fail(res, 404, req.body?.template ? 'Template not found' : 'This page has no PDF template yet — make one under PDF templates');
+		else if (typeof req.body?.template === 'string') {
+			raw = await findTemplate(req.body.template, { gallery: false });
+			// A draft prints only in the designer (its preview sends the template itself, or asks for data).
+			if (raw?.status === 'draft' && req.body?.as !== 'data') return fail(res, 400, `“${raw.name}” is a draft — publish it to download with it`);
+		}
+		// No template named: the page's default among its published ones (PT-33).
+		else raw = await PdfTemplate.findOne({ route, ...PUBLISHED }).sort({ isDefault: -1, updatedAt: -1 }).lean();
+		if (!raw) return fail(res, 404, req.body?.template ? 'Template not found' : 'This page has no published PDF template yet — publish one under PDF templates');
 		const { template } = normalizeTemplate({ name: 'Document', ...raw });
 
 		const settings = await loadSettings();

@@ -222,6 +222,27 @@ ok('flex layout renders', isPdf(r));
 save('flex', r);
 await call('DELETE', `/pdf-templates/${flexId}`, null, T);
 
+// ------------------------------------------------------- status (PT-33)
+// Made from the gallery, it starts as a draft: the page offers nothing yet.
+ok('a new template starts as a draft', t1.status === 'draft', t1.status);
+r = await call('GET', `/pdf-templates?route=${bill.route}&published=1`, null, T);
+ok('?published=1 leaves drafts out', r.status === 200 && r.body.templates.length === 0, r.body?.templates?.map(t => t.name));
+r = await call('POST', `${B}/export/template`, { ids: [b1._id] }, T);
+ok('no published template: no default download', r.status === 404 && /published/.test(r.body?.message || ''), r.status + ' ' + r.body?.message);
+r = await call('POST', `${B}/export/template`, { ids: [b1._id], template: t1._id }, T);
+ok('a draft doesn’t download by id', r.status === 400 && /draft/.test(r.body?.message || ''), r.status + ' ' + r.body?.message);
+r = await call('POST', `${B}/export/template`, { ids: [b1._id], template: t1._id, as: 'data' }, T);
+ok('the designer still reads a draft’s data', r.status === 200 && !!r.body?.roots, r.status);
+r = await call('POST', `/pdf-templates/${t1._id}/duplicate`, {}, T);
+ok('a copy starts as a draft', r.status === 201 && r.body.status === 'draft', r.body?.status);
+await call('DELETE', `/pdf-templates/${r.body._id}`, null, T);
+r = await call('PUT', `/pdf-templates/${t1._id}`, { ...t1, status: 'published' }, T);
+ok('publishing it', r.status === 200 && r.body.status === 'published', r.body?.status);
+r = await call('PUT', `/pdf-templates/${t1._id}`, { ...r.body, status: undefined, name: r.body.name }, T);
+ok('a save without a status keeps it', r.status === 200 && r.body.status === 'published', r.body?.status);
+r = await call('GET', `/pdf-templates?route=${bill.route}&published=1`, null, T);
+ok('published, it’s listed for download', r.body.templates.length === 1 && r.body.templates[0]._id === t1._id);
+
 // ------------------------------------------------------------ download
 r = await call('POST', `${B}/export/template`, { ids: [b1._id], tz: 'Asia/Dhaka' }, T);
 ok('download with the page’s default template', isPdf(r) && r.pdf.length > 8000, r.status + ' ' + (r.body?.message || ''));
@@ -243,7 +264,7 @@ const listTpl = {
 		{ type: 'table', rows: 'payments', columns: [{ header: 'Method', value: '{{item.method}}' }, { header: 'Amount', value: '{{item.amount | money}}', align: 'right' }] },
 	],
 };
-r = await call('POST', '/pdf-templates', listTpl, T);
+r = await call('POST', '/pdf-templates', { ...listTpl, status: 'published' }, T);
 const t2 = r.body;
 ok('a second template saves, not default', r.status === 201 && t2.isDefault === false, r.body);
 r = await call('POST', `${B}/export/template`, { ids: [b1._id], template: t2._id }, T);
