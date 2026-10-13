@@ -12,7 +12,7 @@ import OrganizationRole from '../models/tenancy/organizationRole.model.js';
  *                             customers and analytics — in the projects the
  *                             member can open (WO-22)
  *   build, manage-api-keys, create-projects, manage-projects,
- *   manage-members, manage-roles, manage-organization
+ *   invite-to-projects, manage-members, manage-roles, manage-organization
  * There are no per-model keys: `grants` maps a route's view-/create-/edit-/
  * delete-<route> onto the record keys. The old `data:*` (all four) and
  * `data:view` are still read. Owner-only actions (handing over ownership,
@@ -29,6 +29,7 @@ export const ORG_PERMISSIONS = [
 	{ key: 'manage-api-keys', group: 'Projects', label: 'AI keys', description: 'Create and revoke the keys AI assistants connect with' },
 	{ key: 'create-projects', group: 'Projects', label: 'Create projects', description: 'Start new apps and websites' },
 	{ key: 'manage-projects', group: 'Projects', label: 'Manage projects', description: 'Rename, archive and delete the projects they can open' },
+	{ key: 'invite-to-projects', group: 'Projects', label: 'Invite to projects', description: 'Invite people into the projects they can open, as Member or Developer' },
 	{ key: 'manage-members', group: 'Organization', label: 'Manage members', description: 'Invite people, change their roles and projects, remove them' },
 	{ key: 'manage-roles', group: 'Organization', label: 'Manage roles', description: 'Create, edit and delete roles' },
 	{ key: 'manage-organization', group: 'Organization', label: 'Edit the organization', description: 'Name, logo and business details' },
@@ -57,9 +58,72 @@ export const SYSTEM_ROLE_DEFAULTS = {
 	owner: { name: 'Owner', description: 'Everything, including handing the organization over', permissions: ['*'] },
 	admin: { name: 'Admin', description: 'Everything except handing the organization over', permissions: ['*'] },
 	member: { name: 'Member', description: 'Works with the records in their projects, and starts projects', permissions: [...ALL_RECORDS, 'create-projects'] },
+	/** WO-47: builds the projects they can open — models, pages, AI keys. */
+	developer: { name: 'Developer', description: 'Works with the records and builds the projects they can open', permissions: [...ALL_RECORDS, 'build', 'manage-api-keys'] },
 } as const;
 
-/** The three roles every organization starts with; returns them by system name. */
+/** The roles a project invitation can give (WO-47). */
+export const PROJECT_INVITE_ROLES = ['member', 'developer'] as const;
+
+/**
+ * What a guest — someone invited into projects, not the organization (WO-47) —
+ * can ever hold: work inside a project. Nothing organization-wide.
+ */
+export const PROJECT_KEYS = [...ALL_RECORDS, 'build', 'manage-api-keys'];
+
+const onlyProjectKeys = (permissions: string[]) => (permissions.includes('*') ? [...PROJECT_KEYS] : permissions.filter(k => PROJECT_KEYS.includes(k)));
+
+/**
+ * A member's permissions in the organization (no project open): their role's,
+ * a guest's cut to the project keys (WO-47).
+ */
+export const memberPermissions = (member: any, rolePermissions: string[] = []) => {
+	const own = normalizePermissions(rolePermissions);
+	return member?.guest ? onlyProjectKeys(own) : own;
+};
+
+/**
+ * The role a member has in one project (WO-47), if they were invited to it —
+ * its id, from `projectRoles`.
+ */
+export const projectRoleOf = (member: any, projectId: any) =>
+	(member?.projectRoles || []).find((r: any) => String(r.project) === String(projectId))?.role || null;
+
+/**
+ * A member's permissions inside a project (WO-47): a guest has the role they
+ * were invited with there, alone; a full member their organization's, plus the
+ * project's role when they have one.
+ */
+export const projectPermissions = (member: any, orgPermissions: string[], projectRole: any) => {
+	if (!projectRole) return orgPermissions;
+	const here = onlyProjectKeys(normalizePermissions(projectRole.permissions || []));
+	if (member?.guest) return here;
+	if (orgPermissions.includes('*')) return orgPermissions;
+	return ORG_PERMISSION_KEYS.filter(k => orgPermissions.includes(k) || here.includes(k));
+};
+
+/**
+ * A member's permissions in a project, from the member row alone (its `role`
+ * populated with permissions): for code outside a request — MCP keys,
+ * notifications (WO-47).
+ */
+export const permissionsInProject = async (member: any, projectId: any) => {
+	const own = memberPermissions(member, member?.role?.permissions || []);
+	const roleId = projectRoleOf(member, projectId);
+	if (!roleId) return own;
+	const role: any = await OrganizationRole.findById(roleId, { permissions: 1 }).lean();
+	return projectPermissions(member, own, role);
+};
+
+/** One system role of an organization — made if it's missing (Developer came later, WO-47). */
+export const systemRole = (organization: any, system: keyof typeof SYSTEM_ROLE_DEFAULTS) =>
+	OrganizationRole.findOneAndUpdate(
+		{ organization, system },
+		{ $setOnInsert: { organization, system, ...SYSTEM_ROLE_DEFAULTS[system] } },
+		{ upsert: true, new: true }
+	);
+
+/** The roles every organization starts with; returns them by system name. */
 export const seedOrgRoles = async (organization: any, session?: mongoose.ClientSession) => {
 	const out: Record<string, any> = {};
 	for (const [system, def] of Object.entries(SYSTEM_ROLE_DEFAULTS)) {
@@ -82,6 +146,8 @@ export const grants = (permissions: string[] = [], wanted: string[]) => {
 	if (permissions.includes('*')) return true;
 	return wanted.some(key => {
 		if (permissions.includes(key)) return true;
+		// A standard key is never a record key: create-projects isn't "create" on a model called projects.
+		if (ORG_PERMISSION_KEYS.includes(key)) return false;
 		const record = key.match(RECORD_KEY);
 		if (!record) return false;
 		const [, action, route] = record;

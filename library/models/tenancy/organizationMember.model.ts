@@ -18,6 +18,26 @@ const schema = new Schema<any>(
 		 */
 		allProjects: { type: Boolean, default: true },
 		projects: { type: [{ type: Schema.Types.ObjectId, ref: 'TenantProject' }], default: undefined },
+		/**
+		 * Joined through a project invitation (WO-47): they work in their projects
+		 * only — no organization-wide keys (creating projects, members, roles…).
+		 */
+		guest: { type: Boolean, default: false },
+		/**
+		 * Their role in one project (WO-47), given when invited to it. A guest
+		 * works there with this role alone; a full member gets it on top of
+		 * their organization role.
+		 */
+		projectRoles: {
+			type: [
+				{
+					_id: false,
+					project: { type: Schema.Types.ObjectId, ref: 'TenantProject', required: true },
+					role: { type: Schema.Types.ObjectId, ref: 'OrganizationRole', required: true },
+				},
+			],
+			default: undefined,
+		},
 		invitedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 		joinedAt: { type: Date, default: Date.now },
 		removedAt: { type: Date },

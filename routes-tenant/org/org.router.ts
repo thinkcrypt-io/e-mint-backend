@@ -1,6 +1,5 @@
 import express from 'express';
 import mailRouter from './mail.router.js';
-import crypto from 'crypto';
 import Joi from 'joi';
 import Organization from '../../library/models/tenancy/organization.model.js';
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
@@ -13,7 +12,7 @@ import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { BUSINESS_KEYS, businessJoi } from '../../library/functions/business.function.js';
 import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../library/models/tenancy/organization.model.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
-import { deliver, shell, p } from '../../library/controllers/twoFactor/twoFactor.service.js';
+import { invitationView, joinFromInvitation, projectNames, sendInvite, sha256 } from '../../library/functions/tenantInvitations.function.js';
 import { signedInTenantUser, tenantProtect, tenantProtectAccount } from '../../middleware/tenant/protect.tenant.middleware.js';
 import {
 	ORG_PERMISSIONS,
@@ -21,6 +20,7 @@ import {
 	grants,
 	normalizePermissions,
 	ownerOnly,
+	seedOrgRoles,
 	tenantPermissions,
 } from '../../library/functions/tenantPermissions.function.js';
 import { rateLimit } from '../../library/functions/rateLimit.function.js';
@@ -50,6 +50,7 @@ import {
  *   GET    /roles · POST · PUT /:id · DELETE /:id                  manage-roles
  *   GET    /permissions              what a role can be given
  *   GET    /invitations · POST { email, name, role, allProjects, projects } · POST /:id/resend · DELETE /:id   manage-members
+ *                                   (the list includes the projects' invitations, WO-47 — `project` set)
  *   /mail                            its own email server (mail.router.ts)  manage-organization
  *
  * Project access (WO-22): a member opens every project (`allProjects`, the
@@ -59,11 +60,10 @@ import {
  *   GET    /for-me · POST /for-me/:id/accept · DELETE /for-me/:id   in the app, verified email (WO-24)
  *   GET    /:token                 the emailed link: who it's for, which organization, which projects
  *   POST   /:token/accept          { name, phone, password } → { token } — or nothing, signed in as the invitee
+ * Accepting a project's invitation (WO-47) also answers `project` (its address) to open next.
  */
 
 const router = express.Router();
-
-const tenantUrl = () => String(process.env.TENANT_FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const check = (schema: Joi.Schema, body: any) => {
 	const { error, value } = schema.validate(body || {}, { abortEarly: true, stripUnknown: true });
@@ -185,6 +185,9 @@ const memberView = (m: any) => ({
 	// Owner and Admin open every project whatever is stored (WO-22).
 	allProjects: m.role?.system === 'owner' || m.role?.system === 'admin' || m.allProjects !== false,
 	projects: (m.projects || []).map(String),
+	/** Invited into projects, not the organization (WO-47), and their role in each. */
+	guest: !!m.guest,
+	projectRoles: (m.projectRoles || []).map((r: any) => ({ project: String(r.project), role: String(r.role) })),
 	status: m.status,
 	joinedAt: m.joinedAt,
 });
@@ -206,6 +209,8 @@ const checkAccess = async (req: any, body: any) => {
 inOrg.get(
 	'/members',
 	handle(async req => {
+		// A guest of its projects (WO-47) sees who works in them on each project's People page instead.
+		if (req.member?.guest) throw new TenancyError(403, 'You were invited to projects here, not the whole organization');
 		const docs = await OrganizationMember.find({ organization: req.organization._id, status: 'active' })
 			.populate('user', 'name email image twoFactorEnabled')
 			.populate('role', 'name system')
@@ -243,6 +248,13 @@ inOrg.put(
 		const access = await checkAccess(req, body);
 		const roleChanged = member.isModified('role');
 		if (access) Object.assign(member, access);
+		// Given an organization role or every project, a project guest (WO-47) is a full member now.
+		if (member.guest && (roleChanged || member.allProjects !== false)) member.guest = false;
+		// A project taken away takes its role there with it.
+		if (member.projectRoles?.length)
+			member.projectRoles = member.projectRoles.filter(
+				(r: any) => member.allProjects !== false || (member.projects || []).some((x: any) => String(x) === String(r.project))
+			);
 		const accessChanged = member.isModified('allProjects') || member.isModified('projects');
 		await member.save();
 		// Tell them (WO-37): their new role, or the projects they can now open.
@@ -329,6 +341,8 @@ const roleBody = Joi.object({
 inOrg.get(
 	'/roles',
 	handle(async req => {
+		// Organizations from before WO-47 get the Developer role here.
+		await seedOrgRoles(req.organization._id);
 		const [roles, counts] = await Promise.all([
 			OrganizationRole.find({ organization: req.organization._id }).sort({ createdAt: 1 }).lean(),
 			OrganizationMember.aggregate([
@@ -389,6 +403,8 @@ inOrg.delete(
 		if (role.system) throw new TenancyError(400, 'Owner, Admin and Member can’t be deleted');
 		const inUse = await OrganizationMember.countDocuments({ organization: req.organization._id, role: role._id, status: 'active' });
 		if (inUse) throw new TenancyError(400, `${inUse} member${inUse === 1 ? ' has' : 's have'} this role — give them another first`);
+		if (await OrganizationMember.exists({ organization: req.organization._id, status: 'active', 'projectRoles.role': role._id }))
+			throw new TenancyError(400, 'Someone has this role in a project — change it there first');
 		if (await OrganizationInvitation.exists({ organization: req.organization._id, role: role._id, acceptedAt: null, cancelledAt: null, expiresAt: { $gt: new Date() } }))
 			throw new TenancyError(400, 'A pending invitation uses this role — cancel it first');
 		await OrganizationRole.deleteOne({ _id: role._id });
@@ -398,48 +414,13 @@ inOrg.delete(
 
 /* ------------------------------------------------------------ invitations */
 
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex');
-
-const invitationView = (i: any) => ({
-	_id: String(i._id),
-	email: i.email,
-	name: i.name || '',
-	role: i.role && { _id: String(i.role._id || i.role), name: i.role.name },
-	allProjects: i.allProjects !== false,
-	projects: (i.projects || []).map(String),
-	invitedBy: i.invitedBy && typeof i.invitedBy === 'object' ? { _id: String(i.invitedBy._id), name: i.invitedBy.name } : null,
-	expiresAt: i.expiresAt,
-	expired: new Date(i.expiresAt) < new Date(),
-	lastSentAt: i.lastSentAt || i.createdAt,
-	createdAt: i.createdAt,
-});
-
-/** A fresh link for the invitation, emailed. The link's token is only ever in the email. */
-const sendInvite = async (req: any, invitation: any) => {
-	const raw = crypto.randomBytes(32).toString('hex');
-	invitation.tokenHash = sha256(raw);
-	invitation.expiresAt = new Date(Date.now() + INVITE_TTL_MS);
-	invitation.lastSentAt = new Date();
-	await invitation.save();
-	const link = `${tenantUrl()}/auth/accept-invitation/${raw}`;
-	const org = req.organization.name;
-	const by = req.user.name;
-	await deliver(
-		invitation.email,
-		`${by} invited you to ${org} on MINT`,
-		`Hi${invitation.name ? ` ${invitation.name}` : ''},\n\n${by} invited you to join ${org} on MINT. Accept within 7 days:\n\n${link}`,
-		shell(`Join ${org}`, p(`${by} invited you to join <b>${org}</b> on MINT.`) + p(`<a href="${link}">Accept the invitation</a> — the link works for 7 days.`))
-	);
-	return raw;
-};
-
 inOrg.get(
 	'/invitations',
 	tenantPermissions(['manage-members']),
 	handle(async req => {
 		const docs = await OrganizationInvitation.find({ organization: req.organization._id, acceptedAt: null, cancelledAt: null })
 			.populate('role', 'name')
+			.populate('project', 'name')
 			.populate('invitedBy', 'name')
 			.sort({ createdAt: -1 })
 			.lean();
@@ -467,7 +448,8 @@ inOrg.post(
 		if (existing && (await OrganizationMember.exists({ organization: req.organization._id, user: existing._id, status: 'active' })))
 			throw new TenancyError(400, 'They are already a member');
 		// One open invitation per email: a second invite re-sends it with the new role.
-		let invitation: any = await OrganizationInvitation.findOne({ organization: req.organization._id, email: body.email, acceptedAt: null, cancelledAt: null });
+		// (A project's own invitations, WO-47, are separate.)
+		let invitation: any = await OrganizationInvitation.findOne({ organization: req.organization._id, email: body.email, project: null, acceptedAt: null, cancelledAt: null });
 		if (!invitation)
 			invitation = new OrganizationInvitation({ organization: req.organization._id, email: body.email, tokenHash: 'pending', expiresAt: new Date() });
 		invitation.name = body.name || invitation.name;
@@ -510,7 +492,7 @@ inOrg.post(
 		const invitation = await loadInvitation(req);
 		if (invitation.lastSentAt && Date.now() - new Date(invitation.lastSentAt).getTime() < 60_000)
 			throw new TenancyError(429, 'Sent a moment ago — wait a minute before sending again.');
-		await sendInvite(req, invitation);
+		await sendInvite(req, invitation, invitation.project ? (await projectNames(invitation))[0] : undefined);
 		return { message: 'Sent again' };
 	})
 );
@@ -533,55 +515,19 @@ router.use('/', inOrg);
 
 /* ------------------------------------- joining: the emailed link, and in the app */
 
-/**
- * Makes `user` a member from an invitation — its role and project access
- * (WO-22) — marks it accepted, and opens the organization next time they sign
- * in. Their email is now proven (the link was emailed to it, or they verified
- * it), WO-24.
- */
-const joinFromInvitation = async (invitation: any, user: any) => {
-	await OrganizationMember.findOneAndUpdate(
-		{ organization: invitation.organization._id, user: user._id },
-		{
-			$set: {
-				role: invitation.role._id,
-				allProjects: invitation.allProjects !== false,
-				projects: invitation.allProjects === false ? invitation.projects || [] : [],
-				status: 'active',
-				invitedBy: invitation.invitedBy,
-				joinedAt: new Date(),
-			},
-			$unset: { removedAt: 1 },
-		},
-		{ upsert: true }
-	);
-	invitation.acceptedAt = new Date();
-	invitation.acceptedBy = user._id;
-	await invitation.save();
-	await TenantUser.updateOne({ _id: user._id }, { $set: { lastOrganization: invitation.organization._id, emailVerified: true } });
-	// Whoever invited them hears they joined (WO-37).
-	if (invitation.invitedBy)
-		later(() =>
-			notifyTenant([
-				{
-					recipient: invitation.invitedBy,
-					organization: invitation.organization._id,
-					actor: user._id,
-					actorName: user.name,
-					type: 'member-joined',
-					title: `${user.name || user.email} joined ${invitation.organization.name}`,
-					message: `As ${invitation.role?.name || 'a member'}.`,
-					href: '/org/members',
-				},
-			])
-		);
-};
-
-/** An invitation's projects by name, for the person invited. */
-const projectNames = async (invitation: any) =>
-	invitation.allProjects === false ? (await TenantProject.find({ _id: { $in: invitation.projects || [] } }, { name: 1 }).lean()).map((p: any) => p.name) : [];
-
 export const invitationsRouter = express.Router();
+
+/**
+ * A project's invitation (WO-47): its project's address, to open after
+ * joining — refused once the project is gone or archived. Null for an
+ * organization's invitation.
+ */
+const invitedProject = async (invitation: any): Promise<string | null> => {
+	if (!invitation.project) return null;
+	const project: any = await TenantProject.findOne({ _id: invitation.project, organization: invitation.organization._id }, { publicSlug: 1, isActive: 1 }).lean();
+	if (!project || project.isActive === false) throw new TenancyError(400, 'The project this invitation was for is no longer there.', 'invitation_invalid');
+	return project.publicSlug;
+};
 
 /*
  * In the app (WO-24): invitations sent to the signed-in account's email —
@@ -616,10 +562,16 @@ invitationsRouter.get(
 				.populate('invitedBy', 'name')
 				.sort({ createdAt: -1 })
 				.lean(),
-			OrganizationMember.find({ user: req.user._id, status: 'active' }, { organization: 1 }).lean(),
+			OrganizationMember.find({ user: req.user._id, status: 'active' }, { organization: 1, projectRoles: 1 }).lean(),
 		]);
-		const mine = new Set(memberships.map((m: any) => String(m.organization)));
-		const open = docs.filter((i: any) => i.organization && i.organization.isActive !== false && !mine.has(String(i.organization._id)));
+		const mine = new Map<string, any>(memberships.map((m: any) => [String(m.organization), m]));
+		// A project's invitation (WO-47) stays open for a member who hasn't got that project yet.
+		const open = docs.filter((i: any) => {
+			if (!i.organization || i.organization.isActive === false) return false;
+			const m = mine.get(String(i.organization._id));
+			if (!m) return true;
+			return !!i.project && !(m.projectRoles || []).some((r: any) => String(r.project) === String(i.project));
+		});
 		return {
 			verified: true,
 			email: req.user.email,
@@ -629,7 +581,8 @@ invitationsRouter.get(
 					organization: { _id: String(i.organization._id), name: i.organization.name, logo: i.organization.logo || '' },
 					role: i.role?.name,
 					invitedBy: i.invitedBy?.name || '',
-					allProjects: i.allProjects !== false,
+					project: !!i.project,
+					allProjects: i.project ? false : i.allProjects !== false,
 					projects: await projectNames(i),
 					expiresAt: i.expiresAt,
 				}))
@@ -638,13 +591,15 @@ invitationsRouter.get(
 	})
 );
 
+// `project`: a project's invitation (WO-47) — its address, to open next.
 invitationsRouter.post(
 	'/for-me/:id/accept',
 	tenantProtectAccount,
 	handle(async req => {
 		const invitation = await loadMine(req);
+		const project = await invitedProject(invitation);
 		await joinFromInvitation(invitation, req.user);
-		return { message: `Welcome to ${invitation.organization.name}`, ...(await switchTo(req, invitation.organization._id)) };
+		return { message: `Welcome to ${invitation.organization.name}`, project, ...(await switchTo(req, invitation.organization._id)) };
 	})
 );
 
@@ -683,8 +638,9 @@ invitationsRouter.get(
 			name: invitation.name || '',
 			organization: { name: invitation.organization.name, logo: invitation.organization.logo || '' },
 			role: invitation.role?.name,
-			// What they'll open: every project, or these (WO-22).
-			allProjects: invitation.allProjects !== false,
+			// What they'll open: every project, or these (WO-22) — one, for a project's invitation (WO-47).
+			project: !!invitation.project,
+			allProjects: invitation.project ? false : invitation.allProjects !== false,
 			projects: await projectNames(invitation),
 			existingAccount,
 			signedInAsInvitee: !!me && me.email === invitation.email,
@@ -698,6 +654,7 @@ invitationsRouter.post(
 	rateLimit({ name: 'tenant-invite-accept', windowMs: 15 * 60 * 1000, max: 30 }),
 	handle(async req => {
 		const invitation = await openInvitation(req.params.token);
+		const project = await invitedProject(invitation);
 		const me = await signedInTenantUser(req);
 		let user: any;
 		if (me && me.email === invitation.email) {
@@ -722,7 +679,11 @@ invitationsRouter.post(
 			}
 		}
 		await joinFromInvitation(invitation, user);
-		return { message: `Welcome to ${invitation.organization.name}`, token: await tenantSessions.issueSession(user, req, 'invitation', invitation.organization._id) };
+		return {
+			message: `Welcome to ${invitation.organization.name}`,
+			project,
+			token: await tenantSessions.issueSession(user, req, 'invitation', invitation.organization._id),
+		};
 	})
 );
 

@@ -3,7 +3,8 @@ import mongoose, { Schema } from 'mongoose';
 /**
  * An emailed invitation into an organization. Only a sha256 of the link's
  * token is stored. Accepting adds a membership — for an existing tenant user,
- * or for the account created on the accept page.
+ * or for the account created on the accept page. With `project` it's an
+ * invitation into that one project (WO-47).
  */
 const schema = new Schema<any>(
 	{
@@ -14,6 +15,11 @@ const schema = new Schema<any>(
 		/** The project access the membership gets when it's accepted (WO-22). */
 		allProjects: { type: Boolean, default: true },
 		projects: { type: [{ type: Schema.Types.ObjectId, ref: 'TenantProject' }], default: undefined },
+		/**
+		 * Set for an invitation into one project (WO-47): accepting makes them a
+		 * guest of the organization who opens this project with `role`.
+		 */
+		project: { type: Schema.Types.ObjectId, ref: 'TenantProject', default: null },
 		tokenHash: { type: String, required: true, unique: true, select: false },
 		invitedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 		expiresAt: { type: Date, required: true },

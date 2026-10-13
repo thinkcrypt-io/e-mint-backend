@@ -42,7 +42,7 @@ router.use('/media', ...orgFiles, mediaRoute);
 router.get('/sidebar/:platform/:type', tenantProtect, (req: any, res: any) =>
 	res.status(200).json([
 		{ title: 'Home', href: '/', icon: 'house', path: 'dashboard' },
-		...tenantNav(req.permissions || [], { inProject: false }),
+		...tenantNav(req.permissions || [], { inProject: false, guest: !!req.member?.guest }),
 	])
 );
 

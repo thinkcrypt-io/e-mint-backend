@@ -5,7 +5,7 @@ import TenantUser, { TENANT_TOKEN_KIND } from '../../library/models/tenancy/tena
 import Organization from '../../library/models/tenancy/organization.model.js';
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
 import { REVOKED_CODE, sessionIdOf, tenantSessions } from '../../library/functions/sessions.function.js';
-import { normalizePermissions } from '../../library/functions/tenantPermissions.function.js';
+import { memberPermissions } from '../../library/functions/tenantPermissions.function.js';
 
 /**
  * Signs in a tenant user's request (docs/multi-tenancy WO-05). The token must
@@ -72,7 +72,8 @@ const make =
 				req.member = member;
 				req.role = member.role;
 				// Today's keys only (WO-21): old data:* read as records:*, per-model keys dropped.
-				req.permissions = normalizePermissions(member.role?.permissions || []);
+				// A guest of its projects (WO-47) holds no organization-wide keys.
+				req.permissions = memberPermissions(member, member.role?.permissions || []);
 			} else if (requireOrg) {
 				return res.status(403).json({ message: 'Choose or create an organization first.', code: 'NO_ORGANIZATION' });
 			}

@@ -1,7 +1,7 @@
 import TenantNotification from '../models/tenancy/tenantNotification.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import OrganizationMember from '../models/tenancy/organizationMember.model.js';
-import { grants, normalizePermissions } from './tenantPermissions.function.js';
+import { grants, normalizePermissions, permissionsInProject } from './tenantPermissions.function.js';
 import { canOpenProject } from './tenancy.function.js';
 import { runUnscoped } from './tenantScope.function.js';
 
@@ -50,15 +50,18 @@ export const projectHrefFor = async (project: any, path = '') => {
  */
 export const projectAudience = async ({ organization, project, permission }: { organization: any; project: any; permission: string }) => {
 	const members: any[] = await runUnscoped(() =>
-		OrganizationMember.find({ organization, status: 'active' }, { user: 1, role: 1, allProjects: 1, projects: 1 }).populate('role', 'permissions system').lean()
+		OrganizationMember.find({ organization, status: 'active' }, { user: 1, role: 1, allProjects: 1, projects: 1, guest: 1, projectRoles: 1 })
+			.populate('role', 'permissions system')
+			.lean()
 	);
-	return members
-		.filter(m => {
-			const perms = normalizePermissions(m.role?.permissions || []);
-			return canOpenProject(m, perms, project) && grants(perms, [permission]);
-		})
-		.map(m => m.user)
-		.slice(0, 200);
+	const out: any[] = [];
+	for (const m of members) {
+		if (!canOpenProject(m, normalizePermissions(m.role?.permissions || []), project)) continue;
+		// Their role in this project, if they were invited to it (WO-47).
+		if (grants(await runUnscoped(() => permissionsInProject(m, project)), [permission])) out.push(m.user);
+		if (out.length >= 200) break;
+	}
+	return out;
 };
 
 /** In the background, after the response: `fn` never delays or fails the request. */

@@ -5,7 +5,7 @@ import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import Organization from '../library/models/tenancy/organization.model.js';
 import OrganizationMember from '../library/models/tenancy/organizationMember.model.js';
 import { runUnscoped } from '../library/functions/tenantScope.function.js';
-import { grants, normalizePermissions } from '../library/functions/tenantPermissions.function.js';
+import { grants, permissionsInProject } from '../library/functions/tenantPermissions.function.js';
 import { canOpenProject } from '../library/functions/tenancy.function.js';
 import { makeMcpRouter, hashKey, Caller } from '../library/controllers/mcp/mcp.router.js';
 
@@ -44,7 +44,8 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 	if (!project) return { error: 'This key’s project was deleted' };
 	if (project.isActive === false) return { error: 'This key’s project is archived — restore it to build' };
 	// Its maker's access to the project (WO-22) can be taken away after the key was made.
-	const permissions: string[] = normalizePermissions(member.role?.permissions || []);
+	// With their role in this project, if they were invited to it (WO-47).
+	const permissions: string[] = await permissionsInProject(member, project._id);
 	if (!canOpenProject(member, permissions, project._id)) return { error: 'The person who made this key can no longer open this project' };
 
 	if (!key.lastUsedAt || Date.now() - new Date(key.lastUsedAt).getTime() > 60_000)

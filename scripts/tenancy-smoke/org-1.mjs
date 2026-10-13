@@ -10,7 +10,7 @@ ok('org overview + counts', r.status === 200 && r.body?.name === 'Globex' && r.b
 r = await call('PUT', '/tenant/api/org', { name: 'Globex Corp', onboarding: { industry: 'software', goals: ['api'] } }, owner);
 ok('update org', r.status === 200 && r.body?.name === 'Globex Corp' && r.body?.onboarding?.industry === 'software', r.status);
 r = await call('GET', '/tenant/api/org/roles', null, owner);
-ok('three system roles', r.status === 200 && r.body?.doc?.length === 3, r.body?.doc?.map(x => x.name).join(','));
+ok('four system roles (Developer, WO-47)', r.status === 200 && r.body?.doc?.map(x => x.system).join() === 'owner,admin,member,developer', r.body?.doc?.map(x => x.name).join(','));
 const roles = Object.fromEntries(r.body.doc.map(x => [x.system, x._id]));
 r = await call('POST', '/tenant/api/org/roles', { name: 'Editor', permissions: ['records:view', 'records:edit', 'build'] }, owner);
 ok('custom role', r.status === 200 && r.body?.name === 'Editor', r.body?.message);

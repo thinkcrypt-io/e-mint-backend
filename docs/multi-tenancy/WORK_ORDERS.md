@@ -157,6 +157,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | — | **Bug: deleting a project left its site widgets, carts, payments, payment settings (sealed Stripe keys) and undo copies behind** (`SCOPED` in `projectLifecycle.function.ts`) | backend | S | done (2026-10-06) |
 | 45 | **Tenant panel in its own repo `mint-tenant`** (aiasifistiaque/mint-tenant `main` `6d07f7f`): the tenant pages only, `IS_TENANT_PANEL` always on | tenant | M | done (2026-10-07; not deployed — the live tenant panel still builds from mint-admin) |
 | 46 | **Tenant panel in the marketing website's look** — same components, the website's palette, Outfit/JetBrains Mono, uppercase light headlines, pill buttons, colour tones | tenant | M | done (2026-10-07) |
+| 47 | **Project invitations** — invite someone into one project as Member or Developer (Project → People); new Developer role and Invite to projects permission; project guests; every organization's projects on the dashboard and in the project menu | all | M | done (2026-10-14) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -1007,6 +1008,36 @@ components remains same the styling must change". Done at the theme level so eve
   organization name in caps (`SidebarBrand`), section headings in caps with the icon in a tone, the
   current page as a white pill with its section's dot. Project cards: glyph tiles by kind. Charts: tone series.
   Navbar title in caps; footer © MINT.
+
+## WO-47 — Project invitations (M) — done
+
+The user (2026-10-14): "user invitation should be on project basis too, currently in organization basis, but owners or
+users with specific permission can invite other users to the project too as member/developer, that project will show up on
+their dashboard too, under the new organization's name. and in dropdown of projects must be under the new organization's
+section of the project."
+
+- **Roles/permissions** (`tenantPermissions.function.ts`): new system role `developer` (records:* + build + manage-api-keys;
+  seeded for new orgs, made on the fly for old ones by GET /org/roles and the People routes — `systemRole`); new key
+  `invite-to-projects`. `grants()` no longer reads `create-projects` as "create on a model called projects" (old bug: anyone
+  with records:create could create projects) — fixed in the panels' `can.ts` too.
+- **Membership** (`organizationMember.model.ts`): `guest` (joined through a project invitation — `memberPermissions` cuts a
+  guest to PROJECT_KEYS: records, build, AI keys; no Members page, no new projects) and `projectRoles[{project, role}]`.
+  Inside a project (`project.router.ts`) a guest works with that project's role alone; a full member gets it on top of the
+  org role (`projectPermissions`). MCP keys and notifications use `permissionsInProject`.
+- **Invitations** (`organizationInvitation.model.ts` `project`; helpers moved to `tenantInvitations.function.ts`):
+  `/tenant/api/p/:project/people` (`people.router.ts`) — list, invite {email, name, role: member|developer}, resend,
+  cancel, PUT/DELETE a person's place in the project. Someone already in the org gets the project at once (no email);
+  someone who opens every project is refused. Accepting answers `project` (its address) and the panel opens it. A guest
+  removed from their last project leaves the org. Deleting a project cancels its invitations and pulls `projectRoles`.
+  Promoting a guest on Members (a role, or all projects) makes them a full member.
+- **auth/self**: every organization carries `guest` and `projects` (name, address, kind); the current org's projects carry
+  `permissions` when a project role applies (`useWorkspace` uses them).
+- **Panels** (mint-tenant and admin, same files): `/project-people` page (sidebar Project → People), dashboard
+  `OtherOrgProjects` (other organizations' projects under their names), WorkspaceSwitcher grouped by organization,
+  `useOpenAnyProject` (switch org, then open), PanelGuard switches org for a project address in another of your orgs,
+  accept pages/Home invitations name the project, Members shows "Project guest" and project invitations.
+- Docs: mint-docs organization guide `#project-people`; website changelog.
+- Verified: `scripts/tenancy-smoke/project-invites.mjs` (new, in run-all), full run-all; tsc backend, mint-tenant, admin.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

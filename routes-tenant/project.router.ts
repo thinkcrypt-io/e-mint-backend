@@ -1,7 +1,9 @@
 import express from 'express';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { tenantProtect } from '../middleware/tenant/protect.tenant.middleware.js';
-import { grants, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
+import { grants, projectPermissions, projectRoleOf, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
+import OrganizationRole from '../library/models/tenancy/organizationRole.model.js';
+import peopleRouter from './people.router.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 import { canOpenProject, publicProject, isId, projectPeople } from '../library/functions/tenancy.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
@@ -45,6 +47,7 @@ import { customQuery } from '../middleware/index.js';
  * documents and every insert carries its ids. The paths mirror the admin
  * API's, so the admin app's library components work unchanged:
  *
+ *   /people                       who opens the project; invite people into it (WO-47)   invite-to-projects / manage-members
  *   /builder/*                    models, features, route builder, MCP keys    build / manage-api-keys
  *   /sidebar/:platform/:type      the project's sidebar, filtered by role
  *   /sidebarcategories, /sidebaritems   the sidebar builder's CRUD            build
@@ -73,6 +76,12 @@ router.use(async (req: any, res: any, next: any) => {
 		if (project.isActive === false && req.method !== 'GET')
 			return res.status(400).json({ message: 'This project is archived — restore it to make changes.' });
 		req.project = project;
+		// Their role in this project, if they were invited to it (WO-47).
+		const roleId = projectRoleOf(req.member, project._id);
+		if (roleId) {
+			const role: any = await OrganizationRole.findOne({ _id: roleId, organization: req.organization._id }).lean();
+			req.permissions = projectPermissions(req.member, req.permissions, role);
+		}
 		runInScope({ organization: req.organization._id, project: project._id }, () => next());
 	} catch (e) {
 		next(e);
@@ -80,6 +89,9 @@ router.use(async (req: any, res: any, next: any) => {
 });
 
 router.get('/', (req: any, res: any) => res.status(200).json(publicProject(req.project)));
+
+// Who works in the project, and inviting people into it (WO-47).
+router.use('/people', peopleRouter);
 
 const build = [tenantPermissions(['build'])];
 
@@ -108,7 +120,7 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		// An API project leads with its API, straight after the dashboard (T-09).
 		const [home, ...own] = project;
 		const lead = tenantLead(req.permissions || [], req.project.type);
-		return res.status(200).json([home, ...lead, ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type })]);
+		return res.status(200).json([home, ...lead, ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);
 		return res.status(500).json({ message: 'Something went wrong' });

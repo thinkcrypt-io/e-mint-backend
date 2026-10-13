@@ -38,7 +38,7 @@ export const tenantLead = (permissions: string[], projectType?: string): Sidebar
 
 export const tenantNav = (
 	permissions: string[],
-	{ inProject, projectType }: { inProject: boolean; projectType?: 'app' | 'website' | 'api' }
+	{ inProject, projectType, guest }: { inProject: boolean; projectType?: 'app' | 'website' | 'api'; guest?: boolean }
 ): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
 	// A website: its analytics; any project: the customers of its public API.
@@ -69,12 +69,17 @@ export const tenantNav = (
 		: [];
 	// What happened in the project, for everyone who reads its records (WO-36).
 	const activity = inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : [];
-	// The project's own settings — its business details (docs/pdf-templates D14).
-	const project = inProject && can('manage-projects') ? section('Project', 'folder-cog', [{ title: 'Settings', href: '/project-settings', icon: 'settings' }]) : [];
+	// The project's own settings — its business details (docs/pdf-templates D14) — and who works in it (WO-47).
+	const projectItems = [
+		...(can('invite-to-projects') || can('manage-members') ? [{ title: 'People', href: '/project-people', icon: 'user-plus' }] : []),
+		...(can('manage-projects') ? [{ title: 'Settings', href: '/project-settings', icon: 'settings' }] : []),
+	];
+	const project = inProject && projectItems.length ? section('Project', 'folder-cog', projectItems) : [];
 	// Inside a project the organization's own details stay out of the way: they're changed outside it.
 	const org = section('Organization', 'building-2', [
 		{ title: 'Projects', href: '/projects', icon: 'folder-kanban' },
-		{ title: 'Members', href: '/org/members', icon: 'users' },
+		// A guest of its projects (WO-47) doesn't see the organization's people.
+		...(guest ? [] : [{ title: 'Members', href: '/org/members', icon: 'users' }]),
 		...(can('manage-roles') ? [{ title: 'Roles', href: '/org/roles', icon: 'shield-check' }] : []),
 		...(can('manage-organization')
 			? [{ title: 'Email', href: '/org/email', icon: 'mail' }, ...(inProject ? [] : [{ title: 'Settings', href: '/org/settings', icon: 'settings' }])]

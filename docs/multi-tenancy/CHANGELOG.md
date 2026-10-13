@@ -1647,3 +1647,14 @@ Decisions D14–D17 (README).
   labelKey, pickerDetailsLayout; the list shows "1,200 · 12 Oct 2026", then
   one per line; the input shows INV-0001 after picking. tsc tenant, admin,
   backend, mint-docs clean for the touched files.
+
+## 2026-10-14 — WO-47 Project invitations
+- Invite into one project as Member or Developer: `routes-tenant/people.router.ts` (/p/:project/people),
+  `library/functions/tenantInvitations.function.ts` (shared with org.router.ts), member `guest` + `projectRoles`,
+  invitation `project`, Developer system role, `invite-to-projects` key, per-project permissions in project.router,
+  MCP and notifications; auth/self lists every organization's projects; sidebar Project → People; guests don't see Members.
+- Fixed: `grants(['create-projects'])` was true for any role with records:create (RECORD_KEY regex) — backend and both panels.
+- Panels (mint-tenant + admin): /project-people, other organizations' projects on the dashboard, project menu grouped by
+  organization, opening a project in another organization switches to it, accept flows open the invited project.
+- Verified: new smoke `project-invites.mjs` (50 checks) + full `run-all.sh` on a private server (:5031, Mongo :27996);
+  `org-1.mjs` now expects four system roles. tsc clean in backend, mint-tenant, admin. Not deployed.

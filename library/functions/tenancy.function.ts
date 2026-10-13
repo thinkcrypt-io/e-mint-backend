@@ -7,7 +7,7 @@ import OrganizationMember from '../models/tenancy/organizationMember.model.js';
 import OrganizationRole from '../models/tenancy/organizationRole.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import TenantUser from '../models/tenancy/tenantUser.model.js';
-import { normalizePermissions, seedOrgRoles } from './tenantPermissions.function.js';
+import { memberPermissions, normalizePermissions, projectPermissions, projectRoleOf, seedOrgRoles } from './tenantPermissions.function.js';
 import { currentScope } from './tenantScope.function.js';
 
 /**
@@ -64,7 +64,7 @@ export const PANEL_PAGES = new Set([
 	'jobapplications', 'jobposts', 'leads', 'leaves', 'maintenances', 'meetings', 'model-builder', 'modelattributes',
 	'not-found', 'notifications', 'npmlibraries', 'offers', 'orders', 'org', 'packages', 'passkey', 'payments',
 	'permissions', 'plannedfeatures', 'plannedmodels', 'plannedpages', 'plannedprojects', 'portfolios', 'print',
-	'preview', 'project-settings', 'pdf-templates', 'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
+	'preview', 'project-people', 'project-settings', 'pdf-templates', 'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
 	'resources', 'roles', 'sellers', 'servicecat', 'services', 'sessions', 'settings', 'shops', 'sidebar-builder',
 	'sidebarcategories', 'sidebaritems', 'solutions', 'subscriptions', 'suppliers', 'support-tickets', 'support',
 	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'templates', 'terms', 'test', 'themes', 'user-docs',
@@ -155,33 +155,58 @@ export const publicOrganization = (o: any) =>
 		createdAt: o.createdAt,
 	};
 
+/** A project in another organization's list (WO-47): enough to show it and open it. */
+const projectRef = (p: any) => ({ _id: String(p._id), name: p.name, publicSlug: p.publicSlug, type: p.type || 'app', description: p.description || '' });
+
 /**
  * What the tenant panel needs on every load (GET /tenant/api/auth/self): the
  * account, the organization it works in and its role there, every
- * organization it can switch to, and that organization's projects.
+ * organization it can switch to — each with the projects it opens there
+ * (WO-47: the dashboard and the project menu list them by organization) — and
+ * the current organization's projects, each with the permissions it has
+ * there (a project's own role, WO-47).
  */
 export const selfPayload = async (req: any) => {
 	const memberships: any[] = await OrganizationMember.find({ user: req.user._id, status: 'active' })
 		.populate('organization', 'name slug logo isActive')
-		.populate('role', 'name system')
+		.populate('role', 'name system permissions')
 		.lean();
-	const organizations = memberships
-		.filter(m => m.organization && m.organization.isActive !== false)
-		.map(m => ({
+	const usable = memberships.filter(m => m.organization && m.organization.isActive !== false);
+	const organizations = await Promise.all(
+		usable.map(async m => ({
 			_id: String(m.organization._id),
 			name: m.organization.name,
 			slug: m.organization.slug,
 			logo: m.organization.logo || '',
 			role: m.role?.name,
 			system: m.role?.system || null,
-		}));
-	const projects = req.organization
-		? (
-				await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false }, ...projectAccessFilter(req.member, req.permissions) })
+			/** Invited into its projects only (WO-47). */
+			guest: !!m.guest,
+			projects: (
+				await TenantProject.find(
+					{ organization: m.organization._id, isActive: { $ne: false }, ...projectAccessFilter(m, memberPermissions(m, m.role?.permissions || [])) },
+					{ name: 1, publicSlug: 1, type: 1, description: 1 }
+				)
 					.sort({ createdAt: 1 })
 					.lean()
-		  ).map(publicProject)
+			).map(projectRef),
+		}))
+	);
+	const own: any[] = req.organization
+		? await TenantProject.find({ organization: req.organization._id, isActive: { $ne: false }, ...projectAccessFilter(req.member, req.permissions) })
+				.sort({ createdAt: 1 })
+				.lean()
 		: [];
+	// The roles they were given in projects, to work out each project's permissions.
+	const roleIds = (req.member?.projectRoles || []).map((r: any) => r.role);
+	const roles = new Map<string, any>(
+		roleIds.length ? (await OrganizationRole.find({ _id: { $in: roleIds }, organization: req.organization._id }, { permissions: 1 }).lean()).map((r: any) => [String(r._id), r]) : []
+	);
+	const projects = own.map(p => {
+		const roleId = projectRoleOf(req.member, p._id);
+		const role = roleId && roles.get(String(roleId));
+		return { ...publicProject(p), ...(role && { permissions: projectPermissions(req.member, req.permissions || [], role) }) };
+	});
 	return {
 		...publicUser(req.user),
 		kind: 'tenant',

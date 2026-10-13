@@ -138,8 +138,10 @@ router.delete(
 		await removeProjectContents(req.organization._id, project._id);
 		await TenantProject.deleteOne({ _id: project._id });
 		// Nobody's access list or invitation names it any more (WO-22).
-		await OrganizationMember.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id } });
+		await OrganizationMember.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id, projectRoles: { project: project._id } } });
 		await OrganizationInvitation.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id } });
+		// Its own invitations (WO-47) can't be accepted any more.
+		await OrganizationInvitation.updateMany({ organization: req.organization._id, project: project._id, acceptedAt: null, cancelledAt: null }, { $set: { cancelledAt: new Date() } });
 		return { message: 'Project deleted' };
 	})
 );
