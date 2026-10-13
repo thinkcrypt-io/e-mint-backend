@@ -59,3 +59,36 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   a payments list, a password token printing nothing, permissions (reader
   lists + downloads, can't edit; no read → 403), one default per page.
   Downloaded files looked at as images.
+
+## 2026-10-13 — PT-05 list, PT-06 designer, PT-07 downloads, PT-08 AI
+- Admin (`admin/src`): `/pdf-templates` — templates by page (thumbnails drawn
+  in HTML, default star, duplicate, delete), Gallery tab (super admin: “Add
+  the built-in starters”), Business details dialog, New template (starter /
+  blank / AI → page → match fields), Build with AI dialog.
+  `/pdf-templates/[id]` — the designer: outline with drag and drop (into
+  columns and boxes), the page fitted to its column with zoom, a record or
+  sample data, Show fields, properties per block (field picker with guessed
+  format, Show only when), page settings (paper, look, lists, gallery
+  switch), undo/redo, ⌘S, Real PDF (server file, open in a new tab).
+  Shared: `components/library/pdf/` (types, a copy of tokens.ts, PdfPage,
+  scope, DownloadPdf), `store/services/pdfTemplatesApi.ts`.
+- Downloads: record page *Download PDF* (menu with several templates); row
+  menu type `download-pdf` (param kind `pdfTemplate`); Print / PDF lists the
+  page's templates for ticked rows. Downloads keep UTF-8 file names
+  (`filename*`).
+- Backend: `POST /pdf-templates/ai` (forced-tool loop like the model wizard,
+  the page's fields in the prompt, up to 3 repairs through normalizeTemplate,
+  unknown fields, a test render; warnings returned); `export/template` with
+  `as: 'data'` gives the designer the record's data; tenant nav “PDF
+  templates” under Build; `scripts/seedPdfTemplates.js` (super admin
+  sidebar item — not run anywhere yet).
+- Guide: admin `/docs/pdf-templates` (16 sections, the anchors every panel
+  links), listed in guides.ts; builder guide's row menu gains Download PDF.
+- Checked in the browser (private server): list + thumbnails, New template →
+  Invoice Classic → PT Bill page → guesses (Issue date, Client → Name, Qty,
+  Unit Price, Line Total) → designer with the record's values (Bangla name,
+  ৳, DD/MM/YYYY, words); select, edit, field picker, undo, save, Real PDF
+  (27 KB file), record page Download PDF menu → 31 KB file (the save to
+  disk was intercepted). AI against a local fake API: 3 rounds, repairs sent
+  back, warnings returned. Smoke 23/23. Fixed on the way: page wider than its
+  column, a crash-prone handler.

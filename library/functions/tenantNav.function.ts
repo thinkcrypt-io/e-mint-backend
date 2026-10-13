@@ -63,6 +63,7 @@ export const tenantNav = (
 				{ title: 'Pages', href: '/builder', icon: 'layout-template' },
 				{ title: 'Sidebar', href: '/sidebar-builder', icon: 'panel-left' },
 				{ title: 'Dashboard', href: '/dashboard-builder', icon: 'layout-dashboard' },
+				{ title: 'PDF templates', href: '/pdf-templates', icon: 'file-text' },
 				...(can('manage-api-keys') ? [{ title: 'Connect AI', href: '/model-builder/connect', icon: 'plug' }] : []),
 		  ])
 		: [];

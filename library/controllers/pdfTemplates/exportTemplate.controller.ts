@@ -12,8 +12,9 @@ import { findTemplate, loadSettings, sendPdf, zoneOf } from './pdfTemplates.cont
  * page's export middleware: the reader's read permission, the list's filter
  * and record access decide which records come back (D11).
  *
- * Body: `{ ids: string[], template?: id | template, tz?: string, inline?: boolean }`
- * — no template: the page's default (or its only one).
+ * Body: `{ ids: string[], template?: id | template, tz?: string, inline?: boolean, as?: 'data' }`
+ * — no template: the page's default (or its only one). `as: 'data'` answers
+ * the first record's data as JSON instead (the designer's preview).
  */
 
 const fail = (res: Response, status: number, message: string) => res.status(status).json({ message });
@@ -65,6 +66,8 @@ const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Res
 				},
 			};
 		});
+		// The designer draws the page itself: the same data, as JSON (first record).
+		if (req.body?.as === 'data') return res.status(200).json({ roots: records[0].roots, settings, tz: zoneOf(settings, req.body?.tz) });
 		const pdf = await renderPdf({ template, records, settings, tz: zoneOf(settings, req.body?.tz) });
 		const file = docs.length === 1 ? `${template.name} ${nameOf(docs[0])}.pdf` : `${template.name} — ${docs.length} records.pdf`;
 		sendPdf(res, pdf, file, req.body?.inline === true);
