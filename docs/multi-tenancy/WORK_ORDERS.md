@@ -157,7 +157,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | — | **Bug: deleting a project left its site widgets, carts, payments, payment settings (sealed Stripe keys) and undo copies behind** (`SCOPED` in `projectLifecycle.function.ts`) | backend | S | done (2026-10-06) |
 | 45 | **Tenant panel in its own repo `mint-tenant`** (aiasifistiaque/mint-tenant `main` `6d07f7f`): the tenant pages only, `IS_TENANT_PANEL` always on | tenant | M | done (2026-10-07; not deployed — the live tenant panel still builds from mint-admin) |
 | 46 | **Tenant panel in the marketing website's look** — same components, the website's palette, Outfit/JetBrains Mono, uppercase light headlines, pill buttons, colour tones | tenant | M | done (2026-10-07) |
-| 47 | **Project invitations** — invite someone into one project as Member or Developer (Project → People); new Developer role and Invite to projects permission; project guests; every organization's projects on the dashboard and in the project menu | all | M | done (2026-10-14) |
+| 47 | **Project invitations** — invite someone into one project as Member or Developer (Project → People); new Developer role and Invite to projects permission; project guests; every organization's projects on the dashboard and in the project menu | all | M | done (2026-10-14; pushed: backend `c83254ee`, mint-tenant `806003c`, admin `041b439`, mint-docs `392bad4`, website `2079c7b`; not deployed) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
