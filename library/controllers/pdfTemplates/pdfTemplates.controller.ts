@@ -276,7 +276,9 @@ const businessFor = (settings: PdfSettingsData, sample: any) => (settings.busine
  * POST /render — a template (inline or by id) drawn with sample data: the
  * gallery's previews, the designer before the page has records. `data` is
  * used as the roots when given; otherwise the template's own sample.
- * `dummy: true` — Preview: every field the page has, filled (preview.ts).
+ * `dummy: true` — Preview: every field the page has, filled (preview.ts);
+ * with `as: 'data'` the roots as JSON for the designer's page (the business
+ * details and saved texts left as they are).
  */
 export const renderSample = async (req: any, res: Response) => {
 	try {
@@ -290,8 +292,10 @@ export const renderSample = async (req: any, res: Response) => {
 		// Preview (PT-18): every field filled — from the page's fields, the sample over them.
 		const roots =
 			req.body?.dummy === true
-				? await previewRoots(req, template, settings, data)
+				? await previewRoots(req, template, settings, data, { own: req.body?.as === 'data' })
 				: { ...data, [template.alias]: record, record, business: businessFor(settings, data), texts: textsRoot(settings), today: new Date(), now: new Date(), template: { name: template.name } };
+		// The designer draws the page itself: the preview's data, as JSON.
+		if (req.body?.as === 'data') return res.status(200).json({ roots, settings, tz: zoneOf(settings, req.body?.tz) });
 		const pdf = await renderPdf({ template, records: [{ roots }], settings, tz: zoneOf(settings, req.body?.tz) });
 		sendPdf(res, pdf, `${template.name || 'preview'}.pdf`, req.query.inline === '1');
 	} catch (e: any) {

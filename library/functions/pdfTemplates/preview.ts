@@ -152,8 +152,12 @@ const fillGaps = (template: PdfTemplateData, roots: Record<string, any>, totals:
 	}
 };
 
-/** Every root a template prints, for a preview. */
-export const previewRoots = async (req: any, template: PdfTemplateData, settings: PdfSettingsData, sample: any = {}) => {
+/**
+ * Every root a template prints, for a preview. `own`: the designer's page —
+ * the business details and saved texts stay as they are (empty ones show as
+ * "Add phone" there), the rest filled.
+ */
+export const previewRoots = async (req: any, template: PdfTemplateData, settings: PdfSettingsData, sample: any = {}, opts: { own?: boolean } = {}) => {
 	const tree = template.route ? await fieldTree(req, template.route).catch(() => null) : null;
 	let record: Record<string, any> = tree ? dummyRecord(tree.fields) : {};
 	const totals = balance(record);
@@ -165,15 +169,17 @@ export const previewRoots = async (req: any, template: PdfTemplateData, settings
 		lists[l.name] = Array.isArray(sample?.[l.name]) ? sample[l.name] : [0, 1].map(i => dummyRecord(fields.map(f => ({ ...f, path: f.path.replace(/^item\./, '') })), i));
 	}
 
-	const own = settings.business;
-	const business: any = { ...own };
-	for (const [k, v] of Object.entries(SAMPLE_BUSINESS)) if (!business[k]) business[k] = sample?.business?.[k] || v;
-	if (!business.logo) business.logo = sample?.business?.logo || SAMPLE_LOGO;
+	const business: any = { ...settings.business };
+	if (!opts.own) {
+		for (const [k, v] of Object.entries(SAMPLE_BUSINESS)) if (!business[k]) business[k] = sample?.business?.[k] || v;
+		if (!business.logo) business.logo = sample?.business?.logo || SAMPLE_LOGO;
+	}
 
 	// Saved texts the template prints that the scope hasn't written yet.
 	const texts: Record<string, string> = textsRoot(settings);
-	for (const p of templatePaths(template))
-		if (p.startsWith('texts.') && !texts[p.slice(6)]) texts[p.slice(6)] = `Sample ${p.slice(6).replace(/_/g, ' ')}: payment is due within 14 days. Goods once sold are not returnable.`;
+	if (!opts.own)
+		for (const p of templatePaths(template))
+			if (p.startsWith('texts.') && !texts[p.slice(6)]) texts[p.slice(6)] = `Sample ${p.slice(6).replace(/_/g, ' ')}: payment is due within 14 days. Goods once sold are not returnable.`;
 
 	const now = new Date();
 	const roots: Record<string, any> = { ...sample, ...lists, [template.alias]: record, record, business, texts, today: now, now, template: { name: template.name } };

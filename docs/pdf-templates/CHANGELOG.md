@@ -237,3 +237,36 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   Upload logo → the picker over the dialog → From URL → the logo back in the
   form; Computer generated added; Save → GET /settings has the logo and
   `computer_generated`.
+
+## 2026-10-13 — PT-16 the full-page designer
+- `[id]/page.tsx` rewritten: Layout `type='pos'` + `fullBleed` (sidebar
+  behind the menu button); one toolbar (back, name + Default + Saved /
+  Unsaved, undo / redo, record or Sample data, Fields, zoom — click the % to
+  fit, Business details, Your AI, Preview, Real PDF, Make default, Save);
+  three columns that scroll on their own: left Add / Layers, middle the
+  page, right the selected block or "Document" (PageSettings — moved from
+  the left). Esc unselects; keys don't fire under a dialog.
+- New `designer/AddPanel.tsx`: block tiles, ready-made pieces (Logo and
+  business, Signature line, Computer generated "…no signature is required",
+  Terms & conditions → {{texts.terms_conditions}} in a box, Bank details,
+  PAID stamp, Thank-you line), the saved texts (click to print one; Manage /
+  New saved text open the dialog). Added after the selected block, else at
+  the end of the body, then selected and scrolled to.
+- `PdfPage.tsx`: `onFix` — an empty {{business.x}} / {{texts.x}} draws as a
+  dashed "+ Add phone" / "+ Write “Terms & conditions”" chip, an empty
+  {{business.logo}} image as "+ Upload logo"; a click opens Business details
+  at that field (`Shell` `initialFocus` → Chakra `initialFocusEl`, since the
+  dialog's own first-control focus beat autoFocus). Saved texts are put in
+  before **bold** is read. `blockBar` — the selected block's tools on the
+  page (zoom undone so they keep their size): ↖ the block around it (a
+  signature's columns, not its words), up, down, duplicate, delete.
+- "Sample data" is now the Preview's data (POST /render `dummy` + `as:
+  'data'`, business details and saved texts left as they are — `own`):
+  every field filled. Fixed: choosing Sample data on a page with records was
+  undone at once by the first-record pick (`recordId` null = not picked).
+- Guides: designer section rewritten (both). Website changelog lines.
+- Checked in the browser (admin-5021 on the scratch backend): full width,
+  toolbar, Add tiles, Document panel; Sample data filled; a block's bar; "+
+  Add phone" → dialog with the cursor in Phone → typed, saved → the page
+  prints it, the chip gone; signature: its words → ↖ → Columns → delete;
+  Computer generated added after the selection.
