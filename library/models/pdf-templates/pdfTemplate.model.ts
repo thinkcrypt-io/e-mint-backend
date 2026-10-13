@@ -21,6 +21,8 @@ const schema = new Schema<any>(
 		header: { type: [Schema.Types.Mixed], default: [] },
 		body: { type: [Schema.Types.Mixed], default: [] },
 		footer: { type: [Schema.Types.Mixed], default: [] },
+		/** Placed freely on the page (docs D22). */
+		free: { type: [Schema.Types.Mixed], default: undefined },
 		slots: { type: [Schema.Types.Mixed], default: undefined },
 		sample: { type: Schema.Types.Mixed, default: undefined },
 		key: { type: String, default: undefined },

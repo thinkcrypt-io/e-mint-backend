@@ -429,3 +429,28 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   and a column). The Categories dialog and the multi-select bar are not yet
   seen in the browser — the pane was hidden (pages there don't render while
   it is).
+
+## 2026-10-13 — PT-25 / PT-26 placed freely, like Canva (D22)
+- Engine: `free` blocks (≤ 40) with `x`, `y`, `w`, `rotate`, `opacity`,
+  `behind`, `pages` (first / all / last), clamped to the page; the template
+  always carries the list so a save that removes the last one clears it.
+  `drawFree` turns about the middle and applies opacity; behind ones are
+  drawn as each page starts (a last-page one can't be known then — it's
+  drawn on top), the rest over the header / body / footer in the final pass.
+- Designer: placed blocks drawn absolutely (behind ones under the flow,
+  raised while selected); press and drag to move — snaps to the page's
+  edges, margins and middle and to the other placed blocks' edges and
+  middles (⌥ for none), pink guide lines; the selected one has a width
+  handle; arrow keys nudge 1pt (⇧ 10pt); one undo step per drag. Properties →
+  Placed freely (From the left / top, Width, Turn, Opacity, On first / every
+  / last page, Behind the content, Back into the flow); any top-level flow
+  block → Place freely (keeps where it was on the page). Add: In the flow /
+  Place freely — a tile dropped on the page lands where it's let go. Layers
+  lists "Placed freely". Flow drag and drop doesn't drop beside a placed
+  block (only into its insides).
+- MCP guide: `free`, `bleed`, `padX` / `padY`, `borderSides`, columns'
+  `direction`.
+- Checked: a test render (a turned, see-through PAID over the table, a
+  DRAFT watermark behind it, a box at x 400 / y 760) looked at as an image;
+  smoke 45/45 (+3: kept and clamped, rendered, cleared). The designer's
+  dragging is not yet seen in the browser — the pane was hidden.

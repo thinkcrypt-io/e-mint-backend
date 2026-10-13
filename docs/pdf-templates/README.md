@@ -77,6 +77,7 @@ type PdfTemplate = {
 	style: { font: 'sans' | 'mono' | 'helvetica' | 'times' | 'courier'; size: number; color: string; muted: string; accent: string; lineHeight: number };
 	lists?: { name: string; route: string; foreignField: string; sort?: string; limit?: number }[];
 	header: Block[]; body: Block[]; footer: Block[];   // header/footer repeat on every page
+	free?: Block[];                 // placed freely (D22): + x, y, w, rotate, opacity, behind, pages
 	// gallery starters only
 	gallery?: { published: boolean; order: number };
 	slots?: Slot[]; sample?: Record<string, any>;

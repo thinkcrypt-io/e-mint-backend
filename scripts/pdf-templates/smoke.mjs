@@ -207,6 +207,16 @@ ok(
 	JSON.stringify(fb).slice(0, 300)
 );
 const flexId = r.body?._id;
+// Placed freely (D22): kept with their place, clamped; cleared when the last is taken off.
+r = await call('PUT', `/pdf-templates/${flexId}`, { ...r.body, free: [{ type: 'text', text: 'PAID', x: 330, y: 300, w: 200, rotate: -18, opacity: 0.3, pages: 'all' }, { type: 'text', text: 'DRAFT', x: 99999, y: 40, w: 300, behind: true }] }, T);
+const fr = r.body?.free || [];
+ok('placed blocks keep x / y / w / rotate / opacity / pages / behind (clamped to the page)', r.status === 200 && fr.length === 2 && fr[0].x === 330 && fr[0].rotate === -18 && fr[0].opacity === 0.3 && fr[0].pages === 'all' && fr[1].behind === true && fr[1].x <= 600, JSON.stringify(fr).slice(0, 300));
+r = await call('POST', '/pdf-templates/render', { template: flexId, dummy: true }, T);
+ok('placed blocks render', isPdf(r));
+save('free', r);
+r = await call('GET', `/pdf-templates/${flexId}`, null, T);
+r = await call('PUT', `/pdf-templates/${flexId}`, { ...r.body, free: [] }, T);
+ok('taking the last placed block off clears them', r.status === 200 && (r.body?.free || []).length === 0, r.body?.free);
 r = await call('POST', '/pdf-templates/render', { template: flexId, dummy: true }, T);
 ok('flex layout renders', isPdf(r));
 save('flex', r);

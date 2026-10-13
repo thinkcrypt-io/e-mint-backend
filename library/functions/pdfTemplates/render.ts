@@ -668,6 +668,21 @@ const imageSources = (blocks: Block[], scope: Scope, out: Set<string>) => {
 	}
 };
 
+/** Whether a free block (D22) goes on this page of a record: the first (default), every one, or the last. */
+const onPage = (b: Block, i: number, count: number) => (b.pages === 'all' ? true : b.pages === 'last' ? i === count - 1 : i === 0);
+
+/** A free block at its place: turned about its middle, see-through by its opacity. */
+const drawFree = (ctx: Ctx, b: Block) => {
+	if (!visible(b, ctx.scope)) return;
+	const laid = layoutBlock(ctx, b, b.w || 160);
+	const { doc } = ctx;
+	doc.save();
+	if (b.opacity && b.opacity < 1) doc.opacity(b.opacity);
+	if (b.rotate) doc.rotate(b.rotate, { origin: [b.x + (b.w || 160) / 2, b.y + laid.height / 2] });
+	laid.draw(b.x, b.y);
+	doc.restore();
+};
+
 export const pageSize = (t: PdfTemplateData): [number, number] => {
 	const [w, h] = PAGE_SIZES[t.page.size] || PAGE_SIZES.A4;
 	return t.page.orientation === 'landscape' ? [h, w] : [w, h];
@@ -690,7 +705,7 @@ export const renderPdf = async ({ template: raw, records, settings, tz }: Render
 	const scopes: Scope[] = records.map(r => ({ roots: r.roots, settings, tz }));
 	for (const scope of scopes) {
 		const srcs = new Set<string>();
-		for (const part of [template.header, template.body, template.footer]) imageSources(part, { ...scope, roots: { ...scope.roots, page: 1, pages: 1 } }, srcs);
+		for (const part of [template.header, template.body, template.footer, template.free || []]) imageSources(part, { ...scope, roots: { ...scope.roots, page: 1, pages: 1 } }, srcs);
 		srcs.forEach(s => loader.load(s));
 	}
 	const images = await loader.ready();
@@ -721,12 +736,16 @@ export const renderPdf = async ({ template: raw, records, settings, tz }: Render
 		const start = pageCount;
 		let pagesHere = 0;
 		let y = top;
+		const behind = (template.free || []).filter(b => b.behind && b.pages !== 'last');
 		const newPage = () => {
 			if (pagesHere >= LIMITS.pages) return false;
 			doc.addPage({ size: [pw, ph], margin: 0 });
 			pageCount++;
 			pagesHere++;
 			y = top;
+			// Free blocks behind the content go down first (D22); a last-page one can't be known yet — it's drawn on top.
+			const pageScope: Scope = { ...scope, roots: { ...scope.roots, page: pagesHere, pages: pagesHere } };
+			for (const b of behind) if (b.pages === 'all' || pagesHere === 1) drawFree({ ...ctx, scope: pageScope }, b);
 			return true;
 		};
 		newPage();
@@ -814,6 +833,8 @@ export const renderPdf = async ({ template: raw, records, settings, tz }: Render
 				const f = stack(ctx, template.footer, width);
 				f.draw(ml, ph - mb - f.height);
 			}
+			// Free blocks over everything (D22).
+			for (const b of template.free || []) if ((!b.behind || b.pages === 'last') && onPage(b, i, span.count)) drawFree(ctx, b);
 		}
 	}
 

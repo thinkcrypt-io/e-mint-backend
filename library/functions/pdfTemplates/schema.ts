@@ -70,11 +70,13 @@ export type PdfTemplateData = {
 	header: Block[];
 	body: Block[];
 	footer: Block[];
+	/** Placed freely (D22): blocks at x / y (pt from the page's top-left) with a width `w`, drawn over the flow — or under it with `behind`. */
+	free?: Block[];
 	slots?: Slot[];
 	sample?: Record<string, any>;
 };
 
-export const LIMITS = { blocks: 300, depth: 4, columns: 6, tableColumns: 12, fieldRows: 30, lists: 6, text: 4000, records: 200, rows: 2000, pages: 40 };
+export const LIMITS = { free: 40, blocks: 300, depth: 4, columns: 6, tableColumns: 12, fieldRows: 30, lists: 6, text: 4000, records: 200, rows: 2000, pages: 40 };
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -348,6 +350,30 @@ const styleOf = (s: any): PdfTemplateData['style'] => ({
 	lineHeight: num(s?.lineHeight, 1, 2.5, 1.35),
 });
 
+/** Where a free block sits (D22), clamped to the page; `pages` 'all' / 'last' (first page when left out). */
+const FREE_PAGES = ['first', 'all', 'last'] as const;
+const freeOf = (list: any[], ctx: Ctx, page: PdfTemplateData['page']): Block[] => {
+	const [w, h] = PAGE_SIZES[page.size] || PAGE_SIZES.A4;
+	const [pw, ph] = page.orientation === 'landscape' ? [h, w] : [w, h];
+	const out: Block[] = [];
+	list.forEach((raw: any, i: number) => {
+		const [b] = blocksOf([raw], { ...ctx }, 0, `Placed block ${i + 1}`);
+		if (!b) return;
+		if (b.type === 'pageBreak') return;
+		out.push({
+			...b,
+			x: num(raw?.x, -pw, pw, 0),
+			y: num(raw?.y, -ph, ph, 0),
+			w: num(raw?.w, 4, pw * 2, 160),
+			...(raw?.rotate !== undefined && Number(raw.rotate) && { rotate: num(raw.rotate, -180, 180, 0) }),
+			...(raw?.opacity !== undefined && Number(raw.opacity) < 1 && { opacity: num(raw.opacity, 0.05, 1, 1) }),
+			...(bool(raw?.behind) && { behind: true }),
+			...(raw?.pages !== undefined && raw.pages !== 'first' && { pages: oneOf(raw.pages, FREE_PAGES, 'first') }),
+		});
+	});
+	return out;
+};
+
 /**
  * A template as stored: everything checked, ids on every block. `errors` are
  * for the person — the template is still returned so the designer can keep
@@ -373,6 +399,10 @@ export const normalizeTemplate = (raw: any): { template: PdfTemplateData; errors
 		body: blocksOf(raw?.body, ctx, 0, 'Body'),
 		footer: blocksOf(raw?.footer, ctx, 0, 'Footer'),
 	};
+	// Placed freely on the page (D22): each at x / y with a width, out of the flow.
+	const freeRaw = Array.isArray(raw?.free) ? raw.free.slice(0, LIMITS.free) : [];
+	// Always there (empty too): a save replaces the list, so taking the last one off clears it.
+	template.free = freeOf(freeRaw, ctx, template.page);
 	if (template.route && !ROUTE.test(template.route)) errors.push('That page address isn’t valid');
 	const slots = slotsOf(raw?.slots);
 	if (slots?.length) template.slots = slots;
