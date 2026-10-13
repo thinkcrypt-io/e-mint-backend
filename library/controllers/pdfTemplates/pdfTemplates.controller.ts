@@ -8,7 +8,8 @@ import Organization from '../../models/tenancy/organization.model.js';
 import { fieldTree } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplates/mapping.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
-import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
+import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, categoryKey, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
+import { loadCategories } from './categories.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { previewRoots } from '../../functions/pdfTemplates/preview.js';
 import { resources } from '../builder/viewDocument.controller.js';
@@ -207,8 +208,9 @@ export const saveSettings = async (req: any, res: Response) => {
 export const listGallery = async (_req: Request, res: Response) => {
 	try {
 		const published = await withoutScope(() => PdfTemplate.find({ 'gallery.published': true }).sort({ 'gallery.order': 1, name: 1 }).lean());
-		const templates = (published as any[]).length ? published : STARTERS.map(starterDoc);
-		return res.status(200).json({ templates, builtIn: !(published as any[]).length });
+		const templates = ((published as any[]).length ? published : STARTERS.map(starterDoc)).map((t: any) => ({ ...t, kind: categoryKey(t.kind) || 'other' }));
+		// The categories come along: the gallery is browsed by them (D21).
+		return res.status(200).json({ templates, builtIn: !(published as any[]).length, categories: await loadCategories() });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not load the gallery');
 	}

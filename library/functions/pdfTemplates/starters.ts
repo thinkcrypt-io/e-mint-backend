@@ -17,6 +17,10 @@ const cols = (columns: any[], p: Record<string, any> = {}) => ({ type: 'columns'
 const col = (blocks: any[], width = 1, p: Record<string, any> = {}) => ({ blocks, width, ...p });
 const box = (blocks: any[], p: Record<string, any> = {}) => ({ type: 'box', blocks, ...p });
 const space = (height: number) => ({ type: 'spacer', height });
+/** A Space that takes the room left (D19): in a row it pushes apart, in the body it pushes to the page bottom. */
+const fillSpace = () => ({ type: 'spacer', height: 4, grow: 1 });
+/** Blocks side by side (a box laid out as a row, nothing drawn) — D19. */
+const hrow = (blocks: any[], p: Record<string, any> = {}) => ({ type: 'box', direction: 'row', pad: 0, gap: 8, blocks, ...p });
 const line = (p: Record<string, any> = {}) => ({ type: 'divider', ...p });
 const image = (src: string, p: Record<string, any> = {}) => ({ type: 'image', src, ...p });
 const table = (rows: string, columns: any[], p: Record<string, any> = {}) => ({ type: 'table', rows, columns, ...p });
@@ -73,6 +77,21 @@ const receiptSlots: Slot[] = [
 	{ token: 'receipt.notes', label: 'Notes', type: 'text' },
 ];
 
+const quoteSlots: Slot[] = [
+	{ token: 'quote.number', label: 'Quote number', type: 'text' },
+	{ token: 'quote.date', label: 'Date', type: 'date' },
+	{ token: 'quote.validUntil', label: 'Valid until', type: 'date' },
+	{ token: 'quote.customer.name', label: 'Customer name', type: 'text' },
+	{ token: 'quote.customer.address', label: 'Customer address', type: 'text' },
+	{ token: 'quote.customer.email', label: 'Customer email', type: 'text' },
+	{ token: 'quote.items', label: 'Line items', type: 'list', of: ITEM_SLOTS },
+	{ token: 'quote.subtotal', label: 'Subtotal', type: 'number' },
+	{ token: 'quote.discount', label: 'Discount', type: 'number' },
+	{ token: 'quote.tax', label: 'Tax / VAT', type: 'number' },
+	{ token: 'quote.total', label: 'Total', type: 'number' },
+	{ token: 'quote.notes', label: 'Notes', type: 'text' },
+];
+
 /* --------------------------------------------------------------- samples */
 
 const ITEMS = [
@@ -121,6 +140,22 @@ const receiptSample = {
 	business: invoiceSample('invoice').business,
 };
 
+const BUSINESS = invoiceSample('invoice').business;
+const quoteSample = {
+	quote: {
+		number: 'QT-2026-0018',
+		date: '2026-10-13',
+		validUntil: '2026-11-12',
+		customer: { name: 'Rahman Traders Ltd.', address: 'House 12, Road 5, Dhanmondi\nDhaka 1205', email: 'accounts@rahmantraders.com' },
+		items: ITEMS,
+		subtotal: 77200,
+		discount: 2200,
+		tax: 11250,
+		total: 86250,
+		notes: '50% advance on acceptance, the rest on delivery. Delivery in 3 weeks.',
+	},
+	business: BUSINESS,
+};
 /* -------------------------------------------------------------- starters */
 
 const invoiceClassic = {
@@ -248,7 +283,7 @@ const bill = {
 	key: 'bill-standard',
 	name: 'Bill',
 	description: 'A centred BILL heading, serial-numbered lines, the total in words and two signatures — the layout shops and agencies hand over in Bangladesh.',
-	kind: 'bill',
+	kind: 'invoice',
 	alias: 'bill',
 	page: PAGE,
 	style: { font: 'sans', size: 9.5, color: '#111111', muted: '#555555', accent: '#111111', lineHeight: 1.4 },
@@ -375,4 +410,195 @@ const receiptCompact = {
 	sample: receiptSample,
 };
 
-export const STARTERS = [invoiceClassic, invoiceModern, bill, receipt, receiptCompact];
+const invoiceMinimal = {
+	key: 'invoice-minimal',
+	name: 'Invoice — Minimal',
+	description: 'Lots of white space: the logo and INVOICE on one line, quiet rules, the total in the accent colour and the signature at the bottom of the page.',
+	kind: 'invoice',
+	alias: 'invoice',
+	page: PAGE,
+	style: { font: 'sans', size: 9.5, color: '#1f2937', muted: '#9ca3af', accent: '#0d9488', lineHeight: 1.45 },
+	header: [],
+	body: [
+		hrow([image('{{business.logo}}', { height: 30 }), fillSpace(), text('INVOICE', { size: 20, weight: 300, spacing: 6, color: '#0d9488' })], { valign: 'middle' }),
+		space(22),
+		hrow(
+			[
+				box([label('From'), text('{{business.name}}', { weight: 600 }), muted('{{business.address}}'), muted('{{business.email}}')], { pad: 0, grow: 1 }),
+				box([label('To'), text('{{invoice.customer.name}}', { weight: 600 }), muted('{{invoice.customer.address}}'), muted('{{invoice.customer.email}}')], { pad: 0, grow: 1 }),
+				box([fields([row('No.', '{{invoice.number}}', { bold: true }), row('Date', '{{invoice.date | date}}'), row('Due', '{{invoice.dueDate | date}}')], { align: 'right', labelWidth: 0.4, hideEmpty: true })], { pad: 0, basis: 150 }),
+			],
+			{ gap: 18 }
+		),
+		space(24),
+		table('invoice.items', [
+			tcol('Description', '{{item.description}}', 3.4),
+			tcol('Qty', '{{item.quantity | number}}', 0.6, 'right'),
+			tcol('Price', '{{item.price | money}}', 1.2, 'right'),
+			tcol('Amount', '{{item.amount | money}}', 1.3, 'right'),
+		], { headerColor: '#9ca3af', lines: 'rows', emptyText: 'No items', pad: 7 }),
+		space(12),
+		hrow([
+			fillSpace(),
+			box([
+				fields([
+					row('Subtotal', '{{invoice.subtotal | money}}'),
+					row('Discount', '{{invoice.discount | money}}'),
+					row('Tax', '{{invoice.tax | money}}'),
+					row('Total', '{{invoice.total | money}}', { big: true, line: true }),
+					row('Balance due', '{{invoice.due | money}}', { bold: true }),
+				], { align: 'right', hideEmpty: true, gap: 4 }),
+			], { pad: 0, basis: 220 }),
+		]),
+		space(14),
+		muted('{{invoice.notes}}'),
+		fillSpace(),
+		hrow([
+			box([label('Payment'), muted('{{business.note}}')], { pad: 0, grow: 1 }),
+			box([line({ color: '#1f2937', mb: 4 }), muted('Authorised signature', { align: 'center' })], { pad: 0, basis: 160 }),
+		], { valign: 'bottom', gap: 24 }),
+	],
+	footer: [muted('{{business.name}}  ·  {{business.taxId}}  ·  Page {{page}} of {{pages}}', { size: 7.5, align: 'center' })],
+	slots: invoiceSlots('invoice'),
+	sample: invoiceSample('invoice'),
+};
+
+const quotation = {
+	key: 'quote-standard',
+	name: 'Quotation',
+	description: 'A price offer: valid-until date, the items and total, your terms, and a line for the customer to sign and accept.',
+	kind: 'quotation',
+	alias: 'quote',
+	page: PAGE,
+	style: { font: 'sans', size: 9.5, color: '#111827', muted: '#6b7280', accent: '#2563eb', lineHeight: 1.45 },
+	header: [],
+	body: [
+		hrow([
+			box([image('{{business.logo}}', { height: 32, mb: 6 }), text('{{business.name}}', { size: 12, weight: 600 }), muted('{{business.address}}'), muted('{{business.phone}}   {{business.email}}')], { pad: 0 }),
+			fillSpace(),
+			box([text('QUOTATION', { size: 22, weight: 700, color: '#2563eb', align: 'right', spacing: 1, mb: 6 }), fields([row('Quote no.', '{{quote.number}}', { bold: true }), row('Date', '{{quote.date | date}}'), row('Valid until', '{{quote.validUntil | date}}', { bold: true })], { align: 'right', labelWidth: 0.5, hideEmpty: true })], { pad: 0, basis: 190 }),
+		]),
+		space(20),
+		box([label('Prepared for'), text('{{quote.customer.name}}', { size: 11, weight: 600, mb: 2 }), muted('{{quote.customer.address}}'), muted('{{quote.customer.email}}')], { bg: '#eff6ff', pad: 12, radius: 4 }),
+		space(18),
+		table('quote.items', [
+			tcol('#', '{{index}}', 0.35),
+			tcol('Description', '{{item.description}}', 3.2),
+			tcol('Qty', '{{item.quantity | number}}', 0.6, 'right'),
+			tcol('Unit price', '{{item.price | money}}', 1.2, 'right'),
+			tcol('Amount', '{{item.amount | money}}', 1.3, 'right'),
+		], { headerBg: '#2563eb', headerColor: '#ffffff', lines: 'rows', zebra: true, emptyText: 'No items', pad: 6 }),
+		space(12),
+		hrow([
+			box([label('Terms'), text('{{quote.notes}}', { size: 9 }), muted('In words: {{quote.total | words}}', { mt: 6, italic: true })], { pad: 0, grow: 1 }),
+			box([
+				fields([
+					row('Subtotal', '{{quote.subtotal | money}}'),
+					row('Discount', '{{quote.discount | money}}'),
+					row('VAT', '{{quote.tax | money}}'),
+					row('Total', '{{quote.total | money}}', { bar: true }),
+				], { align: 'right', hideEmpty: true, gap: 4 }),
+			], { pad: 0, basis: 210 }),
+		], { gap: 24 }),
+		fillSpace(),
+		hrow([
+			box([line({ color: '#111827', mb: 4 }), muted('Accepted by (name, signature, date)', { align: 'center' })], { pad: 0, basis: 190 }),
+			fillSpace(),
+			box([line({ color: '#111827', mb: 4 }), muted('For {{business.name}}', { align: 'center' })], { pad: 0, basis: 170 }),
+		], { mt: 30 }),
+	],
+	footer,
+	slots: quoteSlots,
+	sample: quoteSample,
+};
+
+const quotationModern = {
+	key: 'quote-modern',
+	name: 'Quotation — Modern',
+	description: 'A coloured band, the offer’s total up front, light rows and room for your terms — change the accent to your brand’s.',
+	kind: 'quotation',
+	alias: 'quote',
+	page: PAGE,
+	style: { font: 'sans', size: 9.5, color: '#0f172a', muted: '#64748b', accent: '#0891b2', lineHeight: 1.45 },
+	header: [],
+	body: [
+		box(
+			[
+				hrow(
+					[
+						box([text('{{business.name}}', { size: 15, weight: 700, color: '#ffffff' }), text('{{business.phone}}  ·  {{business.email}}', { size: 8.5, color: '#cffafe' })], { pad: 0 }),
+						fillSpace(),
+						box([text('Quotation', { size: 20, weight: 600, color: '#ffffff', align: 'right' }), text('{{quote.number}}', { size: 9, color: '#cffafe', align: 'right' })], { pad: 0 }),
+					],
+					{ valign: 'middle' }
+				),
+			],
+			{ bg: '#0891b2', pad: 18, radius: 6 }
+		),
+		space(18),
+		hrow(
+			[
+				box([label('For'), text('{{quote.customer.name}}', { size: 11, weight: 600, mb: 2 }), muted('{{quote.customer.address}}'), muted('{{quote.customer.email}}')], { pad: 0, grow: 1 }),
+				box([label('Date'), text('{{quote.date | date}}', { weight: 600 }), label('Valid until', { mt: 8 }), text('{{quote.validUntil | date}}', { weight: 600 })], { pad: 0, basis: 110 }),
+				box([label('Total', { align: 'right' }), text('{{quote.total | money}}', { size: 18, weight: 700, color: '#0891b2', align: 'right' })], { pad: 0, basis: 150 }),
+			],
+			{ gap: 16 }
+		),
+		space(20),
+		table('quote.items', [
+			tcol('Item', '{{item.description}}', 3.4),
+			tcol('Qty', '{{item.quantity | number}}', 0.6, 'right'),
+			tcol('Rate', '{{item.price | money}}', 1.2, 'right'),
+			tcol('Amount', '{{item.amount | money}}', 1.3, 'right'),
+		], { headerBg: '#ecfeff', headerColor: '#155e75', zebra: true, lines: 'none', emptyText: 'No items', pad: 7 }),
+		space(14),
+		hrow(
+			[
+				box([label('Terms'), text('{{quote.notes}}', { size: 9 }), text('{{texts.terms_conditions}}', { size: 8.5, color: '#64748b', mt: 4 })], { border: 0.75, borderColor: '#e2e8f0', pad: 12, radius: 6, grow: 1 }),
+				box([fields([row('Subtotal', '{{quote.subtotal | money}}'), row('Discount', '{{quote.discount | money}}'), row('VAT', '{{quote.tax | money}}'), row('Total', '{{quote.total | money}}', { big: true, line: true })], { align: 'right', hideEmpty: true, gap: 5 })], { pad: 0, basis: 200 }),
+			],
+			{ gap: 20 }
+		),
+		fillSpace(),
+		hrow([muted('To accept, sign and send this back before {{quote.validUntil | date}}.', { italic: true }), fillSpace(), box([line({ color: '#0f172a', mb: 4 }), muted('Accepted by', { align: 'center' })], { pad: 0, basis: 170 })], { valign: 'bottom', mt: 24 }),
+	],
+	footer,
+	slots: quoteSlots,
+	sample: quoteSample,
+};
+
+const moneyReceipt = {
+	key: 'receipt-money',
+	name: 'Money receipt',
+	description: 'The counterfoil-style money receipt shops in Bangladesh hand over: received from, the sum in words, cash / cheque / mobile banking, and two signatures.',
+	kind: 'receipt',
+	alias: 'receipt',
+	page: { size: 'A5', orientation: 'landscape', margin: [28, 30, 28, 30] },
+	style: { font: 'sans', size: 10, color: '#111827', muted: '#6b7280', accent: '#b45309', lineHeight: 1.5 },
+	header: [],
+	body: [
+		hrow([image('{{business.logo}}', { height: 30 }), box([text('{{business.name}}', { size: 13, weight: 700 }), muted('{{business.address}}  ·  {{business.phone}}', { size: 8 })], { pad: 0, grow: 1 }), box([text('MONEY RECEIPT', { size: 12, weight: 700, color: '#ffffff', align: 'center', spacing: 1.5 })], { bg: '#b45309', pad: 6, radius: 3 })], { valign: 'middle', gap: 10 }),
+		space(12),
+		hrow([text('No. **{{receipt.number}}**'), fillSpace(), text('Date: **{{receipt.date | date}}**')]),
+		space(10),
+		text('Received with thanks from **{{receipt.customer.name}}**', { mb: 6 }),
+		text('the sum of **{{receipt.amount | words}}**', { mb: 6 }),
+		hrow([text('by **{{receipt.method}}**'), text('Ref: {{receipt.reference}}', { color: '#6b7280' }), fillSpace(), text('against {{receipt.invoice.number}}', { color: '#6b7280' })], { gap: 14 }),
+		fillSpace(),
+		hrow(
+			[
+				box([text('{{receipt.amount | money}}', { size: 16, weight: 700, align: 'center' })], { border: 1.25, borderColor: '#b45309', pad: 8, radius: 3, basis: 170 }),
+				fillSpace(),
+				box([line({ color: '#111827', mb: 4 }), muted('Customer’s signature', { align: 'center' })], { pad: 0, basis: 140 }),
+				box([line({ color: '#111827', mb: 4 }), muted('Authorised signature', { align: 'center' })], { pad: 0, basis: 140 }),
+			],
+			{ valign: 'bottom', gap: 18, mt: 14 }
+		),
+	],
+	footer: [],
+	slots: receiptSlots,
+	sample: receiptSample,
+};
+
+/** By category: invoices, receipts, quotations (D21). */
+export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern];

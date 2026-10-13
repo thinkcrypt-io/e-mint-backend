@@ -19,7 +19,20 @@ export const PAGE_SIZES: Record<string, [number, number]> = {
 	A5: [419.53, 595.28],
 };
 export const FONTS = ['sans', 'mono', 'helvetica', 'times', 'courier'] as const;
-export const KINDS = ['invoice', 'bill', 'receipt', 'quote', 'statement', 'other'] as const;
+/** The built-in categories (D21) — the list itself is data (PdfCategory), seeded with these. */
+export const KINDS = ['invoice', 'receipt', 'quotation'] as const;
+/** Old kinds → today's category keys. */
+const OLD_KINDS: Record<string, string> = { quote: 'quotation', bill: 'invoice' };
+/** A category key: lower-case letters, digits and dashes (D21). */
+export const categoryKey = (v: any): string => {
+	const k = String(v ?? '')
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40);
+	return OLD_KINDS[k] || k;
+};
 export const BLOCK_TYPES = ['text', 'image', 'columns', 'box', 'table', 'fields', 'divider', 'spacer', 'pageBreak'] as const;
 export const ALIGNS = ['left', 'center', 'right'] as const;
 export const WEIGHTS = [400, 500, 600, 700] as const;
@@ -46,7 +59,8 @@ export type Slot = { token: string; label: string; type: 'text' | 'number' | 'da
 export type PdfTemplateData = {
 	name: string;
 	description: string;
-	kind: (typeof KINDS)[number];
+	/** The gallery category's key (D21). */
+	kind: string;
 	route: string;
 	alias: string;
 	page: { size: keyof typeof PAGE_SIZES; orientation: 'portrait' | 'landscape'; margin: [number, number, number, number] };
@@ -338,7 +352,7 @@ export const normalizeTemplate = (raw: any): { template: PdfTemplateData; errors
 	const template: PdfTemplateData = {
 		name,
 		description: str(raw?.description, 500).trim(),
-		kind: oneOf(raw?.kind, KINDS, 'other'),
+		kind: categoryKey(raw?.kind) || 'other',
 		route: str(raw?.route, 80).trim().replace(/^\/+|\/+$/g, ''),
 		alias: NAME.test(alias) && !RESERVED_ROOTS.has(alias) ? alias : 'record',
 		page: pageOf(raw?.page),

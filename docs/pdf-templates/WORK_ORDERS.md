@@ -37,6 +37,10 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-20 | Designer controls for D19: Box → Layout (Stack / Row), gap, align, spread, min height; "Width in the row" (fit / fill / fixed); Space → size + "Fill the free space"; Row and "Push to the bottom" in Add; ← → in a row | M | **done 2026-10-13** |
 | PT-21 | Moving on the page (D20): drag blocks on the page (before / after, left / right in a row, into boxes and columns, from the Add panel), ⌘C / ⌘X / ⌘V with paste inside a box or column, block bar "Paste inside" | M | **done 2026-10-13** |
 | PT-22 | Guides (admin docs + mint-docs), website, MCP guide text, mint-tenant copies | S | **done 2026-10-13** |
+| PT-23 | Gallery categories (D21): PdfCategory model + API (read all; super admin writes), kind = category key, default Invoices / Receipts / Quotations; starters: + Invoice — Minimal, Quotation, Quotation — Modern, Money receipt (rows + filling space); MCP list / save category, publish to the gallery | M | open |
+| PT-24 | Admin: category chips on the gallery (list + New template), super admin's Categories dialog, designer Category picker; guides | M | open |
+| PT-25 | Free placement engine (D22): `free` blocks with x / y / w / rotate / opacity / behind / pages; schema, renderer, HTML page, smoke | M | open |
+| PT-26 | Free placement in the designer: drag anywhere with snap guides, width handle, arrow nudges, flow ⇄ free, Add → Place freely, properties; guides, MCP text, mint-tenant | L | open |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 

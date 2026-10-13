@@ -17,6 +17,7 @@ import {
 	updateTemplate,
 	useTemplate,
 } from './pdfTemplates.controller.js';
+import { deleteCategory, listCategories, putCategory } from './categories.controller.js';
 
 /** A handler's failure answers 500 instead of reaching the process. */
 const safe =
@@ -40,6 +41,11 @@ export const makePdfTemplatesRouter = ({ read, edit }: { read: any[]; edit: any[
 	router.get('/settings', ...read, safe(getSettings));
 	router.put('/settings', ...read, ...edit, safe(saveSettings));
 	router.get('/gallery', ...read, safe(listGallery));
+	// Gallery categories (D21): everyone reads; the super admin keeps them (the controller refuses inside a project).
+	router.get('/categories', ...read, safe(listCategories));
+	router.post('/categories', ...read, ...edit, safe(putCategory));
+	router.put('/categories/:key', ...read, ...edit, safe(putCategory));
+	router.delete('/categories/:key', ...read, ...edit, safe(deleteCategory));
 	router.post('/gallery/starters', ...read, ...edit, safe(addStarters));
 	router.get('/fields/:route(*)', ...read, safe(getFields));
 	router.post('/render', ...read, safe(renderSample));
