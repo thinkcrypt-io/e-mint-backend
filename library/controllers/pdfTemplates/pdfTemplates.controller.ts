@@ -209,8 +209,14 @@ export const listGallery = async (_req: Request, res: Response) => {
 	try {
 		const published = await withoutScope(() => PdfTemplate.find({ 'gallery.published': true }).sort({ 'gallery.order': 1, name: 1 }).lean());
 		const templates = ((published as any[]).length ? published : STARTERS.map(starterDoc)).map((t: any) => ({ ...t, kind: categoryKey(t.kind) || 'other' }));
+		// Starters shipped since the super admin last added them — offered on their gallery tab.
+		let newStarters = 0;
+		if (!currentScope() && (published as any[]).length) {
+			const have = new Set(((await PdfTemplate.find({ key: { $in: STARTERS.map(x => x.key) } }).select('key').lean()) as any[]).map(d => d.key));
+			newStarters = STARTERS.filter(x => !have.has(x.key)).length;
+		}
 		// The categories come along: the gallery is browsed by them (D21).
-		return res.status(200).json({ templates, builtIn: !(published as any[]).length, categories: await loadCategories() });
+		return res.status(200).json({ templates, builtIn: !(published as any[]).length, newStarters, categories: await loadCategories() });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not load the gallery');
 	}
