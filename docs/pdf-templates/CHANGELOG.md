@@ -167,3 +167,22 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   inside a project; Organization → Settings only outside one. PANEL_PAGES /
   PROJECT_PAGES know `project-settings`.
 - Checked: scripts/tenancy-smoke/business.mjs 16/16; PDF smoke 25/25 again.
+
+## 2026-10-13 — PT-14 organization and project settings pages
+- Admin + mint-tenant `components/library/tenant/BusinessDetails.tsx`:
+  `BusinessFields` (logo + name, tax number, address, phone, email, website)
+  and `LogoField` (the media library's picker — library, folders, upload,
+  link — in a modal; Change / Remove).
+- Organization → Settings: new "Business details" panel (saves `logo` +
+  `business`); business name and website moved there from the sign-up
+  answers.
+- New `/project-settings` (inside a project): Project (name, description)
+  and Business details (PUT /projects/:id `business`). `getTenantProject`
+  query; `project-settings` in PROJECT_PAGES; guide anchor
+  projects#project-settings (mint-docs), organization guide paragraph.
+- Website changelog: business details + saved texts lines.
+- Checked in the tenant panel (tenant-5021 against the scratch backend):
+  org panel shows the details, the logo picked through the modal's From URL
+  tab and saved (GET /org returns it); inside the project the page shows the
+  project's copy, the sidebar links Project settings and not the
+  organization's.
