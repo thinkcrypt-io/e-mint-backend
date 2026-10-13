@@ -157,6 +157,16 @@ ok('using a starter makes this page’s template, default', r.status === 201 && 
 const json = JSON.stringify(t1);
 ok('tokens were rewritten to the page’s fields', json.includes(`${t1.alias}.grandTotal`) && json.includes('item.unitPrice') && !json.includes('invoice.total'), json.slice(0, 300));
 
+// ------------------------------------------------------------- preview
+r = await call('POST', '/pdf-templates/render', { template: t1._id, dummy: true, as: 'data' }, T);
+const pv = r.body?.roots?.[t1.alias] || {};
+const rowsSum = (pv.items || []).reduce((n, x) => n + (x.lineTotal || 0), 0);
+ok('preview data: every field filled, totals add up', r.status === 200 && (pv.items || []).length === 3 && rowsSum > 0 && pv.grandTotal === rowsSum && typeof pv.client?.name === 'string', JSON.stringify(pv).slice(0, 200));
+ok('preview data keeps the business details as they are (for the designer)', r.body?.roots?.business?.name === 'Northwind' && !r.body?.roots?.business?.logo, JSON.stringify(r.body?.roots?.business));
+r = await call('POST', '/pdf-templates/render', { template: t1._id, dummy: true }, T);
+ok('preview PDF', r.status === 200 && r.pdf?.length > 5000);
+save('preview', r);
+
 // ------------------------------------------------------------ download
 r = await call('POST', `${B}/export/template`, { ids: [b1._id], tz: 'Asia/Dhaka' }, T);
 ok('download with the page’s default template', isPdf(r) && r.pdf.length > 8000, r.status + ' ' + (r.body?.message || ''));

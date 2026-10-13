@@ -270,3 +270,10 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   Add phone" → dialog with the cursor in Phone → typed, saved → the page
   prints it, the chip gone; signature: its words → ↖ → Columns → delete;
   Computer generated added after the selection.
+
+## 2026-10-13 — PT-17 closing pass
+- smoke.mjs: three Preview checks (preview data — three rows, total = their
+  sum, client filled; business details left as they are for the designer;
+  the preview PDF). 29/29; tenancy-smoke/business.mjs 16/16 on the final
+  backend. mint-tenant typechecks whole (its copies match admin's).
+- Guides and the website were updated with each work order (PT-12…PT-18).
