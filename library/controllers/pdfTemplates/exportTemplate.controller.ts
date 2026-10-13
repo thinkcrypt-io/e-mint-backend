@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 import { PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { cleanRecord, loadLists, populateFor, templatePaths, under } from '../../functions/pdfTemplates/data.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
-import { LIMITS, normalizeTemplate } from '../../functions/pdfTemplates/schema.js';
+import { LIMITS, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
+import { tokenPaths } from '../../functions/pdfTemplates/tokens.js';
 import { findTemplate, loadSettings, sendPdf, zoneOf } from './pdfTemplates.controller.js';
 
 /**
@@ -41,7 +42,8 @@ const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Res
 
 		const settings = await loadSettings();
 		const routeSettings: Record<string, any> = req.resolvedRoute?.settings || {};
-		const paths = templatePaths(template);
+		// The saved texts it prints can read the record's fields too ({{texts.terms}} → "due {{bill.dueDate | date}}").
+		const paths = [...templatePaths(template), ...settings.texts.flatMap(t => tokenPaths(t.text))];
 		const populate = await populateFor(req, Model, under(paths, [template.alias, 'record']));
 		const docs: any[] = await Model.find({ $and: [req.queryHelper || {}, { _id: { $in: ids.map(id => new mongoose.Types.ObjectId(id)) } }] })
 			.select(req.resolvedRoute?.built?.QUERY_OPTIONS?.exclude || '')
@@ -60,6 +62,7 @@ const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Res
 					[template.alias]: record,
 					record,
 					business: settings.business,
+					texts: textsRoot(settings),
 					today: now,
 					now,
 					template: { name: template.name },

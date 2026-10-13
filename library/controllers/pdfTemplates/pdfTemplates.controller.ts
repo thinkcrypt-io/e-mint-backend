@@ -5,7 +5,7 @@ import { currentScope, withoutScope } from '../../functions/tenantScope.function
 import { fieldTree } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplates/mapping.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
-import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, normalizeSettings, normalizeTemplate } from '../../functions/pdfTemplates/schema.js';
+import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { resources } from '../builder/viewDocument.controller.js';
 
@@ -253,7 +253,7 @@ export const renderSample = async (req: any, res: Response) => {
 		const settings = await loadSettings();
 		const data = req.body?.data && typeof req.body.data === 'object' ? req.body.data : template.sample || raw.sample || {};
 		const record = data[template.alias] ?? {};
-		const roots = { ...data, [template.alias]: record, record, business: businessFor(settings, data), today: new Date(), now: new Date(), template: { name: template.name } };
+		const roots = { ...data, [template.alias]: record, record, business: businessFor(settings, data), texts: textsRoot(settings), today: new Date(), now: new Date(), template: { name: template.name } };
 		const pdf = await renderPdf({ template, records: [{ roots }], settings, tz: zoneOf(settings, req.body?.tz) });
 		sendPdf(res, pdf, `${template.name || 'preview'}.pdf`, req.query.inline === '1');
 	} catch (e: any) {

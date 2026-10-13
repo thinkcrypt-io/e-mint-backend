@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import { PdfTemplate } from '../../models/pdf-templates/_index.js';
+import { PdfSettings, PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { fieldTree, FieldNode } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping } from '../../functions/pdfTemplates/mapping.js';
-import { aliasOf, normalizeTemplate } from '../../functions/pdfTemplates/schema.js';
+import { aliasOf, normalizeSettings, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
 import { FILTERS } from '../../functions/pdfTemplates/tokens.js';
-import { findTemplate } from '../pdfTemplates/pdfTemplates.controller.js';
+import { findTemplate, loadSettings } from '../pdfTemplates/pdfTemplates.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { withoutScope } from '../../functions/tenantScope.function.js';
 import type { ToolDef } from './mcp.router.js';
@@ -27,7 +27,8 @@ Blocks (all take mt/mb space and showIf [{field, op, value}] + showMatch):
 - table { rows: "<alias>.<section list>" or a list name, columns: [{ header, value "{{item.x}}", width share, align }], headerBg, headerColor, zebra, lines none|rows|grid, emptyText, pad, size }
 - columns { columns: [{ width share, valign, blocks }], gap } · box { blocks, pad, bg, border, borderColor, radius }
 - image { src (URL or {{business.logo}}), width, height, align } · divider { color, thickness, dashed } · spacer { height } · pageBreak
-Tokens: {{<alias>.field | filter:arg}}; roots: the alias (or record), item + index in table cells, business (name, logo, address, phone, email, website, taxId, note), today, now, page, pages, list names.
+Tokens: {{<alias>.field | filter:arg}}; roots: the alias (or record), item + index in table cells, business (name, logo, address, phone, email, website, taxId, note), texts (the project's saved texts by key — {{texts.terms}}; they may hold fields of their own), today, now, page, pages, list names.
+Words that never change ("This invoice is computer generated — no signature is required.") are plain text blocks; words the user reuses across templates (terms and conditions, a return policy) are saved texts — save_pdf_text, then {{texts.<key>}}.
 Filters: ${Object.keys(FILTERS).join(', ')}.
 Steps: get_pdf_fields for the page → write or start from a gallery design (use_pdf_starter) → save_pdf_template → the user checks it in the designer (link returned).`;
 
@@ -45,8 +46,9 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 		inputSchema: { type: 'object', properties: {} },
 		annotations: { readOnlyHint: true, openWorldHint: false },
 		run: async () => {
-			const gallery = await findGallery();
-			return { text: `${GUIDE}\n\nGallery:\n${gallery.map(g => `- ${g.id} — ${g.name}: ${g.description}`).join('\n')}`, data: { gallery } };
+			const [gallery, settings] = await Promise.all([findGallery(), loadSettings()]);
+			const texts = settings.texts.map(t => `- {{texts.${t.key}}} — ${t.label}`).join('\n') || '(none yet)';
+			return { text: `${GUIDE}\n\nGallery:\n${gallery.map(g => `- ${g.id} — ${g.name}: ${g.description}`).join('\n')}\n\nSaved texts:\n${texts}`, data: { gallery, texts: settings.texts } };
 		},
 	},
 	{
@@ -165,6 +167,39 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 				doc.isDefault = true;
 			}
 			return { text: `${before ? 'Saved' : 'Made'} “${doc.name}”${doc.isDefault ? ' (the page’s default)' : ''}: ${caller.link(`/pdf-templates/${doc._id}`)}`, data: short(doc) };
+		},
+	},
+	{
+		name: 'save_pdf_text',
+		title: 'Save a text for PDF templates',
+		description:
+			'Creates or replaces one of the project’s saved texts — terms and conditions, a return policy, a thank-you note — that every template can print as {{texts.<key>}}. Same key replaces it (every template printing it changes); empty `text` with an existing key removes it. **bold** and new lines work; fields like {{bill.dueDate | date}} are filled per record. Show the user the wording first.',
+		scope: 'build',
+		inputSchema: {
+			type: 'object',
+			required: ['label'],
+			properties: {
+				label: { type: 'string', description: 'What people call it: "Terms & conditions"' },
+				key: { type: 'string', description: 'Its token name (from the label when left out): terms_conditions' },
+				text: { type: 'string' },
+			},
+		},
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+		run: async (_req, args, caller) => {
+			const label = String(args?.label || '').trim();
+			const key = textKey(String(args?.key || '') || label);
+			if (!key) return { text: 'Give it a label.', isError: true };
+			const settings = await loadSettings();
+			const text = String(args?.text ?? '');
+			const others = settings.texts.filter(t => t.key !== key);
+			const texts = text.trim() ? [...others, { key, label: label || key, text }] : others;
+			if (texts.length > 30) return { text: 'A project keeps at most 30 saved texts.', isError: true };
+			const data = normalizeSettings({ ...settings, texts });
+			await PdfSettings.findOneAndUpdate({ key: 'default' }, { $set: { data, updatedBy: caller.user?._id } }, { upsert: true, new: true });
+			return {
+				text: text.trim() ? `Saved — templates print it as {{texts.${key}}}.` : `Removed {{texts.${key}}} — templates printing it now print nothing there.`,
+				data: { key, texts: data.texts },
+			};
 		},
 	},
 ];

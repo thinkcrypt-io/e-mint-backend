@@ -118,8 +118,14 @@ await call('POST', `/${pay.route}`, { bill: b1._id, amount: 400, method: 'Cash' 
 ok('records made', !!(c?._id && b1?._id && b2?._id));
 
 // ------------------------------------------------------------- settings
-let r = await call('PUT', '/pdf-templates/settings', { business: { name: 'Northwind', address: 'Gulshan' }, currency: { symbol: '৳', name: 'Taka', grouping: 'indian', decimals: 2 }, dateFormat: 'DD/MM/YYYY', timezone: 'Nowhere/Zone' }, T);
+const savedTexts = [
+	{ label: 'Terms & conditions', text: '**Pay within 7 days** of {{bill.issueDate | date}}.' },
+	{ label: 'Terms & conditions', text: 'a second one with the same key is dropped' },
+	{ key: '9 bad key!', label: 'Thanks', text: 'Thank you' },
+];
+let r = await call('PUT', '/pdf-templates/settings', { business: { name: 'Northwind', address: 'Gulshan' }, currency: { symbol: '৳', name: 'Taka', grouping: 'indian', decimals: 2 }, dateFormat: 'DD/MM/YYYY', timezone: 'Nowhere/Zone', texts: savedTexts }, T);
 ok('settings save, a bad time zone dropped', r.status === 200 && r.body.currency.symbol === '৳' && r.body.timezone === '', r.body);
+ok('saved texts: keys from labels, unique, cleaned', JSON.stringify(r.body.texts?.map(t => t.key)) === '["terms_conditions","t9_bad_key"]', r.body.texts);
 
 // -------------------------------------------------------------- gallery
 r = await call('GET', '/pdf-templates/gallery', null, T);
@@ -178,6 +184,8 @@ ok('a second template saves, not default', r.status === 201 && t2.isDefault === 
 r = await call('POST', `${B}/export/template`, { ids: [b1._id], template: t2._id }, T);
 ok('download with a chosen template and a list', isPdf(r));
 save('bill-payments', r);
+r = await call('POST', `${B}/export/template`, { ids: [b1._id], template: { ...listTpl, body: [{ type: 'text', text: '{{texts.terms_conditions}}' }] }, as: 'data' }, T);
+ok('a saved text is a root, with the fields it reads loaded', r.status === 200 && r.body.roots?.texts?.terms_conditions?.includes('{{bill.issueDate') && !!r.body.roots?.bill?.issueDate, r.body?.roots?.texts);
 
 // The populate never asks for a password: check what the server would load.
 r = await call('POST', '/pdf-templates', { ...listTpl, name: 'Broken', body: [{ type: 'table', columns: [] }] }, T);

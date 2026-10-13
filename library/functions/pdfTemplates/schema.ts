@@ -90,7 +90,7 @@ export const aliasOf = (name: string) => {
 	return /^[A-Za-z_]/.test(camel) ? camel : `r${camel}`;
 };
 
-const RESERVED_ROOTS = new Set(['item', 'index', 'business', 'today', 'now', 'page', 'pages', 'template', 'record']);
+const RESERVED_ROOTS = new Set(['item', 'index', 'business', 'texts', 'today', 'now', 'page', 'pages', 'template', 'record']);
 
 /** Shared by every block of a template: its errors and how many blocks there are. */
 type Ctx = { errors: string[]; counter: { n: number }; where: string };
@@ -358,14 +358,47 @@ export type PdfSettingsData = {
 	currency: { symbol: string; code: string; name: string; decimals: number; position: 'before' | 'after'; grouping: 'standard' | 'indian' };
 	dateFormat: string;
 	timezone: string;
+	/** Saved texts — terms and conditions, a return policy — printed as {{texts.<key>}}. */
+	texts: SavedText[];
 };
+
+export type SavedText = { key: string; label: string; text: string };
 
 export const DEFAULT_SETTINGS: PdfSettingsData = {
 	business: { name: '', logo: '', address: '', phone: '', email: '', website: '', taxId: '', note: '' },
 	currency: { symbol: '', code: '', name: '', decimals: 2, position: 'before', grouping: 'standard' },
 	dateFormat: 'D MMM YYYY',
 	timezone: '',
+	texts: [],
 };
+
+/** "Terms & conditions" → terms_conditions: what a saved text is called in {{texts.…}}. */
+export const textKey = (v: string) =>
+	String(v || '')
+		.trim()
+		.toLowerCase()
+		.replace(/&/g, ' ')
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_+|_+$/g, '')
+		.replace(/^(\d)/, 't$1')
+		.slice(0, 40);
+
+/** Saved texts: named, unique keys, at most 30 of 5,000 characters. */
+const savedTexts = (list: any): SavedText[] => {
+	const seen = new Set<string>();
+	const out: SavedText[] = [];
+	for (const x of Array.isArray(list) ? list.slice(0, 30) : []) {
+		const label = str(x?.label, 80).trim();
+		const key = textKey(str(x?.key, 40) || label);
+		if (!key || seen.has(key)) continue;
+		seen.add(key);
+		out.push({ key, label: label || key, text: str(x?.text, 5000).replace(/\r/g, '') });
+	}
+	return out;
+};
+
+/** {{texts.<key>}}'s root: each saved text by its key. */
+export const textsRoot = (s: Pick<PdfSettingsData, 'texts'>): Record<string, string> => Object.fromEntries((s.texts || []).map(t => [t.key, t.text]));
 
 const validZone = (tz: string) => {
 	if (!tz) return '';
@@ -401,5 +434,6 @@ export const normalizeSettings = (raw: any): PdfSettingsData => {
 		},
 		dateFormat: str(raw?.dateFormat, 40).trim() || DEFAULT_SETTINGS.dateFormat,
 		timezone: validZone(str(raw?.timezone, 60).trim()),
+		texts: savedTexts(raw?.texts),
 	};
 };

@@ -128,3 +128,23 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - README D12, guides (admin docs + mint-docs #ai) and the website changelog
   line updated.
 - Checked: backend + admin typecheck; dialog in the browser.
+
+## 2026-10-13 — PT-12 saved texts
+- The user asked for custom text anywhere (a "computer generated, no
+  signature required" line, terms and conditions, rules) and business
+  details on the organization and the project; plan in README D14–D18,
+  WORK_ORDERS PT-12…PT-17.
+- `schema.ts`: settings `texts` [{key, label, text}] (30, 5,000 chars; key
+  from the label — `textKey`, unique), `textsRoot`; `texts` reserved as a
+  root. `tokens.ts` (backend + admin copy): `fill` fills a saved text's own
+  fields once (`{{texts.terms}}` → "… {{bill.issueDate | date}}" → the date),
+  never deeper.
+- Renders: `texts` root in /render and /export/template; the saved texts'
+  fields are added to what the record loads.
+- MCP: describe_pdf_templates lists the saved texts; new `save_pdf_text`
+  (create / replace / remove by key).
+- Admin `scope.ts`: `texts` in the sample scope, `textsRoot`, `textKey`;
+  `sampleScope(…, own)` shows the scope's own business details (empty ones
+  too) for the designer to ask for.
+- Checked: smoke 25/25 (two new: keys cleaned, saved text as a root with its
+  fields loaded); nested fill checked directly.

@@ -11,7 +11,7 @@ guides (admin `/docs/pdf-templates`, mint-docs) and the marketing site
 Plan written 2026-10-13 (user asked: visually designed invoice / bill / receipt
 PDFs with `{{invoice.total}}`-style data, pre-built templates added from the
 admin panel, users edit / build their own / let AI build, Download makes the
-PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. **PT-11 done** — AI now only through the user's own AI over MCP (no ANTHROPIC_API_KEY on our side). Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys. `node scripts/seedPdfTemplates.js` was run on production 2026-10-13 (the super admin's sidebar item is in); after deploy, optionally press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
+PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. **PT-12…PT-17 planned 2026-10-13** (user: full-page designer, logo upload from the page, custom text / terms, business details on organization + project — README D14–D18). **PT-11 done** — AI now only through the user's own AI over MCP (no ANTHROPIC_API_KEY on our side). Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys. `node scripts/seedPdfTemplates.js` was run on production 2026-10-13 (the super admin's sidebar item is in); after deploy, optionally press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
 Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693; mint-tenant ddcd2ae; mint-docs e913807; website e08778a.
 
 | WO | Title | Size | Status |
@@ -25,6 +25,12 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-07 | Downloads: view page button, row menu `download-pdf`, Print / PDF with a template | M | **done 2026-10-13** |
 | PT-08 | Build with AI (new + change) — now through the user's own AI over MCP (PT-11) | M | **done 2026-10-13** |
 | PT-11 | Server-side AI removed; Build / Change with your AI write the MCP prompt | S | **done 2026-10-13** |
+| PT-12 | Saved texts: settings `texts`, `{{texts.key}}` root (fields inside filled once), MCP save_pdf_text, smoke (D16) | S | **done 2026-10-13** |
+| PT-13 | Business details on Organization + Project (seeded from the org), org-level upload/media, PDFs read the project's (D14, D15, D18) | M | todo |
+| PT-14 | Organization → Settings "Business details" (logo upload); new Project settings page (general + business); sidebar: project Settings, org Settings hidden inside a project | M | todo |
+| PT-15 | PDF Business details dialog: logo upload, tabs Business / Saved texts / Money & dates, opens at the field clicked | S | todo |
+| PT-16 | Designer full page + reorganised (D17): toolbar, Add / Layers, Document panel, block bar, placeholders, ready-made pieces (computer-generated note, signature, terms) | L | todo |
+| PT-17 | Guides (admin docs + mint-docs), website, mint-tenant copies, smoke | M | todo |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 

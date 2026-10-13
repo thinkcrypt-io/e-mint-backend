@@ -344,8 +344,14 @@ export const evaluate = (expr: string, scope: Scope): any => {
 };
 
 /** A text with its tokens filled in. */
-export const fill = (text: string, scope: Scope): string =>
-	!text || !text.includes('{{') ? text || '' : text.replace(TOKEN, (_m, expr) => display(evaluate(expr, scope), scope));
+export const fill = (text: string, scope: Scope, depth = 0): string =>
+	!text || !text.includes('{{')
+		? text || ''
+		: text.replace(TOKEN, (_m, expr) => {
+				const out = display(evaluate(expr, scope), scope);
+				// A saved text ({{texts.terms}}) can hold fields of its own — filled once, never deeper.
+				return depth === 0 && /^\s*texts\./.test(expr) && out.includes('{{') ? fill(out, scope, 1) : out;
+		  });
 
 /** A table's rows / an image's source: a bare path or one token. */
 export const valueOf = (text: string, scope: Scope): any => {
