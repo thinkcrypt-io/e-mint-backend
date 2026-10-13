@@ -1,4 +1,5 @@
 import { Slot } from './schema.js';
+import { adoptRoles } from './theme.js';
 
 /**
  * The starter templates (docs/pdf-templates D6, D7). They go into the super
@@ -171,12 +172,12 @@ const invoiceClassic = {
 		cols([
 			col([
 				image('{{business.logo}}', { height: 34, mb: 8 }),
-				text('{{business.name}}', { size: 12.5, weight: 600, mb: 2 }),
+				text('{{business.name}}', { font: 'heading', size: 12.5, weight: 600, mb: 2 }),
 				muted('{{business.address}}'),
 				muted('{{business.phone}}   {{business.email}}'),
 			], 1.4),
 			col([
-				text('INVOICE', { size: 26, weight: 700, align: 'right', spacing: 1.5, mb: 6 }),
+				text('INVOICE', { font: 'heading', size: 26, weight: 700, align: 'right', spacing: 1.5, mb: 6 }),
 				fields([row('Invoice no.', '{{invoice.number}}', { bold: true }), row('Date', '{{invoice.date | date}}'), row('Due', '{{invoice.dueDate | date}}')], { align: 'right', labelWidth: 0.45, hideEmpty: true }),
 			]),
 		]),
@@ -244,8 +245,8 @@ const invoiceModern = {
 	body: [
 		box([
 			cols([
-				col([text('{{business.name}}', { size: 16, weight: 700, color: '#ffffff' }), text('{{business.website}}', { size: 8.5, color: '#c7d2fe' })], 2, { valign: 'middle' }),
-				col([text('Invoice', { size: 22, weight: 600, color: '#ffffff', align: 'right' })], 1, { valign: 'middle' }),
+				col([text('{{business.name}}', { font: 'heading', size: 16, weight: 700, color: '#ffffff' }), text('{{business.website}}', { size: 8.5, color: '#c7d2fe' })], 2, { valign: 'middle' }),
+				col([text('Invoice', { font: 'heading', size: 22, weight: 600, color: '#ffffff', align: 'right' })], 1, { valign: 'middle' }),
 			]),
 		], { bg: '#4f46e5', pad: 18, radius: 6 }),
 		space(20),
@@ -291,13 +292,13 @@ const bill = {
 	body: [
 		cols([
 			col([image('{{business.logo}}', { height: 40 })], 1, { valign: 'middle' }),
-			col([text('{{business.name}}', { size: 15, weight: 700, align: 'center' }), muted('{{business.address}}', { align: 'center' }), muted('{{business.phone}}  ·  {{business.email}}', { align: 'center' })], 3),
+			col([text('{{business.name}}', { font: 'heading', size: 15, weight: 700, align: 'center' }), muted('{{business.address}}', { align: 'center' }), muted('{{business.phone}}  ·  {{business.email}}', { align: 'center' })], 3),
 			col([], 1),
 		]),
 		space(10),
 		line({ color: '#111111', thickness: 1.2 }),
 		space(10),
-		text('BILL', { size: 18, weight: 700, align: 'center', spacing: 4, mb: 12 }),
+		text('BILL', { font: 'heading', size: 18, weight: 700, align: 'center', spacing: 4, mb: 12 }),
 		cols([
 			col([fields([row('To', '**{{bill.customer.name}}**'), row('Address', '{{bill.customer.address}}'), row('Phone', '{{bill.customer.phone}}')], { labelWidth: 0.22, hideEmpty: true })], 1.5),
 			col([fields([row('Bill no.', '{{bill.number}}', { bold: true }), row('Date', '{{bill.date | date}}'), row('Due', '{{bill.dueDate | date}}')], { align: 'right', labelWidth: 0.45, hideEmpty: true })]),
@@ -349,8 +350,8 @@ const receipt = {
 	header: [],
 	body: [
 		cols([
-			col([image('{{business.logo}}', { height: 32, mb: 6 }), text('{{business.name}}', { size: 12.5, weight: 600 }), muted('{{business.address}}'), muted('{{business.phone}}   {{business.email}}')], 1.4),
-			col([text('RECEIPT', { size: 24, weight: 700, align: 'right', spacing: 1.5, color: '#059669', mb: 6 }), fields([row('Receipt no.', '{{receipt.number}}', { bold: true }), row('Date', '{{receipt.date | date}}')], { align: 'right', labelWidth: 0.5 })]),
+			col([image('{{business.logo}}', { height: 32, mb: 6 }), text('{{business.name}}', { font: 'heading', size: 12.5, weight: 600 }), muted('{{business.address}}'), muted('{{business.phone}}   {{business.email}}')], 1.4),
+			col([text('RECEIPT', { font: 'heading', size: 24, weight: 700, align: 'right', spacing: 1.5, color: '#059669', mb: 6 }), fields([row('Receipt no.', '{{receipt.number}}', { bold: true }), row('Date', '{{receipt.date | date}}')], { align: 'right', labelWidth: 0.5 })]),
 		]),
 		space(26),
 		box([
@@ -385,7 +386,7 @@ const receiptCompact = {
 	style: { font: 'sans', size: 9, color: '#111827', muted: '#6b7280', accent: '#111827', lineHeight: 1.4 },
 	header: [],
 	body: [
-		text('{{business.name}}', { size: 13, weight: 700, align: 'center' }),
+		text('{{business.name}}', { font: 'heading', size: 13, weight: 700, align: 'center' }),
 		muted('{{business.address}}', { align: 'center' }),
 		muted('{{business.phone}}', { align: 'center', mb: 10 }),
 		line({ dashed: true, color: '#9ca3af', mb: 10 }),
@@ -420,7 +421,7 @@ const invoiceMinimal = {
 	style: { font: 'sans', size: 9.5, color: '#1f2937', muted: '#9ca3af', accent: '#0d9488', lineHeight: 1.45 },
 	header: [],
 	body: [
-		hrow([image('{{business.logo}}', { height: 30 }), fillSpace(), text('INVOICE', { size: 20, weight: 300, spacing: 6, color: '#0d9488' })], { valign: 'middle' }),
+		hrow([image('{{business.logo}}', { height: 30 }), fillSpace(), text('INVOICE', { font: 'heading', size: 20, weight: 300, spacing: 6, color: '#0d9488' })], { valign: 'middle' }),
 		space(22),
 		hrow(
 			[
@@ -476,7 +477,7 @@ const quotation = {
 		hrow([
 			box([image('{{business.logo}}', { height: 32, mb: 6 }), text('{{business.name}}', { size: 12, weight: 600 }), muted('{{business.address}}'), muted('{{business.phone}}   {{business.email}}')], { pad: 0 }),
 			fillSpace(),
-			box([text('QUOTATION', { size: 22, weight: 700, color: '#2563eb', align: 'right', spacing: 1, mb: 6 }), fields([row('Quote no.', '{{quote.number}}', { bold: true }), row('Date', '{{quote.date | date}}'), row('Valid until', '{{quote.validUntil | date}}', { bold: true })], { align: 'right', labelWidth: 0.5, hideEmpty: true })], { pad: 0, basis: 190 }),
+			box([text('QUOTATION', { font: 'heading', size: 22, weight: 700, color: '#2563eb', align: 'right', spacing: 1, mb: 6 }), fields([row('Quote no.', '{{quote.number}}', { bold: true }), row('Date', '{{quote.date | date}}'), row('Valid until', '{{quote.validUntil | date}}', { bold: true })], { align: 'right', labelWidth: 0.5, hideEmpty: true })], { pad: 0, basis: 190 }),
 		]),
 		space(20),
 		box([label('Prepared for'), text('{{quote.customer.name}}', { size: 11, weight: 600, mb: 2 }), muted('{{quote.customer.address}}'), muted('{{quote.customer.email}}')], { bg: '#eff6ff', pad: 12, radius: 4 }),
@@ -526,9 +527,9 @@ const invoiceBanner = {
 				hrow(
 					[
 						image('{{business.logo}}', { height: 30 }),
-						box([text('{{business.name}}', { size: 13, weight: 700, color: '#ffffff' }), text('{{business.address}}', { size: 8, color: '#d1d5db' })], { pad: 0 }),
+						box([text('{{business.name}}', { font: 'heading', size: 13, weight: 700, color: '#ffffff' }), text('{{business.address}}', { size: 8, color: '#d1d5db' })], { pad: 0 }),
 						fillSpace(),
-						text('INVOICE', { size: 24, weight: 700, color: '#ffffff', spacing: 3 }),
+						text('INVOICE', { font: 'heading', size: 24, weight: 700, color: '#ffffff', spacing: 3 }),
 					],
 					{ valign: 'middle', gap: 12 }
 				),
@@ -595,9 +596,9 @@ const quotationModern = {
 			[
 				hrow(
 					[
-						box([text('{{business.name}}', { size: 15, weight: 700, color: '#ffffff' }), text('{{business.phone}}  ·  {{business.email}}', { size: 8.5, color: '#cffafe' })], { pad: 0 }),
+						box([text('{{business.name}}', { font: 'heading', size: 15, weight: 700, color: '#ffffff' }), text('{{business.phone}}  ·  {{business.email}}', { size: 8.5, color: '#cffafe' })], { pad: 0 }),
 						fillSpace(),
-						box([text('Quotation', { size: 20, weight: 600, color: '#ffffff', align: 'right' }), text('{{quote.number}}', { size: 9, color: '#cffafe', align: 'right' })], { pad: 0 }),
+						box([text('Quotation', { font: 'heading', size: 20, weight: 600, color: '#ffffff', align: 'right' }), text('{{quote.number}}', { size: 9, color: '#cffafe', align: 'right' })], { pad: 0 }),
 					],
 					{ valign: 'middle' }
 				),
@@ -650,7 +651,7 @@ const moneyReceipt = {
 	style: { font: 'sans', size: 10, color: '#111827', muted: '#6b7280', accent: '#b45309', lineHeight: 1.5 },
 	header: [],
 	body: [
-		hrow([image('{{business.logo}}', { height: 30 }), box([text('{{business.name}}', { size: 13, weight: 700 }), muted('{{business.address}}  ·  {{business.phone}}', { size: 8 })], { pad: 0, grow: 1 }), box([text('MONEY RECEIPT', { size: 12, weight: 700, color: '#ffffff', align: 'center', spacing: 1.5 })], { bg: '#b45309', pad: 6, radius: 3 })], { valign: 'middle', gap: 10 }),
+		hrow([image('{{business.logo}}', { height: 30 }), box([text('{{business.name}}', { font: 'heading', size: 13, weight: 700 }), muted('{{business.address}}  ·  {{business.phone}}', { size: 8 })], { pad: 0, grow: 1 }), box([text('MONEY RECEIPT', { size: 12, weight: 700, color: '#ffffff', align: 'center', spacing: 1.5 })], { bg: '#b45309', pad: 6, radius: 3 })], { valign: 'middle', gap: 10 }),
 		space(12),
 		hrow([text('No. **{{receipt.number}}**'), fillSpace(), text('Date: **{{receipt.date | date}}**')]),
 		space(10),
@@ -674,4 +675,12 @@ const moneyReceipt = {
 };
 
 /** By category: invoices, receipts, quotations (D21). */
-export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, invoiceBanner, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern];
+/**
+ * Theme-ready (D24): each starter's literal colours that play a role — its accent, tints and shades of it,
+ * near-black bands, white words on the accent — become role names (theme.ts adoptRoles), so a look picked
+ * when using it, or later in the designer, recolours the whole page. Titles and the business name use the
+ * heading font (`font: 'heading'`).
+ */
+const themed = <T extends Record<string, any>>(t: T): T => adoptRoles(t).template;
+
+export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, invoiceBanner, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern].map(themed);
