@@ -178,7 +178,7 @@ export const layoutText = (ctx: Ctx, raw: string, style: TextStyle, width: numbe
 const visible = (b: Block, scope: Scope) => !b.showIf?.length || meets(scope.roots, b.showIf, b.showMatch === 'any' ? 'any' : 'all');
 
 const styleFor = (ctx: Ctx, b: any, over: Partial<TextStyle> = {}): TextStyle => ({
-	family: ctx.template.style.font as Family,
+	family: (b.font || ctx.template.style.font) as Family,
 	weight: b.weight ?? 400,
 	italic: !!b.italic,
 	size: b.size ?? ctx.template.style.size,

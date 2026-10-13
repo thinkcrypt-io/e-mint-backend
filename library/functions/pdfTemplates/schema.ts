@@ -59,6 +59,8 @@ export type Slot = { token: string; label: string; type: 'text' | 'number' | 'da
 
 export type PdfTemplateData = {
 	name: string;
+	/** Draft or published (PT-33) — kept only when given, so a save without it leaves it as it is. */
+	status?: 'draft' | 'published';
 	description: string;
 	/** The gallery category's key (D21). */
 	kind: string;
@@ -134,6 +136,8 @@ const textOf = (v: any, ctx: Ctx, what: string) => {
 
 /** Text styling shared by text blocks, table cells and field rows. */
 const textStyle = (b: any) => ({
+	// PT-34: a block's own font (the page's when left out).
+	...((FONTS as readonly string[]).includes(b.font) && { font: b.font }),
 	...(b.size !== undefined && { size: num(b.size, 5, 72, 10) }),
 	...(b.weight !== undefined && { weight: oneOf(Number(b.weight), WEIGHTS, 400) }),
 	...(bool(b.italic) && { italic: true }),
@@ -406,6 +410,7 @@ export const normalizeTemplate = (raw: any): { template: PdfTemplateData; errors
 	// Always there (empty too): a save replaces the list, so taking the last one off clears it.
 	template.free = freeOf(freeRaw, ctx, template.page);
 	if (template.route && !ROUTE.test(template.route)) errors.push('That page address isn’t valid');
+	if (raw?.status === 'draft' || raw?.status === 'published') template.status = raw.status;
 	const slots = slotsOf(raw?.slots);
 	if (slots?.length) template.slots = slots;
 	if (raw?.sample && typeof raw.sample === 'object' && !Array.isArray(raw.sample)) {

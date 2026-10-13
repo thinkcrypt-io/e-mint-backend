@@ -24,7 +24,7 @@ const GUIDE = `PDF templates print a page's records as designed documents (invoi
   header: [blocks] (every page), body: [blocks], footer: [blocks] (every page; "Page {{page}} of {{pages}}"),
   free: [blocks placed freely, each with x, y (pt from the page's top-left), w (width), rotate (degrees), opacity (0.05–1), behind (under the content — a watermark), pages first|all|last] — a stamp, a signature image, a watermark exactly somewhere }
 Blocks (all take mt/mb space, showIf [{field, op, value}] + showMatch, grow (take a share of the free space) and basis (fixed width in a row, pt)):
-- text { text, size, weight 400–700, italic, color, align, upper, spacing, lineHeight } — **bold**, \\n
+- text { text, font (sans|mono|helvetica|times|courier — the page's when left out; tables and fields take it too), size, weight 400–700, italic, color, align, upper, spacing, lineHeight } — **bold**, \\n
 - fields { rows: [{ label, value, bold, big, bar, line }], labelWidth 0.1–0.9, align left|right, hideEmpty, gap }
 - table { rows: "<alias>.<section list>" or a list name, columns: [{ header, value "{{item.x}}", width share, align }], headerBg, headerColor, zebra, lines none|rows|grid, lineColor (the lines' colour; light grey when left out), emptyText, pad, size }
 - columns { columns: [{ width share, valign, direction "row" (its blocks side by side), gap, blocks }], gap } · box { blocks, pad, padX, padY (left-right / top-bottom over pad), bg, border, borderColor, borderSides ["top","bottom"…] (lines on some sides), radius, direction: "row" (side by side, like flexbox; default a stack), gap, valign top|middle|bottom|stretch, justify start|center|end|between, height (minimum), bleed (a box directly in header / body / footer: its background runs to the page edges — the header's first up to the top edge, the footer's last down to the bottom; use page margins 0 top / bottom for edge-to-edge bands) }
@@ -38,7 +38,10 @@ Steps: get_pdf_fields for the page → write or start from a gallery design (use
 const fieldText = (nodes: FieldNode[], prefix: string, depth = 0): string[] =>
 	nodes.flatMap(n => [`${'  '.repeat(depth)}- ${n.path.startsWith('item.') ? n.path : prefix + n.path} (${n.type}) ${n.label}`, ...(n.children && depth < 2 ? fieldText(n.children, prefix, depth + 1) : [])]);
 
-const short = (t: any) => ({ id: String(t._id), name: t.name, route: t.route, kind: t.kind, isDefault: !!t.isDefault, alias: t.alias });
+/** Draft or published (PT-33); older templates without one are published. */
+const statusOf = (t: any) => (t?.status === 'draft' ? 'draft' : 'published');
+const short = (t: any) => ({ id: String(t._id), name: t.name, route: t.route, kind: t.kind, status: statusOf(t), isDefault: !!t.isDefault, alias: t.alias });
+const STATUS_ARG = { type: 'string', enum: ['draft', 'published'], description: 'Published templates are offered on the page’s Download PDF; drafts only in the designer. New ones start as drafts.' };
 
 export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 	{
@@ -65,14 +68,14 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 	{
 		name: 'list_pdf_templates',
 		title: 'List PDF templates',
-		description: 'The PDF templates, by page, with which one is each page’s default (what Download PDF uses).',
+		description: 'The PDF templates, by page, with their status and which one is each page’s default. Only published templates are offered on a page’s Download PDF (the default among them when none is picked); drafts show only in the designer.',
 		scope: 'read',
 		inputSchema: { type: 'object', properties: { route: { type: 'string', description: 'Only this page’s' } } },
 		annotations: { readOnlyHint: true, openWorldHint: false },
 		run: async (_req, args) => {
 			const docs: any[] = await PdfTemplate.find(args?.route ? { route: String(args.route) } : {}).sort({ route: 1, isDefault: -1, name: 1 }).lean();
 			return {
-				text: docs.length ? docs.map(d => `- ${d._id} ${d.name} → /${d.route || '(no page)'}${d.isDefault ? ' (default)' : ''}`).join('\n') : 'No PDF templates yet.',
+				text: docs.length ? docs.map(d => `- ${d._id} ${d.name} → /${d.route || '(no page)'} · ${statusOf(d)}${d.isDefault ? ' (default)' : ''}`).join('\n') : 'No PDF templates yet.',
 				data: { templates: docs.map(short) },
 			};
 		},
@@ -123,6 +126,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 				route: { type: 'string' },
 				name: { type: 'string' },
 				mapping: { type: 'object', description: 'slot token → the page’s field path ("invoice.total": "grandTotal"); a list slot → {path} or {route, foreignField}' },
+				status: STATUS_ARG,
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -137,10 +141,10 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			const { template, errors } = normalizeTemplate({ ...mapped, name: args?.name || from.name });
 			if (errors.length) return { text: `Not saved:\n- ${errors.join('\n- ')}`, isError: true };
 			const first = !(await PdfTemplate.exists({ route }));
-			const doc: any = await PdfTemplate.create({ ...template, from: String(from._id), isDefault: first, createdBy: caller.user?._id, updatedBy: caller.user?._id });
+			const doc: any = await PdfTemplate.create({ ...template, status: args?.status === 'published' ? 'published' : 'draft', from: String(from._id), isDefault: first, createdBy: caller.user?._id, updatedBy: caller.user?._id });
 			const blank = Object.entries(mapping).filter(([, v]) => !v).map(([k]) => k);
 			return {
-				text: `Made “${doc.name}” for /${route}${first ? ' (its default)' : ''}: ${caller.link(`/pdf-templates/${doc._id}`)}${blank.length ? `\nNot matched (print blank): ${blank.join(', ')}` : ''}`,
+				text: `Made “${doc.name}” for /${route} as a ${statusOf(doc)}${first ? ' (its default)' : ''}: ${caller.link(`/pdf-templates/${doc._id}`)}${blank.length ? `\nNot matched (print blank): ${blank.join(', ')}` : ''}`,
 				data: { template: short(doc), mapping },
 			};
 		},
@@ -149,7 +153,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 		name: 'save_pdf_template',
 		title: 'Save a PDF template',
 		description:
-			'Creates a template (no `id`) or replaces one (`id`, from list_pdf_templates — read it first with get_pdf_template to keep what’s there). Checked like the designer’s save: the problems come back if it doesn’t fit. `makeDefault` makes it the page’s Download PDF. Show the user the plan first.',
+			'Creates a template (no `id`) or replaces one (`id`, from list_pdf_templates — read it first with get_pdf_template to keep what’s there). Checked like the designer’s save: the problems come back if it doesn’t fit. `makeDefault` makes it the page’s Download PDF; `status: "published"` offers it there (new templates start as drafts). Show the user the plan first.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -158,6 +162,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 				id: { type: 'string' },
 				template: { type: 'object', description: 'The whole template — see describe_pdf_templates' },
 				makeDefault: { type: 'boolean' },
+				status: STATUS_ARG,
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -166,18 +171,21 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			if (!raw) return { text: 'Send the template.', isError: true };
 			const before: any = args?.id ? (mongoose.isValidObjectId(args.id) ? await PdfTemplate.findById(args.id).lean() : null) : null;
 			if (args?.id && !before) return { text: 'No template with that id.', isError: true };
-			const { template, errors } = normalizeTemplate({ ...raw, alias: raw.alias || before?.alias || aliasOf(raw.route || '') });
+			const { template, errors } = normalizeTemplate({ ...raw, alias: raw.alias || before?.alias || aliasOf(raw.route || ''), ...(args?.status && { status: args.status }) });
 			if (errors.length) return { text: `Not saved:\n- ${errors.join('\n- ')}`, isError: true };
 			if (template.route && !(await fieldTree(req, template.route))) return { text: `There's no page “${template.route}”.`, isError: true };
 			let doc: any;
 			if (before) doc = await PdfTemplate.findByIdAndUpdate(before._id, { $set: { ...template, updatedBy: caller.user?._id } }, { new: true }).lean();
-			else doc = (await PdfTemplate.create({ ...template, isDefault: template.route ? !(await PdfTemplate.exists({ route: template.route })) : false, createdBy: caller.user?._id, updatedBy: caller.user?._id })).toObject();
+			else doc = (await PdfTemplate.create({ ...template, status: template.status || 'draft', isDefault: template.route ? !(await PdfTemplate.exists({ route: template.route })) : false, createdBy: caller.user?._id, updatedBy: caller.user?._id })).toObject();
 			if (args?.makeDefault && doc.route) {
 				await PdfTemplate.updateMany({ route: doc.route, _id: { $ne: doc._id } }, { $set: { isDefault: false } });
 				await PdfTemplate.updateOne({ _id: doc._id }, { $set: { isDefault: true } });
 				doc.isDefault = true;
 			}
-			return { text: `${before ? 'Saved' : 'Made'} “${doc.name}”${doc.isDefault ? ' (the page’s default)' : ''}: ${caller.link(`/pdf-templates/${doc._id}`)}`, data: short(doc) };
+			return {
+				text: `${before ? 'Saved' : 'Made'} “${doc.name}” — ${statusOf(doc)}${doc.isDefault ? ', the page’s default' : ''}${statusOf(doc) === 'draft' ? ' (not on Download PDF until published)' : ''}: ${caller.link(`/pdf-templates/${doc._id}`)}`,
+				data: short(doc),
+			};
 		},
 	},
 	{

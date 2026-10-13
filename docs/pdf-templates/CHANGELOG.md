@@ -575,3 +575,17 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Test harness note: the headless profile kept an expired token the app
   restored before a script could set the new one — set it with
   Page.addScriptToEvaluateOnNewDocument instead.
+
+## 2026-10-14 — PT-34 A font per block
+- The user: there was no way to choose the font of a text — only the page's
+  (Document → Look → Font).
+- Text, table and label/value blocks take `font` (sans | mono | helvetica |
+  times | courier; schema.ts `textStyle`, an unknown one is dropped → the
+  page's). render.ts `styleFor` uses it before the page's font; the designer's
+  `PdfPage.tsx` `textCss` sets the block's font-family. Properties → Text
+  (and a table's / rows' text) → **Font**: "Page’s font" or one of the five;
+  the list is `FONT` in designer `controls.tsx`, shared with the Document
+  panel. MCP guide text says so. admin + mint-tenant copies identical.
+- Checked: a render of every family regular and bold italic, with ৳ falling
+  back to Noto Bengali, an unknown font → the page's, fields in Times, a table
+  in Mono; tsc clean (backend, admin, tenant) for the touched files.
