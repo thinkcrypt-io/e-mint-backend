@@ -12,6 +12,7 @@ Plan written 2026-10-13 (user asked: visually designed invoice / bill / receipt
 PDFs with `{{invoice.total}}`-style data, pre-built templates added from the
 admin panel, users edit / build their own / let AI build, Download makes the
 PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. **PT-12…PT-18 done 2026-10-13** (user: full-page designer, logo upload from the page, custom text / terms, business details on organization + project, Preview — README D14–D18). Smoke: scripts/pdf-templates/smoke.mjs 29/29, scripts/tenancy-smoke/business.mjs 16/16. **PT-11 done** — AI now only through the user's own AI over MCP (no ANTHROPIC_API_KEY on our side). Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys. `node scripts/seedPdfTemplates.js` was run on production 2026-10-13 (the super admin's sidebar item is in); after deploy, optionally press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
+**PT-19…PT-22 done 2026-10-13** (user: flex-like boxes, a Space that fills the white space, paste inside a box, drag left / right — D19, D20): box stack / row, gap, align, spread, min height; grow / basis on any block; Space fills (row, box, page body); drag on the page + from Add; ⌘C/⌘X/⌘V with paste inside. Smoke 31/31. Still not deployed.
 Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693; mint-tenant ddcd2ae; mint-docs e913807; website e08778a.
 
 | WO | Title | Size | Status |
@@ -35,7 +36,7 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-19 | Flexible layout engine (D19): box stack / row, gap, valign, justify, min height; `grow` + `basis` on any block; Space fills (in a row, a box, the page body); schema, pdfkit renderer, the designer's HTML page, smoke | M | **done 2026-10-13** |
 | PT-20 | Designer controls for D19: Box → Layout (Stack / Row), gap, align, spread, min height; "Width in the row" (fit / fill / fixed); Space → size + "Fill the free space"; Row and "Push to the bottom" in Add; ← → in a row | M | **done 2026-10-13** |
 | PT-21 | Moving on the page (D20): drag blocks on the page (before / after, left / right in a row, into boxes and columns, from the Add panel), ⌘C / ⌘X / ⌘V with paste inside a box or column, block bar "Paste inside" | M | **done 2026-10-13** |
-| PT-22 | Guides (admin docs + mint-docs), website, MCP guide text, mint-tenant copies | S | open |
+| PT-22 | Guides (admin docs + mint-docs), website, MCP guide text, mint-tenant copies | S | **done 2026-10-13** |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 

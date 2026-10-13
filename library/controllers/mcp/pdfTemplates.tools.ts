@@ -21,12 +21,13 @@ const GUIDE = `PDF templates print a page's records as designed documents (invoi
   page: { size: A4|Letter|Legal|A5, orientation, margin: [t,r,b,l] pt }, style: { font: sans|mono|helvetica|times|courier, size, color, muted, accent, lineHeight },
   lists: [{ name, route, foreignField, sort, limit }]  — records of another page that point at this one,
   header: [blocks] (every page), body: [blocks], footer: [blocks] (every page; "Page {{page}} of {{pages}}") }
-Blocks (all take mt/mb space and showIf [{field, op, value}] + showMatch):
+Blocks (all take mt/mb space, showIf [{field, op, value}] + showMatch, grow (take a share of the free space) and basis (fixed width in a row, pt)):
 - text { text, size, weight 400–700, italic, color, align, upper, spacing, lineHeight } — **bold**, \\n
 - fields { rows: [{ label, value, bold, big, bar, line }], labelWidth 0.1–0.9, align left|right, hideEmpty, gap }
 - table { rows: "<alias>.<section list>" or a list name, columns: [{ header, value "{{item.x}}", width share, align }], headerBg, headerColor, zebra, lines none|rows|grid, emptyText, pad, size }
-- columns { columns: [{ width share, valign, blocks }], gap } · box { blocks, pad, bg, border, borderColor, radius }
-- image { src (URL or {{business.logo}}), width, height, align } · divider { color, thickness, dashed } · spacer { height } · pageBreak
+- columns { columns: [{ width share, valign, blocks }], gap } · box { blocks, pad, bg, border, borderColor, radius, direction: "row" (side by side, like flexbox; default a stack), gap, valign top|middle|bottom|stretch, justify start|center|end|between, height (minimum) }
+- image { src (URL or {{business.logo}}), width, height, align } · divider { color, thickness, dashed } · spacer { height (its width in a row), grow } · pageBreak
+Layout: in a row each block fits its content unless it has grow or basis (fields, tables, lines and columns fill). A spacer with grow:1 takes the room left — in a row it pushes what follows to the right (logo · spacer grow · title), in a box with a height it pushes down, and in the body it puts what follows at the bottom of the page (a signature, terms).
 Tokens: {{<alias>.field | filter:arg}}; roots: the alias (or record), item + index in table cells, business (name, logo, address, phone, email, website, taxId, note), texts (the project's saved texts by key — {{texts.terms}}; they may hold fields of their own), today, now, page, pages, list names.
 Words that never change ("This invoice is computer generated — no signature is required.") are plain text blocks; words the user reuses across templates (terms and conditions, a return policy) are saved texts — save_pdf_text, then {{texts.<key>}}.
 Filters: ${Object.keys(FILTERS).join(', ')}.

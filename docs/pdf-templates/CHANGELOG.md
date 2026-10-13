@@ -340,3 +340,16 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   dropped between two blocks of a row; INVOICE copied and pasted inside a
   box; saved without problems; the saved template rendered as a PDF and
   matched the page.
+
+## 2026-10-13 — PT-22 guides, MCP, website, tenant
+- Admin `/docs/pdf-templates` and mint-docs: new sections “Rows and filling
+  space” (#layout, linked from the Layout / Width / Space panels) and
+  “Moving, copy and paste” (#moving); Blocks gain Row; the designer section
+  mentions dragging on the page and Copy / Paste inside.
+- MCP guide (`pdfTemplates.tools.ts`): box `direction`, `gap`, `valign`,
+  `justify`, `height`; `grow` / `basis` on any block; how a filling spacer
+  behaves in a row, a box and the body.
+- Website changelog: two lines under PDF templates.
+- mint-tenant: PdfPage, types, Properties, AddPanel, Outline, the designer
+  page and the new dnd.ts copied (their HEAD copies matched admin's before
+  the change); typechecks.
