@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import { PdfSettings, PdfTemplate } from '../../models/pdf-templates/_index.js';
+import { PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { fieldTree, FieldNode } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping } from '../../functions/pdfTemplates/mapping.js';
-import { aliasOf, normalizeSettings, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
+import { aliasOf, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
 import { FILTERS } from '../../functions/pdfTemplates/tokens.js';
-import { findTemplate, loadSettings } from '../pdfTemplates/pdfTemplates.controller.js';
+import { findTemplate, loadSettings, storeSettings } from '../pdfTemplates/pdfTemplates.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { withoutScope } from '../../functions/tenantScope.function.js';
 import type { ToolDef } from './mcp.router.js';
@@ -194,8 +194,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			const others = settings.texts.filter(t => t.key !== key);
 			const texts = text.trim() ? [...others, { key, label: label || key, text }] : others;
 			if (texts.length > 30) return { text: 'A project keeps at most 30 saved texts.', isError: true };
-			const data = normalizeSettings({ ...settings, texts });
-			await PdfSettings.findOneAndUpdate({ key: 'default' }, { $set: { data, updatedBy: caller.user?._id } }, { upsert: true, new: true });
+			const data = await storeSettings({ ...settings, texts }, caller.user?._id, { business: false });
 			return {
 				text: text.trim() ? `Saved — templates print it as {{texts.${key}}}.` : `Removed {{texts.${key}}} — templates printing it now print nothing there.`,
 				data: { key, texts: data.texts },

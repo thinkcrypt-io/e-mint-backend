@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { businessSchema } from '../../functions/business.function.js';
 
 /**
  * A tenant: a customer company on the platform (docs/multi-tenancy, D2).
@@ -47,6 +48,8 @@ const schema = new Schema<any>(
 		slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
 		owner: { type: Schema.Types.ObjectId, ref: 'TenantUser', required: true, index: true },
 		logo: { type: String, trim: true },
+		/** Its business details (docs/pdf-templates D14) — the logo is `logo` above; new projects start with these. */
+		business: { type: businessSchema(false), default: undefined },
 		isActive: { type: Boolean, default: true },
 		/** The platform's own organization (docs/templates T-04: template previews) — hidden from oversight and sign-in. */
 		system: { type: Boolean, default: undefined },

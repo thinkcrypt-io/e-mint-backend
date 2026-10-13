@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { businessSchema } from '../../functions/business.function.js';
 
 /**
  * A workspace inside an organization (docs/multi-tenancy, D3): its own built
@@ -94,6 +95,8 @@ const schema = new Schema<any>(
 			),
 			default: undefined,
 		},
+		/** Its business details (docs/pdf-templates D14) — copied from the organization when it's made; unset on older projects, which show the organization's. */
+		business: { type: businessSchema(), default: undefined },
 		isActive: { type: Boolean, default: true },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 	},

@@ -9,6 +9,7 @@ import { tenantPermissions } from '../../library/functions/tenantPermissions.fun
 import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject } from '../../library/functions/tenancy.function.js';
 import { createProject, removeProjectContents } from '../../library/functions/projectLifecycle.function.js';
+import { businessJoi, cleanBusiness, projectBusiness } from '../../library/functions/business.function.js';
 
 /**
  * /tenant/api/projects — the organization's projects (docs/multi-tenancy WO-07).
@@ -16,7 +17,7 @@ import { createProject, removeProjectContents } from '../../library/functions/pr
  *   GET    /             every active project the member can open (archived with ?archived=1)
  *   POST   /             { name, type: 'app'|'website'|'api', description, icon, color, domains, mediaScope }   create-projects
  *   GET    /:id
- *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive                   manage-projects
+ *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive, business         manage-projects
  *   DELETE /:id          refused while it has models; ?force=1 (owner) deletes everything in it
  *
  * Only the projects the member can open (WO-22): Owner and Admin open every
@@ -51,7 +52,12 @@ const fields = {
 	domains: Joi.array().items(domain).max(20),
 	/** Whose media library it uses (WO-23): its own, or the organization's shared one. */
 	mediaScope: Joi.string().valid(...MEDIA_SCOPES),
+	/** Its business details (docs/pdf-templates D14): name, logo, address, phone, email, website, taxId. */
+	business: businessJoi(),
 };
+
+/** One project with its business details (the organization's until it has its own). */
+const withBusiness = (project: any, org: any) => ({ ...publicProject(project), business: projectBusiness(project, org) });
 
 /** Projects in this organization, that this member can open. */
 const loadProject = async (req: any) => {
@@ -101,7 +107,7 @@ router.get(
 	handle(async req => {
 		const project = await loadProject(req);
 		const models = await runInScope({ organization: req.organization._id, project: project._id }, () => ModelDefinition.countDocuments({}));
-		return { ...publicProject(project), models };
+		return { ...withBusiness(project, req.organization), models };
 	})
 );
 
@@ -110,10 +116,12 @@ router.put(
 	tenantPermissions(['manage-projects']),
 	handle(async req => {
 		const project = await loadProject(req);
-		const body = check(Joi.object({ ...fields, isActive: Joi.boolean() }), req.body);
+		const { business, ...body } = check(Joi.object({ ...fields, isActive: Joi.boolean() }), req.body);
 		Object.assign(project, body);
+		// The details are saved whole — from now on the project's own.
+		if (business) project.business = cleanBusiness({ ...projectBusiness(project, req.organization), ...business });
 		await project.save();
-		return publicProject(project);
+		return withBusiness(project, req.organization);
 	})
 );
 

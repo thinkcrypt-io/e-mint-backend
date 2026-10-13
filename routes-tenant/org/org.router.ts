@@ -10,6 +10,7 @@ import TenantUser from '../../library/models/tenancy/tenantUser.model.js';
 import TenantProject from '../../library/models/tenancy/tenantProject.model.js';
 import ModelDefinition from '../../library/models/builder/modelDefinition.model.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
+import { BUSINESS_KEYS, businessJoi } from '../../library/functions/business.function.js';
 import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../library/models/tenancy/organization.model.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
 import { deliver, shell, p } from '../../library/controllers/twoFactor/twoFactor.service.js';
@@ -38,7 +39,7 @@ import {
  * /tenant/api/org — the organization the token works in (docs/multi-tenancy WO-06).
  *
  *   GET    /                         the organization + member/project counts
- *   PUT    /                         name, logo, onboarding        manage-organization
+ *   PUT    /                         name, logo, business, onboarding   manage-organization
  *   GET    /list                     every organization you belong to (no org needed)
  *   POST   /                         a new organization, you its owner → { token } in it
  *   POST   /switch/:id               → { token } in that organization
@@ -146,6 +147,8 @@ inOrg.put(
 			Joi.object({
 				name: Joi.string().trim().min(1).max(120),
 				logo: Joi.string().trim().max(1000).allow(''),
+				/** Business details (docs/pdf-templates D14) — what new projects start with. */
+				business: businessJoi(false),
 				/** Changes the payment providers it's offered (docs/widgets W-02). */
 				country: Joi.string().trim().length(2),
 				onboarding: Joi.object({
@@ -165,6 +168,7 @@ inOrg.put(
 		const set: any = {};
 		if (body.name) set.name = body.name;
 		if (body.logo !== undefined) set.logo = body.logo;
+		if (body.business) for (const k of BUSINESS_KEYS) if (k !== 'logo' && body.business[k] !== undefined) set[`business.${k}`] = body.business[k];
 		if (body.country) set.country = await checkCountry(body.country);
 		if (body.onboarding) for (const [k, v] of Object.entries(body.onboarding)) set[`onboarding.${k}`] = v;
 		const organization = await Organization.findByIdAndUpdate(req.organization._id, { $set: set }, { new: true }).lean();

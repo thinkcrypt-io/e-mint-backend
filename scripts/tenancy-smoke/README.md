@@ -27,6 +27,7 @@ Then, from this folder:
 | `node secrets.mjs` | Password fields (WO-39): secret-named keys need the kind, stored as text, never in history | |
 | `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
 | `node access.mjs` | WO-21–24: standard role permissions, project access per member/invitation, the shared media library, invitations in the app, several organizations | stands alone; marks the invitees' emails verified directly in the scratch DB (the real code only goes by email) |
+| `node business.mjs` | business details on the organization and each project (docs/pdf-templates D14/D15/D18): seeding, the project's own, older projects, PDF settings split, sidebar inside a project, org-level upload/media | stands alone; unsets a project's details straight in the scratch DB (`SMOKE_MONGO`) |
 | `node templates.mjs` | Template Studio (docs/templates T-02): starters as templates, validation with fixes, nothing built | counts collections in the scratch DB (`SMOKE_MONGO`); removes its own templates |
 | `node templates-preview.mjs` | Template Studio T-03/T-04: templates built into sandbox previews, tickets, preview guard, cleanup, failures undone, starters; endpoints' read-only fields (WO-42) | needs `TENANT_FRONTEND_URL` unset or any value; removes its templates and previews |
 | `node templates-manage.mjs` | Template Studio T-05: publish with notes + explanation gate, versions/restore, duplicate, export/import, settings, delete vs archive, save a project as a template | removes its templates |

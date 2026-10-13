@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { orgBusiness } from './business.function.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import Organization from '../models/tenancy/organization.model.js';
 import SidebarCategory from '../models/sidebarcategories/model.js';
@@ -99,11 +100,12 @@ export const removeProjectContents = async (organization: any, projectId: any) =
  * (projectHooks — the website kit). Anything failing removes it again.
  */
 export const createProject = async (req: any, organization: any, body: { name: string; type: string; [k: string]: any }, extra: Record<string, any> = {}) => {
-	const org: any = await Organization.findById(organization, { slug: 1 }).lean();
+	const org: any = await Organization.findById(organization, { slug: 1, name: 1, logo: 1, business: 1, onboarding: 1 }).lean();
 	const slug = await uniqueSlug(body.name, s => TenantProject.exists({ organization, slug: s }));
 	// The tenant panel's addresses start with it (/<publicSlug>/<page>): never one of the panel's own pages.
 	const publicSlug = await uniqueSlug(`${org.slug}-${slug}`, async s => PANEL_PAGES.has(s) || TenantProject.exists({ publicSlug: s }));
-	const project: any = await TenantProject.create({ ...body, ...extra, slug, publicSlug, organization });
+	// Its business details start as the organization's (docs/pdf-templates D14).
+	const project: any = await TenantProject.create({ business: orgBusiness(org), ...body, ...extra, slug, publicSlug, organization });
 	try {
 		await runInScope({ organization, project: project._id }, async () => {
 			await SidebarCategory.create({

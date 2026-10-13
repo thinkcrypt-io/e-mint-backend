@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { PdfSettings, PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { currentScope, withoutScope } from '../../functions/tenantScope.function.js';
+import { cleanBusiness, projectBusiness } from '../../functions/business.function.js';
+import TenantProject from '../../models/tenancy/tenantProject.model.js';
+import Organization from '../../models/tenancy/organization.model.js';
 import { fieldTree } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplates/mapping.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
@@ -28,9 +31,40 @@ const starterDoc = (s: any, i: number) => ({
 	builtIn: true,
 });
 
+/** The project this request works in (tenant panel), with its organization — whose business details PDFs print (D14, D15). */
+const projectOf = async () => {
+	const scope: any = currentScope();
+	if (!scope?.project) return null;
+	const [project, org] = await Promise.all([
+		TenantProject.findById(scope.project, { business: 1 }).lean(),
+		Organization.findById(scope.organization, { name: 1, logo: 1, business: 1, onboarding: 1 }).lean(),
+	]);
+	return project ? { project: project as any, org } : null;
+};
+
+/** What every template of the scope reads: in a project, its business details; the bank note, money, dates and saved texts from PdfSettings. */
 export const loadSettings = async (): Promise<PdfSettingsData> => {
-	const doc: any = await PdfSettings.findOne({ key: 'default' }).lean();
-	return normalizeSettings(doc?.data || DEFAULT_SETTINGS);
+	const [doc, inProject]: [any, any] = await Promise.all([PdfSettings.findOne({ key: 'default' }).lean(), projectOf()]);
+	const settings = normalizeSettings(doc?.data || DEFAULT_SETTINGS);
+	if (inProject) settings.business = { ...projectBusiness(inProject.project, inProject.org), note: settings.business.note };
+	return settings;
+};
+
+/**
+ * Saves the settings. In a project its business details go to the project
+ * (Project settings shows the same) and PdfSettings keeps the rest; `business:
+ * false` leaves them alone (a saved text changing). Answers what loadSettings does.
+ */
+export const storeSettings = async (raw: any, user: any, opts: { business?: boolean } = {}): Promise<PdfSettingsData> => {
+	const data = normalizeSettings(raw);
+	const inProject = await projectOf();
+	if (inProject) {
+		const { note, ...business } = data.business;
+		if (opts.business !== false) await TenantProject.updateOne({ _id: inProject.project._id }, { $set: { business: cleanBusiness(business) } });
+		data.business = { ...DEFAULT_SETTINGS.business, note };
+	}
+	await PdfSettings.findOneAndUpdate({ key: 'default' }, { $set: { data, updatedBy: user } }, { upsert: true, new: true });
+	return loadSettings();
 };
 
 /** The time zone dates print in: the settings', else the reader's, else UTC. */
@@ -164,9 +198,7 @@ export const duplicateTemplate = async (req: any, res: Response) => {
 export const getSettings = async (_req: Request, res: Response) => res.status(200).json(await loadSettings());
 
 export const saveSettings = async (req: any, res: Response) => {
-	const data = normalizeSettings(req.body || {});
-	await PdfSettings.findOneAndUpdate({ key: 'default' }, { $set: { data, updatedBy: userId(req) } }, { upsert: true, new: true });
-	return res.status(200).json(data);
+	return res.status(200).json(await storeSettings(req.body || {}, userId(req)));
 };
 
 /* ----------------------------------------------------------- gallery */

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { orgBusiness } from './business.function.js';
 import { listCountries, countryByCode, providersFor } from './countries.function.js';
 import mongoose from 'mongoose';
 import Organization from '../models/tenancy/organization.model.js';
@@ -63,7 +64,7 @@ export const PANEL_PAGES = new Set([
 	'jobapplications', 'jobposts', 'leads', 'leaves', 'maintenances', 'meetings', 'model-builder', 'modelattributes',
 	'not-found', 'notifications', 'npmlibraries', 'offers', 'orders', 'org', 'packages', 'passkey', 'payments',
 	'permissions', 'plannedfeatures', 'plannedmodels', 'plannedpages', 'plannedprojects', 'portfolios', 'print',
-	'preview', 'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
+	'preview', 'project-settings', 'pdf-templates', 'privacy-policy', 'products', 'projects', 'props', 'public-api', 'purchased-themes', 'qr', 'report-issue', 'repos',
 	'resources', 'roles', 'sellers', 'servicecat', 'services', 'sessions', 'settings', 'shops', 'sidebar-builder',
 	'sidebarcategories', 'sidebaritems', 'solutions', 'subscriptions', 'suppliers', 'support-tickets', 'support',
 	'system-status', 't', 'tcclients', 'teams', 'techstacks', 'templates', 'terms', 'test', 'themes', 'user-docs',
@@ -143,6 +144,8 @@ export const publicOrganization = (o: any) =>
 		name: o.name,
 		slug: o.slug,
 		logo: o.logo || '',
+		/** Its business details (docs/pdf-templates D14), the sign-up answers filling the gaps. */
+		business: orgBusiness(o),
 		plan: o.plan || 'free',
 		country: o.country || '',
 		/** Offered because of the country (docs/widgets W-02). */

@@ -26,7 +26,7 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-08 | Build with AI (new + change) — now through the user's own AI over MCP (PT-11) | M | **done 2026-10-13** |
 | PT-11 | Server-side AI removed; Build / Change with your AI write the MCP prompt | S | **done 2026-10-13** |
 | PT-12 | Saved texts: settings `texts`, `{{texts.key}}` root (fields inside filled once), MCP save_pdf_text, smoke (D16) | S | **done 2026-10-13** |
-| PT-13 | Business details on Organization + Project (seeded from the org), org-level upload/media, PDFs read the project's (D14, D15, D18) | M | todo |
+| PT-13 | Business details on Organization + Project (seeded from the org), org-level upload/media, PDFs read the project's (D14, D15, D18) | M | **done 2026-10-13** |
 | PT-14 | Organization → Settings "Business details" (logo upload); new Project settings page (general + business); sidebar: project Settings, org Settings hidden inside a project | M | todo |
 | PT-15 | PDF Business details dialog: logo upload, tabs Business / Saved texts / Money & dates, opens at the field clicked | S | todo |
 | PT-16 | Designer full page + reorganised (D17): toolbar, Add / Layers, Document panel, block bar, placeholders, ready-made pieces (computer-generated note, signature, terms) | L | todo |

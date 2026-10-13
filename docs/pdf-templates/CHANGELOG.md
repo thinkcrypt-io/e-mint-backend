@@ -148,3 +148,22 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   too) for the designer to ask for.
 - Checked: smoke 25/25 (two new: keys cleaned, saved text as a root with its
   fields loaded); nested fill checked directly.
+
+## 2026-10-13 — PT-13 business details on the organization and the project
+- `library/functions/business.function.ts`: BUSINESS_KEYS (name, logo,
+  address, phone, email, website, taxId), schema / Joi / clean,
+  `orgBusiness` (business profile, sign-up answers and name/logo filling
+  gaps), `projectBusiness` (its own, else the organization's).
+- Organization `business` (logo stays `logo`); PUT /tenant/api/org takes it;
+  publicOrganization returns it. Project `business`; seeded from the
+  organization in `createProject`; GET/PUT /tenant/api/projects/:id return /
+  take it (saved whole: the project's own from then on).
+- PDF settings: `loadSettings` in a project uses the project's details (the
+  bank note stays in PdfSettings); `storeSettings` splits them back (project
+  ← details, PdfSettings ← note, money, dates, texts). MCP save_pdf_text
+  leaves the details alone.
+- Org-level `/tenant/api/upload` and `/media` (manage-organization, shared
+  library). Sidebar: Project → Settings (/project-settings, manage-projects)
+  inside a project; Organization → Settings only outside one. PANEL_PAGES /
+  PROJECT_PAGES know `project-settings`.
+- Checked: scripts/tenancy-smoke/business.mjs 16/16; PDF smoke 25/25 again.

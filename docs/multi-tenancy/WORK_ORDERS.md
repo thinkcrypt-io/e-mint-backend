@@ -18,6 +18,17 @@ and indexes. The old `e-mint` database is kept untouched as a rollback — delet
 it only on the user's yes. Free and Flex Atlas tiers cap collections at 500:
 count before anything that creates many models.
 
+**2026-10-13 — business details on organizations and projects** (docs/pdf-templates
+D14, D15, D18, PT-13). Organization `business` {name, address, phone, email,
+website, taxId} (+ its `logo`), edited only on Organization → Settings; project
+`business` (same + logo) copied from it on create (`createProject`), then the
+project's own (PUT /projects/:id `business`; new /project-settings page). Older
+projects have none and show the organization's until saved
+(`business.function.ts` projectBusiness). Inside a project the sidebar has
+Project → Settings and hides Organization → Settings. New org-level
+/tenant/api/upload and /media (manage-organization, shared library). Smoke:
+scripts/tenancy-smoke/business.mjs. Not deployed.
+
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D21), then the open WO
 below. When an item lands, set its Status here, add a `CHANGELOG.md` entry
