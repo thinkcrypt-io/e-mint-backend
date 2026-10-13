@@ -473,3 +473,31 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   landed on the page and unselected the block (swallowed after a drag); a
   placed block's ↑ / ↓ say Send backward / Bring forward (their order is
   which sits on top).
+
+## 2026-10-14 — PT-31 icon pickers, image corner handles
+- The user asked for Align / Spread as icons like Figma, with a popover that
+  explains them, and for logos and images to be resized by dragging, like
+  Figma.
+- Admin `designer/controls.tsx`: `IconPick` — icon buttons in a group, one on,
+  each with a hover card (name + one line). Used for a box's Blocks (down /
+  side by side), Align (top / middle / bottom / stretch), Spread (left /
+  centre / right / between), each column's layout and alignment, text, image
+  and table-column alignment. `PdfPage.tsx`: the selected image (or its empty
+  "+ Upload logo" place) has four corner handles; `[id]/page.tsx`
+  `onImageDown` resizes from the corner pressed — the shape kept (only the
+  width set when it had no height), ⇧ sets width and height apart, no wider
+  than what holds it, a centred image grows both ways; the size shows under
+  it while dragging; one ⌘Z undoes the drag. Placed freely, its box widens
+  with it.
+- Also (not PDF): the table pages' title sat 40px under the breadcrumb (the
+  heading row's own 24px top padding plus the 16px gap) — the row's top
+  padding is gone under the trail (`ServerPageHeading.tsx`).
+- Checked in the desktop app's browser pane, signed in as a made-up super
+  admin (Tess Tester, scratch DB): the hover card read "Space between — First
+  block at the left, last at the right, the rest spaced evenly" (its text
+  first came out near-white on the light card — Text's own colour; fixed to
+  inherit); clicking it made the row space-between; the logo's corner drag
+  90×36 → 167×67, ⌘Z back; a real image 90×36 → 138×55, ⇧ → 130×87. The first
+  try didn't grow: the width cap measured the logo's own place in the row
+  (as wide as the logo) — now what holds it. Invoices page: breadcrumb then
+  the title 12px under it. Copied to mint-tenant (same files at HEAD).
