@@ -90,8 +90,8 @@ Blocks (every block: `id`, `type`, optional `showIf` conditions + `showMatch`,
 |---|---|---|
 | `text` | a paragraph; `**bold**`, line breaks, tokens | `text, size, bold, italic, color, align, upper, spacing, lineHeight, bg, pad` |
 | `image` | logo, signature, a record's photo | `src` (url or token), `width, height, align, fit` |
-| `columns` | side by side | `columns: [{ width (share), blocks, valign }], gap` |
-| `box` | a framed / shaded group; a stack or a row (D19) | `blocks, pad, bg, border, borderColor, radius, direction ('row'), gap, valign, justify, height` |
+| `columns` | side by side | `columns: [{ width (share), blocks, valign, direction ('row'), gap }], gap` |
+| `box` | a framed / shaded group; a stack or a row (D19) | `blocks, pad, padX, padY, bg, border, borderColor, borderSides, radius, direction ('row'), gap, valign, justify, height, bleed` (full-width background, PT-27) |
 | `table` | a list: an array field or a declared list | `rows` (token path), `columns: [{ header, value, width, align }]`, `size, headerBg, headerColor, zebra, lines, emptyText` |
 | `fields` | label : value rows (meta, totals) | `rows: [{ label, value, bold, big, bar }], labelWidth, align, hideEmpty` |
 | `divider` | a line | `color, thickness, dashed` |

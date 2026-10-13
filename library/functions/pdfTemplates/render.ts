@@ -27,7 +27,10 @@ export type RenderInput = {
 };
 
 type Laid = { height: number; draw: (x: number, y: number) => void };
-type Ctx = { doc: PDFKit.PDFDocument; fonts: DocFonts; template: PdfTemplateData; images: Map<string, Buffer | null>; scope: Scope };
+type Ctx = { doc: PDFKit.PDFDocument; fonts: DocFonts; template: PdfTemplateData; images: Map<string, Buffer | null>; scope: Scope; page?: { w: number; h: number } };
+
+/** A full-width box's reach (PT-27): it sits directly in a part; the header's first goes up to the top edge, the footer's last down to the bottom edge. */
+type Bleed = { up?: boolean; down?: boolean };
 
 const NOTHING: Laid = { height: 0, draw: () => {} };
 const HAIRLINE = '#e5e7eb';
@@ -251,7 +254,8 @@ const naturalWidth = (ctx: Ctx, b: Block, max: number): number => {
 		case 'spacer':
 			return Math.min(max, b.height ?? 12);
 		case 'box': {
-			const edge = 2 * ((b.pad ?? 10) + (b.border || 0));
+			const be = boxEdges(b);
+			const edge = be.l + be.r;
 			const inner = Math.max(4, max - edge);
 			const kids = (b.blocks || []).filter((k: Block) => k.type !== 'pageBreak' && visible(k, ctx.scope));
 			const widths = kids.map((k: Block) => naturalWidth(ctx, k, inner));
@@ -358,7 +362,9 @@ const layoutColumns = (ctx: Ctx, b: any, width: number): Laid => {
 	const free = Math.max(0, width - gap * (cols.length - 1));
 	const laid = cols.map(c => {
 		const w = (free * (c.width || 1)) / total;
-		return { w, valign: c.valign, laid: stack(ctx, c.blocks, w) };
+		// Side by side (PT-28): a row, its blocks aligned like the column.
+		const inner = c.direction === 'row' ? row(ctx, { blocks: c.blocks, gap: c.gap, valign: c.valign }, w) : stack(ctx, c.blocks, w);
+		return { w, valign: c.valign, laid: inner };
 	});
 	const height = Math.max(0, ...laid.map(l => l.laid.height));
 	return {
@@ -375,33 +381,72 @@ const layoutColumns = (ctx: Ctx, b: any, width: number): Laid => {
 };
 
 /** A box: a stack, or a row (D19); at least its own `height` or `minHeight` tall. */
-const layoutBox = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
+/**
+ * A box's room around its contents: padding (all sides, or top-bottom /
+ * left-right — PT-30) plus the border on the sides that have one.
+ */
+const SIDES = ['top', 'right', 'bottom', 'left'] as const;
+export const boxEdges = (b: any) => {
 	const pad = b.pad ?? 10;
-	const border = b.border || 0;
-	const edge = 2 * (pad + border);
-	const innerW = Math.max(4, width - edge);
-	const innerMin = Math.max(0, Math.max(b.height || 0, minHeight) - edge);
+	const px = b.padX ?? pad;
+	const py = b.padY ?? pad;
+	const bw = b.border || 0;
+	const sides: Set<string> | null = Array.isArray(b.borderSides) && b.borderSides.length ? new Set(b.borderSides) : null;
+	const has = (k: string) => bw > 0 && (!sides || sides.has(k));
+	return { t: py + (has('top') ? bw : 0), r: px + (has('right') ? bw : 0), b: py + (has('bottom') ? bw : 0), l: px + (has('left') ? bw : 0), bw, sides, has };
+};
+
+/** A box: a stack, or a row (D19); at least its own `height` or `minHeight` tall. */
+const layoutBox = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
+	const e = boxEdges(b);
+	const innerW = Math.max(4, width - e.l - e.r);
+	const innerMin = Math.max(0, Math.max(b.height || 0, minHeight) - e.t - e.b);
 	const inner = b.direction === 'row' ? row(ctx, b, innerW, innerMin) : withGap(ctx, b, innerW, innerMin);
-	const height = inner.height + edge;
+	const height = inner.height + e.t + e.b;
+	const bleed: Bleed | undefined = b._bleed;
 	return {
 		height,
 		draw: (x, y) => {
 			const { doc } = ctx;
-			const r = b.radius || 0;
-			if (b.bg) {
+			// Corners round only a box with a border all round (or none).
+			const r = e.sides ? 0 : b.radius || 0;
+			if (b.bg && bleed && ctx.page) {
+				// Full width: the background from edge to edge (and up / down to the page's edge); the contents stay inside the margins.
+				const top = bleed.up ? 0 : y;
+				const bottom = bleed.down ? ctx.page.h : y + height;
+				doc.save();
+				doc.rect(0, top, ctx.page.w, bottom - top).fill(b.bg);
+				doc.restore();
+			} else if (b.bg) {
 				doc.save();
 				(r ? doc.roundedRect(x, y, width, height, r) : doc.rect(x, y, width, height)).fill(b.bg);
 				doc.restore();
 			}
-			if (border) {
+			if (e.bw && !e.sides) {
 				doc.save();
-				const h = border / 2;
-				(r ? doc.roundedRect(x + h, y + h, width - border, height - border, r) : doc.rect(x + h, y + h, width - border, height - border))
-					.lineWidth(border)
+				const h = e.bw / 2;
+				(r ? doc.roundedRect(x + h, y + h, width - e.bw, height - e.bw, r) : doc.rect(x + h, y + h, width - e.bw, height - e.bw))
+					.lineWidth(e.bw)
 					.stroke(b.borderColor || HAIRLINE);
 				doc.restore();
+			} else if (e.bw) {
+				// Lines on some sides only — a rule above and below, a bar on the left.
+				const h = e.bw / 2;
+				const ends: Record<string, [number, number, number, number]> = {
+					top: [x, y + h, x + width, y + h],
+					bottom: [x, y + height - h, x + width, y + height - h],
+					left: [x + h, y, x + h, y + height],
+					right: [x + width - h, y, x + width - h, y + height],
+				};
+				doc.save();
+				for (const k of SIDES) {
+					if (!e.has(k)) continue;
+					const [x1, y1, x2, y2] = ends[k];
+					doc.moveTo(x1, y1).lineTo(x2, y2).lineWidth(e.bw).stroke(b.borderColor || HAIRLINE);
+				}
+				doc.restore();
 			}
-			inner.draw(x + pad + border, y + pad + border);
+			inner.draw(x + e.l, y + e.t);
 		},
 	};
 };
@@ -628,7 +673,14 @@ export const pageSize = (t: PdfTemplateData): [number, number] => {
 	return t.page.orientation === 'landscape' ? [h, w] : [w, h];
 };
 
-export const renderPdf = async ({ template, records, settings, tz }: RenderInput): Promise<Buffer> => {
+/** The part's own boxes set to full width get their reach (PT-27); boxes further in keep their place. */
+const markBleed = (blocks: Block[], part: 'header' | 'body' | 'footer'): Block[] =>
+	(blocks || []).map((b, i, all) =>
+		b.type === 'box' && b.bleed ? { ...b, _bleed: { up: part === 'header' && i === 0, down: part === 'footer' && i === all.length - 1 } as Bleed } : b
+	);
+
+export const renderPdf = async ({ template: raw, records, settings, tz }: RenderInput): Promise<Buffer> => {
+	const template: PdfTemplateData = { ...raw, header: markBleed(raw.header, 'header'), body: markBleed(raw.body, 'body'), footer: markBleed(raw.footer, 'footer') };
 	const [pw, ph] = pageSize(template);
 	const [mt, mr, mb, ml] = template.page.margin;
 	const width = pw - ml - mr;
@@ -659,7 +711,7 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 	let pageCount = 0;
 
 	for (const scope of scopes) {
-		const ctx: Ctx = { doc, fonts, template, images, scope };
+		const ctx: Ctx = { doc, fonts, template, images, scope, page: { w: pw, h: ph } };
 		// Header and footer heights, measured with this record (page numbers as placeholders).
 		const measureScope = { ...scope, roots: { ...scope.roots, page: 1, pages: 1 } };
 		const headerH = stack({ ...ctx, scope: measureScope }, template.header, width).height;
@@ -756,7 +808,7 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 		for (let i = 0; i < span.count; i++) {
 			doc.switchToPage(span.start + i);
 			const scope: Scope = { ...span.scope, roots: { ...span.scope.roots, page: i + 1, pages: span.count } };
-			const ctx: Ctx = { doc, fonts, template, images, scope };
+			const ctx: Ctx = { doc, fonts, template, images, scope, page: { w: pw, h: ph } };
 			if (template.header.length) stack(ctx, template.header, width).draw(ml, mt);
 			if (template.footer.length) {
 				const f = stack(ctx, template.footer, width);

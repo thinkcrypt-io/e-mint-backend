@@ -41,8 +41,9 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-24 | Admin: category chips on the gallery (list + New template), super admin's Categories dialog, designer Category picker; guides | M | open |
 | PT-25 | Free placement engine (D22): `free` blocks with x / y / w / rotate / opacity / behind / pages; schema, renderer, HTML page, smoke | M | open |
 | PT-26 | Free placement in the designer: drag anywhere with snap guides, width handle, arrow nudges, flow ⇄ free, Add → Place freely, properties; guides, MCP text, mint-tenant | L | open |
-| PT-27 | Full-width backgrounds: a box at the top level of the header / body / footer can bleed to the page's edges (the first header block up to the top edge, the last footer block down to the bottom); starters with full-width header and footer bands (user, 2026-10-13) | S | open |
-| PT-28 | Columns: each column lays its blocks out one under another or side by side (like a box), with its top / middle / bottom alignment (user, 2026-10-13) | S | open |
+| PT-27 | Full-width backgrounds: a box at the top level of the header / body / footer can bleed to the page's edges (the first header block up to the top edge, the last footer block down to the bottom); starters with full-width header and footer bands (user, 2026-10-13) | S | **done 2026-10-13** |
+| PT-28 | Columns: each column lays its blocks out one under another or side by side (like a box), with its top / middle / bottom alignment (user, 2026-10-13) | S | **done 2026-10-13** |
+| PT-30 | Box padding top-bottom / left-right, border lines on chosen sides; Layers: drop on a box / columns row to put it inside (user, 2026-10-13) | S | **done 2026-10-13** |
 | PT-29 | Select several blocks (⇧ / ⌘ click on the page or in Layers) and move them together, or wrap them in a box / row (⌘G), like Figma (user, 2026-10-13) | M | open |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |

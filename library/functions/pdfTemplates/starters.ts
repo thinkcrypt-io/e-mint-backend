@@ -512,16 +512,85 @@ const quotation = {
 	sample: quoteSample,
 };
 
+const invoiceBanner = {
+	key: 'invoice-banner',
+	name: 'Invoice — Banner',
+	description: 'A dark band across the top of every page and a coloured one along the bottom, edge to edge — the details sit between them.',
+	kind: 'invoice',
+	alias: 'invoice',
+	page: { ...PAGE, margin: [0, 42, 0, 42] },
+	style: { font: 'sans', size: 9.5, color: '#111827', muted: '#6b7280', accent: '#e11d48', lineHeight: 1.45 },
+	header: [
+		box(
+			[
+				hrow(
+					[
+						image('{{business.logo}}', { height: 30 }),
+						box([text('{{business.name}}', { size: 13, weight: 700, color: '#ffffff' }), text('{{business.address}}', { size: 8, color: '#d1d5db' })], { pad: 0 }),
+						fillSpace(),
+						text('INVOICE', { size: 24, weight: 700, color: '#ffffff', spacing: 3 }),
+					],
+					{ valign: 'middle', gap: 12 }
+				),
+			],
+			{ bg: '#111827', padX: 0, padY: 22, bleed: true }
+		),
+		space(4),
+		box([], { bg: '#e11d48', pad: 0, height: 4, bleed: true }),
+	],
+	body: [
+		hrow(
+			[
+				box([label('Billed to'), text('{{invoice.customer.name}}', { size: 11, weight: 600, mb: 2 }), muted('{{invoice.customer.address}}'), muted('{{invoice.customer.email}}   {{invoice.customer.phone}}')], { pad: 0, grow: 1 }),
+				box([fields([row('Invoice no.', '{{invoice.number}}', { bold: true }), row('Date', '{{invoice.date | date}}'), row('Due', '{{invoice.dueDate | date}}'), row('Status', '{{invoice.status | upper}}')], { align: 'right', labelWidth: 0.45, hideEmpty: true, gap: 4 })], { pad: 0, basis: 200 }),
+			],
+			{ gap: 20 }
+		),
+		space(20),
+		table('invoice.items', [
+			tcol('#', '{{index}}', 0.35),
+			tcol('Description', '{{item.description}}', 3.2),
+			tcol('Qty', '{{item.quantity | number}}', 0.6, 'right'),
+			tcol('Unit price', '{{item.price | money}}', 1.2, 'right'),
+			tcol('Amount', '{{item.amount | money}}', 1.3, 'right'),
+		], { headerBg: '#f3f4f6', headerColor: '#111827', lines: 'rows', emptyText: 'No items', pad: 7 }),
+		space(14),
+		hrow(
+			[
+				box([label('Payment details'), text('{{business.note}}', { size: 9 }), muted('{{invoice.notes}}', { mt: 6 })], { border: 2, borderColor: '#e11d48', borderSides: ['left'], padX: 12, padY: 4, grow: 1 }),
+				box([
+					fields([
+						row('Subtotal', '{{invoice.subtotal | money}}'),
+						row('Discount', '{{invoice.discount | money}}'),
+						row('Tax', '{{invoice.tax | money}}'),
+						row('Total', '{{invoice.total | money}}', { bold: true, line: true }),
+						row('Paid', '{{invoice.paid | money}}'),
+						row('Balance due', '{{invoice.due | money}}', { bar: true }),
+					], { align: 'right', hideEmpty: true, gap: 4 }),
+				], { pad: 0, basis: 220 }),
+			],
+			{ gap: 24 }
+		),
+		fillSpace(),
+		hrow([fillSpace(), box([line({ color: '#111827', mb: 4 }), muted('Authorised signature', { align: 'center' })], { pad: 0, basis: 170 })], { mt: 30 }),
+	],
+	footer: [
+		box([hrow([text('{{business.phone}}  ·  {{business.email}}  ·  {{business.website}}', { size: 7.5, color: '#ffffff' }), fillSpace(), text('Page {{page}} of {{pages}}', { size: 7.5, color: '#ffffff' })])], { bg: '#e11d48', padX: 0, padY: 12, bleed: true }),
+	],
+	slots: invoiceSlots('invoice'),
+	sample: invoiceSample('invoice'),
+};
+
 const quotationModern = {
 	key: 'quote-modern',
 	name: 'Quotation — Modern',
 	description: 'A coloured band, the offer’s total up front, light rows and room for your terms — change the accent to your brand’s.',
 	kind: 'quotation',
 	alias: 'quote',
-	page: PAGE,
+	page: { ...PAGE, margin: [0, 42, 0, 42] },
 	style: { font: 'sans', size: 9.5, color: '#0f172a', muted: '#64748b', accent: '#0891b2', lineHeight: 1.45 },
-	header: [],
-	body: [
+	// Full-width bands (PT-27): the header's colour runs to the page's edges and top, the footer's to its bottom.
+	header: [
 		box(
 			[
 				hrow(
@@ -533,8 +602,10 @@ const quotationModern = {
 					{ valign: 'middle' }
 				),
 			],
-			{ bg: '#0891b2', pad: 18, radius: 6 }
+			{ bg: '#0891b2', padX: 0, padY: 16, bleed: true }
 		),
+	],
+	body: [
 		space(18),
 		hrow(
 			[
@@ -562,7 +633,9 @@ const quotationModern = {
 		fillSpace(),
 		hrow([muted('To accept, sign and send this back before {{quote.validUntil | date}}.', { italic: true }), fillSpace(), box([line({ color: '#0f172a', mb: 4 }), muted('Accepted by', { align: 'center' })], { pad: 0, basis: 170 })], { valign: 'bottom', mt: 24 }),
 	],
-	footer,
+	footer: [
+		box([hrow([text('{{business.name}}  ·  {{business.website}}', { size: 7.5, color: '#cffafe' }), fillSpace(), text('Page {{page}} of {{pages}}', { size: 7.5, color: '#cffafe' })])], { bg: '#164e63', padX: 0, padY: 12, bleed: true }),
+	],
 	slots: quoteSlots,
 	sample: quoteSample,
 };
@@ -601,4 +674,4 @@ const moneyReceipt = {
 };
 
 /** By category: invoices, receipts, quotations (D21). */
-export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern];
+export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, invoiceBanner, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern];

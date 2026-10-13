@@ -377,3 +377,28 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Smoke 42/42: categories (defaults, add, rename, gallery, remove, a reader
   refused), every new starter in the gallery under a category and rendering
   with its sample; the four looked at as images.
+
+## 2026-10-13 — PT-27 full-width backgrounds, PT-28 row columns, PT-30 box padding + lines
+- The user asked for headers and footers whose background spans the page's
+  full width, columns whose blocks can sit side by side, top-bottom /
+  left-right padding and lines on chosen sides for boxes, and dropping into
+  a container from the Layers panel.
+- Engine: a box directly in the header / body / footer with `bleed` draws
+  its background edge to edge (`markBleed` marks them; the header's first
+  goes up to the top edge, the footer's last down to the bottom edge), the
+  contents stay inside the margins. `boxEdges`: `padX` / `padY` over `pad`,
+  `borderSides` (lines on some sides; corners square then). A column with
+  `direction: 'row'` lays its blocks out as a row (its `gap`, aligned by its
+  valign).
+- Starters: **Invoice — Banner** (a dark full-width band on every page, an
+  accent stripe, a coloured footer band, a left-rule payment box) and
+  **Quotation — Modern** now has full-width header and footer bands (page
+  margins 0 top and bottom). Ten starters.
+- Designer: Box → Full-width background (top-level boxes), Top & bottom,
+  Left & right, Lines on (Top / Right / Bottom / Left); Columns → per column
+  One under another / Side by side; Layers: drop a block on a box or
+  columns row and it goes inside (the first column for columns).
+- Checked: both banded starters rendered and looked at as images (bands to
+  the edges, page 1 of 1); the Banner template in the designer — header band
+  edge to edge, the footer band's box exactly the page's left / right /
+  bottom; the Box panel's values.

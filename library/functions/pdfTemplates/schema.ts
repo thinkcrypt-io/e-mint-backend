@@ -36,6 +36,7 @@ export const categoryKey = (v: any): string => {
 export const BLOCK_TYPES = ['text', 'image', 'columns', 'box', 'table', 'fields', 'divider', 'spacer', 'pageBreak'] as const;
 export const ALIGNS = ['left', 'center', 'right'] as const;
 export const WEIGHTS = [400, 500, 600, 700] as const;
+const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];
 export type Align = (typeof ALIGNS)[number];
@@ -205,6 +206,9 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 			const cols = (Array.isArray(b.columns) ? b.columns : []).slice(0, LIMITS.columns).map((col: any, i: number) => ({
 				width: num(col?.width, 0.1, 12, 1),
 				valign: oneOf(col?.valign, ['top', 'middle', 'bottom'] as const, 'top'),
+				// A column's blocks one under another (default) or side by side (PT-28).
+				...(col?.direction === 'row' && { direction: 'row' }),
+				...(col?.gap !== undefined && { gap: num(col.gap, 0, 120, 8) }),
 				blocks: nested(col?.blocks, `column ${i + 1}`),
 			}));
 			if (!cols.length) c.errors.push(`${where}: add at least one column`);
@@ -225,6 +229,12 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 				...(b.valign !== undefined && b.valign !== 'top' && { valign: oneOf(b.valign, ['top', 'middle', 'bottom', 'stretch'] as const, 'top') }),
 				...(b.justify !== undefined && b.justify !== 'start' && { justify: oneOf(b.justify, ['start', 'center', 'end', 'between'] as const, 'start') }),
 				...(Number(b.height) > 0 && { height: num(b.height, 4, 1600, 40) }),
+				// PT-27: the background runs to the page's edges (a box directly in the header, body or footer).
+				...(bool(b.bleed) && { bleed: true }),
+				// PT-30: padding top-bottom / left-right over `pad`, and the border on some sides only.
+				...(b.padX !== undefined && b.padX !== null && b.padX !== '' && { padX: num(b.padX, 0, 80, 10) }),
+				...(b.padY !== undefined && b.padY !== null && b.padY !== '' && { padY: num(b.padY, 0, 80, 10) }),
+				...(Array.isArray(b.borderSides) && b.borderSides.length && b.borderSides.length < 4 && { borderSides: SIDES.filter(k => b.borderSides.includes(k)) }),
 			};
 		case 'table': {
 			const rows = str(b.rows, 120).trim().replace(/^\{\{\s*|\s*\}\}$/g, '');
