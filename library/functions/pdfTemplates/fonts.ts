@@ -4,14 +4,16 @@ import path from 'path';
 import * as fontkit from 'fontkit';
 
 /**
- * The fonts a template can use (docs/pdf-templates D9) and how text is split
- * across them. Geist Sans / Mono are files (the panel's own font, so the
- * designer matches the PDF); Helvetica, Times and Courier are the PDF's
- * built-ins. A character the chosen font has no glyph for — Bangla, ৳ —
+ * The fonts a template can use (docs/pdf-templates D9, D24) and how text is
+ * split across them. Geist Sans / Mono are files (the panel's own font, so
+ * the designer matches the PDF); the theme families are full static TTFs in
+ * public/fonts/<key>/ (OFL, each checked in pdfkit: Latin, Latin-extended,
+ * ₹ € £ ¥, every weight copies out as text); Helvetica, Times and Courier
+ * are the PDF's built-ins. A character the chosen font has no glyph for — Bangla, ৳ —
  * goes to Noto Sans Bengali, character by character, so mixed text prints.
  */
 
-export type Family = 'sans' | 'mono' | 'helvetica' | 'times' | 'courier';
+export type Family = string;
 export type Weight = 400 | 500 | 600 | 700;
 
 type FaceSource = { file: string } | { std: string };
@@ -20,11 +22,34 @@ export type Face = { name: string; source: FaceSource; fakeItalic: boolean };
 const GEIST = path.resolve(process.cwd(), 'public/fonts/geist');
 const NOTO = path.resolve(process.cwd(), 'node_modules/@fontsource/noto-sans-bengali/files');
 
+const FONTS_DIR = path.resolve(process.cwd(), 'public/fonts');
 const file = (name: string, f: string): Face => ({ name, source: { file: f }, fakeItalic: true });
+const real = (name: string, f: string): Face => ({ name, source: { file: f }, fakeItalic: false });
+
+/** A theme family from public/fonts/<key>/: 400 500 600 700, and real italics where the family has them. */
+const family = (key: string, italics: boolean): Partial<Record<Weight, [Face, Face]>> => {
+	const at = (w: string) => `${FONTS_DIR}/${key}/${w}.ttf`;
+	const up = (w: Weight) => file(`${key}-${w}`, at(String(w)));
+	const it = (w: Weight) => (italics && (w === 400 || w === 700) ? real(`${key}-${w}i`, at(`${w}-italic`)) : up(w));
+	return { 400: [up(400), it(400)], 500: [up(500), italics ? real(`${key}-400i`, at('400-italic')) : up(500)], 600: [up(600), italics ? real(`${key}-700i`, at('700-italic')) : up(600)], 700: [up(700), it(700)] };
+};
 const std = (name: string): Face => ({ name, source: { std: name }, fakeItalic: false });
 
 /** family → weight → [upright, italic]. */
-const FACES: Record<Family, Partial<Record<Weight, [Face, Face]>>> = {
+const FACES: Record<string, Partial<Record<Weight, [Face, Face]>>> = {
+	inter: family('inter', true),
+	dmsans: family('dmsans', true),
+	manrope: family('manrope', false),
+	montserrat: family('montserrat', true),
+	poppins: family('poppins', true),
+	plexsans: family('plexsans', true),
+	grotesk: family('grotesk', false),
+	playfair: family('playfair', true),
+	garamond: family('garamond', true),
+	merriweather: family('merriweather', true),
+	sourceserif: family('sourceserif', true),
+	crimson: family('crimson', true),
+	plexserif: family('plexserif', true),
 	sans: {
 		400: [file('Geist', `${GEIST}/Geist-Regular.ttf`), file('Geist', `${GEIST}/Geist-Regular.ttf`)],
 		500: [file('Geist-Medium', `${GEIST}/Geist-Medium.ttf`), file('Geist-Medium', `${GEIST}/Geist-Medium.ttf`)],

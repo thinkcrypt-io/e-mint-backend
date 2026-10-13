@@ -1,5 +1,5 @@
 /**
- * Themes for PDF templates (docs/pdf-templates D23). A template's `style`
+ * Themes for PDF templates (docs/pdf-templates D24). A template's `style`
  * holds its look: a body font and a heading font, and seven colour roles.
  * Any colour on a block may name a role ("accent", "soft"…) instead of a
  * hex, so changing the theme recolours the whole page; the renderer
@@ -35,21 +35,26 @@ export const COLOR_PROPS = ['color', 'bg', 'borderColor', 'headerBg', 'headerCol
 /* --------------------------------------------------------------- fonts */
 
 /** Every font a template can print in; `heading` on a block means the theme's heading font. */
-export const FONT_FAMILIES: { key: string; label: string; group: 'Sans' | 'Serif' | 'Mono' }[] = [
+export const FONT_FAMILIES: { key: string; label: string; group: 'Sans' | 'Serif' | 'Mono'; builtIn?: boolean }[] = [
 	{ key: 'sans', label: 'Geist', group: 'Sans' },
+	{ key: 'inter', label: 'Inter', group: 'Sans' },
+	{ key: 'dmsans', label: 'DM Sans', group: 'Sans' },
 	{ key: 'manrope', label: 'Manrope', group: 'Sans' },
 	{ key: 'montserrat', label: 'Montserrat', group: 'Sans' },
 	{ key: 'poppins', label: 'Poppins', group: 'Sans' },
+	{ key: 'plexsans', label: 'IBM Plex Sans', group: 'Sans' },
 	{ key: 'grotesk', label: 'Space Grotesk', group: 'Sans' },
-	{ key: 'helvetica', label: 'Helvetica', group: 'Sans' },
 	{ key: 'playfair', label: 'Playfair Display', group: 'Serif' },
-	{ key: 'lora', label: 'Lora', group: 'Serif' },
 	{ key: 'garamond', label: 'EB Garamond', group: 'Serif' },
 	{ key: 'merriweather', label: 'Merriweather', group: 'Serif' },
-	{ key: 'slab', label: 'Roboto Slab', group: 'Serif' },
-	{ key: 'times', label: 'Times', group: 'Serif' },
+	{ key: 'sourceserif', label: 'Source Serif', group: 'Serif' },
+	{ key: 'crimson', label: 'Crimson Pro', group: 'Serif' },
+	{ key: 'plexserif', label: 'IBM Plex Serif', group: 'Serif' },
 	{ key: 'mono', label: 'Geist Mono', group: 'Mono' },
-	{ key: 'courier', label: 'Courier', group: 'Mono' },
+	// The PDF's own three: not embedded, Latin-1 only (other letters fall back to Geist / Noto).
+	{ key: 'helvetica', label: 'Helvetica', group: 'Sans', builtIn: true },
+	{ key: 'times', label: 'Times', group: 'Serif', builtIn: true },
+	{ key: 'courier', label: 'Courier', group: 'Mono', builtIn: true },
 ];
 export const FAMILY_KEYS = FONT_FAMILIES.map(f => f.key);
 export const familyLabel = (k?: string) => FONT_FAMILIES.find(f => f.key === k)?.label || 'Geist';
@@ -77,17 +82,17 @@ export const PALETTES: Palette[] = [
 
 export const PAIRINGS: Pairing[] = [
 	{ key: 'modern', name: 'Modern', heading: 'sans', font: 'sans', note: 'Geist throughout — clean, the panel’s own' },
-	{ key: 'editorial', name: 'Editorial', heading: 'playfair', font: 'sans', note: 'Playfair Display headings, Geist text' },
+	{ key: 'clean', name: 'Clean', heading: 'inter', font: 'inter', note: 'Inter throughout — neutral and very readable' },
+	{ key: 'editorial', name: 'Editorial', heading: 'playfair', font: 'inter', note: 'Playfair Display headings, Inter text' },
+	{ key: 'elegant', name: 'Elegant', heading: 'playfair', font: 'sourceserif', note: 'Playfair Display headings, Source Serif text' },
 	{ key: 'classic', name: 'Classic', heading: 'garamond', font: 'garamond', note: 'EB Garamond — book-like, formal' },
-	{ key: 'literary', name: 'Literary', heading: 'lora', font: 'lora', note: 'Lora — soft, warm serif' },
-	{ key: 'newsroom', name: 'Newsroom', heading: 'merriweather', font: 'sans', note: 'Merriweather headings, Geist text' },
+	{ key: 'literary', name: 'Literary', heading: 'crimson', font: 'crimson', note: 'Crimson Pro — a warm book serif' },
+	{ key: 'newsroom', name: 'Newsroom', heading: 'merriweather', font: 'plexsans', note: 'Merriweather headings, IBM Plex Sans text' },
+	{ key: 'corporate', name: 'Corporate', heading: 'plexserif', font: 'plexsans', note: 'IBM Plex Serif headings, Plex Sans text' },
 	{ key: 'geometric', name: 'Geometric', heading: 'montserrat', font: 'montserrat', note: 'Montserrat — wide and confident' },
 	{ key: 'friendly', name: 'Friendly', heading: 'poppins', font: 'manrope', note: 'Poppins headings, Manrope text' },
+	{ key: 'soft', name: 'Soft', heading: 'dmsans', font: 'dmsans', note: 'DM Sans — round and calm' },
 	{ key: 'tech', name: 'Tech', heading: 'grotesk', font: 'grotesk', note: 'Space Grotesk — a technical edge' },
-	{ key: 'slab', name: 'Slab', heading: 'slab', font: 'sans', note: 'Roboto Slab headings, Geist text' },
-	{ key: 'swiss', name: 'Swiss', heading: 'helvetica', font: 'helvetica', note: 'Helvetica — neutral, built into every PDF' },
-	{ key: 'formal', name: 'Formal', heading: 'times', font: 'times', note: 'Times — the classic letter' },
-	{ key: 'typewriter', name: 'Typewriter', heading: 'courier', font: 'courier', note: 'Courier — a typed receipt' },
 ];
 
 export const LOOKS: Look[] = [
@@ -96,13 +101,13 @@ export const LOOKS: Look[] = [
 	{ key: 'heritage', name: 'Heritage', palette: 'navy', pairing: 'classic' },
 	{ key: 'fresh', name: 'Fresh', palette: 'emerald', pairing: 'friendly' },
 	{ key: 'tech', name: 'Tech', palette: 'ocean', pairing: 'tech' },
-	{ key: 'mono', name: 'Mono', palette: 'graphite', pairing: 'swiss' },
+	{ key: 'mono', name: 'Mono', palette: 'graphite', pairing: 'clean' },
 	{ key: 'warm', name: 'Warm', palette: 'terracotta', pairing: 'literary' },
 	{ key: 'bold', name: 'Bold', palette: 'sunflower', pairing: 'geometric' },
-	{ key: 'forest', name: 'Forest', palette: 'forest', pairing: 'slab' },
-	{ key: 'royal', name: 'Royal', palette: 'plum', pairing: 'newsroom' },
-	{ key: 'calm', name: 'Calm', palette: 'teal', pairing: 'modern' },
-	{ key: 'amber', name: 'Ledger', palette: 'amber', pairing: 'formal' },
+	{ key: 'forest', name: 'Forest', palette: 'forest', pairing: 'newsroom' },
+	{ key: 'royal', name: 'Royal', palette: 'plum', pairing: 'elegant' },
+	{ key: 'calm', name: 'Calm', palette: 'teal', pairing: 'soft' },
+	{ key: 'ledger', name: 'Ledger', palette: 'amber', pairing: 'corporate' },
 ];
 
 export const paletteOf = (k?: string) => PALETTES.find(p => p.key === k);
@@ -237,6 +242,7 @@ export const adoptRoles = <T extends Blocky>(t: T): { template: T; changed: numb
 	const a = hsl(r.accent);
 	const accentIsGrey = a.s < 0.15;
 	let changed = 0;
+	const found: Partial<Record<'soft' | 'dark' | 'line', string>> = {};
 	const roleFor = (k: string, v: string, b: Blocky, parentBg?: string): Role | undefined => {
 		const c = v.toLowerCase();
 		const textProp = k === 'color' || k === 'headerColor';
@@ -265,6 +271,8 @@ export const adoptRoles = <T extends Blocky>(t: T): { template: T; changed: numb
 		if (sameHue && x.l < 0.32) return 'dark';
 		if (sameHue && !bgProp && x.l > 0.32 && x.l < 0.82) return 'accent';
 		if (sameHue && bgProp) return x.l >= 0.6 ? 'soft' : 'accent';
+		// A near-black band or panel: the theme's dark.
+		if (bgProp && x.s < 0.2 && x.l < 0.2) return 'dark';
 		if ((k === 'lineColor' || k === 'borderColor') && x.s < 0.2 && x.l > 0.75) return 'line';
 		return undefined;
 	};
@@ -275,13 +283,15 @@ export const adoptRoles = <T extends Blocky>(t: T): { template: T; changed: numb
 			if (typeof v !== 'string' || isRole(v)) continue;
 			const role = roleFor(k, v, { ...b, ...before }, parentBg);
 			if (role) {
+				// The first tint / shade / line found becomes the role's colour when the style has none yet, so the page looks as before.
+				if ((role === 'soft' || role === 'dark' || role === 'line') && !s[role] && !found[role]) found[role] = v.toLowerCase();
 				b[k] = role;
 				changed++;
 			}
 		}
 		return b;
 	});
-	return { template, changed };
+	return { template: { ...template, style: { ...s, ...found } }, changed };
 };
 
 /**

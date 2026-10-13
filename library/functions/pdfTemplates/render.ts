@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { meets } from '../fieldLocks.function.js';
 import { DocFonts, Face, Family, faceFor, runsOf } from './fonts.js';
+import { resolveTheme, roleColors } from './theme.js';
 import { ImageLoader } from './images.js';
 import { Block, LIMITS, PAGE_SIZES, PdfSettingsData, PdfTemplateData } from './schema.js';
 import { Scope, fill, valueOf } from './tokens.js';
@@ -427,7 +428,7 @@ const layoutBox = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
 				const h = e.bw / 2;
 				(r ? doc.roundedRect(x + h, y + h, width - e.bw, height - e.bw, r) : doc.rect(x + h, y + h, width - e.bw, height - e.bw))
 					.lineWidth(e.bw)
-					.stroke(b.borderColor || HAIRLINE);
+					.stroke(b.borderColor || ctx.template.style.line || HAIRLINE);
 				doc.restore();
 			} else if (e.bw) {
 				// Lines on some sides only — a rule above and below, a bar on the left.
@@ -442,7 +443,7 @@ const layoutBox = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
 				for (const k of SIDES) {
 					if (!e.has(k)) continue;
 					const [x1, y1, x2, y2] = ends[k];
-					doc.moveTo(x1, y1).lineTo(x2, y2).lineWidth(e.bw).stroke(b.borderColor || HAIRLINE);
+					doc.moveTo(x1, y1).lineTo(x2, y2).lineWidth(e.bw).stroke(b.borderColor || ctx.template.style.line || HAIRLINE);
 				}
 				doc.restore();
 			}
@@ -474,7 +475,7 @@ const layoutDivider = (ctx: Ctx, b: any, width: number): Laid => {
 			doc.save();
 			doc.moveTo(x, y + t / 2).lineTo(x + width, y + t / 2).lineWidth(t);
 			if (b.dashed) doc.dash(t * 3, { space: t * 2 });
-			doc.stroke(b.color || HAIRLINE);
+			doc.stroke(b.color || ctx.template.style.line || HAIRLINE);
 			doc.restore();
 		},
 	};
@@ -492,13 +493,13 @@ const layoutFields = (ctx: Ctx, b: any, width: number): Laid => {
 		const big = !!r.big;
 		const size = (b.size ?? style.size) * (big ? 1.3 : 1);
 		const bold = r.bold || big || r.bar;
-		const color = r.bar ? '#ffffff' : b.color ?? style.color;
+		const color = r.bar ? style.onAccent || '#ffffff' : b.color ?? style.color;
 		const padX = r.bar ? 8 : 0;
 		const padY = r.bar ? 6 : 0;
 		const inner = Math.max(8, width - 2 * padX);
 		const labelW = Math.max(4, inner * (b.labelWidth ?? 0.5) - 3);
 		const valueW = Math.max(4, inner - labelW - 6);
-		const l = layoutText(ctx, label, styleFor(ctx, b, { size, weight: bold ? 600 : b.weight ?? 400, color: r.bar ? '#ffffff' : bold ? b.color ?? style.color : style.muted, align: 'left', upper: false, spacing: 0 }), labelW);
+		const l = layoutText(ctx, label, styleFor(ctx, b, { size, weight: bold ? 600 : b.weight ?? 400, color: r.bar ? style.onAccent || '#ffffff' : bold ? b.color ?? style.color : style.muted, align: 'left', upper: false, spacing: 0 }), labelW);
 		const v = layoutText(ctx, value, styleFor(ctx, b, { size, weight: bold ? 700 : b.weight ?? 400, color, align: b.align === 'right' ? 'right' : 'left', upper: false, spacing: 0 }), valueW);
 		const h = Math.max(l.height, v.height) + 2 * padY;
 		rows.push({
@@ -584,14 +585,14 @@ const layoutTableRows = (ctx: Ctx, b: any, width: number): TableRows => {
 					l.draw(cx + pad, y + pad);
 					if (grid) {
 						doc.save();
-						doc.rect(cx, y, widths[i], h).lineWidth(0.5).stroke(b.lineColor || HAIRLINE);
+						doc.rect(cx, y, widths[i], h).lineWidth(0.5).stroke(b.lineColor || ctx.template.style.line || HAIRLINE);
 						doc.restore();
 					}
 					cx += widths[i];
 				});
 				if (lines && !grid) {
 					doc.save();
-					doc.moveTo(x, y + h).lineTo(x + width, y + h).lineWidth(opts.header ? 0.75 : 0.5).stroke(opts.header ? b.lineColor || style.color : b.lineColor || HAIRLINE);
+					doc.moveTo(x, y + h).lineTo(x + width, y + h).lineWidth(opts.header ? 0.75 : 0.5).stroke(opts.header ? b.lineColor || style.color : b.lineColor || ctx.template.style.line || HAIRLINE);
 					doc.restore();
 				}
 			},
@@ -695,7 +696,15 @@ const markBleed = (blocks: Block[], part: 'header' | 'body' | 'footer'): Block[]
 	);
 
 export const renderPdf = async ({ template: raw, records, settings, tz }: RenderInput): Promise<Buffer> => {
-	const template: PdfTemplateData = { ...raw, header: markBleed(raw.header, 'header'), body: markBleed(raw.body, 'body'), footer: markBleed(raw.footer, 'footer') };
+	// The theme (D24): roles → hex, `font: 'heading'` → the heading family, every role on the style.
+	const themed = resolveTheme(raw);
+	const template: PdfTemplateData = {
+		...themed,
+		style: { ...themed.style, ...roleColors(themed.style), color: themed.style.color, muted: themed.style.muted },
+		header: markBleed(themed.header, 'header'),
+		body: markBleed(themed.body, 'body'),
+		footer: markBleed(themed.footer, 'footer'),
+	};
 	const [pw, ph] = pageSize(template);
 	const [mt, mr, mb, ml] = template.page.margin;
 	const width = pw - ml - mr;

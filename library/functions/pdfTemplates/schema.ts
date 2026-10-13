@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { LOCK_OPS } from '../fieldLocks.function.js';
 import { checkTokens } from './tokens.js';
+import { FAMILY_KEYS, PAIRINGS, PALETTES, isRole } from './theme.js';
 
 /**
  * PDF templates (docs/pdf-templates): what a template is, and the one check
@@ -18,7 +19,8 @@ export const PAGE_SIZES: Record<string, [number, number]> = {
 	Legal: [612, 1008],
 	A5: [419.53, 595.28],
 };
-export const FONTS = ['sans', 'mono', 'helvetica', 'times', 'courier'] as const;
+/** Every family (theme.ts FONT_FAMILIES, D24); a block may also say `heading` — the theme's heading font. */
+export const FONTS = FAMILY_KEYS;
 /** The built-in categories (D21) — the list itself is data (PdfCategory), seeded with these. */
 export const KINDS = ['invoice', 'receipt', 'quotation'] as const;
 /** Old kinds → today's category keys. */
@@ -67,7 +69,23 @@ export type PdfTemplateData = {
 	route: string;
 	alias: string;
 	page: { size: keyof typeof PAGE_SIZES; orientation: 'portrait' | 'landscape'; margin: [number, number, number, number] };
-	style: { font: (typeof FONTS)[number]; size: number; color: string; muted: string; accent: string; lineHeight: number };
+	/** The theme (D24): body + heading font, and the colour roles blocks can name instead of a hex. */
+	style: {
+		font: string;
+		heading?: string;
+		size: number;
+		color: string;
+		muted: string;
+		accent: string;
+		onAccent?: string;
+		soft?: string;
+		dark?: string;
+		line?: string;
+		lineHeight: number;
+		/** The presets last put on (D24) — the Theme tab shows them picked. */
+		palette?: string;
+		pairing?: string;
+	};
 	lists: TemplateList[];
 	header: Block[];
 	body: Block[];
@@ -92,6 +110,8 @@ const num = (v: any, min: number, max: number, fallback: number) => {
 };
 const oneOf = <T extends readonly any[]>(v: any, list: T, fallback: T[number]): T[number] => (list.includes(v) ? v : fallback);
 const color = (v: any, fallback?: string) => (typeof v === 'string' && HEX.test(v.trim()) ? v.trim().toLowerCase() : fallback);
+/** A block's colour: a hex, or a theme role ("accent", "soft"… — D24) that follows the theme. */
+const tint = (v: any) => (isRole(v) ? v : color(v));
 const bool = (v: any) => v === true || v === 'true';
 export const newBlockId = () => `b_${crypto.randomBytes(5).toString('hex')}`;
 
@@ -136,12 +156,12 @@ const textOf = (v: any, ctx: Ctx, what: string) => {
 
 /** Text styling shared by text blocks, table cells and field rows. */
 const textStyle = (b: any) => ({
-	// PT-34: a block's own font (the page's when left out).
-	...((FONTS as readonly string[]).includes(b.font) && { font: b.font }),
+	// PT-34: a block's own font (the page's when left out); `heading` = the theme's heading font (D24).
+	...((b.font === 'heading' || (FONTS as readonly string[]).includes(b.font)) && { font: b.font }),
 	...(b.size !== undefined && { size: num(b.size, 5, 72, 10) }),
 	...(b.weight !== undefined && { weight: oneOf(Number(b.weight), WEIGHTS, 400) }),
 	...(bool(b.italic) && { italic: true }),
-	...(color(b.color) && { color: color(b.color) }),
+	...(tint(b.color) && { color: tint(b.color) }),
 });
 
 const blocksOf = (list: any, ctx: Ctx, depth: number, where: string): Block[] => {
@@ -225,9 +245,9 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 				...out,
 				blocks: nested(b.blocks, 'inside'),
 				pad: num(b.pad, 0, 80, 10),
-				...(color(b.bg) && { bg: color(b.bg) }),
+				...(tint(b.bg) && { bg: tint(b.bg) }),
 				...(b.border !== undefined && { border: num(b.border, 0, 8, 0) }),
-				...(color(b.borderColor) && { borderColor: color(b.borderColor) }),
+				...(tint(b.borderColor) && { borderColor: tint(b.borderColor) }),
 				...(b.radius !== undefined && { radius: num(b.radius, 0, 40, 0) }),
 				// D19: a stack (default) or a row, like flexbox.
 				...(b.direction === 'row' && { direction: 'row' }),
@@ -257,12 +277,12 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 				rows,
 				columns,
 				...textStyle(b),
-				...(color(b.headerBg) && { headerBg: color(b.headerBg) }),
-				...(color(b.headerColor) && { headerColor: color(b.headerColor) }),
+				...(tint(b.headerBg) && { headerBg: tint(b.headerBg) }),
+				...(tint(b.headerColor) && { headerColor: tint(b.headerColor) }),
 				...(b.zebra !== undefined && { zebra: bool(b.zebra) }),
 				lines: oneOf(b.lines, ['none', 'rows', 'grid'] as const, 'rows'),
 				// PT-33: the lines' colour (light grey when left out).
-				...(color(b.lineColor) && { lineColor: color(b.lineColor) }),
+				...(tint(b.lineColor) && { lineColor: tint(b.lineColor) }),
 				...(b.emptyText !== undefined && { emptyText: textOf(b.emptyText, c, 'empty text') }),
 				...(b.pad !== undefined && { pad: num(b.pad, 0, 20, 5) }),
 			};
@@ -290,7 +310,7 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 		case 'divider':
 			return {
 				...out,
-				...(color(b.color) && { color: color(b.color) }),
+				...(tint(b.color) && { color: tint(b.color) }),
 				thickness: num(b.thickness, 0.25, 12, 0.75),
 				...(bool(b.dashed) && { dashed: true }),
 			};
@@ -349,11 +369,19 @@ const pageOf = (p: any): PdfTemplateData['page'] => {
 };
 const styleOf = (s: any): PdfTemplateData['style'] => ({
 	font: oneOf(s?.font, FONTS, 'sans'),
+	...((FONTS as readonly string[]).includes(s?.heading) && { heading: s.heading }),
 	size: num(s?.size, 6, 24, 10),
 	color: color(s?.color, '#111111')!,
 	muted: color(s?.muted, '#6b7280')!,
 	accent: color(s?.accent, '#2563eb')!,
+	// The newer roles (D24) stay out until set: theme.ts roleColors makes them from the accent.
+	...(color(s?.onAccent) && { onAccent: color(s.onAccent) }),
+	...(color(s?.soft) && { soft: color(s.soft) }),
+	...(color(s?.dark) && { dark: color(s.dark) }),
+	...(color(s?.line) && { line: color(s.line) }),
 	lineHeight: num(s?.lineHeight, 1, 2.5, 1.35),
+	...(PALETTES.some(p => p.key === s?.palette) && { palette: s.palette }),
+	...(PAIRINGS.some(p => p.key === s?.pairing) && { pairing: s.pairing }),
 });
 
 /** Where a free block sits (D22), clamped to the page; `pages` 'all' / 'last' (first page when left out). */
