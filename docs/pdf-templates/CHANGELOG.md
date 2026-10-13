@@ -299,3 +299,20 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   stretch + fixed 120pt, a 120pt box with a filling space, a body space
   putting the signature at the page bottom) rendered and looked at as an
   image; smoke 31/31 (two new checks: the props are kept, the PDF renders).
+
+## 2026-10-13 — PT-20 designer controls for the layout
+- Properties: a box has **Layout** — Blocks (Stack / Row), Gap, Align (top /
+  middle / bottom / stretch), Spread (from the left / centred / to the right /
+  space between, when nothing fills), Min height; a block in a row has
+  **Width in the row** (Fit its content / Fill the free space / Fixed width);
+  a box in a stack can fill the free height; Space has **Fill the free
+  space** with a line saying what it does there (in the body: what follows
+  sits at the bottom of the page). Moves are ← → in a row (panel + block bar).
+- Add: **Row** (a box with nothing drawn, side by side) and **Push to the
+  bottom** (a filling Space); the Signature line is now a row — a filling
+  space, then a 170pt line — so it sits on the right.
+- types.ts: `labelOf` ("Row"), `newRow`, `placeOf`, `FILLERS`; the Layers
+  say "Row · 3 side by side" and "Fills the free space".
+- Checked in the browser (admin-5021 on the scratch server): a test
+  template drew as the PDF does; Width → Fixed made a 120pt slot; the Row
+  panel; the Signature piece; undo.
