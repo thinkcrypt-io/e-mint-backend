@@ -18,6 +18,7 @@ import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import { namingFields, refIds } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
 import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
+import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
 import { createMcpRouter } from './transport.js';
 
 /**
@@ -50,7 +51,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. Never build without the user's go-ahead.`;
+Use update_page for later changes to a page's columns, form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -737,6 +738,7 @@ const TOOLS: ToolDef[] = [
 	},
 	...WEBSITE_TOOLS,
 	...SITE_BUILDER_TOOLS,
+	...PDF_TEMPLATE_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */

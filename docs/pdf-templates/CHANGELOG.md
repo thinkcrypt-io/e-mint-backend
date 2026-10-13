@@ -92,3 +92,14 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   disk was intercepted). AI against a local fake API: 3 rounds, repairs sent
   back, warnings returned. Smoke 23/23. Fixed on the way: page wider than its
   column, a crash-prone handler.
+
+## 2026-10-13 — PT-09 MCP
+- `library/controllers/mcp/pdfTemplates.tools.ts`, added to the builder MCP
+  (admin /mcp and tenant /tenant/mcp): `describe_pdf_templates` (format +
+  gallery), `list_pdf_templates`, `get_pdf_template`, `get_pdf_fields`
+  (read); `use_pdf_starter`, `save_pdf_template` (build) — saves go through
+  normalizeTemplate; the server instructions point at them.
+- Checked over JSON-RPC with a scratch key on the private server: all six
+  listed; describe shows the gallery; get_pdf_fields lists the page's fields
+  with its root; use_pdf_starter made a Receipt and named the unmatched
+  slots; a broken template came back “Not saved” with both problems.
