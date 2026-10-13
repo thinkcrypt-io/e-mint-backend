@@ -11,7 +11,8 @@ guides (admin `/docs/pdf-templates`, mint-docs) and the marketing site
 Plan written 2026-10-13 (user asked: visually designed invoice / bill / receipt
 PDFs with `{{invoice.total}}`-style data, pre-built templates added from the
 admin panel, users edit / build their own / let AI build, Download makes the
-PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). Next: PT-10 (mint-tenant copy, mint-docs, website). The hosted /mcp gets the tools only after a backend deploy.
+PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys; then run `node scripts/seedPdfTemplates.js` for the super admin's sidebar item and press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
+Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693; mint-tenant ddcd2ae; mint-docs e913807; website e08778a.
 
 | WO | Title | Size | Status |
 |---|---|---|---|
@@ -24,7 +25,7 @@ PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, a
 | PT-07 | Downloads: view page button, row menu `download-pdf`, Print / PDF with a template | M | **done 2026-10-13** |
 | PT-08 | Build with AI (new + change) | M | **done 2026-10-13** |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
-| PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | todo |
+| PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 
 ## PT-01 Engine — L
 **Why:** everything else prints through it.

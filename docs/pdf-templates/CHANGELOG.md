@@ -103,3 +103,14 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   listed; describe shows the gallery; get_pdf_fields lists the page's fields
   with its root; use_pdf_starter made a Receipt and named the unmatched
   slots; a broken template came back “Not saved” with both problems.
+
+## 2026-10-13 — PT-10 tenant panel, guides, website
+- mint-tenant `ddcd2ae`: every shared file copied from admin (identical to
+  admin's previous versions before the copy); panel.ts got the same two
+  edits by hand (it differs by its tenant-only header). Type-checks clean.
+- mint-docs `e913807`: `/pdf-templates` guide (the same 16 anchors the panel
+  links through docsPath), in the guides list; Pages → Row menu mentions
+  Download PDF. Production build checked.
+- Website `e08778a`: “PDF templates” feature tile (Build), changelog
+  release 2026-10-13.
+- Not deployed anywhere.
