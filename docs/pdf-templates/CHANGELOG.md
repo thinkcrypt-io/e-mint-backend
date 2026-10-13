@@ -454,3 +454,22 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   DRAFT watermark behind it, a box at x 400 / y 760) looked at as an image;
   smoke 45/45 (+3: kept and clamped, rendered, cleared). The designer's
   dragging is not yet seen in the browser — the pane was hidden.
+
+## 2026-10-13 — designer checked in headless Chrome; fixes
+- The app's browser pane was hidden (pages there don't render), so the
+  designer was driven in headless Chrome over the DevTools protocol (real
+  mouse and keys; drag-and-drop events dispatched): Place freely on a
+  nested text (stays where it was: x 455 / y 53 / 91pt); dragging it;
+  snapping its middle to the page's middle (pink guide, middle 297.5 for
+  297.64); the width handle (91 → 138); ⇧→ nudges 10pt and ⌘Z undoes it;
+  Add → Place freely, a Text tile dropped at x 300 / y 400 landed at 299 /
+  400; ⇧ / ⌘ click → "2 blocks selected", the bar and panel; ⌘G grouped
+  Right and Left in a box; the gallery's chips (All 10 · Invoices 5 ·
+  Receipts 3 · Quotations 2) after "Add 1 new built-in starter"; the
+  Categories dialog added "Delivery notes". Screenshots looked at.
+- Fixes it found: Place freely was offered only for a part's own blocks —
+  any block can come out now; dragging a placed block selected the words it
+  passed over (user-select off while editing); the click that ends a drag
+  landed on the page and unselected the block (swallowed after a drag); a
+  placed block's ↑ / ↓ say Send backward / Bring forward (their order is
+  which sits on top).
