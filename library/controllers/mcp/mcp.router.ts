@@ -19,6 +19,7 @@ import { namingFields, refIds } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
 import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
 import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
+import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
 
 /**
@@ -51,7 +52,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
+Use update_page for later changes to a page's columns, row menu (the ⋯ buttons on each row, e.g. Download invoice / Download receipt shown by status), form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -352,6 +353,7 @@ const TOOLS: ToolDef[] = [
 					table: config?.table || [],
 					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField, ...(t.via?.route && { via: t.via.route }) })),
 					linkedRelationships: config?.linkedRelationships || [],
+					rowMenu: config?.route?.menu || [],
 				},
 				linkedBy,
 			};
@@ -363,6 +365,7 @@ const TOOLS: ToolDef[] = [
 					...m.fields.map(kindLine),
 					`Table columns: ${(data.page.table || []).join(', ') || '—'}`,
 					`Tabs: ${data.page.tabs.map((t: any) => t.title).join(', ') || '—'}`,
+					`Row menu (⋯ on each row): ${rowMenuText(data.page.rowMenu) || '—'}`,
 					`Linked from: ${linkedBy.join(', ') || '—'}`,
 					`Linked Relationships (rules on save): ${
 						(data.page.linkedRelationships || [])
@@ -463,7 +466,7 @@ const TOOLS: ToolDef[] = [
 		name: 'update_page',
 		title: 'Change a page layout',
 		description:
-			'Changes an existing page: its table columns, create/edit form sections, detail-page sections, add-button title, user guidelines, Bulk upload (on/off and its options), or its Linked Relationships (rules that update the records it picks on save). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
+			'Changes an existing page: its table columns, the row menu (the ⋯ buttons on each row — Download PDF, Mark as paid, Add payment…, each shown only on the rows that match), create/edit form sections, detail-page sections, add-button title, user guidelines, Bulk upload (on/off and its options), or its Linked Relationships (rules that update the records it picks on save). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -471,6 +474,33 @@ const TOOLS: ToolDef[] = [
 			properties: {
 				route: { type: 'string', description: 'The page’s route, e.g. "leaverequests"' },
 				table: { type: 'array', items: { type: 'string' }, description: 'Column keys, in order' },
+				rowMenu: {
+					description: `The table's row menu — the ⋯ buttons on each row. Replaces the whole menu, in order: read it first with get_model (page.rowMenu) and send back what should stay. Each item: { type, title, showIf?: [{field, op: is|not|in|gt|gte|lt|lte|contains|empty|filled, value}], showMatch?: "all"|"any" (default all) — the item shows only on rows that match, ...its parameters }. Types: ${ROW_MENU_HELP}. download-pdf's template is a template id or exact name from list_pdf_templates. A paid bill gets a receipt and an unpaid one an invoice: {type:"download-pdf", title:"Download receipt", template:"<receipt id>", showIf:[{field:"status", op:"is", value:"paid"}]} and {type:"download-pdf", title:"Download invoice", template:"<invoice id>", showIf:[{field:"status", op:"not", value:"paid"}]}.`,
+					type: 'array',
+					maxItems: 30,
+					items: {
+						type: 'object',
+						required: ['type', 'title'],
+						properties: {
+							type: { type: 'string' },
+							title: { type: 'string' },
+							showIf: { type: 'array', items: { type: 'object', required: ['field', 'op'], properties: { field: { type: 'string' }, op: { type: 'string' }, value: {} } } },
+							showMatch: { type: 'string', enum: ['all', 'any'] },
+							template: { type: 'string' },
+							key: { type: 'string' },
+							value: {},
+							keyType: { type: 'string', enum: ['string', 'number', 'data-menu'] },
+							dataPath: { type: 'string' },
+							href: { type: 'string' },
+							path: { type: 'string' },
+							body: { type: 'object' },
+							route: { type: 'string' },
+							presets: { type: 'array', items: { type: 'object', required: ['field'], properties: { field: { type: 'string' }, from: { type: 'string' }, value: {}, lock: { type: 'boolean' } } } },
+							fields: { type: 'array', items: { type: 'string' } },
+							prompt: { type: 'object', properties: { title: { type: 'string' }, body: { type: 'string' }, btnText: { type: 'string' } } },
+						},
+					},
+				},
 				form: (FEATURE_SCHEMA as any).properties.steps.items.properties.form,
 				view: (FEATURE_SCHEMA as any).properties.steps.items.properties.view,
 				buttonTitle: { type: 'string' },
@@ -570,6 +600,13 @@ const TOOLS: ToolDef[] = [
 				upload = bulkUploadOf(args.bulkUpload, known);
 				if (typeof upload === 'string') return { text: upload, isError: true };
 			}
+			let menu: any[] | undefined;
+			if (args?.rowMenu !== undefined) {
+				const current = (await effectiveConfig(req.app, route))?.route?.menu || [];
+				const r = await rowMenuOf(args.rowMenu, { route, known, isRoute: r => !!routeModel(req.app, r) && !PROTECTED_ROUTES.has(r), current });
+				if (r.problems) return { text: ['The row menu wasn’t saved:', ...r.problems.map(p => `- ${p}`)].join('\n'), isError: true };
+				menu = r.items;
+			}
 			let noGuidelines = false;
 			try {
 				await publishConfigPatch(
@@ -607,6 +644,7 @@ const TOOLS: ToolDef[] = [
 							const { bulkUpload, ...rest } = next.route || {};
 							next.route = upload ? { ...rest, bulkUpload: upload } : rest;
 						}
+						if (menu) next.route = { ...(next.route || {}), menu };
 						// Checked like a builder publish (configDraftSchema + linkedCheck): a field or link that doesn't fit refuses it.
 						if (args?.linkedRelationships === false || (Array.isArray(args?.linkedRelationships) && !args.linkedRelationships.length)) delete next.linkedRelationships;
 						else if (Array.isArray(args?.linkedRelationships)) next.linkedRelationships = args.linkedRelationships;
@@ -618,7 +656,7 @@ const TOOLS: ToolDef[] = [
 				return { text: e?.message || 'Could not change the page', isError: true };
 			}
 			return {
-				text: `Updated /${route}: ${caller.page(route)}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}${
+				text: `Updated /${route}: ${caller.page(route)}${menu ? `\nRow menu: ${rowMenuText(menu) || 'empty'}` : ''}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}${
 					noGuidelines ? '\nGuidelines not saved: this page has no table header to show them from.' : ''
 				}`,
 			};

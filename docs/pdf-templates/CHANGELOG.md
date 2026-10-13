@@ -501,3 +501,27 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   try didn't grow: the width cap measured the logo's own place in the row
   (as wide as the logo) — now what holds it. Invoices page: breadcrumb then
   the title 12px under it. Copied to mint-tenant (same files at HEAD).
+
+## 2026-10-14 — PT-32 Row menu over MCP
+- The user asked for the MCP to set a page's table row buttons (Bills: a paid
+  bill offers "Download receipt", a due one "Download invoice"). The row menu
+  (config `route.menu`, with `showIf` / `showMatch` from LU-10) could only be
+  edited in the route builder.
+- `update_page` takes `rowMenu`: the whole menu, in order, each item
+  `{ type, title, showIf?, showMatch?, …parameters }`. New
+  `library/controllers/mcp/rowMenu.ts` checks it the way the builder's
+  `validateMenu` does (types and required parameters from the admin's
+  `menuTypes.ts` ROW_MENU_TYPES — keep the two in step), plus: field
+  parameters and `showIf` fields must be the page's, `showIf` ops are
+  `LOCK_OPS`, `add-related` routes must exist, and a `download-pdf` template
+  may be given by id or exact name (stored as the id; refused when the page has
+  no such template). A custom item from the code config (a type the builder
+  doesn't offer) is only kept as it already is. Any problem refuses the whole
+  menu; nothing is published. `[]` empties the menu.
+- `get_model` returns `page.rowMenu` and a "Row menu" line saying when each
+  item shows. The server instructions and update_page's description mention it.
+- Smoke `scripts/row-menu/smoke.mjs` (private server :5031, mongod :27991):
+  16/16 — refusals (unknown type, missing template, unknown showIf field, bad
+  op, missing key), the menu stored in order, template name → id, showIf kept,
+  get_model, a RouteVersion kept, `[]` clears.
+- Guides: admin `/docs/builder` (MCP tools table) and mint-docs `/connect-ai`.
