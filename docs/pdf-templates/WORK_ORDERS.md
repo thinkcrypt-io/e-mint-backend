@@ -11,7 +11,7 @@ guides (admin `/docs/pdf-templates`, mint-docs) and the marketing site
 Plan written 2026-10-13 (user asked: visually designed invoice / bill / receipt
 PDFs with `{{invoice.total}}`-style data, pre-built templates added from the
 admin panel, users edit / build their own / let AI build, Download makes the
-PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys; then run `node scripts/seedPdfTemplates.js` for the super admin's sidebar item and press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
+PDF). **PT-01…PT-08 done** — engine, API, record data, starters + gallery, admin list + designer, downloads (record page, row menu, Print / PDF), Build with AI. Checked in the browser on the private server (:5021 / admin-5021 :3022). **PT-09 done** (MCP tools). **PT-10 done** — all ten work orders done. **PT-11 done** — AI now only through the user's own AI over MCP (no ANTHROPIC_API_KEY on our side). Nothing is deployed: the backend (Heroku), admin + tenant panels and docs/website need their deploys. `node scripts/seedPdfTemplates.js` was run on production 2026-10-13 (the super admin's sidebar item is in); after deploy, optionally press “Add the built-in starters” on the Gallery tab (or leave the code starters showing).
 Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693; mint-tenant ddcd2ae; mint-docs e913807; website e08778a.
 
 | WO | Title | Size | Status |
@@ -23,7 +23,8 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-05 | Admin: /pdf-templates list, gallery, business settings | M | **done 2026-10-13** |
 | PT-06 | Admin: the designer | L | **done 2026-10-13** |
 | PT-07 | Downloads: view page button, row menu `download-pdf`, Print / PDF with a template | M | **done 2026-10-13** |
-| PT-08 | Build with AI (new + change) | M | **done 2026-10-13** |
+| PT-08 | Build with AI (new + change) — now through the user's own AI over MCP (PT-11) | M | **done 2026-10-13** |
+| PT-11 | Server-side AI removed; Build / Change with your AI write the MCP prompt | S | **done 2026-10-13** |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 
@@ -76,7 +77,12 @@ table Print / PDF → *With a template* for ticked rows.
 
 ## PT-08 AI — M
 `POST /pdf-templates/ai { prompt, route, template? }`: forced `build_template` tool with the field tree
-in the prompt, up to 3 repair rounds through `normalizeTemplate` + a test render.
+in the prompt, up to 3 repair rounds through `normalizeTemplate` + a test render. **Replaced by PT-11.**
+
+## PT-11 Your own AI only — S
+The user asked to follow the MCP approach: `POST /pdf-templates/ai` and `ai.controller.ts` removed; the panel's
+"Build / Change with your AI" writes a prompt (route, template id, which MCP tools) to paste into the user's own AI,
+links to Connect your AI, and refetches what it saved.
 
 ## PT-09 MCP — S
 Builder MCP tools: `list_pdf_templates`, `get_pdf_template`, `save_pdf_template`, `describe_pdf_templates`.

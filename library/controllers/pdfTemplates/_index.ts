@@ -1,5 +1,4 @@
 import express from 'express';
-import { aiBuildTemplate } from './ai.controller.js';
 import { adminPermissions, adminProtect } from '../../../middleware/index.js';
 import {
 	addStarters,
@@ -46,7 +45,6 @@ export const makePdfTemplatesRouter = ({ read, edit }: { read: any[]; edit: any[
 	router.post('/render', ...read, safe(renderSample));
 	router.post('/guess', ...read, ...edit, safe(guess));
 	router.post('/use', ...read, ...edit, safe(useTemplate));
-	router.post('/ai', ...read, ...edit, safe(aiBuildTemplate));
 	router.post('/', ...read, ...edit, safe(createTemplate));
 	router.get('/:id', ...read, safe(getTemplate));
 	router.put('/:id', ...read, ...edit, safe(updateTemplate));

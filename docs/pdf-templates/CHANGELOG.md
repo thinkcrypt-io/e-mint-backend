@@ -114,3 +114,17 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
 - Website `e08778a`: “PDF templates” feature tile (Build), changelog
   release 2026-10-13.
 - Not deployed anywhere.
+
+## 2026-10-13 — PT-11 AI through the user's own AI only
+- The user asked to follow the MCP approach instead of the server calling
+  Anthropic. Removed `controllers/pdfTemplates/ai.controller.ts` and
+  `POST /pdf-templates/ai` (the admin's `aiPdfTemplate` endpoint too); the
+  Anthropic SDK stays for the model wizard.
+- Admin + mint-tenant `AiDialog.tsx` → "Build / Change with your AI": pick the
+  page, say what it should look like, copy a prompt that names the route (and
+  the template id when changing) and the MCP tools to use; "Connect your AI"
+  links to /model-builder/connect; "Show what it made" refetches the list,
+  "Load its changes" refetches the designer's template (off while unsaved).
+- README D12, guides (admin docs + mint-docs #ai) and the website changelog
+  line updated.
+- Checked: backend + admin typecheck; dialog in the browser.
