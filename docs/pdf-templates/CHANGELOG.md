@@ -614,3 +614,21 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   templates, not the draft copy; Publish → "Published — It’s offered on
   /ptbillmv6ryun2’s Download PDF now", the record page then offered three;
   Unpublish asked first and went back to Draft; the list showed the badges.
+
+## 2026-10-14 — Layers: drag like Figma
+- The user: in the designer's left sidebar, layers can be rearranged by
+  dragging up and down and put into another container.
+- `designer/Outline.tsx`: each row is its own drop target — top half above,
+  bottom half below (a blue line at the row's indent); the middle of a box /
+  row / columns row puts it inside at the end (the row outlined), its bottom
+  edge first inside (its blocks are listed under it). "Column 2" / "Inside"
+  lines and a part's title (and an empty part's hint) take it at their end.
+  Refused: into itself or its own blocks, between the flow and placed-freely
+  blocks, a page break outside the body's top level. Dragging near the
+  panel's edge scrolls the list. setData for Firefox. Replaces the thin 2px
+  drop lines between rows.
+- Checked in headless Chrome as the made-up super admin with real drag
+  events on "Flex check": reorder (line shown, order changed), into a box
+  (outlined, inside on the page), back out above it, a box onto its own child
+  (refused, nothing changed), under a box row (first inside), scrolling
+  along (0 → 110).
