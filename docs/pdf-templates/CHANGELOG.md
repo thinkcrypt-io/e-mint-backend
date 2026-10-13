@@ -525,3 +525,19 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   op, missing key), the menu stored in order, template name → id, showIf kept,
   get_model, a RouteVersion kept, `[]` clears.
 - Guides: admin `/docs/builder` (MCP tools table) and mint-docs `/connect-ai`.
+
+## 2026-10-14 — PT-33 Table line colour
+- The user wanted the bill and receipt in white with black type, a near-black
+  table heading, dark lines and a black footer. Table lines were always light
+  grey (`HAIRLINE`) in the renderer and the designer.
+- Tables take `lineColor` (schema.ts `color()`), used for the lines between
+  rows, the grid, and the line under the heading (which stays the text colour
+  when left out). render.ts and the designer's `PdfPage.tsx` (admin + tenant,
+  same file) read it; Properties → Table → Look → **Line colour** (hidden when
+  Lines is None). MCP guide text lists it; guides mention it.
+- Checked by rendering the two Thinkcrypt templates with the compiled engine
+  (#2a2a2a lines, PNGs via sips); tsc clean for the touched files.
+- Thinkcrypt Admin's **Invoice — Mono** (6ace81c79ea0618e13cd7ddd) and
+  **Receipt — Mono** (6ace81e39ea0618e13cd7dfc) were saved over MCP with it;
+  production (not yet deployed) dropped `lineColor`, so re-save them after
+  the deploy.

@@ -257,6 +257,8 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 				...(color(b.headerColor) && { headerColor: color(b.headerColor) }),
 				...(b.zebra !== undefined && { zebra: bool(b.zebra) }),
 				lines: oneOf(b.lines, ['none', 'rows', 'grid'] as const, 'rows'),
+				// PT-33: the lines' colour (light grey when left out).
+				...(color(b.lineColor) && { lineColor: color(b.lineColor) }),
 				...(b.emptyText !== undefined && { emptyText: textOf(b.emptyText, c, 'empty text') }),
 				...(b.pad !== undefined && { pad: num(b.pad, 0, 20, 5) }),
 			};

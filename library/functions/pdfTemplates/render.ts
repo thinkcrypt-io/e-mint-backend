@@ -584,14 +584,14 @@ const layoutTableRows = (ctx: Ctx, b: any, width: number): TableRows => {
 					l.draw(cx + pad, y + pad);
 					if (grid) {
 						doc.save();
-						doc.rect(cx, y, widths[i], h).lineWidth(0.5).stroke(HAIRLINE);
+						doc.rect(cx, y, widths[i], h).lineWidth(0.5).stroke(b.lineColor || HAIRLINE);
 						doc.restore();
 					}
 					cx += widths[i];
 				});
 				if (lines && !grid) {
 					doc.save();
-					doc.moveTo(x, y + h).lineTo(x + width, y + h).lineWidth(opts.header ? 0.75 : 0.5).stroke(opts.header ? style.color : HAIRLINE);
+					doc.moveTo(x, y + h).lineTo(x + width, y + h).lineWidth(opts.header ? 0.75 : 0.5).stroke(opts.header ? b.lineColor || style.color : b.lineColor || HAIRLINE);
 					doc.restore();
 				}
 			},
