@@ -1,4 +1,4 @@
-// PDF templates smoke test (backend/docs/pdf-templates, PT-02…PT-04).
+// PDF templates smoke test (backend/docs/pdf-templates, PT-02…PT-04, PT-12, PT-18, PT-19).
 // Runs against a throwaway local server + database only (never a shared one):
 //   mongod --dbpath <scratch>/db --port 27997
 //   npx tsc --outDir <scratch>/be; in <scratch>/be symlink node_modules, .env, public, docs from backend/, then
@@ -166,6 +166,31 @@ ok('preview data keeps the business details as they are (for the designer)', r.b
 r = await call('POST', '/pdf-templates/render', { template: t1._id, dummy: true }, T);
 ok('preview PDF', r.status === 200 && r.pdf?.length > 5000);
 save('preview', r);
+
+// -------------------------------------------------- flex layout (D19)
+const flexTpl = {
+	...t1,
+	_id: undefined,
+	name: 'Flex layout',
+	isDefault: false,
+	body: [
+		{ type: 'box', direction: 'row', valign: 'stretch', justify: 'between', gap: 6, height: 60, blocks: [{ type: 'text', text: 'A' }, { type: 'spacer', grow: 2 }, { type: 'box', basis: 120, blocks: [{ type: 'text', text: 'B' }] }] },
+		{ type: 'spacer', grow: 1 },
+		{ type: 'text', text: 'At the bottom of the page' },
+	],
+};
+r = await call('POST', '/pdf-templates', flexTpl, T);
+const fb = r.body?.body || [];
+ok(
+	'flex layout kept: row, gap, stretch, between, height, grow, basis',
+	r.status === 201 && fb[0]?.direction === 'row' && fb[0]?.valign === 'stretch' && fb[0]?.justify === 'between' && fb[0]?.gap === 6 && fb[0]?.height === 60 && fb[0]?.blocks?.[1]?.grow === 2 && fb[0]?.blocks?.[2]?.basis === 120 && fb[1]?.grow === 1,
+	JSON.stringify(fb).slice(0, 300)
+);
+const flexId = r.body?._id;
+r = await call('POST', '/pdf-templates/render', { template: flexId, dummy: true }, T);
+ok('flex layout renders', isPdf(r));
+save('flex', r);
+await call('DELETE', `/pdf-templates/${flexId}`, null, T);
 
 // ------------------------------------------------------------ download
 r = await call('POST', `${B}/export/template`, { ids: [b1._id], tz: 'Asia/Dhaka' }, T);

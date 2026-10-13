@@ -185,15 +185,33 @@ const styleFor = (ctx: Ctx, b: any, over: Partial<TextStyle> = {}): TextStyle =>
 	...over,
 });
 
-/** Blocks one under another. */
-const stack = (ctx: Ctx, blocks: Block[], width: number): Laid => {
-	const parts: { mt: number; laid: Laid; mb: number }[] = [];
+/** How much of the free space a block takes (D19); 0 = none. */
+const growOf = (b: Block) => (Number(b.grow) > 0 ? Number(b.grow) : 0);
+
+/**
+ * Blocks one under another. With `minHeight` taller than they are, the
+ * blocks set to fill share the spare height: a box grows to it, anything
+ * else gets it as room below.
+ */
+const stack = (ctx: Ctx, blocks: Block[], width: number, minHeight = 0): Laid => {
+	const parts: { b: Block; mt: number; laid: Laid; mb: number }[] = [];
 	for (const b of blocks || []) {
 		if (b.type === 'pageBreak' || !visible(b, ctx.scope)) continue;
-		parts.push({ mt: b.mt || 0, laid: layoutBlock(ctx, b, width), mb: b.mb || 0 });
+		parts.push({ b, mt: b.mt || 0, laid: layoutBlock(ctx, b, width), mb: b.mb || 0 });
+	}
+	const natural = parts.reduce((h, p) => h + p.mt + p.laid.height + p.mb, 0);
+	const growth = parts.reduce((g, p) => g + growOf(p.b), 0);
+	if (minHeight > natural && growth) {
+		const free = minHeight - natural;
+		for (const p of parts) {
+			const g = growOf(p.b);
+			if (!g) continue;
+			const h = p.laid.height + (free * g) / growth;
+			p.laid = p.b.type === 'box' ? layoutBox(ctx, p.b, width, h) : { height: h, draw: p.laid.draw };
+		}
 	}
 	return {
-		height: parts.reduce((h, p) => h + p.mt + p.laid.height + p.mb, 0),
+		height: Math.max(minHeight, parts.reduce((h, p) => h + p.mt + p.laid.height + p.mb, 0)),
 		draw: (x, y) => {
 			let cy = y;
 			for (const p of parts) {
@@ -201,6 +219,95 @@ const stack = (ctx: Ctx, blocks: Block[], width: number): Laid => {
 				p.laid.draw(x, cy);
 				cy += p.laid.height + p.mb;
 			}
+		},
+	};
+};
+
+/** Blocks with no width of their own: in a row they fill unless given one. */
+const FILLERS = new Set(['fields', 'table', 'divider', 'columns']);
+
+/** A block's share of a row's free space: its own `grow`, or 1 for a filler with no fixed width. */
+const rowGrow = (b: Block) => growOf(b) || (!b.basis && FILLERS.has(b.type) ? 1 : 0);
+
+/**
+ * How wide a block wants to be in a row, at most `max`: text its widest
+ * line, an image its size, a space its size, a box its contents.
+ */
+const naturalWidth = (ctx: Ctx, b: Block, max: number): number => {
+	if (b.basis) return Math.min(b.basis, max);
+	switch (b.type) {
+		case 'text': {
+			const t = layoutText(ctx, fill(b.text || '', ctx.scope), styleFor(ctx, b), max);
+			return Math.min(max, Math.max(0, ...t.lines.map(l => l.width)) + 0.5);
+		}
+		case 'image': {
+			const src = valueOf(b.src || '', ctx.scope);
+			const buf = typeof src === 'string' ? ctx.images.get(src.trim()) : null;
+			const size = buf ? imageSize(ctx, buf, b, max) : null;
+			return size ? size.w : 0;
+		}
+		case 'spacer':
+			return Math.min(max, b.height ?? 12);
+		case 'box': {
+			const edge = 2 * ((b.pad ?? 10) + (b.border || 0));
+			const inner = Math.max(4, max - edge);
+			const kids = (b.blocks || []).filter((k: Block) => k.type !== 'pageBreak' && visible(k, ctx.scope));
+			const widths = kids.map((k: Block) => naturalWidth(ctx, k, inner));
+			const content = b.direction === 'row' ? widths.reduce((t: number, w: number) => t + w, 0) + (b.gap ?? 8) * Math.max(0, kids.length - 1) : Math.max(0, ...widths);
+			return Math.min(max, content + edge);
+		}
+		case 'pageBreak':
+			return 0;
+	}
+	return max;
+};
+
+/**
+ * A row (D19), like flexbox: fixed widths, then content widths (shrunk when
+ * they don't fit), then the free space shared by the blocks that fill — or,
+ * when none does, spread by `justify`. Height: the tallest, or `minHeight`.
+ */
+const row = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
+	const kids: Block[] = (b.blocks || []).filter((k: Block) => k.type !== 'pageBreak' && visible(k, ctx.scope));
+	if (!kids.length) return { height: minHeight, draw: () => {} };
+	let gap = b.gap ?? 8;
+	const avail = Math.max(0, width - gap * (kids.length - 1));
+	const grows = kids.map(rowGrow);
+	const widths = kids.map((k, i) => (grows[i] ? 0 : naturalWidth(ctx, k, avail)));
+	let used = widths.reduce((t, w) => t + w, 0);
+	if (used > avail) {
+		// Too wide: content widths give way first, fixed ones only if that isn't enough.
+		const auto = kids.map((k, i) => !grows[i] && !k.basis);
+		const autoSum = widths.reduce((t, w, i) => t + (auto[i] ? w : 0), 0);
+		const k1 = autoSum ? Math.max(0, autoSum - (used - avail)) / autoSum : 1;
+		widths.forEach((w, i) => auto[i] && (widths[i] = w * k1));
+		used = widths.reduce((t, w) => t + w, 0);
+		if (used > avail) widths.forEach((w, i) => (widths[i] = (w * avail) / used));
+		used = Math.min(used, avail);
+	}
+	const free = Math.max(0, avail - used);
+	const growth = grows.reduce((t, g) => t + g, 0);
+	let lead = 0;
+	if (growth) widths.forEach((w, i) => (widths[i] = w + (free * grows[i]) / growth));
+	else if (b.justify === 'center') lead = free / 2;
+	else if (b.justify === 'end') lead = free;
+	else if (b.justify === 'between' && kids.length > 1) gap += free / (kids.length - 1);
+
+	let laid = kids.map((k, i) => layoutBlock(ctx, k, Math.max(1, widths[i]), 'row'));
+	const outer = (i: number) => (kids[i].mt || 0) + laid[i].height + (kids[i].mb || 0);
+	const height = Math.max(minHeight, ...kids.map((_, i) => outer(i)));
+	// Stretch: boxes take the row's height.
+	if (b.valign === 'stretch') laid = laid.map((l, i) => (kids[i].type === 'box' ? layoutBox(ctx, kids[i], Math.max(1, widths[i]), height - (kids[i].mt || 0) - (kids[i].mb || 0)) : l));
+	return {
+		height,
+		draw: (x, y) => {
+			let cx = x + lead;
+			kids.forEach((k, i) => {
+				const room = height - outer(i);
+				const off = b.valign === 'middle' ? room / 2 : b.valign === 'bottom' ? room : 0;
+				laid[i].draw(cx, y + off + (k.mt || 0));
+				cx += widths[i] + gap;
+			});
 		},
 	};
 };
@@ -265,11 +372,15 @@ const layoutColumns = (ctx: Ctx, b: any, width: number): Laid => {
 	};
 };
 
-const layoutBox = (ctx: Ctx, b: any, width: number): Laid => {
+/** A box: a stack, or a row (D19); at least its own `height` or `minHeight` tall. */
+const layoutBox = (ctx: Ctx, b: any, width: number, minHeight = 0): Laid => {
 	const pad = b.pad ?? 10;
 	const border = b.border || 0;
-	const inner = stack(ctx, b.blocks, Math.max(4, width - 2 * (pad + border)));
-	const height = inner.height + 2 * (pad + border);
+	const edge = 2 * (pad + border);
+	const innerW = Math.max(4, width - edge);
+	const innerMin = Math.max(0, Math.max(b.height || 0, minHeight) - edge);
+	const inner = b.direction === 'row' ? row(ctx, b, innerW, innerMin) : withGap(ctx, b, innerW, innerMin);
+	const height = inner.height + edge;
 	return {
 		height,
 		draw: (x, y) => {
@@ -291,6 +402,20 @@ const layoutBox = (ctx: Ctx, b: any, width: number): Laid => {
 			inner.draw(x + pad + border, y + pad + border);
 		},
 	};
+};
+
+/** A stacked box's blocks with its `gap` between them (as space above each but the first). */
+const withGap = (ctx: Ctx, b: any, width: number, minHeight: number): Laid => {
+	const gap = b.gap || 0;
+	if (!gap) return stack(ctx, b.blocks, width, minHeight);
+	let first = true;
+	const spaced = (b.blocks || []).map((k: Block) => {
+		if (k.type === 'pageBreak' || !visible(k, ctx.scope)) return k;
+		const out = first ? k : { ...k, mt: (k.mt || 0) + gap };
+		first = false;
+		return out;
+	});
+	return stack(ctx, spaced, width, minHeight);
 };
 
 const layoutDivider = (ctx: Ctx, b: any, width: number): Laid => {
@@ -459,7 +584,8 @@ const layoutTable = (ctx: Ctx, b: any, width: number): Laid => {
 	};
 };
 
-const layoutBlock = (ctx: Ctx, b: Block, width: number): Laid => {
+/** `flow`: the direction of the list it sits in — a Space is a height in a stack and a width in a row. */
+const layoutBlock = (ctx: Ctx, b: Block, width: number, flow: 'column' | 'row' = 'column'): Laid => {
 	switch (b.type) {
 		case 'text':
 			return layoutText(ctx, fill(b.text || '', ctx.scope), styleFor(ctx, b), width);
@@ -476,7 +602,7 @@ const layoutBlock = (ctx: Ctx, b: Block, width: number): Laid => {
 		case 'divider':
 			return layoutDivider(ctx, b, width);
 		case 'spacer':
-			return { height: b.height ?? 12, draw: () => {} };
+			return { height: flow === 'row' ? 0 : b.height ?? 12, draw: () => {} };
 	}
 	return NOTHING;
 };
@@ -552,7 +678,25 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 		newPage();
 		let full = false;
 
-		for (const b of template.body) {
+		/** What the body blocks from `from` up to the next page break need, the filling ones at their own size (D19). */
+		const restOf = (from: number) => {
+			let h = 0;
+			let growth = 0;
+			for (let i = from; i < template.body.length; i++) {
+				const k = template.body[i];
+				if (!visible(k, scope)) continue;
+				if (k.type === 'pageBreak') break;
+				growth += growOf(k);
+				h += (k.mt || 0) + (k.mb || 0);
+				if (k.type === 'table') {
+					const t = layoutTableRows(ctx, k, width);
+					h += t.header.height + t.rows.reduce((s, r) => s + r.height, 0);
+				} else h += layoutBlock(ctx, k, width).height;
+			}
+			return { h, growth };
+		};
+
+		for (const [bi, b] of template.body.entries()) {
 			if (full) break;
 			if (!visible(b, scope)) continue;
 			if (b.type === 'pageBreak') {
@@ -582,7 +726,17 @@ export const renderPdf = async ({ template, records, settings, tz }: RenderInput
 					y += r.height;
 				}
 			} else {
-				const laid = layoutBlock(ctx, b, width);
+				let laid = layoutBlock(ctx, b, width);
+				const g = growOf(b);
+				if (g) {
+					// Fill: the room left on this page once everything after it (to the next page break) is in.
+					const rest = restOf(bi);
+					const free = bottom - (y - (b.mt || 0)) - rest.h;
+					if (free > 0) {
+						const h = laid.height + (free * g) / rest.growth;
+						laid = b.type === 'box' ? layoutBox(ctx, b, width, h) : { height: h, draw: laid.draw };
+					}
+				}
 				if (y + laid.height > bottom && y > top && !newPage()) {
 					full = true;
 					break;

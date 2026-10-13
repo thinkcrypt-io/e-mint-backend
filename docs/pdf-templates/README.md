@@ -59,6 +59,8 @@ and every template reads them as `{{business.name}}` and through `money` /
 | D16 | **Saved texts** (terms and conditions, a return policy, a "no signature required" line someone reuses): up to 30 per project in PdfSettings `texts` [{key, label, text}], printed as `{{texts.<key>}}`, **bold** and new lines kept, the fields inside filled once per record. Not a new "ProjectContent" model: PdfSettings is already the per-project "what every template prints" document, loaded on every render. MCP: save_pdf_text. Words that never change stay plain text blocks. | Edit the terms once, every template changes. |
 | D17 | **The designer is a full-page tool**: no sidebar (the menu button opens it), one toolbar, left panel Add (blocks + ready-made pieces) / Layers, the page in the middle with a move / duplicate / delete bar on the selected block, right panel the selected block — or the document (name, page, paper, look, lists) when nothing is. Empty business details and saved texts show on the page as "Upload logo", "Add address", "Write Terms & conditions" — click to fill them in. | The user: full page, better organised, upload the logo from the page. |
 | D18 | **Organization-level uploads**: /tenant/api/upload and /media (manage-organization) store into the organization's shared library, so the organization's logo can be uploaded outside a project. | The org settings page had no way to upload a logo. |
+| D19 | **Flexible layout, like CSS flex** (2026-10-13, user: "boxed, flex like … choose if the space is flex and takes the whole white space"). A box lays its blocks out as a **stack** (one under another, default) or a **row** (`direction: 'row'`, side by side) with a `gap`, row alignment `valign` (top / middle / bottom / stretch), `justify` (start / centre / end / space between — used when nothing fills) and an optional minimum `height`. Any block can **fill the free space** (`grow`, a share) or, in a row, have a **fixed width** (`basis`, pt); otherwise it fits its content (text its widest line, an image its size, a box its contents; label rows, tables, lines and columns have no content width, so they fill). A **Space** is `height` pt tall in a stack and that wide in a row; set to fill, it takes the room left — in a row the width, in a box with a height the height, and in the page body the room left on the page, so what follows sits at the bottom of that page (when it fits there). Header and footer have no room to fill. The Columns block stays (fixed shares). | Signatures pushed right, a total pushed to the bottom, a logo and a title on one line with the space between — without counting points. Same rules in the PDF and the designer's HTML (flexbox). |
+| D20 | **Moving things on the page**: blocks drag on the page itself — before / after another block (left / right in a row), into a box or a column (where the line shows), and from the Add panel straight onto the page. ⌘C / ⌘X / ⌘V copy, cut and paste the selected block; a paste goes **inside** a selected box or column block, otherwise after the selected block. The copy is also on the system clipboard as JSON, so it pastes into another template or tab. | The user: "an object can be pasted inside a container or box, dragged left to right". The Layers panel kept its drag and drop. |
 
 ## 3. The template
 
@@ -80,18 +82,18 @@ type PdfTemplate = {
 ```
 
 Blocks (every block: `id`, `type`, optional `showIf` conditions + `showMatch`,
-`mt` / `mb` space above / below):
+`mt` / `mb` space above / below, `grow` fill the free space (a share), `basis` fixed width in a row, pt):
 
 | type | what | main props |
 |---|---|---|
 | `text` | a paragraph; `**bold**`, line breaks, tokens | `text, size, bold, italic, color, align, upper, spacing, lineHeight, bg, pad` |
 | `image` | logo, signature, a record's photo | `src` (url or token), `width, height, align, fit` |
 | `columns` | side by side | `columns: [{ width (share), blocks, valign }], gap` |
-| `box` | a framed / shaded group | `blocks, pad, bg, border, borderColor, radius` |
+| `box` | a framed / shaded group; a stack or a row (D19) | `blocks, pad, bg, border, borderColor, radius, direction ('row'), gap, valign, justify, height` |
 | `table` | a list: an array field or a declared list | `rows` (token path), `columns: [{ header, value, width, align }]`, `size, headerBg, headerColor, zebra, lines, emptyText` |
 | `fields` | label : value rows (meta, totals) | `rows: [{ label, value, bold, big, bar }], labelWidth, align, hideEmpty` |
 | `divider` | a line | `color, thickness, dashed` |
-| `spacer` | blank space | `height` |
+| `spacer` | blank space; can fill the free space (D19) | `height` (its width in a row), `grow` |
 | `pageBreak` | next page | — |
 
 Conditions are the platform's (`is, not, in, gt, gte, lt, lte, contains,

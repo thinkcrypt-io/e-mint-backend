@@ -151,6 +151,9 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 		type,
 		...(b.mt !== undefined && { mt: num(b.mt, 0, 200, 0) }),
 		...(b.mb !== undefined && { mb: num(b.mb, 0, 200, 0) }),
+		// D19: fill the free space (a share), or a fixed width in a row (pt).
+		...(Number(b.grow) > 0 && { grow: num(b.grow, 0.1, 12, 1) }),
+		...(Number(b.basis) > 0 && { basis: num(b.basis, 4, 1200, 100) }),
 	};
 	const showIf = conditions(b.showIf);
 	if (showIf) {
@@ -202,6 +205,12 @@ const blockOf = (b: any, ctx: Ctx, depth: number): Block | null => {
 				...(b.border !== undefined && { border: num(b.border, 0, 8, 0) }),
 				...(color(b.borderColor) && { borderColor: color(b.borderColor) }),
 				...(b.radius !== undefined && { radius: num(b.radius, 0, 40, 0) }),
+				// D19: a stack (default) or a row, like flexbox.
+				...(b.direction === 'row' && { direction: 'row' }),
+				...(b.gap !== undefined && { gap: num(b.gap, 0, 120, 0) }),
+				...(b.valign !== undefined && b.valign !== 'top' && { valign: oneOf(b.valign, ['top', 'middle', 'bottom', 'stretch'] as const, 'top') }),
+				...(b.justify !== undefined && b.justify !== 'start' && { justify: oneOf(b.justify, ['start', 'center', 'end', 'between'] as const, 'start') }),
+				...(Number(b.height) > 0 && { height: num(b.height, 4, 1600, 40) }),
 			};
 		case 'table': {
 			const rows = str(b.rows, 120).trim().replace(/^\{\{\s*|\s*\}\}$/g, '');

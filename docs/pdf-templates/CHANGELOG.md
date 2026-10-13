@@ -277,3 +277,25 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   the preview PDF). 29/29; tenancy-smoke/business.mjs 16/16 on the final
   backend. mint-tenant typechecks whole (its copies match admin's).
 - Guides and the website were updated with each work order (PT-12…PT-18).
+
+## 2026-10-13 — PT-19 flexible layout (D19)
+- The user asked for boxes that work like flex and a Space that can take the
+  whole white space. Plan: README D19 / D20, WORK_ORDERS PT-19…PT-22.
+- `schema.ts`: boxes keep `direction` ('row'), `gap`, `valign` (top / middle /
+  bottom / stretch), `justify` (start / center / end / between), `height`
+  (minimum); any block keeps `grow` (share of the free space) and `basis`
+  (fixed width in a row).
+- `render.ts`: `row()` — fixed, then content widths (text's widest line, an
+  image's size, a box's contents; shrunk when too wide), then the free space
+  shared by `grow` or spread by `justify`; stretch makes boxes the row's
+  height. `stack()` shares a box's spare height among the blocks that fill;
+  a stacked box's `gap`. In the body a filling block gets the room left on
+  its page after everything up to the next page break, so a signature sits
+  at the bottom of the page. A Space is a width in a row.
+- Admin `PdfPage.tsx`: the same rules with flexbox (the body is a flex
+  column, so a filling Space reaches the page bottom); a filling Space is
+  hatched in the designer.
+- Checked: a test page (logo · fill · title row, space-between, centred,
+  stretch + fixed 120pt, a 120pt box with a filling space, a body space
+  putting the signature at the page bottom) rendered and looked at as an
+  image; smoke 31/31 (two new checks: the props are kept, the PDF renders).

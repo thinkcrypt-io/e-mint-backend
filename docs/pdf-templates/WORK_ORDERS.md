@@ -32,6 +32,10 @@ Commits: backend 94312255, c1ff7cbe, 45918a31, 37748ca3 (+ this); admin 4046693;
 | PT-16 | Designer full page + reorganised (D17): toolbar, Add / Layers, Document panel, block bar, placeholders, ready-made pieces (computer-generated note, signature, terms) | L | **done 2026-10-13** |
 | PT-17 | Guides (admin docs + mint-docs), website, mint-tenant copies, smoke | M | **done 2026-10-13** |
 | PT-18 | Preview: a button on every template (list, gallery, designer) opening the real PDF in a new tab, every field filled with dummy data made from the page's fields when the template's sample doesn't cover them (user, 2026-10-13) | M | **done 2026-10-13** |
+| PT-19 | Flexible layout engine (D19): box stack / row, gap, valign, justify, min height; `grow` + `basis` on any block; Space fills (in a row, a box, the page body); schema, pdfkit renderer, the designer's HTML page, smoke | M | **done 2026-10-13** |
+| PT-20 | Designer controls for D19: Box → Layout (Stack / Row), gap, align, spread, min height; "Width in the row" (fit / fill / fixed); Space → size + "Fill the free space"; Row and "Push to the bottom" in Add; ← → in a row | M | open |
+| PT-21 | Moving on the page (D20): drag blocks on the page (before / after, left / right in a row, into boxes and columns, from the Add panel), ⌘C / ⌘X / ⌘V with paste inside a box or column, block bar "Paste inside" | M | open |
+| PT-22 | Guides (admin docs + mint-docs), website, MCP guide text, mint-tenant copies | S | open |
 | PT-09 | MCP tools (list / get / save / render) | S | **done 2026-10-13** |
 | PT-10 | Tenant panel (mint-tenant), guides, website, smoke script | M | **done 2026-10-13** |
 
@@ -97,6 +101,24 @@ Builder MCP tools: `list_pdf_templates`, `get_pdf_template`, `save_pdf_template`
 ## PT-10 Tenant + guides + site + smoke — M
 mint-tenant copies of every shared admin file, mint-docs guide, website feature + changelog,
 `scripts/pdf-templates/smoke.mjs`.
+
+## PT-19 Flexible layout engine — M
+**Why:** the user wants flex-like boxes and a Space that takes the whole white space (D19).
+**Files:** `library/functions/pdfTemplates/{schema,render}.ts`; admin `components/library/pdf/{PdfPage,types}.tsx`; `scripts/pdf-templates/smoke.mjs`.
+**Change:** schema keeps `direction` ('row'), `gap`, `valign`, `justify`, `height` on boxes and `grow`, `basis` on any block; the renderer lays rows out (fixed → content widths, shrunk when too wide → the free space shared by `grow`, else spread by `justify`), stretches boxes in a row, shares a box's spare height, and in the body gives a filling block the room left on its page; the designer's HTML does the same with flexbox.
+**Done when:** smoke renders a row (logo · fill · title), a box with a height and a filling space, and a body with a filling space that puts the signature at the bottom of page 1 — checked as images.
+
+## PT-20 Designer controls — M
+**Files:** `_components/designer/{Properties,AddPanel,Outline}.tsx`, `[id]/page.tsx`.
+**Change:** Box → Layout (Stack / Row), Gap, Align, Spread, Min height; any block in a row → Width (Fit / Fill / Fixed pt); a box or space in a stack → Fill the free space; Space → Size; Add → Row, Push to the bottom; the block bar and properties move ← → in a row.
+
+## PT-21 Moving on the page — M
+**Files:** `components/library/pdf/PdfPage.tsx`, `[id]/page.tsx`, `_components/designer/{AddPanel,dnd}.ts(x)`.
+**Change:** draggable blocks on the page; the drop place from the pointer (before / after along the parent's direction, inside a box / column / an empty part) with a line where it lands; Add tiles drag onto the page; ⌘C / ⌘X / ⌘V (system clipboard JSON) with paste inside a selected box or column block; block bar "Paste inside".
+**Done when:** in the browser: drag a block into a box, left / right in a row, from Add onto the page; copy a block, select a box, paste — it lands inside.
+
+## PT-22 Guides + copies — S
+Admin `/docs/pdf-templates` and mint-docs (layout, filling space, dragging, copy / paste), website changelog, MCP `describe_pdf_templates` guide, mint-tenant copies.
 
 ## Later
 - Email a PDF (needs the messaging SMTP).
