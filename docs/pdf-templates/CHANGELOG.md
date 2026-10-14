@@ -632,3 +632,34 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   (outlined, inside on the page), back out above it, a box onto its own child
   (refused, nothing changed), under a box row (first inside), scrolling
   along (0 → 110).
+
+## 2026-10-14 — PT-35 themes (D24)
+- The user asked for configurable fonts and colours: mix-and-match themes,
+  variations of type and colour, presets that change the whole page — and
+  only fonts that work with pdfkit and download properly.
+- Fonts: 18 candidate families tested in pdfkit (static, not variable;
+  registered, embedded, every weight 400–700 + italics; glyph coverage of
+  Latin-extended, ₹ € £ ¥; PDFs opened with macOS PDFKit, text copied back
+  out and compared). 13 kept as full TTFs in `public/fonts/<key>/`; Lora,
+  Libre Baskerville, Roboto Slab dropped (no ₹). Web subsets first tried
+  lacked Ł Š Ő ₹ and were replaced.
+- `theme.ts`: colour roles, families, 12 palettes / 12 pairings / 12 looks,
+  `resolveTheme`, `adoptRoles`, `applyLook`. Schema takes `style.heading`,
+  `onAccent / soft / dark / line`, `palette / pairing`, block `font:
+  'heading'`, role names on block colours. Renderer resolves the theme first;
+  default lines use `line`, filled rows `onAccent`.
+- Starters themed (`adoptRoles` at load, titles + business name on the
+  heading font). `POST /use` and MCP `use_pdf_starter` / `save_pdf_template`
+  take `look`, `palette`, `pairing`; the MCP guide lists roles, fonts and
+  presets.
+- Designer: Theme bar above the left tabs → Theme view (Looks, Colours,
+  Fonts, Your own); colour pickers show the theme's colours as dots (a dot
+  stores the role); Font → Heading font; Document → Look shows the theme
+  with Change. New template: a “Pick a look” step (the starter drawn in each
+  look, or As designed). Same in mint-tenant.
+- Checked: smoke 59/59 (5 new: use with a look, roles + heading kept, font
+  embedded, unknown names fall back, every family prints); headless Chrome as
+  the made-up super admin — Heritage / Warm on an older template (16 colours
+  adopted), the look step with 13 thumbnails, theme dots on a block; the
+  real PDF of a starter used with Heritage (EB Garamond, navy band, ৳).
+

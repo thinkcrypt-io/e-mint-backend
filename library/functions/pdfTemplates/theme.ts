@@ -220,6 +220,16 @@ export const resolveTheme = <T extends Blocky>(t: T): T => {
 	});
 };
 
+/** Does any block use the heading font? */
+export const usesHeading = (t: Blocky) => {
+	let yes = false;
+	mapParts(t, b => {
+		if (b.font === 'heading') yes = true;
+		return b;
+	});
+	return yes;
+};
+
 /** Does the template use roles anywhere? */
 export const usesRoles = (t: Blocky) => {
 	let yes = false;
@@ -251,7 +261,8 @@ export const adoptRoles = <T extends Blocky>(t: T): { template: T; changed: numb
 		const under = k === 'headerColor' ? b.headerBg : b.type === 'text' && b.bg ? b.bg : parentBg;
 		const underRole = isRole(under) ? under : under && under.toLowerCase() === r.accent.toLowerCase() ? 'accent' : under && under.toLowerCase() === r.dark.toLowerCase() ? 'dark' : undefined;
 		if (textProp && underRole === 'accent' && (c === r.onAccent.toLowerCase() || c === '#ffffff' || c === '#fff')) return 'onAccent';
-		if (textProp && underRole === 'dark') return undefined;
+		// White / grey words on a dark band stay as they are.
+		if (textProp && underRole === 'dark' && hsl(c).s < 0.2) return undefined;
 		// The theme's own colours.
 		if (textProp && c === r.text.toLowerCase()) return 'text';
 		if (textProp && c === r.muted.toLowerCase()) return 'muted';
@@ -262,18 +273,18 @@ export const adoptRoles = <T extends Blocky>(t: T): { template: T; changed: numb
 		if (!HEX.test(c)) return undefined;
 		const x = hsl(c);
 		// Greys for words: near-black is the text, mid-grey is muted (not on a coloured background).
-		if (textProp && !underRole && x.s < 0.2 && x.l < 0.2) return 'text';
+		if (textProp && !underRole && x.l < 0.2) return 'text';
 		if (textProp && !underRole && x.s < 0.25 && x.l >= 0.35 && x.l <= 0.7) return 'muted';
 		if (accentIsGrey) return undefined;
 		// By look: the accent's hue, lighter or darker.
-		const sameHue = x.s > 0.2 && Math.min(Math.abs(x.h - a.h), 360 - Math.abs(x.h - a.h)) < 22;
+		const sameHue = x.s > 0.2 && Math.min(Math.abs(x.h - a.h), 360 - Math.abs(x.h - a.h)) < 28;
 		if (sameHue && x.l > 0.82) return 'soft';
 		if (sameHue && x.l < 0.32) return 'dark';
 		if (sameHue && !bgProp && x.l > 0.32 && x.l < 0.82) return 'accent';
 		if (sameHue && bgProp) return x.l >= 0.6 ? 'soft' : 'accent';
 		// A near-black band or panel: the theme's dark.
-		if (bgProp && x.s < 0.2 && x.l < 0.2) return 'dark';
-		if ((k === 'lineColor' || k === 'borderColor') && x.s < 0.2 && x.l > 0.75) return 'line';
+		if (bgProp && x.l < 0.2) return 'dark';
+		if ((k === 'lineColor' || k === 'borderColor') && ((x.s < 0.2 && x.l > 0.75) || (x.s < 0.45 && x.l > 0.85))) return 'line';
 		return undefined;
 	};
 	const template = mapParts(t, (b, parentBg) => {
@@ -302,13 +313,26 @@ export const applyLook = <T extends Blocky>(t: T, pick: { look?: string; palette
 	const look = lookOf(pick.look);
 	const palette = paletteOf(pick.palette || look?.palette);
 	const pairing = pairingOf(pick.pairing || look?.pairing);
-	const { template, changed } = palette ? adoptRoles(t) : { template: t, changed: 0 };
+	const adopted = palette ? adoptRoles(t) : { template: t, changed: 0 };
+	const template = adopted.template;
+	let changed = adopted.changed;
 	const style: ThemeStyle = { ...(template.style as ThemeStyle) };
 	if (palette) {
 		Object.assign(style, { color: palette.text, muted: palette.muted, accent: palette.accent, onAccent: palette.onAccent, soft: palette.soft, dark: palette.dark, line: palette.line, palette: palette.key });
 	}
 	if (pairing) Object.assign(style, { font: pairing.font, heading: pairing.heading, pairing: pairing.key });
-	return { template: { ...template, style }, adopted: changed };
+	// A template with no heading yet (older ones, hand-made): its big titles take the heading font.
+	let headed = template;
+	if (pairing && !usesHeading(template)) {
+		headed = mapParts(template, b => {
+			if (b.type === 'text' && !b.font && (b.size ?? 0) >= 15) {
+				b.font = 'heading';
+				changed++;
+			}
+			return b;
+		});
+	}
+	return { template: { ...headed, style }, adopted: changed };
 };
 
 /** The style's colours as a palette-shaped object (to compare with the presets). */

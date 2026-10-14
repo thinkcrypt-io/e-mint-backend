@@ -4,6 +4,7 @@ import { fieldTree, FieldNode } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping } from '../../functions/pdfTemplates/mapping.js';
 import { aliasOf, categoryKey, normalizeTemplate, textKey } from '../../functions/pdfTemplates/schema.js';
 import { FILTERS } from '../../functions/pdfTemplates/tokens.js';
+import { FONT_FAMILIES, LOOKS, PAIRINGS, PALETTES, applyLook, familyLabel } from '../../functions/pdfTemplates/theme.js';
 import { findTemplate, loadSettings, storeSettings } from '../pdfTemplates/pdfTemplates.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { withoutScope } from '../../functions/tenantScope.function.js';
@@ -19,21 +20,32 @@ import type { ToolDef } from './mcp.router.js';
 
 const GUIDE = `PDF templates print a page's records as designed documents (invoice, bill, receipt…). A template is JSON:
 { name, description, kind (a category key from list_pdf_categories — invoice, receipt, quotation…), route (the page), alias (the record's token root, e.g. "bill"),
-  page: { size: A4|Letter|Legal|A5, orientation, margin: [t,r,b,l] pt }, style: { font: sans|mono|helvetica|times|courier, size, color, muted, accent, lineHeight },
+  page: { size: A4|Letter|Legal|A5, orientation, margin: [t,r,b,l] pt }, style: { font, heading (the heading font), size, lineHeight, color (text), muted, accent, onAccent, soft, dark, line } — the theme,
   lists: [{ name, route, foreignField, sort, limit }]  — records of another page that point at this one,
   header: [blocks] (every page), body: [blocks], footer: [blocks] (every page; "Page {{page}} of {{pages}}"),
   free: [blocks placed freely, each with x, y (pt from the page's top-left), w (width), rotate (degrees), opacity (0.05–1), behind (under the content — a watermark), pages first|all|last] — a stamp, a signature image, a watermark exactly somewhere }
 Blocks (all take mt/mb space, showIf [{field, op, value}] + showMatch, grow (take a share of the free space) and basis (fixed width in a row, pt)):
-- text { text, font (sans|mono|helvetica|times|courier — the page's when left out; tables and fields take it too), size, weight 400–700, italic, color, align, upper, spacing, lineHeight } — **bold**, \\n
+- text { text, font ("heading" = the theme's heading font — use it on titles and the business name; or a family; the page's when left out; tables and fields take it too), size, weight 400–700, italic, color, align, upper, spacing, lineHeight } — **bold**, \\n
 - fields { rows: [{ label, value, bold, big, bar, line }], labelWidth 0.1–0.9, align left|right, hideEmpty, gap }
 - table { rows: "<alias>.<section list>" or a list name, columns: [{ header, value "{{item.x}}", width share, align }], headerBg, headerColor, zebra, lines none|rows|grid, lineColor (the lines' colour; light grey when left out), emptyText, pad, size }
 - columns { columns: [{ width share, valign, direction "row" (its blocks side by side), gap, blocks }], gap } · box { blocks, pad, padX, padY (left-right / top-bottom over pad), bg, border, borderColor, borderSides ["top","bottom"…] (lines on some sides), radius, direction: "row" (side by side, like flexbox; default a stack), gap, valign top|middle|bottom|stretch, justify start|center|end|between, height (minimum), bleed (a box directly in header / body / footer: its background runs to the page edges — the header's first up to the top edge, the footer's last down to the bottom; use page margins 0 top / bottom for edge-to-edge bands) }
 - image { src (URL or {{business.logo}}), width, height, align } · divider { color, thickness, dashed } · spacer { height (its width in a row), grow } · pageBreak
 Layout: in a row each block fits its content unless it has grow or basis (fields, tables, lines and columns fill). A spacer with grow:1 takes the room left — in a row it pushes what follows to the right (logo · spacer grow · title), in a box with a height it pushes down, and in the body it puts what follows at the bottom of the page (a signature, terms).
+Theme: any colour prop (color, bg, borderColor, headerBg, headerColor, lineColor) may name a role instead of a hex — text, muted, accent, onAccent (words on accent), soft (light panels), dark (deep bands), line — so changing the style recolours the whole page. Prefer roles; a hex stays fixed.
+Fonts (all embedded, Latin + Latin-extended + ₹€£¥; Bangla falls back to Noto): ${FONT_FAMILIES.filter(f => !f.builtIn).map(f => `${f.key} (${f.label})`).join(', ')}; helvetica / times / courier are the PDF's built-ins (not embedded, Latin-1 only).
+Presets — mix and match: palettes ${PALETTES.map(p => p.key).join(', ')}; font pairings ${PAIRINGS.map(p => `${p.key} (${familyLabel(p.heading)}${p.heading !== p.font ? ` + ${familyLabel(p.font)}` : ''})`).join(', ')}; looks (a palette + a pairing) ${LOOKS.map(l => `${l.key} (${l.palette} + ${l.pairing})`).join(', ')}. Pass look / palette / pairing to use_pdf_starter or save_pdf_template to put one on (literal colours that play a role become roles first); offer the user a few looks to choose from.
 Tokens: {{<alias>.field | filter:arg}}; roots: the alias (or record), item + index in table cells, business (name, logo, address, phone, email, website, taxId, note), texts (the project's saved texts by key — {{texts.terms}}; they may hold fields of their own), today, now, page, pages, list names.
 Words that never change ("This invoice is computer generated — no signature is required.") are plain text blocks; words the user reuses across templates (terms and conditions, a return policy) are saved texts — save_pdf_text, then {{texts.<key>}}.
 Filters: ${Object.keys(FILTERS).join(', ')}.
-Steps: get_pdf_fields for the page → write or start from a gallery design (use_pdf_starter) → save_pdf_template → the user checks it in the designer (link returned).`;
+Steps: get_pdf_fields for the page → write or start from a gallery design (use_pdf_starter, with a look the user picked) → save_pdf_template → the user checks it in the designer (link returned).`;
+
+/** A look / palette / pairing from the call put on the template (theme.ts applyLook, D24); none → as sent. */
+const themedBy = (t: any, args: any) => {
+	const pick = { look: args?.look, palette: args?.palette, pairing: args?.pairing };
+	if (!pick.look && !pick.palette && !pick.pairing) return t;
+	const { template } = applyLook(normalizeTemplate(t).template as any, pick);
+	return { ...t, ...template };
+};
 
 const fieldText = (nodes: FieldNode[], prefix: string, depth = 0): string[] =>
 	nodes.flatMap(n => [`${'  '.repeat(depth)}- ${n.path.startsWith('item.') ? n.path : prefix + n.path} (${n.type}) ${n.label}`, ...(n.children && depth < 2 ? fieldText(n.children, prefix, depth + 1) : [])]);
@@ -126,6 +138,9 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 				route: { type: 'string' },
 				name: { type: 'string' },
 				mapping: { type: 'object', description: 'slot token → the page’s field path ("invoice.total": "grandTotal"); a list slot → {path} or {route, foreignField}' },
+				look: { type: 'string', enum: LOOKS.map(l => l.key), description: 'A ready look (a palette + a font pairing) — see describe_pdf_templates' },
+				palette: { type: 'string', enum: PALETTES.map(p => p.key), description: 'Colours only (over the look’s)' },
+				pairing: { type: 'string', enum: PAIRINGS.map(p => p.key), description: 'Fonts only (over the look’s)' },
 				status: STATUS_ARG,
 			},
 		},
@@ -138,7 +153,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			if (!tree) return { text: 'No page with that route.', isError: true };
 			const mapping = args?.mapping && typeof args.mapping === 'object' ? args.mapping : guessMapping(from, tree);
 			const mapped = applyMapping(normalizeTemplate(from).template, mapping, { route, title: tree.title });
-			const { template, errors } = normalizeTemplate({ ...mapped, name: args?.name || from.name });
+			const { template, errors } = normalizeTemplate(themedBy({ ...mapped, name: args?.name || from.name }, args));
 			if (errors.length) return { text: `Not saved:\n- ${errors.join('\n- ')}`, isError: true };
 			const first = !(await PdfTemplate.exists({ route }));
 			const doc: any = await PdfTemplate.create({ ...template, status: args?.status === 'published' ? 'published' : 'draft', from: String(from._id), isDefault: first, createdBy: caller.user?._id, updatedBy: caller.user?._id });
@@ -162,6 +177,9 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 				id: { type: 'string' },
 				template: { type: 'object', description: 'The whole template — see describe_pdf_templates' },
 				makeDefault: { type: 'boolean' },
+				look: { type: 'string', enum: LOOKS.map(l => l.key), description: 'A ready look (a palette + a font pairing) — see describe_pdf_templates' },
+				palette: { type: 'string', enum: PALETTES.map(p => p.key), description: 'Colours only (over the look’s)' },
+				pairing: { type: 'string', enum: PAIRINGS.map(p => p.key), description: 'Fonts only (over the look’s)' },
 				status: STATUS_ARG,
 			},
 		},
@@ -171,7 +189,7 @@ export const PDF_TEMPLATE_TOOLS: ToolDef[] = [
 			if (!raw) return { text: 'Send the template.', isError: true };
 			const before: any = args?.id ? (mongoose.isValidObjectId(args.id) ? await PdfTemplate.findById(args.id).lean() : null) : null;
 			if (args?.id && !before) return { text: 'No template with that id.', isError: true };
-			const { template, errors } = normalizeTemplate({ ...raw, alias: raw.alias || before?.alias || aliasOf(raw.route || ''), ...(args?.status && { status: args.status }) });
+			const { template, errors } = normalizeTemplate(themedBy({ ...raw, alias: raw.alias || before?.alias || aliasOf(raw.route || ''), ...(args?.status && { status: args.status }) }, args));
 			if (errors.length) return { text: `Not saved:\n- ${errors.join('\n- ')}`, isError: true };
 			if (template.route && !(await fieldTree(req, template.route))) return { text: `There's no page “${template.route}”.`, isError: true };
 			let doc: any;

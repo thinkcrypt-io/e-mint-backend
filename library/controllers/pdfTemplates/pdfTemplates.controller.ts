@@ -9,6 +9,7 @@ import { fieldTree } from '../../functions/pdfTemplates/data.js';
 import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplates/mapping.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
 import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, categoryKey, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
+import { applyLook } from '../../functions/pdfTemplates/theme.js';
 import { loadCategories } from './categories.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { previewRoots } from '../../functions/pdfTemplates/preview.js';
@@ -273,7 +274,10 @@ export const useTemplate = async (req: any, res: Response) => {
 		const { template: base } = normalizeTemplate(from);
 		const mapped = applyMapping(base, mapping, { route, title: pageTitle(tree) });
 		const name = typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : from.name;
-		const { template, errors } = normalizeTemplate({ ...mapped, name });
+		// The look picked when using it (D24): a palette and / or a font pairing.
+		const pick = { look: req.body?.look, palette: req.body?.palette, pairing: req.body?.pairing };
+		const looked = pick.look || pick.palette || pick.pairing ? applyLook(mapped as any, pick).template : mapped;
+		const { template, errors } = normalizeTemplate({ ...looked, name });
 		if (errors.length) return fail(res, 400, errors[0], { errors });
 		const first = !(await PdfTemplate.exists({ route }));
 		const doc = await PdfTemplate.create({ ...template, status: startStatus(req.body), from: String(from._id), isDefault: first, createdBy: userId(req), updatedBy: userId(req) });

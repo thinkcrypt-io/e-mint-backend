@@ -1,4 +1,4 @@
-// PDF templates smoke test (backend/docs/pdf-templates, PT-02…PT-04, PT-12, PT-18, PT-19).
+// PDF templates smoke test (backend/docs/pdf-templates, PT-02…PT-04, PT-12, PT-18, PT-19, PT-35 themes).
 // Runs against a throwaway local server + database only (never a shared one):
 //   mongod --dbpath <scratch>/db --port 27997
 //   npx tsc --outDir <scratch>/be; in <scratch>/be symlink node_modules, .env, public, docs from backend/, then
@@ -280,6 +280,32 @@ ok('a broken template is refused with readable errors', r.status === 400 && r.bo
 r = await call('POST', `/pdf-templates/${t2._id}/default`, {}, T);
 r = await call('GET', `/pdf-templates?route=${bill.route}`, null, T);
 ok('one default per page', r.body.templates.filter(t => t.isDefault).length === 1 && r.body.templates.find(t => t.isDefault)._id === t2._id);
+
+// ------------------------------------------------------- themes (D24)
+r = await call('POST', '/pdf-templates/use', { from: classic._id, route: bill.route, mapping: m, look: 'heritage', name: `Themed ${stamp}` }, T);
+const th = r.body;
+const thJson = JSON.stringify(th);
+ok('a starter used with a look gets its colours and fonts', r.status === 201 && th.style?.palette === 'navy' && th.style?.pairing === 'classic' && th.style?.font === 'garamond' && th.style?.heading === 'garamond' && th.style?.dark === '#0b1a45', th?.style);
+ok('its colours follow the theme (roles, not hex); its title uses the heading font', /"(bg|headerBg|color)":"(accent|dark|onAccent|soft)"/.test(thJson) && thJson.includes('"font":"heading"'), thJson.slice(0, 200));
+r = await call('POST', '/pdf-templates/render', { template: th._id, dummy: true }, T);
+ok('a themed template renders with its font embedded', isPdf(r) && r.pdf.includes('EBGaramond'), r.status);
+save('themed-heritage', r);
+r = await call('POST', '/pdf-templates/render', {
+	template: { ...th, style: { ...th.style, font: 'comic', heading: 'nope' }, header: [], footer: [], free: [], body: [{ type: 'text', text: 'Odd', color: 'notarole', bg: 'soft', font: 'heading' }] },
+}, T);
+ok('an unknown font or colour name falls back instead of failing', isPdf(r), r.status + ' ' + (r.body?.message || ''));
+const FAMILIES = ['sans', 'inter', 'dmsans', 'manrope', 'montserrat', 'poppins', 'plexsans', 'grotesk', 'playfair', 'garamond', 'merriweather', 'sourceserif', 'crimson', 'plexserif', 'mono'];
+r = await call('POST', '/pdf-templates/render', {
+	template: {
+		name: 'Fonts',
+		alias: 'x',
+		style: { font: 'sans' },
+		body: FAMILIES.flatMap(f => [400, 700].map(w => ({ type: 'text', text: `${f} ${w} — Łódź ₹1,250 €99 ৳500 রহমান`, font: f, weight: w, italic: w === 700 }))),
+	},
+}, T);
+ok('every theme font prints (all weights, italics, Latin-extended, ₹, Bangla fallback)', isPdf(r) && ['Inter', 'DMSans', 'Manrope', 'Montserrat', 'Poppins', 'IBMPlexSans', 'SpaceGrotesk', 'PlayfairDisplay', 'EBGaramond', 'Merriweather', 'SourceSerif4', 'CrimsonPro', 'IBMPlexSerif'].every(n => r.pdf.includes(n)), r.status);
+save('fonts', r);
+await call('DELETE', `/pdf-templates/${th._id}`, null, T);
 
 // --------------------------------------------------------- permissions
 const reader = (await roles.insertOne({ name: `PT reader ${stamp}`, permissions: [`view-${bill.permission}`], isActive: true })).insertedId;
