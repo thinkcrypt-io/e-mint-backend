@@ -18,6 +18,8 @@ import {
 	syncSummary,
 } from '../library/functions/apiEndpoints.function.js';
 import { listCapabilities } from '../library/functions/publicRecords.function.js';
+import ApiCall from '../library/models/tenancy/apiCall.model.js';
+import { findLogs, logSummary, logView } from '../library/functions/apiLogs.function.js';
 
 /**
  * /tenant/api/p/:projectId/api-builder — the project's public API as endpoints
@@ -34,6 +36,10 @@ import { listCapabilities } from '../library/functions/publicRecords.function.js
  *   GET    /keys                       server keys (never their secret)
  *   POST   /keys                       { name } → the key's secret, once
  *   DELETE /keys/:id                   revoke
+ *   GET    /logs                       calls, newest first: ?hours (1|24|168) &endpoint (an id, or none) &status
+ *                                      (ok|errors|4xx|5xx|a code) &method &who &customer &key &q &before (cursor) &limit
+ *   GET    /logs/summary               the same filters: totals, typical/slow times, a chart, top errors and endpoints
+ *   GET    /logs/:id                   one call
  *
  * A bad endpoint answers 400 with `on`, the input at fault ("access.when.1").
  */
@@ -309,6 +315,28 @@ router.delete(
 		if (!k.revokedAt) await ServerKey.updateOne({ _id: k._id }, { $set: { revokedAt: new Date() } });
 		recordProjectEvent({ req, action: 'delete', model: 'ServerKey', modelPath: 'public-api/keys', document: k._id, name: k.name, text: `revoked the server key “${k.name}”` });
 		return { message: 'Revoked' };
+	})
+);
+
+/* ---------------------------------------------------------------- logs */
+
+router.get(
+	'/logs',
+	handle(async req => findLogs(req.query))
+);
+
+router.get(
+	'/logs/summary',
+	handle(async req => logSummary(req.query))
+);
+
+router.get(
+	'/logs/:id',
+	handle(async req => {
+		if (!isId(req.params.id)) throw new TenancyError(404, 'That call isn’t in the log — calls are kept 7 days.');
+		const c: any = await ApiCall.findById(req.params.id).lean();
+		if (!c) throw new TenancyError(404, 'That call isn’t in the log — calls are kept 7 days.');
+		return logView(c);
 	})
 );
 

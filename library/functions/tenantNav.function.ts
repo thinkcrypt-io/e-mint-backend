@@ -31,6 +31,7 @@ const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
 				{ title: 'Overview', href: '/public-api', icon: 'plug-zap' },
 				{ title: 'Endpoints', href: '/public-api/endpoints', icon: 'route' },
 				{ title: 'Keys', href: '/public-api/keys', icon: 'key-round' },
+				{ title: 'Logs', href: '/public-api/logs', icon: 'scroll-text' },
 				{ title: 'Reference', href: '/public-api/reference', icon: 'book-open' },
 		  ]
 		: []),

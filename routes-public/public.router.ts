@@ -34,6 +34,7 @@ import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
+import { callRecord } from '../library/functions/apiLogs.function.js';
 import ApiEndpoint from '../library/models/tenancy/apiEndpoint.model.js';
 import {
 	checkCreate,
@@ -135,26 +136,26 @@ router.use(async (req: any, res: any, next: any) => {
 	}
 });
 
-// An API project's calls, for its dashboard's "recent calls" (docs/templates T-09):
-// method, path, answer and time — nothing sent or signed in with.
+// The project's request log (docs/api-builder AB-06; T-09's "recent calls"):
+// every call but the site's own page renders and analytics beacons — what was
+// asked, which endpoint answered, who called, the answer and its time. Never
+// bodies, tokens or addresses (apiLogs.function callRecord). The router fills
+// `req.apiLog` on the way: the endpoint (open), the customer (customerOf), the
+// server key (open), and the error the caller got (here, from res.json).
+const UNLOGGED = /^\/(render|track|site)(\/|$)/;
 router.use((req: any, res: any, next: any) => {
-	if (req.project?.type !== 'api' || req.method === 'OPTIONS') return next();
+	if (req.method === 'OPTIONS' || UNLOGGED.test(req.path) || isRenderer(req)) return next();
 	const started = Date.now();
 	const scope = currentScope();
+	req.apiLog = {};
+	const json = res.json.bind(res);
+	res.json = (body: any) => {
+		if (res.statusCode >= 400 && body && typeof body === 'object') req.apiLog.error = { message: body.message, code: body.code };
+		return json(body);
+	};
 	res.on('finish', () => {
 		if (!scope) return;
-		const path = String(req.path || '/').slice(0, 300);
-		const route = path.split('/')[1] || '';
-		runInScope(scope, () =>
-			ApiCall.create({
-				method: req.method,
-				path,
-				route: route === 'auth' ? '' : route.slice(0, 60),
-				status: res.statusCode,
-				ms: Date.now() - started,
-				customer: String(req.headers.authorization || '').startsWith('Bearer '),
-			})
-		).catch(() => undefined);
+		runInScope(scope, () => ApiCall.create(callRecord(req, res, started))).catch(() => undefined);
 	});
 	next();
 });
@@ -168,6 +169,7 @@ const customerOf = async (req: any) => {
 		if (claims?.kind !== CUSTOMER_TOKEN_KIND || claims.project !== String(req.project._id)) return null;
 		const customer: any = await ProjectCustomer.findById(claims._id).lean();
 		if (!customer || customer.isActive === false || (customer.tokenVersion || 0) !== (claims.v || 0)) return null;
+		if (req.apiLog) req.apiLog.customer = customer;
 		return customer;
 	} catch {
 		return null;
@@ -687,6 +689,9 @@ const open = async (req: any): Promise<Ctx> => {
 	const hit = matchEndpoint(endpoints, req.method, req.path);
 	if (!hit) throw new TenancyError(404, 'Not found');
 	const { ep, id } = hit;
+	if (req.apiLog) req.apiLog.endpoint = ep;
+	// Every call it answered, refused ones too — as its Logs tab shows them (AB-06).
+	ApiEndpoint.updateOne({ _id: ep._id }, { $inc: { 'stats.calls': 1 }, $set: { 'stats.lastCalledAt': new Date() } }).catch(() => undefined);
 	await syncDynamicModels({ app: req.app });
 	const def: any = await ModelDefinition.findOne({ route: ep.model, active: { $ne: false } }).lean();
 	const Model = def && compiledModel(def.name);
@@ -694,12 +699,13 @@ const open = async (req: any): Promise<Ctx> => {
 	if (id !== undefined && !isId(id)) throw new TenancyError(404, 'Not found');
 	const customer = await customerOf(req);
 	if (ep.access?.who === 'customer' && !customer) throw new TenancyError(401, 'Sign in first.', 'customer_required');
-	if (ep.access?.who === 'key' && !(await serverKeyOf(req)))
+	const key = ep.access?.who === 'key' ? await serverKeyOf(req) : null;
+	if (ep.access?.who === 'key' && !key)
 		throw new TenancyError(401, sendsServerKey(req) ? 'That server key isn’t valid — it may have been revoked.' : 'This endpoint needs a server key.', 'key_required');
+	if (key && req.apiLog) req.apiLog.key = key;
 	// The route's settings as the panels use them (a published copy, or generated) — for formulas.
 	const published = await getActiveSettings(def.route);
 	const settings = published?.data ? dataToSettings(published.data) : generateSettings(def, makeTargetLookup(req.app, [def]));
-	ApiEndpoint.updateOne({ _id: ep._id }, { $inc: { 'stats.calls': 1 }, $set: { 'stats.lastCalledAt': new Date() } }).catch(() => undefined);
 	return { ep, id, def, Model, customer, settings, formulas: formulasOf(settings) };
 };
 

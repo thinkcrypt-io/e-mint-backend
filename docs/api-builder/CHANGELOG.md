@@ -104,3 +104,12 @@ agent must know. Decisions live in README.md.
   Public API, since the backend's sidebar now links Endpoints / Keys / Reference — drop when mint-tenant is live.
 - Verified: `api-builder.mjs` + 8 MCP checks all pass; website-mcp, site-builder-data pass; `mcp.mjs` fails only on a
   re-run against the same project (its Ticket model exists from the first, passing, run).
+
+## 2026-10-14 — AB-06 Request logs
+- Every project's public API calls logged in `ApiCall` (D13) with the endpoint, who, error, query (masked), origin,
+  client; `stats.calls` counts refused calls too. Panel API → Logs, endpoint Logs tab, Overview “Last 24 hours”.
+  MCP `get_api_logs`. Guide `public-api#api-logs`; website changelog + feature.
+- Verified: `api-logs.mjs` (37 checks) all pass; `api-builder`, `webhooks` (sidebar now has Logs), `public-filters`,
+  `widgets-cart` pass; `public.mjs` passes on a fresh database (on the reused one it fails only on counts left by
+  earlier runs). Headless Chrome: Logs page, a call's dialog, the phone layout, an endpoint's Logs tab, Overview.
+

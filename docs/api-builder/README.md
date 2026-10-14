@@ -71,6 +71,13 @@ Choices the user made (same day):
   migration has to run. `scripts/migrateApiEndpoints.js` does all projects at once, for the deploy.
 - **D10 — Calls log.** Every project's calls are counted per endpoint (calls, last called) — today only API
   projects log `ApiCall`s. Full request logs are later.
+- **D13 — Request logs (AB-06, 2026-10-14; the user: "start with api request logs").** `ApiCall` becomes every
+  project's request log: all calls to `/public/api/<slug>` except OPTIONS, the renderer's own requests, `/render`,
+  `/track` and `/site*`. Each keeps method, path, the query with values of token/key/secret/password-like names
+  masked, the endpoint that answered (+ its name then), who (anyone / customer + email / key + name), status, the
+  error message and code the caller got, ms, the calling site (Origin, else Referer's origin) and the client
+  ("Chrome on macOS", "curl/8.4.0"). **Never bodies, tokens or IP addresses.** Kept 7 days (TTL, as before). An
+  endpoint's `stats.calls` now counts every call it answered, refused ones too, so it matches its Logs tab.
 - **D11 — The panel's pages** (mint-tenant, sidebar section **API**; addresses stay under `/public-api` —
   `/api` is the panel's own proxy):
   - `/public-api` — **Overview**: the API's address, endpoints on / off, keys, customers, calls this week,
@@ -119,5 +126,5 @@ type Condition = { field: string; op: Op; value?: any | { ref: 'customer' | 'cus
 
 ## 6. Not in this plan (later)
 
-Totals / group-by endpoints, including linked records (joins), custom server code, request logs with bodies,
+Totals / group-by endpoints, including linked records (joins), custom server code, request bodies in the logs,
 per-key endpoint limits, rate limits per endpoint, OAuth / magic-link customer sign-in.

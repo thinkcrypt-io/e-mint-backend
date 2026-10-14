@@ -9,6 +9,7 @@ import {
 	syncSummary,
 } from '../../functions/apiEndpoints.function.js';
 import { apiOrigin } from './website.tools.js';
+import { findLogs, logSummary } from '../../functions/apiLogs.function.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
 /**
@@ -141,6 +142,29 @@ const CONDITION = {
 	},
 };
 
+/** The API's request log (AB-06): the numbers over a period and the matching calls, newest first. */
+const apiLogs = async (_req: any, args: any, caller: Caller): Promise<Out> => {
+	const hours = [1, 24, 168].includes(Number(args?.hours)) ? Number(args.hours) : 24;
+	const q = { ...args, hours, limit: Math.min(Number(args?.limit) || 30, 100) };
+	const [sum, page] = await Promise.all([logSummary(q), findLogs(q)]);
+	const period = hours === 1 ? 'the last hour' : hours === 24 ? 'the last 24 hours' : 'the last 7 days';
+	const lines = [
+		`${period}: ${sum.total} calls, ${sum.errors} failed${sum.avgMs != null ? `, typically ${sum.avgMs} ms (95% under ${sum.p95Ms} ms)` : ''}. Logs in the panel: ${caller.link('/public-api/logs')}`,
+	];
+	if (sum.topErrors.length) lines.push('', 'Commonest errors:', ...sum.topErrors.map((e: any) => `- ${e.status}${e.code ? ` ${e.code}` : ''}: ${e.error || '(no message)'}${e.endpoint ? ` — ${e.endpoint}` : ''} ×${e.count}`));
+	lines.push('', page.doc.length ? 'Calls, newest first:' : 'No calls match.');
+	for (const c of page.doc) {
+		const who = c.key ? `key “${c.key.name}”` : c.customer ? `customer ${c.customer.email}` : 'anyone';
+		lines.push(
+			`- ${new Date(c.at).toISOString()} ${c.method} ${c.path}${c.query ? `?${c.query}` : ''} → ${c.status} in ${c.ms} ms; ${who}${c.endpoint ? `; endpoint ${c.endpoint.name} [${c.endpoint._id}]` : ''}${
+				c.error ? `; error: ${c.error}${c.code ? ` (${c.code})` : ''}` : ''
+			}${c.origin ? `; from ${c.origin}` : ''}`
+		);
+	}
+	if (page.hasMore) lines.push(`(more — pass before: "${page.doc[page.doc.length - 1]._id}")`);
+	return { text: lines.join('\n'), data: { summary: sum, calls: page.doc, hasMore: page.hasMore } };
+};
+
 export const API_ENDPOINT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_endpoints',
@@ -210,9 +234,32 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
 		run: saveEndpoint,
 	},
+	{
+		name: 'get_api_logs',
+		title: 'Read the API’s request logs',
+		description:
+			'The calls made to the project’s API (kept 7 days), newest first, with the numbers for the period: each call’s method, path and query, status, time, the endpoint that answered, who called (anyone, a signed-in customer, a server key), the error message the caller got, and the calling site. Filter to find why something fails: status "errors" (or "4xx", "5xx", a code), an endpoint id (from list_endpoints), method, who, q (text in the path, query, error or customer email). Never shows bodies, tokens or IP addresses.',
+		scope: 'read',
+		only: 'project',
+		inputSchema: {
+			type: 'object',
+			properties: {
+				hours: { type: 'number', enum: [1, 24, 168], description: 'The period; default 24' },
+				status: { type: 'string', description: 'ok, errors, 4xx, 5xx, or a status code like 401' },
+				endpoint: { type: 'string', description: 'An endpoint id, or "none" for calls no endpoint answered (sign-in, cart, unknown paths)' },
+				method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE'] },
+				who: { type: 'string', enum: ['anyone', 'customer', 'key'] },
+				q: { type: 'string', description: 'Text to look for' },
+				limit: { type: 'number', description: 'Calls to list, up to 100 (default 30)' },
+				before: { type: 'string', description: 'Continue after this call id' },
+			},
+		},
+		annotations: { readOnlyHint: true, openWorldHint: false },
+		run: apiLogs,
+	},
 ];
 
 /** The paragraph every project's AI gets about the API. */
 export const API_ENDPOINT_INSTRUCTIONS = `
 
-For the project's API (what its own website, app or server calls): list_endpoints shows every endpoint; generate_endpoints makes a model's standard ones; save_endpoint makes a custom endpoint (its own path) or changes one — who may call it (anyone, signed-in customers, a server key), rules on the records it reaches, the fields it sends back and never writes, a list's fixed filters and page sizes. Server keys are made by the user in the panel (API → Keys), never by you. Describe each endpoint and its rules to the user in plain words and get their go-ahead before saving.`;
+For the project's API (what its own website, app or server calls): list_endpoints shows every endpoint; get_api_logs reads the calls made to it (find why a call fails: status "errors"); generate_endpoints makes a model's standard ones; save_endpoint makes a custom endpoint (its own path) or changes one — who may call it (anyone, signed-in customers, a server key), rules on the records it reaches, the fields it sends back and never writes, a list's fixed filters and page sizes. Server keys are made by the user in the panel (API → Keys), never by you. Describe each endpoint and its rules to the user in plain words and get their go-ahead before saving.`;

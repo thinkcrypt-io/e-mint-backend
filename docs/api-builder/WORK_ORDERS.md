@@ -12,6 +12,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-03 | Panel I: the API section, Overview, Endpoints (list, Generate from a model, New endpoint wizard) | mint-tenant | M | done 2026-10-14 |
 | AB-04 | Panel II: an endpoint's page (Access, Fields, Filters, Try it, Code), Keys, Reference | mint-tenant | L | done 2026-10-14 |
 | AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | done 2026-10-14 |
+| AB-06 | Request logs (D13): every call logged; API → Logs + an endpoint's Logs tab + Overview glance; `get_api_logs` over MCP; guide, website | all | M | done 2026-10-14 |
 
 ## AB-02 — Engine (L)
 
@@ -54,3 +55,20 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
   endpoint, access, conditions, fields, filters, keys, reference) — keep the old anchors.
 - Website: features + changelog.
 - MCP: `list_endpoints`, `generate_endpoints`, `save_endpoint` (describe + confirm with the user first); `set_public_api` unchanged.
+
+## AB-06 — Request logs (M) — done
+
+- Backend: `apiCall.model.ts` (new fields, index `{project, endpoint, createdAt}`); `apiLogs.function.ts`
+  (`callRecord`, `maskedQuery`, `clientOf`, `originOf`, `logFilter`, `findLogs` — newest first, `before` cursor,
+  `logSummary` — totals, avg, p95, a series of 5-min / 1-h / 6-h bars for 1 / 24 / 168 h, top 5 errors, top 5
+  endpoints). `public.router.ts`: the logging middleware for every project type (was API projects only) keeps
+  `req.apiLog` — `open` sets the endpoint and key, `customerOf` the customer, a wrapped `res.json` the error.
+  `apiBuilder.router.ts`: `GET /logs`, `/logs/summary`, `/logs/:id`. MCP `get_api_logs` (read). Sidebar: API → Logs.
+- Panel (mint-tenant): `public-api/_components/logs.tsx` — `ApiLogs` (period, answer, endpoint, who, search, Live
+  = 5 s polling; tiles, stacked chart, Commonest errors → filters, calls list with Show more up to 200, a call's
+  dialog with curl), `LogsGlance` (Overview, 24 h), `StatusBadge`, `LogChart`; `/public-api/logs` (filters in the
+  address); endpoint page tab **Logs** (`?tab=logs`). RTK `getApiRequestLogs`, `getApiRequestLogSummary`,
+  `getApiRequestLog`. Admin needs nothing (its `/public-api/:sub+` redirect covers `/logs`).
+- Docs: mint-docs `public-api#api-logs`, Connect AI tools table; website changelog + feature card “API logs”.
+- Smoke: `scripts/tenancy-smoke/api-logs.mjs` (in run-all). Verified with screenshots (1280 + 390).
+
