@@ -4,7 +4,7 @@ import OrganizationMember from '../library/models/tenancy/organizationMember.mod
 import OrganizationRole from '../library/models/tenancy/organizationRole.model.js';
 import OrganizationInvitation from '../library/models/tenancy/organizationInvitation.model.js';
 import TenantUser from '../library/models/tenancy/tenantUser.model.js';
-import { PROJECT_INVITE_ROLES, normalizePermissions, systemRole, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
+import { PROJECT_INVITE_ROLES, grants, normalizePermissions, systemRole, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { TenancyError, canOpenProject, handle, isId } from '../library/functions/tenancy.function.js';
 import { addProjectRole, invitationView, sendInvite } from '../library/functions/tenantInvitations.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
@@ -12,10 +12,11 @@ import { later, notifyTenant } from '../library/functions/tenantNotify.function.
 
 /**
  * /tenant/api/p/:projectId/people — who works in one project, and inviting
- * people into it (docs/multi-tenancy WO-47). For the owner, admins and anyone
- * whose role has `invite-to-projects` (or `manage-members`).
+ * people into it (docs/multi-tenancy WO-47). Everyone in the project sees who
+ * works in it (WO-48); the rest is for the owner, admins and anyone whose role
+ * has `invite-to-projects` (or `manage-members`).
  *
- *   GET    /                         { doc: people, invitations, roles }
+ *   GET    /                         { doc: people, invitations, roles, canManage }   invitations only for those who manage
  *   POST   /invitations              { email, name, role: 'member'|'developer' }
  *   POST   /invitations/:id/resend
  *   DELETE /invitations/:id
@@ -30,7 +31,7 @@ import { later, notifyTenant } from '../library/functions/tenantNotify.function.
  */
 const router = express.Router({ mergeParams: true });
 
-router.use(tenantPermissions(['invite-to-projects', 'manage-members']));
+const MANAGE = ['invite-to-projects', 'manage-members'];
 
 const check = (schema: Joi.Schema, body: any) => {
 	const { error, value } = schema.validate(body || {}, { abortEarly: true, stripUnknown: true });
@@ -70,6 +71,7 @@ router.get(
 	'/',
 	handle(async req => {
 		const projectId = req.project._id;
+		const canManage = grants(req.permissions, MANAGE);
 		const [members, roles, invitations]: any = await Promise.all([
 			OrganizationMember.find({ organization: req.organization._id, status: 'active' })
 				.populate('user', 'name email image')
@@ -77,22 +79,28 @@ router.get(
 				.sort({ joinedAt: 1 })
 				.lean(),
 			OrganizationRole.find({ organization: req.organization._id }, { name: 1, system: 1 }).lean(),
-			OrganizationInvitation.find({ organization: req.organization._id, project: projectId, acceptedAt: null, cancelledAt: null })
-				.populate('role', 'name')
-				.populate('invitedBy', 'name')
-				.sort({ createdAt: -1 })
-				.lean(),
+			canManage
+				? OrganizationInvitation.find({ organization: req.organization._id, project: projectId, acceptedAt: null, cancelledAt: null })
+						.populate('role', 'name')
+						.populate('invitedBy', 'name')
+						.sort({ createdAt: -1 })
+						.lean()
+				: [],
 		]);
 		const byId = new Map<string, any>(roles.map((r: any) => [String(r._id), r]));
 		const here = members.filter((m: any) => m.user && canOpenProject(m, normalizePermissions(m.role?.permissions || []), projectId));
-		const offered = await inviteRoles(req);
+		const offered = canManage ? await inviteRoles(req) : [];
 		return {
 			doc: here.map((m: any) => personView(m, byId, projectId)),
 			invitations: invitations.map(invitationView),
 			roles: offered.map((r: any) => ({ _id: String(r._id), name: r.name, system: r.system, description: r.description || '' })),
+			canManage,
 		};
 	})
 );
+
+// Everything below changes who works in the project.
+router.use(tenantPermissions(MANAGE));
 
 router.post(
 	'/invitations',

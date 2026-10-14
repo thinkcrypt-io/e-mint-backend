@@ -4,8 +4,10 @@ import TenantProject, { MEDIA_SCOPES, PROJECT_TYPES } from '../../library/models
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
 import OrganizationInvitation from '../../library/models/tenancy/organizationInvitation.model.js';
 import ModelDefinition from '../../library/models/builder/modelDefinition.model.js';
+import TenantUser from '../../library/models/tenancy/tenantUser.model.js';
+import ProjectTemplate from '../../library/models/templates/projectTemplate.model.js';
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
-import { tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
+import { normalizePermissions, tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject } from '../../library/functions/tenancy.function.js';
 import { createProject, removeProjectContents } from '../../library/functions/projectLifecycle.function.js';
@@ -16,7 +18,7 @@ import { businessJoi, cleanBusiness, projectBusiness } from '../../library/funct
  *
  *   GET    /             every active project the member can open (archived with ?archived=1)
  *   POST   /             { name, type: 'app'|'website'|'api', description, icon, color, domains, mediaScope }   create-projects
- *   GET    /:id
+ *   GET    /:id          with its details (WO-48): who made it, how many people open it, its template, last change
  *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive, business         manage-projects
  *   DELETE /:id          refused while it has models; ?force=1 (owner) deletes everything in it
  *
@@ -106,8 +108,23 @@ router.get(
 	'/:id',
 	handle(async req => {
 		const project = await loadProject(req);
-		const models = await runInScope({ organization: req.organization._id, project: project._id }, () => ModelDefinition.countDocuments({}));
-		return { ...withBusiness(project, req.organization), models };
+		const [models, creator, members, template]: any = await Promise.all([
+			runInScope({ organization: req.organization._id, project: project._id }, () => ModelDefinition.countDocuments({})),
+			project.createdBy ? TenantUser.findById(project.createdBy, { name: 1 }).lean() : null,
+			OrganizationMember.find({ organization: req.organization._id, status: 'active' }).populate('role', 'permissions').lean(),
+			project.template?.key ? ProjectTemplate.findOne({ key: project.template.key }, { name: 1 }).lean() : null,
+		]);
+		const people = members.filter((m: any) => canOpenProject(m, normalizePermissions(m.role?.permissions || []), project._id)).length;
+		return {
+			...withBusiness(project, req.organization),
+			models,
+			people,
+			createdBy: creator ? { _id: String(creator._id), name: creator.name } : null,
+			updatedAt: project.updatedAt,
+			organizationName: req.organization.name,
+			// The template it was built from (docs/templates T-03).
+			...(project.template?.key && { fromTemplate: { name: template?.name || project.template.key, version: project.template.version, appliedAt: project.template.appliedAt } }),
+		};
 	})
 );
 

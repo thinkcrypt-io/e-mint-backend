@@ -1040,6 +1040,26 @@ section of the project."
 - Docs: mint-docs organization guide `#project-people`; website changelog.
 - Verified: `scripts/tenancy-smoke/project-invites.mjs` (new, in run-all), full run-all; tsc backend, mint-tenant, admin.
 
+## WO-48 — Project details and members (S) — done
+
+The user (2026-10-14): "add more information to project, project members should show up under the project tab in sidebar
+settings then members."
+
+- **Sidebar** (`tenantNav.function.ts`): inside a project, the Project section is **Settings**, then **Members**
+  (`/project-people`, was "People") — for everyone in the project. Changing them still takes `manage-projects` /
+  `invite-to-projects` (or `manage-members`); the pages turn read-only otherwise.
+- **Members** (`people.router.ts`): `GET /p/:project/people` is open to anyone who opens the project and answers
+  `canManage`; pending invitations and the invite roles only when they manage. Every write keeps the old permission check.
+- **Project details** (`GET /tenant/api/projects/:id`): `people` (how many open it), `createdBy {name}`, `updatedAt`,
+  `organizationName`, `fromTemplate {name, version, appliedAt}`.
+- **Panels** (mint-tenant + admin, same files): Project settings gets an **About this project** panel — kind, address and
+  public API address (copy buttons), domains (website), members (link to Members), models (link), media library,
+  template, created on/by, last changed. Members page: titled Members, list for everyone, Invite / role / remove and
+  pending invitations only with `canManage`. Inviting or removing refreshes the members count.
+- Docs: mint-docs `projects#project-settings` (About), `organization#project-people` (Project → Members, read-only list).
+- Verified: `project-invites.mjs` (+4 checks: guest sees the list read-only, can't invite, sidebar order, project
+  details), `tenant-auth`, `org-1`, `projects`, `business` on a private server (:5031, Mongo :27996); tsc clean.
+
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
   rely on the proxy's cookie redirect — correct, one extra hop; convert to

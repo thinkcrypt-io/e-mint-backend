@@ -69,8 +69,15 @@ r = await call('POST', '/tenant/api/projects', { name: 'Mine', type: 'app' }, gi
 ok("can't start projects in Alpha", r.status === 403, r.status);
 r = await call('GET', '/tenant/api/org/members', null, gina);
 ok("doesn't see Alpha's members", r.status === 403, r.status);
+// WO-48: everyone in a project sees who works in it — but not its invitations, and can't invite.
 r = await call('GET', P(shop._id, '/people'), null, gina);
+ok("sees Shop's members, read-only", r.status === 200 && r.body?.doc?.length >= 2 && r.body?.canManage === false && r.body?.invitations?.length === 0, JSON.stringify({ s: r.status, n: r.body?.doc?.length, m: r.body?.canManage }));
+r = await call('POST', P(shop._id, '/people/invitations'), { email: `zed${stamp}@example.com`, role: 'member' }, gina);
 ok("can't invite people herself", r.status === 403, r.status);
+r = await call('GET', P(shop._id, '/sidebar/web/server'), null, gina);
+ok('Project → Settings, then Members in her sidebar', /project-settings[\s\S]*project-people/.test(JSON.stringify(r.body)));
+r = await call('GET', `/tenant/api/projects/${shop._id}`, null, gina);
+ok("Shop's details: who made it, how many open it", r.body?.createdBy?.name === 'Alma' && r.body?.people >= 2 && r.body?.models === 1 && !!r.body?.organizationName, JSON.stringify({ c: r.body?.createdBy, p: r.body?.people, m: r.body?.models }));
 r = await call('GET', '/tenant/api/sidebar/web/server', null, gina);
 ok('no Members in her sidebar', !JSON.stringify(r.body).includes('/org/members'));
 
@@ -122,7 +129,7 @@ r = await call('POST', P(blog._id, '/people/invitations'), { email: `nia${stamp}
 ok("…but not to Blog, which she can't open", r.status === 404, r.status);
 r = await call('GET', '/tenant/api/sidebar/web/server', null, ruth);
 r = await call('GET', P(shop._id, '/sidebar/web/server'), null, ruth);
-ok('People in her project sidebar', JSON.stringify(r.body).includes('/project-people'));
+ok('Members in her project sidebar', JSON.stringify(r.body).includes('/project-people'));
 r = await call('DELETE', P(shop._id, `/people/invitations/${niaInvite}`), null, ruth);
 ok('cancels it', r.status === 200, r.body?.message);
 r = await call('GET', P(shop._id, '/people'), null, ruth);

@@ -1659,6 +1659,14 @@ Decisions D14–D17 (README).
 - Verified: new smoke `project-invites.mjs` (50 checks) + full `run-all.sh` on a private server (:5031, Mongo :27996);
   `org-1.mjs` now expects four system roles. tsc clean in backend, mint-tenant, admin. Not deployed.
 
+## 2026-10-14 — WO-48 Project details and members
+- Sidebar inside a project: Project → Settings, then Members (was People), for everyone in the project.
+- `GET /p/:project/people` open to anyone in the project (+ `canManage`; invitations/roles only for managers); writes unchanged.
+- `GET /projects/:id` adds people count, createdBy, updatedAt, organizationName, fromTemplate.
+- Panels (mint-tenant + admin): About this project on Project settings; Members page read-only without invite rights.
+- Verified: `project-invites.mjs` (4 new checks) and tenant-auth, org-1, projects, business on a private server; tsc clean.
+  Not deployed.
+
 ## 2026-10-14 — WO-49 Waitlist approvals
 - Asked: a waitlist tab on the super admin to see sign-ups and approve them; approved people get the sign-up link by email.
 - Backend: `Waitlist` gains status `approved` and `approvedAt` / `linkSentAt`. `models/waitlist/waitlist.mail.ts`
