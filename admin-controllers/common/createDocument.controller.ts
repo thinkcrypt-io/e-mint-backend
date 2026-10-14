@@ -43,7 +43,9 @@ const createDocument = (model: mongoose.Model<any>) => {
 			const message = getErrorMessage(e);
 			// A value the model refuses is the request's fault, not the server's.
 			const invalid = e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError;
-			return res.status(invalid ? 400 : 500).json({ message });
+			// …and so is a model's own refusal that says so (a single type's second record, docs/cms D2).
+			const status = typeof e?.status === 'number' && e.status >= 400 && e.status < 500 ? e.status : invalid ? 400 : 500;
+			return res.status(status).json({ message });
 		}
 	};
 };

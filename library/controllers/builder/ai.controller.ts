@@ -41,6 +41,7 @@ export const KIND_GUIDE: Record<string, string> = {
 	editor: 'formatted rich text — descriptions, articles',
 	email: 'an email address',
 	url: 'a web address',
+	uid: 'a record’s address (slug), unique — made from another field (`from`, e.g. "title" → "my-first-post") until typed by hand. For posts, pages, products shown on a site',
 	color: 'a colour, like #ff8800',
 	number: 'a number — prices, quantities, ratings; can have min/max',
 	boolean: 'yes/no — a checkbox',
@@ -97,6 +98,7 @@ export const fieldProps = {
 	showInTable: { type: 'boolean', description: 'Shown as a table column by default' },
 	searchable: { type: 'boolean', description: 'Matched by the table search box' },
 	helper: { type: 'string', description: 'Short help text under the input' },
+	from: { type: 'string', description: 'For kind "uid": the key of the text field its slug is made from, e.g. "title"' },
 };
 
 /** A section's own field: the same, minus links, lists of values and nesting. */
@@ -133,6 +135,12 @@ export const TOOL: Anthropic.Tool = {
 			title: { type: 'string', description: 'Plural page title, e.g. "Invoices"' },
 			name: { type: 'string', description: 'Singular PascalCase model name, e.g. "Invoice"' },
 			description: { type: 'string', description: 'One line shown under the page title' },
+			kind: {
+				type: 'string',
+				enum: ['collection', 'single'],
+				description:
+					'"single" for something there is exactly one of — the site’s settings, the home page’s hero, an About page, a footer: its page opens the one record instead of a table. Default "collection" (many records).',
+			},
 			displayField: {
 				type: 'string',
 				description: 'Key of the text/email/url/select field that names a record where it is linked from (usually name or title). Or "code".',
@@ -260,6 +268,7 @@ export const normalize = (input: any, targets: Set<string>) => {
 		for (const p of ['min', 'max']) if (typeof f?.[p] === 'number') out[p] = f[p];
 		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
 		if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
+		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
 		if (Array.isArray(f?.options) && f.options.length) {
 			const seen = new Set<string>();
 			out.options = f.options
@@ -311,6 +320,7 @@ export const normalize = (input: any, targets: Set<string>) => {
 
 	return {
 		access,
+		...(input?.kind === 'single' && { kind: 'single' }),
 		title: String(input?.title || '').slice(0, 80),
 		name: String(input?.name || ''),
 		description: String(input?.description || '').slice(0, 300),

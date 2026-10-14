@@ -50,6 +50,8 @@ export const FIELD_KINDS = [
 	'editor',
 	'email',
 	'url',
+	// A record's address, made from another field (`from`): "My first post" → my-first-post. Unique (docs/cms D2).
+	'uid',
 	'number',
 	// A number calculated from the record's other number fields (`formula`) — never typed.
 	'formula',
@@ -226,6 +228,8 @@ export type ModelFieldDef = {
 	fields?: ModelFieldDef[];
 	/** A section list's add button, e.g. "Add item". */
 	addLabel?: string;
+	/** A uid kind's source field: its slug is made from that field's value until it's typed by hand. */
+	from?: string;
 };
 
 export type ModelDef = {
@@ -237,6 +241,8 @@ export type ModelDef = {
 	description?: string;
 	permission: string;
 	displayField?: string;
+	/** A collection of records, or a single type: exactly one record (docs/cms D2). */
+	kind?: 'collection' | 'single';
 	code?: { enabled?: boolean; prefix?: string; padding?: number; start?: number };
 	/** Per-record access (recordAccess.function.ts): an owner, a privacy and an access list on every record. */
 	access?: { enabled?: boolean; default?: string };
@@ -444,6 +450,10 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			case 'email':
 				p = { type: String, trim: true, lowercase: true };
 				break;
+			case 'uid':
+				// Made and checked on validate (uidHooks); always unique within the model.
+				p = { type: String, trim: true, lowercase: true };
+				break;
 			case 'textarea':
 			case 'editor':
 				p = { type: String };
@@ -500,7 +510,7 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			if (typeof f.max === 'number') p.maxlength = f.max;
 		}
 		if (required) p.required = required;
-		if (f.unique) {
+		if (f.unique || f.kind === 'uid') {
 			p.unique = true;
 			if (!f.required) p.sparse = true;
 		} else if (f.index) p.index = true;
@@ -514,6 +524,67 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 		paths[f.key] = p;
 	}
 	return paths;
+};
+
+/**
+ * A uid's form: lower case, words joined by dashes, accents off Latin letters;
+ * other scripts' letters kept (a Bangla title makes a Bangla address).
+ */
+export const uidOf = (value: any) =>
+	String(value ?? '')
+		.normalize('NFKD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 120)
+		.replace(/-+$/, '');
+
+/**
+ * uid fields (docs/cms D2), on every save: one typed by hand is put in uid
+ * form and must be free in this model; an empty one is made from its `from`
+ * field, and gets -2, -3… when that's taken. Left empty with nothing to make
+ * it from, the required check (if any) speaks.
+ */
+const uidHooks = (schema: Schema, def: ModelDef) => {
+	const uids = def.fields.filter(f => f.kind === 'uid');
+	if (!uids.length) return;
+	schema.pre('validate', async function (this: any) {
+		const Model: any = this.constructor;
+		for (const f of uids) {
+			const label = f.label || humanize(f.key);
+			const typed = this.get(f.key);
+			if (typed) {
+				const v = uidOf(typed);
+				if (v !== typed) this.set(f.key, v);
+				if (!v) this.invalidate(f.key, `${label} needs letters or digits`);
+				else if ((this.isNew || this.isModified(f.key)) && (await Model.exists({ [f.key]: v, _id: { $ne: this._id } })))
+					this.invalidate(f.key, `${label} “${v}” is already used — pick another`);
+				continue;
+			}
+			const base = f.from ? uidOf(this.get(f.from)) : '';
+			if (!base) continue;
+			let v = base;
+			for (let n = 2; await Model.exists({ [f.key]: v, _id: { $ne: this._id } }); n++) v = `${base}-${n}`;
+			this.set(f.key, v);
+		}
+	});
+};
+
+/** A single type (docs/cms D2) holds one record: a second is refused, however it's added. */
+const singleHooks = (schema: Schema, def: ModelDef) => {
+	const message = `${def.title} is a single type — it holds one record, which is already there. Edit that one.`;
+	schema.pre('save', async function (this: any) {
+		if (!this.isNew) return;
+		const Model: any = this.constructor;
+		if (await Model.exists({ _id: { $ne: this._id } })) throw Object.assign(new Error(message), { status: 400, name: 'SingleTypeError' });
+	});
+	schema.pre('insertMany', async function (this: any, next: any, docs: any) {
+		const n = Array.isArray(docs) ? docs.length : 1;
+		const Model: any = this;
+		if (n > 1 || (await Model.exists({}))) return next(Object.assign(new Error(message), { status: 400, name: 'SingleTypeError' }));
+		next();
+	});
 };
 
 export const buildSchema = (def: ModelDef) => {
@@ -544,6 +615,9 @@ export const buildSchema = (def: ModelDef) => {
 	// Indexes are synced explicitly (syncIndexes) after a change, where a
 	// failure — duplicates under a new unique field — can be reported back.
 	const schema = new Schema<any>(paths, { timestamps: true, versionKey: false, autoIndex: false });
+
+	uidHooks(schema, def);
+	if (def.kind === 'single') singleHooks(schema, def);
 
 	if (restricted) {
 		schema.index({ addedBy: 1 });
@@ -604,7 +678,9 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 		const s: any = { title, edit: true, schema: { default: shown, displayInTable: shown } };
 		// With a default, leaving it out isn't an error — the model fills it in.
 		// The form still marks it required, and starts from the default.
-		if (f.required && defaultOf(f) === undefined) s.required = true;
+		// A uid made from another field fills itself on save — like a default (docs/cms D2).
+		const fillsItself = defaultOf(f) !== undefined || (f.kind === 'uid' && !!f.from);
+		if (f.required && !fillsItself) s.required = true;
 		else if (f.required) s.schema.isRequired = true;
 		if (f.unique) s.unique = true;
 		// `helperText` is what the form reads.
@@ -646,6 +722,14 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 			case 'url':
 				Object.assign(s, { type: 'uri', trim: true, search: f.searchable ?? false });
 				s.schema.viewType = 'external-link';
+				break;
+			case 'uid':
+				// The slug input (docs/cms D2): filled from `from` as it's typed, until edited by hand.
+				Object.assign(s, { type: 'string', trim: true, search: f.searchable ?? true, unique: true });
+				s.schema.type = 'slug';
+				s.schema.copy = true;
+				if (f.from) s.schema.slugFrom = f.from;
+				sortable(true);
 				break;
 			case 'color':
 				Object.assign(s, { type: 'string', trim: true });

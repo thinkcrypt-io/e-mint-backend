@@ -50,6 +50,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig.section && { section: fieldConfig.section }),
 							...(fieldConfig.placeholder && { placeholder: fieldConfig.placeholder }),
 							...(fieldConfig?.helperText && { helper: fieldConfig.helperText }),
+							...(fieldConfig?.slugFrom && { slugFrom: fieldConfig.slugFrom }),
 							...(fieldConfig.options && { options: fieldConfig.options }),
 							...(fieldConfig.model && { model: fieldConfig.model }),
 							...(fieldConfig.dataModel && { dataModel: fieldConfig.model }),
@@ -103,6 +104,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig.dataModel && { dataModel: fieldConfig.dataModel }),
 						...(fieldConfig.options && { dataModel: fieldConfig.options }),
 						...(fieldConfig?.helperText && { helper: fieldConfig.helperText }),
+						...(fieldConfig?.slugFrom && { slugFrom: fieldConfig.slugFrom }),
 						...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
 						// Declarative, so it survives a settings copy in the DB: shown while formData[field] equals value.

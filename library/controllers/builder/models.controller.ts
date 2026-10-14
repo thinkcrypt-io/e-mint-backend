@@ -114,6 +114,7 @@ const subFieldBase = {
 	searchable: Joi.boolean(),
 	helper: Joi.string().allow('').max(200),
 	formula: Joi.string().allow('').max(500),
+	from: Joi.string().allow('').max(40),
 };
 
 /** A section's own field: the same, minus links and nested sections. */
@@ -171,6 +172,7 @@ const bodySchema = Joi.object({
 	title: Joi.string().trim().min(1).max(80).required(),
 	description: Joi.string().allow('').max(300),
 	displayField: Joi.string().allow(''),
+	kind: Joi.string().valid('collection', 'single'),
 	code: Joi.object({
 		enabled: Joi.boolean(),
 		prefix: Joi.string()
@@ -195,6 +197,9 @@ const bodySchema = Joi.object({
 	active: Joi.boolean(),
 	sidebar: Joi.object({ category: Joi.string().allow('', null) }),
 }).options({ stripUnknown: true });
+
+/** The kinds a uid can be made from. */
+const UID_SOURCES = ['text', 'email', 'url', 'select', 'textarea'];
 
 /** Joi-valid body -> definition fields, plus the checks Joi can't express. */
 const check = async (req: any, body: any, selfName: string, extraTargets: string[] = []) => {
@@ -241,6 +246,16 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 			}
 		}
 		if (typeof f.min === 'number' && typeof f.max === 'number' && f.min > f.max) problems.push(`${name}: min is above max`);
+		// A uid is always unique, and made from a text-like field of the same model, or typed (docs/cms D2).
+		if (f.kind === 'uid') {
+			f.unique = true;
+			delete f.index;
+			delete f.default;
+			if (f.from) {
+				const src = scope.find((x: any) => x.key === f.from);
+				if (!src || !UID_SOURCES.includes(src.kind)) problems.push(`${name}: it's made from “${f.from}”, which isn't a text, email, link or options field of this model`);
+			} else delete f.from;
+		} else delete f.from;
 	};
 
 	for (const f of value.fields) {
@@ -294,6 +309,7 @@ const draftDef = (value: any, a: Availability): ModelDef => ({
 	description: value.description,
 	permission: a.route,
 	displayField: value.displayField || undefined,
+	kind: value.kind,
 	code: value.code,
 	access: value.access,
 	active: true,
@@ -357,7 +373,7 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
@@ -910,6 +926,12 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 			publishedBy: req.user?._id,
 		});
 
+		// A collection becomes a single type only while it holds at most one record.
+		if (value.kind === 'single' && before.kind !== 'single') {
+			const Model: any = compiledModel(before.name);
+			const n = Model ? await Model.countDocuments() : 0;
+			if (n > 1) throw new BuildError(400, `${before.title} has ${n} records — a single type holds one. Delete the others first, or keep it a collection.`);
+		}
 		const { sidebar, name, route, ...rest } = value;
 		doc.set({
 			...rest,

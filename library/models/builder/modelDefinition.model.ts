@@ -40,6 +40,8 @@ const fieldSchema = new Schema<any>(
 		fields: { type: [Schema.Types.Mixed], default: undefined },
 		/** For a section list: its add button's text. */
 		addLabel: { type: String, trim: true },
+		/** For the uid kind: the field its slug is made from (docs/cms D2). */
+		from: { type: String, trim: true },
 	},
 	{ _id: false, minimize: false }
 );
@@ -60,6 +62,8 @@ const schema = new Schema<any>(
 		permission: { type: String, required: true, trim: true, lowercase: true },
 		/** The field that names a record wherever it's linked (menus, tables). */
 		displayField: { type: String, trim: true },
+		/** A collection of records, or a single type holding exactly one (docs/cms D2). */
+		kind: { type: String, enum: ['collection', 'single'], default: 'collection' },
 		code: {
 			enabled: { type: Boolean, default: false },
 			prefix: { type: String, trim: true, uppercase: true },

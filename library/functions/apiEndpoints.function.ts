@@ -84,6 +84,8 @@ const words = (def: any) => {
 };
 export const standardName = (def: any, action: string) => {
 	const { plural, one } = words(def);
+	// A single type's GET answers with its one record (docs/cms D2).
+	if (def.kind === 'single' && action === 'list') return `Read ${String(def.title || one).toLowerCase()}`;
 	return { list: `List ${plural.toLowerCase()}`, get: `Read one ${one}`, create: `Create ${one}`, update: `Update ${one}`, delete: `Delete ${one}` }[action] || action;
 };
 
@@ -140,7 +142,7 @@ const reconcile = async (def: any, mine: any[]) => {
 /** Every model's standard endpoints in step with its `publicApi` (D1, D9). Cheap when nothing changed. */
 export const ensureEndpoints = async () => {
 	const [defs, std]: any[] = await Promise.all([
-		ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, publicApi: 1 }).lean(),
+		ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, publicApi: 1, kind: 1 }).lean(),
 		ApiEndpoint.find({ standard: true }).lean(),
 	]);
 	for (const def of defs) {

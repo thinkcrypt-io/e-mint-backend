@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { Page } from '../../models/_index.js';
+import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 
 type ConfigType = {
 	table: string[];
@@ -31,7 +32,9 @@ const getPageRoute = ({ config, route }: { config?: ConfigType; route?: string }
 				};
 				return res.status(200).json(routeConfig);
 			} else {
-				return res.status(200).json(config.route);
+				// A single type's page opens its one record instead of a table (docs/cms D2).
+				const def: any = await ModelDefinition.findOne({ route: config.route.path || route }, { kind: 1 }).lean();
+				return res.status(200).json(def?.kind === 'single' ? { ...config.route, single: true } : config.route);
 			}
 		} catch (e: any) {
 			console.error(e.message);

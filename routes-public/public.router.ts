@@ -786,6 +786,14 @@ const applyLinked = async (plan: any, saved: any, undo: () => Promise<any>) => {
 
 const list = async (req: any, ctx: Ctx) => {
 	const { def, Model, ep } = ctx;
+	// A single type (docs/cms D2) answers with its one record, as an object — 404 until it's made.
+	if (def.kind === 'single') {
+		const keys = outFor(ctx, req.query.fields);
+		const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
+		const doc: any = await Model.findOne(reach(ctx)).select(keys.join(' ')).populate(populate).lean();
+		if (!doc) throw new TenancyError(404, 'Not found');
+		return shapeOut(doc, keys);
+	}
 	const max = ep.list?.maxLimit || 100;
 	const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || ep.list?.limit || 20, 1), max);
 	const page = Math.max(parseInt(req.query.page, 10) || 1, 1);

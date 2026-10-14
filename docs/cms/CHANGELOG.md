@@ -15,3 +15,23 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   order, conditions); drafts until Publish; languages chosen in Settings, other-language fields only when there's
   more than one; engine first. README D1, D8, §5, §6 and CMS-06, CMS-12 rewritten to match.
 
+## 2026-10-15 — CMS-02 Single types + address (uid) fields
+- Backend: `ModelDefinition.kind` (`collection` | `single`) and field `from`; field kind `uid` (FIELD_KINDS). Compiled
+  models: `uidHooks` (pre-validate — typed ones tidied with `uidOf` and checked free, empty ones made from `from`
+  with -2, -3…; Latin accents dropped, other scripts kept) and `singleHooks` (a second record refused on save and
+  insertMany, 400). Builder checks: a uid is always unique, its `from` a text/email/url/select/textarea field; a
+  collection becomes single only with ≤ 1 record. Settings: uid → `slug` input with `slugFrom`; a uid with `from` isn't
+  required in the request (it fills itself). `/get/route` says `single: true`. Public API: a single type's list
+  answers with the record (404 before it's made); its standard endpoint is "Read <title>"; uid is filterable and
+  searchable (`?slug=…`, lower-cased). AI/MCP plan schema: model `kind`, field `from`, the uid kind guide.
+  `admin-controllers/common/createDocument` passes a model's own 4xx through.
+- Panel (mint-tenant): kind "Address (slug)" with a "Made from …" picker and its check; Settings → **How many
+  records** (Many / Just one); form preview; `VSlug` follows its source on new records (never on edit) and stays
+  controlled; `SingleTypePage` (opens the record, or "Fill it in"); a single type's record page is titled by the page,
+  without a table breadcrumb. Admin not changed (it shows a table; the backend still refuses a second record).
+- Docs: mint-docs Models → Single types, Address (slug) fields; website changelog.
+- Verified: `cms-single.mjs` (24 checks) passes; models, api-builder, public-filters, templates-apply, website-mcp,
+  templates-mcp, site-builder-data pass. Headless Chrome: empty single type, its record page, the slug following a
+  typed title, the model builder's field row and How many records. (A pre-existing React "uncontrolled → controlled"
+  warning shows on every create form when typing — not from this change.)
+

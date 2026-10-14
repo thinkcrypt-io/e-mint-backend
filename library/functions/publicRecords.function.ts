@@ -74,6 +74,8 @@ const FAMILY: Record<string, Family> = {
 	text: 'text',
 	email: 'text',
 	url: 'text',
+	// An address (docs/cms D2): a site finds a record by it — ?slug=my-first-post.
+	uid: 'text',
 	textarea: 'text',
 	select: 'choice',
 	number: 'number',
@@ -101,7 +103,7 @@ const ALL_OPS = new Set(Object.values(OPS).flat());
 /** Query names that are the list's own, never a field filter (as in the admin's filter middleware). */
 const RESERVED = new Set(['page', 'limit', 'sort', 'search', 'fields', 'skip', 'archived']);
 /** Kinds `search` looks through. */
-const SEARCHED = new Set(['text', 'email', 'textarea', 'select', 'tags']);
+const SEARCHED = new Set(['text', 'email', 'textarea', 'select', 'tags', 'uid']);
 const SYSTEM_DATES = [
 	{ key: 'createdAt', label: 'Created', kind: 'date' },
 	{ key: 'updatedAt', label: 'Updated', kind: 'date' },
@@ -169,7 +171,7 @@ const readValue = (f: any, raw: any): any => {
 			return new mongoose.Types.ObjectId(v);
 		default:
 			if (v.length > 200) throw new TenancyError(400, `${f.key}: at most 200 characters`);
-			return f.kind === 'email' ? v.toLowerCase() : v;
+			return f.kind === 'email' || f.kind === 'uid' ? v.toLowerCase() : v;
 	}
 };
 

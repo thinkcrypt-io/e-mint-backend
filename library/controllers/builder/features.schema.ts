@@ -49,6 +49,7 @@ export const STEP_SCHEMA = {
 				'create: optional admin route (and API path) when the user names one, e.g. "web-contents" — lowercase letters, digits and hyphens. Left out, it comes from the name ("leaverequests").',
 		},
 		description: { type: 'string', description: 'create: one line shown under the page title' },
+		kind: buildModel.properties.kind,
 		displayField: buildModel.properties.displayField,
 		code: buildModel.properties.code,
 		access: buildModel.properties.access,

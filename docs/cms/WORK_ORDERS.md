@@ -9,7 +9,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | WO | What | Where | Size | Status |
 |---|---|---|---|---|
 | CMS-01 | Plan & docs | backend | S | done 2026-10-15 (agreed) |
-| CMS-02 | Single types + UID field kind (D2) | backend + mint-tenant | M | — |
+| CMS-02 | Single types + UID field kind (D2) | backend + mint-tenant | M | done 2026-10-15 |
 | CMS-03 | Components: definitions, `component` field kind, nesting, "make reusable" (D3) | backend + mint-tenant | L | — |
 | CMS-04 | Dynamic zone: `blocks` field kind, panel editor, API shape (D4) | backend + mint-tenant | L | — |
 | CMS-05 | Draft & publish per entry: `_published` snapshot, status, publish/unpublish/discard, every read path (D5, D11) | backend + mint-tenant | L | — |
