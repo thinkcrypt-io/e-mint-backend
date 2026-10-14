@@ -1719,3 +1719,11 @@ Decisions D14–D17 (README).
   window's bottom edge (Layout `minH: 100vh` + `MainBody grow`). Undoes admin's sticky footer `ba88b4b`.
 - Verified in the browser pane: dashboard at 375px (footer only after the last card), Notifications at 1280px (footer at
   the window's bottom). Pushed: mint-tenant `0d083e9`, admin `345267c`.
+
+## 2026-10-14 — Phone create form padding (mint-tenant)
+- The user: on a phone the create form's body had no padding and scrolled sideways where the inputs are.
+  `BackendCreateModal` set `DialogBody px={{ base: 0, md: 6 }}`, so fields ran to the screen edge and the form sections'
+  `mx: -1` (room for focus rings, FormDivisionAccordion) stuck 4px past it. Now the body's own padding (16px phone,
+  24px up), like CreateModal. Admin already had it (the zero was mint-tenant drift).
+- Verified in headless Chrome on a template project's New invoice: 390px and 360px, with a line item open —
+  body 16px padding, scrollWidth = width. Pushed: mint-tenant (see git log).
