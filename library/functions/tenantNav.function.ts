@@ -21,12 +21,22 @@ const widgetsItem = (can: (key: string) => boolean) => [
 	...(can('manage-projects') ? [{ title: 'Payments', href: '/site-payments', icon: 'credit-card' }] : []),
 ];
 
-/** The public API's pages: its settings and reference, webhooks, widgets, and the customers who sign in to it. */
+/**
+ * The public API's pages (docs/api-builder D11): its overview, endpoints, server keys and reference, the
+ * customers who sign in to it, webhooks — and, outside a website, the widgets built on it.
+ */
 const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
-	...(can('build') ? [{ title: 'Public API', href: '/public-api', icon: 'webhook' }] : []),
+	...(can('build')
+		? [
+				{ title: 'Overview', href: '/public-api', icon: 'plug-zap' },
+				{ title: 'Endpoints', href: '/public-api/endpoints', icon: 'route' },
+				{ title: 'Keys', href: '/public-api/keys', icon: 'key-round' },
+				{ title: 'Reference', href: '/public-api/reference', icon: 'book-open' },
+		  ]
+		: []),
+	...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 	...(can('build') ? [{ title: 'Webhooks', href: '/webhooks', icon: 'send' }] : []),
 	...(withWidgets ? widgetsItem(can) : []),
-	...(can('view-customers') ? [{ title: 'Customers', href: '/t/customers', icon: 'user-round' }] : []),
 ];
 
 /**
@@ -54,7 +64,7 @@ export const tenantNav = (
 			  ])
 			: [];
 	// An API project has these at the top instead (tenantLead).
-	const audience = inProject && projectType !== 'api' ? section('Audience', 'users-round', apiItems(can, projectType !== 'website')) : [];
+	const audience = inProject && projectType !== 'api' ? section('API', 'plug-zap', apiItems(can, projectType !== 'website')) : [];
 	// Everyone who works with records uses the media library, so it isn't kept under Build.
 	const files = inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : [];
 	const build = inProject && can('build')

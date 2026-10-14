@@ -46,12 +46,12 @@ const slug = r.body?.publicSlug;
 r = await call('GET', P(pid, '/sidebar/admin/server'), null, s.pat);
 const nav = r.body || [];
 ok(
-	'sidebar leads with API: Public API, Webhooks, Widgets, Payments, Customers',
-	nav[0]?.title === 'Dashboard' && nav[1]?.sectionTitle === 'API' && nav.slice(1, 6).map(i => i.title).join() === 'Public API,Webhooks,Widgets,Payments,Customers' && !nav.some(i => i.sectionTitle === 'Audience'),
+	'sidebar leads with API: Overview, Endpoints, Keys, Reference, Customers, Webhooks, Widgets, Payments',
+	nav[0]?.title === 'Dashboard' && nav[1]?.sectionTitle === 'API' && nav.slice(1, 9).map(i => i.title).join() === 'Overview,Endpoints,Keys,Reference,Customers,Webhooks,Widgets,Payments' && !nav.some(i => i.sectionTitle === 'Audience'),
 	nav.map(i => `${i.sectionTitle ? `[${i.sectionTitle}] ` : ''}${i.title}`).join(' | ')
 );
 r = await call('GET', P(s.crm, '/sidebar/admin/server'), null, s.pat);
-ok('an app keeps Public API, Webhooks, Customers under Audience', (r.body || []).some(i => i.sectionTitle === 'Audience' && i.title === 'Public API') && (r.body || []).some(i => i.title === 'Webhooks'));
+ok('an app has its API section: Overview first, Webhooks in it (docs/api-builder D11)', (r.body || []).some(i => i.sectionTitle === 'API' && i.title === 'Overview' && i.href === '/public-api') && (r.body || []).some(i => i.title === 'Endpoints') && (r.body || []).some(i => i.title === 'Webhooks') && !(r.body || []).some(i => i.sectionTitle === 'Audience'));
 
 r = await call('POST', P(pid, '/builder/models'), {
 	name: 'Order', title: 'Orders', displayField: 'name', fields: [

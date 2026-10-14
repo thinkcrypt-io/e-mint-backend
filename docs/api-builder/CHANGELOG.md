@@ -40,3 +40,25 @@ agent must know. Decisions live in README.md.
   collections, widgets, widgets-cart, templates-preview, templates-apply, site-builder, site-builder-data,
   site-builder-starter all pass (public.mjs isn't re-runnable on one project — first run passed). Migration
   rehearsed: 71 standard endpoints removed, dry run, `--apply` made 181 across projects, re-run made 0.
+
+## 2026-10-14 — AB-03 Panel I
+- Sidebar (`tenantNav.function.ts`): the **API** section (icon plug-zap) replaces Audience — Overview
+  `/public-api`, Endpoints, Keys, Reference (Build), Customers (view-customers), Webhooks (Build), then Widgets and
+  Payments outside a website (a website keeps them under Site). An API project leads with the same section.
+  `webhooks.mjs` checks the new order.
+- mint-tenant: `store/services/apiBuilderApi.ts` (tag `api-builder`; saves also invalidate `builder`, since the
+  model's `publicApi` summary changes). `getApiOverview` was taken (the API project dashboard) — the overview
+  query is `getApiBuilderOverview`.
+- `app/public-api/page.tsx` — **Overview**: address (copy), tiles (endpoints on, calls, keys, customers), "Start
+  here" while there are no endpoints, By model (Generate / Endpoints →), Called lately, Use it (anyone fetch,
+  sign-in widget, server key curl, website analytics). The old page's reference + tester move to Reference (AB-04).
+- `app/public-api/endpoints/page.tsx` — **Endpoints**: by model, standard first in action order then custom by
+  path; method badge, path, name, calls, who badge + rules count, on/off; model filter (`?model=`) and search;
+  Generate per model. `_components/`: `shared.tsx` (publicBase/apiBase/apiHref, MethodBadge, WhoBadge, ACTIONS,
+  WHO, ApiTabs — the four pages as tabs), `WhoCards.tsx`, `GenerateDialog.tsx`, `NewEndpointDialog.tsx` (model →
+  what it does → address with suggestions and the full URL → who + name; server errors go back to their step;
+  opens the endpoint's page). Each page's Layout `path` is its sidebar item's (`public-api-endpoints`…).
+- GuideLink anchors `api-*` → the public-api guide (written in AB-05).
+- Verified: panel tsc; screenshots (headless Chrome against the private backend, launch config
+  `mint-tenant-5051` :3053): empty Overview with Start here, Endpoints with standard/custom/key endpoints, the
+  Generate dialog (scrolls inside), the wizard's address step; `webhooks.mjs` all pass.
