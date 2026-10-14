@@ -663,3 +663,31 @@ Newest last. Each entry: what changed, where, how it was checked, commits.
   adopted), the look step with 13 thumbnails, theme dots on a block; the
   real PDF of a starter used with Heritage (EB Garamond, navy band, ৳).
 
+
+## 2026-10-14 — PT-36 More starters and categories
+- The user: more PDF templates, more categories.
+- 7 new gallery categories (`MORE_CATEGORIES` in `startersMore.ts`, part of
+  DEFAULT_CATEGORIES): purchase-order, delivery-note, credit-note, statement,
+  payslip, certificate, voucher. Existing databases already have categories,
+  so `ensureCategories` upserts (`$setOnInsert`, never overwrites a renamed
+  one) the categories of starters being added — on "Add the new built-in
+  starters" and when the gallery falls back to the built-in starters.
+- 15 starters (25 in all): Invoice — Elegant (Heritage), Proforma invoice,
+  Tax invoice with per-line VAT and both BINs, Receipt — Modern (bands,
+  PAID stamp), Estimate — Project (scope / timeline), Purchase order and
+  Purchase order — Modern, Delivery challan (no prices, vehicle / driver,
+  three signatures), Packing slip (ship-to box, tracking, tick column),
+  Credit note, Statement of account (running balance), Payslip (earnings /
+  deductions side by side, net pay in words), Certificate of completion
+  (A4 landscape, double frame) and of appreciation (side panel), Payment
+  voucher (A5 landscape, four signatures). Colours are roles and titles
+  `font: 'heading'`, so a look recolours / re-fonts them.
+- The small builders moved to `starterKit.ts` (shared by both files, plus
+  `look(palette, pairing)`, `signatures`, `businessBlock`). mapping.ts got
+  synonyms for the new slots (supplier, deliveryDate, employee, net pay…).
+- Checked: every starter rendered from a scratch build — one page each,
+  looked at as PNGs (fixed a wrapping VAT% header, a doubled "BIN",
+  statement dates wrapping); smoke on a scratch server + database: all
+  passed, with 17 new checks (the 15 in the gallery and each previewing as
+  one page, the categories came along; the kinds check now reads the
+  gallery's categories). Not deployed.

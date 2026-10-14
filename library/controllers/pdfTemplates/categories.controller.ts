@@ -2,11 +2,14 @@ import { Request, Response } from 'express';
 import { PdfCategory, PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { currentScope, withoutScope } from '../../functions/tenantScope.function.js';
 import { categoryKey } from '../../functions/pdfTemplates/schema.js';
+import { MORE_CATEGORIES } from '../../functions/pdfTemplates/startersMore.js';
 
 /**
  * Gallery categories (docs/pdf-templates D21): one global list, read by
  * everyone signed in, kept by the super admin. Seeded with Invoices,
- * Receipts and Quotations the first time it's read.
+ * Receipts, Quotations and the rest of DEFAULT_CATEGORIES the first time
+ * it's read; a category added since comes along with its starters
+ * (ensureCategories, on "Add the built-in starters").
  */
 
 export type PdfCategoryData = { key: string; name: string; description: string; order: number };
@@ -15,6 +18,7 @@ export const DEFAULT_CATEGORIES: PdfCategoryData[] = [
 	{ key: 'invoice', name: 'Invoices', description: 'What a customer owes you — for work done or goods sold.', order: 0 },
 	{ key: 'receipt', name: 'Receipts', description: 'Proof of money received.', order: 1 },
 	{ key: 'quotation', name: 'Quotations', description: 'A price offer before the work starts.', order: 2 },
+	...MORE_CATEGORIES,
 ];
 
 const shape = (c: any): PdfCategoryData => ({ key: c.key, name: c.name, description: c.description || '', order: c.order ?? 0 });
@@ -29,6 +33,15 @@ export const loadCategories = async (): Promise<PdfCategoryData[]> =>
 		}
 		return list.map(shape);
 	});
+
+/** The built-in categories of these kinds that aren't there yet — added, never changed (PT-36). */
+export const ensureCategories = async (kinds: string[]): Promise<number> => {
+	const want = DEFAULT_CATEGORIES.filter(c => kinds.includes(c.key));
+	if (!want.length) return 0;
+	await loadCategories();
+	const r = await withoutScope(() => PdfCategory.bulkWrite(want.map(c => ({ updateOne: { filter: { key: c.key }, update: { $setOnInsert: c }, upsert: true } }))));
+	return r.upsertedCount || 0;
+};
 
 /** Only the super admin keeps the categories (not inside a project). */
 export const keepsGallery = () => !currentScope();

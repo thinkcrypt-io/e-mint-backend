@@ -1,5 +1,7 @@
 import { Slot } from './schema.js';
 import { adoptRoles } from './theme.js';
+import { text, fields, row, cols, col, box, space, fillSpace, hrow, line, image, table, tcol, PAGE, muted, label, footer, BUSINESS as KIT_BUSINESS } from './starterKit.js';
+import { MORE_STARTERS } from './startersMore.js';
 
 /**
  * The starter templates (docs/pdf-templates D6, D7). They go into the super
@@ -9,35 +11,6 @@ import { adoptRoles } from './theme.js';
  * these. Each declares its data as slots — what it prints, under its own
  * alias — which are matched to a page's fields when a project uses it.
  */
-
-/* Small builders, so a starter reads like its layout. */
-const text = (t: string, p: Record<string, any> = {}) => ({ type: 'text', text: t, ...p });
-const fields = (rows: any[], p: Record<string, any> = {}) => ({ type: 'fields', rows, ...p });
-const row = (label: string, value: string, p: Record<string, any> = {}) => ({ label, value, ...p });
-const cols = (columns: any[], p: Record<string, any> = {}) => ({ type: 'columns', columns, ...p });
-const col = (blocks: any[], width = 1, p: Record<string, any> = {}) => ({ blocks, width, ...p });
-const box = (blocks: any[], p: Record<string, any> = {}) => ({ type: 'box', blocks, ...p });
-const space = (height: number) => ({ type: 'spacer', height });
-/** A Space that takes the room left (D19): in a row it pushes apart, in the body it pushes to the page bottom. */
-const fillSpace = () => ({ type: 'spacer', height: 4, grow: 1 });
-/** Blocks side by side (a box laid out as a row, nothing drawn) — D19. */
-const hrow = (blocks: any[], p: Record<string, any> = {}) => ({ type: 'box', direction: 'row', pad: 0, gap: 8, blocks, ...p });
-const line = (p: Record<string, any> = {}) => ({ type: 'divider', ...p });
-const image = (src: string, p: Record<string, any> = {}) => ({ type: 'image', src, ...p });
-const table = (rows: string, columns: any[], p: Record<string, any> = {}) => ({ type: 'table', rows, columns, ...p });
-const tcol = (header: string, value: string, width = 1, align = 'left') => ({ header, value, width, align });
-
-const PAGE = { size: 'A4', orientation: 'portrait', margin: [42, 42, 42, 42] };
-const muted = (t: string, p: Record<string, any> = {}) => text(t, { size: 8.5, color: '#6b7280', ...p });
-const label = (t: string, p: Record<string, any> = {}) => text(t, { size: 7.5, weight: 600, color: '#6b7280', upper: true, spacing: 0.8, mb: 3, ...p });
-
-const footer = [
-	line({ mb: 6 }),
-	cols([
-		col([muted('{{business.name}}  ·  {{business.website}}', { size: 7.5 })], 3),
-		col([muted('Page {{page}} of {{pages}}', { size: 7.5, align: 'right' })], 1),
-	]),
-];
 
 /* ---------------------------------------------------------------- slots */
 
@@ -117,15 +90,7 @@ const invoiceSample = (a: string) => ({
 		due: 56250,
 		notes: 'Please pay by bank transfer within 14 days. Thank you for your business.',
 	},
-	business: {
-		name: 'Northwind Studio',
-		address: 'Level 4, 22 Gulshan Avenue, Dhaka 1212',
-		phone: '+880 1800 000000',
-		email: 'hello@northwind.studio',
-		website: 'northwind.studio',
-		taxId: 'BIN 000123456-0101',
-		note: 'Bank: City Bank · A/C 1234 5678 9012 · Routing 225261725',
-	},
+	business: KIT_BUSINESS,
 });
 const receiptSample = {
 	receipt: {
@@ -674,7 +639,6 @@ const moneyReceipt = {
 	sample: receiptSample,
 };
 
-/** By category: invoices, receipts, quotations (D21). */
 /**
  * Theme-ready (D24): each starter's literal colours that play a role — its accent, tints and shades of it,
  * near-black bands, white words on the accent — become role names (theme.ts adoptRoles), so a look picked
@@ -683,4 +647,5 @@ const moneyReceipt = {
  */
 const themed = <T extends Record<string, any>>(t: T): T => adoptRoles(t).template;
 
-export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, invoiceBanner, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern].map(themed);
+/** By category (D21): invoices, receipts, quotations, then the rest (startersMore.ts). */
+export const STARTERS = [invoiceClassic, invoiceModern, invoiceMinimal, invoiceBanner, bill, receipt, receiptCompact, moneyReceipt, quotation, quotationModern, ...MORE_STARTERS].map(themed);

@@ -10,7 +10,7 @@ import { applyMapping, guessMapping, Mapping } from '../../functions/pdfTemplate
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
 import { DEFAULT_SETTINGS, PdfSettingsData, PdfTemplateData, categoryKey, normalizeSettings, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
 import { applyLook } from '../../functions/pdfTemplates/theme.js';
-import { loadCategories } from './categories.controller.js';
+import { ensureCategories, loadCategories } from './categories.controller.js';
 import { STARTERS } from '../../functions/pdfTemplates/starters.js';
 import { previewRoots } from '../../functions/pdfTemplates/preview.js';
 import { resources } from '../builder/viewDocument.controller.js';
@@ -217,6 +217,8 @@ export const saveSettings = async (req: any, res: Response) => {
 export const listGallery = async (_req: Request, res: Response) => {
 	try {
 		const published = await withoutScope(() => PdfTemplate.find({ 'gallery.published': true }).sort({ 'gallery.order': 1, name: 1 }).lean());
+		// Showing the built-in starters: their categories too, so none land under "Other" (PT-36).
+		if (!(published as any[]).length) await ensureCategories([...new Set(STARTERS.map(x => x.kind))]);
 		const templates = ((published as any[]).length ? published : STARTERS.map(starterDoc)).map((t: any) => ({ ...t, kind: categoryKey(t.kind) || 'other' }));
 		// Starters shipped since the super admin last added them — offered on their gallery tab.
 		let newStarters = 0;
@@ -235,13 +237,17 @@ export const listGallery = async (_req: Request, res: Response) => {
 export const addStarters = async (req: any, res: Response) => {
 	if (currentScope()) return fail(res, 403, 'Only the super admin keeps the gallery');
 	let added = 0;
+	const kinds = new Set<string>();
 	for (const [i, s] of STARTERS.entries()) {
 		if (await PdfTemplate.exists({ key: s.key })) continue;
 		const { template } = normalizeTemplate(s);
 		await PdfTemplate.create({ ...template, key: s.key, gallery: { published: true, order: i }, createdBy: userId(req), updatedBy: userId(req) });
+		kinds.add(template.kind);
 		added++;
 	}
-	return res.status(200).json({ added });
+	// Starters of a category the gallery doesn't have yet bring it along (PT-36).
+	const categories = await ensureCategories([...kinds]);
+	return res.status(200).json({ added, categories });
 };
 
 /* ----------------------------------------------------- fields, using */

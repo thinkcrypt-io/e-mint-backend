@@ -137,10 +137,23 @@ r = await call('GET', '/pdf-templates/gallery', null, T);
 const classic = r.body.templates.find(t => t.key === 'invoice-classic');
 ok('gallery now comes from the database', r.body.builtIn === false && !!classic?._id && !String(classic._id).startsWith('starter:'), r.body?.templates?.length);
 const galleryList = r.body.templates;
+const galleryCats = (r.body.categories || []).map(c => c.key);
 r = await call('POST', '/pdf-templates/render', { template: classic._id }, T);
 ok('gallery preview renders with sample data', r.status === 200 && r.pdf?.length > 5000);
 save('gallery-classic', r);
-ok('every starter is in the gallery, each under a category', ['invoice-minimal', 'quote-standard', 'quote-modern', 'receipt-money'].every(k => galleryList.some(t => t.key === k)) && galleryList.every(t => ['invoice', 'receipt', 'quotation'].includes(t.kind)), galleryList.map(t => `${t.key}:${t.kind}`));
+ok('every starter is in the gallery, each under a category', ['invoice-minimal', 'quote-standard', 'quote-modern', 'receipt-money'].every(k => galleryList.some(t => t.key === k)) && galleryList.every(t => galleryCats.includes(t.kind)), galleryList.map(t => `${t.key}:${t.kind}`));
+// PT-36: the further starters and the categories they bring.
+const more = ['invoice-elegant', 'invoice-proforma', 'invoice-tax', 'receipt-modern', 'quote-estimate', 'po-standard', 'po-modern', 'delivery-challan', 'packing-slip', 'credit-note', 'statement-account', 'payslip-standard', 'certificate-completion', 'certificate-appreciation', 'voucher-payment'];
+ok('the further starters are in the gallery (PT-36)', more.every(k => galleryList.some(t => t.key === k)), more.filter(k => !galleryList.some(t => t.key === k)));
+ok('their categories came along', ['purchase-order', 'delivery-note', 'credit-note', 'statement', 'payslip', 'certificate', 'voucher'].every(k => galleryCats.includes(k)), galleryCats);
+for (const k of more) {
+	const t = galleryList.find(x => x.key === k);
+	if (!t) continue;
+	r = await call('POST', '/pdf-templates/render', { template: t._id }, T);
+	ok(`${k} previews as one page`, r.status === 200 && r.pdf?.length > 3000 && (r.pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length === 1, r.status);
+	save(`gallery-${k}`, r);
+}
+
 for (const key of ['invoice-minimal', 'quote-standard', 'quote-modern', 'receipt-money']) {
 	const g = galleryList.find(t => t.key === key);
 	const out = await call('POST', '/pdf-templates/render', { template: g?._id }, T);
