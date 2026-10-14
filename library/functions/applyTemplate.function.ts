@@ -225,7 +225,7 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 			/* 6. Organization roles: only names the organization doesn't have yet. */
 			step = 'Roles';
 			for (const r of bp.roles || []) {
-				const exists = await OrganizationRole.exists({ organization: project.organization, name: new RegExp(`^${r.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+				const exists = await OrganizationRole.exists({ organization: project.organization, project: null, name: new RegExp(`^${r.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
 				if (exists) {
 					result.roles.skipped.push(r.name);
 					continue;

@@ -72,11 +72,11 @@ export const tenantNav = (
 	// What happened in the project, for everyone who reads its records (WO-36).
 	const activity = inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : [];
 	// The project's own settings — its details and business details (docs/pdf-templates D14) — then who works in it (WO-47).
-	// Everyone in the project sees both (WO-48); changing them takes manage-projects / invite-to-projects.
+	// Only for those who can change them (WO-50): manage-projects, invite-to-projects / manage-members.
 	const project = inProject
 		? section('Project', 'folder-cog', [
-				{ title: 'Settings', href: '/project-settings', icon: 'settings' },
-				{ title: 'Members', href: '/project-people', icon: 'users' },
+				...(can('manage-projects') ? [{ title: 'Settings', href: '/project-settings', icon: 'settings' }] : []),
+				...(can('invite-to-projects') || can('manage-members') ? [{ title: 'Members', href: '/project-people', icon: 'users' }] : []),
 		  ])
 		: [];
 	// Inside a project the organization's own details stay out of the way: they're changed outside it.

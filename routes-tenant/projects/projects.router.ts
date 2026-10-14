@@ -7,7 +7,7 @@ import ModelDefinition from '../../library/models/builder/modelDefinition.model.
 import TenantUser from '../../library/models/tenancy/tenantUser.model.js';
 import ProjectTemplate from '../../library/models/templates/projectTemplate.model.js';
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
-import { normalizePermissions, tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
+import { grants, normalizePermissions, requestPermissionsIn, tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
 import { TenancyError, canOpenProject, collaborationOf, handle, isId, opensAllProjects, projectAccessFilter, publicProject } from '../../library/functions/tenancy.function.js';
 import { createProject, removeProjectContents } from '../../library/functions/projectLifecycle.function.js';
@@ -132,9 +132,11 @@ router.get(
 
 router.put(
 	'/:id',
-	tenantPermissions(['manage-projects']),
 	handle(async req => {
 		const project = await loadProject(req);
+		// Their role in the project counts — Full access there may change it (WO-50).
+		if (!grants(await requestPermissionsIn(req, project._id), ['manage-projects']))
+			throw new TenancyError(403, 'Forbidden: your role in this project doesn’t allow this');
 		const { business, collaboration, ...body } = check(Joi.object({ ...fields, isActive: Joi.boolean() }), req.body);
 		Object.assign(project, body);
 		// A switch left out keeps its value.

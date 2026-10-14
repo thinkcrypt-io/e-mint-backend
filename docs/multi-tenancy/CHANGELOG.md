@@ -1691,3 +1691,15 @@ Decisions D14–D17 (README).
 - Verified: `comments.mjs` (32 checks, added to run-all) + neighbouring suites on a private server; screenshots; tsc clean.
   Not deployed.
 - Also: Members page falls back to role keys for Invite when the backend predates WO-48 (`canManage` missing).
+
+## 2026-10-14 — WO-50 Project roles, invite fix, invitations page, comments per page
+- Invite "Something went wrong": `systemRole` upserting Developer collided with an organization's own "Developer" role
+  (unique {organization, name}) → E11000 → 500. A clash now names it "Developer (standard)".
+- New system role `full` (Full access). Project roles: `OrganizationRole.project`, index {organization, project, name}
+  (old index dropped on connect); per-model keys kept only for project roles (`normalizePermissions(…, {models})`,
+  `isModelKey`); `/p/:project/people/roles` CRUD; `requestPermissionsIn` for PUT /projects/:id.
+- Sidebar Project → Settings / Members only for managers; `/invitations` page; invitation notifications link there.
+- Comments/mentions switches per page in RouteConfig `route.comments|mentions` (Fields & rules), read by comments.router.
+- Files: tenantPermissions.function, organizationRole.model, people.router, projects.router, org.router, comments.router,
+  tenantNav.function, applyTemplate.function, tenancy.function; smoke project-invites, comments, org-1.
+- Verified: smoke org-1, project-invites, comments, access, automations; screenshots. Details in WORK_ORDERS.md WO-50.

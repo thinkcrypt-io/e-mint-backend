@@ -4,7 +4,8 @@ import mongoose from 'mongoose';
 import RecordComment from '../library/models/tenancy/recordComment.model.js';
 import TenantUser from '../library/models/tenancy/tenantUser.model.js';
 import ModelDefinition from '../library/models/builder/modelDefinition.model.js';
-import { TenancyError, collaborationOf, handle } from '../library/functions/tenancy.function.js';
+import RouteConfig from '../library/models/builder/routeConfig.model.js';
+import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { accessRule, isAccessRestricted } from '../library/functions/recordAccess.function.js';
 import { scopedModel } from '../library/functions/routeRegistry.function.js';
@@ -16,7 +17,7 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
  * /tenant/api/p/:projectId/comments — talking about one record (docs/multi-tenancy
  * WO-49): the record page's Comments tab, with @mentions.
  *
- *   GET    /?route&record                 the thread, oldest first, and the project's switches
+ *   GET    /?route&record                 the thread, oldest first, and the page's switches
  *   GET    /mentionable?route&record      who can be @mentioned on this record, and who can't
  *   POST   /                              { route, record, body, mentions: [userId] }
  *   PUT    /:id                           { body, mentions }   your own comment
@@ -31,7 +32,8 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
  *   only me                                        no one — the owner alone sees it
  *
  * Mentioning anyone else is refused with a 400 that names them. Comments and
- * mentions each turn off in Project settings (TenantProject.collaboration).
+ * mentions each turn off per page (WO-50) — on its Fields & rules tab, kept in
+ * its published config as `route.comments` / `route.mentions`; on unless off.
  */
 const router = express.Router({ mergeParams: true });
 
@@ -44,7 +46,16 @@ const check = (schema: Joi.Schema, body: any) => {
 	return value;
 };
 
-type Target = { route: string; def: any; Model: mongoose.Model<any>; doc: any; restricted: boolean; title: string };
+type Switches = { comments: boolean; mentions: boolean };
+type Target = { route: string; def: any; Model: mongoose.Model<any>; doc: any; restricted: boolean; title: string; settings: Switches };
+
+/** A page's comments and mentions switches (WO-50), from its published config; mentions need comments. */
+const switchesOf = async (route: string): Promise<Switches> => {
+	const c: any = await RouteConfig.findOne({ route }, { 'data.route.comments': 1, 'data.route.mentions': 1 }).lean();
+	const r = c?.data?.route || {};
+	const comments = r.comments !== false;
+	return { comments, mentions: comments && r.mentions !== false };
+};
 
 /** The page and record a request is about — 404 unless this person may see both. */
 const loadTarget = async (req: any, route: any, record: any): Promise<Target> => {
@@ -60,7 +71,15 @@ const loadTarget = async (req: any, route: any, record: any): Promise<Target> =>
 	const field = displayFieldOf(def);
 	const name = field && field !== '_id' ? doc[field] : '';
 	const noun = def.title ? String(def.title).replace(/s$/i, '') : def.name;
-	return { route: r, def, Model, doc, restricted, title: typeof name === 'string' && name.trim() ? `${noun} “${name.trim()}”` : noun.toLowerCase() };
+	return {
+		route: r,
+		def,
+		Model,
+		doc,
+		restricted,
+		title: typeof name === 'string' && name.trim() ? `${noun} “${name.trim()}”` : noun.toLowerCase(),
+		settings: await switchesOf(r),
+	};
 };
 
 type Mentionable = {
@@ -89,7 +108,7 @@ const mentionable = async (req: any, t: Target): Promise<Mentionable> => {
 const checkMentions = async (req: any, t: Target, ids: string[]) => {
 	const wanted = [...new Set(ids.map(String))].filter(id => !same(id, req.user._id));
 	if (!wanted.length) return [];
-	if (!collaborationOf(req.project).mentions) throw new TenancyError(400, 'Mentions are turned off for this project (Project → Settings).', 'mentions_off');
+	if (!t.settings.mentions) throw new TenancyError(400, 'Mentions are turned off for this page (its Fields & rules).', 'mentions_off');
 	const m = await mentionable(req, t);
 	if (m.mode === 'none') throw new TenancyError(400, 'This record is Only me — no one else can see it, so no one can be mentioned.', 'not_mentionable');
 	const ok = new Map(m.people.map(p => [p._id, p]));
@@ -143,8 +162,8 @@ const notifyMentions = (req: any, t: Target, comment: any, users: any[]) => {
 	});
 };
 
-const commentsOn = (req: any) => {
-	if (!collaborationOf(req.project).comments) throw new TenancyError(403, 'Comments are turned off for this project (Project → Settings).', 'comments_off');
+const commentsOn = (t: Target) => {
+	if (!t.settings.comments) throw new TenancyError(403, 'Comments are turned off for this page (its Fields & rules).', 'comments_off');
 };
 
 router.get(
@@ -155,7 +174,7 @@ router.get(
 		return {
 			doc: docs.map(view),
 			total: docs.length,
-			settings: collaborationOf(req.project),
+			settings: t.settings,
 			canModerate: grants(req.permissions, ['manage-projects']),
 		};
 	})
@@ -165,7 +184,7 @@ router.get(
 	'/mentionable',
 	handle(async req => {
 		const t = await loadTarget(req, req.query.route, req.query.record);
-		const on = collaborationOf(req.project).mentions;
+		const on = t.settings.mentions;
 		return { enabled: on, ...(on ? await mentionable(req, t) : { mode: 'none', people: [], blocked: [] }) };
 	})
 );
@@ -179,9 +198,9 @@ router.post(
 	'/',
 	rateLimit({ name: 'tenant-comments', windowMs: 60 * 1000, max: 60 }),
 	handle(async req => {
-		commentsOn(req);
 		const input = check(Joi.object({ route: Joi.string().required(), record: Joi.string().required(), ...bodySchema }), req.body);
 		const t = await loadTarget(req, input.route, input.record);
+		commentsOn(t);
 		const mentions = await checkMentions(req, t, input.mentions);
 		const comment: any = await RecordComment.create({
 			route: t.route,
@@ -208,8 +227,8 @@ const loadComment = async (req: any) => {
 router.put(
 	'/:id',
 	handle(async req => {
-		commentsOn(req);
 		const { comment, t } = await loadComment(req);
+		commentsOn(t);
 		if (!same(comment.author, req.user._id)) throw new TenancyError(403, 'You can only edit your own comments');
 		const input = check(Joi.object(bodySchema), req.body);
 		const mentions = await checkMentions(req, t, input.mentions);

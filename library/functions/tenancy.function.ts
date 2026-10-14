@@ -200,7 +200,7 @@ export const selfPayload = async (req: any) => {
 	// The roles they were given in projects, to work out each project's permissions.
 	const roleIds = (req.member?.projectRoles || []).map((r: any) => r.role);
 	const roles = new Map<string, any>(
-		roleIds.length ? (await OrganizationRole.find({ _id: { $in: roleIds }, organization: req.organization._id }, { permissions: 1 }).lean()).map((r: any) => [String(r._id), r]) : []
+		roleIds.length ? (await OrganizationRole.find({ _id: { $in: roleIds }, organization: req.organization._id }, { permissions: 1, project: 1 }).lean()).map((r: any) => [String(r._id), r]) : []
 	);
 	const projects = own.map(p => {
 		const roleId = projectRoleOf(req.member, p._id);

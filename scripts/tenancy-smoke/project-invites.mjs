@@ -42,7 +42,8 @@ r = await call('GET', '/tenant/api/org/invitations', null, alma);
 ok("the organization's pending list shows it, with its project", r.body?.doc?.find(i => i._id === ginaInvite)?.project?.name === 'Shop');
 r = await call('GET', P(shop._id, '/people'), null, alma);
 ok("Shop's People: Alma (every project) and the pending invitation", r.body?.doc?.length === 1 && r.body.doc[0].access === 'organization' && r.body?.invitations?.length === 1, JSON.stringify(r.body?.doc?.map(p => p.access)));
-ok('People offers Member and Developer', r.body?.roles?.map(x => x.system).join() === 'member,developer');
+ok('People offers Full access, Member and Developer (WO-50)', r.body?.roles?.map(x => x.system).join() === 'full,member,developer', r.body?.roles?.map(x => x.system).join());
+ok('…and the models a role can name', r.body?.models?.some(m => m.route === 'items'), JSON.stringify(r.body?.models));
 
 await verify(ginaEmail);
 r = await call('GET', '/tenant/api/invitations/for-me', null, gina);
@@ -75,7 +76,12 @@ ok("sees Shop's members, read-only", r.status === 200 && r.body?.doc?.length >= 
 r = await call('POST', P(shop._id, '/people/invitations'), { email: `zed${stamp}@example.com`, role: 'member' }, gina);
 ok("can't invite people herself", r.status === 403, r.status);
 r = await call('GET', P(shop._id, '/sidebar/web/server'), null, gina);
-ok('Project → Settings, then Members in her sidebar', /project-settings[\s\S]*project-people/.test(JSON.stringify(r.body)));
+ok('no Project → Settings or Members for a Developer (WO-50)', !/project-settings|project-people/.test(JSON.stringify(r.body)));
+r = await call('PUT', `/tenant/api/projects/${shop._id}`, { name: 'Shop!' }, gina);
+ok("…and she can't change Shop's settings", r.status === 403, r.status);
+r = await call('GET', '/tenant/api/notifications', null, gina);
+const ginaNote = r.body?.doc?.find(x => x.type === 'invitation');
+ok('her invitation notification opens the page to accept or decline it', ginaNote?.href === `/invitations?id=${ginaInvite}`, ginaNote?.href);
 r = await call('GET', `/tenant/api/projects/${shop._id}`, null, gina);
 ok("Shop's details: who made it, how many open it", r.body?.createdBy?.name === 'Alma' && r.body?.people >= 2 && r.body?.models === 1 && !!r.body?.organizationName, JSON.stringify({ c: r.body?.createdBy, p: r.body?.people, m: r.body?.models }));
 r = await call('GET', '/tenant/api/sidebar/web/server', null, gina);
@@ -166,6 +172,81 @@ ok('invited to Temp', r.status === 200, r.body?.message);
 await call('DELETE', `/tenant/api/projects/${temp._id}`, null, alma);
 r = await call('GET', '/tenant/api/invitations/for-me', null, omar);
 ok("Temp's invitation is gone with it", r.status === 200 && r.body?.doc?.length === 0, JSON.stringify(r.body?.doc));
+
+/* ---- WO-50: Full access, a project's own roles */
+const hanaEmail = `hana${stamp}@example.com`;
+let hana = await register('Hana', 'hana');
+await verify(hanaEmail);
+const joinVia = async (token, pid, role) => {
+	await call('POST', P(pid, '/people/invitations'), { email: (await call('GET', '/tenant/api/auth/self', null, token)).body?.email, role }, alma);
+	const inv = (await call('GET', '/tenant/api/invitations/for-me', null, token)).body?.doc?.[0];
+	return (await call('POST', `/tenant/api/invitations/for-me/${inv?._id}/accept`, null, token)).body?.token;
+};
+hana = await joinVia(hana, shop._id, 'full');
+ok('Hana joins Shop with Full access', !!hana);
+r = await call('GET', P(shop._id, '/sidebar/web/server'), null, hana);
+ok('…Project → Settings, then Members in her sidebar', /project-settings[\s\S]*project-people/.test(JSON.stringify(r.body)));
+r = await call('PUT', `/tenant/api/projects/${shop._id}`, { description: 'Run by Hana' }, hana);
+ok('…she can change its settings', r.status === 200 && r.body?.description === 'Run by Hana', r.body?.message);
+r = await call('PUT', `/tenant/api/projects/${blog._id}`, { description: 'Nope' }, hana);
+ok("…not Blog's", r.status === 404 || r.status === 403, r.status);
+
+r = await call('POST', P(shop._id, '/people/roles'), { name: 'Item clerk', permissions: [] }, alma);
+ok('a role with nothing ticked is refused, under its boxes', r.status === 400 && r.body?.on === 'permissions', JSON.stringify(r.body));
+r = await call('POST', P(shop._id, '/people/roles'), { name: 'developer', permissions: ['view-items'] }, alma);
+ok("a standard role's name is taken", r.status === 400 && r.body?.on === 'name', JSON.stringify(r.body));
+r = await call('POST', P(shop._id, '/people/roles'), { name: 'Item clerk', permissions: ['create-items', 'delete-other', 'build', 'records:view'] }, hana);
+const clerk = r.body;
+ok('Full access makes a role: adding includes viewing; other keys dropped', r.status === 201 && clerk?.custom === true && clerk?.permissions?.join() === 'view-items,create-items', JSON.stringify(r.body));
+r = await call('POST', P(blog._id, '/people/roles'), { name: 'Item clerk', permissions: ['view-image'] }, alma);
+ok("the same name in another project is fine", r.status === 201, r.body?.message);
+const blogClerk = r.body?._id;
+r = await call('GET', '/tenant/api/org/roles', null, alma);
+ok("the organization's Roles leave project roles out", !r.body?.doc?.some(x => x.name === 'Item clerk'), r.body?.doc?.map(x => x.name).join());
+
+const ivyEmail = `ivy${stamp}@example.com`;
+let ivy = await register('Ivy', 'ivy');
+await verify(ivyEmail);
+r = await call('POST', P(shop._id, '/people/invitations'), { email: ivyEmail, role: blogClerk }, alma);
+ok("Blog's role can't be given in Shop", r.status === 400 && r.body?.on === 'role', JSON.stringify(r.body));
+ivy = await joinVia(ivy, shop._id, clerk?._id);
+ok('Ivy joins Shop as Item clerk', !!ivy);
+r = await call('GET', '/tenant/api/auth/self', null, ivy);
+ok("…Shop carries the role's keys", r.body?.projects?.[0]?.permissions?.join() === 'view-items,create-items', JSON.stringify(r.body?.projects?.[0]?.permissions));
+r = await call('GET', P(shop._id, '/items'), null, ivy);
+ok('…sees Items', r.status === 200, r.status);
+r = await call('POST', P(shop._id, '/items'), { name: 'Pen' }, ivy);
+const pen = r.body?._id || r.body?.doc?._id;
+ok('…adds one', (r.status === 200 || r.status === 201) && !!pen, r.body?.message);
+r = await call('PUT', P(shop._id, `/items/${pen}`), { name: 'Pencil' }, ivy);
+ok("…can't edit", r.status === 403, r.status);
+r = await call('DELETE', P(shop._id, `/items/${pen}`), null, ivy);
+ok("…can't delete", r.status === 403, r.status);
+r = await call('GET', P(shop._id, '/builder/models'), null, ivy);
+ok("…can't build", r.status === 403, r.status);
+r = await call('PUT', P(shop._id, `/people/roles/${clerk?._id}`), { name: 'Item clerk', permissions: ['create-items', 'edit-items'] }, alma);
+ok('the role gains Edit', r.status === 200 && r.body?.permissions?.join() === 'view-items,create-items,edit-items', JSON.stringify(r.body));
+r = await call('PUT', P(shop._id, `/items/${pen}`), { name: 'Pencil' }, ivy);
+ok('…so Ivy can edit now', r.status === 200, r.status);
+r = await call('DELETE', P(shop._id, `/people/roles/${clerk?._id}`), null, alma);
+ok("a role someone has can't be deleted", r.status === 400 && /1 person has this role/.test(r.body?.message), r.body?.message);
+r = await call('GET', P(shop._id, '/people'), null, alma);
+const ivyHere = r.body?.doc?.find(p => p.user?.email === ivyEmail);
+ok("Members shows Ivy's role", ivyHere?.role?.name === 'Item clerk', JSON.stringify(ivyHere?.role));
+r = await call('PUT', P(shop._id, `/people/${ivyHere?._id}`), { role: 'member' }, alma);
+ok('Ivy made a Member', r.status === 200, r.body?.message);
+r = await call('DELETE', P(shop._id, `/people/roles/${clerk?._id}`), null, alma);
+ok('…the role is free, and deleted', r.status === 200, r.body?.message);
+
+/* ---- an organization that made its own "Developer" before WO-47 */
+const zoe = await register('Zoe', 'zoe');
+const zoeProject = (await call('POST', '/tenant/api/projects', { name: 'Zed', type: 'app' }, zoe)).body;
+const zoeOrg = (await call('GET', '/tenant/api/auth/self', null, zoe)).body?.organization?._id;
+await mongoose.connection.db.collection('organizationroles').deleteMany({ organization: new mongoose.Types.ObjectId(zoeOrg), system: { $in: ['developer', 'full'] } });
+r = await call('POST', '/tenant/api/org/roles', { name: 'Developer', permissions: ['records:view'] }, zoe);
+ok('Zoe has her own role called Developer', r.status === 200 || r.status === 201, r.body?.message);
+r = await call('POST', P(zoeProject._id, '/people/invitations'), { email: `yan${stamp}@example.com`, role: 'developer' }, zoe);
+ok('inviting as Developer still works (was “Something went wrong”)', r.status === 200 && r.body?.role?.name === 'Developer (standard)', JSON.stringify(r.body));
 
 await mongoose.disconnect();
 done();

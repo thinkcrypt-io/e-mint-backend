@@ -5,9 +5,14 @@ import mongoose, { Schema } from 'mongoose';
  * (`view-<route>`, `create-<route>`, `edit-<route>`, `delete-<route>`, plus
  * the org keys in library/functions/tenantPermissions.function.ts); `'*'` is
  * everything. The three system roles are seeded per organization and can't be
- * deleted: owner (`*`), admin (`*` minus owner-only keys), member.
+ * deleted: owner (`*`), admin (`*` minus owner-only keys), member; developer
+ * and full (Full access) are given in projects (WO-47, WO-50).
+ *
+ * A role with `project` is that project's own (WO-50): made on its Members
+ * page, given only there, with per-model keys (`create-deals`). Names are
+ * unique among the organization's roles, and among each project's.
  */
-export const SYSTEM_ROLES = ['owner', 'admin', 'member'] as const;
+export const SYSTEM_ROLES = ['owner', 'admin', 'member', 'developer', 'full'] as const;
 
 const schema = new Schema<any>(
 	{
@@ -16,9 +21,17 @@ const schema = new Schema<any>(
 		description: { type: String, trim: true, maxlength: 300 },
 		permissions: { type: [String], default: [] },
 		system: { type: String, enum: [...SYSTEM_ROLES, null], default: null },
+		project: { type: Schema.Types.ObjectId, ref: 'TenantProject', default: null },
 	},
 	{ timestamps: true }
 );
-schema.index({ organization: 1, name: 1 }, { unique: true });
+schema.index({ organization: 1, project: 1, name: 1 }, { unique: true });
 
-export default mongoose.model<any>('OrganizationRole', schema, 'organizationroles');
+const OrganizationRole = mongoose.model<any>('OrganizationRole', schema, 'organizationroles');
+
+// WO-50: the old index made names unique across the whole organization, projects' roles too.
+const dropOldIndex = () => OrganizationRole.collection.dropIndex('organization_1_name_1').catch(() => {});
+if (mongoose.connection.readyState === 1) dropOldIndex();
+else mongoose.connection.once('open', dropOldIndex);
+
+export default OrganizationRole;

@@ -18,6 +18,7 @@ import {
 	ORG_PERMISSIONS,
 	ORG_PERMISSION_KEYS,
 	grants,
+	isModelKey,
 	normalizePermissions,
 	ownerOnly,
 	seedOrgRoles,
@@ -229,7 +230,7 @@ const loadMember = async (req: any) => {
 
 const loadRole = async (req: any, id: any) => {
 	if (!isId(id)) throw new TenancyError(400, 'Choose a role');
-	const role: any = await OrganizationRole.findOne({ _id: id, organization: req.organization._id });
+	const role: any = await OrganizationRole.findOne({ _id: id, organization: req.organization._id, project: null });
 	if (!role) throw new TenancyError(400, 'Choose a role');
 	if (role.system === 'owner') throw new TenancyError(400, 'Hand over ownership with “Transfer ownership” instead.');
 	return role;
@@ -344,7 +345,7 @@ inOrg.get(
 		// Organizations from before WO-47 get the Developer role here.
 		await seedOrgRoles(req.organization._id);
 		const [roles, counts] = await Promise.all([
-			OrganizationRole.find({ organization: req.organization._id }).sort({ createdAt: 1 }).lean(),
+			OrganizationRole.find({ organization: req.organization._id, project: null }).sort({ createdAt: 1 }).lean(),
 			OrganizationMember.aggregate([
 				{ $match: { organization: req.organization._id, status: 'active' } },
 				{ $group: { _id: '$role', n: { $sum: 1 } } },
@@ -366,8 +367,9 @@ inOrg.post(
 	tenantPermissions(['manage-roles']),
 	handle(async req => {
 		const body = check(roleBody, req.body);
-		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*');
-		if (await OrganizationRole.exists({ organization: req.organization._id, name: body.name }))
+		// Per-model keys are for a project's own roles (WO-50).
+		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*' && !isModelKey(k));
+		if (await OrganizationRole.exists({ organization: req.organization._id, project: null, name: body.name }))
 			throw new TenancyError(400, 'A role with this name exists');
 		const role = await OrganizationRole.create({ ...body, organization: req.organization._id });
 		return roleView(role);
@@ -379,13 +381,14 @@ inOrg.put(
 	tenantPermissions(['manage-roles']),
 	handle(async req => {
 		if (!isId(req.params.id)) throw new TenancyError(404, 'Role not found');
-		const role: any = await OrganizationRole.findOne({ _id: req.params.id, organization: req.organization._id });
+		const role: any = await OrganizationRole.findOne({ _id: req.params.id, organization: req.organization._id, project: null });
 		if (!role) throw new TenancyError(404, 'Role not found');
 		const body = check(roleBody, req.body);
-		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*');
+		// Per-model keys are for a project's own roles (WO-50).
+		body.permissions = normalizePermissions(body.permissions).filter(k => k !== '*' && !isModelKey(k));
 		// Owner and admin are everything by definition; their names and descriptions can change.
 		if (role.system === 'owner' || role.system === 'admin') delete body.permissions;
-		if (body.name !== role.name && (await OrganizationRole.exists({ organization: req.organization._id, name: body.name })))
+		if (body.name !== role.name && (await OrganizationRole.exists({ organization: req.organization._id, project: null, name: body.name })))
 			throw new TenancyError(400, 'A role with this name exists');
 		Object.assign(role, body);
 		await role.save();
@@ -398,9 +401,9 @@ inOrg.delete(
 	tenantPermissions(['manage-roles']),
 	handle(async req => {
 		if (!isId(req.params.id)) throw new TenancyError(404, 'Role not found');
-		const role: any = await OrganizationRole.findOne({ _id: req.params.id, organization: req.organization._id });
+		const role: any = await OrganizationRole.findOne({ _id: req.params.id, organization: req.organization._id, project: null });
 		if (!role) throw new TenancyError(404, 'Role not found');
-		if (role.system) throw new TenancyError(400, 'Owner, Admin and Member can’t be deleted');
+		if (role.system) throw new TenancyError(400, 'Standard roles — Owner, Admin, Member, Developer, Full access — can’t be deleted');
 		const inUse = await OrganizationMember.countDocuments({ organization: req.organization._id, role: role._id, status: 'active' });
 		if (inUse) throw new TenancyError(400, `${inUse} member${inUse === 1 ? ' has' : 's have'} this role — give them another first`);
 		if (await OrganizationMember.exists({ organization: req.organization._id, status: 'active', 'projectRoles.role': role._id }))
@@ -458,7 +461,7 @@ inOrg.post(
 		invitation.projects = access.projects;
 		invitation.invitedBy = req.user._id;
 		await sendInvite(req, invitation);
-		// Someone who already has an account also sees it in the app (WO-37); accepting is on Home.
+		// Someone who already has an account also sees it in the app (WO-37); accepting or declining is on /invitations (WO-50).
 		if (existing)
 			later(() =>
 				notifyTenant([
@@ -469,8 +472,9 @@ inOrg.post(
 						actorName: req.user.name,
 						type: 'invitation',
 						title: `${req.user.name || 'Someone'} invited you to join ${req.organization.name}`,
-						message: `As ${role.name}. Accept it on your Home page.`,
-						href: '/dashboard',
+						message: `As ${role.name}. Open it to accept or decline.`,
+						// The page to accept or decline it (WO-50).
+						href: `/invitations?id=${invitation._id}`,
 					},
 				])
 			);

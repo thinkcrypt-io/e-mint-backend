@@ -1,6 +1,7 @@
 // WO-49: comments and @mentions on a project's records — who can be mentioned
-// follows who can see the record (public / private / only me), the project's
-// Comments and Mentions switches, notifications, and editing/deleting.
+// follows who can see the record (public / private / only me), each page's
+// Comments and Mentions switches (WO-50: its published config), notifications,
+// and editing/deleting.
 // Stands alone (its own accounts). Local scratch server only.
 import mongoose from 'mongoose';
 import { call, ok, done } from './lib.mjs';
@@ -101,22 +102,35 @@ ok('Bea has two mentions: the note and the private deal', (r.body?.doc || []).fi
 r = await call('DELETE', P(shop._id, `/comments/${first}`), null, bea);
 ok("Bea can't delete it", r.status === 403, r.status);
 
-/* ---- the switches */
-r = await call('PUT', `/tenant/api/projects/${shop._id}`, { collaboration: { mentions: false } }, alma);
-ok('mentions off', r.status === 200 && r.body?.collaboration?.mentions === false && r.body?.collaboration?.comments === true, JSON.stringify(r.body?.collaboration));
+/* ---- the switches: per page, in its config, once published (WO-50) */
+const switches = async (route, patch, who = alma) => {
+	const b = (await call('GET', P(shop._id, `/builder/route?route=${route}`), null, who)).body;
+	const config = b?.config?.data || b?.code?.config || {};
+	const d = await call('PUT', P(shop._id, '/builder/draft'), { route, kind: 'config', draft: { ...config, route: { ...(config.route || {}), ...patch } } }, who);
+	if (d.status !== 200) return d;
+	return call('POST', P(shop._id, '/builder/publish'), { route, kinds: ['config'] }, who);
+};
+r = await switches('notes', { mentions: false });
+ok('mentions off on Notes', r.status === 200, r.body?.message);
+r = await call('GET', P(shop._id, C('notes', note)), null, alma);
+ok('the thread says so', r.body?.settings?.comments === true && r.body?.settings?.mentions === false, JSON.stringify(r.body?.settings));
+r = await call('GET', P(shop._id, M('deals', pub)), null, alma);
+ok('…Deals keep theirs', r.body?.enabled === true, JSON.stringify(r.body?.enabled));
 r = await call('GET', P(shop._id, M('notes', note)), null, alma);
 ok('mentionable says off', r.body?.enabled === false && r.body?.people?.length === 0);
 r = await post('notes', note, 'Hi @Bea', [beaId]);
 ok('a mention is refused while off', r.status === 400 && /Mentions are turned off/.test(r.body?.message), r.body?.message);
 r = await post('notes', note, 'Plain comment');
 ok('…plain comments still work', r.status === 200);
-r = await call('PUT', `/tenant/api/projects/${shop._id}`, { collaboration: { comments: false } }, alma);
+r = await switches('notes', { comments: false });
 r = await post('notes', note, 'Anyone?');
 ok('comments off: refused', r.status === 403 && /Comments are turned off/.test(r.body?.message), r.body?.message);
 r = await call('DELETE', P(shop._id, `/comments/${first}`), null, alma);
 ok('the author can still delete', r.status === 200, r.body?.message);
-r = await call('PUT', `/tenant/api/projects/${shop._id}`, { collaboration: { comments: true, mentions: true } }, bea);
-ok("Bea can't change the switches", r.status === 403, r.status);
+r = await post('deals', pub, 'Deals still talk');
+ok('…while Deals still take comments', r.status === 200, r.body?.message);
+r = await switches('notes', { comments: true, mentions: true }, bea);
+ok("Bea (no Build) can't change the switches", r.status === 403, r.status);
 
 /* ---- deleting the project takes its comments */
 r = await call('DELETE', `/tenant/api/projects/${shop._id}?force=1`, null, alma);

@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-10)
+## Handoff — read this first (kept current; last updated 2026-10-14)
 
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
@@ -159,6 +159,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 46 | **Tenant panel in the marketing website's look** — same components, the website's palette, Outfit/JetBrains Mono, uppercase light headlines, pill buttons, colour tones | tenant | M | done (2026-10-07) |
 | 47 | **Project invitations** — invite someone into one project as Member or Developer (Project → People); new Developer role and Invite to projects permission; project guests; every organization's projects on the dashboard and in the project menu | all | M | done (2026-10-14; pushed: backend `c83254ee`, mint-tenant `806003c`, admin `041b439`, mint-docs `392bad4`, website `2079c7b`; not deployed) |
 | 49 | **Waitlist approvals** — super-admin `/waitlist` page (admin `app/waitlist`): Approve (row, bulk, or status edit) emails a “Your spot is ready” sign-up link (`TENANT_FRONTEND_URL/auth/register?email=`); Resend signup link; signing up marks the entry Joined | all | S | done (2026-10-14; pushed: backend `f93a09cc`, admin `8677b75`, mint-tenant `662dc39`; not deployed) |
+| 50 | **Project roles + invite fix** — Full access / Member / Developer and each project's own per-model roles (Project → Members → Roles); the “Developer” name clash behind “Something went wrong” on invites; Project → Settings/Members only for managers; `/invitations` page from the notification; comments and mentions switched per page on Fields & rules | all | M | done (2026-10-14; not deployed) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -1090,6 +1091,47 @@ mentioned, must show error. if only me no one can be mentioned".
 
 Also 2026-10-14: Project → Members showed no Invite with a backend older than WO-48 (no `canManage`) — the panel now falls
 back to the role's keys and shows load errors (mint-tenant `7437f8d`, admin `141d12c`).
+
+## WO-50 — Project roles, invite fix, invitations page, comments per page (M) — done
+
+The user (2026-10-14): "On invite members inside project nothing works it says something went wrong"; Project Settings
+and Members "should be hidden for members without management rights"; roles "should be Full Access, Member, Developer"
+plus "customized roles … permissions customized for each model, either can create/edit/delete"; "when the notification is
+clicked should go to a page to accept or decline the invite"; "Mentions and comment must be model specific … from rules page".
+
+- **Invite bug:** `systemRole` upserts the Developer role (WO-47) for older organizations; an organization that had made
+  its own role named "Developer" hit the unique {organization, name} index → E11000 → 500 "Something went wrong" (also on
+  the managers' GET /people). Now a clash names it "Developer (standard)" (then "(standard 2)"); `seedOrgRoles` shares it.
+- **Full access** — system role `full` (records, build, AI keys, manage-projects, invite-to-projects); PROJECT_INVITE_ROLES
+  `full, member, developer`; a guest may now hold manage-projects/invite-to-projects (PROJECT_KEYS). PUT /projects/:id
+  checks permissions *in that project* (`requestPermissionsIn`), so Full access there can change its settings.
+- **A project's own roles** — `OrganizationRole.project` (index now {organization, project, name}; the old
+  `organization_1_name_1` is dropped on connect). Per-model keys `view|create|edit|delete-<route>` (+ media `image`,
+  `history` view), kept by `normalizePermissions(…, {models: true})` only for project roles — an org role's pre-WO-21
+  per-model keys stay ignored; org role create/update strips them. `projectPermissions` adds them. API on
+  `/p/:project/people`: GET returns roles (standard + own, with permissions) and `models`; POST/PUT/DELETE `/roles[/:id]`
+  (unknown keys dropped; add/edit/delete adds view; nothing → 400 `on: permissions`; a standard or same-project name →
+  400 `on: name`; delete refused while someone has it in a project or an invitation gives it; a guest's org-level `role`
+  pointing at it moves to Member). Invites and role changes take a standard name or the project's role id. Org Roles,
+  org role checks and template roles look at `project: null` only.
+- **Hidden:** sidebar Project → Settings needs manage-projects; Members needs invite-to-projects/manage-members. The pages
+  say "For people who manage this project" to anyone else. GET /people stays open (automations' people list).
+- **Invitations page** — `/invitations` (tenant-only page): every invitation for your verified email, Accept / Decline;
+  `?id=` puts that one first, marked. Invitation notifications (project and organization) link to `/invitations?id=<id>`.
+- **Comments per page** — the switches moved from Project settings to each page's Fields & rules tab (`CommentsPanel`),
+  kept in its RouteConfig as `route.comments` / `route.mentions` (on unless off; mentions need comments), effective once
+  published. `comments.router` reads them per target (`switchesOf`); messages point at the page. `TenantProject.collaboration`
+  is no longer read.
+- **Panels** (mint-tenant + admin, same files): Members — role dropdowns from the server's list, a **Roles** panel
+  (standard roles, own roles with what they allow, edit/delete), `RoleDialog` (models × View/Add/Edit/Delete, column
+  toggles, errors under their input); Settings guard; `/invitations`; CommentsPanel on Fields & rules; GuideLink
+  `project-roles`.
+- Docs: mint-docs `organization#project-people`, `#project-roles`, `#invited`, `#roles`; `projects#project-settings`,
+  `#project-comments`.
+- Verified: smoke project-invites (+23 checks: Full access sidebar/settings, project roles, per-model access 403/200, delete
+  rules, the "Developer" clash), comments (per-page switches via draft + publish), access, automations, org-1 on a private
+  server; screenshots (Members + Roles, role dialog, Invitations page, a custom-role guest's sidebar, Fields & rules panel).
+- Gap: table buttons (New / Edit / Delete) aren't hidden by per-model keys in the panel — the server refuses them.
 
 ## Automations (2026-10-14)
 
