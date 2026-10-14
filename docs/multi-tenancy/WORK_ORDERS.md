@@ -1059,6 +1059,7 @@ settings then members."
 - Docs: mint-docs `projects#project-settings` (About), `organization#project-people` (Project → Members, read-only list).
 - Verified: `project-invites.mjs` (+4 checks: guest sees the list read-only, can't invite, sidebar order, project
   details), `tenant-auth`, `org-1`, `projects`, `business` on a private server (:5031, Mongo :27996); tsc clean.
+- Pushed: backend `d84a46a1` (mint v3), mint-tenant `7caf8a1`, admin `c2c6496`, mint-docs `0bc050a`, mint-webpage `e947c87`. Not deployed.
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
