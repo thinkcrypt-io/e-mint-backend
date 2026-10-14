@@ -2,6 +2,7 @@ import { SettingsType } from '../../imports.js';
 
 const STATUS = [
 	{ label: 'Waiting', value: 'waiting' },
+	{ label: 'Approved', value: 'approved' },
 	{ label: 'Invited', value: 'invited' },
 	{ label: 'Joined', value: 'joined' },
 	{ label: 'Declined', value: 'declined' },
@@ -98,6 +99,18 @@ const settings: SettingsType<any> = {
 		type: 'date',
 		sort: true,
 		edit: true,
+		schema: { type: 'date', tableType: 'date', sort: true },
+	},
+	approvedAt: {
+		title: 'Approved at',
+		type: 'date',
+		sort: true,
+		schema: { type: 'date', tableType: 'date', sort: true },
+	},
+	linkSentAt: {
+		title: 'Sign-up link sent',
+		type: 'date',
+		sort: true,
 		schema: { type: 'date', tableType: 'date', sort: true },
 	},
 	note: {

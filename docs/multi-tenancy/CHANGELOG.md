@@ -1658,3 +1658,18 @@ Decisions D14–D17 (README).
   organization, opening a project in another organization switches to it, accept flows open the invited project.
 - Verified: new smoke `project-invites.mjs` (50 checks) + full `run-all.sh` on a private server (:5031, Mongo :27996);
   `org-1.mjs` now expects four system roles. tsc clean in backend, mint-tenant, admin. Not deployed.
+
+## 2026-10-14 — WO-49 Waitlist approvals
+- Asked: a waitlist tab on the super admin to see sign-ups and approve them; approved people get the sign-up link by email.
+- Backend: `Waitlist` gains status `approved` and `approvedAt` / `linkSentAt`. `models/waitlist/waitlist.mail.ts`
+  `sendSignupLinks(Model, filter)` claims each approved, unsent entry (`linkSentAt`) before mailing via `deliver`, and
+  un-claims on failure. Model hooks: `save` (single edit) and `updateOne`/`updateMany`/`findOneAndUpdate` (bulk) mail
+  whoever moved onto approved; moving off and back on mails again. `PUT /admin/api/waitlist/send-link/:id`
+  (edit-waitlist) approves if needed and mails now (`skipSignupLinkHook` option keeps the hook out). Tenant
+  `POST /auth/register` sets the matching entry to `joined`.
+- Admin: `app/waitlist` (BackendPageTable) — row Approve (`set-field`), Resend signup link (approved rows), bulk
+  Approve/Decline selected, edit form note that Approved sends the email. Sidebar item + permission were already seeded.
+- Both panels' `TenantRegister` prefill the email from `?email=`.
+- Verified: scratch Mongo script — save approve, unchanged save (no mail), bulk approve (only not-yet-approved mailed),
+  decline → re-approve (mailed again), resend on approved and waiting entries. tsc clean on changed files. UI not
+  checked in a browser. Not deployed.

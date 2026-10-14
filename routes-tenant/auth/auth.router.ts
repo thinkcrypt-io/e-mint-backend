@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import Joi from 'joi';
 import TenantUser from '../../library/models/tenancy/tenantUser.model.js';
+import Waitlist from '../../models/waitlist/waitlist.model.js';
 import { HEARD_FROM, ORG_GOALS, ORG_INDUSTRIES, ORG_TEAM_SIZES } from '../../library/models/tenancy/organization.model.js';
 import { TenantPasskey, TenantTwoFactorChallenge } from '../../library/models/twoFactor/tenant.models.js';
 import { tenantSessions } from '../../library/functions/sessions.function.js';
@@ -124,6 +125,8 @@ router.post(
 			user.lastOrganization = organization._id;
 			await user.save();
 			welcome(user, organization);
+			// Off the waitlist: whoever signed up with this email has joined.
+			Waitlist.updateOne({ email: user.email, status: { $ne: 'joined' } }, { $set: { status: 'joined' } }).catch(() => undefined);
 			return { token: await tenantSessions.issueSession(user, req, 'password', organization._id) };
 		} catch (e) {
 			await TenantUser.deleteOne({ _id: user._id }).catch(() => undefined);

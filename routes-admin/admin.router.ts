@@ -7,6 +7,7 @@ import {
 	replyToThread,
 	setThreadStatus,
 } from '../controllers/support/supportTickets.controller.js';
+import { sendSignupLink } from '../controllers/waitlist/sendSignupLink.controller.js';
 import express from 'express';
 import {
 	adminAuthRoute,
@@ -568,6 +569,17 @@ router.use(
 		Model: Waitlist,
 		settings: waitlistSettings,
 		permission: 'waitlist',
+		// Approving (status → approved) mails the sign-up link by itself
+		// (waitlist.model.ts hooks); this sends it again on demand.
+		customRoutes: [
+			{
+				path: '/send-link/:id',
+				method: 'put',
+				controller: sendSignupLink,
+				middlewares: [adminProtect, adminPermissions(['edit-waitlist'])],
+				description: 'Approve a waitlist entry if needed and email its sign-up link now',
+			},
+		],
 	}),
 );
 
