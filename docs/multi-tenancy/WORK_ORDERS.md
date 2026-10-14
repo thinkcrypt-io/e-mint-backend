@@ -160,6 +160,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 47 | **Project invitations** — invite someone into one project as Member or Developer (Project → People); new Developer role and Invite to projects permission; project guests; every organization's projects on the dashboard and in the project menu | all | M | done (2026-10-14; pushed: backend `c83254ee`, mint-tenant `806003c`, admin `041b439`, mint-docs `392bad4`, website `2079c7b`; not deployed) |
 | 49 | **Waitlist approvals** — super-admin `/waitlist` page (admin `app/waitlist`): Approve (row, bulk, or status edit) emails a “Your spot is ready” sign-up link (`TENANT_FRONTEND_URL/auth/register?email=`); Resend signup link; signing up marks the entry Joined | all | S | done (2026-10-14; pushed: backend `f93a09cc`, admin `8677b75`, mint-tenant `662dc39`; not deployed) |
 | 50 | **Project roles + invite fix** — Full access / Member / Developer and each project's own per-model roles (Project → Members → Roles); the “Developer” name clash behind “Something went wrong” on invites; Project → Settings/Members only for managers; `/invitations` page from the notification; comments and mentions switched per page on Fields & rules | all | M | done (2026-10-14; not deployed) |
+| 51 | **The tenant panel as an installable app (PWA)** — manifest, icons, service worker with an offline page, **Install app** in the account menu (browser prompt, or the browser's own steps; a QR code for the phone on a computer) | tenant | S | done (2026-10-14; pushed: mint-tenant `1b330bf`, mint-docs `95cf525`, website `0b9b89c`; live once mint-tenant is deployed) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -1138,6 +1139,35 @@ clicked should go to a page to accept or decline the invite"; "Mentions and comm
   where it leads; another email's → 404; unverified → `verified: false`). Notifications link `/invitations/<id>`; older
   ones (href `/dashboard`) open `/invitations` (`notificationHref`); `/invitations?id=` redirects. Declining sets
   `declinedAt` and tells the inviter (link to the project's Members / org Members). Smoke project-invites +8 checks.
+
+## WO-51 — The tenant panel as an installable app (S) — done
+
+The user (2026-10-14): "we want the app/ tenant panel to be a pwa. so that users can install on their phone and have the
+full experience"; "install button should be under the user dropdown".
+
+- **mint-tenant only** (admin's `NEXT_PUBLIC_PANEL=tenant` build is not touched — port it there if the tenant panel must
+  install before mint-tenant is deployed). The panel was already laid out for phones (menu drawer under 800px).
+- `src/app/manifest.ts` → `/manifest.webmanifest`: MINT, `start_url` `/dashboard`, standalone, `#fbfbfd`, icons
+  `public/icons/{icon,maskable}-{192,512}.png` (rendered from `app/icon.svg`; maskable = full-bleed gradient, M in the
+  safe zone), shortcuts Projects / Notifications. `layout.tsx` metadata: `appleWebApp` (title MINT, status bar default),
+  `applicationName`; `app/apple-icon.png` (180) was already there.
+- `public/sw.js`: page loads only — network (navigation preload), `/offline.html` when the network fails. Caches nothing
+  else on purpose (no stale deploys, no records in a cache). Bump `VERSION` when offline.html changes; keep offline.html
+  self-contained (inline logo). `next.config.mjs` serves `/sw.js` with `Cache-Control: no-cache`.
+- `tenant/pwaBoot.ts`: a beforeInteractive script — keeps `beforeinstallprompt` on `window.__mintInstall` (mini-bar held
+  back), clears it on `appinstalled`, registers the worker in production builds only. `tenant/installApp.ts`:
+  `useInstallApp()` (`installed` = display-mode standalone, `canPrompt`), `promptInstall()`, `installPlatform()`.
+- Account menu (`SelfMenu`, tenant panel only, hidden once running installed): **Install app** — on a phone with a prompt,
+  straight to it; otherwise `tenant/InstallAppDialog` — the prompt button or this browser's steps (iPhone/iPad Share →
+  Add to Home Screen, Android menu, Safari on Mac File → Add to Dock, Chrome/Edge address-bar icon, Firefox desktop
+  can't), and on a computer a QR code for `/dashboard` on the phone. GuideLink `install-app` → `account#install-app`.
+- Docs: mint-docs `account#install-app` ("The MINT app"); website changelog + admin panel feature "The MINT app".
+- Verified: `next build` + `next start`, headless Chrome 155 (390px, mobile): manifest no errors, **no installability
+  errors**, worker active and controlling, `beforeinstallprompt` caught, offline navigation → offline page (light + dark).
+  Browser pane, signed in as a made-up tenant user on a scratch backend: menu item + dialog at 1280px (steps + QR) and
+  375px (Android steps, no QR). Not checked on a real iPhone.
+- Not done (ask first): push notifications (Web Push needs VAPID keys, subscriptions on the backend, and on iPhone only
+  works for installed apps).
 
 ## Automations (2026-10-14)
 

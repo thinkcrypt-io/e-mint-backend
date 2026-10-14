@@ -1703,3 +1703,12 @@ Decisions D14–D17 (README).
 - Files: tenantPermissions.function, organizationRole.model, people.router, projects.router, org.router, comments.router,
   tenantNav.function, applyTemplate.function, tenancy.function; smoke project-invites, comments, org-1.
 - Verified: smoke org-1, project-invites, comments, access, automations; screenshots. Details in WORK_ORDERS.md WO-50.
+
+## 2026-10-14 — WO-51 The tenant panel as an installable app (PWA)
+- mint-tenant: `app/manifest.ts`, `public/icons/*`, `public/sw.js` (offline page only, no caching of pages or data),
+  `public/offline.html`, `tenant/pwaBoot.ts` (install prompt kept + worker registered in production), `tenant/installApp.ts`,
+  `tenant/InstallAppDialog.tsx`, **Install app** in the account menu (SelfMenu), `appleWebApp` metadata, `/sw.js` no-cache.
+- Docs: mint-docs `account#install-app`; website changelog + feature list.
+- Verified: production build in headless Chrome — installable with no errors, worker controls the page, offline page shows;
+  menu + dialog in the browser pane at desktop and phone widths. Pushed: mint-tenant `1b330bf`, mint-docs `95cf525`,
+  website `0b9b89c`. Live once mint-tenant is deployed (admin's tenant build not changed). Details in WORK_ORDERS.md WO-51.
