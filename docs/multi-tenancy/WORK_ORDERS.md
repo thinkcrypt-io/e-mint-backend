@@ -162,6 +162,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 50 | **Project roles + invite fix** — Full access / Member / Developer and each project's own per-model roles (Project → Members → Roles); the “Developer” name clash behind “Something went wrong” on invites; Project → Settings/Members only for managers; `/invitations` page from the notification; comments and mentions switched per page on Fields & rules | all | M | done (2026-10-14; not deployed) |
 | 51 | **The tenant panel as an installable app (PWA)** — manifest, icons, service worker with an offline page, **Install app** in the account menu (browser prompt, or the browser's own steps; a QR code for the phone on a computer) | tenant | S | done (2026-10-14; pushed: mint-tenant `1b330bf`, mint-docs `95cf525`, website `0b9b89c`; live once mint-tenant is deployed) |
 | 52 | **API builder** — the public API as endpoints (generate from a model or create one), who + conditions, fields, list settings, server keys, an own API section of pages. Plan + WOs in `docs/api-builder` (AB-01…05) | all | L | done (2026-10-14; AB-01…05 pushed — backend, mint-tenant, mint-docs, website, admin redirect; not deployed) |
+| 53 | **Replies in comments** — Facebook-style threads (one level; a reply to a reply joins the thread and starts with @their name), reply notifications to the thread, deleting a comment takes its replies, links in comments open in a new tab, notifications open at the comment | all | S | done (2026-10-14; not deployed) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -1169,6 +1170,30 @@ full experience"; "install button should be under the user dropdown".
   375px (Android steps, no QR). Not checked on a real iPhone.
 - Not done (ask first): push notifications (Web Push needs VAPID keys, subscriptions on the backend, and on iPhone only
   works for installed apps).
+
+## WO-53 — Replies in comments (S) — done
+
+The user (2026-10-14): "on comments and mmentions, we need to be able to reply to comment, like in facebook. so that it
+becomes a thread. Also any links posted in comments must be opened in a new tab when clicked."
+
+- `RecordComment.parent` (ObjectId, null = top-level; partial index on it). One level, like Facebook: POST `/comments`
+  takes `parent`; the parent must be on the same route + record (404 `parent_gone` otherwise), and a reply to a reply is
+  stored under that reply's top-level comment. GET returns the flat list with `parent`; the panel groups it.
+- Notifications: type `reply` — the top comment's writer ("replied to your comment on …") and everyone who replied before
+  ("replied to a comment on …"), minus the writer and the people the reply @mentions (they get the `mention`), and only
+  those who can still see the record (the `mentionable` audience). Every comment notification's href is now
+  `…?tab=comments&comment=<id>`.
+- DELETE of a top-level comment deletes its replies ("Comment and N replies deleted").
+- Panel (`tenant/RecordComments.tsx`, same file in mint-tenant and admin): `Thread` = the comment + replies indented
+  (a left rule on phones), the last 2 showing behind "View N earlier replies"; **Reply** under each comment opens a
+  2-row composer at the thread's end ("Reply to <name>…"), pre-filled `@Name ` when answering someone else's reply who
+  can be mentioned. `?comment=<id>` opens that thread, scrolls to the comment and lights it up. `Linked` turns
+  `https?://…` / `www.…` into `<a target=_blank rel="noopener noreferrer nofollow">` (sentence punctuation trimmed off);
+  its colour uses `&[href]` because the panel's global `a:not(.chakra-button) { color: inherit }` outranks a class.
+  Notifications page: `reply` icon.
+- Docs: mint-docs `projects#comment-replies` (in Comments and @mentions); website changelog "Replies in comments".
+- Verified: `scripts/tenancy-smoke/comments.mjs` (47 checks, 13 new for replies) on a private backend; headless Chrome on
+  mint-tenant (1280 + 390): threads, links, reply box, deep link to a hidden reply, a reply sent through the UI.
 
 ## Automations (2026-10-14)
 

@@ -1727,3 +1727,10 @@ Decisions D14–D17 (README).
   24px up), like CreateModal. Admin already had it (the zero was mint-tenant drift).
 - Verified in headless Chrome on a template project's New invoice: 390px and 360px, with a line item open —
   body 16px padding, scrollWidth = width. Pushed: mint-tenant (see git log).
+
+## 2026-10-14 — WO-53 Replies in comments
+- `recordComment.model.ts` `parent`; `routes-tenant/comments.router.ts` replies (one level, reply-to-reply joins the
+  thread), `reply` notifications to the thread, `?comment=<id>` on comment notification links, delete takes replies.
+- Panel `tenant/RecordComments.tsx` (mint-tenant + admin): threads, Reply, View earlier replies, deep link highlight,
+  links open in a new tab; `RecordComment.parent` + `addRecordComment` `parent` in tenantApi; notifications `reply` icon.
+- Verified: comments smoke (all passed, incl. 13 new reply checks) on a private backend; headless Chrome screenshots.

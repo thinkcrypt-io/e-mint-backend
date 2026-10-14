@@ -1,7 +1,7 @@
 // WO-49: comments and @mentions on a project's records — who can be mentioned
 // follows who can see the record (public / private / only me), each page's
 // Comments and Mentions switches (WO-50: its published config), notifications,
-// and editing/deleting.
+// and editing/deleting; replies in threads (WO-53).
 // Stands alone (its own accounts). Local scratch server only.
 import mongoose from 'mongoose';
 import { call, ok, done } from './lib.mjs';
@@ -57,7 +57,7 @@ const first = r.body?._id;
 await settle();
 r = await call('GET', '/tenant/api/notifications', null, bea);
 const n = r.body?.doc?.find(x => x.type === 'mention');
-ok('Bea is notified, with a link to the Comments tab', !!n && /Alma mentioned you on Note “Opening hours”/.test(n.title) && /\/notes\/.+\?tab=comments$/.test(n.href || ''), JSON.stringify(n));
+ok('Bea is notified, with a link to the Comments tab', !!n && /Alma mentioned you on Note “Opening hours”/.test(n.title) && /\/notes\/.+\?tab=comments&comment=[a-f0-9]{24}$/.test(n.href || ''), JSON.stringify(n));
 r = await call('GET', '/tenant/api/notifications', null, cy);
 ok('Cy, not mentioned, is not', !(r.body?.doc || []).some(x => x.type === 'mention'));
 r = await call('GET', P(shop._id, C('notes', note)), null, cy);
@@ -101,6 +101,40 @@ r = await call('GET', '/tenant/api/notifications', null, bea);
 ok('Bea has two mentions: the note and the private deal', (r.body?.doc || []).filter(x => x.type === 'mention').length === 2, (r.body?.doc || []).filter(x => x.type === 'mention').length);
 r = await call('DELETE', P(shop._id, `/comments/${first}`), null, bea);
 ok("Bea can't delete it", r.status === 403, r.status);
+
+/* ---- replies (WO-53): one level, a reply to a reply joins the thread */
+const reply = (record, parent, body, who, mentions = []) => call('POST', P(shop._id, '/comments'), { route: 'deals', record, body, parent, mentions }, who);
+const replies = async who => ((await call('GET', '/tenant/api/notifications', null, who)).body?.doc || []).filter(x => x.type === 'reply');
+r = await post('deals', pub, 'Thoughts on the price?');
+const top = r.body?._id;
+ok('a top-level comment has no parent', r.status === 200 && r.body?.parent === null, JSON.stringify(r.body));
+r = await reply(pub, top, 'Looks fine to me', bea);
+const beaReply = r.body?._id;
+ok('Bea replies', r.status === 200 && r.body?.parent === top, JSON.stringify(r.body));
+await settle();
+let got = await replies(alma);
+ok('Alma hears Bea replied to her comment, linked to the reply', got.length === 1 && /Bea replied to your comment on Deal “Open deal”/.test(got[0].title) && got[0].href?.endsWith(`?tab=comments&comment=${beaReply}`), JSON.stringify(got));
+r = await reply(pub, beaReply, 'Agreed with Bea', cy);
+ok('a reply to a reply joins the same thread', r.status === 200 && r.body?.parent === top, JSON.stringify(r.body));
+await settle();
+got = await replies(bea);
+ok('Bea, in the thread, hears about it', got.length === 1 && /Cy replied to a comment on Deal/.test(got[0].title), JSON.stringify(got));
+ok('…and Alma again', (await replies(alma)).length === 2);
+ok('Cy is not told about his own reply', (await replies(cy)).length === 0);
+const almaId = (await self(alma))?._id;
+r = await reply(pub, top, '@Alma what do you say?', cy, [almaId]);
+await settle();
+ok('mentioned in a reply: Alma gets the mention, not another reply', (await replies(alma)).length === 2, (await replies(alma)).length);
+r = await call('POST', P(shop._id, '/comments'), { route: 'notes', record: note, body: 'Wrong record', parent: top }, bea);
+ok("…the parent must be on the same record", r.status === 404 && /replying to was deleted/.test(r.body?.message), r.body?.message);
+r = await call('GET', P(shop._id, C('deals', pub)), null, bea);
+ok('the thread lists replies with their parent', (r.body?.doc || []).filter(c => c.parent === top).length === 3, JSON.stringify(r.body?.doc));
+r = await call('DELETE', P(shop._id, `/comments/${beaReply}`), null, bea);
+ok('Bea deletes her reply alone', r.status === 200 && r.body?.message === 'Comment deleted', r.body?.message);
+r = await call('DELETE', P(shop._id, `/comments/${top}`), null, alma);
+ok('deleting the first comment takes its replies', r.status === 200 && /and 2 replies deleted/.test(r.body?.message), r.body?.message);
+const orphans = await mongoose.connection.db.collection('recordcomments').countDocuments({ parent: new mongoose.Types.ObjectId(top) });
+ok('…none left', orphans === 0, orphans);
 
 /* ---- the switches: per page, in its config, once published (WO-50) */
 const switches = async (route, patch, who = alma) => {

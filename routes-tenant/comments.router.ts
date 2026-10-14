@@ -19,9 +19,15 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
  *
  *   GET    /?route&record                 the thread, oldest first, and the page's switches
  *   GET    /mentionable?route&record      who can be @mentioned on this record, and who can't
- *   POST   /                              { route, record, body, mentions: [userId] }
+ *   POST   /                              { route, record, body, mentions: [userId], parent? }
  *   PUT    /:id                           { body, mentions }   your own comment
- *   DELETE /:id                           your own; Manage projects deletes anyone's
+ *   DELETE /:id                           your own; Manage projects deletes anyone's (a comment's replies go with it)
+ *
+ * Replies (WO-53) are one level deep, like Facebook: `parent` is a top-level
+ * comment, and a reply to a reply joins that same thread. Everyone in the
+ * thread — its first comment's writer and whoever replied — hears about a new
+ * reply, as long as they can still see the record (the @mentioned hear about
+ * the mention instead).
  *
  * Everything needs Records: View on the page, and the record itself in sight
  * (an access-restricted record: its owner, or shared with you). Who can be
@@ -134,16 +140,20 @@ const view = (c: any) => ({
 	author: { _id: String(c.author), name: c.authorName || 'Someone' },
 	body: c.body,
 	mentions: (c.mentions || []).map((m: any) => ({ _id: String(m.user), name: m.name })),
+	parent: c.parent ? String(c.parent) : null,
 	createdAt: c.createdAt,
 	editedAt: c.editedAt || null,
 });
+
+const excerptOf = (body: string) => (body.length > 140 ? `${body.slice(0, 137)}…` : body);
+/** A comment's link: the record's Comments tab, opened at the comment. */
+const hrefOf = (req: any, t: Target, comment: any) => projectHrefFor(req.project, `/${t.route}/${t.doc._id}?tab=comments&comment=${comment._id}`);
 
 /** Tells the newly mentioned, after the response. */
 const notifyMentions = (req: any, t: Target, comment: any, users: any[]) => {
 	if (!users.length) return;
 	later(async () => {
-		const href = await projectHrefFor(req.project, `/${t.route}/${t.doc._id}?tab=comments`);
-		const excerpt = comment.body.length > 140 ? `${comment.body.slice(0, 137)}…` : comment.body;
+		const href = await hrefOf(req, t, comment);
 		await notifyTenant(
 			users.map(u => ({
 				recipient: u,
@@ -153,7 +163,42 @@ const notifyMentions = (req: any, t: Target, comment: any, users: any[]) => {
 				actorName: req.user.name,
 				type: 'mention',
 				title: `${req.user.name || 'Someone'} mentioned you on ${t.title}`,
-				message: excerpt,
+				message: excerptOf(comment.body),
+				href,
+				route: t.route,
+				record: t.doc._id,
+			}))
+		);
+	});
+};
+
+/**
+ * Tells a thread's people about a new reply, after the response: the first
+ * comment's writer and everyone who replied before — not the writer, not the
+ * people this reply @mentions (they hear about that), and only those who can
+ * still see the record.
+ */
+const notifyReply = (req: any, t: Target, top: any, reply: any, mentioned: any[]) => {
+	later(async () => {
+		const earlier: any[] = await RecordComment.find({ parent: top._id, _id: { $ne: reply._id } }, { author: 1 }).lean();
+		const skip = new Set([String(req.user._id), ...mentioned.map(String)]);
+		const wanted = [...new Set([top.author, ...earlier.map(c => c.author)].map(String))].filter(id => !skip.has(id));
+		if (!wanted.length) return;
+		const sees = new Set((await mentionable(req, t)).people.map(p => p._id));
+		const users = wanted.filter(id => sees.has(id));
+		if (!users.length) return;
+		const href = await hrefOf(req, t, reply);
+		const who = req.user.name || 'Someone';
+		await notifyTenant(
+			users.map(u => ({
+				recipient: u,
+				organization: req.organization._id,
+				project: req.project._id,
+				actor: req.user._id,
+				actorName: req.user.name,
+				type: 'reply',
+				title: same(u, top.author) ? `${who} replied to your comment on ${t.title}` : `${who} replied to a comment on ${t.title}`,
+				message: excerptOf(reply.body),
 				href,
 				route: t.route,
 				record: t.doc._id,
@@ -198,9 +243,20 @@ router.post(
 	'/',
 	rateLimit({ name: 'tenant-comments', windowMs: 60 * 1000, max: 60 }),
 	handle(async req => {
-		const input = check(Joi.object({ route: Joi.string().required(), record: Joi.string().required(), ...bodySchema }), req.body);
+		const input = check(
+			Joi.object({ route: Joi.string().required(), record: Joi.string().required(), parent: Joi.string().allow(null, ''), ...bodySchema }),
+			req.body
+		);
 		const t = await loadTarget(req, input.route, input.record);
 		commentsOn(t);
+		// A reply: to a comment on this same record; a reply to a reply joins its thread.
+		let top: any = null;
+		if (input.parent) {
+			const p: any = isId(input.parent) && (await RecordComment.findOne({ _id: input.parent, route: t.route, record: t.doc._id }).lean());
+			if (!p) throw new TenancyError(404, 'The comment you’re replying to was deleted', 'parent_gone');
+			top = p.parent ? await RecordComment.findById(p.parent).lean() : p;
+			if (!top) throw new TenancyError(404, 'The comment you’re replying to was deleted', 'parent_gone');
+		}
 		const mentions = await checkMentions(req, t, input.mentions);
 		const comment: any = await RecordComment.create({
 			route: t.route,
@@ -209,8 +265,10 @@ router.post(
 			authorName: req.user.name,
 			body: input.body,
 			mentions,
+			parent: top?._id || null,
 		});
 		notifyMentions(req, t, comment, mentions.map(m => m.user));
+		if (top) notifyReply(req, t, top, comment, mentions.map(m => m.user));
 		return view(comment);
 	})
 );
@@ -250,7 +308,9 @@ router.delete(
 		if (!same(comment.author, req.user._id) && !grants(req.permissions, ['manage-projects']))
 			throw new TenancyError(403, 'You can only delete your own comments');
 		await RecordComment.deleteOne({ _id: comment._id });
-		return { message: 'Comment deleted' };
+		// A top-level comment takes its replies with it.
+		const replies = comment.parent ? 0 : (await RecordComment.deleteMany({ parent: comment._id })).deletedCount || 0;
+		return { message: replies ? `Comment and ${replies} ${replies === 1 ? 'reply' : 'replies'} deleted` : 'Comment deleted' };
 	})
 );
 
