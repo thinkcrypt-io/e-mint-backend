@@ -8,7 +8,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | AB-01 | Plan & docs | backend | S | done 2026-10-14 |
-| AB-02 | Engine: `ApiEndpoint` + `ApiKey`, `applyPublicApi` + derived summary, lazy migration + script, the public router on endpoints (who, conditions, fields, list settings, keys, stats), panel API `/p/:project/api/*`, smoke | backend | L | |
+| AB-02 | Engine: `ApiEndpoint` + `ServerKey`, `applyPublicApi` + derived summary, lazy migration + script, the public router on endpoints (who, conditions, fields, list settings, keys, stats), panel API `/p/:project/api-builder/*`, smoke | backend | L | done 2026-10-14 |
 | AB-03 | Panel I: the API section, Overview, Endpoints (list, Generate from a model, New endpoint wizard) | mint-tenant | M | |
 | AB-04 | Panel II: an endpoint's page (Access, Fields, Filters, Try it, Code), Keys, Reference | mint-tenant | L | |
 | AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | |
@@ -16,7 +16,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 ## AB-02 — Engine (L)
 
 - `ApiEndpoint` (tenantScoped, `apiendpoints`): §4 of the README; index {project, method, path} unique.
-- `ApiKey` (tenantScoped, `apikeys`): name, hash (select:false), last4, createdBy, lastUsedAt, revokedAt.
+- `ServerKey` (tenantScoped, `serverkeys`): name, hash (select:false), last4, createdBy, lastUsedAt, revokedAt.
 - `library/functions/apiEndpoints.function.ts`: `standardEndpoints(def, publicApi)`, `applyPublicApi(def, value)`
   (writes standard endpoints, then `syncSummary(route)`), `syncSummary`, `ensureEndpoints()` (D9),
   `matchEndpoint(endpoints, method, path)`, `reachQuery(def, conds, customer)`, `checkCreate(...)`,
@@ -25,8 +25,8 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
   website kit / starter.
 - `public.router.ts`: the model routes become one catch-all after the fixed routes: match → who → reach →
   action. `GET /` lists endpoints (and still `models` for the widgets and old callers).
-- Panel API (Build): `/p/:project/api/endpoints` list / get / create / update / delete, `POST generate`
-  {route, actions, who}; `/p/:project/api/keys` list / create (secret once) / revoke; `/p/:project/api/overview`.
+- Panel API (Build): `/p/:project/api-builder/endpoints` list / get / create / update / delete, `POST generate`
+  {route, actions, who}; `/p/:project/api-builder/keys` list / create (secret once) / revoke; `/p/:project/api-builder/overview`.
 - `scripts/migrateApiEndpoints.js`; smoke `scripts/tenancy-smoke/api-builder.mjs` (in run-all): old addresses
   unchanged after migration, a custom path with fixed filters, who=customer / key, owner and field
   conditions on each action, create refused by a rule, fields out/write/read-only, caller filters off, page

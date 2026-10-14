@@ -34,6 +34,17 @@ import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
+import ApiEndpoint from '../library/models/tenancy/apiEndpoint.model.js';
+import {
+	checkCreate,
+	ensureEndpoints,
+	matchEndpoint,
+	outOf,
+	reachOf,
+	sendsServerKey,
+	serverKeyOf,
+	writableOf,
+} from '../library/functions/apiEndpoints.function.js';
 import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
@@ -170,7 +181,9 @@ const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c
 router.get(
 	'/',
 	handle(async req => {
-		const defs = await publicDefs();
+		await ensureEndpoints();
+		const [defs, endpoints] = await Promise.all([publicDefs(), ApiEndpoint.find({ enabled: true }).sort({ model: 1, standard: -1, path: 1 }).lean()]);
+		const byRoute = new Map<string, any>((await ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1, access: 1 }).lean()).map((d: any) => [d.route, d]));
 		return {
 			name: req.project.name,
 			type: req.project.type,
@@ -194,6 +207,44 @@ router.get(
 				})),
 				...(d.publicApi.actions || []).includes('list') && listCapabilities(d),
 			})),
+			// Every endpoint that answers (docs/api-builder): what the reference and the panel's tester read.
+			endpoints: endpoints
+				.filter((e: any) => byRoute.has(e.model))
+				.map((e: any) => {
+					const d = byRoute.get(e.model);
+					const out = outOf(d, e);
+					const writes = new Set(['create', 'update'].includes(e.action) ? writableOf(d, e) : []);
+					return {
+						name: e.name,
+						...(e.note && { note: e.note }),
+						method: e.method,
+						path: e.path,
+						action: e.action,
+						model: e.model,
+						modelTitle: d.title || d.name,
+						standard: !!e.standard,
+						who: e.access?.who || 'anyone',
+						rules: (e.access?.when || []).length + (e.action === 'list' ? (e.list?.filters || []).length : 0),
+						fields: d.fields
+							.filter((f: any) => out.includes(f.key) || writes.has(f.key))
+							.map((f: any) => ({
+								key: f.key,
+								label: f.label || f.key,
+								kind: f.kind,
+								required: !!f.required,
+								...(f.options?.length && { options: f.options.map((o: any) => o.value) }),
+								...(out.includes(f.key) && { out: true }),
+								...(writes.has(f.key) && { write: true }),
+							})),
+						...(e.action === 'list' && {
+							list: {
+								limit: e.list?.limit || 20,
+								maxLimit: e.list?.maxLimit || 100,
+								...(e.list?.callerFilters !== false ? listCapabilities(d) : { filters: [], search: [], sort: [] }),
+							},
+						}),
+					};
+				}),
 		};
 	})
 );
@@ -611,73 +662,75 @@ router.get(
 
 /* ------------------------------------------------------- model routes */
 
-type Ctx = { def: any; Model: mongoose.Model<any>; customer: any | null; settings: Record<string, any>; formulas: any[] };
+/*
+ * Every other address is one of the project's endpoints (docs/api-builder):
+ * a model's standard ones (/<route>, /<route>/:id — kept in step with its
+ * `publicApi`) and the custom ones made in the panel's API pages. One handler
+ * matches the call to an endpoint, checks who may call it, and runs its action
+ * with its rules: the records it reaches, the fields it writes and shows.
+ */
 
-/** The model behind `/:route`, if `action` is public — and the customer when it needs one. */
-const open = async (req: any, action: string): Promise<Ctx> => {
+type Ctx = {
+	ep: any;
+	id?: string;
+	def: any;
+	Model: mongoose.Model<any>;
+	customer: any | null;
+	settings: Record<string, any>;
+	formulas: any[];
+};
+
+/** The endpoint answering this call — or 404, 401 (sign in / a server key), as its "who" says. */
+const open = async (req: any): Promise<Ctx> => {
+	await ensureEndpoints();
+	const endpoints: any[] = await ApiEndpoint.find({ enabled: true }).lean();
+	const hit = matchEndpoint(endpoints, req.method, req.path);
+	if (!hit) throw new TenancyError(404, 'Not found');
+	const { ep, id } = hit;
 	await syncDynamicModels({ app: req.app });
-	const def: any = (await publicDefs()).get(String(req.params.route || ''));
-	if (!def || !(def.publicApi.actions || []).includes(action)) throw new TenancyError(404, 'Not found');
-	const Model = compiledModel(def.name);
-	if (!Model) throw new TenancyError(404, 'Not found');
+	const def: any = await ModelDefinition.findOne({ route: ep.model, active: { $ne: false } }).lean();
+	const Model = def && compiledModel(def.name);
+	if (!def || !Model) throw new TenancyError(404, 'Not found');
+	if (id !== undefined && !isId(id)) throw new TenancyError(404, 'Not found');
 	const customer = await customerOf(req);
-	if (def.publicApi.auth === 'customer' && !customer) throw new TenancyError(401, 'Sign in first.', 'customer_required');
+	if (ep.access?.who === 'customer' && !customer) throw new TenancyError(401, 'Sign in first.', 'customer_required');
+	if (ep.access?.who === 'key' && !(await serverKeyOf(req)))
+		throw new TenancyError(401, sendsServerKey(req) ? 'That server key isn’t valid — it may have been revoked.' : 'This endpoint needs a server key.', 'key_required');
 	// The route's settings as the panels use them (a published copy, or generated) — for formulas.
 	const published = await getActiveSettings(def.route);
 	const settings = published?.data ? dataToSettings(published.data) : generateSettings(def, makeTargetLookup(req.app, [def]));
-	return { def, Model, customer, settings, formulas: formulasOf(settings) };
+	ApiEndpoint.updateOne({ _id: ep._id }, { $inc: { 'stats.calls': 1 }, $set: { 'stats.lastCalledAt': new Date() } }).catch(() => undefined);
+	return { ep, id, def, Model, customer, settings, formulas: formulasOf(settings) };
 };
 
-/**
- * The records a call may reach: with owner-only, the customer's own; on a
- * model with per-record access (D19) only those marked public — a record kept
- * to some of the team never reaches a site. Archived records (bulk Archive)
- * never do either, as in the admin's lists.
- */
-const owned = (ctx: Ctx) => publicReach(ctx.def, ctx.customer);
+/** The records this call may reach: the endpoint's rules (reachOf), never archived ones. */
+const reach = (ctx: Ctx) => reachOf(ctx.def, ctx.ep, ctx.customer);
 
-router.get(
-	'/:route',
-	handle(async req => {
-		const ctx = await open(req, 'list');
-		const { def, Model } = ctx;
-		const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
-		const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-		const and = listFilters(def, req.query);
-		const query: any = { ...owned(ctx), ...(and.length && { $and: and }) };
-		const keys = listSelect(def, req.query.fields);
-		const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
-		const find = Model.find(query).select(keys.join(' ')).sort(listSort(def, req.query.sort)).skip((page - 1) * limit).limit(limit).populate(populate);
-		const [docs, total] = await Promise.all([find.lean(), Model.countDocuments(query)]);
-		return { doc: docs.map((d: any) => shape(d, def)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
-	})
-);
-
-router.get(
-	'/:route/:id',
-	handle(async req => {
-		const ctx = await open(req, 'get');
-		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
-		const populate = await refPopulates(ctx.def);
-		const doc = await ctx.Model.findOne({ _id: req.params.id, ...owned(ctx) }).select(outKeys(ctx.def).join(' ')).populate(populate).lean();
-		if (!doc) throw new TenancyError(404, 'Not found');
-		return shape(doc, ctx.def);
-	})
-);
+/** What goes out: the endpoint's fields, and of those the ones `?fields=` asks for. */
+const outFor = (ctx: Ctx, asked?: any) => {
+	const allowed = outOf(ctx.def, ctx.ep);
+	const picked = listSelect(ctx.def, asked).filter((k: string) => allowed.includes(k));
+	return asked && picked.length ? [...new Set(['_id', ...picked])] : allowed;
+};
+const shapeOut = (doc: any, keys: string[]) => {
+	if (!doc) return doc;
+	const out: any = {};
+	for (const k of keys) if (doc[k] !== undefined) out[k] = doc[k];
+	return out;
+};
 
 /** The fields the public API never writes — the business sets them (an order's status, a payment reference). */
 const readOnlyOf = (def: any) => new Set<string>(def.publicApi?.readOnlyFields || []);
 
 /**
- * The body, cut down to the model's own (non-formula) fields the API may
- * write. Read-only fields are dropped like unknown keys: on create they take
- * their default, on update they keep what they have — so a site can send back
- * a record it read without being refused.
+ * The body, cut down to the fields this endpoint writes (the model's own,
+ * never formulas, minus read-only ones). Others are dropped like unknown keys:
+ * on create they take their default, on update they keep what they have — so a
+ * site can send back a record it read without being refused.
  */
 const bodyOf = (req: any, ctx: Ctx) => {
 	const body: any = {};
-	const readOnly = readOnlyOf(ctx.def);
-	for (const k of fieldKeys(ctx.def)) if (req.body?.[k] !== undefined && !readOnly.has(k)) body[k] = req.body[k];
+	for (const k of writableOf(ctx.def, ctx.ep)) if (req.body?.[k] !== undefined) body[k] = req.body[k];
 	stripFormulaKeys(body, ctx.formulas);
 	return body;
 };
@@ -725,96 +778,131 @@ const applyLinked = async (plan: any, saved: any, undo: () => Promise<any>) => {
 	}
 };
 
-router.post(
-	'/:route',
-	handle(async (req, res) => {
-		const ctx = await open(req, 'create');
-		// On a model with per-record access, what a site sends in is public: the team sees it (it has no owner among them).
-		const doc: any = new ctx.Model({
-			...bodyOf(req, ctx),
-			...(ctx.customer && { _customer: ctx.customer._id }),
-			...(ctx.def.access?.enabled && { privacy: 'public' }),
-		});
-		applyFormulas(doc, ctx.formulas);
-		let plan: any = null;
-		try {
-			if (await hasApiRules(req, ctx)) {
-				await doc.validate();
-				plan = await apiLinked(req, ctx, 'create', null, doc.toObject());
-			}
-			await doc.save();
-		} catch (e) {
-			throw invalid(e);
-		}
-		await applyLinked(plan, doc, () => ctx.Model.collection.deleteOne({ _id: doc._id }));
-		res.status(201);
-		const label = doc.get?.(displayFieldOf(ctx.def));
-		tellTeam(req, {
-			route: ctx.def.route,
-			permission: `view-${ctx.def.route}`,
-			title: `New ${String(ctx.def.name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()} from ${req.project.name}`,
-			message: typeof label === 'string' && label.trim() ? label.trim().slice(0, 140) : undefined,
-			path: `/${ctx.def.route}/${doc._id}`,
-			record: doc._id,
-		});
-		if (req.project.type === 'website') forwardConversion(req.project, req, 'lead', { ...contactOf(req.body), form: ctx.def.title || ctx.def.name });
-		fireWebhooks({ route: ctx.def.route, event: 'create', doc, source: 'api' });
-		fireAutomations({ route: ctx.def.route, event: 'create', doc: doc, actor: { name: 'Website' } });
-		return shape(doc.toObject(), ctx.def);
-	})
-);
+const list = async (req: any, ctx: Ctx) => {
+	const { def, Model, ep } = ctx;
+	const max = ep.list?.maxLimit || 100;
+	const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || ep.list?.limit || 20, 1), max);
+	const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+	// Callers' own filters, search and sort — unless the endpoint keeps them out.
+	const own = ep.list?.callerFilters !== false;
+	const and = own ? listFilters(def, req.query) : [];
+	const base = reach(ctx);
+	const query: any = and.length ? { ...base, $and: [...(base.$and || []), ...and] } : base;
+	const keys = outFor(ctx, req.query.fields);
+	const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
+	const sort = listSort(def, own && req.query.sort ? req.query.sort : ep.list?.sort);
+	const find = Model.find(query).select(keys.join(' ')).sort(sort).skip((page - 1) * limit).limit(limit).populate(populate);
+	const [docs, total] = await Promise.all([find.lean(), Model.countDocuments(query)]);
+	return { doc: docs.map((d: any) => shapeOut(d, keys)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+};
 
-router.put(
-	'/:route/:id',
-	handle(async req => {
-		const ctx = await open(req, 'update');
-		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
-		const doc: any = await ctx.Model.findOne({ _id: req.params.id, ...owned(ctx) });
-		if (!doc) throw new TenancyError(404, 'Not found');
-		const body = bodyOf(req, ctx);
-		// Locked by the record's state (a paid order's status): kept as it is, like a read-only field.
-		for (const l of lockedChanges(ctx.settings, doc.toObject(), body)) delete body[l.field];
-		const before = doc.toObject();
-		const raw = (await hasApiRules(req, ctx)) ? await ctx.Model.collection.findOne({ _id: doc._id }) : null;
-		doc.set(body);
-		applyFormulas(doc, ctx.formulas);
-		const changed = doc.isModified();
-		let plan: any = null;
-		try {
-			if (raw) {
-				await doc.validate();
-				plan = await apiLinked(req, ctx, 'update', before, doc.toObject());
-			}
-			await doc.save();
-		} catch (e) {
-			throw invalid(e);
-		}
-		await applyLinked(plan, doc, () => ctx.Model.collection.replaceOne({ _id: doc._id }, raw as any));
-		if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
-		if (changed) fireAutomations({ route: ctx.def.route, event: 'update', doc: doc, actor: { name: 'Website' } });
-		return shape(doc.toObject(), ctx.def);
-	})
-);
+const getOne = async (req: any, ctx: Ctx) => {
+	const keys = outFor(ctx, req.query.fields);
+	const populate = (await refPopulates(ctx.def)).filter((p: any) => keys.includes(p.path));
+	const doc = await ctx.Model.findOne({ ...reach(ctx), _id: ctx.id }).select(keys.join(' ')).populate(populate).lean();
+	if (!doc) throw new TenancyError(404, 'Not found');
+	return shapeOut(doc, keys);
+};
 
-router.delete(
-	'/:route/:id',
-	handle(async req => {
-		const ctx = await open(req, 'delete');
-		if (!isId(req.params.id)) throw new TenancyError(404, 'Not found');
-		let plan: any = null;
-		let raw: any = null;
+const create = async (req: any, res: any, ctx: Ctx) => {
+	// On a model with per-record access, what a site sends in is public: the team sees it (it has no owner among them).
+	const doc: any = new ctx.Model({
+		...bodyOf(req, ctx),
+		...(ctx.customer && { _customer: ctx.customer._id }),
+		...(ctx.def.access?.enabled && { privacy: 'public' }),
+	});
+	applyFormulas(doc, ctx.formulas);
+	// The endpoint's conditions, on the new record (an owner condition makes the customer its owner).
+	checkCreate(ctx.ep, doc, ctx.customer);
+	let plan: any = null;
+	try {
 		if (await hasApiRules(req, ctx)) {
-			const current = await ctx.Model.findOne({ _id: req.params.id, ...owned(ctx) });
-			if (!current) throw new TenancyError(404, 'Not found');
-			raw = await ctx.Model.collection.findOne({ _id: current._id });
-			plan = await apiLinked(req, ctx, 'delete', current.toObject(), null);
+			await doc.validate();
+			plan = await apiLinked(req, ctx, 'create', null, doc.toObject());
 		}
-		const gone = await ctx.Model.findOneAndDelete({ _id: req.params.id, ...owned(ctx) });
-		if (!gone) throw new TenancyError(404, 'Not found');
-		await applyLinked(plan, gone, () => ctx.Model.collection.insertOne(raw));
-		fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
-		fireAutomations({ route: ctx.def.route, event: 'delete', doc: gone, actor: { name: 'Website' } });
-		return { message: 'Deleted' };
+		await doc.save();
+	} catch (e) {
+		throw invalid(e);
+	}
+	await applyLinked(plan, doc, () => ctx.Model.collection.deleteOne({ _id: doc._id }));
+	res.status(201);
+	const label = doc.get?.(displayFieldOf(ctx.def));
+	tellTeam(req, {
+		route: ctx.def.route,
+		permission: `view-${ctx.def.route}`,
+		title: `New ${String(ctx.def.name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()} from ${req.project.name}`,
+		message: typeof label === 'string' && label.trim() ? label.trim().slice(0, 140) : undefined,
+		path: `/${ctx.def.route}/${doc._id}`,
+		record: doc._id,
+	});
+	if (req.project.type === 'website') forwardConversion(req.project, req, 'lead', { ...contactOf(req.body), form: ctx.def.title || ctx.def.name });
+	fireWebhooks({ route: ctx.def.route, event: 'create', doc, source: 'api' });
+	fireAutomations({ route: ctx.def.route, event: 'create', doc: doc, actor: { name: 'Website' } });
+	return shapeOut(doc.toObject(), outOf(ctx.def, ctx.ep));
+};
+
+const update = async (req: any, ctx: Ctx) => {
+	const doc: any = await ctx.Model.findOne({ ...reach(ctx), _id: ctx.id });
+	if (!doc) throw new TenancyError(404, 'Not found');
+	const body = bodyOf(req, ctx);
+	// Locked by the record's state (a paid order's status): kept as it is, like a read-only field.
+	for (const l of lockedChanges(ctx.settings, doc.toObject(), body)) delete body[l.field];
+	const before = doc.toObject();
+	const raw = (await hasApiRules(req, ctx)) ? await ctx.Model.collection.findOne({ _id: doc._id }) : null;
+	doc.set(body);
+	applyFormulas(doc, ctx.formulas);
+	const changed = doc.isModified();
+	let plan: any = null;
+	try {
+		if (raw) {
+			await doc.validate();
+			plan = await apiLinked(req, ctx, 'update', before, doc.toObject());
+		}
+		await doc.save();
+	} catch (e) {
+		throw invalid(e);
+	}
+	await applyLinked(plan, doc, () => ctx.Model.collection.replaceOne({ _id: doc._id }, raw as any));
+	if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
+	if (changed) fireAutomations({ route: ctx.def.route, event: 'update', doc: doc, actor: { name: 'Website' } });
+	return shapeOut(doc.toObject(), outOf(ctx.def, ctx.ep));
+};
+
+const remove = async (req: any, ctx: Ctx) => {
+	let plan: any = null;
+	let raw: any = null;
+	if (await hasApiRules(req, ctx)) {
+		const current = await ctx.Model.findOne({ ...reach(ctx), _id: ctx.id });
+		if (!current) throw new TenancyError(404, 'Not found');
+		raw = await ctx.Model.collection.findOne({ _id: current._id });
+		plan = await apiLinked(req, ctx, 'delete', current.toObject(), null);
+	}
+	const gone = await ctx.Model.findOneAndDelete({ ...reach(ctx), _id: ctx.id });
+	if (!gone) throw new TenancyError(404, 'Not found');
+	await applyLinked(plan, gone, () => ctx.Model.collection.insertOne(raw));
+	fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
+	fireAutomations({ route: ctx.def.route, event: 'delete', doc: gone, actor: { name: 'Website' } });
+	return { message: 'Deleted' };
+};
+
+router.use(
+	handle(async (req, res) => {
+		if (!['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) throw new TenancyError(404, 'Not found');
+		const ctx = await open(req);
+		switch (ctx.ep.action) {
+			case 'list':
+				return list(req, ctx);
+			case 'get':
+				return getOne(req, ctx);
+			case 'create':
+				return create(req, res, ctx);
+			case 'update':
+				return update(req, ctx);
+			case 'delete':
+				return remove(req, ctx);
+			default:
+				throw new TenancyError(404, 'Not found');
+		}
 	})
 );
 

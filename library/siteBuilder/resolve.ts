@@ -1,6 +1,7 @@
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel } from '../functions/dynamicModels.function.js';
-import { isId, listFilters, listSort, outKeys, publicDefs, publicReach, refPopulates, shape } from '../functions/publicRecords.function.js';
+import { isId, listFilters, listSort, outKeys, publicDefs, refPopulates, shape } from '../functions/publicRecords.function.js';
+import { siteReach } from '../functions/apiEndpoints.function.js';
 import { TenancyError } from '../functions/tenancy.function.js';
 import { KIT_ROUTES, kitModel } from './kit.js';
 
@@ -52,6 +53,7 @@ export const publicProblem = (def: any, action: 'list' | 'get', title = def?.tit
 	if (!def) return `There is no model “${title}” with a public API`;
 	if (!def.publicApi?.enabled || !(def.publicApi?.actions || []).includes(action)) return `Turn on ${def.title}’s public API (${action}) to show it on the site`;
 	if (def.publicApi?.auth === 'customer') return `${def.title}’s public API is for signed-in customers only, so the site can’t show it`;
+	if (def.publicApi?.auth === 'key') return `${def.title}’s public API needs a server key, so the site can’t show it`;
 	return null;
 };
 
@@ -123,8 +125,10 @@ const readCollection = async (node: any, defs: Map<string, any>, page: number, a
 		throw e;
 	}
 	const current = props.pagination ? Math.max(1, Math.min(page || 1, 1000)) : 1;
-	const query: any = { ...publicReach(def), ...(and.length && { $and: and }) };
-	const keys = outKeys(def);
+	// The list endpoint's own rules and fields (docs/api-builder): never more than the API shows.
+	const reach = await siteReach(def, 'list');
+	const query: any = and.length ? { ...reach.query, $and: [...(reach.query.$and || []), ...and] } : reach.query;
+	const keys = reach.keys;
 	const [docs, total] = await Promise.all([
 		Model.find(query)
 			.select(keys.join(' '))
@@ -184,8 +188,9 @@ export const findTemplateRecord = async (source: any, value: string) => {
 		if (!f) return null;
 		cond = { [field]: f.kind === 'number' ? Number(value) : value };
 	}
-	const doc = await Model.findOne({ ...cond, ...publicReach(def) })
-		.select(outKeys(def).join(' '))
+	const reach = await siteReach(def, 'get');
+	const doc = await Model.findOne({ ...reach.query, ...cond })
+		.select(reach.keys.join(' '))
 		.populate(await refPopulates(def))
 		.lean();
 	return doc ? shape(doc, def) : null;
@@ -198,9 +203,10 @@ export const sampleRecord = async (source: any, recordId?: string) => {
 	if (!def || publicProblem(def, 'get')) return null;
 	const Model = compiledModel(def.name);
 	if (!Model) return null;
-	const doc = await Model.findOne({ ...publicReach(def), ...(recordId && isId(recordId) && { _id: recordId }) })
+	const reach = await siteReach(def, 'get');
+	const doc = await Model.findOne({ ...reach.query, ...(recordId && isId(recordId) && { _id: recordId }) })
 		.sort({ createdAt: -1, _id: -1 })
-		.select(outKeys(def).join(' '))
+		.select(reach.keys.join(' '))
 		.populate(await refPopulates(def))
 		.lean();
 	return doc ? shape(doc, def) : null;
@@ -219,7 +225,8 @@ export const dataModels = async () => {
 			const list = !!pub && !publicProblem(pub, 'list');
 			const get = !!pub && !publicProblem(pub, 'get');
 			const Model = list || get ? compiledModel(d.name) : null;
-			const sample = Model ? await Model.findOne(publicReach(d)).sort({ createdAt: -1 }).select(outKeys(d).join(' ')).lean() : null;
+			const reach = Model ? await siteReach(d, list ? 'list' : 'get') : null;
+			const sample = Model && reach ? await Model.findOne(reach.query).sort({ createdAt: -1 }).select(reach.keys.join(' ')).lean() : null;
 			return {
 				model: d.route,
 				title: d.title,

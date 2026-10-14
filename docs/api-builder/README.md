@@ -63,7 +63,7 @@ Choices the user made (same day):
 - **D7 — List settings** (list endpoints): **fixed filters** (conditions always applied — "featured is
   true"), whether callers may add their own filters/search (all filterable fields, or none), default sort,
   default and maximum page size (≤ 100).
-- **D8 — Keys.** `ApiKey`: name, a `mint_sk_` secret shown once (only its sha256 and last 4 kept), created
+- **D8 — Keys.** `ServerKey` (`serverkeys` — `ApiKey` is already the MCP keys' model): name, a `mint_sk_` secret shown once (only its sha256 and last 4 kept), created
   by, last used, revoked. Sent as `Authorization: Bearer mint_sk_…` or `X-Api-Key`. Managed by people with
   Build. Never put in a website — the Keys page says so.
 - **D9 — Migration.** On first read of a project's endpoints (API pages, the public router), a model whose

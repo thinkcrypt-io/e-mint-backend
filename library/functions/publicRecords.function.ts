@@ -275,3 +275,37 @@ export const publicReach = (def: any, customer: any | null = null) => ({
 	...(def.publicApi?.ownerOnly && { _customer: customer?._id ?? null }),
 	...(def.access?.enabled && { privacy: 'public' }),
 });
+
+/* ------------------------------------- conditions (docs/api-builder D5, D7) */
+
+/** The ConditionsEditor's tests as the list syntax's operators (empty / filled are their own). */
+const OP_OF: Record<string, string> = { is: 'eq', not: 'ne', in: 'in', gt: 'gt', gte: 'gte', lt: 'lt', lte: 'lte', contains: 'contains' };
+
+/**
+ * One condition `{field, op, value}` — an endpoint's access rule or fixed filter
+ * — as a MongoDB filter on the model's records, its value already resolved
+ * (a `{ref: 'customer'}` is the customer's id by now). Read through the same
+ * per-kind code as a caller's `<field>_<op>=` filter, so a value is typed and
+ * checked the same way. `_customer` (the owner) and `_id` take an id.
+ */
+export const conditionQuery = (def: any, c: { field: string; op: string; value?: any }): any => {
+	const blank = { $in: [null, '', []] };
+	if (c.field === '_customer' || c.field === '_id') {
+		if (c.op === 'empty') return { [c.field]: null };
+		if (c.op === 'filled') return { [c.field]: { $ne: null } };
+		const ids = (Array.isArray(c.value) ? c.value : String(c.value ?? '').split(',')).map(String).filter(isId);
+		if (!ids.length) return { _id: null }; // nothing can match
+		const oid = ids.map(v => new mongoose.Types.ObjectId(v));
+		if (c.op === 'not') return { [c.field]: { $nin: oid } };
+		return { [c.field]: oid.length > 1 || c.op === 'in' ? { $in: oid } : oid[0] };
+	}
+	const f = filterable(def).find(x => x.key === c.field);
+	if (!f) throw new TenancyError(400, `“${c.field}” can’t be used in a rule — it isn’t a field this model can be filtered by`);
+	if (c.op === 'empty') return { [f.key]: blank };
+	if (c.op === 'filled') return { [f.key]: { $nin: [null, '', []] } };
+	const op = OP_OF[c.op];
+	if (!op) throw new TenancyError(400, `Unknown test “${c.op}” on ${f.key}`);
+	const raw = Array.isArray(c.value) ? c.value.map(String).join(',') : typeof c.value === 'boolean' || typeof c.value === 'number' ? String(c.value) : c.value;
+	if (raw === undefined || raw === null || raw === '') throw new TenancyError(400, `Give ${f.label || f.key} a value to compare with`);
+	return { [f.key]: condition(f, op === 'eq' && Array.isArray(c.value) ? 'in' : op, typeof raw === 'string' ? raw : String(raw)) };
+};

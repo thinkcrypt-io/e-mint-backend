@@ -30,6 +30,7 @@ import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
 import commentsRouter from './comments.router.js';
 import automationsRouter from './automations.router.js';
+import apiBuilderRouter from './apiBuilder.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
@@ -61,6 +62,7 @@ import { customQuery } from '../middleware/index.js';
  *                                 or the organization's shared library (mediaScope, WO-23)
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
+ *   /api-builder                  the public API's endpoints and server keys (docs/api-builder)   build
  *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
  *   /site-builder                 a website's builder pages, design, publish (docs/site-builder)   read; build to change
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
@@ -205,6 +207,8 @@ router.use('/payments', paymentsRouter);
 
 router.use('/templates', templatesRouter);
 router.use('/api-overview', overviewRouter);
+// The public API as endpoints: generate, rules, fields, server keys (docs/api-builder).
+router.use('/api-builder', apiBuilderRouter);
 
 // Who a restricted model's records can be shared with (per-record access, D19):
 // the organization's members who can open this project. Shaped like a list

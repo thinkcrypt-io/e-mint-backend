@@ -80,7 +80,8 @@ const schema = new Schema<any>(
 		publicApi: {
 			enabled: { type: Boolean, default: false },
 			actions: { type: [String], enum: ['list', 'get', 'create', 'update', 'delete'], default: undefined },
-			auth: { type: String, enum: ['none', 'customer'], default: 'none' },
+			/** 'key': its endpoints need a server key (docs/api-builder) — derived from them, never set here. */
+			auth: { type: String, enum: ['none', 'customer', 'key'], default: 'none' },
 			ownerOnly: { type: Boolean, default: false },
 			/** What the site or app uses it for — shown in the API reference (a template's endpoint note, T-09). */
 			note: { type: String, trim: true, maxlength: 300, default: '' },

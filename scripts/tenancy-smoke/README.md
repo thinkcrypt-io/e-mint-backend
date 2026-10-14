@@ -22,6 +22,7 @@ Then, from this folder:
 | `node mcp.mjs` | tenant MCP keys, tools, builds in the project, key isolation | |
 | `node public.mjs` | public API, customers, owner-only records, read-only fields (WO-42), widget.js | |
 | `node public-filters.mjs` | public API lists (WO-40): every filter operator per field kind, dates, search, sort, paging, `fields`, 400s, archived rows | archives a row straight in the scratch DB (`SMOKE_MONGO`) |
+| `node api-builder.mjs` | API builder (docs/api-builder AB-02): endpoints made from a model's old-style public API, Generate, owner and customer-field conditions, a custom list with fixed filters / no caller filters / its own fields / page-size cap, literal paths before `/:id`, path and rule checks, a create refused by its rule, chosen write fields, server keys (Bearer, X-Api-Key, wrong, revoked, last used), old-style saves reaching standard endpoints only, on/off, `GET /` endpoints, stats, overview, delete | makes and force-deletes its own project |
 | `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
 | `node website-mcp.mjs` | website settings through the MCP and Site setup (WO-38) | |
 | `node secrets.mjs` | Password fields (WO-39): secret-named keys need the kind, stored as text, never in history | |

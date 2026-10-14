@@ -54,6 +54,11 @@ against production yet (all were verified on a scratch database).
    on any project model whose collection isn't `t_<projectId>…`). Rehearsed
    on the scratch DB 2026-10-06: 43 models in 12 projects moved, every
    record identical, every other collection unchanged (CHANGELOG).
+6. **API builder endpoints (docs/api-builder D9)** — optional, any time after
+   the deploy: each project's first public-API call or API page makes its
+   endpoints from `publicApi` anyway. To do every project at once:
+   `npm run build && node scripts/migrateApiEndpoints.js` (dry run), then
+   `--apply`. Safe to re-run; old `/<route>` addresses answer as before.
 
 ## 2. Tenant panel (a second Vercel project from the `admin` repo)
 

@@ -18,6 +18,8 @@ import History from '../models/history/model.js';
 import RecordComment from '../models/tenancy/recordComment.model.js';
 import Automation from '../models/tenancy/automation.model.js';
 import AutomationRun from '../models/tenancy/automationRun.model.js';
+import ApiEndpoint from '../models/tenancy/apiEndpoint.model.js';
+import ServerKey from '../models/tenancy/serverKey.model.js';
 import AdminFile from '../models/admin-file/model.js';
 import Folder from '../models/folders/model.js';
 import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js';
@@ -75,6 +77,9 @@ const SCOPED = [
 	ProjectWebhook,
 	WebhookDelivery,
 	ApiCall,
+	// Its public API's endpoints and server keys (docs/api-builder).
+	ApiEndpoint,
+	ServerKey,
 	DeletedRecord,
 	SiteWidgets,
 	SiteCart,

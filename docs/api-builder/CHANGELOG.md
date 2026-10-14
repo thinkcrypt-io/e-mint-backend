@@ -9,3 +9,34 @@ agent must know. Decisions live in README.md.
 - README (the user's words and choices, decisions D1–D12, the endpoint shape, how a call runs), WORK_ORDERS
   (AB-01…05), this log.
 - The user chose: model-based endpoints, who + conditions, secret server keys, an own "API" sidebar section.
+
+## 2026-10-14 — AB-02 Engine
+- Models (tenantScoped): `ApiEndpoint` (`apiendpoints`, unique {organization, project, method, path}) and
+  `ServerKey` (`serverkeys`; `ApiKey` was taken by the MCP keys). Both deleted with a project
+  (`projectLifecycle` SCOPED).
+- `library/functions/apiEndpoints.function.ts`: paths (D3, reserved first parts), standard endpoints,
+  **reconcile** — a model's standard endpoints follow its `publicApi` both ways: `ensureEndpoints()` applies
+  only what changed in `publicApi` since the endpoints' `sync` snapshot (so rules set on an endpoint survive
+  an old-style save; the first time it makes them, D9), `syncSummary(route)` writes `publicApi` back from the
+  endpoints after a panel change (enabled = any endpoint on, actions = standard ones on, who/owner from the list
+  endpoint, read-only from create/update) and forces a record-model rebuild when the API turns on/off (the
+  `_customer` path). `matchEndpoint` (custom before standard, literal parts before `:id`), `serverKeyOf`,
+  `reachOf` (conditions + fixed filters as Mongo through `publicRecords.conditionQuery`, the same per-kind
+  reading as caller filters), `checkCreate` (owner set; 403 `rule_failed` with the rule in words),
+  `outOf` / `writableOf`, `checkEndpoint` (400 with `on`), `siteReach`.
+- `publicApi.auth` may be `key` (derived); the site builder treats it like customers-only. The site builder's
+  data now reads through the standard list/get endpoint's rules and fields (`siteReach`) — never more than
+  the API shows.
+- `routes-public/public.router.ts`: the five model routes became one handler after the fixed routes: match →
+  who (401 `customer_required` / `key_required`) → reach → action; stats per endpoint. `GET /` adds
+  `endpoints` (method, path, who, rules count, fields in/out, list capabilities); `models` stays.
+- Panel API `routes-tenant/apiBuilder.router.ts` at `/p/:project/api-builder` (Build): overview, endpoints
+  (list with models + rule fields, get with modelInfo, create, generate, put, patch, delete), keys (list,
+  create — secret once, revoke). History entries for each change.
+- `scripts/migrateApiEndpoints.js` (dry run / `--apply`, re-runnable); DEPLOY.md §1.6.
+- Verified on a private server (Mongo :27995, backend :5051 from a private `dist`): new
+  `scripts/tenancy-smoke/api-builder.mjs` (70 checks, in run-all) all pass; regression suites tenant-auth,
+  org-1, projects, models, public, public-filters, mcp, website, website-mcp, access, automations, webhooks,
+  collections, widgets, widgets-cart, templates-preview, templates-apply, site-builder, site-builder-data,
+  site-builder-starter all pass (public.mjs isn't re-runnable on one project — first run passed). Migration
+  rehearsed: 71 standard endpoints removed, dry run, `--apply` made 181 across projects, re-run made 0.
