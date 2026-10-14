@@ -57,3 +57,20 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   webhooks, templates-apply, site-builder-data, widgets-cart, website-mcp, comments pass; models passes on a fresh
   database. Headless Chrome: Components list and editor, a model's component rows, a record form drawing them.
 
+## 2026-10-15 — CMS-04 Content blocks
+- Backend: field kind `blocks` (`components`: the uids it takes, min/max). Compiled as an array whose items are
+  Mongoose embedded discriminators keyed by `__component` — one per allowed component (`blockTypes`), so each item is
+  validated, defaulted and stripped as its component; validators refuse a component it doesn't take and check the
+  count; a pre-validate hook gives every item a `_key`. `expandComponents` adds `blockTypes` from the scope's cache
+  (now with icon/description). Settings: `schema.type: 'blocks'`, `schema.blocks` = [{uid, title, icon, description,
+  dataModel}], `limit` = max. The server's form and view converters pass `blocks`. Builder checks: components picked
+  and made. A component's usage and refresh include blocks fields. Automations, webhooks, public sort, API builder
+  fields treat it like a section. AI/MCP: kind guide + `components` in plans.
+- Panel (mint-tenant): `VBlocks` (Add menu of the allowed components, items collapse with a preview, up/down, copy,
+  remove, at-most note) registered as input `blocks`; record pages draw each block under its component's title, full
+  width (`BLOCK_TYPES`); model builder kind "Content blocks" with component toggles and How many.
+- Docs: mint-docs Models → Content blocks; website changelog.
+- Verified: `cms-blocks.mjs` (19 checks) passes; cms-components, cms-single, api-builder, webhooks, automations,
+  widgets-cart pass. Headless Chrome: two blocks added and filled through the form and saved (stored with keys), the
+  record page, the model builder row.
+

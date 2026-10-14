@@ -38,6 +38,8 @@ const createViewField = ({ key, field }: { key: string; field: any }): any => {
 		}),
 		// A section list's row fields, for its table.
 		...(field?.section?.dataModel && { dataModel: field.section.dataModel }),
+		// Content blocks: each component's fields, for the record page (docs/cms D4).
+		...(field?.blocks && { blocks: field.blocks }),
 	};
 };
 

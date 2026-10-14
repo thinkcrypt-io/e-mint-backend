@@ -75,6 +75,8 @@ export const FIELD_KINDS = [
 	'sectionlist',
 	// A shared group of fields (docs/cms D3) named by `component` — once, or `repeatable`. Compiles as a section (list).
 	'component',
+	// Content blocks (docs/cms D4): a list of components in any order, of the kinds in `components` — a page's sections.
+	'blocks',
 	// A credential kept for someone: stored as text, shown as dots in the panel (click to see); never in history.
 	'password',
 ] as const;
@@ -239,6 +241,9 @@ export type ModelFieldDef = {
 	/** A component kind's component (`category.name`), and whether it's a list of them (docs/cms D3). */
 	component?: string;
 	repeatable?: boolean;
+	/** A blocks kind's allowed components (uids) — and, once expanded, what they are (docs/cms D4). */
+	components?: string[];
+	blockTypes?: { uid: string; title: string; icon?: string; description?: string; fields: ModelFieldDef[] }[];
 };
 
 export type ModelDef = {
@@ -530,6 +535,31 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				// Expanded before compiling (expandComponents); kept as it came if its component is unknown.
 				p = { type: Schema.Types.Mixed };
 				break;
+			case 'blocks': {
+				// Each item is one of the allowed components, told apart by `__component` (Mongoose embedded
+				// discriminators, added in buildSchema), with a stable `_key`. docs/cms D4.
+				const allowed = new Set(f.components || []);
+				const lo = typeof f.min === 'number' ? f.min : undefined;
+				const hi = typeof f.max === 'number' ? f.max : undefined;
+				p = {
+					type: [new Schema({ _key: { type: String, trim: true } }, { discriminatorKey: '__component', _id: false })],
+					default: undefined,
+					validate: [
+						{
+							validator: (v: any[]) => (Array.isArray(v) ? v : []).every(x => allowed.has(String(x?.__component || ''))),
+							message: `${label}: each item must be one of ${[...allowed].join(', ') || 'its components'}`,
+						},
+						{
+							validator: (v: any[]) => {
+								const n = Array.isArray(v) ? v.length : 0;
+								return (lo === undefined || n === 0 || n >= lo) && (hi === undefined || n <= hi);
+							},
+							message: `${label}: ${lo !== undefined && hi !== undefined ? `between ${lo} and ${hi} items` : lo !== undefined ? `at least ${lo} items` : `at most ${hi} items`}`,
+						},
+					],
+				};
+				break;
+			}
 			case 'password':
 				// `secret` keeps the value out of history (secretFields.function.ts).
 				p = { type: String, secret: true };
@@ -569,11 +599,20 @@ const pathsOf = (fields: ModelFieldDef[]) => {
  * leaves an empty section rather than breaking the model.
  */
 export const expandComponents = <T extends { fields: ModelFieldDef[] }>(def: T): T => {
-	if (!def?.fields?.some(f => f.kind === 'component')) return def;
+	if (!def?.fields?.some(f => f.kind === 'component' || f.kind === 'blocks')) return def;
 	const comps = reg().components;
 	return {
 		...def,
 		fields: def.fields.map(f => {
+			// Content blocks keep their kind and learn what each allowed component is (docs/cms D4).
+			if (f.kind === 'blocks')
+				return {
+					...f,
+					blockTypes: (f.components || [])
+						.map(uid => comps.get(uid))
+						.filter(Boolean)
+						.map(c => ({ uid: c!.uid, title: c!.title, icon: c!.icon, description: c!.description, fields: c!.fields })),
+				};
 			if (f.kind !== 'component') return f;
 			const c = comps.get(String(f.component || ''));
 			return {
@@ -634,6 +673,28 @@ const uidHooks = (schema: Schema, def: ModelDef) => {
 	});
 };
 
+/**
+ * Content blocks (docs/cms D4): each allowed component becomes a discriminator
+ * of the field's items — validated, defaulted and stripped as that component —
+ * and every item gets a `_key` that stays with it (the builder and the site
+ * bind to it).
+ */
+const blockTypes = (schema: Schema, def: ModelDef) => {
+	const zones = def.fields.filter(f => f.kind === 'blocks');
+	if (!zones.length) return;
+	for (const f of zones) {
+		const arr: any = schema.path(f.key);
+		for (const t of f.blockTypes || []) arr.discriminator(t.uid, new Schema(pathsOf(t.fields || []), { _id: false }));
+	}
+	schema.pre('validate', function (this: any) {
+		for (const f of zones) {
+			const items = this.get(f.key);
+			if (!Array.isArray(items)) continue;
+			for (const it of items) if (it && !it._key) it._key = Math.random().toString(36).slice(2, 10);
+		}
+	});
+};
+
 /** A single type (docs/cms D2) holds one record: a second is refused, however it's added. */
 const singleHooks = (schema: Schema, def: ModelDef) => {
 	const message = `${def.title} is a single type — it holds one record, which is already there. Edit that one.`;
@@ -681,6 +742,7 @@ export const buildSchema = (input: ModelDef) => {
 	const schema = new Schema<any>(paths, { timestamps: true, versionKey: false, autoIndex: false });
 
 	uidHooks(schema, def);
+	blockTypes(schema, def);
 	if (def.kind === 'single') singleHooks(schema, def);
 
 	if (restricted) {
@@ -937,6 +999,21 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				s.schema.viewType = 'section-data-array';
 				break;
 			}
+			case 'blocks':
+				// The blocks editor (docs/cms D4): add any allowed component, reorder, fill each in.
+				s.type = 'array-object';
+				s.schema.type = 'blocks';
+				s.schema.blocks = (f.blockTypes || []).map(t => ({
+					uid: t.uid,
+					title: t.title,
+					icon: t.icon || '',
+					description: t.description || '',
+					dataModel: dataModelOf(t.fields),
+				}));
+				if (typeof f.max === 'number') s.schema.limit = f.max;
+				s.schema.tableType = 'data-array-count';
+				s.schema.viewType = 'blocks';
+				break;
 			case 'password':
 				// Dots in the table, form and detail page, with show and copy.
 				Object.assign(s, { type: 'string', search: false, secret: true });
@@ -1163,7 +1240,7 @@ type Compiled = { def: ModelDef; Model: mongoose.Model<any>; stamp: string; mode
  */
 type Registry = {
 	compiled: Map<string, Compiled>; // by plain model name
-	components: Map<string, { uid: string; title: string; fields: ModelFieldDef[]; version: number }>; // by uid
+	components: Map<string, { uid: string; title: string; icon?: string; description?: string; fields: ModelFieldDef[]; version: number }>; // by uid
 	failures: Map<string, string>; // by plain model name
 	mounts: Map<string, any>; // route -> wrapper router
 	checkedAt: number;
@@ -1344,9 +1421,14 @@ export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boo
 
 		r.running = (async () => {
 			try {
-				const [found, comps]: any[] = await Promise.all([ModelDefinition.find({}).lean(), ComponentDefinition.find({}, { uid: 1, title: 1, fields: 1, version: 1 }).lean()]);
+				const [found, comps]: any[] = await Promise.all([
+					ModelDefinition.find({}).lean(),
+					ComponentDefinition.find({}, { uid: 1, title: 1, icon: 1, description: 1, fields: 1, version: 1 }).lean(),
+				]);
 				const defs: ModelDef[] = found;
-				r.components = new Map(comps.map((c: any) => [c.uid, { uid: c.uid, title: c.title, fields: c.fields || [], version: c.version || 1 }]));
+				r.components = new Map(
+					comps.map((c: any) => [c.uid, { uid: c.uid, title: c.title, icon: c.icon, description: c.description, fields: c.fields || [], version: c.version || 1 }])
+				);
 				r.checkedAt = Date.now();
 				let changed = false;
 

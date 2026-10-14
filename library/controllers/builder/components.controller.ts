@@ -27,14 +27,19 @@ const fail = (res: Response, status: number, message: string, problems?: string[
 
 /** The models using each component, by uid. */
 const usage = async () => {
-	const defs: any[] = await ModelDefinition.find({ 'fields.kind': 'component' }, { name: 1, title: 1, route: 1, fields: 1 }).lean();
-	const by = new Map<string, { _id: string; title: string; route: string; field: string; repeatable: boolean }[]>();
+	const defs: any[] = await ModelDefinition.find({ 'fields.kind': { $in: ['component', 'blocks'] } }, { name: 1, title: 1, route: 1, fields: 1 }).lean();
+	const by = new Map<string, { _id: string; title: string; route: string; field: string; repeatable: boolean; blocks?: boolean }[]>();
+	const add = (uid: string, entry: any) => {
+		if (!by.has(uid)) by.set(uid, []);
+		by.get(uid)!.push(entry);
+	};
 	for (const d of defs)
-		for (const f of d.fields || [])
-			if (f.kind === 'component' && f.component) {
-				if (!by.has(f.component)) by.set(f.component, []);
-				by.get(f.component)!.push({ _id: String(d._id), title: d.title || d.name, route: d.route, field: f.label || f.key, repeatable: !!f.repeatable });
-			}
+		for (const f of d.fields || []) {
+			const where = { _id: String(d._id), title: d.title || d.name, route: d.route, field: f.label || f.key };
+			if (f.kind === 'component' && f.component) add(f.component, { ...where, repeatable: !!f.repeatable });
+			// A content blocks field that takes it (docs/cms D4).
+			if (f.kind === 'blocks') for (const c of f.components || []) add(c, { ...where, repeatable: true, blocks: true });
+		}
 	return by;
 };
 

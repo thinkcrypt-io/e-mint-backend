@@ -119,6 +119,7 @@ const subFieldBase = {
 	from: Joi.string().allow('').max(40),
 	component: Joi.string().allow('').max(81),
 	repeatable: Joi.boolean(),
+	components: Joi.array().items(Joi.string().max(81)).max(50),
 };
 
 /** A section's own field: the same, minus links and nested sections. */
@@ -263,7 +264,7 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 	};
 
 	// The components this scope has (docs/cms D3) — a component field must name one.
-	const components = value.fields.some((f: any) => f.kind === 'component')
+	const components = value.fields.some((f: any) => f.kind === 'component' || f.kind === 'blocks')
 		? new Set((await ComponentDefinition.find({}, { uid: 1 }).lean()).map((c: any) => c.uid))
 		: new Set<string>();
 
@@ -285,6 +286,16 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		}
 		delete f.component;
 		delete f.repeatable;
+		// Content blocks (docs/cms D4): the components it takes, each made already.
+		if (f.kind === 'blocks') {
+			f.components = [...new Set((f.components || []).map((c: any) => String(c).toLowerCase()))];
+			if (!f.components.length) problems.push(`${name}: pick the components it takes`);
+			for (const c of f.components) if (!components.has(c)) problems.push(`${name}: there's no component “${c}” — make it under Build → Components first`);
+			if (typeof f.min === 'number' && typeof f.max === 'number' && f.min > f.max) problems.push(`${name}: min is above max`);
+			for (const k of ['fields', 'options', 'default', 'unique', 'index', 'formula', 'ref', 'from', 'addLabel']) delete f[k];
+			continue;
+		}
+		delete f.components;
 		if (SECTION_KINDS.includes(f.kind)) {
 			if (!f.fields?.length) problems.push(`${name}: add at least one field to the section`);
 			for (const x of f.fields || []) {
@@ -398,7 +409,7 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from, f.component, f.repeatable] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from, f.component, f.repeatable, f.components] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
@@ -1174,11 +1185,17 @@ export const checkComponentFields = async (req: any, fields: any[]) => {
  * the record page follow the component.
  */
 export const refreshComponentUsers = async (req: any, uid: string) => {
-	const users: any[] = await ModelDefinition.find({ 'fields.component': uid }).lean();
+	const users: any[] = await ModelDefinition.find({ $or: [{ 'fields.component': uid }, { 'fields.components': uid }] }).lean();
 	if (!users.length) return [];
 	await ModelDefinition.updateMany({ _id: { $in: users.map(d => d._id) } }, { $inc: { version: 1 } });
 	await syncDynamicModels({ app: req.app, force: true });
 	for (const d of users)
-		await syncCopies(req.app, d, d, req.user?._id, d.fields.filter((f: any) => f.kind === 'component' && f.component === uid).map((f: any) => f.key));
+		await syncCopies(
+			req.app,
+			d,
+			d,
+			req.user?._id,
+			d.fields.filter((f: any) => (f.kind === 'component' && f.component === uid) || (f.kind === 'blocks' && (f.components || []).includes(uid))).map((f: any) => f.key)
+		);
 	return users.map(d => ({ _id: String(d._id), name: d.name, title: d.title || d.name, route: d.route }));
 };

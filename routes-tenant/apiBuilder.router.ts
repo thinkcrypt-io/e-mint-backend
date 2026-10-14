@@ -78,7 +78,7 @@ const modelView = (d: any) => ({
 	name: d.name,
 	title: d.title || d.name,
 	fields: (d.fields || [])
-		.filter((f: any) => !['section', 'sectionlist', 'component'].includes(f.kind))
+		.filter((f: any) => !['section', 'sectionlist', 'component', 'blocks'].includes(f.kind))
 		.map((f: any) => ({
 			key: f.key,
 			label: f.label || f.key,

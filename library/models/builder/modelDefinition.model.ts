@@ -45,6 +45,8 @@ const fieldSchema = new Schema<any>(
 		/** For the component kind: its component's uid, and whether it's a list of them (docs/cms D3). */
 		component: { type: String, trim: true, lowercase: true },
 		repeatable: { type: Boolean },
+		/** For the blocks kind: the components its items can be (docs/cms D4). */
+		components: { type: [String], default: undefined },
 	},
 	{ _id: false, minimize: false }
 );

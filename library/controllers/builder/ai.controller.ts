@@ -61,6 +61,8 @@ export const KIND_GUIDE: Record<string, string> = {
 		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
 	component:
 		'a shared group of fields made once under Build → Components (list_components) — set `component` to its uid (e.g. "shared.button"); `repeatable` for a list of them (with min/max). Use it when several models need the same group (a button, an SEO block, a card)',
+	blocks:
+		'content blocks: a list of components in any order — a page’s hero, text, gallery, FAQ… Set `components` to the uids it takes (list_components); the people filling it in pick which, in what order. For page-like content',
 	sectionlist:
 		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };
@@ -103,6 +105,7 @@ export const fieldProps = {
 	from: { type: 'string', description: 'For kind "uid": the key of the text field its slug is made from, e.g. "title"' },
 	component: { type: 'string', description: 'For kind "component": the component’s uid from list_components, e.g. "shared.button"' },
 	repeatable: { type: 'boolean', description: 'For kind "component": a list of them (min/max count) instead of one' },
+	components: { type: 'array', items: { type: 'string' }, description: 'For kind "blocks": the component uids its items can be' },
 };
 
 /** A section's own field: the same, minus links, lists of values and nesting. */
@@ -273,6 +276,7 @@ export const normalize = (input: any, targets: Set<string>) => {
 		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
 		if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
 		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
+		if (kind === 'blocks') out.components = (Array.isArray(f?.components) ? f.components : []).map((c: any) => String(c).toLowerCase().slice(0, 81)).slice(0, 50);
 		if (kind === 'component') {
 			out.component = String(f?.component || '').toLowerCase().slice(0, 81);
 			if (f?.repeatable) out.repeatable = true;
