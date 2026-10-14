@@ -1196,6 +1196,12 @@ becomes a thread. Also any links posted in comments must be opened in a new tab 
 - Verified: `scripts/tenancy-smoke/comments.mjs` (47 checks, 13 new for replies) on a private backend; headless Chrome on
   mint-tenant (1280 + 390): threads, links, reply box, deep link to a hidden reply, a reply sent through the UI.
 
+## CMS (2026-10-15) — proposed
+
+Planned in `docs/cms` (CMS-01…15), waiting for the user's decisions: website content as typed sections in each
+page (replacing one Contents record per word), single types, components, dynamic zones, draft & publish per entry,
+versions, scheduling, locales, preview, content API, media alt text, MCP content tools.
+
 ## Automations (2026-10-14)
 
 Planned and tracked in `docs/automations` (AU-01…05; AU-01–03 done): Build → Automations in tenant projects — when a
