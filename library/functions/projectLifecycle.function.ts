@@ -15,6 +15,7 @@ import ProjectCustomer from '../models/tenancy/projectCustomer.model.js';
 import WebsiteEvent from '../models/tenancy/websiteEvent.model.js';
 import WebsiteSettings from '../models/tenancy/websiteSettings.model.js';
 import History from '../models/history/model.js';
+import RecordComment from '../models/tenancy/recordComment.model.js';
 import AdminFile from '../models/admin-file/model.js';
 import Folder from '../models/folders/model.js';
 import { deleteS3ObjectIfUnused } from '../../routes-admin/file/media.helpers.js';
@@ -64,6 +65,8 @@ const SCOPED = [
 	WebsiteEvent,
 	WebsiteSettings,
 	History,
+	// Comments on its records (WO-49).
+	RecordComment,
 	ProjectWebhook,
 	WebhookDelivery,
 	ApiCall,

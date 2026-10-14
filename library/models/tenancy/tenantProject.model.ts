@@ -97,6 +97,11 @@ const schema = new Schema<any>(
 		},
 		/** Its business details (docs/pdf-templates D14) — copied from the organization when it's made; unset on older projects, which show the organization's. */
 		business: { type: businessSchema(), default: undefined },
+		/** Talking about records (WO-49): the Comments tab on record pages, and @mentions in it. Both on unless turned off in Project settings. */
+		collaboration: {
+			type: new Schema({ comments: { type: Boolean, default: true }, mentions: { type: Boolean, default: true } }, { _id: false }),
+			default: undefined,
+		},
 		isActive: { type: Boolean, default: true },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 	},

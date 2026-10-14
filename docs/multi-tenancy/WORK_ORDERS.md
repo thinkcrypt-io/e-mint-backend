@@ -1061,6 +1061,35 @@ settings then members."
   details), `tenant-auth`, `org-1`, `projects`, `business` on a private server (:5031, Mongo :27996); tsc clean.
 - Pushed: backend `d84a46a1` (mint v3), mint-tenant `7caf8a1`, admin `c2c6496`, mint-docs `0bc050a`, mint-webpage `e947c87`. Not deployed.
 
+## WO-49 — Comments and @mentions on records (M) — done
+
+The user (2026-10-14): comments and @mentions on a record; "from the settings mentions can be turned on or off. if mention
+is on users can mention one another … only the people who has access if private can be mentioned, others can not be
+mentioned, must show error. if only me no one can be mentioned".
+
+- **Model** `RecordComment` (tenantScoped; route, record, author + name snapshot, body ≤5000, mentions [{user, name}],
+  editedAt). Deleted with the project (`projectLifecycle` SCOPED).
+- **API** `routes-tenant/comments.router.ts` at `/p/:project/comments`: GET thread (+ settings, canModerate), GET
+  `/mentionable` (mode everyone|private|none, people, blocked), POST, PUT own, DELETE own (Manage projects: anyone's).
+  Needs view-<route> and the record in sight (`accessRule` on restricted models; else 404). Built models only.
+- **Who can be mentioned:** `projectAudience(view-<route>)` minus yourself; a private record narrows it to its owner +
+  `access`; Only me → nobody. Anyone else → 400 naming them ("… this record is private and they don't have access to it");
+  Only me → 400 "This record is Only me — …". Mentioned people get a `mention` notification linking to `?tab=comments`;
+  an edit notifies only newly added people.
+- **Switches** `TenantProject.collaboration {comments, mentions}` (both on unless off; `collaborationOf`), PUT
+  /projects/:id `collaboration` (Manage projects). Comments off → 403 on post/edit (old ones stay readable, deletable);
+  mentions off → 400 on any mention.
+- **Panels** (mint-tenant + admin, same files): record page **Comments** tab with count (tenant panel; hidden when off and
+  empty) — `tenant/RecordComments.tsx`: thread, edit/delete, composer with an @ list (allowed people; blocked ones greyed
+  with why — picking one or typing their @Name shows the error; Only me / mentions off explained). Project settings
+  **Comments and mentions** switches. Notifications page icon for `mention`.
+- Docs: mint-docs `projects#project-comments`; website changelog.
+- Verified: new smoke `comments.mjs` (32 checks, in run-all) + projects, project-invites, business, activity on a private
+  server; screenshots (private record list with a blocked person and its error, Only me, settings); tsc clean both panels.
+
+Also 2026-10-14: Project → Members showed no Invite with a backend older than WO-48 (no `canManage`) — the panel now falls
+back to the role's keys and shows load errors (mint-tenant `7437f8d`, admin `141d12c`).
+
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
   rely on the proxy's cookie redirect — correct, one extra hop; convert to

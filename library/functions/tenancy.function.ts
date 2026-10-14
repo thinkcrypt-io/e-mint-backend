@@ -218,6 +218,9 @@ export const selfPayload = async (req: any) => {
 	};
 };
 
+/** A project's comments and @mentions switches (WO-49): on unless turned off. */
+export const collaborationOf = (p: any) => ({ comments: p?.collaboration?.comments !== false, mentions: p?.collaboration?.mentions !== false });
+
 export const publicProject = (p: any) => ({
 	_id: String(p._id),
 	name: p.name,
@@ -229,6 +232,7 @@ export const publicProject = (p: any) => ({
 	color: p.color || '',
 	domains: p.domains || [],
 	mediaScope: p.mediaScope || 'project',
+	collaboration: collaborationOf(p),
 	isActive: p.isActive !== false,
 	...(p.preview && { preview: { expiresAt: p.preview.expiresAt, from: p.preview.from } }),
 	// A website template's starter code, filled for this project (docs/templates T-10).

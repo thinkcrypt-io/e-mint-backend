@@ -1681,3 +1681,13 @@ Decisions D14–D17 (README).
 - Verified: scratch Mongo script — save approve, unchanged save (no mail), bulk approve (only not-yet-approved mailed),
   decline → re-approve (mailed again), resend on approved and waiting entries. tsc clean on changed files. UI not
   checked in a browser. Not deployed.
+
+## 2026-10-14 — WO-49 Comments and @mentions on records
+- `RecordComment` model; `/p/:project/comments` (thread, mentionable, post, edit own, delete own/moderate).
+- Mentions limited to who can see the record: page viewers (public), owner + access (private), nobody (Only me); 400s name
+  who was refused. `mention` notifications to the record's Comments tab.
+- `TenantProject.collaboration {comments, mentions}` switches in Project settings.
+- Panels: Comments tab on record pages with an @ picker; settings panel; notifications icon.
+- Verified: `comments.mjs` (32 checks, added to run-all) + neighbouring suites on a private server; screenshots; tsc clean.
+  Not deployed.
+- Also: Members page falls back to role keys for Invite when the backend predates WO-48 (`canManage` missing).

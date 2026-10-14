@@ -9,7 +9,7 @@ import ProjectTemplate from '../../library/models/templates/projectTemplate.mode
 import { tenantProtect } from '../../middleware/tenant/protect.tenant.middleware.js';
 import { normalizePermissions, tenantPermissions } from '../../library/functions/tenantPermissions.function.js';
 import { runInScope } from '../../library/functions/tenantScope.function.js';
-import { TenancyError, canOpenProject, handle, isId, opensAllProjects, projectAccessFilter, publicProject } from '../../library/functions/tenancy.function.js';
+import { TenancyError, canOpenProject, collaborationOf, handle, isId, opensAllProjects, projectAccessFilter, publicProject } from '../../library/functions/tenancy.function.js';
 import { createProject, removeProjectContents } from '../../library/functions/projectLifecycle.function.js';
 import { businessJoi, cleanBusiness, projectBusiness } from '../../library/functions/business.function.js';
 
@@ -19,7 +19,7 @@ import { businessJoi, cleanBusiness, projectBusiness } from '../../library/funct
  *   GET    /             every active project the member can open (archived with ?archived=1)
  *   POST   /             { name, type: 'app'|'website'|'api', description, icon, color, domains, mediaScope }   create-projects
  *   GET    /:id          with its details (WO-48): who made it, how many people open it, its template, last change
- *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive, business         manage-projects
+ *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive, business, collaboration         manage-projects
  *   DELETE /:id          refused while it has models; ?force=1 (owner) deletes everything in it
  *
  * Only the projects the member can open (WO-22): Owner and Admin open every
@@ -56,6 +56,8 @@ const fields = {
 	mediaScope: Joi.string().valid(...MEDIA_SCOPES),
 	/** Its business details (docs/pdf-templates D14): name, logo, address, phone, email, website, taxId. */
 	business: businessJoi(),
+	/** Comments on records, and @mentions in them (WO-49). */
+	collaboration: Joi.object({ comments: Joi.boolean(), mentions: Joi.boolean() }),
 };
 
 /** One project with its business details (the organization's until it has its own). */
@@ -133,8 +135,10 @@ router.put(
 	tenantPermissions(['manage-projects']),
 	handle(async req => {
 		const project = await loadProject(req);
-		const { business, ...body } = check(Joi.object({ ...fields, isActive: Joi.boolean() }), req.body);
+		const { business, collaboration, ...body } = check(Joi.object({ ...fields, isActive: Joi.boolean() }), req.body);
 		Object.assign(project, body);
+		// A switch left out keeps its value.
+		if (collaboration) project.collaboration = { ...collaborationOf(project), ...collaboration };
 		// The details are saved whole — from now on the project's own.
 		if (business) project.business = cleanBusiness({ ...projectBusiness(project, req.organization), ...business });
 		await project.save();
