@@ -262,6 +262,22 @@ router.put(
 		const { role: value } = check(Joi.object({ role: Joi.string().required() }), req.body);
 		const role: any = await roleFor(req, value);
 		await addProjectRole(member._id, req.project._id, role._id);
+		// Tell them their role here changed.
+		later(() =>
+			notifyTenant([
+				{
+					recipient: member.user?._id || member.user,
+					organization: req.organization._id,
+					project: req.project._id,
+					actor: req.user._id,
+					actorName: req.user.name,
+					type: 'member-changed',
+					title: `You’re now ${role.name} in ${req.project.name}`,
+					message: `In ${req.organization.name}.`,
+					href: `/${req.project.publicSlug}`,
+				},
+			])
+		);
 		return { message: `Now ${role.name} in ${req.project.name}` };
 	})
 );
@@ -279,6 +295,20 @@ router.delete(
 			member.removedAt = new Date();
 		}
 		await member.save();
+		later(() =>
+			notifyTenant([
+				{
+					recipient: member.user?._id || member.user,
+					organization: req.organization._id,
+					actor: req.user._id,
+					actorName: req.user.name,
+					type: 'member-changed',
+					title: `You were removed from ${req.project.name}`,
+					message: `In ${req.organization.name}.`,
+					href: '/projects',
+				},
+			])
+		);
 		return { message: `Removed from ${req.project.name}` };
 	})
 );
