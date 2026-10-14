@@ -1086,6 +1086,7 @@ mentioned, must show error. if only me no one can be mentioned".
 - Docs: mint-docs `projects#project-comments`; website changelog.
 - Verified: new smoke `comments.mjs` (32 checks, in run-all) + projects, project-invites, business, activity on a private
   server; screenshots (private record list with a blocked person and its error, Only me, settings); tsc clean both panels.
+- Pushed: backend `edb28a62` (mint v3), mint-tenant `775cbc4`, admin `a8f344c`, mint-docs `4376ec8`, mint-webpage `bd5d69e`. Not deployed.
 
 Also 2026-10-14: Project → Members showed no Invite with a backend older than WO-48 (no `canManage`) — the panel now falls
 back to the role's keys and shows load errors (mint-tenant `7437f8d`, admin `141d12c`).
