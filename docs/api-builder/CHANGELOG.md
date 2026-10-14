@@ -62,3 +62,28 @@ agent must know. Decisions live in README.md.
 - Verified: panel tsc; screenshots (headless Chrome against the private backend, launch config
   `mint-tenant-5051` :3053): empty Overview with Start here, Endpoints with standard/custom/key endpoints, the
   Generate dialog (scrolls inside), the wizard's address step; `webhooks.mjs` all pass.
+
+## 2026-10-14 — AB-04 Panel II
+- `app/public-api/endpoints/[id]/page.tsx` — **an endpoint**: header (name, action · model · calls, on/off, Delete
+  through PromptDialog), its method + full address (copy) + who/rules badge, tabs **Access** (WhoCards; "Only their
+  own records" switch for customers — the OWNER condition; RuleEditor), **Fields** (Sent back → `fields.out`, null
+  when all; Written → unticked go to `fields.readOnly`, `write` stays null so the `publicApi` read-only summary
+  keeps working; a warning for a required field not written on create), **Filters** (list only: fixed filters,
+  callers may filter/search/sort, order + direction, page size, largest page), **Try it** (the tester loaded with
+  this endpoint and an example body), **Code** (curl / fetch with the right Authorization, `MintAuth.fetch` for
+  customers), **Details** (name, note, path — standard endpoints keep theirs). Edits are a draft with a sticky
+  Save / Discard bar; a server 400 opens the tab its `on` names and shows under that input or rule row.
+- `_components/RuleEditor.tsx`: field · test (by kind, dates "is after"…) · value (options, yes/no, number, date,
+  text, comma lists for "is one of"); on customers' endpoints a value can be the customer (owner → the signed-in
+  customer; text fields → their email / name / phone); all / any. New rules start on a select or yes/no field.
+- `app/public-api/keys/page.tsx` — **Keys**: in use (…last4, made by, last used, Revoke), revoked, the endpoints
+  that need a key; New key → the secret once with a warning and a curl example.
+- `app/public-api/reference/page.tsx` — **Reference** + tester. `ApiReference` reads `GET /`'s `endpoints`
+  (falls back to `models` for an older backend): grouped by model, standard first in action order, Customer and
+  Server key badges, **Open** to the endpoint's page, list endpoints with caller filters off say their filters are
+  fixed, example responses with only the endpoint's out fields and its page size. `api.ts`: `fromInfo`,
+  `InfoEndpoint`, `key` on requests (`Authorization: Bearer <server key>`). Tester: the token field takes a
+  customer token or a server key. `ReadOnlyFields.tsx` removed (the Fields tab replaces it).
+- Verified: tsc, `next build` (all five pages), screenshots at 1280 px (each tab, a save of an owner switch + two
+  rules — stored as sent, a reserved path refused under its input, Try it returning only featured+published products'
+  name/price cheapest first, making a key, the reference with an endpoint open) and 390 px (no sideways scroll).
