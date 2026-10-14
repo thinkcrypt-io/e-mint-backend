@@ -64,6 +64,8 @@ export const tenantNav = (
 				{ title: 'Sidebar', href: '/sidebar-builder', icon: 'panel-left' },
 				{ title: 'Dashboard', href: '/dashboard-builder', icon: 'layout-dashboard' },
 				{ title: 'PDF templates', href: '/pdf-templates', icon: 'file-text' },
+				// When a record is created or changed: email, webhook, update, notify (docs/automations).
+				{ title: 'Automations', href: '/automations', icon: 'zap' },
 				...(can('manage-api-keys') ? [{ title: 'Connect AI', href: '/model-builder/connect', icon: 'plug' }] : []),
 		  ])
 		: [];

@@ -1091,6 +1091,11 @@ mentioned, must show error. if only me no one can be mentioned".
 Also 2026-10-14: Project → Members showed no Invite with a backend older than WO-48 (no `canManage`) — the panel now falls
 back to the role's keys and shows load errors (mint-tenant `7437f8d`, admin `141d12c`).
 
+## Automations (2026-10-14)
+
+Planned and tracked in `docs/automations` (AU-01…05; AU-01–03 done): Build → Automations in tenant projects — when a
+record is created/changed/deleted and meets conditions, notify / email / webhook / update / create, after the save.
+
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)
   rely on the proxy's cookie redirect — correct, one extra hop; convert to

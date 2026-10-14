@@ -24,3 +24,14 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   a fresh DB: admin…secrets, projects, comments, project-invites, activity, business, webhooks, collections, access,
   widgets, widgets-cart; linked-relationships smoke. tsc clean. Not deployed.
 
+## 2026-10-14 — AU-03 Panel, guide, website
+- Sidebar Build → Automations (`tenantNav`, after PDF templates; `automations` reserved as a project address).
+- Panels (mint-tenant + admin, same files): `src/app/automations` — list (sentence, on/off, last run, counts, last error),
+  editor dialog (name; when: page, created/changed/deleted, changed fields; only if: the shared ConditionsEditor; then:
+  action cards with "Insert a field" placeholders, order, remove; webhook secret), Try on a record (dry run), Runs tab
+  (filter by automation/result, each step). Server refusals show under their input (`on`) and in the footer.
+  `tenantApi` hooks, `automation` notification icon, GuideLink anchors, PROJECT_PAGES / TENANT_ONLY_PAGES.
+- Guide: mint-docs `/automations` (in the Build group). Website changelog.
+- Verified: tsc clean in both panels; screenshots on a private stack (list, runs with a failed email, editor top and
+  actions, a `{{nope}}` refused under Title, Try dialog).
+
