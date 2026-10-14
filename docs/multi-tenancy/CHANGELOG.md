@@ -1712,3 +1712,10 @@ Decisions D14–D17 (README).
 - Verified: production build in headless Chrome — installable with no errors, worker controls the page, offline page shows;
   menu + dialog in the browser pane at desktop and phone widths. Pushed: mint-tenant `1b330bf`, mint-docs `95cf525`,
   website `0b9b89c`. Live once mint-tenant is deployed (admin's tenant build not changed). Details in WORK_ORDERS.md WO-51.
+
+## 2026-10-14 — Footer at the end of the page
+- The user: the footer (Guides / Terms of Use / Privacy Policy) should sit at the end of the scroll, not stay pinned to
+  the window. `nav/Footer.tsx` lost `position: sticky; bottom: 0` (both panels). Short pages still end with it at the
+  window's bottom edge (Layout `minH: 100vh` + `MainBody grow`). Undoes admin's sticky footer `ba88b4b`.
+- Verified in the browser pane: dashboard at 375px (footer only after the last card), Notifications at 1280px (footer at
+  the window's bottom). Pushed: mint-tenant `0d083e9`, admin `345267c`.
