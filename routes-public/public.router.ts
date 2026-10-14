@@ -35,6 +35,7 @@ import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../lib
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 import { callRecord } from '../library/functions/apiLogs.function.js';
+import { liveCount, liveFind, liveFindOne } from '../library/functions/drafts.function.js';
 import ApiEndpoint from '../library/models/tenancy/apiEndpoint.model.js';
 import {
 	checkCreate,
@@ -790,7 +791,7 @@ const list = async (req: any, ctx: Ctx) => {
 	if (def.kind === 'single') {
 		const keys = outFor(ctx, req.query.fields);
 		const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
-		const doc: any = await Model.findOne(reach(ctx)).select(keys.join(' ')).populate(populate).lean();
+		const doc: any = await liveFindOne(def, Model, { query: reach(ctx), keys, populate });
 		if (!doc) throw new TenancyError(404, 'Not found');
 		return shapeOut(doc, keys);
 	}
@@ -805,15 +806,18 @@ const list = async (req: any, ctx: Ctx) => {
 	const keys = outFor(ctx, req.query.fields);
 	const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
 	const sort = listSort(def, own && req.query.sort ? req.query.sort : ep.list?.sort);
-	const find = Model.find(query).select(keys.join(' ')).sort(sort).skip((page - 1) * limit).limit(limit).populate(populate);
-	const [docs, total] = await Promise.all([find.lean(), Model.countDocuments(query)]);
+	// A drafts model's published values (docs/cms D5); any other's records as they are.
+	const [docs, total]: any[] = await Promise.all([
+		liveFind(def, Model, { query, keys, sort, skip: (page - 1) * limit, limit, populate }),
+		liveCount(def, Model, query),
+	]);
 	return { doc: docs.map((d: any) => shapeOut(d, keys)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
 };
 
 const getOne = async (req: any, ctx: Ctx) => {
 	const keys = outFor(ctx, req.query.fields);
 	const populate = (await refPopulates(ctx.def)).filter((p: any) => keys.includes(p.path));
-	const doc = await ctx.Model.findOne({ ...reach(ctx), _id: ctx.id }).select(keys.join(' ')).populate(populate).lean();
+	const doc = await liveFindOne(ctx.def, ctx.Model, { query: { ...reach(ctx), _id: ctx.id }, keys, populate });
 	if (!doc) throw new TenancyError(404, 'Not found');
 	return shapeOut(doc, keys);
 };

@@ -178,6 +178,7 @@ const bodySchema = Joi.object({
 	description: Joi.string().allow('').max(300),
 	displayField: Joi.string().allow(''),
 	kind: Joi.string().valid('collection', 'single'),
+	draftAndPublish: Joi.boolean(),
 	code: Joi.object({
 		enabled: Joi.boolean(),
 		prefix: Joi.string()
@@ -346,6 +347,7 @@ const draftDef = (value: any, a: Availability): ModelDef => ({
 	permission: a.route,
 	displayField: value.displayField || undefined,
 	kind: value.kind,
+	draftAndPublish: value.draftAndPublish,
 	code: value.code,
 	access: value.access,
 	active: true,
@@ -406,6 +408,7 @@ const keysOf = (d?: ModelDef | null) => [
 	...(d?.code?.enabled ? ['code'] : []),
 	...(d?.fields || []).map(f => f.key),
 	...(d?.access?.enabled ? ACCESS_KEYS : []),
+	...(d?.draftAndPublish ? ['_publishedAt'] : []),
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
@@ -997,6 +1000,18 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 				await syncCopies(req.app, d, d, req.user?._id, d.fields.filter(f => f.ref === after.name).map(f => f.key));
 		}
 
+		// Drafts and publishing switched on: what's there now is published, so nothing leaves the site (docs/cms D5).
+		let publishedNow = 0;
+		if (after.draftAndPublish && !before.draftAndPublish) {
+			const own = inProjectCollection(after) ? { [MODEL_KEY]: after.name } : {};
+			const now = new Date();
+			publishedNow = (
+				await mongoose.connection.collection(after.collectionName).updateMany({ ...own, _publishedAt: { $exists: false } }, [
+					{ $set: { _published: { data: '$$ROOT', byName: req.user?.name || '' }, _publishedAt: now, _publishedFrom: '$updatedAt' } },
+				])
+			).modifiedCount;
+		}
+
 		let codesAssigned = 0;
 		if (after.code?.enabled && !before.code?.enabled) codesAssigned = await backfillCodes(after);
 
@@ -1041,6 +1056,7 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 			before,
 			warnings,
 			codesAssigned,
+			publishedNow,
 			madePublic,
 			...(recalculated !== undefined && { recalculated }),
 		};

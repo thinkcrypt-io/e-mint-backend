@@ -148,6 +148,10 @@ export const TOOL: Anthropic.Tool = {
 				description:
 					'"single" for something there is exactly one of — the site’s settings, the home page’s hero, an About page, a footer: its page opens the one record instead of a table. Default "collection" (many records).',
 			},
+			draftAndPublish: {
+				type: 'boolean',
+				description: 'Records stay drafts until someone publishes them; the site and API show only what’s published. For content shown on a website (posts, pages, products); not for business records (orders, invoices).',
+			},
 			displayField: {
 				type: 'string',
 				description: 'Key of the text/email/url/select field that names a record where it is linked from (usually name or title). Or "code".',
@@ -334,6 +338,7 @@ export const normalize = (input: any, targets: Set<string>) => {
 	return {
 		access,
 		...(input?.kind === 'single' && { kind: 'single' }),
+		...(input?.draftAndPublish === true && { draftAndPublish: true }),
 		title: String(input?.title || '').slice(0, 80),
 		name: String(input?.name || ''),
 		description: String(input?.description || '').slice(0, 300),

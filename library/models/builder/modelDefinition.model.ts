@@ -69,6 +69,8 @@ const schema = new Schema<any>(
 		displayField: { type: String, trim: true },
 		/** A collection of records, or a single type holding exactly one (docs/cms D2). */
 		kind: { type: String, enum: ['collection', 'single'], default: 'collection' },
+		/** Records are drafts until published; the public API and the site read what's published (docs/cms D5). */
+		draftAndPublish: { type: Boolean, default: false },
 		code: {
 			enabled: { type: Boolean, default: false },
 			prefix: { type: String, trim: true, uppercase: true },

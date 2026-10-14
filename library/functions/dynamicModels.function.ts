@@ -257,6 +257,8 @@ export type ModelDef = {
 	displayField?: string;
 	/** A collection of records, or a single type: exactly one record (docs/cms D2). */
 	kind?: 'collection' | 'single';
+	/** Records are drafts until published; the outside reads the published snapshot (docs/cms D5). */
+	draftAndPublish?: boolean;
 	code?: { enabled?: boolean; prefix?: string; padding?: number; start?: number };
 	/** Per-record access (recordAccess.function.ts): an owner, a privacy and an access list on every record. */
 	access?: { enabled?: boolean; default?: string };
@@ -737,6 +739,13 @@ export const buildSchema = (input: ModelDef) => {
 	// order's `customer` link to the tenant's own Customers model).
 	if (def.publicApi?.enabled) paths._customer = { type: Schema.Types.ObjectId, ref: 'ProjectCustomer', index: true };
 
+	// Drafts and publishing (docs/cms D5, drafts.function.ts): the live snapshot, never sent unless asked for.
+	if (def.draftAndPublish) {
+		paths._published = { type: Schema.Types.Mixed, select: false };
+		paths._publishedAt = { type: Date };
+		paths._publishedFrom = { type: Date };
+	}
+
 	// Indexes are synced explicitly (syncIndexes) after a change, where a
 	// failure — duplicates under a new unique field — can be reported back.
 	const schema = new Schema<any>(paths, { timestamps: true, versionKey: false, autoIndex: false });
@@ -1042,6 +1051,15 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 
 	if (def.access?.enabled) Object.assign(settings, accessSettings(def));
 
+	// Drafts and publishing (docs/cms D5): when it last went live — empty while a draft.
+	if (def.draftAndPublish)
+		settings._publishedAt = {
+			title: 'Published',
+			type: 'date',
+			sort: true,
+			schema: { type: 'date', default: true, displayInTable: true, sort: true },
+		};
+
 	settings.createdAt = {
 		title: 'Created',
 		type: 'date',
@@ -1205,16 +1223,17 @@ export const generateConfig = (def: ModelDef) => {
 	const keys = def.fields.map(f => f.key);
 	const restricted = !!def.access?.enabled;
 	return {
-		fields: [...code, ...keys, ...(restricted ? ACCESS_KEYS : []), 'createdAt'],
+		fields: [...code, ...keys, ...(restricted ? ACCESS_KEYS : []), ...(def.draftAndPublish ? ['_publishedAt'] : []), 'createdAt'],
 		table: [
 			...code,
 			...def.fields.filter(f => f.showInTable !== false).map(f => f.key),
 			...(restricted ? ['privacy', 'addedBy'] : []),
+			...(def.draftAndPublish ? ['_publishedAt'] : []),
 			'createdAt',
 		],
 		form: [{ sectionTitle: 'Details', fields: generateFormRows(def.fields) }, ...(restricted ? [ACCESS_FORM_SECTION] : [])],
 		view: [
-			{ title: 'Details', columns: 2, fields: [...code, ...keys, 'createdAt'] },
+			{ title: 'Details', columns: 2, fields: [...code, ...keys, ...(def.draftAndPublish ? ['_publishedAt'] : []), 'createdAt'] },
 			...(restricted ? [ACCESS_VIEW_SECTION] : []),
 		],
 		route: {

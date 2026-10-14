@@ -2,6 +2,7 @@ import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel } from '../functions/dynamicModels.function.js';
 import { isId, listFilters, listSort, outKeys, publicDefs, refPopulates, shape } from '../functions/publicRecords.function.js';
 import { siteReach } from '../functions/apiEndpoints.function.js';
+import { liveCount, liveFind, liveFindOne } from '../functions/drafts.function.js';
 import { TenancyError } from '../functions/tenancy.function.js';
 import { KIT_ROUTES, kitModel } from './kit.js';
 
@@ -129,15 +130,10 @@ const readCollection = async (node: any, defs: Map<string, any>, page: number, a
 	const reach = await siteReach(def, 'list');
 	const query: any = and.length ? { ...reach.query, $and: [...(reach.query.$and || []), ...and] } : reach.query;
 	const keys = reach.keys;
-	const [docs, total] = await Promise.all([
-		Model.find(query)
-			.select(keys.join(' '))
-			.sort(listSort(def, source.sort))
-			.skip((current - 1) * pageSize)
-			.limit(pageSize)
-			.populate(await refPopulates(def))
-			.lean(),
-		Model.countDocuments(query),
+	// A drafts model shows what's published (docs/cms D5).
+	const [docs, total]: any[] = await Promise.all([
+		liveFind(def, Model, { query, keys, sort: listSort(def, source.sort), skip: (current - 1) * pageSize, limit: pageSize, populate: await refPopulates(def) }),
+		liveCount(def, Model, query),
 	]);
 	return { items: docs.map((d: any) => shape(d, def)), total, page: current, pageSize, totalPages: Math.ceil(total / pageSize) || 1 };
 };
@@ -189,10 +185,7 @@ export const findTemplateRecord = async (source: any, value: string) => {
 		cond = { [field]: f.kind === 'number' ? Number(value) : value };
 	}
 	const reach = await siteReach(def, 'get');
-	const doc = await Model.findOne({ ...reach.query, ...cond })
-		.select(reach.keys.join(' '))
-		.populate(await refPopulates(def))
-		.lean();
+	const doc = await liveFindOne(def, Model, { query: { ...reach.query, ...cond }, keys: reach.keys, populate: await refPopulates(def) });
 	return doc ? shape(doc, def) : null;
 };
 

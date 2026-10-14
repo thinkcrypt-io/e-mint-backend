@@ -74,3 +74,15 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   widgets-cart pass. Headless Chrome: two blocks added and filled through the form and saved (stored with keys), the
   record page, the model builder row.
 
+## 2026-10-15 — CMS-05 Drafts and publishing
+- Backend: `draftAndPublish` on models; `_published` (select:false), `_publishedAt`, `_publishedFrom` paths;
+  `drafts.function.ts` (prefixQuery, liveFind / liveFindOne / liveCount, publish / unpublish / discard, statusOf);
+  public API list/get and the site's lists + template pages read published values; routes POST /:id/publish |
+  unpublish | discard and /bulk/publish (update permission); switching it on publishes existing records
+  (`publishedNow`); Published column; `/get/route` says draftAndPublish; AI plan schema.
+- Panel: model Settings → Drafts and publishing switch; record page badge (Draft / Published / Changes not published)
+  with Publish, Take off, Discard changes.
+- Not yet: D11 separate Publish right, mint-docs guide section, website changelog, publish webhooks (CMS-09).
+- Verified: `cms-drafts.mjs` (25 checks) passes; public-filters, api-builder, api-logs, site-builder(-data/-starter),
+  widgets(-cart), cms-*, webhooks, automations, templates-apply, website pass. Headless Chrome: record page header.
+

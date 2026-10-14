@@ -34,6 +34,7 @@ import {
 import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
+import { bulkPublish, publishAction } from '../../library/controllers/crud/publish.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
 import { rollupResponses, rollupsOf } from '../../library/functions/rollups.function.js';
 import getStats from '../../library/controllers/aggregate/getStats.controller.js';
@@ -462,6 +463,13 @@ const defineRoutes = ({
 	router.post('/bulk/status', ...bulk(permissions.update), bulkStatus(bulkOpts));
 	router.post('/bulk/merge/preview', ...bulk(permissions.delete), mergePreview(bulkOpts));
 	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
+
+	// Drafts and publishing (docs/cms D5): the draft put live, taken off, or thrown away. /bulk first, so it's never an id.
+	router.post('/bulk/publish', ...bulk(permissions.update), bulkPublish(config.MODEL, route));
+	const publishing = [protect, hasPermission([permissions.update]), ...(injectMiddleware?.update || [])];
+	router.post('/:id/publish', ...publishing, publishAction(config.MODEL, route, 'publish'));
+	router.post('/:id/unpublish', ...publishing, publishAction(config.MODEL, route, 'unpublish'));
+	router.post('/:id/discard', ...publishing, publishAction(config.MODEL, route, 'discard'));
 
 	// Linked Relationships: what saving the form's values would change in the
 	// records they pick — the form's hint. Nothing is written.

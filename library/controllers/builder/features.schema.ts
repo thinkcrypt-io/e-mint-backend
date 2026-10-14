@@ -50,6 +50,7 @@ export const STEP_SCHEMA = {
 		},
 		description: { type: 'string', description: 'create: one line shown under the page title' },
 		kind: buildModel.properties.kind,
+		draftAndPublish: buildModel.properties.draftAndPublish,
 		displayField: buildModel.properties.displayField,
 		code: buildModel.properties.code,
 		access: buildModel.properties.access,
