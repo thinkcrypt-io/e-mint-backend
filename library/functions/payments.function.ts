@@ -11,6 +11,7 @@ import { dataToSettings } from './routeRegistry.function.js';
 import { applyFormulas, formulasOf } from './formula.function.js';
 import { listCountries, providersFor } from './countries.function.js';
 import { fireWebhooks } from './webhooks.function.js';
+import { fireAutomations } from './automations.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from './tenantNotify.function.js';
 import { siteOrigin } from './siteConfig.function.js';
 import { TenancyError } from './tenancy.function.js';
@@ -264,6 +265,7 @@ export const checkout = async ({ app, project, customer, body }: { app: any; pro
 		throw new TenancyError(409, `The order couldn’t be saved${first?.message ? `: ${first.message}` : ''} — check the order mapping in Shop.`, 'order_invalid');
 	}
 	fireWebhooks({ route: def.route, event: 'create', doc, source: 'api' });
+	fireAutomations({ route: def.route, event: 'create', doc, actor: { name: 'Checkout' } });
 
 	const keys = (await stripeKeys(project))!;
 	const site = siteOrigin(project);
@@ -411,6 +413,7 @@ const markPaid = async (app: any, project: any, payment: any, confirmed: { amoun
 			if (o.fields.paymentReference) doc.set(o.fields.paymentReference, confirmed.providerPaymentId || payment.ref);
 			await doc.save().catch((e: any) => console.error('payments: order not updated', e?.message));
 			fireWebhooks({ route: def.route, event: 'update', doc, source: 'api' });
+			fireAutomations({ route: def.route, event: 'update', doc, actor: { name: 'Checkout' } });
 			later(async () => {
 				const people = await projectAudience({ organization: project.organization, project: project._id, permission: `view-${def.route}` });
 				const href = await projectHrefFor(project, `/${def.route}/${doc._id}`);

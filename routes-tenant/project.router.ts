@@ -29,6 +29,7 @@ import analyticsRouter from './analytics.router.js';
 import siteRouter from './site.router.js';
 import historyRouter from './history.router.js';
 import commentsRouter from './comments.router.js';
+import automationsRouter from './automations.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
@@ -49,6 +50,7 @@ import { customQuery } from '../middleware/index.js';
  * API's, so the admin app's library components work unchanged:
  *
  *   /comments                     comments and @mentions on a record (WO-49)   view-<route>
+ *   /automations                  the project's automations (docs/automations)   build
  *   /people                       who opens the project; invite people into it (WO-47)   invite-to-projects / manage-members
  *   /builder/*                    models, features, route builder, MCP keys    build / manage-api-keys
  *   /sidebar/:platform/:type      the project's sidebar, filtered by role
@@ -192,6 +194,8 @@ router.use('/', siteRouter);
 router.use('/history', historyRouter);
 // Comments and @mentions on a record (WO-49).
 router.use('/comments', commentsRouter);
+// When a record is created, changed or deleted: notify, email, webhook, update, create (docs/automations).
+router.use('/automations', automationsRouter);
 // Outgoing webhooks, and what an API project's dashboard shows (docs/templates T-09).
 router.use('/webhooks', webhooksRouter);
 // Site widgets (docs/widgets W-03): any project with a public API.

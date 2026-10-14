@@ -2,6 +2,7 @@ import History from '../models/history/model.js';
 import { displayModelName } from './routeRegistry.function.js';
 import { currentScope } from './tenantScope.function.js';
 import { fireWebhooks } from './webhooks.function.js';
+import { fireAutomations } from './automations.function.js';
 import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 
 /**
@@ -186,6 +187,8 @@ export const recordHistory = ({ req, action, model, doc, changes = [], modelPath
 
 		// Inside a project, the project's webhooks hear about it too (docs/templates T-09).
 		fireWebhooks({ model, event: action, doc, source: 'panel' });
+		// …and its automations on that page (docs/automations).
+		fireAutomations({ model, event: action, doc, changes, actor: req?.user });
 
 		const userName = req?.user?.name || req?.user?.username || 'Someone';
 		// Inside a project the model is `T<projectId>_Client`: kept and shown as `Client` (WO-36).

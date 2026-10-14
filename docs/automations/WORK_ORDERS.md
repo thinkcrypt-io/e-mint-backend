@@ -9,7 +9,7 @@ mint-webpage → `origin` main), then go on.
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | AU-01 | Plan & docs | backend | S | done 2026-10-14 |
-| AU-02 | Engine + API: models, triggers, conditions, five actions, limits, chain guard, runs log, dry run | backend | L | open |
+| AU-02 | Engine + API: models, triggers, conditions, five actions, limits, chain guard, runs log, dry run | backend | L | done 2026-10-14 |
 | AU-03 | Panel: Build → Automations — list, editor, dry run, runs; guide; website | panels + docs | L | open |
 | AU-04 | Date-reached and schedule triggers (job queue), waits | both | L | later |
 | AU-05 | MCP tools, recipes, template blueprints | both | M | later |

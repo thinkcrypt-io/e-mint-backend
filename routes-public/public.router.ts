@@ -26,6 +26,7 @@ import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
+import { fireAutomations } from '../library/functions/automations.function.js';
 import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
 import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
@@ -758,6 +759,7 @@ router.post(
 		});
 		if (req.project.type === 'website') forwardConversion(req.project, req, 'lead', { ...contactOf(req.body), form: ctx.def.title || ctx.def.name });
 		fireWebhooks({ route: ctx.def.route, event: 'create', doc, source: 'api' });
+		fireAutomations({ route: ctx.def.route, event: 'create', doc: doc, actor: { name: 'Website' } });
 		return shape(doc.toObject(), ctx.def);
 	})
 );
@@ -789,6 +791,7 @@ router.put(
 		}
 		await applyLinked(plan, doc, () => ctx.Model.collection.replaceOne({ _id: doc._id }, raw as any));
 		if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
+		if (changed) fireAutomations({ route: ctx.def.route, event: 'update', doc: doc, actor: { name: 'Website' } });
 		return shape(doc.toObject(), ctx.def);
 	})
 );
@@ -810,6 +813,7 @@ router.delete(
 		if (!gone) throw new TenancyError(404, 'Not found');
 		await applyLinked(plan, gone, () => ctx.Model.collection.insertOne(raw));
 		fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
+		fireAutomations({ route: ctx.def.route, event: 'delete', doc: gone, actor: { name: 'Website' } });
 		return { message: 'Deleted' };
 	})
 );
