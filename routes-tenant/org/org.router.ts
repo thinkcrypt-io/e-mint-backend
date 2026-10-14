@@ -59,6 +59,7 @@ import {
  *
  * Joining (invitationsRouter, /tenant/api/invitations):
  *   GET    /for-me · POST /for-me/:id/accept · DELETE /for-me/:id   in the app, verified email (WO-24)
+ *   GET    /for-me/:id             one invitation, whatever became of it — its own page (WO-50)
  *   GET    /:token                 the emailed link: who it's for, which organization, which projects
  *   POST   /:token/accept          { name, phone, password } → { token } — or nothing, signed in as the invitee
  * Accepting a project's invitation (WO-47) also answers `project` (its address) to open next.
@@ -474,7 +475,7 @@ inOrg.post(
 						title: `${req.user.name || 'Someone'} invited you to join ${req.organization.name}`,
 						message: `As ${role.name}. Open it to accept or decline.`,
 						// The page to accept or decline it (WO-50).
-						href: `/invitations?id=${invitation._id}`,
+						href: `/invitations/${invitation._id}`,
 					},
 				])
 			);
@@ -595,6 +596,59 @@ invitationsRouter.get(
 	})
 );
 
+/**
+ * One invitation sent to this account's email — the page an invitation's
+ * notification opens (WO-50), like GitHub's. `state` says whether it can
+ * still be answered: open, accepted, declined, cancelled, expired, or joined
+ * (they already have what it gives).
+ */
+invitationsRouter.get(
+	'/for-me/:id',
+	tenantProtectAccount,
+	handle(async req => {
+		if (!req.user.emailVerified) return { verified: false, email: req.user.email, invitation: null };
+		if (!isId(req.params.id)) throw new TenancyError(404, 'Invitation not found');
+		const i: any = await OrganizationInvitation.findOne({ _id: req.params.id, email: req.user.email })
+			.populate('organization', 'name logo isActive')
+			.populate('role', 'name description')
+			.populate('invitedBy', 'name')
+			.lean();
+		if (!i) throw new TenancyError(404, 'This invitation was sent to another email address, or doesn’t exist.');
+		const m: any = await OrganizationMember.findOne({ organization: i.organization?._id, user: req.user._id, status: 'active' }, { projectRoles: 1 }).lean();
+		const joined = !!m && (!i.project || (m.projectRoles || []).some((r: any) => String(r.project) === String(i.project)));
+		const state = i.acceptedAt
+			? 'accepted'
+			: i.declinedAt
+				? 'declined'
+				: i.cancelledAt || i.organization?.isActive === false
+					? 'cancelled'
+					: joined
+						? 'joined'
+						: new Date(i.expiresAt) < new Date()
+							? 'expired'
+							: 'open';
+		return {
+			verified: true,
+			email: req.user.email,
+			invitation: {
+				_id: String(i._id),
+				state,
+				organization: { _id: String(i.organization?._id), name: i.organization?.name || 'An organization', logo: i.organization?.logo || '' },
+				role: i.role?.name || '',
+				roleDescription: i.role?.description || '',
+				invitedBy: i.invitedBy?.name || '',
+				project: !!i.project,
+				allProjects: i.project ? false : i.allProjects !== false,
+				projects: await projectNames(i),
+				/** Where accepting leads, once accepted: the project's address. */
+				address: state === 'accepted' || state === 'joined' ? await invitedProject(i).catch(() => null) : null,
+				expiresAt: i.expiresAt,
+				createdAt: i.createdAt,
+			},
+		};
+	})
+);
+
 // `project`: a project's invitation (WO-47) — its address, to open next.
 invitationsRouter.post(
 	'/for-me/:id/accept',
@@ -613,7 +667,27 @@ invitationsRouter.delete(
 	handle(async req => {
 		const invitation = await loadMine(req);
 		invitation.cancelledAt = new Date();
+		invitation.declinedAt = new Date();
 		await invitation.save();
+		// Whoever sent it hears back (WO-50).
+		if (invitation.invitedBy) {
+			const what = invitation.project ? (await projectNames(invitation))[0] || 'the project' : invitation.organization.name;
+			const address = invitation.project ? await invitedProject(invitation).catch(() => null) : null;
+			later(() =>
+				notifyTenant([
+					{
+						recipient: invitation.invitedBy,
+						organization: invitation.organization._id,
+						actor: req.user._id,
+						actorName: req.user.name,
+						type: 'member-changed',
+						title: `${req.user.name || invitation.email} declined your invitation to ${what}`,
+						message: invitation.email,
+						href: address ? `/${address}/project-people` : '/org/members',
+					},
+				])
+			);
+		}
 		return { message: 'Invitation declined' };
 	})
 );

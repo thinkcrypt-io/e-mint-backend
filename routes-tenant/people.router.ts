@@ -202,7 +202,7 @@ router.post(
 						title: `${req.user.name || 'Someone'} invited you to ${project.name}`,
 						message: `In ${req.organization.name}, as ${role.name}. Open it to accept or decline.`,
 						// The page to accept or decline it (WO-50).
-						href: `/invitations?id=${invitation._id}`,
+						href: `/invitations/${invitation._id}`,
 					},
 				])
 			);

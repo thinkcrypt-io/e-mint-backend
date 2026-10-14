@@ -52,6 +52,8 @@ ok('Gina sees it: a project, Shop, as Developer', mine?.project === true && mine
 r = await call('POST', `/tenant/api/invitations/for-me/${mine?._id}/accept`, null, gina);
 ok('accepted → a token in Alpha and Shop to open', r.status === 200 && !!r.body?.token && r.body?.project === shop.publicSlug, r.body?.message);
 gina = r.body?.token || gina;
+r = await call('GET', `/tenant/api/invitations/for-me/${mine?._id}`, null, gina);
+ok('its own page says accepted, with the project to open (WO-50)', r.body?.invitation?.state === 'accepted' && r.body.invitation.address === shop.publicSlug, JSON.stringify(r.body?.invitation));
 
 r = await call('GET', '/tenant/api/auth/self', null, gina);
 const alpha = r.body?.organizations?.find(o => o._id === r.body?.organization?._id);
@@ -81,7 +83,7 @@ r = await call('PUT', `/tenant/api/projects/${shop._id}`, { name: 'Shop!' }, gin
 ok("…and she can't change Shop's settings", r.status === 403, r.status);
 r = await call('GET', '/tenant/api/notifications', null, gina);
 const ginaNote = r.body?.doc?.find(x => x.type === 'invitation');
-ok('her invitation notification opens the page to accept or decline it', ginaNote?.href === `/invitations?id=${ginaInvite}`, ginaNote?.href);
+ok('her invitation notification opens the page to accept or decline it', ginaNote?.href === `/invitations/${ginaInvite}`, ginaNote?.href);
 r = await call('GET', `/tenant/api/projects/${shop._id}`, null, gina);
 ok("Shop's details: who made it, how many open it", r.body?.createdBy?.name === 'Alma' && r.body?.people >= 2 && r.body?.models === 1 && !!r.body?.organizationName, JSON.stringify({ c: r.body?.createdBy, p: r.body?.people, m: r.body?.models }));
 r = await call('GET', '/tenant/api/sidebar/web/server', null, gina);
@@ -247,6 +249,31 @@ r = await call('POST', '/tenant/api/org/roles', { name: 'Developer', permissions
 ok('Zoe has her own role called Developer', r.status === 200 || r.status === 201, r.body?.message);
 r = await call('POST', P(zoeProject._id, '/people/invitations'), { email: `yan${stamp}@example.com`, role: 'developer' }, zoe);
 ok('inviting as Developer still works (was “Something went wrong”)', r.status === 200 && r.body?.role?.name === 'Developer (standard)', JSON.stringify(r.body));
+
+/* ---- an invitation's own page, and declining (WO-50) */
+const kaiEmail = `kai${stamp}@example.com`;
+const kai = await register('Kai', 'kai');
+r = await call('POST', P(shop._id, '/people/invitations'), { email: kaiEmail, role: 'member' }, alma);
+const kaiInvite = r.body?._id;
+r = await call('GET', `/tenant/api/invitations/for-me/${kaiInvite}`, null, kai);
+ok('unverified: the page asks to verify first', r.status === 200 && r.body?.verified === false && !r.body?.invitation, JSON.stringify(r.body));
+await verify(kaiEmail);
+r = await call('GET', `/tenant/api/invitations/for-me/${kaiInvite}`, null, kai);
+const page = r.body?.invitation;
+ok('open: who, where, role and what it allows', page?.state === 'open' && page.invitedBy === 'Alma' && page.project === true && page.projects?.join() === 'Shop' && page.role === 'Member' && !!page.roleDescription, JSON.stringify(page));
+await verify(`alma${stamp}@example.com`);
+r = await call('GET', `/tenant/api/invitations/for-me/${kaiInvite}`, null, alma);
+ok("someone else's invitation is not found", r.status === 404, r.status);
+r = await call('DELETE', `/tenant/api/invitations/for-me/${kaiInvite}`, null, kai);
+ok('Kai declines', r.status === 200, r.body?.message);
+r = await call('GET', `/tenant/api/invitations/for-me/${kaiInvite}`, null, kai);
+ok('…the page says declined', r.body?.invitation?.state === 'declined', r.body?.invitation?.state);
+r = await call('POST', `/tenant/api/invitations/for-me/${kaiInvite}/accept`, null, kai);
+ok("…and it can't be accepted after", r.status === 404, r.status);
+await new Promise(res => setTimeout(res, 500));
+r = await call('GET', '/tenant/api/notifications', null, alma);
+const back = r.body?.doc?.find(x => /Kai declined your invitation to Shop/.test(x.title || ''));
+ok('Alma hears that Kai declined, linked to Members', !!back && back.href === `/${shop.publicSlug}/project-people`, JSON.stringify(back));
 
 await mongoose.disconnect();
 done();

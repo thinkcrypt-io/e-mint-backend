@@ -26,6 +26,8 @@ const schema = new Schema<any>(
 		acceptedAt: { type: Date },
 		acceptedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 		cancelledAt: { type: Date },
+		/** Declined by the person invited (WO-50) — also cancelled, so the link stops working. */
+		declinedAt: { type: Date },
 		lastSentAt: { type: Date },
 	},
 	{ timestamps: true }

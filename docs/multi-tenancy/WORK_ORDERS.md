@@ -1132,6 +1132,12 @@ clicked should go to a page to accept or decline the invite"; "Mentions and comm
   rules, the "Developer" clash), comments (per-page switches via draft + publish), access, automations, org-1 on a private
   server; screenshots (Members + Roles, role dialog, Invitations page, a custom-role guest's sidebar, Fields & rules panel).
 - Gap: table buttons (New / Edit / Delete) aren't hidden by per-model keys in the panel — the server refuses them.
+- **Follow-up (same day): an invitation's own page**, like GitHub's — the user: clicking the notification "does not lead
+  to the accept page, must have a separate accept/decline page". `/invitations/<id>` (panel) over GET
+  `/tenant/api/invitations/for-me/:id` (`state` open|accepted|declined|cancelled|expired|joined, role + description,
+  where it leads; another email's → 404; unverified → `verified: false`). Notifications link `/invitations/<id>`; older
+  ones (href `/dashboard`) open `/invitations` (`notificationHref`); `/invitations?id=` redirects. Declining sets
+  `declinedAt` and tells the inviter (link to the project's Members / org Members). Smoke project-invites +8 checks.
 
 ## Automations (2026-10-14)
 
