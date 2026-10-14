@@ -11,7 +11,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-02 | Engine: `ApiEndpoint` + `ServerKey`, `applyPublicApi` + derived summary, lazy migration + script, the public router on endpoints (who, conditions, fields, list settings, keys, stats), panel API `/p/:project/api-builder/*`, smoke | backend | L | done 2026-10-14 |
 | AB-03 | Panel I: the API section, Overview, Endpoints (list, Generate from a model, New endpoint wizard) | mint-tenant | M | done 2026-10-14 |
 | AB-04 | Panel II: an endpoint's page (Access, Fields, Filters, Try it, Code), Keys, Reference | mint-tenant | L | done 2026-10-14 |
-| AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | |
+| AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | done 2026-10-14 |
 
 ## AB-02 — Engine (L)
 
@@ -53,4 +53,4 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 - mint-docs `public-api` guide rewritten around endpoints (sections: overview, endpoints, generate, new
   endpoint, access, conditions, fields, filters, keys, reference) — keep the old anchors.
 - Website: features + changelog.
-- MCP: `list_endpoints`, `save_endpoint` (plan + confirm, like build tools); `set_public_api` unchanged.
+- MCP: `list_endpoints`, `generate_endpoints`, `save_endpoint` (describe + confirm with the user first); `set_public_api` unchanged.

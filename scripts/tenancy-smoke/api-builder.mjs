@@ -217,6 +217,33 @@ r = await call('DELETE', AB(`/endpoints/${stdGet._id}`), null, s.pat);
 r = await call('GET', `/tenant/api/p/${pid}/builder/models`, null, s.pat);
 ok('deleting a standard endpoint takes its action off the summary', !(r.body?.doc || r.body || []).find(m => m.route === 'products')?.publicApi?.actions?.includes('get'));
 
+/* ---- MCP: list_endpoints, generate_endpoints, save_endpoint (AB-05) */
+r = await call('POST', P('/builder/api-keys'), { name: 'AI', scopes: ['read', 'build'] }, s.pat);
+const mk = r.body?.secret || r.body?.key || r.body?.doc?.secret;
+ok('MCP key', typeof mk === 'string' && mk.startsWith('emk_'), r.status);
+const rpc = async (method, params) =>
+	(await fetch(`${ROOT}/tenant/mcp`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${mk}` }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) }).then(x => x.json())).result;
+const tool = (name, args) => rpc('tools/call', { name, arguments: args });
+const listed = await rpc('tools/list', {});
+ok('MCP offers the endpoint tools', ['list_endpoints', 'generate_endpoints', 'save_endpoint'].every(n => listed?.tools?.some(t => t.name === n)));
+let t = await tool('list_endpoints', {});
+const tText = t?.content?.[0]?.text || '';
+ok('list_endpoints shows paths, who and rules', /POST \/products\/suggest/.test(tText) && /rules: status is "draft"/.test(tText) && /rule fields:/.test(tText), tText.slice(0, 300));
+t = await tool('generate_endpoints', { model: 'Order', actions: ['list'], who: 'customer' });
+ok('generate_endpoints keeps what exists', /already there: GET \/orders/.test(t?.content?.[0]?.text || ''), t?.content?.[0]?.text);
+t = await tool('save_endpoint', { model: 'products', action: 'list', path: '/products/cheap', name: 'Cheap products', who: 'anyone', rules: [{ field: 'price', op: 'lt', value: 25 }], sendBack: ['name', 'price'] });
+ok('save_endpoint makes a custom endpoint', !t?.isError && /\/products\/cheap/.test(t?.content?.[0]?.text || ''), t?.content?.[0]?.text);
+const cheapId = t?.structuredContent?._id || (t?.content?.[0]?.text || '').match(/\[id ([a-f0-9]{24})\]/)?.[1];
+r = await pub('/products/cheap');
+ok('…and it answers with its rule and fields', r.status === 200 && r.body?.doc?.every(d => d.price < 25 && !('internalNote' in d)), JSON.stringify(r.body));
+t = await tool('save_endpoint', { model: 'products', action: 'list', path: '/auth/cheap' });
+ok('save_endpoint refuses a reserved path', t?.isError && /path:/.test(t?.content?.[0]?.text || ''), t?.content?.[0]?.text);
+t = await tool('save_endpoint', { id: cheapId, rules: [{ field: '_customer', op: 'is', value: { ref: 'customer' } }] });
+ok('save_endpoint refuses a customer rule on an endpoint for anyone', t?.isError && /Signed-in customers/.test(t?.content?.[0]?.text || ''), t?.content?.[0]?.text);
+t = await tool('save_endpoint', { id: cheapId, enabled: false });
+r = await pub('/products/cheap');
+ok('save_endpoint turns one off, keeping the rest', !t?.isError && r.status === 404 && /price lt 25/.test(t?.content?.[0]?.text || ''), `${r.status} ${t?.content?.[0]?.text}`);
+
 /* ---- Project delete takes its endpoints */
 r = await call('DELETE', `/tenant/api/projects/${pid}?force=1`, null, s.pat);
 ok('project deleted', r.status === 200, `${r.status} ${r.body?.message}`);

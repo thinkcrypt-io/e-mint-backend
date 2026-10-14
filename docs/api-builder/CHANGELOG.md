@@ -87,3 +87,20 @@ agent must know. Decisions live in README.md.
 - Verified: tsc, `next build` (all five pages), screenshots at 1280 px (each tab, a save of an owner switch + two
   rules — stored as sent, a reserved path refused under its input, Try it returning only featured+published products'
   name/price cheapest first, making a key, the reference with an endpoint open) and 390 px (no sideways scroll).
+
+## 2026-10-14 — AB-05 Guide, website, MCP
+- mint-docs `public-api` guide (card now “API”): new sections api-pages, api-endpoints, api-generate (`turn-on`
+  kept as an anchor), api-new-endpoint, api-access (`who`), api-conditions, api-fields (`read-only`), api-filters,
+  api-keys; `api-reference` / `api-try` anchors in the reference and tester sections; 401 `key_required`, 403
+  `rule_failed`, 404 wording; custom addresses in “The address”. Other guides: Audience → API (customers,
+  sidebar, getting started), analytics is under Site, the site builder's list note points at Generate. All 18
+  anchors the panel links exist. `next build` ok.
+- Website: changelog “The API builder”; features (API builder, Server keys, REST API per model); the API workflow's
+  steps (Generate its endpoints, Set its rules, API → Reference); Go live step text. `next build` ok.
+- MCP (`library/controllers/mcp/apiEndpoints.tools.ts`, in every project): `list_endpoints` (read), `generate_endpoints`,
+  `save_endpoint` (build; same checks as the panel, `on` in the refusal), and a paragraph in the server
+  instructions (describe and confirm before saving; keys are the user's to make).
+- Admin (still the live tenant panel): `/public-api/:sub+` and `/:project/public-api/:sub+` redirect to its one-page
+  Public API, since the backend's sidebar now links Endpoints / Keys / Reference — drop when mint-tenant is live.
+- Verified: `api-builder.mjs` + 8 MCP checks all pass; website-mcp, site-builder-data pass; `mcp.mjs` fails only on a
+  re-run against the same project (its Ticket model exists from the first, passing, run).

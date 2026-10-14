@@ -19,6 +19,7 @@ import { namingFields, refIds } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
 import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
 import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
+import { API_ENDPOINT_INSTRUCTIONS, API_ENDPOINT_TOOLS } from './apiEndpoints.tools.js';
 import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
 
@@ -777,6 +778,7 @@ const TOOLS: ToolDef[] = [
 	...WEBSITE_TOOLS,
 	...SITE_BUILDER_TOOLS,
 	...PDF_TEMPLATE_TOOLS,
+	...API_ENDPOINT_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */
@@ -791,7 +793,8 @@ type Authenticate = (req: Request) => Promise<Caller | { error: string }>;
 export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
-		instructions: caller => (caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS),
+		instructions: caller =>
+			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
