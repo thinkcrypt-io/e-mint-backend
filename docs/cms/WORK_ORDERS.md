@@ -2,24 +2,24 @@
 
 Read `README.md` first (decisions D1–D12, D-AI). Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Each WO ships on its own: code, smoke, guide (mint-docs) + website, commit and push, a line in `CHANGELOG.md`.
-Nothing here starts before the user confirms the decisions.
+Decisions agreed 2026-10-15 (README status line). Engine first.
 
 ## Status
 
 | WO | What | Where | Size | Status |
 |---|---|---|---|---|
-| CMS-01 | Plan & docs | backend | S | done 2026-10-15 (proposed) |
+| CMS-01 | Plan & docs | backend | S | done 2026-10-15 (agreed) |
 | CMS-02 | Single types + UID field kind (D2) | backend + mint-tenant | M | — |
 | CMS-03 | Components: definitions, `component` field kind, nesting, "make reusable" (D3) | backend + mint-tenant | L | — |
 | CMS-04 | Dynamic zone: `blocks` field kind, panel editor, API shape (D4) | backend + mint-tenant | L | — |
 | CMS-05 | Draft & publish per entry: `_published` snapshot, status, publish/unpublish/discard, every read path (D5, D11) | backend + mint-tenant | L | — |
-| CMS-06 | Website content refactor: section components from the builder's presets, Page `sections`, Shared sections, header/footer/settings/design as single types, new bindings, migration (D1) | backend + mint-builder + mint-sites | L+L | — |
+| CMS-06 | Website contents: typed records (type first), page dropdown, List type (model, count, order, conditions), types from the builder's presets, header/footer/settings/design as single types, binding paths, migration (D1) | backend + mint-tenant + mint-builder + mint-sites | L+L | — |
 | CMS-07 | Content manager: "Content" in the sidebar, entry editor with status sidebar, list badges (D5, D11) | mint-tenant | L | — |
 | CMS-08 | Preview on the real site: tokens, mint-sites draft render, side-by-side pane (D9) | backend + mint-sites + mint-tenant | M | — |
 | CMS-09 | Content API: status, locale, populate, single types, publish webhooks, site revalidation (D10) | backend + mint-tenant | M | — |
 | CMS-10 | Versions: store, compare, restore (D6) | backend + mint-tenant | M | — |
 | CMS-11 | Scheduling: publish at / unpublish at (D7) | backend + mint-tenant | M | — |
-| CMS-12 | Locales: project locales, localized fields, `_locales`, API + site `/bn/…`, builder switcher (D8) | all | L+L | — |
+| CMS-12 | Languages: Settings → Languages, per-language inputs only when more than one, `_locales`, API + site `/bn/…`, builder switcher (D8) | all | L+L | — |
 | CMS-13 | Media: alt, caption, focal point; image field `{url, alt…}` opt-in (D12) | backend + mint-tenant | M | — |
 | CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | — |
 | CMS-15 | Guide, website, templates and theme starters in the new shape | docs + website + backend | M | — |
@@ -67,20 +67,23 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
 - Indexes: the per-model index manager adds `_published.<field>` for fields used in public filters.
 - Smoke: `cms-publish.mjs` — a draft-only change is invisible on every read path; publish shows it; discard restores.
 
-## CMS-06 — Website content refactor (L + L)
-- Section components generated from the site builder manifest (`siteBuilder/manifest.ts`, section presets): one
-  per preset, fields from its bindable props; cards → a repeatable item component with the card's own fields.
-- Kit: Pages gets `sections` (blocks) and `seo` (component `shared.seo`); new single types **Header**, **Footer**,
-  **Site settings** (from WebsiteSettings) and **Site design**; collection **Shared sections**.
-- Builder (mint-builder): binds `{from:'section', key, path}`; adding a section adds its item to the page's draft
-  with demo words; editing in place writes the draft; Publish in the builder publishes layout + the page entry
-  together; reading a page pulls panel edits (as today, from the entry).
-- Renderer (mint-sites): reads the published page entry (draft with a preview token); still reads old
-  `{from:'content'}` until a project is migrated.
-- Migration: `scripts/migrateSiteContent.js` (dry run / `--apply`) + lazy on first open; Contents grouped by page +
-  section into the entry, trees rebound, the current state published, Contents marked `migratedAt`.
-- Smoke: `cms-site.mjs` (new site from a theme, edit in panel → not live until publish, builder edit → entry draft,
-  migration of a site made the old way renders the same HTML).
+## CMS-06 — Website contents (L + L)
+- Content types = components under `content.*`, generated from the site builder's section presets (fields from
+  their bindable props; cards → a repeatable item with the card's own fields) plus *Text*, *Rich text*, *List*.
+- `WebContent`: `name`, `page`, `slug`, `order`, `status`, and `content` (blocks, exactly one item). Panel: the
+  Contents screen with a **page dropdown** (and "Whole site"); a page's records in order, drag to reorder;
+  **New content → choose the type first**, then only its fields.
+- *List* type: model, limit, sort, conditions (RuleEditor), card field mapping, link pattern; read on the site
+  through the model's public rules (D27); the builder's list block uses it.
+- Single types **Header**, **Footer**, **Site settings** (from WebsiteSettings), **Site design**.
+- Builder (mint-builder): adding a section makes its typed record with demo words; binding `field` is a path;
+  Publish in the builder publishes layout + the page's contents together.
+- Renderer (mint-sites): reads published records (drafts with a preview token); reads old per-word records until a
+  project is migrated.
+- Migration: `scripts/migrateSiteContent.js` (dry run / `--apply`) + lazy on first open (README §6).
+- Smoke: `cms-site.mjs` — new site from a theme, a panel edit isn't live until Publish, a builder edit lands in the
+  record's draft, a List record with conditions renders the right records, an old-style site renders the same
+  HTML after migration.
 
 ## CMS-07 — Content manager (L)
 - Sidebar section **Content** (website projects first, then any project with content types): Single types, then
@@ -107,12 +110,13 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
 - `_schedule.publishAt / unpublishAt`; a minute tick (one leader — Mongo lock doc) publishes/unpublishes and
   records who scheduled it; the editor's sidebar sets and clears it; notifications on success/failure.
 
-## CMS-12 — Locales (L + L)
-- Project locales (Project → Settings): default + others. Field flag `localized` (text kinds, editor, uid,
-  components' text). `_locales.<code>` on the draft and in `_published`; fallback to default.
-- API `locale`; the site `/bn/...` with `hreflang` and a language switcher block; the builder's locale switch
-  edits that locale's words; the editor shows the default beside the translation.
-- MCP translate (CMS-14) fills a locale's draft.
+## CMS-12 — Languages (L + L)
+- Website settings → **Languages**: the main language (English by default) and others. One language: forms as
+  today. More: every text-like field (text, textarea, rich text, slug, and inside content types) shows an input per
+  language; images/numbers/links shared unless marked "translate".
+- `_locales.<code>` on the draft and in `_published`; fallback to the main language.
+- API `locale`; the site `/bn/...` with `hreflang` and a language switcher block; the builder's language switch.
+- MCP translate (CMS-14) fills a language's draft.
 
 ## CMS-13 — Media (M)
 - Library: alt, caption, focal point (click on the image) per file; image/images fields can opt into the object

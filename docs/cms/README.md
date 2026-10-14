@@ -1,6 +1,6 @@
 # MINT CMS — plan (2026-10-15)
 
-Status: **proposed** — decisions D1–D12 below are recommendations waiting for the user's call.
+Status: **agreed 2026-10-15** — D1 and D8 as the user shaped them; D5 drafts until Publish; engine first (CMS-02…05).
 Work orders: `WORK_ORDERS.md`. Log: `CHANGELOG.md`.
 
 ## 1. The user's words
@@ -56,6 +56,7 @@ automations, customers, payments or AI-over-MCP.
 |---|---|---|---|
 | Collection types | ✓ | ✓ models | ✓ |
 | Single types | ✓ | — | ✓ D2 |
+| Typed content, by page | content types | one catch-all bag | ✓ D1 (type first, page dropdown, List type) |
 | Components (reusable field groups) | ✓ | `section`/`sectionlist`, not reusable | ✓ D3 |
 | Dynamic zones | ✓ | — | ✓ D4 (`blocks`) |
 | UID / slug field | ✓ | text | ✓ D2 |
@@ -80,21 +81,30 @@ user's AI fill and translate it.
 
 ## 4. Decisions (recommended)
 
-- **D1 — A page's words live in the page, as typed sections.** Replace "one Contents record per word" with **one
-  Page entry per page** whose `sections` field (a dynamic zone, D4) holds the page's sections in order, each a
-  typed component: *Hero* {heading, text, buttons[], image}, *Features* {title, items[] {icon, title, text}},
-  *Testimonials* {items[] {quote, name, role, avatar}}, *FAQ*, *Stats*, *CTA*, *Gallery*… The component of each
-  section comes from the site builder's section presets (their bindable props), so every section the builder can
-  add has a matching form. The builder still edits words in place; a bound value points at
-  `{ from: 'section', key, path }` (the section's stable key and a path inside it, `items.2.title`) instead of a
-  Contents slug. Editors open **Pages → Home** and see the page as a list of sections, each a small form. A grid of
-  cards is a repeatable component of its own fields — a price or a rating fits.
-  - *Shared sections* (a testimonial strip on five pages): a **Shared sections** collection whose entries a page
-    section can point at, edited once.
-  - *Header, footer, site settings, design*: single types (D2).
-  - *Lists* (services, team, posts, products) stay models of their own — collections, as now.
-  - Presentation (`bgColor`, `fontSize`) leaves content: it's the builder's styling on the node.
-  - Supersedes D28's storage (not its promise: every word is still content, bound from the start, with demo words).
+- **D1 — Contents stay records, typed and grouped by page** (the user's call, 2026-10-15: "keep one content per
+  record, but a pages model needs to be there too… pages will be listed on the dropdown, selecting would show that
+  specific page only. Content type should be set first then relevant data will be there… we can add a list, for
+  example there are projects, so we can list and select a list, number of data to show and the order, also
+  conditions can be set").
+  - **Pages** (the kit's `WebPage`, scoped to the project like every model): the page is found by its path. The
+    Contents screen opens with a **page dropdown**; picking a page shows **that page's contents only**, in their
+    order on the page. A "Whole site" choice holds what's on every page (header, footer, a shared strip).
+  - **One record per content item** (one section or block group — a hero, a FAQ, a row of cards), not one per
+    word. **Its type is set first** — *Hero*, *Text*, *Rich text*, *Cards*, *FAQ*, *Stats*, *Testimonials*,
+    *Gallery*, *Video*, *Call to action*, *Logos*, *List*… — and the form then shows **only that type's fields**
+    (a Hero: heading, text, buttons, image; Cards: a title and cards with their own fields). Types are components
+    (D3), so a project can add its own; the built-in ones come from the site builder's section presets, so every
+    section the builder adds gets the right type.
+  - **List** type: pick a model (Projects, Services, Posts…), how many to show, the order, and conditions
+    (`status is published`, `featured is yes` — the same rule editor as the API builder), and which of its fields
+    go where on a card. The builder's list block draws it; the site reads it through the model's public rules.
+  - Storage: `WebContent` keeps `name`, `page`, `slug`, `order`, `status` and gains `content` — a dynamic zone (D4)
+    of exactly one item, whose component *is* the type. The old catch-all fields (`content`, `subContent`,
+    `btnText`, `card[]`, `bgColor`, `fontSize`…) go after migration; styling belongs to the builder's node.
+  - Builder binding stays `{ from: 'content', slug, field }`; `field` becomes a path in the item
+    (`heading`, `items.2.title`). The builder still edits words in place and adds a typed record with demo words for
+    each section it adds (D28's promise kept, its storage tidied).
+  - Header, footer, site settings and design become single types (D2).
 - **D2 — Single types and a UID field.** A model can be **single** (`kind: 'single'`): exactly one entry, the panel
   opens its form instead of a table, the API answers `GET /<route>` with the entry. **UID** field kind: a slug made
   from another field (`title` → `my-first-post`), unique per model (per locale), editable, checked as you type.
@@ -120,11 +130,16 @@ user's AI fill and translate it.
   diff, like History), **Restore** into the draft.
 - **D7 — Scheduling.** Publish at / unpublish at, per entry; a minute-tick job on the backend applies them (and
   tells the scheduler). Releases (publish a group of entries together, scheduled) come later (§7).
-- **D8 — Locales.** A project has a default locale and others (`en`, `bn`, `ar`…). A field is **localized** or
-  shared (an image or a price usually shared). Non-default values live in `_locales.<code>.<field>` on the same
-  document (draft and in `_published`); a missing translation falls back to the default. Publish publishes all
-  locales together (per-locale publishing later). API `?locale=bn`; the site serves `/bn/...` (mint-sites) with
-  `hreflang`; the builder gets a locale switcher.
+- **D8 — Languages, set in Settings** (the user's call: "On settings we can choose how many languages the website
+  is going to be, if bilangual is selected then fields for other languages should show otherwise single english").
+  Website settings → **Languages**: English alone by default; add others (Bangla, Arabic…) and pick the main one.
+  With one language, every form is as it is. With more, each text-like field (text, rich text, slug; inside
+  types too) shows an input per language (tabs on the field, or a language switch at the top of the form); images,
+  numbers and links stay shared unless a field is marked "translate". Other languages live in
+  `_locales.<code>.<field>` on the same record (draft and published); a missing translation shows the main
+  language. Publish publishes every language together. API `?locale=bn`; the site serves `/bn/...` with `hreflang`
+  and a language switcher; the builder switches language to edit that language's words. App projects get the same
+  switch later.
 - **D9 — Preview.** A draft can be seen on the real site: the renderer (mint-sites) takes a short-lived preview
   token and draws the draft content of that page (or entry, through the page that lists it). The entry editor has a
   side-by-side **Preview** that refreshes on save; per model, a preview address (`/blog/{slug}`).
@@ -139,42 +154,42 @@ user's AI fill and translate it.
 - **D-AI — Content tools over MCP** (the user's own AI, never server-side AI): read/write entry drafts, publish (after
   the user says so), translate an entry into a locale, fill a page's sections, suggest SEO.
 
-## 5. What an entry looks like
+## 5. What a content record looks like
 
 ```jsonc
-// Pages → Home (draft = the record; live = _published)
+// Contents → page "Home" → "Hero" (draft = the record; live = _published)
 {
-  "_id": "66f…", "_model": "WebPage",
-  "name": "Home", "path": "/", "slug": "home",
-  "sections": [
-    { "_key": "hero-a1", "__component": "sections.hero",
-      "heading": "Bread worth waking up for", "text": "<p>Baked daily…</p>",
-      "buttons": [{ "label": "Order now", "url": "/shop", "style": "primary" }],
-      "image": { "url": "…/loaf.jpg", "alt": "A sourdough loaf" } },
-    { "_key": "feat-b2", "__component": "sections.features", "title": "Why us",
-      "items": [{ "icon": "wheat", "title": "Local flour", "text": "…" }] },
-    { "_key": "shared-c3", "__component": "shared.reference", "section": "67a…" }   // a Shared section
-  ],
-  "seo": { "title": "Corner Bakery", "description": "…", "image": "…" },            // component shared.seo
-  "_locales": { "bn": { "sections": [ /* localized fields only */ ] } },
-  "_published": { "at": "2026-10-15T09:00:00Z", "by": "…", "rev": 7, "data": { /* the same, as published */ } },
-  "_schedule": { "publishAt": null, "unpublishAt": null }
+  "_id": "66f…", "_model": "WebContent",
+  "name": "Home hero", "page": "66a…", "slug": "home-hero-a1", "order": 1, "status": "published",
+  "content": [{ "_key": "a1", "__component": "content.hero",
+    "heading": "Bread worth waking up for", "text": "<p>Baked daily…</p>",
+    "buttons": [{ "label": "Order now", "url": "/shop", "style": "primary" }],
+    "image": { "url": "…/loaf.jpg", "alt": "A sourdough loaf" } }],
+  "_locales": { "bn": { "content": [{ "heading": "ঘুম ভাঙার মতো রুটি" }] } },
+  "_published": { "at": "2026-10-15T09:00:00Z", "by": "…", "rev": 7, "data": { /* as published */ } }
 }
+
+// Contents → page "Home" → "List" of Projects
+{ "name": "Recent projects", "page": "66a…", "slug": "home-projects-b2", "order": 4,
+  "content": [{ "_key": "b2", "__component": "content.list",
+    "title": "Recent work", "model": "projects", "limit": 6, "sort": "-completedAt",
+    "when": [{ "field": "status", "op": "is", "value": "published" }, { "field": "featured", "op": "is", "value": true }],
+    "match": "all", "card": { "title": "name", "text": "summary", "image": "cover", "link": "/projects/{slug}" } }] }
 ```
 
-The builder's node: `{ "type": "heading", "props": { "text": { "from": "section", "key": "hero-a1", "path": "heading" } } }`.
+A builder node: `{ "type": "heading", "props": { "text": { "from": "content", "slug": "home-hero-a1", "field": "heading" } } }`.
 
 ## 6. Moving existing sites
 
-- A script (and lazily, the first time a project's builder or Pages opens) groups each page's Contents records by
-  their section, maps their fields into that section's component (`content` → `heading`, `card[]` → `items[]`…),
-  writes them into the Page entry's `sections`, rebinds the builder trees, publishes what was live (so nothing
-  changes on the site), and marks the Contents records `migratedAt`. Dry run first; per-project report.
-- `WebContent` stays read-only for one release, then goes from the kit. SEO records fold into the page's `seo`
-  component (one place to edit a page; a collection entry gets the same component). Site design and settings become single types.
-- Templates (docs/templates) and the theme starters (`siteBuilder/starter.ts`) ship section content in the new shape.
-- Every repo touched: backend, mint-tenant, mint-builder (binding, section forms, locale switch), mint-sites
-  (render published/draft/locale, preview), mint-docs, website, admin (nothing — tenant-only).
+- A script (and lazily, the first time a project's builder or Contents opens) groups each page's per-word Contents
+  records by their section (the builder tree knows which node is in which section), makes one typed record per
+  section (`content` → `heading`, `card[]` → `items[]`, a `collection` over a model → a *List* record), rebinds the
+  builder trees to the new slugs and paths, publishes what was live (so nothing changes on the site), and archives
+  the old records (`migratedAt`). Dry run first; a report per project.
+- SEO records stay a model (one per page) and gain draft & publish; site design and settings become single types.
+- Templates (docs/templates) and the theme starters (`siteBuilder/starter.ts`) ship typed records.
+- Every repo touched: backend, mint-tenant, mint-builder (types, binding paths, language switch), mint-sites (render
+  published/draft/language, preview), mint-docs, website, admin (nothing — tenant-only).
 
 ## 7. Later (not in this plan)
 
