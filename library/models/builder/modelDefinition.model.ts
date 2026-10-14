@@ -42,6 +42,9 @@ const fieldSchema = new Schema<any>(
 		addLabel: { type: String, trim: true },
 		/** For the uid kind: the field its slug is made from (docs/cms D2). */
 		from: { type: String, trim: true },
+		/** For the component kind: its component's uid, and whether it's a list of them (docs/cms D3). */
+		component: { type: String, trim: true, lowercase: true },
+		repeatable: { type: Boolean },
 	},
 	{ _id: false, minimize: false }
 );

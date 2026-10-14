@@ -5,6 +5,7 @@ import Organization from '../models/tenancy/organization.model.js';
 import SidebarCategory from '../models/sidebarcategories/model.js';
 import SidebarItem from '../models/sidebaritems/model.js';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
+import ComponentDefinition from '../models/builder/componentDefinition.model.js';
 import RouteSettings from '../models/builder/routeSettings.model.js';
 import RouteConfig from '../models/builder/routeConfig.model.js';
 import RouteVersion from '../models/builder/routeVersion.model.js';
@@ -56,6 +57,7 @@ import DeletedRecord from '../models/deleted-record/model.js';
  */
 const SCOPED = [
 	ModelDefinition,
+	ComponentDefinition,
 	RouteSettings,
 	RouteConfig,
 	RouteVersion,

@@ -59,6 +59,8 @@ export const KIND_GUIDE: Record<string, string> = {
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
 	password:
 		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
+	component:
+		'a shared group of fields made once under Build → Components (list_components) — set `component` to its uid (e.g. "shared.button"); `repeatable` for a list of them (with min/max). Use it when several models need the same group (a button, an SEO block, a card)',
 	sectionlist:
 		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };
@@ -99,6 +101,8 @@ export const fieldProps = {
 	searchable: { type: 'boolean', description: 'Matched by the table search box' },
 	helper: { type: 'string', description: 'Short help text under the input' },
 	from: { type: 'string', description: 'For kind "uid": the key of the text field its slug is made from, e.g. "title"' },
+	component: { type: 'string', description: 'For kind "component": the component’s uid from list_components, e.g. "shared.button"' },
+	repeatable: { type: 'boolean', description: 'For kind "component": a list of them (min/max count) instead of one' },
 };
 
 /** A section's own field: the same, minus links, lists of values and nesting. */
@@ -269,6 +273,11 @@ export const normalize = (input: any, targets: Set<string>) => {
 		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
 		if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
 		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
+		if (kind === 'component') {
+			out.component = String(f?.component || '').toLowerCase().slice(0, 81);
+			if (f?.repeatable) out.repeatable = true;
+			if (f?.repeatable && f?.addLabel) out.addLabel = String(f.addLabel).slice(0, 40);
+		}
 		if (Array.isArray(f?.options) && f.options.length) {
 			const seen = new Set<string>();
 			out.options = f.options

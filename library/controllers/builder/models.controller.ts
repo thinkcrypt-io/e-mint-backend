@@ -3,6 +3,7 @@ import { recordProjectEvent } from '../../functions/recordHistory.function.js';
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ModelDefinition, RouteConfig, RouteSettings, RouteVersion } from '../../models/builder/_index.js';
+import ComponentDefinition from '../../models/builder/componentDefinition.model.js';
 import Permission from '../../models/permissions/model.js';
 import SidebarItem from '../../models/sidebaritems/model.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
@@ -25,6 +26,7 @@ import {
 	SECRET_KINDS,
 	SECTION_KINDS,
 	SUB_KINDS,
+	COMPONENT_KINDS,
 	formulaInfoOf,
 	REFERENCE_KINDS,
 	defaultOf,
@@ -115,6 +117,8 @@ const subFieldBase = {
 	helper: Joi.string().allow('').max(200),
 	formula: Joi.string().allow('').max(500),
 	from: Joi.string().allow('').max(40),
+	component: Joi.string().allow('').max(81),
+	repeatable: Joi.boolean(),
 };
 
 /** A section's own field: the same, minus links and nested sections. */
@@ -258,8 +262,29 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		} else delete f.from;
 	};
 
+	// The components this scope has (docs/cms D3) — a component field must name one.
+	const components = value.fields.some((f: any) => f.kind === 'component')
+		? new Set((await ComponentDefinition.find({}, { uid: 1 }).lean()).map((c: any) => c.uid))
+		: new Set<string>();
+
 	for (const f of value.fields) {
 		const name = f.label || f.key;
+		if (f.kind === 'component') {
+			if (!f.component) problems.push(`${name}: pick its component`);
+			else if (!components.has(f.component)) problems.push(`${name}: there's no component “${f.component}” — make it under Build → Components first`);
+			if (f.repeatable && typeof f.min === 'number' && typeof f.max === 'number' && f.min > f.max) problems.push(`${name}: min is above max`);
+			if (!f.repeatable) {
+				delete f.min;
+				delete f.max;
+				delete f.addLabel;
+			}
+			for (const k of ['fields', 'options', 'default', 'unique', 'index', 'formula', 'ref', 'from']) delete f[k];
+			if (value.access?.enabled && ACCESS_KEYS.includes(f.key))
+				problems.push(`${name}: “${f.key}” is used by access control — rename the field, or turn access off`);
+			continue;
+		}
+		delete f.component;
+		delete f.repeatable;
 		if (SECTION_KINDS.includes(f.kind)) {
 			if (!f.fields?.length) problems.push(`${name}: add at least one field to the section`);
 			for (const x of f.fields || []) {
@@ -373,7 +398,7 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from, f.component, f.repeatable] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
@@ -1126,4 +1151,34 @@ export const updatePublicApi = async (req: any, res: Response): Promise<Response
 	} catch (e: any) {
 		return answer(res, e);
 	}
+};
+
+/* ------------------------------------------------ components (docs/cms D3) */
+
+/**
+ * A component's fields, checked as a model's would be (kinds, keys, options,
+ * formulas, defaults) and limited to COMPONENT_KINDS. Returns the fields as
+ * they'd be saved, or the problems.
+ */
+export const checkComponentFields = async (req: any, fields: any[]) => {
+	const { value, problems } = await check(req, { title: 'Component', fields }, '__component__');
+	const found = [...(problems || [])];
+	for (const f of value?.fields || [])
+		if (!COMPONENT_KINDS.includes(f.kind)) found.push(`${f.label || f.key}: a component's field can't be ${f.kind === 'component' ? 'another component' : `of the kind “${f.kind}”`}`);
+	return { fields: value?.fields || [], problems: found };
+};
+
+/**
+ * After a component changed: every model using it is recompiled (a new
+ * version), and its pages' settings regenerate those fields — forms, cells and
+ * the record page follow the component.
+ */
+export const refreshComponentUsers = async (req: any, uid: string) => {
+	const users: any[] = await ModelDefinition.find({ 'fields.component': uid }).lean();
+	if (!users.length) return [];
+	await ModelDefinition.updateMany({ _id: { $in: users.map(d => d._id) } }, { $inc: { version: 1 } });
+	await syncDynamicModels({ app: req.app, force: true });
+	for (const d of users)
+		await syncCopies(req.app, d, d, req.user?._id, d.fields.filter((f: any) => f.kind === 'component' && f.component === uid).map((f: any) => f.key));
+	return users.map(d => ({ _id: String(d._id), name: d.name, title: d.title || d.name, route: d.route }));
 };

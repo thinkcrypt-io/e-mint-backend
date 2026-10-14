@@ -93,7 +93,7 @@ export const webhookUrlProblem = async (raw: string): Promise<string | null> => 
 
 /* --------------------------------------------------------------- records */
 
-const HIDDEN_KINDS = new Set(['password', 'section', 'sectionlist']);
+const HIDDEN_KINDS = new Set(['password', 'section', 'sectionlist', 'component']);
 
 /** The record as the public API shapes it, minus password fields. */
 export const webhookRecord = (def: any, doc: any) => {

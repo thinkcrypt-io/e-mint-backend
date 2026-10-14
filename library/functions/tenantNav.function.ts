@@ -71,6 +71,7 @@ export const tenantNav = (
 	const build = inProject && can('build')
 		? section('Build', 'hammer', [
 				{ title: 'Models', href: '/model-builder', icon: 'boxes' },
+				{ title: 'Components', href: '/components', icon: 'puzzle' },
 				{ title: 'Pages', href: '/builder', icon: 'layout-template' },
 				{ title: 'Sidebar', href: '/sidebar-builder', icon: 'panel-left' },
 				{ title: 'Dashboard', href: '/dashboard-builder', icon: 'layout-dashboard' },

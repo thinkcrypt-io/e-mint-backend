@@ -30,6 +30,7 @@ import {
 } from './models.controller.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { aiBuildModel } from './ai.controller.js';
+import { createComponent, deleteComponent, getComponent, listComponents, updateComponent } from './components.controller.js';
 import {
 	aiPlanFeature,
 	buildFeaturePlan,
@@ -95,6 +96,13 @@ export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
 	router.delete('/models/:id', ...edit, deleteModel);
 	// A tenant project model's public API (routes-public). 404 outside a project.
 	router.put('/models/:id/public-api', ...edit, updatePublicApi);
+
+	// Components (docs/cms D3): groups of fields any model can use.
+	router.get('/components', ...view, listComponents);
+	router.get('/components/:id', ...view, getComponent);
+	router.post('/components', ...edit, createComponent);
+	router.put('/components/:id', ...edit, updateComponent);
+	router.delete('/components/:id', ...edit, deleteComponent);
 
 	// Features: several models and their links, planned and built together (features.service.ts).
 	router.get('/features', ...view, listFeatures);

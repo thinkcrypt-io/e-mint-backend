@@ -20,6 +20,7 @@ import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.too
 import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
 import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
 import { API_ENDPOINT_INSTRUCTIONS, API_ENDPOINT_TOOLS } from './apiEndpoints.tools.js';
+import { COMPONENT_TOOLS } from './components.tools.js';
 import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
 
@@ -779,6 +780,7 @@ const TOOLS: ToolDef[] = [
 	...SITE_BUILDER_TOOLS,
 	...PDF_TEMPLATE_TOOLS,
 	...API_ENDPOINT_TOOLS,
+	...COMPONENT_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */

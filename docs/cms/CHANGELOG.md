@@ -35,3 +35,25 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   typed title, the model builder's field row and How many records. (A pre-existing React "uncontrolled → controlled"
   warning shows on every create form when typing — not from this change.)
 
+## 2026-10-15 — CMS-03 Components
+- Backend: `ComponentDefinition` (`componentdefinitions`, scoped; uid `category.name`, title, description, icon, fields,
+  version). Field kind `component` (`component`, `repeatable`, min/max for a list). `expandComponents` turns it into a
+  section / section list of the component's fields wherever a model compiles or its settings generate (buildSchema,
+  generateSettings), from a per-scope cache loaded with the models (`syncDynamicModels`); a list's min/max validated; a
+  component left blank is unset (`isBlankGroup`). Component fields: `COMPONENT_KINDS` = section kinds + editor, images,
+  files, video, tags, multiselect (SUB_INPUT maps them). Builder routes `/builder/components` (list with `usedBy`, get,
+  create, update, delete refused while used); saving recompiles every model using it and regenerates their settings
+  (`refreshComponentUsers` → syncCopies). Model checks: the component must exist. Automations, webhooks, public sort and
+  the API builder's field lists treat it like a section. Project delete takes components. MCP `list_components`,
+  `save_component`; the plan schema takes `component` / `repeatable`. Sidebar: Build → Components.
+- Panel (mint-tenant): `/components` (by category, used-by badges) and `/components/[id]` (`new` to make one: title,
+  address, description, icon, FieldsEditor with COMPONENT_KINDS, form preview, used by, delete); `components` is a
+  project page (proxy). Model builder: kind Component with a component picker and One / A list, How many (at least /
+  at most). Admin: `/<project>/components` redirects to its model builder until mint-tenant is live.
+- Not yet: components inside components, links to records inside a component, "make a section reusable", templates
+  carrying components (a blueprint with a component field needs the component in the target project).
+- Docs: mint-docs Models → Components; website changelog.
+- Verified: `cms-components.mjs` (25 checks) passes; cms-single, api-builder, api-logs, public-filters, automations,
+  webhooks, templates-apply, site-builder-data, widgets-cart, website-mcp, comments pass; models passes on a fresh
+  database. Headless Chrome: Components list and editor, a model's component rows, a record form drawing them.
+

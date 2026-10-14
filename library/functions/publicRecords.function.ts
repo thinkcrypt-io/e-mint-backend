@@ -117,7 +117,7 @@ export const filterable = (def: any) =>
 export const listCapabilities = (def: any) => ({
 	filters: filterable(def).map(f => ({ key: f.key, kind: f.kind, ops: OPS[f.family as Family] })),
 	search: def.fields.filter((f: any) => SEARCHED.has(f.kind)).map((f: any) => f.key),
-	sort: [...def.fields.filter((f: any) => !['section', 'sectionlist', 'password'].includes(f.kind)).map((f: any) => f.key), ...SYSTEM_OUT],
+	sort: [...def.fields.filter((f: any) => !['section', 'sectionlist', 'component', 'password'].includes(f.kind)).map((f: any) => f.key), ...SYSTEM_OUT],
 });
 
 const escapeRegex = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

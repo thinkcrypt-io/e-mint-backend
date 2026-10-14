@@ -4,6 +4,7 @@ import { tenantPermissions } from './tenantPermissions.function.js';
 import { projectHooks } from './projectHooks.function.js';
 import mongoose, { Schema } from 'mongoose';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
+import ComponentDefinition from '../models/builder/componentDefinition.model.js';
 import Counter from '../../models/counter/counter.model.js';
 import defineRoutes from '../../routes-admin/common/router.js';
 import {
@@ -72,6 +73,8 @@ export const FIELD_KINDS = [
 	'section',
 	// Rows of the same fields (`fields`), stored as a list: an invoice's items.
 	'sectionlist',
+	// A shared group of fields (docs/cms D3) named by `component` — once, or `repeatable`. Compiles as a section (list).
+	'component',
 	// A credential kept for someone: stored as text, shown as dots in the panel (click to see); never in history.
 	'password',
 ] as const;
@@ -94,6 +97,9 @@ export const SUB_KINDS: FieldKind[] = [
 	'image',
 	'file',
 ];
+
+/** What a component's own fields can be (docs/cms D3): a section's, plus rich text, galleries, tags and media lists. */
+export const COMPONENT_KINDS: FieldKind[] = [...SUB_KINDS, 'editor', 'images', 'files', 'video', 'tags', 'multiselect'];
 
 /** Kinds whose value is short text — the ones that can name a record. */
 export const TEXT_KINDS: FieldKind[] = ['text', 'email', 'url', 'select'];
@@ -230,6 +236,9 @@ export type ModelFieldDef = {
 	addLabel?: string;
 	/** A uid kind's source field: its slug is made from that field's value until it's typed by hand. */
 	from?: string;
+	/** A component kind's component (`category.name`), and whether it's a list of them (docs/cms D3). */
+	component?: string;
+	repeatable?: boolean;
 };
 
 export type ModelDef = {
@@ -425,6 +434,15 @@ export const nextCode = async (def: Pick<ModelDef, 'name' | 'code'>) => {
 	return prefix ? `${prefix.toUpperCase()}-${digits}` : digits;
 };
 
+/** A group's value with nothing in it: {}, or only blanks (empty text, empty lists, null). */
+const isBlankGroup = (v: any) =>
+	!!v &&
+	typeof v === 'object' &&
+	!Array.isArray(v) &&
+	Object.values(typeof v.toObject === 'function' ? v.toObject() : v).every(
+		x => x === undefined || x === null || x === '' || (Array.isArray(x) && !x.length)
+	);
+
 /** The Mongoose paths for a list of fields — a model's, or a section's own. */
 const pathsOf = (fields: ModelFieldDef[]) => {
 	const paths: Record<string, any> = {};
@@ -490,9 +508,27 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				break;
 			case 'section':
 				p = { type: new Schema(pathsOf(f.fields || []), { _id: false, minimize: false }), default: undefined };
+				// A component left blank in the form is "not filled in", not a half-filled one its own required fields refuse (docs/cms D3).
+				if (f.component) p.set = (v: any) => (isBlankGroup(v) ? undefined : v);
 				break;
-			case 'sectionlist':
+			case 'sectionlist': {
 				p = { type: [new Schema(pathsOf(f.fields || []), { _id: false })], default: undefined };
+				// A repeatable component's least and most (docs/cms D3).
+				const lo = typeof f.min === 'number' ? f.min : undefined;
+				const hi = typeof f.max === 'number' ? f.max : undefined;
+				if (f.component && (lo !== undefined || hi !== undefined))
+					p.validate = {
+						validator: (v: any[]) => {
+							const n = Array.isArray(v) ? v.length : 0;
+							return (lo === undefined || n === 0 || n >= lo) && (hi === undefined || n <= hi);
+						},
+						message: `${label}: ${lo !== undefined && hi !== undefined ? `between ${lo} and ${hi}` : lo !== undefined ? `at least ${lo}` : `at most ${hi}`}`,
+					};
+				break;
+			}
+			case 'component':
+				// Expanded before compiling (expandComponents); kept as it came if its component is unknown.
+				p = { type: Schema.Types.Mixed };
 				break;
 			case 'password':
 				// `secret` keeps the value out of history (secretFields.function.ts).
@@ -525,6 +561,33 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 	}
 	return paths;
 };
+
+/**
+ * A definition with its component fields filled in (docs/cms D3): each becomes
+ * a section — or, repeatable, a section list — of its component's fields, as
+ * this scope last loaded them (syncDynamicModels). A component that's gone
+ * leaves an empty section rather than breaking the model.
+ */
+export const expandComponents = <T extends { fields: ModelFieldDef[] }>(def: T): T => {
+	if (!def?.fields?.some(f => f.kind === 'component')) return def;
+	const comps = reg().components;
+	return {
+		...def,
+		fields: def.fields.map(f => {
+			if (f.kind !== 'component') return f;
+			const c = comps.get(String(f.component || ''));
+			return {
+				...f,
+				kind: f.repeatable ? 'sectionlist' : 'section',
+				fields: (c?.fields || []) as ModelFieldDef[],
+				addLabel: f.addLabel || (f.repeatable ? `Add ${String(c?.title || 'item').toLowerCase()}` : undefined),
+			} as ModelFieldDef;
+		}),
+	};
+};
+
+/** The components this scope has, by uid (loaded with the models). */
+export const scopeComponents = () => reg().components;
 
 /**
  * A uid's form: lower case, words joined by dashes, accents off Latin letters;
@@ -587,7 +650,8 @@ const singleHooks = (schema: Schema, def: ModelDef) => {
 	});
 };
 
-export const buildSchema = (def: ModelDef) => {
+export const buildSchema = (input: ModelDef) => {
+	const def = expandComponents(input);
 	const paths = pathsOf(def.fields);
 
 	if (def.code?.enabled) paths.code = { type: String, trim: true, unique: true, sparse: true };
@@ -660,7 +724,8 @@ const guessDisplay = (Model: mongoose.Model<any>) =>
  * The settings object for a built model — what its settings.ts would export.
  * Filters ride along under `filter:`, exactly as in code settings.
  */
-export const generateSettings = (def: ModelDef, target: (ref?: string) => TargetInfo | null) => {
+export const generateSettings = (input: ModelDef, target: (ref?: string) => TargetInfo | null) => {
+	const def = expandComponents(input);
 	const settings: Record<string, any> = {};
 
 	if (def.code?.enabled)
@@ -914,6 +979,13 @@ export const generateSettings = (def: ModelDef, target: (ref?: string) => Target
 const SUB_INPUT: Partial<Record<FieldKind, string>> = {
 	text: 'text',
 	textarea: 'textarea',
+	// A component's fields may also be these (COMPONENT_KINDS).
+	editor: 'editor',
+	images: 'image-array',
+	files: 'file-array',
+	video: 'video',
+	tags: 'tag',
+	multiselect: 'select-tag',
 	email: 'email',
 	url: 'text',
 	color: 'color',
@@ -1091,6 +1163,7 @@ type Compiled = { def: ModelDef; Model: mongoose.Model<any>; stamp: string; mode
  */
 type Registry = {
 	compiled: Map<string, Compiled>; // by plain model name
+	components: Map<string, { uid: string; title: string; fields: ModelFieldDef[]; version: number }>; // by uid
 	failures: Map<string, string>; // by plain model name
 	mounts: Map<string, any>; // route -> wrapper router
 	checkedAt: number;
@@ -1100,7 +1173,7 @@ const registries = new Map<string, Registry>();
 const reg = (): Registry => {
 	const key = scopeKey();
 	let r = registries.get(key);
-	if (!r) registries.set(key, (r = { compiled: new Map(), failures: new Map(), mounts: new Map(), checkedAt: 0, running: null }));
+	if (!r) registries.set(key, (r = { compiled: new Map(), components: new Map(), failures: new Map(), mounts: new Map(), checkedAt: 0, running: null }));
 	return r;
 };
 let appRef: any = null;
@@ -1271,7 +1344,9 @@ export const syncDynamicModels = async ({ app, force }: { app?: any; force?: boo
 
 		r.running = (async () => {
 			try {
-				const defs: ModelDef[] = (await ModelDefinition.find({}).lean()) as any;
+				const [found, comps]: any[] = await Promise.all([ModelDefinition.find({}).lean(), ComponentDefinition.find({}, { uid: 1, title: 1, fields: 1, version: 1 }).lean()]);
+				const defs: ModelDef[] = found;
+				r.components = new Map(comps.map((c: any) => [c.uid, { uid: c.uid, title: c.title, fields: c.fields || [], version: c.version || 1 }]));
 				r.checkedAt = Date.now();
 				let changed = false;
 
