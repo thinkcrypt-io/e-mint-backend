@@ -99,3 +99,26 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   website changelog.
 - Verified: `cms-drafts.mjs` (35 checks), project-invites, access, org-1 pass. Headless Chrome: the role dialog's
   Publish column on the drafts model only.
+
+## 2026-10-15 — CMS-06a Typed contents, by page
+- Backend: content types = components `content.*` (`library/siteBuilder/contentTypes.ts`: Hero, Text, Rich text,
+  Cards, Questions, Numbers, Reviews, Gallery, Video, Call to action, Logos, Picture, List, Section, Header, Footer —
+  one vocabulary: eyebrow, heading, text, image, buttonLabel/Url, items[title, subTitle, description, image, url]);
+  `ensureContentTypes` makes the missing ones, `ensureTypedContents` adds `type`, `order` and `block` (content blocks,
+  one item, every `content.*` type) to the kit's Contents (new websites at seed; others when the screen opens).
+  Components may hold a group or a list of rows one level deep (`section` / `sectionlist` in COMPONENT_KINDS;
+  `dataModelOf` draws them). `routes-tenant/siteContents.router.ts` (/site-contents): types (+ form, + models a List
+  can show), a page's contents in order with the pages' counts, create with the type first (slug
+  `<page>-<type>-xxxxxx`, last place), edit (name, page, the type's fields), reorder, archive, list preview.
+  `resolve.ts`: `readList` — a List record's model through its public API's rules (conditions all/any via
+  `conditionQuery`, order, how many, card title/text/picture, link pattern `{field}`); a collection whose
+  `source.content` is a List shows those records, a typed Cards record its `items`.
+- Panel: `/t/web-contents` of a website opens the Contents screen (`?view=table` the table): page dropdown (Whole site
+  + pages with counts), pieces in order with type, preview, move up/down, edit, remove; New content → type picker →
+  only that type's fields (BlockFields), List settings (ListEditor: model, how many, order, ConditionsEditor, card
+  fields, link, "It shows now"); older one-word records listed below, opened in the table.
+- Docs: mint-docs Websites → Contents, page by page (`site-contents`), Lists of your records (`site-contents-list`);
+  website changelog.
+- Verified: `cms-site-contents.mjs` (31 checks) passes; site-builder(-data/-starter/-connect), website(-mcp), cms-*,
+  templates-apply pass. Headless Chrome: the screen, the type picker, the List editor showing what it lists, the
+  Cards form, a Call to action added through the form, phone width.

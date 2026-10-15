@@ -1,10 +1,12 @@
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel } from '../functions/dynamicModels.function.js';
-import { isId, listFilters, listSort, outKeys, publicDefs, refPopulates, shape } from '../functions/publicRecords.function.js';
+import { conditionQuery, isId, listFilters, listSort, outKeys, publicDefs, refPopulates, shape } from '../functions/publicRecords.function.js';
 import { siteReach } from '../functions/apiEndpoints.function.js';
 import { liveCount, liveFind, liveFindOne } from '../functions/drafts.function.js';
 import { TenancyError } from '../functions/tenancy.function.js';
 import { KIT_ROUTES, kitModel } from './kit.js';
+import { pathValue } from './bind.js';
+import { LIST_TYPE } from './contentTypes.js';
 
 /**
  * The data a builder page shows (docs/site-builder SB-09, D8): the records of
@@ -16,7 +18,8 @@ import { KIT_ROUTES, kitModel } from './kit.js';
  * public API would. Runs inside the project's scope.
  *
  *   collection.props.source = { model, filter?: { <field>[_<op>]: value }, sort?: '-price,name', pageSize? }
- *                           | { content: <slug> }   a Contents record's cards (SB-29) — read by the backend, no public API
+ *                           | { content: <slug> }   a Contents record's cards (SB-29) — read by the backend, no public API;
+ *                                                 a typed one's `items`, or a List's records (docs/cms D1)
  *   page.source             = { model, match: { param: 'slug', field: 'slug' } }
  */
 
@@ -86,7 +89,68 @@ const pageSizeOf = (props: any) => {
 
 const empty = (pageSize: number, problem?: string): CollectionData => ({ items: [], total: 0, page: 1, pageSize, totalPages: 1, ...(problem && { problem }) });
 
-/** A list of cards kept in one Contents record (`card`): each card is an item. */
+/** A record's value at a field path, as a card shows it: a picture's address, a list's first. */
+const cardValue = (rec: any, path?: string) => {
+	if (!path) return undefined;
+	let v = pathValue(rec, path);
+	if (Array.isArray(v)) v = v[0];
+	if (v && typeof v === 'object') v = v.url ?? v.src ?? v.name ?? v.title ?? undefined;
+	return v;
+};
+
+/** "/projects/{slug}" with the record's values in (each encoded). */
+const linkOf = (pattern: string, rec: any) =>
+	pattern.replace(/\{([A-Za-z_][A-Za-z0-9_.]{0,80})\}/g, (_, path) => encodeURIComponent(String(cardValue(rec, path) ?? '')));
+
+/**
+ * A List's records (a Contents record of type List, docs/cms D1): the model's
+ * records through its public API's rules — the conditions (all or any), the
+ * order and how many — each with the card fields (title, description, image,
+ * url) filled from the fields the List names, besides its own.
+ */
+export const readList = async (item: any, { pageSize: wanted, page = 1, pagination = false }: { pageSize?: number; page?: number; pagination?: boolean } = {}): Promise<CollectionData> => {
+	const limit = Number(item?.limit);
+	const pageSize = Math.min(Math.max(Number.isInteger(limit) && limit > 0 ? limit : wanted || 6, 1), MAX_PAGE_SIZE);
+	const route = String(item?.source || '');
+	if (!route) return empty(pageSize, 'Pick the model this list shows');
+	const defs = await publicDefs();
+	const def = defs.get(route);
+	const why = def ? publicProblem(def, 'list') : sourceProblem(route, 'list', defs, await allDefs());
+	if (why) return empty(pageSize, why);
+	const Model = compiledModel(def.name);
+	if (!Model) return empty(pageSize, `${def.title} isn’t available right now`);
+	let conds: any[];
+	try {
+		conds = (Array.isArray(item.when) ? item.when : [])
+			.filter((c: any) => c?.field && c?.op)
+			.slice(0, 20)
+			.map((c: any) => conditionQuery(def, { field: c.field, op: c.op, value: c.value }));
+	} catch (e: any) {
+		if (e instanceof TenancyError) return empty(pageSize, `Condition: ${e.message}`);
+		throw e;
+	}
+	const reach = await siteReach(def, 'list');
+	const and = conds.length ? [item.match === 'any' ? { $or: conds } : { $and: conds }] : [];
+	const query: any = and.length ? { ...reach.query, $and: [...(reach.query.$and || []), ...and] } : reach.query;
+	const current = pagination ? Math.max(1, Math.min(page || 1, 1000)) : 1;
+	const [docs, total]: any[] = await Promise.all([
+		liveFind(def, Model, { query, keys: reach.keys, sort: listSort(def, item.sort), skip: (current - 1) * pageSize, limit: pageSize, populate: await refPopulates(def) }),
+		liveCount(def, Model, query),
+	]);
+	const items = docs.map((d: any) => {
+		const rec = shape(d, def);
+		return {
+			...rec,
+			title: cardValue(rec, item.cardTitle || def.displayField || 'title') ?? rec.title ?? rec.name ?? '',
+			description: cardValue(rec, item.cardText) ?? rec.description ?? '',
+			image: cardValue(rec, item.cardImage) ?? rec.image ?? '',
+			url: typeof item.link === 'string' && item.link ? linkOf(item.link, rec) : rec.url ?? '',
+		};
+	});
+	return { items, total: pagination ? total : Math.min(total, pageSize), page: current, pageSize, totalPages: pagination ? Math.ceil(total / pageSize) || 1 : 1 };
+};
+
+/** A list of cards kept in one Contents record — a typed one's `items`, or the old `card` — or a List's records. */
 const readCards = async (slug: string, props: any, page: number): Promise<CollectionData> => {
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit) return empty(DEFAULT_PAGE_SIZE, 'This project has no Contents model (web-contents) for these cards');
@@ -94,9 +158,12 @@ const readCards = async (slug: string, props: any, page: number): Promise<Collec
 	const has = (k: string) => kit.def.fields.some((f: any) => f.key === k);
 	if (has('status')) cond.status = { $nin: ['draft', 'archived'] };
 	if (has('isVisible')) cond.isVisible = { $ne: false };
-	const rec: any = await kit.Model.findOne(cond, { card: 1 }).lean();
+	const rec: any = await kit.Model.findOne(cond, { card: 1, block: 1 }).lean();
 	if (!rec) return empty(DEFAULT_PAGE_SIZE, `The cards’ Contents record “${slug}” is gone, hidden or a draft`);
-	const cards = (Array.isArray(rec.card) ? rec.card : []).map((c: any, i: number) => {
+	const typed = Array.isArray(rec.block) ? rec.block[0] : null;
+	if (typed?.__component === LIST_TYPE) return readList(typed, { page, pagination: !!props.pagination, pageSize: Number(props.source?.pageSize) || undefined });
+	const list = typed ? typed.items : rec.card;
+	const cards = (Array.isArray(list) ? list : []).map((c: any, i: number) => {
 		const { _id, ...rest } = c || {};
 		return { _id: `${rec._id}-${i}`, ...rest };
 	});

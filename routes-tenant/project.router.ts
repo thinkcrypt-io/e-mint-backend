@@ -36,6 +36,7 @@ import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import templatesRouter from './templates.router.js';
 import siteBuilderRouter from './siteBuilder.router.js';
+import siteContentsRouter from './siteContents.router.js';
 import projectCustomerSettings, { projectCustomerConfig } from '../library/models/tenancy/projectCustomer.settings.js';
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
@@ -188,6 +189,8 @@ router.use(
 
 // The site builder (docs/site-builder): pages, design, publish, releases.
 router.use('/site-builder', siteBuilderRouter);
+// The website's contents, typed and by page (docs/cms D1, CMS-06).
+router.use('/site-contents', siteContentsRouter);
 // A website project's analytics (events from /public/track.js).
 router.use('/analytics', analyticsRouter);
 // …and its setup: tags, code, SEO, redirects, headers, domains (WO-34).

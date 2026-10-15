@@ -13,7 +13,9 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-03 | Components: definitions, `component` field kind, nesting, "make reusable" (D3) | backend + mint-tenant | L | done 2026-10-15 (no nesting / make-reusable yet) |
 | CMS-04 | Dynamic zone: `blocks` field kind, panel editor, API shape (D4) | backend + mint-tenant | L | done 2026-10-15 |
 | CMS-05 | Draft & publish per entry: `_published` snapshot, status, publish/unpublish/discard, every read path (D5, D11) | backend + mint-tenant | L | done 2026-10-15 (publish webhooks → CMS-09) |
-| CMS-06 | Website contents: typed records (type first), page dropdown, List type (model, count, order, conditions), types from the builder's presets, header/footer/settings/design as single types, binding paths, migration (D1) | backend + mint-tenant + mint-builder + mint-sites | L+L | — |
+| CMS-06a | Typed contents + the Contents screen: content types (components `content.*`), `type` / `order` / `block` on Contents, page dropdown, type first, List type (model, how many, order, conditions, card fields) read on the site (D1) | backend + mint-tenant | L | done 2026-10-15 |
+| CMS-06b | The site on typed contents: builder words land in typed records (one per section, paths like `items.2.title`), legacy field aliases for the builder, Contents drafts + Publish with the site, Publish / status on the Contents screen (D1, D5) | backend + mint-tenant | L | — |
+| CMS-06c | Moving sites over: migration script + lazy, theme starters and templates making typed records, header/footer on Whole site, Site design as a single type (D1, §6) | backend + mint-builder + mint-sites | L | — |
 | CMS-07 | Content manager: "Content" in the sidebar, entry editor with status sidebar, list badges (D5, D11) | mint-tenant | L | — |
 | CMS-08 | Preview on the real site: tokens, mint-sites draft render, side-by-side pane (D9) | backend + mint-sites + mint-tenant | M | — |
 | CMS-09 | Content API: status, locale, populate, single types, publish webhooks, site revalidation (D10) | backend + mint-tenant | M | — |
@@ -67,7 +69,7 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
 - Indexes: the per-model index manager adds `_published.<field>` for fields used in public filters.
 - Smoke: `cms-publish.mjs` — a draft-only change is invisible on every read path; publish shows it; discard restores.
 
-## CMS-06 — Website contents (L + L)
+## CMS-06 — Website contents (L + L) — split into 06a / 06b / 06c (2026-10-15)
 - Content types = components under `content.*`, generated from the site builder's section presets (fields from
   their bindable props; cards → a repeatable item with the card's own fields) plus *Text*, *Rich text*, *List*.
 - `WebContent`: `name`, `page`, `slug`, `order`, `status`, and `content` (blocks, exactly one item). Panel: the

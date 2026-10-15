@@ -100,8 +100,12 @@ export const SUB_KINDS: FieldKind[] = [
 	'file',
 ];
 
-/** What a component's own fields can be (docs/cms D3): a section's, plus rich text, galleries, tags and media lists. */
-export const COMPONENT_KINDS: FieldKind[] = [...SUB_KINDS, 'editor', 'images', 'files', 'video', 'tags', 'multiselect'];
+/**
+ * What a component's own fields can be (docs/cms D3): a section's, plus rich
+ * text, galleries, tags and media lists — and a group or list of rows one
+ * level deep (its rows' fields are a section's: cards, questions, links).
+ */
+export const COMPONENT_KINDS: FieldKind[] = [...SUB_KINDS, 'editor', 'images', 'files', 'video', 'tags', 'multiselect', 'section', 'sectionlist'];
 
 /** Kinds whose value is short text — the ones that can name a record. */
 export const TEXT_KINDS: FieldKind[] = ['text', 'email', 'url', 'select'];
@@ -1097,8 +1101,27 @@ const SUB_INPUT: Partial<Record<FieldKind, string>> = {
  * A section's fields as the form draws them (and formula.function.ts reads
  * them): `{ name, label, type, isRequired, options, formula }`.
  */
-export const dataModelOf = (fields: ModelFieldDef[] = []) =>
+export const dataModelOf = (fields: ModelFieldDef[] = []): any[] =>
 	fields.map(x => {
+		// A component's group or list of rows (one level deep): the section inputs, with their own fields.
+		if (x.kind === 'section')
+			return { name: x.key, label: x.label || humanize(x.key), type: 'section-object', kind: x.kind, dataModel: dataModelOf(x.fields), ...(x.helper && { helper: x.helper }) };
+		if (x.kind === 'sectionlist') {
+			const texts = (x.fields || []).filter(y => ['text', 'email', 'url', 'select', 'textarea'].includes(y.kind));
+			return {
+				name: x.key,
+				label: x.label || humanize(x.key),
+				type: 'section-data-array',
+				kind: x.kind,
+				...(x.helper && { helper: x.helper }),
+				section: {
+					title: x.label || humanize(x.key),
+					addBtnText: x.addLabel || 'Add row',
+					display: { title: texts[0]?.key, description: texts[1]?.key, image: (x.fields || []).find(y => y.kind === 'image')?.key },
+					dataModel: dataModelOf(x.fields),
+				},
+			};
+		}
 		const allowed = enumOf(x);
 		return {
 			name: x.key,

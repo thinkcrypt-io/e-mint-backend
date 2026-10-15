@@ -5,6 +5,7 @@ import { runInScope } from './tenantScope.function.js';
 import { syncDynamicModels } from './dynamicModels.function.js';
 import { projectHooks } from './projectHooks.function.js';
 import { SITE_DESIGN_STEP } from '../siteBuilder/kit.js';
+import { ensureTypedContents } from '../siteBuilder/contentTypes.js';
 
 /**
  * The website kit (docs/multi-tenancy WO-18, D13): what a new **website**
@@ -170,6 +171,9 @@ export const seedWebsiteKit = async (req: any, project: any) => {
 			{ $set: { publicApi: { enabled: true, actions: ['list', 'get'], auth: 'none', ownerOnly: false } }, $inc: { version: 1 } }
 		);
 		await syncDynamicModels({ app: req.app, force: true });
+		// Contents hold typed records — a Hero, Cards, a List… (docs/cms D1, CMS-06).
+		// A problem here leaves the old Contents form; the Contents screen tries again when it opens.
+		await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
 	});
 };
 
