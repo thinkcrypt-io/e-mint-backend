@@ -7,10 +7,11 @@ import OrganizationRole from '../models/tenancy/organizationRole.model.js';
  * Permissions are strings on the member's OrganizationRole — the standard set
  * (WO-21), records first:
  *   '*'                       everything (owner, admin)
- *   records:view|create|edit|delete
+ *   records:view|create|edit|delete|publish
  *                             every model's records — and the project's media,
  *                             customers and analytics — in the projects the
- *                             member can open (WO-22)
+ *                             member can open (WO-22); publish puts drafts live
+ *                             on models with Drafts and publishing (docs/cms D11)
  *   build, manage-api-keys, create-projects, manage-projects,
  *   invite-to-projects, manage-members, manage-roles, manage-organization
  `grants` maps a route's view-/create-/edit-/delete-<route> onto the record
@@ -19,13 +20,14 @@ import OrganizationRole from '../models/tenancy/organizationRole.model.js';
  * `data:view` are still read. Owner-only actions (handing over ownership,
  * deleting a project with data) are checked on the role's `system === 'owner'`.
  */
-export const RECORD_ACTIONS = ['view', 'create', 'edit', 'delete'] as const;
+export const RECORD_ACTIONS = ['view', 'create', 'edit', 'delete', 'publish'] as const;
 
 export const ORG_PERMISSIONS = [
 	{ key: 'records:view', group: 'Records', label: 'View', description: 'See records, media, customers and analytics' },
 	{ key: 'records:create', group: 'Records', label: 'Add', description: 'Add records, import them, upload files' },
 	{ key: 'records:edit', group: 'Records', label: 'Edit', description: 'Change records, archive them, move their status' },
 	{ key: 'records:delete', group: 'Records', label: 'Delete', description: 'Delete and merge records, delete files' },
+	{ key: 'records:publish', group: 'Records', label: 'Publish', description: 'Put drafts live, take records off the site, throw changes away' },
 	{ key: 'build', group: 'Projects', label: 'Build', description: 'Models, pages, sidebar, dashboard, media and the public API' },
 	{ key: 'manage-api-keys', group: 'Projects', label: 'AI keys', description: 'Create and revoke the keys AI assistants connect with' },
 	{ key: 'create-projects', group: 'Projects', label: 'Create projects', description: 'Start new apps and websites' },
@@ -40,8 +42,8 @@ export const ORG_PERMISSION_KEYS: string[] = ORG_PERMISSIONS.map(p => p.key);
 
 const ALL_RECORDS = RECORD_ACTIONS.map(a => `records:${a}`);
 
-/** A per-model key — view-/create-/edit-/delete-<route> — of a project's own role (WO-50). */
-export const isModelKey = (key: string) => !ORG_PERMISSION_KEYS.includes(key) && /^(view|create|edit|delete)-[a-z0-9_-]+$/i.test(key);
+/** A per-model key — view-/create-/edit-/delete-/publish-<route> — of a project's own role (WO-50). */
+export const isModelKey = (key: string) => !ORG_PERMISSION_KEYS.includes(key) && /^(view|create|edit|delete|publish)-[a-z0-9_-]+$/i.test(key);
 
 /**
  * A role's permissions in today's keys: `data:*` / `data:view` become record
@@ -172,7 +174,7 @@ export const seedOrgRoles = async (organization: any, session?: mongoose.ClientS
 	return out;
 };
 
-const RECORD_KEY = /^(view|create|edit|delete)-(.+)$/;
+const RECORD_KEY = /^(view|create|edit|delete|publish)-(.+)$/;
 /** The media manager's keys (view-image…): building includes managing media. */
 const MEDIA_ROUTE = 'image';
 

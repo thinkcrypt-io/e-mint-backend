@@ -465,8 +465,10 @@ const defineRoutes = ({
 	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
 
 	// Drafts and publishing (docs/cms D5): the draft put live, taken off, or thrown away. /bulk first, so it's never an id.
-	router.post('/bulk/publish', ...bulk(permissions.update), bulkPublish(config.MODEL, route));
-	const publishing = [protect, hasPermission([permissions.update]), ...(injectMiddleware?.update || [])];
+	router.post('/bulk/publish', ...bulk(auth ? `publish-${permission}` : permissions.update), bulkPublish(config.MODEL, route));
+	// Publish is a right of its own in a tenant project (D11): publish-<route>; the super admin keeps edit.
+	const publishKey = auth ? `publish-${permission}` : permissions.update;
+	const publishing = [protect, hasPermission([publishKey]), ...(injectMiddleware?.update || [])];
 	router.post('/:id/publish', ...publishing, publishAction(config.MODEL, route, 'publish'));
 	router.post('/:id/unpublish', ...publishing, publishAction(config.MODEL, route, 'unpublish'));
 	router.post('/:id/discard', ...publishing, publishAction(config.MODEL, route, 'discard'));

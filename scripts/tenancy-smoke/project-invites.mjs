@@ -26,7 +26,7 @@ r = await call('GET', '/tenant/api/org/permissions', null, alma);
 ok('Invite to projects is a permission', !!r.body?.organization?.find(p => p.key === 'invite-to-projects'));
 r = await call('GET', '/tenant/api/org/roles', null, alma);
 const developer = r.body?.doc?.find(x => x.system === 'developer');
-ok('Developer role: records + build + AI keys', developer?.permissions?.join() === 'records:view,records:create,records:edit,records:delete,build,manage-api-keys', developer?.permissions?.join());
+ok('Developer role: records + build + AI keys', developer?.permissions?.join() === 'records:view,records:create,records:edit,records:delete,records:publish,build,manage-api-keys', developer?.permissions?.join());
 
 /* ---- Gina, from her own organization, invited to Shop as Developer */
 const ginaEmail = `gina${stamp}@example.com`;

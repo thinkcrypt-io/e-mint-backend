@@ -74,14 +74,16 @@ const roleView = (r: any) => ({
 	...(r.project && { custom: true, permissions: normalizePermissions(r.permissions || [], { models: true }) }),
 });
 
-/** What a project's own role can name: each model, the media library ('image') and History. */
+/** What a project's own role can name: each model (Publish where it has drafts), the media library ('image') and History. */
 const ROLE_EXTRAS = [
 	{ route: 'image', name: 'Media library', actions: ['view', 'create', 'edit', 'delete'] },
 	{ route: 'history', name: 'History', actions: ['view'] },
 ];
 const roleTargets = async () => {
-	const models: any[] = await ModelDefinition.find({}, { route: 1, title: 1, name: 1 }).sort({ title: 1 }).lean();
-	return [...models.map(m => ({ route: m.route, name: m.title || m.name, actions: ['view', 'create', 'edit', 'delete'] })), ...ROLE_EXTRAS];
+	const models: any[] = await ModelDefinition.find({}, { route: 1, title: 1, name: 1, draftAndPublish: 1 }).sort({ title: 1 }).lean();
+	// Publish only where records are drafts until published (docs/cms D11).
+	const actions = (m: any) => ['view', 'create', 'edit', 'delete', ...(m.draftAndPublish ? ['publish'] : [])];
+	return [...models.map(m => ({ route: m.route, name: m.title || m.name, actions: actions(m) })), ...ROLE_EXTRAS];
 };
 
 /** Opens every project, whatever the project's list says: the owner, admins, members with all projects. */

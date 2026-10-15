@@ -24,7 +24,7 @@ r = await call('POST', '/tenant/api/org/roles', { name: 'Viewer', permissions: [
 const viewer = r.body?._id;
 ok('a View-only role', r.status === 200 && r.body?.permissions?.join() === 'records:view', r.body?.message);
 r = await call('GET', '/tenant/api/org/roles', null, alma);
-ok('Member is the four record keys + create projects', r.body?.doc?.find(x => x.system === 'member')?.permissions?.join() === 'records:view,records:create,records:edit,records:delete,create-projects');
+ok('Member is the record keys + create projects', r.body?.doc?.find(x => x.system === 'member')?.permissions?.join() === 'records:view,records:create,records:edit,records:delete,records:publish,create-projects');
 
 // A model with a record in Shop.
 r = await call('POST', P(A._id, '/builder/models'), { name: 'Item', title: 'Items', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }] }, alma);

@@ -1,10 +1,13 @@
 // CMS-05 (docs/cms D5): drafts and publishing — records of a drafts model stay off the API until published;
 // edits after that are a draft (the API keeps the published values, filters and sort run on them, links filled
 // in); discard goes back; unpublish takes it off; bulk publish; turning it on publishes what's there; a model
-// without it refuses publish; the page says draftAndPublish and gets a Published column.
+// without it refuses publish; the page says draftAndPublish and gets a Published column. D11: Publish is a right
+// of its own — records:publish on standard roles, publish-<route> on a project's own role (only for drafts models).
 // Uses projects.mjs's state (pat); makes its own project.
+import mongoose from 'mongoose';
 import { call, ok, done, load, ROOT } from './lib.mjs';
 const s = load();
+await mongoose.connect(process.env.SMOKE_MONGO || process.env.MONGO_CONNECTION_URI || 'mongodb://127.0.0.1:27999/emint_tenancy_dev');
 const stamp = Date.now();
 
 let r = await call('POST', '/tenant/api/projects', { name: `CMS drafts ${stamp}`, type: 'app' }, s.pat);
@@ -92,6 +95,39 @@ await call('PUT', P(`/${author.route}/${ana._id}`), { name: 'Ana Maria' }, s.pat
 r = await pub(`/${author.route}/${ana._id}`);
 ok('…and edits are drafts from then on', r.body?.name === 'Ana', JSON.stringify(r.body));
 
+/* ---- D11: Publish is a right of its own */
+r = await call('GET', '/tenant/api/org/permissions', null, s.pat);
+ok('Publish is a standard permission', r.body?.organization?.some(p => p.key === 'records:publish'), JSON.stringify(r.body?.organization?.map(p => p.key)));
+r = await call('GET', P('/people'), null, s.pat);
+const targets = r.body?.models || [];
+ok('a project role can name Publish on a drafts model only', targets.find(t => t.route === route)?.actions?.includes('publish') && targets.find(t => t.route === author.route)?.actions?.includes('publish') && !targets.find(t => t.route === 'image')?.actions?.includes('publish'), JSON.stringify(targets));
+r = await call('POST', P('/people/roles'), { name: `Writer ${stamp}`, permissions: [`edit-${route}`, 'publish-image'] }, s.pat);
+const writer = r.body;
+ok('a Writer: edits, doesn’t publish', r.status === 201 && writer?.permissions?.join() === `view-${route},edit-${route}`, JSON.stringify(r.body));
+const email = `rae${stamp}@example.com`;
+let rae = (await call('POST', '/tenant/api/auth/register', { name: 'Rae', email, password: 'drafts-pass-123', organization: `Rae Co ${stamp}`, country: 'BD' })).body?.token;
+await mongoose.connection.db.collection('tenantusers').updateOne({ email }, { $set: { emailVerified: true } });
+await call('POST', P('/people/invitations'), { email, role: writer?._id }, s.pat);
+const inv = (await call('GET', '/tenant/api/invitations/for-me', null, rae)).body?.doc?.[0];
+rae = (await call('POST', `/tenant/api/invitations/for-me/${inv?._id}/accept`, null, rae)).body?.token || rae;
+r = await call('PUT', P(`/${route}/${a2._id}`), { title: 'Second, by Rae' }, rae);
+ok('…Rae edits the draft', r.status === 200, `${r.status} ${r.body?.message}`);
+r = await call('POST', P(`/${route}/${a2._id}/publish`), {}, rae);
+ok('…but can’t publish it', r.status === 403, r.status);
+r = await call('POST', P(`/${route}/bulk/publish`), { ids: [a2._id] }, rae);
+ok('…nor in bulk', r.status === 403, r.status);
+r = await call('PUT', P(`/people/roles/${writer?._id}`), { name: `Writer ${stamp}`, permissions: [`edit-${route}`, `publish-${route}`] }, s.pat);
+ok('the role gains Publish', r.status === 200 && r.body?.permissions?.includes(`publish-${route}`), JSON.stringify(r.body));
+r = await call('POST', P(`/${route}/${a2._id}/publish`), {}, rae);
+ok('…now Rae publishes', r.status === 200 && r.body?.status === 'published', `${r.status} ${r.body?.message}`);
+r = await call('POST', B('/models'), { name: 'Note', title: 'Notes', fields: [{ key: 'text', label: 'Text', kind: 'text' }] }, s.pat);
+const note = r.body?.doc;
+await call('PUT', P(`/people/roles/${writer?._id}`), { name: `Writer ${stamp}`, permissions: [`edit-${route}`, `publish-${route}`, `edit-${note.route}`] }, s.pat);
+r = await call('PUT', B(`/models/${note._id}`), { title: 'Notes', displayField: 'text', draftAndPublish: true, fields: note.fields }, s.pat);
+r = await call('GET', P('/people'), null, s.pat);
+ok('drafts switched on: roles that edited it can publish it', r.body?.roles?.find(x => x._id === writer?._id)?.permissions?.includes(`publish-${note.route}`), JSON.stringify(r.body?.roles?.find(x => x._id === writer?._id)));
+
 r = await call('DELETE', `/tenant/api/projects/${pid}?force=1`, null, s.pat);
 ok('project deleted', r.status === 200, r.body?.message);
+await mongoose.disconnect();
 done();

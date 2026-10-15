@@ -86,3 +86,16 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Verified: `cms-drafts.mjs` (25 checks) passes; public-filters, api-builder, api-logs, site-builder(-data/-starter),
   widgets(-cart), cms-*, webhooks, automations, templates-apply, website pass. Headless Chrome: record page header.
 
+
+## 2026-10-15 — CMS-05 (rest) Publish right, guide, website
+- Backend: D11 — `records:publish` (standard permission, in Member / Developer / Full access defaults and in `data:*`)
+  and per-model `publish-<route>` on a project's own roles (offered only for models with drafts); publish / unpublish
+  / discard / bulk publish check `publish-<route>` in tenant projects (the super admin keeps edit). Switching drafts on
+  gives `publish-<route>` to the project roles with `edit-<route>`. `scripts/migratePublishRight.js` (dry run /
+  `--apply`): roles that edit get Publish — **run once at the deploy that ships this**.
+- Panel: role editor's Publish column; organization roles list it; record page without the right says "Someone who
+  can publish puts it live" instead of the buttons.
+- Docs: mint-docs Models → Drafts and publishing (`models-drafts`), Organization → permissions + project roles;
+  website changelog.
+- Verified: `cms-drafts.mjs` (35 checks), project-invites, access, org-1 pass. Headless Chrome: the role dialog's
+  Publish column on the drafts model only.

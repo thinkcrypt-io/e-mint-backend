@@ -1010,6 +1010,12 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 					{ $set: { _published: { data: '$$ROOT', byName: req.user?.name || '' }, _publishedAt: now, _publishedFrom: '$updatedAt' } },
 				])
 			).modifiedCount;
+			// Publish became a right of its own here (D11): the project's own roles that could edit, publish.
+			const project = currentScope()?.project;
+			if (project)
+				await mongoose.connection
+					.collection('organizationroles')
+					.updateMany({ project: new mongoose.Types.ObjectId(String(project)), permissions: `edit-${after.route}` }, { $addToSet: { permissions: `publish-${after.route}` } });
 		}
 
 		let codesAssigned = 0;
