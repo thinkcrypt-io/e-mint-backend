@@ -237,3 +237,12 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - See docs/templates/CHANGELOG.md "Components in templates": blueprint `models.components`, capture, validate (dry run
   with them), apply (made before the models, links follow renamed models), MCP set_components, the studio keeps them.
 - Docs: mint-docs Templates (what a template holds); website changelog. CMS-03's follow-ups are all done.
+
+## 2026-10-16 — Production: website contents moved (CMS-06c)
+- After the backend deploy, `node scripts/migrateSiteContents.js --apply` ran on production (dry run first; model
+  definitions, components and website settings backed up with mongodump beforehand).
+- All 10 websites' Contents now hold typed records with drafts. Web Demo got 58 typed records (from 135 old ones) and
+  Demo Business Website 8 (from 28); the other 8 had no old words in their pages.
+- Four sites that never opened the site builder have no site design, so the last step (marking the site as moved)
+  failed on them with a null error after everything else had run. `migrateContents.ts` now skips the mark when there's
+  no design; a re-run reports nothing left to move.

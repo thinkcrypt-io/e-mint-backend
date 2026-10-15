@@ -162,7 +162,8 @@ export const migrateSiteContents = async (req: any, { apply = false, force = fal
 	// A page saved meanwhile is moved the next time — the site isn't marked done yet.
 	const $set: any = busy ? {} : { 'draft.contentsMigratedAt': new Date() };
 	if (layoutsMoved) $set['draft.layouts'] = next;
-	if (Object.keys($set).length) await SiteDesign.updateOne({ _id: design._id }, { $set, ...(layoutsMoved && { $inc: { 'draft.rev': 1 } }) });
+	// A site that never opened the builder has no design yet — nothing to mark.
+	if (design && Object.keys($set).length) await SiteDesign.updateOne({ _id: design._id }, { $set, ...(layoutsMoved && { $inc: { 'draft.rev': 1 } }) });
 	// The old records the site used: kept for the live site until its next Publish.
 	if (used.size) await kit.Model.collection.updateMany({ ...ownRecordsOf(kit.Model), slug: { $in: [...used] }, archivedAt: null, block: { $exists: false } }, { $set: { migratedAt: new Date() } });
 	return report;
