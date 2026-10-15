@@ -51,6 +51,11 @@ const schema = new Schema<any>(
 			limit: { type: Number, default: 20, min: 1, max: 100 },
 			maxLimit: { type: Number, default: 100, min: 1, max: 100 },
 		},
+		/**
+		 * The links a read may fill (`?populate=`, docs/cms CMS-09): paths like
+		 * `author`, `hero.page`, `author.company`. null = every link one step away.
+		 */
+		populate: { type: [String], default: null },
 		/** A standard endpoint: the model's `publicApi` as last reconciled (apiEndpoints.function.ts). */
 		sync: { type: Schema.Types.Mixed, default: null },
 		stats: {

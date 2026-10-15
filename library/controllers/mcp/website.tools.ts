@@ -1,4 +1,5 @@
 import { publishRecord, unpublishRecord } from '../../functions/drafts.function.js';
+import { afterPublish } from '../../functions/publishEvents.function.js';
 import dns from 'dns/promises';
 import net from 'net';
 import mongoose from 'mongoose';
@@ -302,10 +303,16 @@ export const upsertPage = async (req: any, args: any, caller: Caller): Promise<O
 		const r = await contents.Model.updateMany({ _id: { $in: gone.map(g => g._id) } }, { $set: { status: 'archived' } });
 		archived = r.modifiedCount || 0;
 		// Contents keep drafts (docs/cms D5): an archived block leaves the live site too.
-		if (contents.def.draftAndPublish) for (const g of gone) await unpublishRecord(contents.Model, g._id);
+		if (contents.def.draftAndPublish)
+			for (const g of gone) if (await unpublishRecord(contents.Model, g._id)) afterPublish(contents.Model, 'unpublish', await contents.Model.findById(g._id).lean());
 	}
 	// The page's blocks as written here are what the site serves — published, as they always went live.
-	if (contents?.def.draftAndPublish) for (const d of docs) if (d.Model === contents.Model) await publishRecord(contents.Model, d.doc._id, req?.user);
+	if (contents?.def.draftAndPublish)
+		for (const d of docs) {
+			if (d.Model !== contents.Model) continue;
+			const out = await publishRecord(contents.Model, d.doc._id, req?.user);
+			if (out) afterPublish(contents.Model, 'publish', out.doc);
+		}
 
 	const added = docs.filter(d => d.isNew).length;
 	const lines = [

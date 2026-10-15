@@ -39,7 +39,7 @@ export const BUILTIN_PLACEHOLDERS = ['project', 'slug', 'api'];
 export const PAGE_STATUSES = ['published', 'draft', 'archived'];
 export const PAGE_TEMPLATES = ['default', 'home', 'landing', 'content', 'contact'];
 export const BLOCK_CATEGORIES = ['content', 'rich-content', 'list', 'card', 'image', 'gallery', 'list-of-links', 'video', 'section', 'other'];
-export const WEBHOOK_EVENTS = ['create', 'update', 'delete'];
+export const WEBHOOK_EVENTS = ['create', 'update', 'delete', 'publish', 'unpublish'];
 export const PUBLIC_ACTIONS = ['list', 'get', 'create', 'update', 'delete'];
 /** The website kit's routes (websiteKit.function.ts) — a website template may point at them. */
 export const KIT_ROUTES: Record<string, string> = { WebPage: 'pages', PageSeo: 'seo', WebContent: 'web-contents', SiteTheme: 'site-design' };

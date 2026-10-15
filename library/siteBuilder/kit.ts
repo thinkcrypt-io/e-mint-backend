@@ -8,6 +8,7 @@ import { updateModelCore } from '../controllers/builder/models.controller.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { refPopulates, shape } from '../functions/publicRecords.function.js';
 import { liveFind, publishRecord, statusOf } from '../functions/drafts.function.js';
+import { afterPublish } from '../functions/publishEvents.function.js';
 import { ownRecordsOf } from '../functions/projectIndexes.function.js';
 import { loadManifest } from './manifest.js';
 import { EMPTY_SEO } from './site.js';
@@ -477,7 +478,10 @@ export const publishContents = async (trees: any[][], user?: any) => {
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit?.def.draftAndPublish) return 0;
 	const todo = await unpublishedContents(trees);
-	for (const c of todo) await publishRecord(kit.Model, c._id, user);
+	for (const c of todo) {
+		const out = await publishRecord(kit.Model, c._id, user);
+		if (out) afterPublish(kit.Model, 'publish', out.doc, { refresh: false });
+	}
 	return todo.length;
 };
 

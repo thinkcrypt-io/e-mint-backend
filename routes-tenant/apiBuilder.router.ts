@@ -17,6 +17,8 @@ import {
 	standardPath,
 	syncSummary,
 } from '../library/functions/apiEndpoints.function.js';
+import { syncDynamicModels } from '../library/functions/dynamicModels.function.js';
+import { defaultPopulate, defsByName, populateOptions } from '../library/functions/contentPopulate.function.js';
 import { listCapabilities } from '../library/functions/publicRecords.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 import { findLogs, logSummary, logView } from '../library/functions/apiLogs.function.js';
@@ -28,7 +30,7 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  *   GET    /overview                   counts, models, the newest calls
  *   GET    /endpoints                  every endpoint (standard ones made from `publicApi` first), and the models
  *   GET    /endpoints/:id              one, with its model's fields and rule fields
- *   POST   /endpoints                  a custom endpoint { name, note, model, action, path, access, fields, list, enabled }
+ *   POST   /endpoints                  a custom endpoint { name, note, model, action, path, access, fields, list, populate, enabled }
  *   POST   /endpoints/generate         { model, actions[], who }   a model's standard endpoints
  *   PUT    /endpoints/:id              the same as POST, whole (a standard one keeps its model, action and path)
  *   PATCH  /endpoints/:id              { enabled }
@@ -45,6 +47,8 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  */
 const router = express.Router({ mergeParams: true });
 router.use(tenantPermissions(['build']));
+// Links inside components (populate, docs/cms CMS-09) need the project's components loaded.
+router.use('/endpoints', (req: any, _res: any, next: any) => syncDynamicModels({ app: req.app }).then(() => next(), next));
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
 
@@ -67,14 +71,19 @@ const view = (e: any) => ({
 		limit: e.list?.limit || 20,
 		maxLimit: e.list?.maxLimit || 100,
 	},
+	populate: e.populate ?? null,
 	stats: { calls: e.stats?.calls || 0, lastCalledAt: e.stats?.lastCalledAt || null },
 	createdAt: e.createdAt,
 	updatedAt: e.updatedAt,
 });
 
 /** A model as the endpoint editors need it: its fields, what rules can name, what a list can be filtered and sorted by. */
-const modelView = (d: any) => ({
+const modelView = (d: any, defs?: Map<string, any>) => ({
 	route: d.route,
+	drafts: !!d.draftAndPublish,
+	single: d.kind === 'single',
+	// The links its reads can fill (docs/cms CMS-09), and the ones filled when the endpoint names none.
+	...(defs && { populate: populateOptions(d, defs), populateDefault: defaultPopulate(d, defs) }),
 	name: d.name,
 	title: d.title || d.name,
 	fields: (d.fields || [])
@@ -99,7 +108,9 @@ const load = async (id: any) => {
 };
 
 const models = async () =>
-	(await ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1 }).sort({ title: 1 }).lean()) as any[];
+	(await ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1, kind: 1, draftAndPublish: 1, publicApi: 1, displayField: 1, code: 1 })
+		.sort({ title: 1 })
+		.lean()) as any[];
 
 /** Saves, turning a duplicate path into a 400 on `path`. */
 const saving = async <T>(doc: any, run: () => Promise<T>) => {
@@ -160,7 +171,8 @@ router.get(
 	handle(async () => {
 		await ensureEndpoints();
 		const [docs, defs]: any[] = await Promise.all([ApiEndpoint.find({}).sort({ model: 1, standard: -1, path: 1, method: 1 }).lean(), models()]);
-		return { doc: docs.map(view), total: docs.length, models: defs.map(modelView) };
+		const byName = defsByName(defs);
+		return { doc: docs.map(view), total: docs.length, models: defs.map((d: any) => modelView(d, byName)) };
 	})
 );
 
@@ -168,8 +180,9 @@ router.get(
 	'/endpoints/:id',
 	handle(async req => {
 		const e = await load(req.params.id);
-		const def: any = await ModelDefinition.findOne({ route: e.model }).lean();
-		return { ...view(e), modelInfo: def ? modelView(def) : null };
+		const defs = await models();
+		const def: any = defs.find((d: any) => d.route === e.model);
+		return { ...view(e), modelInfo: def ? modelView(def, defsByName(defs)) : null };
 	})
 );
 

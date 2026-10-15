@@ -35,7 +35,8 @@ import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../lib
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
 import { callRecord } from '../library/functions/apiLogs.function.js';
-import { liveCount, liveFind, liveFindOne } from '../library/functions/drafts.function.js';
+import { isDraftModel, liveCount, liveFind, liveFindOne } from '../library/functions/drafts.function.js';
+import { Access, askedPopulate, defaultPopulate, defsByName, populateDocs } from '../library/functions/contentPopulate.function.js';
 import ApiEndpoint from '../library/models/tenancy/apiEndpoint.model.js';
 import {
 	checkCreate,
@@ -186,7 +187,10 @@ router.get(
 	handle(async req => {
 		await ensureEndpoints();
 		const [defs, endpoints] = await Promise.all([publicDefs(), ApiEndpoint.find({ enabled: true }).sort({ model: 1, standard: -1, path: 1 }).lean()]);
-		const byRoute = new Map<string, any>((await ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1, access: 1 }).lean()).map((d: any) => [d.route, d]));
+		await syncDynamicModels({ app: req.app });
+		const all: any[] = await ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1, access: 1, kind: 1, draftAndPublish: 1, publicApi: 1, displayField: 1, code: 1 }).lean();
+		const byRoute = new Map<string, any>(all.map((d: any) => [d.route, d]));
+		const byName = defsByName(all);
 		return {
 			name: req.project.name,
 			type: req.project.type,
@@ -236,6 +240,7 @@ router.get(
 								kind: f.kind,
 								required: !!f.required,
 								...(f.options?.length && { options: f.options.map((o: any) => o.value) }),
+								...(f.kind === 'component' && f.repeatable && { repeatable: true }),
 								...(out.includes(f.key) && { out: true }),
 								...(writes.has(f.key) && { write: true }),
 							})),
@@ -245,6 +250,12 @@ router.get(
 								maxLimit: e.list?.maxLimit || 100,
 								...(e.list?.callerFilters !== false ? listCapabilities(d) : { filters: [], search: [], sort: [] }),
 							},
+						}),
+						// The content API (docs/cms CMS-09): links ?populate= fills, and drafts behind a server key.
+						...((e.action === 'list' || e.action === 'get') && {
+							populate: e.populate ?? defaultPopulate(d, byName),
+							...(d.draftAndPublish && { drafts: { param: statusParam(d) } }),
+							...(d.kind === 'single' && e.action === 'list' && { single: true }),
 						}),
 					};
 				}),
@@ -682,6 +693,8 @@ type Ctx = {
 	customer: any | null;
 	settings: Record<string, any>;
 	formulas: any[];
+	/** The caller's server key — looked up once, when something needs it. */
+	key?: any;
 };
 
 /** The endpoint answering this call — or 404, 401 (sign in / a server key), as its "who" says. */
@@ -708,8 +721,74 @@ const open = async (req: any): Promise<Ctx> => {
 	// The route's settings as the panels use them (a published copy, or generated) — for formulas.
 	const published = await getActiveSettings(def.route);
 	const settings = published?.data ? dataToSettings(published.data) : generateSettings(def, makeTargetLookup(req.app, [def]));
-	return { ep, id, def, Model, customer, settings, formulas: formulasOf(settings) };
+	return { ep, id, def, Model, customer, settings, formulas: formulasOf(settings), ...(key && { key }) };
 };
+
+/** The caller's valid server key, or null. */
+const keyOf = async (req: any, ctx: Ctx) => {
+	if (ctx.key === undefined) {
+		ctx.key = await serverKeyOf(req);
+		if (ctx.key && req.apiLog) req.apiLog.key = ctx.key;
+	}
+	return ctx.key;
+};
+
+/**
+ * `status=draft` (docs/cms D10, CMS-09): a drafts model's records as they are,
+ * never-published ones too — for a server, so a server key only (a preview
+ * link will come with CMS-08). `_status` always works; `status` too when the
+ * model has no field of that name (then `status` filters that field).
+ */
+const statusParam = (def: any) => (def.fields.some((f: any) => f.key === 'status') ? '_status' : 'status');
+const draftsAsked = async (req: any, ctx: Ctx) => {
+	const raw = req.query._status ?? (statusParam(ctx.def) === 'status' ? req.query.status : undefined);
+	if (raw === undefined || raw === '' || raw === 'published') return false;
+	if (raw !== 'draft') throw new TenancyError(400, `${req.query._status !== undefined ? '_status' : 'status'} is published (the default) or draft`);
+	if (!(await keyOf(req, ctx)))
+		throw new TenancyError(
+			401,
+			sendsServerKey(req) ? 'That server key isn’t valid — it may have been revoked.' : 'Drafts aren’t public — send a server key (x-api-key) with status=draft.',
+			'key_required'
+		);
+	return isDraftModel(ctx.def);
+};
+
+/**
+ * What a linked record shows this caller (populate): its model's standard Read
+ * one endpoint (or List) — who may call it, its rules and fields. Null → the
+ * name only. Asked once per model per call.
+ */
+const accessFor = (req: any, ctx: Ctx): Access => {
+	const seen = new Map<string, any>();
+	return async (target: any) => {
+		if (seen.has(target.route)) return seen.get(target.route);
+		let out: any = null;
+		if (target.publicApi?.enabled) {
+			const eps: any[] = await ApiEndpoint.find({ model: target.route, standard: true, enabled: true, action: { $in: ['get', 'list'] } }).lean();
+			const ep = eps.find(e => e.action === 'get') || eps.find(e => e.action === 'list');
+			const who = ep?.access?.who || 'anyone';
+			const may = ep && (who === 'anyone' || (who === 'customer' && ctx.customer) || (who === 'key' && (await keyOf(req, ctx))));
+			if (may) out = { query: reachOf(target, ep, ctx.customer), keys: outOf(target, ep) };
+		}
+		seen.set(target.route, out);
+		return out;
+	};
+};
+
+/** The links this call fills (`?populate=`, among what the endpoint offers) — checked before anything is read. */
+const linksFor = async (req: any, ctx: Ctx) => {
+	if (req.query.populate === undefined || req.query.populate === '') return null;
+	const defs = defsByName(await ModelDefinition.find({ active: { $ne: false } }).lean());
+	const paths = askedPopulate(ctx.ep.populate ?? defaultPopulate(ctx.def, defs), req.query.populate);
+	return paths.length ? { paths, defs } : null;
+};
+
+const fillLinks = async (req: any, ctx: Ctx, docs: any[], links: Awaited<ReturnType<typeof linksFor>>, draft: boolean) => {
+	if (links) await populateDocs(ctx.def, docs, links.paths, links.defs, accessFor(req, ctx), { draft });
+};
+
+/** A drafts model's records also say when they went live (`publishedAt`, null when they aren't). */
+const stampKeys = (def: any, keys: string[]) => (isDraftModel(def) && !def.fields.some((f: any) => f.key === 'publishedAt') ? [...keys, 'publishedAt'] : keys);
 
 /** The records this call may reach: the endpoint's rules (reachOf), never archived ones. */
 const reach = (ctx: Ctx) => reachOf(ctx.def, ctx.ep, ctx.customer);
@@ -720,10 +799,17 @@ const outFor = (ctx: Ctx, asked?: any) => {
 	const picked = listSelect(ctx.def, asked).filter((k: string) => allowed.includes(k));
 	return asked && picked.length ? [...new Set(['_id', ...picked])] : allowed;
 };
+/** A filled-in link without `_model` — how a project's shared collection tells models apart, not the caller's business. */
+const bare = (v: any): any => {
+	if (Array.isArray(v)) return v.map(bare);
+	// A link filled on published values comes as a document (Model.populate on plain data).
+	const o = v && typeof v.toObject === 'function' && !(v instanceof mongoose.Types.ObjectId) ? v.toObject() : v;
+	return o && typeof o === 'object' && o._id !== undefined && '_model' in o ? (({ _model, ...rest }) => rest)(o) : o;
+};
 const shapeOut = (doc: any, keys: string[]) => {
 	if (!doc) return doc;
 	const out: any = {};
-	for (const k of keys) if (doc[k] !== undefined) out[k] = doc[k];
+	for (const k of keys) if (doc[k] !== undefined) out[k] = bare(doc[k]);
 	return out;
 };
 
@@ -789,12 +875,15 @@ const applyLinked = async (plan: any, saved: any, undo: () => Promise<any>) => {
 const list = async (req: any, ctx: Ctx) => {
 	const { def, Model, ep } = ctx;
 	// A single type (docs/cms D2) answers with its one record, as an object — 404 until it's made.
+	const draft = await draftsAsked(req, ctx);
+	const links = await linksFor(req, ctx);
 	if (def.kind === 'single') {
 		const keys = outFor(ctx, req.query.fields);
 		const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
-		const doc: any = await liveFindOne(def, Model, { query: reach(ctx), keys, populate });
+		const doc: any = await liveFindOne(def, Model, { query: reach(ctx), keys, populate, draft, stamp: true });
 		if (!doc) throw new TenancyError(404, 'Not found');
-		return shapeOut(doc, keys);
+		await fillLinks(req, ctx, [doc], links, draft);
+		return shapeOut(doc, stampKeys(def, keys));
 	}
 	const max = ep.list?.maxLimit || 100;
 	const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || ep.list?.limit || 20, 1), max);
@@ -809,18 +898,23 @@ const list = async (req: any, ctx: Ctx) => {
 	const sort = listSort(def, own && req.query.sort ? req.query.sort : ep.list?.sort);
 	// A drafts model's published values (docs/cms D5); any other's records as they are.
 	const [docs, total]: any[] = await Promise.all([
-		liveFind(def, Model, { query, keys, sort, skip: (page - 1) * limit, limit, populate }),
-		liveCount(def, Model, query),
+		liveFind(def, Model, { query, keys, sort, skip: (page - 1) * limit, limit, populate, draft, stamp: true }),
+		liveCount(def, Model, query, { draft }),
 	]);
-	return { doc: docs.map((d: any) => shapeOut(d, keys)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+	await fillLinks(req, ctx, docs, links, draft);
+	const out = stampKeys(def, keys);
+	return { doc: docs.map((d: any) => shapeOut(d, out)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
 };
 
 const getOne = async (req: any, ctx: Ctx) => {
+	const draft = await draftsAsked(req, ctx);
+	const links = await linksFor(req, ctx);
 	const keys = outFor(ctx, req.query.fields);
 	const populate = (await refPopulates(ctx.def)).filter((p: any) => keys.includes(p.path));
-	const doc = await liveFindOne(ctx.def, ctx.Model, { query: { ...reach(ctx), _id: ctx.id }, keys, populate });
+	const doc = await liveFindOne(ctx.def, ctx.Model, { query: { ...reach(ctx), _id: ctx.id }, keys, populate, draft, stamp: true });
 	if (!doc) throw new TenancyError(404, 'Not found');
-	return shapeOut(doc, keys);
+	await fillLinks(req, ctx, [doc], links, draft);
+	return shapeOut(doc, stampKeys(ctx.def, keys));
 };
 
 const create = async (req: any, res: any, ctx: Ctx) => {

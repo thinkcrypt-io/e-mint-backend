@@ -45,9 +45,9 @@ const prefixSort = (sort: Record<string, any> = {}) => Object.fromEntries(Object
 const liveQuery = (query: any) => ({ ...prefixQuery(query || {}), [`${DATA}._id`]: { $exists: true } });
 
 /** The published values, with only `keys` (and links filled in as `populate` says — by hand: a snapshot is plain data). */
-const liveDocs = async (def: any, Model: any, rows: any[], keys: string[] | null, populate: any[] = []) => {
-	let docs = rows.map(r => r?._published?.data).filter(Boolean);
-	if (keys?.length) docs = docs.map(d => Object.fromEntries(Object.entries(d).filter(([k]) => k === '_id' || keys.includes(k))));
+const liveDocs = async (def: any, Model: any, rows: any[], keys: string[] | null, populate: any[] = [], stamp = false) => {
+	let docs = rows.filter(r => r?._published?.data).map(r => (stamp ? { ...r._published.data, publishedAt: r._publishedAt ?? null } : r._published.data));
+	if (keys?.length) docs = docs.map(d => Object.fromEntries(Object.entries(d).filter(([k]) => k === '_id' || keys.includes(k) || (stamp && k === 'publishedAt'))));
 	for (const p of populate) {
 		const target = (def.fields || []).find((f: any) => f.key === p.path)?.ref;
 		const ref = target && compiledModel(target);
@@ -56,23 +56,40 @@ const liveDocs = async (def: any, Model: any, rows: any[], keys: string[] | null
 	return docs;
 };
 
-type Find = { query: any; keys?: string[] | null; sort?: any; skip?: number; limit?: number; populate?: any[] };
-
-/** A page of records as the outside sees them: published values for a drafts model, the records as they are otherwise. */
-export const liveFind = async (def: any, Model: any, { query, keys, sort, skip = 0, limit = 20, populate = [] }: Find) => {
-	if (!isDraftModel(def)) {
-		let q = Model.find(query);
-		if (keys?.length) q = q.select(keys.join(' '));
-		return q.sort(sort || { createdAt: -1 }).skip(skip).limit(limit).populate(populate).lean();
-	}
-	const rows = await Model.find(liveQuery(query)).select('_published').sort(prefixSort(sort || { createdAt: -1 })).skip(skip).limit(limit).lean();
-	return liveDocs(def, Model, rows, keys || null, populate);
+type Find = {
+	query: any;
+	keys?: string[] | null;
+	sort?: any;
+	skip?: number;
+	limit?: number;
+	populate?: any[];
+	/** The drafts as they are, never-published ones too — the content API's `status=draft` (CMS-09). */
+	draft?: boolean;
+	/** A drafts model's records carry `publishedAt` (null: not live) — as the content API answers them. */
+	stamp?: boolean;
 };
 
-export const liveFindOne = async (def: any, Model: any, { query, keys, sort, populate = [] }: Omit<Find, 'skip' | 'limit'>) =>
-	(await liveFind(def, Model, { query, keys, sort, limit: 1, populate }))[0] || null;
+/** A draft row with `publishedAt` in place of the stored `_publishedAt`. */
+const stamped = ({ _publishedAt, ...d }: any) => ({ ...d, publishedAt: _publishedAt ?? null });
 
-export const liveCount = (def: any, Model: any, query: any) => (isDraftModel(def) ? Model.countDocuments(liveQuery(query)) : Model.countDocuments(query));
+/** A page of records as the outside sees them: published values for a drafts model, the records as they are otherwise. */
+export const liveFind = async (def: any, Model: any, { query, keys, sort, skip = 0, limit = 20, populate = [], draft = false, stamp = false }: Find) => {
+	const drafts = isDraftModel(def);
+	if (!drafts || draft) {
+		let q = Model.find(query);
+		if (keys?.length) q = q.select([...keys, ...(drafts && stamp ? ['_publishedAt'] : [])].join(' '));
+		const docs = await q.sort(sort || { createdAt: -1 }).skip(skip).limit(limit).populate(populate).lean();
+		return drafts && stamp ? docs.map(stamped) : docs;
+	}
+	const rows = await Model.find(liveQuery(query)).select('_published _publishedAt').sort(prefixSort(sort || { createdAt: -1 })).skip(skip).limit(limit).lean();
+	return liveDocs(def, Model, rows, keys || null, populate, stamp);
+};
+
+export const liveFindOne = async (def: any, Model: any, { query, keys, sort, populate = [], draft, stamp }: Omit<Find, 'skip' | 'limit'>) =>
+	(await liveFind(def, Model, { query, keys, sort, limit: 1, populate, draft, stamp }))[0] || null;
+
+export const liveCount = (def: any, Model: any, query: any, { draft = false } = {}) =>
+	isDraftModel(def) && !draft ? Model.countDocuments(liveQuery(query)) : Model.countDocuments(query);
 
 /* ------------------------------------------------------------ actions */
 

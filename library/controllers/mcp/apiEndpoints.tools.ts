@@ -53,7 +53,7 @@ const listEndpoints = async (req: any, _args: any, caller: Caller): Promise<Out>
 		text: lines.join('\n'),
 		data: {
 			base: base(req, caller),
-			endpoints: eps.map((e: any) => ({ _id: String(e._id), name: e.name, model: e.model, action: e.action, method: e.method, path: e.path, standard: !!e.standard, enabled: e.enabled !== false, access: e.access, fields: e.fields, list: e.list })),
+			endpoints: eps.map((e: any) => ({ _id: String(e._id), name: e.name, model: e.model, action: e.action, method: e.method, path: e.path, standard: !!e.standard, enabled: e.enabled !== false, access: e.access, fields: e.fields, list: e.list, populate: e.populate ?? null })),
 		},
 	};
 };
@@ -97,6 +97,7 @@ const saveEndpoint = async (req: any, args: any, caller: Caller): Promise<Out> =
 		access: args?.who || args?.rules || args?.match ? { who: args?.who, when: args?.rules, match: args?.match } : undefined,
 		fields: args?.sendBack || args?.write || args?.readOnly ? { out: args?.sendBack, write: args?.write, readOnly: args?.readOnly } : undefined,
 		list: args?.list,
+		populate: args?.populate,
 	};
 	let current: any = null;
 	if (args?.id) {
@@ -200,7 +201,7 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 		name: 'save_endpoint',
 		title: 'Make or change an endpoint',
 		description:
-			'One endpoint: with `id`, changes that endpoint (what’s left out is kept; a standard endpoint keeps its model, action and path); without it, makes a custom one — `model`, `action` and `path` (lowercase parts with dashes, 1–4 of them, ending in /:id for get/update/delete; not starting with auth, site, pages, shop, cart, checkout, render, track, widgets, payments). `who` decides who may call it; `rules` narrow the records it reaches (a create must meet them, or it’s refused); `sendBack` lists the fields in its answers (default all); `readOnly` the fields a create/update never writes; `list` a list’s settings. Tell the user the endpoint and its rules in plain words before saving.',
+			'One endpoint: with `id`, changes that endpoint (what’s left out is kept; a standard endpoint keeps its model, action and path); without it, makes a custom one — `model`, `action` and `path` (lowercase parts with dashes, 1–4 of them, ending in /:id for get/update/delete; not starting with auth, site, pages, shop, cart, checkout, render, track, widgets, payments). `who` decides who may call it; `rules` narrow the records it reaches (a create must meet them, or it’s refused); `sendBack` lists the fields in its answers (default all); `readOnly` the fields a create/update never writes; `list` a list’s settings; `populate` the links a read may fill (?populate=). Tell the user the endpoint and its rules in plain words before saving.',
 		scope: 'build',
 		only: 'project',
 		inputSchema: {
@@ -219,6 +220,12 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 				sendBack: { type: ['array', 'null'], items: { type: 'string' }, description: 'Field keys in its answers; null for all' },
 				write: { type: ['array', 'null'], items: { type: 'string' }, description: 'Field keys a create/update may write; null for all' },
 				readOnly: { type: 'array', items: { type: 'string' }, description: 'Field keys a create/update never writes (the business sets them)' },
+				populate: {
+					type: ['array', 'null'],
+					items: { type: 'string' },
+					description:
+						'List/Read one: the links a caller may fill with ?populate= — paths like author, hero.page (inside a section/component/blocks), author.company (two links deep at most; the linked model needs a public API to go further). null: every link one step away; [] none',
+				},
 				list: {
 					type: 'object',
 					properties: {

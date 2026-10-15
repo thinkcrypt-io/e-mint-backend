@@ -60,6 +60,8 @@ export const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i
  *   search=<words>             the text fields contain it, any case
  *   sort=-price,name           up to three fields, `-` for descending
  *   fields=name,price          only these fields come back (_id always)
+ *   populate=author,hero.page  links filled in (contentPopulate.function.ts)
+ *   status=draft / _status=draft  drafts, with a server key (public.router.ts)
  *
  * Different filters must all match. Names the API doesn't know (a field that
  * isn't filterable, `?v=2` cache busters, sorting by an unknown field) are
@@ -101,7 +103,8 @@ const OPS: Record<Family, string[]> = {
 const ALL_OPS = new Set(Object.values(OPS).flat());
 
 /** Query names that are the list's own, never a field filter (as in the admin's filter middleware). */
-const RESERVED = new Set(['page', 'limit', 'sort', 'search', 'fields', 'skip', 'archived']);
+/** `populate` and `_status` / `status` are the content API's (docs/cms CMS-09) — never a field filter. */
+const RESERVED = new Set(['page', 'limit', 'sort', 'search', 'fields', 'skip', 'archived', 'populate', '_status']);
 /** Kinds `search` looks through. */
 const SEARCHED = new Set(['text', 'email', 'textarea', 'select', 'tags', 'uid']);
 const SYSTEM_DATES = [

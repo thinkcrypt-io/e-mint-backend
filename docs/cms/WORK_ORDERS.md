@@ -18,7 +18,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-06c | Moving sites over: migration script + lazy, theme starters and templates making typed records, header/footer on Whole site, Site design as a single type (D1, §6) | backend | L | done 2026-10-15 (builder and renderer needed no change) |
 | CMS-07 | Content manager: "Content" in the sidebar, entry editor with status sidebar, list badges (D5, D11) | mint-tenant | L | done 2026-10-15 (sidebar All content, Status column + filter, bulk Publish, published-by, ⌘S; schedule/locale/versions/preview come with 08–12) |
 | CMS-08 | Preview on the real site: tokens, mint-sites draft render, side-by-side pane (D9) | backend + mint-sites + mint-tenant | M | — |
-| CMS-09 | Content API: status, locale, populate, single types, publish webhooks, site revalidation (D10) | backend + mint-tenant | M | — |
+| CMS-09 | Content API: status, locale, populate, single types, publish webhooks, site revalidation (D10) | backend + mint-tenant | M | done 2026-10-16 (locale → CMS-12) |
 | CMS-10 | Versions: store, compare, restore (D6) | backend + mint-tenant | M | — |
 | CMS-11 | Scheduling: publish at / unpublish at (D7) | backend + mint-tenant | M | — |
 | CMS-12 | Languages: Settings → Languages, per-language inputs only when more than one, `_locales`, API + site `/bn/…`, builder switcher (D8) | all | L+L | — |

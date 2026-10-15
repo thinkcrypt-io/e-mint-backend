@@ -17,6 +17,7 @@ import { newWebhookSecret, sendTestDelivery, webhookUrlProblem } from '../librar
  *
  *   GET    /                      the webhooks (never their secrets), with the models they can watch
  *   POST   /                      { route, events, url, note, active }   → { doc, secret } — the secret shown once
+ *                                  events: create | update | delete | publish | unpublish (the last two: drafts models)
  *   PUT    /:id                   { route?, events?, url?, note?, active? }
  *   DELETE /:id                   the webhook and its log
  *   POST   /:id/secret            a new secret → { secret } (the old one stops working)
@@ -65,9 +66,11 @@ const deliveryView = (d: any) => ({
 });
 
 const models = async () =>
-	(await ModelDefinition.find({ active: { $ne: false } }, { route: 1, title: 1, name: 1 }).sort({ title: 1 }).lean()).map((d: any) => ({
+	(await ModelDefinition.find({ active: { $ne: false } }, { route: 1, title: 1, name: 1, draftAndPublish: 1 }).sort({ title: 1 }).lean()).map((d: any) => ({
 		route: d.route,
 		title: d.title || d.name,
+		// Publish / unpublish only happen on a model with drafts (docs/cms CMS-09).
+		drafts: !!d.draftAndPublish,
 	}));
 
 /** The fields of a body that can be set, checked. `creating` needs a model. */
@@ -80,7 +83,7 @@ const read = async (body: any, creating: boolean, current?: any) => {
 	}
 	if (creating || body.events !== undefined) {
 		const events: string[] = [...new Set<string>((Array.isArray(body.events) ? body.events : []).map(String))].filter(e => (WEBHOOK_EVENTS as readonly string[]).includes(e));
-		if (!events.length) throw new TenancyError(400, 'Pick when it’s sent: created, changed or deleted.');
+		if (!events.length) throw new TenancyError(400, 'Pick when it’s sent: created, changed, deleted, published or taken off.');
 		out.events = WEBHOOK_EVENTS.filter(e => events.includes(e));
 	}
 	if (creating || body.url !== undefined) {

@@ -246,3 +246,33 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Four sites that never opened the site builder have no site design, so the last step (marking the site as moved)
   failed on them with a null error after everything else had run. `migrateContents.ts` now skips the mark when there's
   no design; a re-run reports nothing left to move.
+
+## 2026-10-16 — CMS-09 Content API
+- **Published by default, drafts on request.** Records of a drafts model carry `publishedAt` (`liveFind`'s `stamp`).
+  `status=draft` — or `_status=draft`, which always works (a model with its own `status` field keeps `status` as its
+  filter) — returns the drafts as they are, never-published ones too, and needs a server key (401 `key_required`
+  otherwise). `liveFind` / `liveCount` take `draft`. The preview link (CMS-08) will be the other way in.
+- **populate** (`functions/contentPopulate.function.ts`): `?populate=author,hero.page,content.by` or `*` fills links
+  with the linked record — through sections, components, lists of rows and content blocks; two links deep at most
+  (`author.company`). A linked record comes out as its model's standard Read one (or List) endpoint shows it — who may
+  call it, its rules, its fields, published values; a model without a public API by its name only, and not past it.
+  Not reachable → null, or left out of a list. `_model` no longer leaks in filled links (`bare` in the router).
+- **Per endpoint**: `ApiEndpoint.populate` — the paths a read offers; null = every link one step away. Checked on save
+  (`checkPopulate`: not a link, model gone, no public API to go past, more than two links). Panel: endpoint → Fields
+  → **Linked records** (the options from `populateOptions`, "Every link one step away" switch); MCP `save_endpoint`
+  takes `populate`. A path the endpoint doesn't offer is a 400 naming the ones it does.
+- **Reference**: GET / describes each read's `populate` and `drafts.param`; the panel's reference shows a Content block
+  (populate, status=draft) and `publishedAt` in examples; a single type's list example is its one record; components
+  are objects in examples.
+- **Webhooks**: events `publish` and `unpublish` (record: what went live / the draft), offered for drafts models
+  (`models[].drafts`); sent from the panel's Publish / Take off / bulk Publish, the Contents manager's Publish, MCP page
+  saves, and the site's Publish (for its Contents). Template blueprints accept them too.
+- **Site refresh**: a publish or unpublish refreshes the project's site (`refreshSiteSoon` → `revalidateSite`) once,
+  3 s after the last one (`SITE_REFRESH_DELAY_MS`), so bulk Publish makes one call. The site's own Publish doesn't
+  double up. Needs SITES_RENDERER_URL + SITE_REVALIDATE_SECRET, as Publish already does.
+- Not here: `locale` (comes with CMS-12 Languages).
+- Verified: `cms-content-api.mjs` (34 checks; site refresh with SMOKE_SITE_RECV) passes; cms-drafts, api-builder,
+  webhooks, public-filters, cms-single, cms-blocks, cms-components(-nested), cms-site-contents, site-builder-data,
+  website, automations, templates-apply, templates-mcp, widgets(-cart) pass. Headless Chrome: Linked records
+  (desktop, phone, switched off with a two-deep link), the reference's Content block, the webhook dialog.
+- Docs: mint-docs Public API — Linked records, Filling in links, Drafts and publishedAt, webhook events.

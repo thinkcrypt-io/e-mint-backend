@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 import { discardDraft, publishRecord, unpublishRecord } from '../../functions/drafts.function.js';
 import recordHistory from '../../functions/recordHistory.function.js';
+import { afterPublish } from '../../functions/publishEvents.function.js';
 
 /**
  * Drafts and publishing on a page's records (docs/cms D5, CMS-05):
@@ -12,7 +13,9 @@ import recordHistory from '../../functions/recordHistory.function.js';
  *   POST /:id/discard     the draft's changes thrown away — back to what's live
  *   POST /bulk/publish    { ids } — each one published
  *
- * Only on a model with Drafts and publishing on; otherwise 400.
+ * Only on a model with Drafts and publishing on; otherwise 400. Publishing and
+ * taking off send the project's publish / unpublish webhooks and refresh its
+ * site (publishEvents.function.ts).
  */
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
@@ -34,6 +37,7 @@ export const publishAction = (Model: mongoose.Model<any>, route: string | undefi
 		if (!out) return res.status(404).json({ message: 'Record not found' });
 		if (out.error) return res.status(400).json({ message: out.error });
 		const doc: any = await Model.findById(req.params.id).lean();
+		if (action !== 'discard') afterPublish(Model, action, action === 'publish' ? out.doc : doc);
 		recordHistory({ req, action: 'update', model: Model.modelName, doc, note: action === 'publish' ? '— published it' : action === 'unpublish' ? '— took it off the site' : '— threw the draft’s changes away' } as any);
 		return res.json({ message: action === 'publish' ? 'Published' : action === 'unpublish' ? 'Taken off the site' : 'Changes discarded', ...out, doc });
 	} catch (e: any) {
@@ -47,7 +51,12 @@ export const bulkPublish = (Model: mongoose.Model<any>, route: string | undefine
 		const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).filter(isId).slice(0, 500);
 		if (!ids.length) return res.status(400).json({ message: 'Pick the records to publish' });
 		let published = 0;
-		for (const id of ids) if (await publishRecord(Model, id, req.user)) published++;
+		for (const id of ids) {
+			const out = await publishRecord(Model, id, req.user);
+			if (!out) continue;
+			published++;
+			afterPublish(Model, 'publish', out.doc);
+		}
 		return res.json({ message: `${published} published`, published });
 	} catch (e: any) {
 		return res.status(500).json({ message: e?.message || 'Something went wrong' });

@@ -5,6 +5,7 @@ import { syncDynamicModels } from './dynamicModels.function.js';
 import { TenancyError } from './tenancy.function.js';
 import { conditionQuery, fieldKeys, filterable, outKeys } from './publicRecords.function.js';
 import { lockText, meets } from './fieldLocks.function.js';
+import { checkPopulate, defsByName } from './contentPopulate.function.js';
 
 /**
  * The API builder's engine (docs/api-builder): a project's public API as
@@ -377,6 +378,12 @@ export const checkEndpoint = async (input: any, current?: any) => {
 		limit: Math.min(Math.max(parseInt(l.limit, 10) || 20, 1), maxLimit),
 		maxLimit,
 	};
+	// The links a read may fill (docs/cms CMS-09); null → every link one step away.
+	const asked = input.populate === undefined ? current?.populate : input.populate;
+	const populate =
+		(action === 'list' || action === 'get') && asked != null
+			? checkPopulate(def, defsByName(await ModelDefinition.find({ active: { $ne: false } }).lean()), asked, bad)
+			: null;
 	return {
 		def,
 		doc: {
@@ -391,6 +398,7 @@ export const checkEndpoint = async (input: any, current?: any) => {
 			access: { who, when, match: (input.access?.match ?? current?.access?.match) === 'any' ? 'any' : 'all' },
 			fields,
 			list,
+			populate,
 		},
 	};
 };

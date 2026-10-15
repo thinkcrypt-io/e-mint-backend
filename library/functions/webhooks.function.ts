@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import dns from 'dns/promises';
 import net from 'net';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
-import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
+import ProjectWebhook, { WEBHOOK_EVENTS } from '../models/tenancy/projectWebhook.model.js';
 import WebhookDelivery from '../models/tenancy/webhookDelivery.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import { compiledModel } from './dynamicModels.function.js';
@@ -18,7 +18,10 @@ import { currentScope, runInScope } from './tenantScope.function.js';
  *
  * with these headers, the signature over `<timestamp>.<raw body>`:
  *
- *   x-mint-event      create | update | delete | test
+ *   x-mint-event      create | update | delete | publish | unpublish | test
+ *
+ * publish / unpublish (docs/cms CMS-09): a drafts model's record went live
+ * (`record` is what was published) or was taken off (`record` is its draft).
  *   x-mint-delivery   the delivery's id (the same on every retry)
  *   x-mint-timestamp  seconds since 1970
  *   x-mint-signature  sha256=<hex HMAC-SHA256 with the webhook's secret>
@@ -224,7 +227,7 @@ const payloadOf = async (event: string, route: string, source: string, record: a
  */
 export const fireWebhooks = ({ route, model, event, doc, source }: { route?: string; model?: string; event: string; doc: any; source: 'panel' | 'api' }) => {
 	const scope = currentScope();
-	if (!scope?.project || !['create', 'update', 'delete'].includes(event) || !doc) return;
+	if (!scope?.project || !(WEBHOOK_EVENTS as readonly string[]).includes(event) || !doc) return;
 	const snapshot = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
 	setImmediate(() =>
 		runInScope(scope, async () => {

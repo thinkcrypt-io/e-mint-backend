@@ -5,6 +5,7 @@ import { grants } from '../library/functions/tenantPermissions.function.js';
 import recordHistory from '../library/functions/recordHistory.function.js';
 import { dataModelOf } from '../library/functions/dynamicModels.function.js';
 import { publishRecord, statusOf } from '../library/functions/drafts.function.js';
+import { afterPublish } from '../library/functions/publishEvents.function.js';
 import { KIT_ROUTES, kitModel } from '../library/siteBuilder/kit.js';
 import { slugPart } from '../library/siteBuilder/connect.js';
 import { contentTypes, ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
@@ -242,7 +243,13 @@ router.post(
 		if (page && page !== SITE && !isId(page)) throw new TenancyError(404, 'No such page');
 		const recs: any[] = await k.Model.find({ archivedAt: null, ...(ids ? { _id: { $in: ids } } : pageCond(page)) }, { updatedAt: 1, _publishedAt: 1, _publishedFrom: 1 }).lean();
 		let published = 0;
-		for (const r of recs) if (statusOf(r) !== 'published' && (await publishRecord(k.Model, r._id, req.user))) published++;
+		for (const r of recs) {
+			if (statusOf(r) === 'published') continue;
+			const out = await publishRecord(k.Model, r._id, req.user);
+			if (!out) continue;
+			published++;
+			afterPublish(k.Model, 'publish', out.doc);
+		}
 		return { message: published ? `${published} published` : 'Everything here is live already', published };
 	})
 );

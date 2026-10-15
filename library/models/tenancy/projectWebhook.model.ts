@@ -11,7 +11,8 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  * A webhook without a URL is kept switched off (a template can make one and
  * leave the address to the project).
  */
-export const WEBHOOK_EVENTS = ['create', 'update', 'delete'] as const;
+/** publish / unpublish: a drafts model's record went live or was taken off (docs/cms CMS-09). */
+export const WEBHOOK_EVENTS = ['create', 'update', 'delete', 'publish', 'unpublish'] as const;
 
 const schema = new Schema<any>(
 	{
