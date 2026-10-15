@@ -47,6 +47,14 @@ const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
 export const tenantLead = (permissions: string[], projectType?: string): SidebarItemType[] =>
 	projectType === 'api' ? section('API', 'plug-zap', apiItems(key => grants(permissions, [key]))) : [];
 
+/**
+ * The content manager (docs/cms CMS-07): straight after the Dashboard when the
+ * project has content — single types, or models whose records are drafts
+ * until published (a website always has its Contents).
+ */
+export const tenantContent = (hasContent: boolean): SidebarItemType[] =>
+	hasContent ? section('Content', 'file-pen-line', [{ title: 'All content', href: '/content', icon: 'files' }]) : [];
+
 export const tenantNav = (
 	permissions: string[],
 	{ inProject, projectType, guest }: { inProject: boolean; projectType?: 'app' | 'website' | 'api'; guest?: boolean }

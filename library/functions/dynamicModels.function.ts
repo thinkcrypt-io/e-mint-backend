@@ -1056,13 +1056,28 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 	if (def.access?.enabled) Object.assign(settings, accessSettings(def));
 
 	// Drafts and publishing (docs/cms D5): when it last went live — empty while a draft.
-	if (def.draftAndPublish)
+	if (def.draftAndPublish) {
 		settings._publishedAt = {
 			title: 'Published',
 			type: 'date',
 			sort: true,
 			schema: { type: 'date', default: true, displayInTable: true, sort: true },
 		};
+		// Where each record stands (worked out per row by the list, CMS-07); the filter asks ?publishStatus=.
+		settings._status = {
+			title: 'Status',
+			type: 'string',
+			schema: { type: 'text', default: true, displayInTable: true, tableType: 'tag', viewType: 'tag' },
+			filter: {
+				name: '_status',
+				field: 'publishStatus',
+				type: 'select',
+				label: 'Status',
+				title: 'Filter by status',
+				options: PUBLISH_STATUSES.map(([value, label]) => ({ value, label })),
+			},
+		};
+	}
 
 	settings.createdAt = {
 		title: 'Created',
@@ -1073,6 +1088,13 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 
 	return settings;
 };
+
+/** A drafts record's statuses, as lists show and filter them (docs/cms D5, CMS-07). */
+export const PUBLISH_STATUSES = [
+	['draft', 'Draft'],
+	['published', 'Published'],
+	['modified', 'Changes not published'],
+] as const;
 
 /** The input type a section's own field gets in the form. */
 const SUB_INPUT: Partial<Record<FieldKind, string>> = {
@@ -1251,7 +1273,7 @@ export const generateConfig = (def: ModelDef) => {
 			...code,
 			...def.fields.filter(f => f.showInTable !== false).map(f => f.key),
 			...(restricted ? ['privacy', 'addedBy'] : []),
-			...(def.draftAndPublish ? ['_publishedAt'] : []),
+			...(def.draftAndPublish ? ['_status', '_publishedAt'] : []),
 			'createdAt',
 		],
 		form: [{ sectionTitle: 'Details', fields: generateFormRows(def.fields) }, ...(restricted ? [ACCESS_FORM_SECTION] : [])],

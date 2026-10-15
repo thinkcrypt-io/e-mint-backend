@@ -172,3 +172,14 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - `migratePublishRight.js --apply` run on production (37 organization roles that edit got `records:publish`; re-checked: 0
   left). `migrateSiteContents.js` dry run on production: 10 website projects, none typed yet — **apply right after the
   backend deploy**, not before (the old backend can't compile a Contents model with a `blocks` field).
+
+## 2026-10-15 — CMS-07 Content manager
+- Backend: `routes-tenant/content.router.ts` (/content: website Contents, single types, drafts collections with total /
+  draft / modified / last edit, only models the member may see); sidebar section Content → All content after the
+  Dashboard (websites, or any project with drafts or single models — `tenantContent`); drafts models get a `_status`
+  column (Draft / Published / Changes not published, worked out per row in controllers/common/getAllDocuments) and a
+  `publishStatus` filter (filter middleware); getById adds `_publishedBy`. Admin: `/<project>/content` → dashboard.
+- Panel: `/content` page; Menu → Publish for ticked rows on drafts models (needs publish-<route>); record page meta
+  "Published 2h ago by Ana"; ⌘S saves forms.
+- Verified: cms-drafts (now with CMS-07 checks) passes. Visual check of /content was in progress when the session
+  limit neared — re-check next session.

@@ -95,6 +95,26 @@ await call('PUT', P(`/${author.route}/${ana._id}`), { name: 'Ana Maria' }, s.pat
 r = await pub(`/${author.route}/${ana._id}`);
 ok('…and edits are drafts from then on', r.body?.name === 'Ana', JSON.stringify(r.body));
 
+/* ---- CMS-07: the content manager */
+r = await call('GET', P(`/${route}?limit=50`), null, s.pat);
+ok('the list says where each record stands', (r.body?.doc || []).every(d => ['Draft', 'Published', 'Changes not published'].includes(d._status)), JSON.stringify((r.body?.doc || []).map(d => d._status)));
+await call('PUT', P(`/${route}/${a1._id}`), { title: 'Edited again' }, s.pat);
+r = await call('GET', P(`/${route}?publishStatus=modified`), null, s.pat);
+ok('…filtered to the changed ones', r.body?.doc?.length === 1 && r.body.doc[0]._id === a1._id && r.body.doc[0]._status === 'Changes not published', JSON.stringify(r.body?.doc?.map(d => d.title)));
+r = await call('GET', P(`/${route}?publishStatus=draft`), null, s.pat);
+ok('…to the never published', r.body?.doc?.length === 1 && r.body.doc[0]._id === a2._id, JSON.stringify(r.body?.doc?.map(d => d.title)));
+r = await call('GET', P(`/${route}?publishStatus=published`), null, s.pat);
+ok('…to the live and unchanged', r.body?.doc?.length === 0, JSON.stringify(r.body?.doc?.map(d => d.title)));
+r = await call('GET', P(`/${route}/get/schema`), null, s.pat);
+ok('…a Status column', r.body?._status?.tableType === 'tag', JSON.stringify(r.body?._status));
+r = await call('GET', P(`/${route}/get/filters`), null, s.pat);
+ok('…and its filter', JSON.stringify(r.body).includes('publishStatus'), JSON.stringify(r.body).slice(0, 300));
+r = await call('GET', P('/content'), null, s.pat);
+const art2 = r.body?.collections?.find(c => c.route === route);
+ok('All content: the collections with how many aren’t live', r.status === 200 && art2?.total === 2 && art2.modified === 1 && art2.draft === 1 && art2.waiting === 2 && art2.last?.name === 'Edited again', JSON.stringify(r.body).slice(0, 300));
+r = await call('GET', P('/sidebar/web/server'), null, s.pat);
+ok('…in the sidebar, after the Dashboard', JSON.stringify(r.body).includes('"href":"/content"'), JSON.stringify(r.body).slice(0, 200));
+
 /* ---- D11: Publish is a right of its own */
 r = await call('GET', '/tenant/api/org/permissions', null, s.pat);
 ok('Publish is a standard permission', r.body?.organization?.some(p => p.key === 'records:publish'), JSON.stringify(r.body?.organization?.map(p => p.key)));

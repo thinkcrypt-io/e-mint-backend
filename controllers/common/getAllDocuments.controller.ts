@@ -1,5 +1,7 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
+import { statusOf } from '../../library/functions/drafts.function.js';
+import { PUBLISH_STATUSES } from '../../library/functions/dynamicModels.function.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -38,8 +40,16 @@ const getAllDocuments = ({
 				.limit(limit)
 				.skip(skip);
 
-			const doc = await listQuery.exec();
+			let doc: any[] = await listQuery.exec();
 			const count: number = await model.countDocuments(query);
+
+			// A drafts model's rows say where each stands (docs/cms D5, CMS-07) — read apart, whatever `fields` picked.
+			if (doc.length && model.schema.path('_publishedFrom')) {
+				const dates: any[] = await model.find({ _id: { $in: doc.map(d => d._id) } }, { _publishedAt: 1, _publishedFrom: 1, updatedAt: 1 }).lean();
+				const by = new Map(dates.map(d => [String(d._id), statusOf(d)]));
+				const label: Record<string, string> = Object.fromEntries(PUBLISH_STATUSES);
+				doc = doc.map(d => ({ ...(typeof d.toJSON === 'function' ? d.toJSON() : d), _status: label[by.get(String(d._id)) || 'draft'] }));
+			}
 
 			req.meta.docsInPage = doc.length;
 			req.meta.totalDocs = count;

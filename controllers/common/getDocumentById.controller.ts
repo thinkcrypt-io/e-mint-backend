@@ -44,6 +44,12 @@ const getDocumentById = ({ model, populate, select, exclude }: EndwareType) => {
 				return res.status(404).json({ message: 'Document Not Found' });
 			}
 
+			// A drafts record says who last published it (docs/cms D5, CMS-07) — the snapshot itself stays out.
+			if (model.schema.path('_publishedFrom') && (data as any)._publishedAt) {
+				const pub: any = await model.findById(id).select('_published.byName').lean();
+				return res.status(200).json({ ...data.toJSON(), _publishedBy: pub?._published?.byName || '' });
+			}
+
 			// If a document is found, return it with a 200 OK response.
 			return res.status(200).json(data);
 		} catch (error: any) {

@@ -10,7 +10,9 @@ import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
 import { makePdfTemplatesRouter } from '../library/controllers/pdfTemplates/_index.js';
 import { buildSidebar } from '../library/controllers/config/getAdminSidebar.controller.js';
-import { tenantLead, tenantNav } from '../library/functions/tenantNav.function.js';
+import { tenantContent, tenantLead, tenantNav } from '../library/functions/tenantNav.function.js';
+import ModelDefinition from '../library/models/builder/modelDefinition.model.js';
+import contentRouter from './content.router.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import defineRoutes from '../routes-admin/common/router.js';
 import SidebarCategory from '../library/models/sidebarcategories/model.js';
@@ -127,7 +129,8 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		// An API project leads with its API, straight after the dashboard (T-09).
 		const [home, ...own] = project;
 		const lead = tenantLead(req.permissions || [], req.project.type);
-		return res.status(200).json([home, ...lead, ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
+		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
+		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);
 		return res.status(500).json({ message: 'Something went wrong' });
@@ -191,6 +194,8 @@ router.use(
 router.use('/site-builder', siteBuilderRouter);
 // The website's contents, typed and by page (docs/cms D1, CMS-06).
 router.use('/site-contents', siteContentsRouter);
+// The content manager's home (docs/cms CMS-07).
+router.use('/content', contentRouter);
 // A website project's analytics (events from /public/track.js).
 router.use('/analytics', analyticsRouter);
 // …and its setup: tags, code, SEO, redirects, headers, domains (WO-34).

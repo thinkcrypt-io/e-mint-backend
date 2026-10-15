@@ -9,7 +9,7 @@ type QueryType = {
 };
 
 // The list's own parameters — never read as a field of the same name.
-const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip', 'archived'];
+const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip', 'archived', 'publishStatus'];
 const MATCH_OPS = ['in', 'ne'];
 
 const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryType) => {
@@ -71,6 +71,19 @@ const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryTyp
 			const archived = (req as any).query?.archived;
 			if (archived === 'only') query.archivedAt = { $ne: null };
 			else if (archived !== 'all') query.archivedAt = null;
+
+			// Drafts and publishing (docs/cms D5, CMS-07): ?publishStatus=draft|published|modified.
+			const status = (req as any).query?.publishStatus;
+			const changed = { $gt: ['$updatedAt', '$_publishedFrom'] };
+			const byStatus: any =
+				status === 'draft'
+					? { _publishedAt: null }
+					: status === 'published'
+					? { _publishedAt: { $ne: null }, $expr: { $not: [changed] } }
+					: status === 'modified'
+					? { _publishedAt: { $ne: null }, $expr: changed }
+					: null;
+			if (byStatus) query.$and = [...(query.$and || []), byStatus];
 
 			(req as any).queryHelper = query;
 			// (req as any).meta.allowSort = allowSort;
