@@ -4,7 +4,7 @@ import ComponentDefinition from '../../models/builder/componentDefinition.model.
 import { ModelDefinition } from '../../models/builder/_index.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { recordProjectEvent } from '../../functions/recordHistory.function.js';
-import { checkComponentFields, refreshComponentUsers } from './models.controller.js';
+import { checkComponentFields, refreshComponentUsers, updateModelCore } from './models.controller.js';
 
 /**
  * Build → Components (docs/cms D3, CMS-03): groups of fields made once and
@@ -15,6 +15,7 @@ import { checkComponentFields, refreshComponentUsers } from './models.controller
  *   POST   /components            { category, name, title, description?, icon?, fields }
  *   PUT    /components/:id        the same; `category` and `name` (its uid) stay
  *   DELETE /components/:id        refused while a model uses it, naming them
+ *   POST   /models/:id/make-component  { field, category, name, title } — a section made reusable
  *
  * Its fields are checked as a model's are (COMPONENT_KINDS); a change
  * recompiles every model using it and regenerates their forms.
@@ -181,6 +182,66 @@ export const deleteComponent = async (req: any, res: Response) => {
 		await syncDynamicModels({ app: req.app, force: true });
 		recordProjectEvent({ req, action: 'delete', model: 'Component', modelPath: 'components', document: c._id, name: c.title, text: `deleted the component ${c.title}` });
 		return res.json({ message: 'Component deleted' });
+	} catch (e: any) {
+		return fail(res, 500, e?.message || 'Something went wrong');
+	}
+};
+
+/**
+ * "Make reusable" (docs/cms D3, CMS-03b): a model's section or list of rows
+ * becomes a component — made from its fields — and the field uses it, once or
+ * as a list as it was. The records don't change: a component is stored just
+ * as the section was. Other models can then use the same component.
+ */
+export const makeReusable = async (req: any, res: Response) => {
+	try {
+		if (!isId(req.params.id)) return fail(res, 404, 'Model not found');
+		const def: any = await ModelDefinition.findById(req.params.id).lean();
+		if (!def) return fail(res, 404, 'Model not found');
+		const b = req.body || {};
+		const f = (def.fields || []).find((x: any) => x.key === b.field);
+		if (!f) return fail(res, 400, `${def.title} has no field “${b.field || ''}”`);
+		if (f.kind !== 'section' && f.kind !== 'sectionlist') return fail(res, 400, `${f.label || f.key} isn’t a section or a list of rows`);
+		const made = await saveComponentCore(req, null, {
+			category: b.category || 'shared',
+			name: b.name || b.title || f.label || f.key,
+			title: String(b.title || f.label || f.key),
+			description: b.description || '',
+			icon: b.icon || '',
+			fields: (f.fields || []).map(({ _id, ...x }: any) => x),
+		});
+		if (made.status !== 201) return res.status(made.status).json(made.body);
+		const uid = made.body.uid;
+		const field = {
+			key: f.key,
+			label: f.label,
+			kind: 'component',
+			component: uid,
+			repeatable: f.kind === 'sectionlist',
+			...(f.helper && { helper: f.helper }),
+			...(f.showInTable !== undefined && { showInTable: f.showInTable }),
+			...(f.kind === 'sectionlist' && f.addLabel && { addLabel: f.addLabel }),
+		};
+		const input = {
+			title: def.title,
+			description: def.description || '',
+			displayField: def.displayField || '',
+			kind: def.kind,
+			draftAndPublish: def.draftAndPublish,
+			code: def.code,
+			access: def.access,
+			fields: def.fields.map(({ _id, ...x }: any) => (x.key === f.key ? field : x)),
+		};
+		try {
+			const { before, ...result } = await updateModelCore(req, def._id, input, { note: `Before making ${f.label || f.key} reusable` });
+			recordProjectEvent({ req, action: 'update', model: 'Model', modelPath: 'model-builder', document: def._id, name: def.title, text: `made ${f.label || f.key} of ${def.title} the component ${made.body.title}` });
+			return res.status(200).json({ component: made.body, model: (result as any).doc });
+		} catch (e: any) {
+			// The model kept its section: the component made for it goes again.
+			await ComponentDefinition.deleteOne({ uid });
+			await syncDynamicModels({ app: req.app, force: true });
+			return fail(res, e?.status || 400, e?.message || 'The model couldn’t use the component', e?.problems);
+		}
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Something went wrong');
 	}

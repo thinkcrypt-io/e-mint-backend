@@ -30,7 +30,7 @@ import {
 } from './models.controller.js';
 import { syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { aiBuildModel } from './ai.controller.js';
-import { createComponent, deleteComponent, getComponent, listComponents, updateComponent } from './components.controller.js';
+import { createComponent, deleteComponent, getComponent, listComponents, makeReusable, updateComponent } from './components.controller.js';
 import {
 	aiPlanFeature,
 	buildFeaturePlan,
@@ -103,6 +103,8 @@ export const makeBuilderRouter = ({ view, edit, keys, tenant }: Guards) => {
 	router.post('/components', ...edit, createComponent);
 	router.put('/components/:id', ...edit, updateComponent);
 	router.delete('/components/:id', ...edit, deleteComponent);
+	// A model's section made a component (CMS-03b).
+	router.post('/models/:id/make-component', ...edit, makeReusable);
 
 	// Features: several models and their links, planned and built together (features.service.ts).
 	router.get('/features', ...view, listFeatures);

@@ -213,9 +213,22 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   **Edit forms showed a saved link's picker empty** (every picker, not only these): the combobox writes a name only on a
   pick — VDataMenu now fills it once the saved record is in the list (controlled `inputValue`).
 - Docs: mint-docs Models → Components → Links and components inside a component; website changelog.
-- Verified: `cms-components-nested.mjs` (21 checks) passes; cms-components, cms-blocks, cms-single, cms-drafts, models,
+- Verified: `cms-components-nested.mjs` (20 checks) passes; cms-components, cms-blocks, cms-single, cms-drafts, models,
   api-builder, automations, webhooks, site-builder-data, website, cms-site-contents, public-filters pass. Headless
   Chrome: the component editor with links and a component inside, a record page with linked names and the inner
   group, the edit form (both pickers named), a new pick saved.
 - Not yet: links inside a component on the public API come as ids (CMS-09 `populate`); "make reusable"; templates
   carrying components.
+
+## 2026-10-15 — CMS-03b Make a section reusable
+- Backend: `POST /builder/models/:id/make-component { field, category, name, title }` (components.controller
+  `makeReusable`): a saved section / section list becomes a component made from its fields (saveComponentCore — the
+  usual checks and uid rules), and the field becomes kind component (`repeatable` for a list, label, helper, add label
+  kept) through updateModelCore (a RouteVersion snapshot, recompile, copies regenerated). Records are untouched — a
+  component is stored as the section was. If the model change fails, the component made for it is removed.
+- Panel (mint-tenant): "Make reusable" under a saved section / list on the model's Fields tab →
+  `MakeReusableDialog` (title, address category.name; asks to save other changes first) → `makeSectionReusable`.
+- Docs: mint-docs Models → Components → Make a section reusable; website changelog.
+- Verified: cms-components-nested.mjs now 29 checks (a section and a list made components, a non-section and a taken
+  name refused with the model left as it was, records read the same, the component's rules hold). Headless Chrome:
+  the dialog, then the field shown as Component · Venue · One with nothing unsaved; the record unchanged.

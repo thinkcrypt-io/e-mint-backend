@@ -1,7 +1,8 @@
 // CMS-03b (docs/cms D3): components inside components and links inside components. A component may hold another
 // whose fields are all plain (once or as a list), and links to the project's records; records save and read them with
 // the linked names filled in; the form gets a record picker; a change to the inner one reaches the models using the
-// outer one; neither can be deleted while used; depth stays at one level.
+// outer one; neither can be deleted while used; depth stays at one level. "Make reusable": a model's section or list of
+// rows becomes a component, its records unchanged.
 // Uses projects.mjs's state (pat); makes its own project.
 import { call, ok, done, load } from './lib.mjs';
 const s = load();
@@ -95,4 +96,34 @@ const listed = (r.body?.doc || []).find(c => c.uid === 'shared.button');
 ok('the inner one lists the component using it', listed?.usedBy?.some(u => u.component === 'content.quote'), JSON.stringify(listed?.usedBy));
 r = await call('DELETE', B(`/components/${button._id}`), null, s.pat);
 ok('…and can’t be deleted while it’s there', r.status === 400 && /Quote \(a component\)/.test(r.body?.message), r.body?.message);
+
+/* ---- make reusable */
+r = await call('POST', B('/models'), { name: 'Event', title: 'Events', fields: [
+	{ key: 'title', label: 'Title', kind: 'text', required: true },
+	{ key: 'venue', label: 'Venue', kind: 'section', fields: [{ key: 'place', label: 'Place', kind: 'text', required: true }, { key: 'seats', label: 'Seats', kind: 'number' }] },
+	{ key: 'speakers', label: 'Speakers', kind: 'sectionlist', addLabel: 'Add speaker', fields: [{ key: 'name', label: 'Name', kind: 'text' }, { key: 'photo', label: 'Photo', kind: 'image' }] },
+] }, s.pat);
+const ev = r.body?.doc;
+ok('a model with a section and a list of rows', r.status === 201, JSON.stringify(r.body?.problems || r.body?.message));
+const evRec = (await call('POST', P(`/${ev.route}`), { title: 'Launch', venue: { place: 'Dhaka', seats: 80 }, speakers: [{ name: 'Ana' }, { name: 'Bo', photo: 'bo.jpg' }] }, s.pat)).body?.doc;
+r = await call('POST', B(`/models/${ev._id}/make-component`), { field: 'title' }, s.pat);
+ok('only a section can be made reusable', r.status === 400 && /isn’t a section/.test(r.body?.message), r.body?.message);
+r = await call('POST', B(`/models/${ev._id}/make-component`), { field: 'venue', category: 'shared', name: 'venue', title: 'Venue' }, s.pat);
+ok('a section made a component', r.status === 200 && r.body?.component?.uid === 'shared.venue' && r.body.component.fields.length === 2 && r.body.model?.fields?.find(f => f.key === 'venue')?.component === 'shared.venue', JSON.stringify(r.body).slice(0, 300));
+r = await call('POST', B(`/models/${ev._id}/make-component`), { field: 'speakers', category: 'shared', name: 'speaker', title: 'Speaker' }, s.pat);
+const spk = r.body?.model?.fields?.find(f => f.key === 'speakers');
+ok('…and a list of rows, as a list', r.status === 200 && spk?.kind === 'component' && spk.repeatable === true && spk.addLabel === 'Add speaker', JSON.stringify(spk));
+r = await call('POST', B(`/models/${ev._id}/make-component`), { field: 'venue', category: 'shared', name: 'venue2' }, s.pat);
+ok('a field that’s a component already is refused', r.status === 400, r.body?.message);
+r = await call('GET', P(`/${ev.route}/${evRec._id}`), null, s.pat);
+ok('its records read as before', r.body?.venue?.place === 'Dhaka' && r.body.venue.seats === 80 && r.body.speakers?.map(x => x.name).join() === 'Ana,Bo' && r.body.speakers[1].photo === 'bo.jpg', JSON.stringify(r.body).slice(0, 300));
+r = await call('PUT', P(`/${ev.route}/${evRec._id}`), { venue: { place: '', seats: 5 } }, s.pat);
+ok('…and the component’s rules hold', r.status === 400 && /Place/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await call('POST', B('/components'), { category: 'shared', name: 'venue', title: 'Again', fields: [{ key: 'a', label: 'A', kind: 'text' }] }, s.pat);
+r = await call('POST', B('/models'), { name: 'Meetup', title: 'Meetups', fields: [{ key: 'title', label: 'Title', kind: 'text' }, { key: 'where', label: 'Where', kind: 'section', fields: [{ key: 'x', label: 'X', kind: 'text' }] }] }, s.pat);
+const meet = r.body?.doc;
+r = await call('POST', B(`/models/${meet._id}/make-component`), { field: 'where', category: 'shared', name: 'venue' }, s.pat);
+ok('a name already taken is refused, the model left as it was', r.status === 400 && /already a component/.test(r.body?.message), r.body?.message);
+r = await call('GET', B(`/models/${meet._id}`), null, s.pat);
+ok('…its section still a section', (r.body?.doc || r.body)?.fields?.find(f => f.key === 'where')?.kind === 'section', JSON.stringify((r.body?.doc || r.body)?.fields));
 done();
