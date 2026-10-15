@@ -183,3 +183,15 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   "Published 2h ago by Ana"; ⌘S saves forms.
 - Verified: cms-drafts (now with CMS-07 checks) passes. Visual check of /content was in progress when the session
   limit neared — re-check next session.
+
+## 2026-10-15 — CMS-07 on screen: fixes
+- Checked All content and a drafts model's table in headless Chrome (desktop and phone). Found and fixed:
+  - **No row ticks on a drafts model's table**, so bulk Publish couldn't be reached — row selection is a page
+    setting (`route.select`) builder models never had. `/get/route` now turns it on for a drafts model unless the
+    page's own settings set `select` (getPageRoute.controller.ts). Smoke: cms-drafts checks it.
+  - **Status column empty**: the `tag` cell drew only lists. `_status` now uses coloured tags (`colorTags`, Draft grey,
+    Changes not published orange, Published green); mint-tenant's TagCell takes a single value too, and a long tag
+    shortens in a narrow column (full words on hover) instead of running into the next.
+  - mint-tenant: Panel's title and subtitle are divs (an icon in the title was a `<div>` inside a `<p>`, a hydration
+    error on All content); table columns sharing a dataKey (a photo column keyed by the name) no longer share a React
+    key.

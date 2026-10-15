@@ -1067,7 +1067,17 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 		settings._status = {
 			title: 'Status',
 			type: 'string',
-			schema: { type: 'text', default: true, displayInTable: true, tableType: 'tag', viewType: 'tag' },
+			// Coloured like any choice (colorTags): Draft grey, Changes not published orange, Published green.
+			schema: {
+				type: 'text',
+				default: true,
+				displayInTable: true,
+				tableType: 'tag',
+				viewType: 'tag',
+				colorTags: true,
+				options: PUBLISH_STATUSES.map(([, label]) => ({ value: label, label })),
+				optionColors: { Draft: 'gray', Published: 'green', 'Changes not published': 'orange' },
+			},
 			filter: {
 				name: '_status',
 				field: 'publishStatus',

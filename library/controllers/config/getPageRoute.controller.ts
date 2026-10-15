@@ -34,8 +34,10 @@ const getPageRoute = ({ config, route }: { config?: ConfigType; route?: string }
 			} else {
 				// A single type's page opens its one record instead of a table (docs/cms D2).
 				const def: any = await ModelDefinition.findOne({ route: config.route.path || route }, { kind: 1, draftAndPublish: 1 }).lean();
-				// …and a drafts model's records show their status, with Publish (docs/cms D5).
-				return res.status(200).json({ ...config.route, ...(def?.kind === 'single' && { single: true }), ...(def?.draftAndPublish && { draftAndPublish: true }) });
+				// …and a drafts model's records show their status, with Publish (docs/cms D5) — rows can be
+				// ticked to publish several at once, unless the page's own settings say otherwise (CMS-07).
+				const drafts = def?.draftAndPublish && { draftAndPublish: true, ...(!config.route.select && { select: { show: true, menu: [] } }) };
+				return res.status(200).json({ ...config.route, ...(def?.kind === 'single' && { single: true }), ...drafts });
 			}
 		} catch (e: any) {
 			console.error(e.message);

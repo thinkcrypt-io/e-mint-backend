@@ -33,6 +33,7 @@ const route = art.route;
 await call('PUT', B(`/models/${art._id}/public-api`), { enabled: true, actions: ['list', 'get'], auth: 'none' }, s.pat);
 r = await call('GET', P(`/${route}/get/route`), null, s.pat);
 ok('its page says drafts', r.body?.draftAndPublish === true, JSON.stringify(r.body));
+ok('…and its rows can be ticked (bulk Publish)', r.body?.select?.show === true, JSON.stringify(r.body?.select));
 r = await call('GET', P(`/${route}/get/schema`), null, s.pat);
 ok('…with a Published column', /"_publishedAt"/.test(JSON.stringify(r.body)) || r.body?._publishedAt, JSON.stringify(r.body).slice(0, 200));
 
