@@ -146,3 +146,24 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   widgets(-cart), public-filters, api-builder, cms-* pass; jest connect tests pass. Headless Chrome: statuses, Publish
   the page.
 - Not yet (06c): moving old one-word records into typed ones, the builder's own pickers showing typed fields.
+
+## 2026-10-15 — CMS-06c Moving sites over
+- Backend: `library/siteBuilder/migrateContents.ts` — `migrateSiteContents` (per site, once: `draft.contentsMigratedAt`
+  on the design): each page's and layout's draft tree reads the panel's latest words, an old list of cards becomes a
+  typed Cards record, bindings to old records are dropped and the tree connected again (one typed record per section),
+  the new records published (the old words were live), the draft saved only over the rev it read (a page saved meanwhile
+  waits for the next run). Old records used by the site get `migratedAt` and stay for the live site; the site's Publish
+  archives the ones no live tree uses (`retireMigrated`). Runs when the builder opens (GET /design with Build), and for
+  every website with `scripts/migrateSiteContents.js` (dry run / `--apply`) — **run at the deploy that ships CMS-06**.
+  Re-connecting is idempotent (a section already bound makes no record; a row with no room places the word like a
+  word on its own). Site design is a single type (new sites; others when the builder opens and it holds one record).
+  Contents hides moved records.
+- The theme starters already make typed records (06b); header and footer are pieces of the Whole site. mint-builder and
+  mint-sites needed no change: bindings keep `{from:'content', slug, field}`, `field` a path, the old names aliased.
+- Verified: `cms-site-migrate.mjs` (16 checks) passes — the live site reads the old records until Publish, then the same
+  words from typed records, the old archived, a second open makes nothing new; the script's dry run and `--apply` on the
+  scratch database (40 sites, 749 typed records); a published old site's live words compared before / during / after
+  (unchanged, except a list of cards that showed nothing now shows its cards). site-builder(-data/-starter/-connect),
+  website(-mcp), templates-apply, cms-* pass.
+- Templates' website blueprints still write old-style blocks through `upsert_page` (coded sites read them by-path) —
+  CMS-15 moves them to typed ones.

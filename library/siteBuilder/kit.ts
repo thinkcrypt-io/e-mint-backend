@@ -4,9 +4,11 @@ import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import { compiledModel, syncDynamicModels } from '../functions/dynamicModels.function.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
+import { updateModelCore } from '../controllers/builder/models.controller.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { refPopulates, shape } from '../functions/publicRecords.function.js';
 import { liveFind, publishRecord, statusOf } from '../functions/drafts.function.js';
+import { ownRecordsOf } from '../functions/projectIndexes.function.js';
 import { loadManifest } from './manifest.js';
 import { EMPTY_SEO } from './site.js';
 
@@ -54,6 +56,7 @@ export const SITE_DESIGN_STEP = () => ({
 	name: 'SiteTheme',
 	route: KIT_ROUTES.design,
 	title: 'Site design',
+	kind: 'single',
 	description: 'The site’s theme, colours and fonts — the site builder reads and writes it',
 	buttonTitle: 'Add design',
 	displayField: 'name',
@@ -83,7 +86,18 @@ export const SITE_DESIGN_STEP = () => ({
 
 /** Adds the Site design model to a website project that doesn't have it (projects made before it existed). */
 export const ensureDesignModel = async (req: any) => {
-	if (await ModelDefinition.exists({ route: KIT_ROUTES.design })) return;
+	const have: any = await ModelDefinition.findOne({ route: KIT_ROUTES.design, active: { $ne: false } }).lean();
+	if (have) {
+		// One record, the site's look: a single type (docs/cms D2, CMS-06c) — its page opens the record, not a table.
+		if (have.kind !== 'single') {
+			const Model = compiledModel(have.name);
+			if (Model && (await Model.countDocuments()) <= 1) {
+				const { _id, name, route, sidebar, collectionName, createdAt, updatedAt, version, __v, organization, project, ...rest } = have;
+				await updateModelCore(req, have._id, { ...rest, kind: 'single' }, { note: 'Site design: a single type (CMS-06c)' }).catch((e: any) => console.error('site design single:', e?.message));
+			}
+		}
+		return;
+	}
 	const kitCategory: any = await ModelDefinition.findOne({ route: KIT_ROUTES.pages }, { sidebarCategory: 1 }).lean();
 	try {
 		await buildFeature(
@@ -488,7 +502,8 @@ export const orderContents = async (kitPage: any, tree: any[]) => {
 	};
 	visit(tree);
 	if (!seen.length) return 0;
-	const ops = seen.slice(0, 500).map((slug, order) => ({ updateOne: { filter: { slug, page: kitPage, archivedAt: null }, update: { $set: { order } } } }));
+	const own = ownRecordsOf(kit.Model);
+	const ops = seen.slice(0, 500).map((slug, order) => ({ updateOne: { filter: { ...own, slug, page: kitPage, archivedAt: null }, update: { $set: { order } } } }));
 	await kit.Model.collection.bulkWrite(ops as any);
 	return ops.length;
 };

@@ -1,3 +1,4 @@
+import { retireMigrated } from './migrateContents.js';
 import { publishContents } from './kit.js';
 import { draftTrees } from './site.js';
 import crypto from 'crypto';
@@ -126,6 +127,9 @@ export const publishSite = async ({ req, project, note = '' }: { req: any; proje
 	const design: any = await SiteDesign.findOne({}).lean();
 	const designSnap = designSnapshot(design.draft);
 	await SiteDesign.updateOne({ _id: design._id }, { $set: { published: { ...designSnap, rev: design.draft.rev, version, publishedAt } } });
+
+	// Old one-word Contents records the site moved off (docs/cms CMS-06c) and no live page uses now: archived.
+	await retireMigrated([...live.map(l => l.tree || []), ...draftTrees([], { draft: designSnap })]);
 
 	const by = req?.user || {};
 	await writeRelease({ version, note: String(note || '').slice(0, 300), publishedBy: by._id, publishedByName: by.name || '', publishedAt, design: designSnap, pages: live });

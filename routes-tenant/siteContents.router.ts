@@ -126,8 +126,9 @@ router.get(
 		if (page !== SITE && !isId(page)) throw new TenancyError(404, 'No such page');
 		const [pages, counts, recs, types] = await Promise.all([
 			pk ? pk.Model.find({ archivedAt: null }, { name: 1, path: 1, status: 1 }).sort({ path: 1 }).limit(300).lean() : [],
-			k.Model.find({ archivedAt: null }, { page: 1 }).limit(5000).lean(),
-			k.Model.find({ archivedAt: null, ...pageCond(page) })
+			k.Model.find({ archivedAt: null, migratedAt: { $exists: false } }, { page: 1 }).limit(5000).lean(),
+			// (old one-word records the site has moved off stay for the live site until its next Publish — not listed)
+			k.Model.find({ archivedAt: null, migratedAt: { $exists: false }, ...pageCond(page) })
 				.select('+_published')
 				.sort({ order: 1, createdAt: 1 })
 				.limit(500)

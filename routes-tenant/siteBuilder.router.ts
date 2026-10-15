@@ -14,6 +14,7 @@ import { dataModels, resolveCollections, sampleRecord } from '../library/siteBui
 import { applyStarter, isBlankSite, isUntouchedSite, starterSummaries } from '../library/siteBuilder/starter.js';
 import { connectNodes, layoutTrees, pushTreeContents, syncLayouts, syncPage } from '../library/siteBuilder/connect.js';
 import { ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
+import { migrateSiteContents } from '../library/siteBuilder/migrateContents.js';
 import { contentList, ensureDesignModel, orderContents, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
 
 /**
@@ -292,6 +293,8 @@ router.get(
 			await ensureDesignModel(req);
 			// Contents hold typed records from here on — new sections' words go into one per section (docs/cms D1).
 			await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
+			// A site from before content types: its one-word records into typed ones, once (CMS-06c).
+			await migrateSiteContents(req, { apply: true }).catch((e: any) => console.error('moving site contents:', e?.message));
 		}
 		return designWithUsage(await syncLayouts(await pullDesign(), { connect: build }));
 	})

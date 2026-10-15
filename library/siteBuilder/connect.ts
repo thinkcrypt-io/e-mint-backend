@@ -486,13 +486,13 @@ const connectTyped = (nodes: any[], o: ConnectOptions) => {
 				if (!value) continue;
 				if (value !== raw) node.props = { ...(node.props || {}), [prop]: value };
 				const isButton = (node.type === 'button' && prop === 'label') || (node.type === 'link' && prop === 'text');
-				if (row) {
-					const rowKinds = typeOf(row.r).rows!;
-					const cell = item(row.r).items[row.i];
-					const key = (isButton ? ['title', 'subTitle'] : ROW[sl.role]).find(k => rowKinds.has(k) && cell[k] === undefined);
-					if (!key) continue;
-					cell[key] = asKind(value, rowKinds.get(key));
-					if ((isButton || node.type === 'link') && typeof node.action?.href === 'string' && rowKinds.has('url') && cell.url === undefined) cell.url = node.action.href;
+				const rowKinds = row ? typeOf(row.r).rows! : null;
+				const cell = row ? item(row.r).items[row.i] : null;
+				// A row with no room for this word: it goes where a word on its own would (so nothing stays unbound).
+				const key = row ? (isButton ? ['title', 'subTitle'] : ROW[sl.role]).find(k => rowKinds!.has(k) && cell[k] === undefined) : undefined;
+				if (row && key) {
+					cell[key] = asKind(value, rowKinds!.get(key));
+					if ((isButton || node.type === 'link') && typeof node.action?.href === 'string' && rowKinds!.has('url') && cell.url === undefined) cell.url = node.action.href;
 					node.bind = { ...(node.bind || {}), [prop]: { from: 'content', slug: row.r.slug, field: `items.${row.i}.${key}` } };
 					continue;
 				}
@@ -505,13 +505,21 @@ const connectTyped = (nodes: any[], o: ConnectOptions) => {
 			}
 		};
 
-		/** Look-alike children of `p` (two or more, the same blocks in the same places) with words in them. */
+		/** Whether a block (or one inside it) has a word not bound yet — a part already connected is left as it is. */
+		const unbound = (top: any) => {
+			let found = false;
+			walk([top], t => {
+				for (const prop of Object.keys(slotsOf(t.type) || {})) if (!t.bind?.[prop] && typeof t.props?.[prop] === 'string' && t.props[prop] && !t.props[prop].includes('{{')) found = true;
+			});
+			return found;
+		};
+		/** Look-alike children of `p` (two or more, the same blocks in the same places) with words in them not bound yet. */
 		const rowsOf = (p: any) => {
 			const list: any[] = p.children || [];
 			if (list.length < MIN_CARDS || p.type === 'collection') return null;
 			const first = sig(list[0]);
 			if (list.some(c => !c || sig(c) !== first || c.type === 'collection' || c.type === 'section-ref')) return null;
-			return list.some(c => cardSlots(c).length) ? list : null;
+			return list.some(c => cardSlots(c).length) && list.some(unbound) ? list : null;
 		};
 		/** A record with room for rows: this one, or the extra Section. */
 		const rowHome = () => {
@@ -597,7 +605,7 @@ const connectTyped = (nodes: any[], o: ConnectOptions) => {
 					}
 				}
 				// One row-like block on its own (a single quote): a row when the type has rows.
-				if (ROW_BLOCKS.has(node.type) && typeOf(own()).rows && !rowsUsed) {
+				if (ROW_BLOCKS.has(node.type) && unbound(node) && typeOf(own()).rows && !rowsUsed) {
 					rowsUsed = true;
 					item(own()).items = [{}];
 					walk([node], t => bindNode(t, { r: own(), i: 0 }));
@@ -612,8 +620,10 @@ const connectTyped = (nodes: any[], o: ConnectOptions) => {
 		visit(holder, null);
 		nodes[i] = holder[0];
 	}
-	// A record nothing went into (its section had no words) isn't made.
-	return { nodes, records: records.filter(r => Object.keys(r.block[0]).length > 1), copies };
+	// A record nothing went into (its section had no words, or they were bound already) isn't made.
+	const hasWords = (r: Rec) =>
+		Object.entries(r.block[0]).some(([k, v]) => k !== '__component' && (Array.isArray(v) ? v.some(x => x && typeof x === 'object' && Object.keys(x).length) : true));
+	return { nodes, records: records.filter(hasWords), copies };
 };
 
 /* --------------------------------------------------------- with the DB */
@@ -656,7 +666,7 @@ export const connectNodes = async (nodes: any[], o: ConnectOptions & { page?: an
 	return { nodes: out.nodes, records: docs.length };
 };
 
-const saveNew = async (kit: any, docs: any[], kitPage: any, allowed: Set<string>) => {
+export const saveNew = async (kit: any, docs: any[], kitPage: any, allowed: Set<string>) => {
 	for (const d of docs) {
 		const fields: any = Object.fromEntries(Object.entries(d).filter(([k, v]) => allowed.has(k) && v !== undefined));
 		if (kitPage && allowed.has('page')) fields.page = kitPage;
@@ -786,7 +796,7 @@ export const pushTreeContents = async (before: any[][], after: any[][], page?: a
 
 /* ----------------------------------------------- pages and the layouts */
 
-const pageKeyOf = (page: any) => (page?.isHome || page?.path === '/' ? 'home' : slugPart(page?.name || '') || 'page');
+export const pageKeyOf = (page: any) => (page?.isHome || page?.path === '/' ? 'home' : slugPart(page?.name || '') || 'page');
 
 /**
  * A page as the builder opens it: what the panel changed in Contents read
