@@ -57,7 +57,8 @@ const fieldSchema = Joi.object({
 	exclude: Joi.boolean(),
 	min: Joi.number(),
 	max: Joi.number(),
-	populate: Joi.alternatives(Joi.string(), Joi.object()),
+	// A list for a component's links (CMS-03b): one entry per link inside it.
+	populate: Joi.alternatives(Joi.string(), Joi.object(), Joi.array().items(Joi.object()).max(40)),
 	// Worked out from linked records on read, never stored (rollups.function).
 	rollup: Joi.object({
 		// Empty while it's being set up — checkSettings names what's missing.
@@ -396,8 +397,8 @@ export const checkSettings = ({
 
 		// '+field' in a populate select forces a `select: false` field (a
 		// password) out of the other collection.
-		const select = typeof field.populate === 'object' ? field.populate?.select : undefined;
-		if (typeof select === 'string' && /(^|\s)\+/.test(select))
+		const selects = (Array.isArray(field.populate) ? field.populate : [field.populate]).map((p: any) => (p && typeof p === 'object' ? p.select : undefined));
+		if (selects.some((select: any) => typeof select === 'string' && /(^|\s)\+/.test(select)))
 			problems.push(`'${key}' populate can't force hidden fields ('+…') into the result.`);
 	}
 

@@ -28,7 +28,7 @@ const fail = (res: Response, status: number, message: string, problems?: string[
 /** The models using each component, by uid. */
 const usage = async () => {
 	const defs: any[] = await ModelDefinition.find({ 'fields.kind': { $in: ['component', 'blocks'] } }, { name: 1, title: 1, route: 1, fields: 1 }).lean();
-	const by = new Map<string, { _id: string; title: string; route: string; field: string; repeatable: boolean; blocks?: boolean }[]>();
+	const by = new Map<string, { _id: string; title: string; route: string; field: string; repeatable: boolean; blocks?: boolean; component?: string }[]>();
 	const add = (uid: string, entry: any) => {
 		if (!by.has(uid)) by.set(uid, []);
 		by.get(uid)!.push(entry);
@@ -40,6 +40,12 @@ const usage = async () => {
 			// A content blocks field that takes it (docs/cms D4).
 			if (f.kind === 'blocks') for (const c of f.components || []) add(c, { ...where, repeatable: true, blocks: true });
 		}
+	// A component holding it (CMS-03b).
+	const holders: any[] = await ComponentDefinition.find({ 'fields.kind': 'component' }, { uid: 1, title: 1, fields: 1 }).lean();
+	for (const h of holders)
+		for (const f of h.fields || [])
+			if (f.kind === 'component' && f.component)
+				add(f.component, { _id: String(h._id), title: h.title, route: '', field: f.label || f.key, repeatable: !!f.repeatable, component: h.uid });
 	return by;
 };
 
@@ -85,12 +91,12 @@ export const getComponent = async (req: any, res: Response) => {
 };
 
 /** The parts every save checks: title, description, icon and fields. */
-const common = async (req: any) => {
+const common = async (req: any, uid?: string) => {
 	const b = req.body || {};
 	const problems: string[] = [];
 	const title = String(b.title || '').trim().slice(0, 80);
 	if (!title) problems.push('Give the component a title');
-	const { fields, problems: fieldProblems } = await checkComponentFields(req, Array.isArray(b.fields) ? b.fields : []);
+	const { fields, problems: fieldProblems } = await checkComponentFields(req, Array.isArray(b.fields) ? b.fields : [], uid);
 	problems.push(...fieldProblems);
 	return {
 		problems,
@@ -109,7 +115,7 @@ export const saveComponentCore = async (req: any, id: string | null, body: any):
 		if (!isId(id)) return { status: 404, body: { message: 'Component not found' } };
 		const c: any = await ComponentDefinition.findById(id);
 		if (!c) return { status: 404, body: { message: 'Component not found' } };
-		const { problems, set } = await common(req);
+		const { problems, set } = await common(req, c.uid);
 		if (problems.length) return bad('The component isn’t valid', problems);
 		c.set({ ...set, version: (c.version || 1) + 1, updatedBy: req.user?._id });
 		await c.save();
@@ -124,7 +130,7 @@ export const saveComponentCore = async (req: any, id: string | null, body: any):
 	const problems: string[] = [];
 	if (!PART.test(category)) problems.push('The category is a short lowercase word, like “shared” or “content”');
 	if (!PART.test(name)) problems.push('The name is lowercase letters, digits and dashes, starting with a letter');
-	const { problems: more, set } = await common(req);
+	const { problems: more, set } = await common(req, `${category}.${name}`);
 	problems.push(...more);
 	if (problems.length) return bad('The component isn’t valid', problems);
 	const uid = `${category}.${name}`;
@@ -169,7 +175,7 @@ export const deleteComponent = async (req: any, res: Response) => {
 			return fail(
 				res,
 				400,
-				`${c.title} is used by ${used.map(u => `${u.title} (${u.field})`).join(', ')} — take it off those fields first.`
+				`${c.title} is used by ${used.map(u => `${u.title}${u.component ? ' (a component)' : ''} (${u.field})`).join(', ')} — take it off those fields first.`
 			);
 		await ComponentDefinition.deleteOne({ _id: c._id });
 		await syncDynamicModels({ app: req.app, force: true });

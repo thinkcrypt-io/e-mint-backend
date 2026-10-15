@@ -102,10 +102,26 @@ export const SUB_KINDS: FieldKind[] = [
 
 /**
  * What a component's own fields can be (docs/cms D3): a section's, plus rich
- * text, galleries, tags and media lists — and a group or list of rows one
- * level deep (its rows' fields are a section's: cards, questions, links).
+ * text, galleries, tags and media lists, links to records — and a group or
+ * list of rows one level deep (its rows' fields are a section's: cards,
+ * questions), or another component whose fields are all plain (CMS-03b).
  */
-export const COMPONENT_KINDS: FieldKind[] = [...SUB_KINDS, 'editor', 'images', 'files', 'video', 'tags', 'multiselect', 'section', 'sectionlist'];
+export const COMPONENT_KINDS: FieldKind[] = [
+	...SUB_KINDS,
+	'editor',
+	'images',
+	'files',
+	'video',
+	'tags',
+	'multiselect',
+	'reference',
+	'references',
+	'section',
+	'sectionlist',
+	'component',
+];
+/** Kinds that make a component hold fields of its own fields — what a component inside another may not have. */
+export const NESTING_KINDS: FieldKind[] = ['section', 'sectionlist', 'component', 'blocks'];
 
 /** Kinds whose value is short text — the ones that can name a record. */
 export const TEXT_KINDS: FieldKind[] = ['text', 'email', 'url', 'select'];
@@ -511,11 +527,13 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			case 'files':
 				p = { type: [{ type: String, trim: true, ...(enumRule && { enum: enumRule }) }], default: undefined };
 				break;
+			// A tenant's links name models of its own project, by their internal names — at any depth
+			// (a link inside a component, CMS-03b).
 			case 'reference':
-				p = { type: Schema.Types.ObjectId, ref: f.ref, set: idOnly };
+				p = { type: Schema.Types.ObjectId, ref: f.ref && internalModelName(f.ref), set: idOnly };
 				break;
 			case 'references':
-				p = { type: [{ type: Schema.Types.ObjectId, ref: f.ref }], set: idsOnly, default: undefined };
+				p = { type: [{ type: Schema.Types.ObjectId, ref: f.ref && internalModelName(f.ref) }], set: idsOnly, default: undefined };
 				break;
 			case 'section':
 				p = { type: new Schema(pathsOf(f.fields || []), { _id: false, minimize: false }), default: undefined };
@@ -607,28 +625,34 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 export const expandComponents = <T extends { fields: ModelFieldDef[] }>(def: T): T => {
 	if (!def?.fields?.some(f => f.kind === 'component' || f.kind === 'blocks')) return def;
 	const comps = reg().components;
+	return { ...def, fields: def.fields.map(f => expandField(f, comps)) };
+};
+
+/**
+ * One field with its components opened up: a component becomes a section (a
+ * list of rows when repeatable) of the component's fields — and a component
+ * inside that one the same, one level down (CMS-03b); content blocks learn
+ * what each allowed component is.
+ */
+const expandField = (f: ModelFieldDef, comps: Map<string, any>, depth = 0): ModelFieldDef => {
+	const inner = (fields: ModelFieldDef[] = []) => (depth < 2 ? fields.map(x => expandField(x, comps, depth + 1)) : fields);
+	// Content blocks keep their kind and learn what each allowed component is (docs/cms D4).
+	if (f.kind === 'blocks')
+		return {
+			...f,
+			blockTypes: (f.components || [])
+				.map(uid => comps.get(uid))
+				.filter(Boolean)
+				.map(c => ({ uid: c!.uid, title: c!.title, icon: c!.icon, description: c!.description, fields: inner(c!.fields) })),
+		};
+	if (f.kind !== 'component') return f;
+	const c = comps.get(String(f.component || ''));
 	return {
-		...def,
-		fields: def.fields.map(f => {
-			// Content blocks keep their kind and learn what each allowed component is (docs/cms D4).
-			if (f.kind === 'blocks')
-				return {
-					...f,
-					blockTypes: (f.components || [])
-						.map(uid => comps.get(uid))
-						.filter(Boolean)
-						.map(c => ({ uid: c!.uid, title: c!.title, icon: c!.icon, description: c!.description, fields: c!.fields })),
-				};
-			if (f.kind !== 'component') return f;
-			const c = comps.get(String(f.component || ''));
-			return {
-				...f,
-				kind: f.repeatable ? 'sectionlist' : 'section',
-				fields: (c?.fields || []) as ModelFieldDef[],
-				addLabel: f.addLabel || (f.repeatable ? `Add ${String(c?.title || 'item').toLowerCase()}` : undefined),
-			} as ModelFieldDef;
-		}),
-	};
+		...f,
+		kind: f.repeatable ? 'sectionlist' : 'section',
+		fields: inner((c?.fields || []) as ModelFieldDef[]),
+		addLabel: f.addLabel || (f.repeatable ? `Add ${String(c?.title || 'item').toLowerCase()}` : undefined),
+	} as ModelFieldDef;
 };
 
 /** The components this scope has, by uid (loaded with the models). */
@@ -987,13 +1011,13 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 			case 'section':
 				s.type = 'object';
 				s.schema.type = 'section-object';
-				s.schema.dataModel = dataModelOf(f.fields);
+				s.schema.dataModel = dataModelOf(f.fields, target);
 				s.schema.tableType = 'section-object';
 				s.schema.viewType = 'section-object';
 				break;
 			case 'sectionlist': {
 				s.type = 'array-object';
-				const dataModel = dataModelOf(f.fields);
+				const dataModel = dataModelOf(f.fields, target);
 				const texts = (f.fields || []).filter(x => ['text', 'email', 'url', 'select', 'textarea'].includes(x.kind));
 				s.schema.type = 'section-data-array';
 				s.schema.section = {
@@ -1021,7 +1045,7 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 					title: t.title,
 					icon: t.icon || '',
 					description: t.description || '',
-					dataModel: dataModelOf(t.fields),
+					dataModel: dataModelOf(t.fields, target),
 				}));
 				if (typeof f.max === 'number') s.schema.limit = f.max;
 				s.schema.tableType = 'data-array-count';
@@ -1035,6 +1059,10 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				s.schema.viewType = 'password';
 				break;
 		}
+
+		// Links to records inside a component's fields (CMS-03b) come back with their names, like a top-level link.
+		const inner = SECTION_KINDS.includes(f.kind) ? linksIn(f.key, f.fields, target) : f.kind === 'blocks' ? (f.blockTypes || []).flatMap(t => linksIn(f.key, t.fields, target)) : [];
+		if (inner.length) s.populate = [...new Map(inner.map(x => [x.path, x])).values()];
 
 		// Limited to a list: picked from it in the form, and filtered by it.
 		if (options) {
@@ -1129,15 +1157,41 @@ const SUB_INPUT: Partial<Record<FieldKind, string>> = {
 	file: 'file',
 };
 
+/** The populate options for the links among a group's fields, and its groups' (`items.author`, `hero.cta.page`). */
+const linksIn = (prefix: string, fields: ModelFieldDef[] = [], target: (ref?: string) => TargetInfo | null): { path: string; select: string }[] =>
+	fields.flatMap(x => {
+		if (REFERENCE_KINDS.includes(x.kind)) {
+			const display = target(x.ref)?.display || '_id';
+			return [{ path: `${prefix}.${x.key}`, select: display === '_id' ? '_id' : display }];
+		}
+		return SECTION_KINDS.includes(x.kind) ? linksIn(`${prefix}.${x.key}`, x.fields, target) : [];
+	});
+
 /**
  * A section's fields as the form draws them (and formula.function.ts reads
  * them): `{ name, label, type, isRequired, options, formula }`.
  */
-export const dataModelOf = (fields: ModelFieldDef[] = []): any[] =>
+export const dataModelOf = (fields: ModelFieldDef[] = [], target?: (ref?: string) => TargetInfo | null): any[] =>
 	fields.map(x => {
 		// A component's group or list of rows (one level deep): the section inputs, with their own fields.
 		if (x.kind === 'section')
-			return { name: x.key, label: x.label || humanize(x.key), type: 'section-object', kind: x.kind, dataModel: dataModelOf(x.fields), ...(x.helper && { helper: x.helper }) };
+			return { name: x.key, label: x.label || humanize(x.key), type: 'section-object', kind: x.kind, dataModel: dataModelOf(x.fields, target), ...(x.helper && { helper: x.helper }) };
+		// A link to records inside a component (CMS-03b): the record picker, told which model and what names it.
+		if (REFERENCE_KINDS.includes(x.kind)) {
+			const t = target?.(x.ref);
+			const display = t?.display || '_id';
+			return {
+				name: x.key,
+				label: x.label || humanize(x.key),
+				type: x.kind === 'reference' ? 'data-menu' : 'data-tag',
+				kind: x.kind,
+				model: t?.route || '',
+				menuKey: display,
+				labelKey: display,
+				...(x.required && { isRequired: true }),
+				...(x.helper && { helper: x.helper }),
+			};
+		}
 		if (x.kind === 'sectionlist') {
 			const texts = (x.fields || []).filter(y => ['text', 'email', 'url', 'select', 'textarea'].includes(y.kind));
 			return {
@@ -1150,7 +1204,7 @@ export const dataModelOf = (fields: ModelFieldDef[] = []): any[] =>
 					title: x.label || humanize(x.key),
 					addBtnText: x.addLabel || 'Add row',
 					display: { title: texts[0]?.key, description: texts[1]?.key, image: (x.fields || []).find(y => y.kind === 'image')?.key },
-					dataModel: dataModelOf(x.fields),
+					dataModel: dataModelOf(x.fields, target),
 				},
 			};
 		}
@@ -1430,13 +1484,10 @@ const compile = (def: ModelDef) => {
 	if (existing && !r.compiled.has(def.name))
 		throw new Error(`A model in code is already registered as ${def.name}`);
 	if (existing) dropCompiled(modelName);
-	// A tenant's references name models of its own project: point them at their internal names.
-	const schemaDef = currentScope()
-		? { ...def, fields: def.fields.map(f => (f.ref ? { ...f, ref: internalModelName(f.ref) } : f)) }
-		: def;
+	// A tenant's references name models of its own project: pathsOf points them at their internal names.
 	const Model = inProjectCollection(def)
-		? projectBase(currentScope()!.project).discriminator(modelName, buildSchema(schemaDef), { value: def.name, overwriteModels: true })
-		: mongoose.model(modelName, buildSchema(schemaDef), def.collectionName);
+		? projectBase(currentScope()!.project).discriminator(modelName, buildSchema(def), { value: def.name, overwriteModels: true })
+		: mongoose.model(modelName, buildSchema(def), def.collectionName);
 	r.compiled.set(def.name, { def, Model, stamp: stampOf(def), modelName });
 	r.failures.delete(def.name);
 	return Model;

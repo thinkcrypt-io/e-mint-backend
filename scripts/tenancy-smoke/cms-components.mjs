@@ -19,7 +19,7 @@ const B = path => P(`/builder${path}`);
 r = await call('POST', B('/components'), { category: 'shared', name: 'button', title: 'Button', fields: [] }, s.pat);
 ok('a component needs fields', r.status === 400 && /at least one field/i.test(JSON.stringify(r.body)), JSON.stringify(r.body));
 r = await call('POST', B('/components'), { category: 'shared', name: 'link', title: 'Link', fields: [{ key: 'to', label: 'To', kind: 'reference', ref: 'TenantUser' }] }, s.pat);
-ok('no links inside a component', r.status === 400 && /can't be of the kind “reference”|isn't a model/.test(JSON.stringify(r.body)), JSON.stringify(r.body));
+ok('a link inside a component names a model of the project', r.status === 400 && /isn't a model/.test(JSON.stringify(r.body)), JSON.stringify(r.body));
 r = await call('POST', B('/components'), { category: 'Shared', name: 'Button', title: 'Button', icon: 'mouse-pointer-click', fields: [
 	{ key: 'label', label: 'Label', kind: 'text', required: true },
 	{ key: 'url', label: 'Link', kind: 'url' },

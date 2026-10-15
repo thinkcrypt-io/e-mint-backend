@@ -93,12 +93,12 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 		EXPORT_OPTIONS: {
 			model: model,
 			populate:
-				configKeys.filter(key => config[key].populate).map(key => config[key].populate) || '',
+				configKeys.filter(key => config[key].populate).flatMap(key => config[key].populate) || '',
 		},
 		QUERY_OPTIONS: {
 			model: model,
 			populate:
-				configKeys.filter(key => config[key].populate).map(key => config[key].populate) || '',
+				configKeys.filter(key => config[key].populate).flatMap(key => config[key].populate) || '',
 			exclude:
 				configKeys
 					.filter(key => config[key].exclude)

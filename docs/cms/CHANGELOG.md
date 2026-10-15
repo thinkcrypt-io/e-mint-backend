@@ -195,3 +195,27 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   - mint-tenant: Panel's title and subtitle are divs (an icon in the title was a `<div>` inside a `<p>`, a hydration
     error on All content); table columns sharing a dataKey (a photo column keyed by the name) no longer share a React
     key.
+
+## 2026-10-15 — CMS-03b Links and components inside a component
+- Backend: COMPONENT_KINDS += reference, references, section, sectionlist, component; `NESTING_KINDS`. A component's checks
+  (`checkComponentFields(req, fields, uid)`): a link names a model of the project; a component inside is one of plain
+  fields (no NESTING_KINDS), never itself; one that sits inside another can't gain groups or components.
+  `expandComponents` → `expandField`, recursive one level (component fields and blocks' component types alike).
+  Links at any depth point at the project's internal model names in `pathsOf` (was only the model's own fields in
+  `compile`; the builder preview's field list shows plain names). Settings: `dataModelOf(fields, target)` gives a link
+  inside a group the record picker (`data-menu` / `data-tag`, `model`, `menuKey`, `labelKey`); a group's links populate
+  (`linksIn` → a list of populate options; lib + library constructConfig `flatMap` them; the settings validator takes
+  a list). Components' usage lists the components holding one; delete refused naming them; a change refreshes the
+  models using a component that holds it. MCP save_component describes the new kinds.
+- Panel (mint-tenant): COMPONENT_KINDS/NESTING_KINDS; the component editor offers them, with the project's models as
+  link targets and a component picker of plain components (not itself; `FieldsEditor inComponent`); groups and blocks
+  pass a picker its `model`; record pages draw linked names and a group / rows inside a group (SectionValues).
+  **Edit forms showed a saved link's picker empty** (every picker, not only these): the combobox writes a name only on a
+  pick — VDataMenu now fills it once the saved record is in the list (controlled `inputValue`).
+- Docs: mint-docs Models → Components → Links and components inside a component; website changelog.
+- Verified: `cms-components-nested.mjs` (21 checks) passes; cms-components, cms-blocks, cms-single, cms-drafts, models,
+  api-builder, automations, webhooks, site-builder-data, website, cms-site-contents, public-filters pass. Headless
+  Chrome: the component editor with links and a component inside, a record page with linked names and the inner
+  group, the edit form (both pickers named), a new pick saved.
+- Not yet: links inside a component on the public API come as ids (CMS-09 `populate`); "make reusable"; templates
+  carrying components.

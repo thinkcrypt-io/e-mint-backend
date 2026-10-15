@@ -8,7 +8,7 @@ import Permission from '../../models/permissions/model.js';
 import SidebarItem from '../../models/sidebaritems/model.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import Counter from '../../../models/counter/counter.model.js';
-import { configToData, listModelFields, scopedModelNames, settingsToData } from '../../functions/routeRegistry.function.js';
+import { configToData, displayModelName, listModelFields, scopedModelNames, settingsToData } from '../../functions/routeRegistry.function.js';
 import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
@@ -27,6 +27,7 @@ import {
 	SECTION_KINDS,
 	SUB_KINDS,
 	COMPONENT_KINDS,
+	NESTING_KINDS,
 	formulaInfoOf,
 	REFERENCE_KINDS,
 	defaultOf,
@@ -782,7 +783,8 @@ export const buildPreview = async (
 		settings,
 		config,
 		generated: { settings: fresh.settings, config: fresh.config },
-		fields: listModelFields({ schema: buildSchema(def) } as any),
+		// Links by the names the builder uses, not the project's internal ones.
+		fields: listModelFields({ schema: buildSchema(def) } as any).map(f => (f.ref ? { ...f, ref: displayModelName(f.ref) } : f)),
 		models: [...new Set([...scopedModelNames(), def.name])].sort(),
 	};
 };
@@ -1193,12 +1195,34 @@ export const updatePublicApi = async (req: any, res: Response): Promise<Response
  * formulas, defaults) and limited to COMPONENT_KINDS. Returns the fields as
  * they'd be saved, or the problems.
  */
-export const checkComponentFields = async (req: any, fields: any[]) => {
+export const checkComponentFields = async (req: any, fields: any[], uid?: string) => {
 	const { value, problems } = await check(req, { title: 'Component', fields }, '__component__');
 	const found = [...(problems || [])];
-	for (const f of value?.fields || [])
-		if (!COMPONENT_KINDS.includes(f.kind)) found.push(`${f.label || f.key}: a component's field can't be ${f.kind === 'component' ? 'another component' : `of the kind “${f.kind}”`}`);
-	return { fields: value?.fields || [], problems: found };
+	const mine: any[] = value?.fields || [];
+	for (const f of mine) {
+		const name = f.label || f.key;
+		if (!COMPONENT_KINDS.includes(f.kind)) found.push(`${name}: a component's field can't be of the kind “${f.kind}”`);
+		// A link names a model of the project — a component has no records of its own to link to.
+		if (REFERENCE_KINDS.includes(f.kind) && f.ref === '__component__') found.push(`${name}: pick the model it links to`);
+	}
+	// A component inside a component (CMS-03b), one level deep: the inner one's fields are all plain.
+	const inner = mine.filter(f => f.kind === 'component' && f.component);
+	if (inner.length) {
+		const comps = new Map((await ComponentDefinition.find({ uid: { $in: inner.map(f => f.component) } }, { uid: 1, title: 1, fields: 1 }).lean()).map((c: any) => [c.uid, c]));
+		for (const f of inner) {
+			const c: any = comps.get(f.component);
+			if (f.component === uid) found.push(`${f.label || f.key}: a component can't hold itself`);
+			else if (c?.fields?.some((x: any) => NESTING_KINDS.includes(x.kind)))
+				found.push(`${f.label || f.key}: ${c.title} has groups or components of its own — only a component of plain fields can go inside another`);
+		}
+	}
+	// …and one that sits inside another stays plain.
+	if (uid && mine.some(f => NESTING_KINDS.includes(f.kind))) {
+		const parents: any[] = await ComponentDefinition.find({ 'fields.component': uid }, { title: 1 }).lean();
+		if (parents.length)
+			found.push(`This component is inside ${parents.map(p => p.title).join(', ')} — a component inside another can't have groups or components of its own`);
+	}
+	return { fields: mine, problems: found };
 };
 
 /**
@@ -1207,7 +1231,10 @@ export const checkComponentFields = async (req: any, fields: any[]) => {
  * the record page follow the component.
  */
 export const refreshComponentUsers = async (req: any, uid: string) => {
-	const users: any[] = await ModelDefinition.find({ $or: [{ 'fields.component': uid }, { 'fields.components': uid }] }).lean();
+	// …and the models using a component that holds it (CMS-03b).
+	const holders: string[] = (await ComponentDefinition.find({ 'fields.component': uid }, { uid: 1 }).lean()).map((c: any) => c.uid);
+	const uids = [uid, ...holders];
+	const users: any[] = await ModelDefinition.find({ $or: [{ 'fields.component': { $in: uids } }, { 'fields.components': { $in: uids } }] }).lean();
 	if (!users.length) return [];
 	await ModelDefinition.updateMany({ _id: { $in: users.map(d => d._id) } }, { $inc: { version: 1 } });
 	await syncDynamicModels({ app: req.app, force: true });
@@ -1217,7 +1244,7 @@ export const refreshComponentUsers = async (req: any, uid: string) => {
 			d,
 			d,
 			req.user?._id,
-			d.fields.filter((f: any) => (f.kind === 'component' && f.component === uid) || (f.kind === 'blocks' && (f.components || []).includes(uid))).map((f: any) => f.key)
+			d.fields.filter((f: any) => (f.kind === 'component' && uids.includes(f.component)) || (f.kind === 'blocks' && (f.components || []).some((c: string) => uids.includes(c)))).map((f: any) => f.key)
 		);
 	return users.map(d => ({ _id: String(d._id), name: d.name, title: d.title || d.name, route: d.route }));
 };

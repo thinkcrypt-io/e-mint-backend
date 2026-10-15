@@ -58,7 +58,7 @@ export const COMPONENT_TOOLS: ToolDef[] = [
 		name: 'save_component',
 		title: 'Make or change a component',
 		description:
-			'A component: a named group of fields any model can use once or as a list (field kind "component"). Without `id` it makes one — `category` (shared, content, seo…) and `name` make its uid "category.name", fixed once made; with `id` it changes one (every model using it follows). Its fields can be text, textarea, editor, email, url, color, number, formula, boolean, date, select, multiselect, tags, image, images, file, files, video — no links or nested components. Describe it to the user and get their go-ahead first.',
+			'A component: a named group of fields any model can use once or as a list (field kind "component"). Without `id` it makes one — `category` (shared, content, seo…) and `name` make its uid "category.name", fixed once made; with `id` it changes one (every model using it follows). Its fields can be text, textarea, editor, email, url, color, number, formula, boolean, date, select, multiselect, tags, image, images, file, files, video, reference / references (with `ref`, a model of the project), section / sectionlist (a group or list of rows of plain fields), or component (another component, once or `repeatable` — one whose fields are all plain; a component inside another can’t hold groups or components itself). Describe it to the user and get their go-ahead first.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',

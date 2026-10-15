@@ -10,7 +10,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 |---|---|---|---|---|
 | CMS-01 | Plan & docs | backend | S | done 2026-10-15 (agreed) |
 | CMS-02 | Single types + UID field kind (D2) | backend + mint-tenant | M | done 2026-10-15 |
-| CMS-03 | Components: definitions, `component` field kind, nesting, "make reusable" (D3) | backend + mint-tenant | L | done 2026-10-15 (no nesting / make-reusable yet) |
+| CMS-03 | Components: definitions, `component` field kind, nesting, "make reusable" (D3) | backend + mint-tenant | L | done 2026-10-15; 03b (links + components inside, one level) done 2026-10-15; make-reusable, templates carrying components next |
 | CMS-04 | Dynamic zone: `blocks` field kind, panel editor, API shape (D4) | backend + mint-tenant | L | done 2026-10-15 |
 | CMS-05 | Draft & publish per entry: `_published` snapshot, status, publish/unpublish/discard, every read path (D5, D11) | backend + mint-tenant | L | done 2026-10-15 (publish webhooks → CMS-09) |
 | CMS-06a | Typed contents + the Contents screen: content types (components `content.*`), `type` / `order` / `block` on Contents, page dropdown, type first, List type (model, how many, order, conditions, card fields) read on the site (D1) | backend + mint-tenant | L | done 2026-10-15 |
