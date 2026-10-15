@@ -167,3 +167,8 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   website(-mcp), templates-apply, cms-* pass.
 - Templates' website blueprints still write old-style blocks through `upsert_page` (coded sites read them by-path) —
   CMS-15 moves them to typed ones.
+
+## 2026-10-15 — Production
+- `migratePublishRight.js --apply` run on production (37 organization roles that edit got `records:publish`; re-checked: 0
+  left). `migrateSiteContents.js` dry run on production: 10 website projects, none typed yet — **apply right after the
+  backend deploy**, not before (the old backend can't compile a Contents model with a `blocks` field).
