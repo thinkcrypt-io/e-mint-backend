@@ -66,3 +66,53 @@ describe('connectTree', () => {
 		expect(copy[0].bind.text.slug).not.toBe('home-hero-1');
 	});
 });
+
+/* Typed Contents (docs/cms D1, CMS-06b): one record per section, words bound by path. */
+import { typeInfos } from '../connect';
+import { CONTENT_TYPES, typeUid } from '../contentTypes';
+
+const TYPES = typeInfos(CONTENT_TYPES.map(t => ({ uid: typeUid(t.name), fields: t.fields })));
+const valueAt = (obj: any, path: string) => path.split('.').reduce((v: any, k) => (v == null ? v : v[k]), obj);
+
+describe('connectTree, typed', () => {
+	it('connects every preset into a valid tree, each binding a path to a word in its typed record', () => {
+		for (const p of loadManifest().presets as any[]) {
+			const tree = presetTree(p.key);
+			const { records } = connectTree(tree, { pageKey: p.category === 'header' ? 'header' : p.category === 'footer' ? 'footer' : 'home', pageName: 'Home', slugs: 'count', types: TYPES });
+			expect({ preset: p.key, errors: errors(tree) }).toEqual({ preset: p.key, errors: [] });
+			const bySlug = new Map(records.map(r => [r.slug, r]));
+			for (const r of records) expect(r.type).toMatch(/^content\./);
+			walk(tree, (n, inList) => {
+				for (const b of Object.values<any>(n.bind || {}))
+					if (b.from === 'content') {
+						const r: any = bySlug.get(b.slug);
+						expect({ preset: p.key, slug: b.slug, found: !!r }).toEqual({ preset: p.key, slug: b.slug, found: true });
+						expect({ preset: p.key, field: b.field, set: valueAt(r.block[0], b.field) !== undefined }).toEqual({ preset: p.key, field: b.field, set: true });
+					}
+				if (!inList && n.type === 'heading' && !n.props.text.includes('{{')) expect(n.bind?.text?.from).toBe('content');
+			});
+			if (p.key.startsWith('hero')) expect(records[0].type).toBe('content.hero');
+		}
+	});
+
+	it('a grid of cards becomes the section record’s rows, drawn by a list', () => {
+		const tree = presetTree('team');
+		const { records } = connectTree(tree, { pageKey: 'about', pageName: 'About', slugs: 'count', types: TYPES });
+		const lists: any[] = [];
+		walk(tree, n => n.type === 'collection' && lists.push(n));
+		const rec: any = records.find(r => r.slug === lists[0]?.props.source.content);
+		expect(rec?.type).toBe('content.cards');
+		expect(rec.block[0].items.length).toBeGreaterThanOrEqual(3);
+	});
+
+	it('questions bind to rows by number', () => {
+		const tree = presetTree('faq');
+		const { records } = connectTree(tree, { pageKey: 'home', pageName: 'Home', slugs: 'count', types: TYPES });
+		const faq: any = records.find(r => r.type === 'content.faq');
+		expect(faq.block[0].items.length).toBeGreaterThanOrEqual(2);
+		const paths: string[] = [];
+		walk(tree, n => Object.values<any>(n.bind || {}).forEach(b => b.from === 'content' && paths.push(b.field)));
+		expect(paths).toEqual(expect.arrayContaining(['items.0.title', 'items.0.description', 'items.1.title']));
+	});
+});
+

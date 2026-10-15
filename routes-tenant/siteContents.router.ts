@@ -4,7 +4,7 @@ import { TenancyError, handle, isId } from '../library/functions/tenancy.functio
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import recordHistory from '../library/functions/recordHistory.function.js';
 import { dataModelOf } from '../library/functions/dynamicModels.function.js';
-import { statusOf } from '../library/functions/drafts.function.js';
+import { publishRecord, statusOf } from '../library/functions/drafts.function.js';
 import { KIT_ROUTES, kitModel } from '../library/siteBuilder/kit.js';
 import { slugPart } from '../library/siteBuilder/connect.js';
 import { contentTypes, ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
@@ -24,13 +24,14 @@ import { dataModels, readList } from '../library/siteBuilder/resolve.js';
  *   DELETE /:id                   archived (the table's Archived view brings it back)
  *   POST   /order                 { ids } — their order on the page, first to last
  *   POST   /list-preview          { data } → the records a List would show now
+ *   POST   /publish               { page } or { ids } → each not yet live published (drafts until Publish, D5)
  *
  * Reading needs to see Contents; changes need add / edit / delete on it.
  */
 const router = express.Router({ mergeParams: true });
 const ROUTE = KIT_ROUTES.contents;
 
-const may = (req: any, action: 'view' | 'create' | 'edit' | 'delete') => {
+const may = (req: any, action: 'view' | 'create' | 'edit' | 'delete' | 'publish') => {
 	if (!grants(req.permissions, [`${action}-${ROUTE}`])) throw new TenancyError(403, `Your role can’t ${action === 'view' ? 'see' : action} the site’s contents`);
 };
 
@@ -225,6 +226,23 @@ router.post(
 		may(req, 'view');
 		const out = await readList(req.body?.data || {}, { pageSize: 6 });
 		return { ...out, items: out.items.map((x: any) => ({ _id: x._id, title: x.title ?? '', description: x.description ?? '', image: x.image ?? '', url: x.url ?? '' })) };
+	})
+);
+
+router.post(
+	'/publish',
+	handle(async (req: any) => {
+		may(req, 'publish');
+		const k = await kit(req);
+		if (!k.def.draftAndPublish) throw new TenancyError(400, 'Contents go live as soon as they’re saved here');
+		const body = req.body || {};
+		const ids = Array.isArray(body.ids) ? body.ids.filter((x: any) => isId(x)).slice(0, 500) : null;
+		const page = ids ? null : body.page === SITE || !body.page ? SITE : String(body.page);
+		if (page && page !== SITE && !isId(page)) throw new TenancyError(404, 'No such page');
+		const recs: any[] = await k.Model.find({ archivedAt: null, ...(ids ? { _id: { $in: ids } } : pageCond(page)) }, { updatedAt: 1, _publishedAt: 1, _publishedFrom: 1 }).lean();
+		let published = 0;
+		for (const r of recs) if (statusOf(r) !== 'published' && (await publishRecord(k.Model, r._id, req.user))) published++;
+		return { message: published ? `${published} published` : 'Everything here is live already', published };
 	})
 );
 

@@ -3,7 +3,7 @@
 // (types, by page, create with the type first, edit, reorder, archive), each type checked as its component, the List
 // type (a model's records with conditions, order and how many — through the public API's rules) on the site, and a
 // typed Cards record's items in a list of cards. Stands alone.
-import { call, ok, done } from './lib.mjs';
+import { call, ok, done, ROOT } from './lib.mjs';
 
 const stamp = Date.now();
 let r = await call('POST', '/tenant/api/auth/register', { name: 'Cora Contents', email: `cora${stamp}@example.com`, password: 'tenant-pass-123', organization: `Cora ${stamp}`, country: 'BD' });
@@ -36,8 +36,8 @@ ok('pages made', !!home?._id && !!about?._id);
 r = await call('POST', C('/'), { page: home._id, type: 'content.hero', data: { heading: 'Bread worth waking up for', text: '<p>Baked daily.</p>', buttonLabel: 'Order now', buttonUrl: '/shop', extra: 'dropped' } }, T);
 const hero = r.body;
 ok('a Hero on Home: named, its slug and first place made for it', r.status === 201 && hero?.type === 'content.hero' && hero.order === 0 && /^home-hero-/.test(hero.slug) && hero.name === 'Home — Hero' && hero.data?.heading === 'Bread worth waking up for' && !('extra' in hero.data), JSON.stringify(r.body));
-r = await call('POST', C('/'), { page: home._id, type: 'content.hero', data: { text: 'no heading' } }, T);
-ok('its required heading is checked', r.status === 400 && /heading/i.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await call('POST', C('/'), { page: home._id, type: 'content.list', data: { source: 'x', match: 'some' } }, T);
+ok('its fields are checked as its type’s (an option it doesn’t have)', r.status === 400 && /match|Show records/i.test(r.body?.message), `${r.status} ${r.body?.message}`);
 r = await call('POST', C('/'), { page: home._id, type: 'content.nope', data: {} }, T);
 ok('a type it doesn’t know is refused', r.status === 400, `${r.status} ${r.body?.message}`);
 r = await call('POST', C('/'), { page: home._id, type: 'content.cards', name: 'What we bake', data: { heading: 'What we bake', items: [{ title: 'Sourdough', description: 'Slow and tangy' }, { title: 'Croissants', description: 'Butter, layers' }] } }, T);
@@ -104,6 +104,18 @@ const tree = [
 r = await call('POST', P('/site-builder/resolve'), { tree }, T);
 ok('a collection showing a List record: the model’s records', r.body?.nodes?.colList1?.items?.map(x => x.title).join() === 'Ridge house,Library', JSON.stringify(r.body?.nodes?.colList1));
 ok('…and one showing a Cards record: its rows', r.body?.nodes?.colCard1?.items?.map(x => x.title).join() === 'Sourdough,Croissants', JSON.stringify(r.body?.nodes?.colCard1));
+
+/* ---- drafts until Publish (D5) */
+r = await call('GET', C(`/?page=${home._id}`), null, T);
+ok('Contents are drafts until published: each says so', r.body?.drafts === true && r.body.doc.every(d => d.status === 'draft'), JSON.stringify(r.body?.doc?.map(d => d.status)));
+await call('PUT', P(`/builder/models/${contentsDef._id}/public-api`), { enabled: true, actions: ['list', 'get'], auth: 'none' }, T);
+const pubContents = () => fetch(`${ROOT}/public/api/${site.publicSlug}/web-contents?limit=50`).then(x => x.json());
+ok('…none on the API yet', (await pubContents()).total === 0);
+r = await call('POST', C('/publish'), { page: home._id }, T);
+ok('Publish the page: its pieces go live', r.status === 200 && r.body?.published === 2, JSON.stringify(r.body));
+ok('…on the API (the other pages’ still drafts)', (await pubContents()).total === 2);
+r = await call('POST', C('/publish'), { page: home._id }, T);
+ok('…again: nothing left to publish', r.body?.published === 0, JSON.stringify(r.body));
 
 /* ---- archive */
 r = await call('DELETE', C(`/${cards._id}`), null, T);

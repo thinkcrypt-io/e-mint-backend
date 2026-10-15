@@ -5,7 +5,8 @@ import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import { compiledModel, syncDynamicModels } from '../functions/dynamicModels.function.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
-import { outKeys, refPopulates, shape } from '../functions/publicRecords.function.js';
+import { refPopulates, shape } from '../functions/publicRecords.function.js';
+import { liveFind, publishRecord, statusOf } from '../functions/drafts.function.js';
 import { loadManifest } from './manifest.js';
 import { EMPTY_SEO } from './site.js';
 
@@ -274,6 +275,47 @@ export const pullSeo = async (pages: any[]) => {
 
 /* ----------------------------------------------------------- contents */
 
+/**
+ * Typed Contents records (docs/cms D1): the words live in `block[0]` — one
+ * item of the record's type — and a binding's `field` is a path in it
+ * (`heading`, `items.2.title`). Read flat (the item's fields beside slug and
+ * name), with the old field names as aliases so a binding made the old way —
+ * the editor's `content`, `btnText`, `card`… — finds the same words.
+ */
+export const LEGACY_ALIAS: Record<string, string> = {
+	content: 'heading',
+	subContent: 'subheading',
+	btnText: 'buttonLabel',
+	url: 'buttonUrl',
+	richContent: 'text',
+	image: 'image',
+	card: 'items',
+};
+
+export const typedItem = (rec: any) => (Array.isArray(rec?.block) && rec.block[0] && typeof rec.block[0] === 'object' ? rec.block[0] : null);
+
+/** A Contents record as bindings read it: a typed one flat (and its old names), an old one as it is. */
+export const flatContent = (rec: any, def?: any) => {
+	const item = typedItem(rec);
+	if (!item) return def ? shape(rec, def) : rec;
+	const { _key, __component, ...fields } = item;
+	const out: any = { _id: rec._id, slug: rec.slug, name: rec.name, page: rec.page, type: __component, ...fields };
+	for (const [old, now] of Object.entries(LEGACY_ALIAS)) if (out[old] === undefined && fields[now] !== undefined) out[old] = fields[now];
+	return out;
+};
+
+/** A binding's field in a typed record's item: the first part through the old names (`card.1.title` → `items.1.title`). */
+export const typedPath = (field: string) => {
+	const [head, ...rest] = String(field || '').split('.');
+	return [LEGACY_ALIAS[head] || head, ...rest].join('.');
+};
+
+/** The Contents records the site reads: what's published (Contents keeps drafts, D5), or the drafts for the editor. */
+const findContents = async (kit: Kit, cond: any, { drafts = false, populate = [] as any[] } = {}) => {
+	if (drafts || !kit.def.draftAndPublish) return kit.Model.find(cond).sort({ priority: -1, createdAt: 1 }).populate(populate).lean();
+	return liveFind(kit.def, kit.Model, { query: cond, sort: { priority: -1, createdAt: 1 }, limit: 1000, populate });
+};
+
 /** The slugs every `content` binding in `trees` names. */
 export const contentSlugs = (trees: any[][], out = new Set<string>()) => {
 	const visit = (nodes: any[]) => {
@@ -289,8 +331,23 @@ export const contentSlugs = (trees: any[][], out = new Set<string>()) => {
 	return out;
 };
 
-/** The Contents records `trees` bind to, by slug — visible and published ones only. */
-export const resolveContents = async (trees: any[][]) => {
+/** Every Contents record `trees` show: their bindings' and their lists' (`source.content`). */
+export const siteContentSlugs = (trees: any[][]) => {
+	const out = contentSlugs(trees);
+	const visit = (nodes: any[]) => {
+		for (const n of nodes || []) {
+			if (!n || typeof n !== 'object') continue;
+			if (n.type === 'collection' && typeof n.props?.source?.content === 'string') out.add(n.props.source.content);
+			if (Array.isArray(n.children)) visit(n.children);
+			if (n.slots && typeof n.slots === 'object') Object.values<any>(n.slots).forEach(visit);
+		}
+	};
+	trees.forEach(t => visit(Array.isArray(t) ? t : []));
+	return out;
+};
+
+/** The Contents records `trees` bind to, by slug — visible and published ones only (`drafts`: as they are now, for the editor). */
+export const resolveContents = async (trees: any[][], { drafts = false }: { drafts?: boolean } = {}) => {
 	const slugs = [...contentSlugs(trees)].slice(0, 200);
 	if (!slugs.length) return {} as Record<string, any>;
 	const kit = await kitModel(KIT_ROUTES.contents);
@@ -298,46 +355,140 @@ export const resolveContents = async (trees: any[][]) => {
 	const cond: any = { slug: { $in: slugs }, archivedAt: null };
 	if (has(kit, 'status')) cond.status = { $nin: ['draft', 'archived'] };
 	if (has(kit, 'isVisible')) cond.isVisible = { $ne: false };
-	const docs: any[] = await kit.Model.find(cond).select(outKeys(kit.def).join(' ')).sort({ priority: -1, createdAt: 1 }).populate(await refPopulates(kit.def)).lean();
+	const docs: any[] = await findContents(kit, cond, { drafts, populate: await refPopulates(kit.def) });
 	const out: Record<string, any> = {};
-	for (const d of docs) if (!out[d.slug]) out[d.slug] = shape(d, kit.def);
+	for (const d of docs) if (!out[d.slug]) out[d.slug] = flatContent(d, kit.def);
 	return out;
 };
 
-/** The Contents records for the editor and the AI: slug, name, section, and what they hold. */
+/** The Contents records for the editor and the AI: slug, name, section, and what they hold (typed ones flat). */
 export const contentList = async () => {
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit) return { fields: [], items: [] };
 	const docs: any[] = await kit.Model.find({ archivedAt: null }).sort({ section: 1, priority: -1, createdAt: 1 }).limit(500).populate(await refPopulates(kit.def)).lean();
 	return {
 		fields: kit.def.fields.map((f: any) => ({ key: f.key, label: f.label || f.key, kind: f.kind })),
-		items: docs.filter(d => d.slug).map(d => shape(d, kit.def)),
+		items: docs.filter(d => d.slug).map(d => flatContent(d, kit.def)),
 	};
 };
 
-/** Adds or updates Contents records by slug (the editor's "Save as content", the MCP). */
+/** Whether the project's Contents holds typed records (CMS-06). */
+export const isTyped = (def: any) => !!def?.fields?.some((f: any) => f.key === 'block' && f.kind === 'blocks');
+
+/** The type a record made from old-style fields gets: cards when it has them, else a Section. */
+const typeForOld = (fields: any) => (Array.isArray(fields.card) ? 'content.cards' : 'content.section');
+
+/** Old-style fields (`content`, `btnText`, `card`…) as a typed item's. */
+const asTypedFields = (fields: any) => {
+	const out: any = {};
+	for (const [k, v] of Object.entries<any>(fields)) {
+		const to = LEGACY_ALIAS[k];
+		if (to) out[to] = k === 'card' && Array.isArray(v) ? v.map(({ _id, ...row }: any) => row) : v;
+	}
+	return out;
+};
+
+const RECORD_KEYS = new Set(['name', 'page', 'section', 'slug', 'status', 'isVisible', 'priority', 'order', 'type', 'block', 'category']);
+
+/**
+ * Adds or updates Contents records by slug (the editor's "Save as content", its
+ * cards, the MCP, the theme demos). A typed record takes typed fields, or the
+ * old names (`content` → heading…); a new one sent the old way is made typed
+ * when the project's Contents is (a Section, or Cards with `card`). Old-style
+ * Contents get what they always did.
+ */
 export const upsertContents = async (records: any[], page?: any) => {
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit) throw new Error('This project has no Contents model (web-contents) — it was renamed or deleted');
 	const kitPage = page ? await pushPage(page) : null;
+	const typed = isTyped(kit.def);
 	const allowed = new Set(kit.def.fields.filter((f: any) => f.kind !== 'formula').map((f: any) => f.key));
 	const out: any[] = [];
 	for (const r of records) {
 		const slug = String(r?.slug || '').trim();
 		if (!/^[a-z0-9-]{1,120}$/.test(slug)) throw new Error(`“${slug || '(empty)'}” isn’t a content slug — lowercase letters, digits and dashes`);
-		const fields: any = Object.fromEntries(Object.entries<any>(r).filter(([k, v]) => allowed.has(k) && v !== undefined));
-		const current: any = await kit.Model.findOne({ slug, archivedAt: null }, { _id: 1 }).lean();
-		// A new record gets a name, its page, a category and "published"; an update changes only what was sent.
-		if (!current) {
-			if (!fields.name) fields.name = slug;
-			if (kitPage && allowed.has('page') && !fields.page) fields.page = kitPage;
-			if (allowed.has('category') && !fields.category) fields.category = 'content';
-			if (allowed.has('status') && !fields.status) fields.status = 'published';
+		const current: any = await kit.Model.findOne({ slug, archivedAt: null }).lean();
+		const item = typedItem(current);
+		let saved: any;
+		if (item || (typed && !current)) {
+			// Typed: the record's own keys, and the item's fields (sent typed, or by their old names).
+			const own: any = Object.fromEntries(Object.entries<any>(r).filter(([k, v]) => RECORD_KEYS.has(k) && k !== 'block' && v !== undefined && allowed.has(k)));
+			const given = Array.isArray(r.block) && r.block[0] ? r.block[0] : { ...asTypedFields(r), ...(r.data && typeof r.data === 'object' ? r.data : {}) };
+			const type = item?.__component || r.type || given.__component || typeForOld(r);
+			const { __component, _key, ...fields } = given;
+			const next = { ...(item || {}), ...fields, __component: type, ...(item?._key && { _key: item._key }) };
+			if (!current) {
+				if (!own.name) own.name = slug;
+				if (kitPage && !own.page) own.page = kitPage;
+				const doc = await kit.Model.create({ slug, ...own, type, block: [next] });
+				saved = doc.toObject();
+			} else {
+				const doc: any = await kit.Model.findById(current._id);
+				doc.set({ ...own, block: [next] });
+				await doc.save();
+				saved = doc.toObject();
+			}
+		} else {
+			const fields: any = Object.fromEntries(Object.entries<any>(r).filter(([k, v]) => allowed.has(k) && v !== undefined));
+			// A new record gets a name, its page, a category and "published"; an update changes only what was sent.
+			if (!current) {
+				if (!fields.name) fields.name = slug;
+				if (kitPage && allowed.has('page') && !fields.page) fields.page = kitPage;
+				if (allowed.has('category') && !fields.category) fields.category = 'content';
+				if (allowed.has('status') && !fields.status) fields.status = 'published';
+			}
+			saved = current
+				? await kit.Model.findOneAndUpdate({ _id: current._id }, { $set: fields }, { new: true, runValidators: true }).lean()
+				: (await kit.Model.create({ slug, ...fields })).toObject();
 		}
-		const saved = current
-			? await kit.Model.findOneAndUpdate({ _id: current._id }, { $set: fields }, { new: true, runValidators: true }).lean()
-			: (await kit.Model.create({ slug, ...fields })).toObject();
-		out.push(shape(saved, kit.def));
+		out.push(flatContent(saved, kit.def));
 	}
 	return out;
+};
+
+/* ------------------------------------------------- contents and Publish */
+
+/** The Contents records the site's trees use that aren't live as they are (Contents keeps drafts, D5). */
+export const unpublishedContents = async (trees: any[][]) => {
+	const kit = await kitModel(KIT_ROUTES.contents);
+	if (!kit?.def.draftAndPublish) return [];
+	const slugs = [...siteContentSlugs(trees)].slice(0, 2000);
+	if (!slugs.length) return [];
+	const docs: any[] = await kit.Model.find({ slug: { $in: slugs }, archivedAt: null }, { slug: 1, name: 1, updatedAt: 1, _publishedAt: 1, _publishedFrom: 1 }).lean();
+	return docs.filter(d => statusOf(d) !== 'published').map(d => ({ _id: String(d._id), slug: d.slug, name: d.name, status: statusOf(d) }));
+};
+
+/** Publishes the Contents records the trees use — the site's Publish puts its words live with its layout. */
+export const publishContents = async (trees: any[][], user?: any) => {
+	const kit = await kitModel(KIT_ROUTES.contents);
+	if (!kit?.def.draftAndPublish) return 0;
+	const todo = await unpublishedContents(trees);
+	for (const c of todo) await publishRecord(kit.Model, c._id, user);
+	return todo.length;
+};
+
+/**
+ * The page's Contents records in the order its tree shows them (bindings and
+ * lists, first use first) — the Contents screen lists a page in that order.
+ * Only the order changes: no draft is touched.
+ */
+export const orderContents = async (kitPage: any, tree: any[]) => {
+	const kit = await kitModel(KIT_ROUTES.contents);
+	if (!kit || !kitPage || !has(kit, 'order') || !Array.isArray(tree)) return 0;
+	const seen: string[] = [];
+	const visit = (nodes: any[]) => {
+		for (const n of nodes || []) {
+			if (!n || typeof n !== 'object') continue;
+			for (const b of Object.values<any>(n.bind || {})) if (b?.from === 'content' && typeof b.slug === 'string' && !seen.includes(b.slug)) seen.push(b.slug);
+			const src = n.type === 'collection' && n.props?.source?.content;
+			if (typeof src === 'string' && !seen.includes(src)) seen.push(src);
+			if (Array.isArray(n.children)) visit(n.children);
+			if (n.slots && typeof n.slots === 'object') Object.values<any>(n.slots).forEach(visit);
+		}
+	};
+	visit(tree);
+	if (!seen.length) return 0;
+	const ops = seen.slice(0, 500).map((slug, order) => ({ updateOne: { filter: { slug, page: kitPage, archivedAt: null }, update: { $set: { order } } } }));
+	await kit.Model.collection.bulkWrite(ops as any);
+	return ops.length;
 };

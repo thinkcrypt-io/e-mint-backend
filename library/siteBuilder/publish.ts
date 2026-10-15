@@ -1,3 +1,5 @@
+import { publishContents } from './kit.js';
+import { draftTrees } from './site.js';
 import crypto from 'crypto';
 import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
@@ -109,6 +111,8 @@ export const publishSite = async ({ req, project, note = '' }: { req: any; proje
 	const version = await nextVersion();
 	const publishedAt = new Date();
 	const pages: any[] = await SitePage.find({ deletedAt: null }).lean();
+	// The words go live with the layout: the Contents records the site shows (docs/cms D5).
+	const contentsPublished = await publishContents(draftTrees(pages, await SiteDesign.findOne({}).lean()), req?.user);
 	const live: any[] = [];
 	for (const p of pages) {
 		if (p.status === 'unpublished') continue;
@@ -135,7 +139,7 @@ export const publishSite = async ({ req, project, note = '' }: { req: any; proje
 		text: `published the site (version ${version}${note ? ` — “${String(note).slice(0, 80)}”` : ''})`,
 	});
 	const revalidated = await revalidateSite(project);
-	return { version, publishedAt, url: siteUrl(project), revalidated, pages: live.length };
+	return { version, publishedAt, url: siteUrl(project), revalidated, pages: live.length, contents: contentsPublished };
 };
 
 /** Makes release `version` live again — and the drafts with it — as a new release. */

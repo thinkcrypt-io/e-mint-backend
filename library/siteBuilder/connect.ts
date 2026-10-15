@@ -1,9 +1,10 @@
 import crypto from 'crypto';
-import { asText } from './bind.js';
+import { asText, pathValue } from './bind.js';
 import { loadManifest } from './manifest.js';
 import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
-import { KIT_ROUTES, kitModel, pushPage } from './kit.js';
+import { KIT_ROUTES, flatContent, isTyped, kitModel, orderContents, pushPage, typedItem, typedPath } from './kit.js';
+import { contentTypes } from './contentTypes.js';
 
 /**
  * Every word on the site lives in Contents (docs/site-builder SB-29, D28).
@@ -216,6 +217,8 @@ type ConnectOptions = {
 	fresh?: boolean;
 	/** the section name every record gets (else each top-level node's own) */
 	section?: string;
+	/** the project's content types, when its Contents holds typed records (docs/cms D1): words go into one typed record per section */
+	types?: TypeInfo[];
 };
 
 /**
@@ -225,6 +228,7 @@ type ConnectOptions = {
  * records stay bound to the list.
  */
 export const connectTree = (nodes: any[], o: ConnectOptions) => {
+	if (o.types?.length) return connectTyped(nodes, o);
 	const defaults = blockDefaults();
 	const records: ContentRecord[] = [];
 	const copies: { from: string; to: string; name: string; section: string }[] = [];
@@ -332,6 +336,286 @@ export const connectTree = (nodes: any[], o: ConnectOptions) => {
 	return { nodes, records, copies };
 };
 
+/* ------------------------------------------------------ typed records */
+
+/** A content type as connecting needs it: its fields and its rows' (`items`), by key → kind. */
+export type TypeInfo = { uid: string; fields: Map<string, string>; rows: Map<string, string> | null };
+
+export const typeInfos = (types: any[]): TypeInfo[] =>
+	types.map(t => {
+		const items = (t.fields || []).find((f: any) => f.key === 'items' && f.kind === 'sectionlist');
+		return {
+			uid: t.uid,
+			fields: new Map((t.fields || []).map((f: any) => [f.key, f.kind])),
+			rows: items ? new Map((items.fields || []).map((f: any) => [f.key, f.kind])) : null,
+		};
+	});
+
+/** The type a section's words go into, by what the section is (its name, as the presets name them). */
+const TYPE_BY_NAME: [RegExp, string][] = [
+	[/^hero/i, 'hero'],
+	[/call to action|newsletter|countdown|sign.?up|cta/i, 'cta'],
+	[/question|faq/i, 'faq'],
+	[/number|stat/i, 'stats'],
+	[/testimonial|review|quote/i, 'testimonials'],
+	[/logo/i, 'logos'],
+	[/gallery|photo/i, 'gallery'],
+	[/feature|team|step|pricing|plan|service|product|blog|card/i, 'cards'],
+	[/page title|title/i, 'text'],
+	[/header/i, 'header'],
+	[/footer/i, 'footer'],
+];
+const typeFor = (x: any, o: ConnectOptions, types: Map<string, TypeInfo>) => {
+	const key = String(o.pageKey || '');
+	const part = /(^|-)header$/.test(key) ? 'header' : /(^|-)footer$/.test(key) ? 'footer' : null;
+	const name = part || TYPE_BY_NAME.find(([rx]) => rx.test(String(x?.name || '')))?.[1] || 'section';
+	return types.get(`content.${name}`) || types.get('content.section') || null;
+};
+
+/** Where a word goes in a record, by its role: the first of these the type has and hasn't filled. */
+const TOP: Record<Role, string[]> = {
+	title: ['heading', 'subheading', 'eyebrow'],
+	subTitle: ['eyebrow', 'subheading', 'heading'],
+	description: ['text', 'body', 'caption', 'subheading'],
+	image: ['image'],
+	alt: ['imageAlt'],
+};
+const BUTTONS = [
+	['buttonLabel', 'buttonUrl'],
+	['secondaryLabel', 'secondaryUrl'],
+] as const;
+const ROW: Record<Role, string[]> = {
+	title: ['title', 'subTitle', 'description'],
+	subTitle: ['subTitle', 'title', 'description'],
+	description: ['description', 'subTitle', 'title'],
+	image: ['image'],
+	alt: [],
+};
+/** Blocks that stand for one row of a list (a number, a quote, a question) when the type has rows. */
+const ROW_BLOCKS = new Set(['stat', 'quote', 'accordion-item']);
+
+/** A value as a field of `kind` keeps it: rich text as HTML, anything else as plain words. */
+const asKind = (value: string, kind?: string) => {
+	if (kind === 'editor') return looksLikeHtml(value) ? value : `<p>${escapeHtml(value)}</p>`;
+	return looksLikeHtml(value) ? plainOf(value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : value;
+};
+
+type Rec = ContentRecord & { type: string; block: any[] };
+
+/**
+ * connectTree for typed Contents (docs/cms D1): each top-level section's words
+ * go into one record of the type the section is (a Hero, Cards, Questions…),
+ * bound by path — `heading`, `buttonLabel`, `items.2.title`. A grid of
+ * look-alike cards becomes the record's `items`, drawn by a list
+ * (`source.content`) so a card added in the panel shows on the site; other
+ * look-alike rows (questions, quotes, numbers) bind to `items.<n>.<field>`.
+ * Words the type has no room for go into a Section record of their own.
+ */
+const connectTyped = (nodes: any[], o: ConnectOptions) => {
+	const defaults = blockDefaults();
+	const types = new Map((o.types || []).map(t => [t.uid, t]));
+	const records: Rec[] = [];
+	const copies: { from: string; to: string; name: string; section: string }[] = [];
+	let n = 0;
+	const slugFor = (section: string) => {
+		const base = `${slugPart(o.pageKey) || 'page'}-${slugPart(section) || 'section'}`.slice(0, 100);
+		return o.slugs === 'count' ? `${base}-${++n}` : `${base}-${rand()}`;
+	};
+	const make = (t: TypeInfo, sec: string, name: string): Rec => {
+		const r: Rec = { slug: slugFor(sec), name, section: sec, type: t.uid, order: records.length, block: [{ __component: t.uid }] };
+		records.push(r);
+		return r;
+	};
+
+	// A copy's Contents bindings (o.fresh) get records of their own: the words are in the tree, so they're connected anew.
+	if (o.fresh)
+		walk(nodes, x => {
+			if (x.bind) for (const k of Object.keys(x.bind)) if (x.bind[k]?.from === 'content') delete x.bind[k];
+			if (x.bind && !Object.keys(x.bind).length) delete x.bind;
+		});
+
+	for (let i = 0; i < nodes.length; i++) {
+		const x = nodes[i];
+		if (!x || typeof x !== 'object') continue;
+		const sec = o.section || slugPart(x.name || x.type);
+		const secName = x.name || x.type;
+		const kind = typeFor(x, o, types);
+		if (!kind) continue;
+		let rec: Rec | null = null;
+		const more: Rec[] = [];
+		let rowsUsed = false;
+		const own = () => (rec ||= make(kind, sec, `${o.pageName} — ${secName}`));
+		/** The section's latest extra Section record — or, `fresh`, a new one (a section with more words than one holds). */
+		const extra = (fresh = false) => {
+			const t = types.get('content.section');
+			if (!t) return null;
+			if (!fresh && more.length) return more[more.length - 1];
+			const r = make(t, sec, `${o.pageName} — ${secName} (more${more.length ? ` ${more.length + 1}` : ''})`);
+			more.push(r);
+			return r;
+		};
+		const item = (r: Rec) => r.block[0];
+		const typeOf = (r: Rec) => types.get(r.type)!;
+
+		/** A free top-level field for a role, in `r` or else the extra record. */
+		const place = (role: Role, isButton: boolean): { r: Rec; key: string; urlKey?: string } | null => {
+			const tryIn = (r: Rec | null) => {
+				if (!r) return null;
+				const t = typeOf(r);
+				if (isButton) {
+					for (const [label, url] of BUTTONS) if (t.fields.has(label) && item(r)[label] === undefined) return { r, key: label as string, urlKey: t.fields.has(url) ? (url as string) : undefined };
+					return null;
+				}
+				for (const key of TOP[role]) if (t.fields.has(key) && item(r)[key] === undefined) return { r, key };
+				return null;
+			};
+			// An extra Section only when the section's own record has no room — and another when that's full.
+			return tryIn(own()) || (more.length ? tryIn(more[more.length - 1]) : null) || tryIn(extra(true));
+		};
+
+		/** One block's own words, each to a free field (or a row's). */
+		const bindNode = (node: any, row?: { r: Rec; i: number }) => {
+			const slots = slotsOf(node.type);
+			if (!slots) return;
+			for (const [prop, sl] of Object.entries(slots)) {
+				if (node.bind?.[prop]) continue;
+				const raw = node.props?.[prop];
+				if (raw !== undefined && typeof raw !== 'string') continue;
+				if (typeof raw === 'string' && raw.includes('{{')) continue;
+				const value = sl.role === 'image' || sl.role === 'alt' ? raw || '' : filled(node.type, prop, raw, defaults);
+				if (!value) continue;
+				if (value !== raw) node.props = { ...(node.props || {}), [prop]: value };
+				const isButton = (node.type === 'button' && prop === 'label') || (node.type === 'link' && prop === 'text');
+				if (row) {
+					const rowKinds = typeOf(row.r).rows!;
+					const cell = item(row.r).items[row.i];
+					const key = (isButton ? ['title', 'subTitle'] : ROW[sl.role]).find(k => rowKinds.has(k) && cell[k] === undefined);
+					if (!key) continue;
+					cell[key] = asKind(value, rowKinds.get(key));
+					if ((isButton || node.type === 'link') && typeof node.action?.href === 'string' && rowKinds.has('url') && cell.url === undefined) cell.url = node.action.href;
+					node.bind = { ...(node.bind || {}), [prop]: { from: 'content', slug: row.r.slug, field: `items.${row.i}.${key}` } };
+					continue;
+				}
+				if (sl.role === 'alt' && !(rec && item(rec).image !== undefined)) continue;
+				const spot = place(sl.role, isButton);
+				if (!spot) continue;
+				item(spot.r)[spot.key] = asKind(value, typeOf(spot.r).fields.get(spot.key));
+				if (spot.urlKey && node.action?.type === 'link' && typeof node.action.href === 'string') item(spot.r)[spot.urlKey] = node.action.href;
+				node.bind = { ...(node.bind || {}), [prop]: { from: 'content', slug: spot.r.slug, field: spot.key } };
+			}
+		};
+
+		/** Look-alike children of `p` (two or more, the same blocks in the same places) with words in them. */
+		const rowsOf = (p: any) => {
+			const list: any[] = p.children || [];
+			if (list.length < MIN_CARDS || p.type === 'collection') return null;
+			const first = sig(list[0]);
+			if (list.some(c => !c || sig(c) !== first || c.type === 'collection' || c.type === 'section-ref')) return null;
+			return list.some(c => cardSlots(c).length) ? list : null;
+		};
+		/** A record with room for rows: this one, or the extra Section. */
+		const rowHome = () => {
+			if (!rowsUsed && typeOf(own()).rows) {
+				rowsUsed = true;
+				return own();
+			}
+			const last = more[more.length - 1];
+			const e = last && !item(last).items ? last : extra(true);
+			return e && typeOf(e).rows ? e : null;
+		};
+
+		const visit = (list: any[], _parent: any | null) => {
+			for (let k = 0; k < (list || []).length; k++) {
+				const node = list[k];
+				if (!node || typeof node !== 'object') continue;
+				// A list of records keeps its own words; a new, empty one gets three demo cards in its own Cards record.
+				if (node.type === 'collection') {
+					const src = node.props?.source;
+					const cards = types.get('content.cards');
+					if (!o.fresh && cards && (!src || (!src.model && !src.content))) {
+						const r = make(cards, sec, `${o.pageName} — ${secName} cards`);
+						item(r).items = DEMO_CARDS.map(c => ({ title: c.title, subTitle: c.subTitle, description: c.description, image: c.image }));
+						node.props = { ...(node.props || {}), source: { content: r.slug } };
+					} else if (o.fresh && src && typeof src.content === 'string') {
+						const to = slugFor(sec);
+						copies.push({ from: src.content, to, name: `${o.pageName} — ${secName} cards`, section: sec });
+						node.props = { ...node.props, source: { ...src, content: to } };
+					}
+					continue;
+				}
+				// A grid of look-alike cards: the record's rows, drawn by a list so cards added in the panel show.
+				const plan = cardPlan(node);
+				if (plan) {
+					const home = rowHome();
+					if (home) {
+						const rowKinds = typeOf(home).rows!;
+						item(home).items = plan.items.map(it => Object.fromEntries(Object.entries(it).filter(([key]) => rowKinds.has(key)).map(([key, v]) => [key, asKind(String(v), rowKinds.get(key))])));
+						const template = JSON.parse(JSON.stringify(node.children[0]));
+						let c = 0;
+						walk([template], t => {
+							const order = c++;
+							if (t.bind) for (const p of Object.keys(t.bind)) if (t.bind[p]?.from === 'content') delete t.bind[p];
+							for (const prop of Object.keys(slotsOf(t.type) || {})) {
+								const f = plan.assign.get(`${order}:${prop}`);
+								if (f && rowKinds.has(f)) t.bind = { ...(t.bind || {}), [prop]: { from: 'item', field: f } };
+							}
+							if (t.bind && !Object.keys(t.bind).length) delete t.bind;
+						});
+						const pr = node.props || {};
+						const clamp = (v: any, max: number, d: number) => Math.min(Math.max(Number.isInteger(v) ? v : d, 1), max);
+						list[k] = {
+							id: node.id,
+							type: 'collection',
+							...(node.name && { name: node.name }),
+							props: {
+								source: { content: home.slug },
+								layout: 'grid',
+								columns: clamp(pr.columns, 6, 3),
+								columnsTablet: clamp(pr.columnsTablet, 4, 2),
+								columnsMobile: clamp(pr.columnsMobile, 2, 1),
+								gap: pr.gap ?? 6,
+								pagination: false,
+							},
+							...(node.style && { style: node.style }),
+							...(node.hidden && { hidden: node.hidden }),
+							children: [template],
+						};
+						continue;
+					}
+				}
+				// Other look-alike rows — questions, quotes, numbers, links — bound to items.<n>.
+				const rows = rowsOf(node);
+				if (rows) {
+					const home = rowHome();
+					if (home) {
+						item(home).items = item(home).items || [];
+						for (const r of rows) {
+							const i = item(home).items.push({}) - 1;
+							walk([r], t => bindNode(t, { r: home, i }));
+						}
+						continue;
+					}
+				}
+				// One row-like block on its own (a single quote): a row when the type has rows.
+				if (ROW_BLOCKS.has(node.type) && typeOf(own()).rows && !rowsUsed) {
+					rowsUsed = true;
+					item(own()).items = [{}];
+					walk([node], t => bindNode(t, { r: own(), i: 0 }));
+					continue;
+				}
+				bindNode(node);
+				kids(node).forEach(l => visit(l, node));
+			}
+		};
+		// (a grid at the top level is swapped for a list in its holder — put it back in the page's list)
+		const holder = [x];
+		visit(holder, null);
+		nodes[i] = holder[0];
+	}
+	// A record nothing went into (its section had no words) isn't made.
+	return { nodes, records: records.filter(r => Object.keys(r.block[0]).length > 1), copies };
+};
+
 /* --------------------------------------------------------- with the DB */
 
 const CARD_KEYS = new Set(CARD_FIELDS);
@@ -342,6 +626,9 @@ export const holdsCards = (def: any) => {
 	return !!f && [...CARD_KEYS].every(k => (f.fields || []).some((s: any) => s.key === k));
 };
 
+/** The project's content types for connecting, when its Contents holds typed records (CMS-06) — else none. */
+export const typesForConnect = async (def: any): Promise<TypeInfo[] | undefined> => (isTyped(def) ? typeInfos(await contentTypes()) : undefined);
+
 /**
  * connectTree, then the records made in Contents (linked to the page's Pages
  * record). Without a Contents model the nodes come back as they were.
@@ -350,14 +637,20 @@ export const connectNodes = async (nodes: any[], o: ConnectOptions & { page?: an
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit) return { nodes, records: 0 };
 	const copy = JSON.parse(JSON.stringify(nodes));
-	const out = connectTree(copy, { ...o, cards: o.cards ?? holdsCards(kit.def) });
+	const types = await typesForConnect(kit.def);
+	const out = connectTree(copy, { ...o, types, cards: o.cards ?? holdsCards(kit.def) });
 	const allowed = new Set<string>(kit.def.fields.map((f: any) => f.key));
 	const kitPage = o.page ? await pushPage(o.page) : null;
 	const docs: any[] = [];
 	for (const r of out.records) docs.push(r);
 	for (const c of out.copies) {
 		const from: any = await kit.Model.findOne({ slug: c.from, archivedAt: null }).lean();
-		docs.push({ slug: c.to, name: c.name, section: c.section, category: 'card', card: (from?.card || []).map(({ _id, ...rest }: any) => rest) });
+		const item = typedItem(from);
+		if (types) {
+			// A copy of a list of cards: the same type and words, a record of its own.
+			const { _key, __component, ...fields } = item || { __component: 'content.cards', items: (from?.card || []).map(({ _id, ...rest }: any) => rest) };
+			docs.push({ slug: c.to, name: c.name, section: c.section, type: __component, block: [{ __component, ...fields }] });
+		} else docs.push({ slug: c.to, name: c.name, section: c.section, category: 'card', card: (from?.card || []).map(({ _id, ...rest }: any) => rest) });
 	}
 	await saveNew(kit, docs, kitPage, allowed);
 	return { nodes: out.nodes, records: docs.length };
@@ -370,8 +663,11 @@ const saveNew = async (kit: any, docs: any[], kitPage: any, allowed: Set<string>
 		if (allowed.has('status')) fields.status = 'published';
 		if (allowed.has('isVisible')) fields.isVisible = true;
 		const current: any = await kit.Model.findOne({ slug: d.slug, archivedAt: null }, { _id: 1 }).lean();
-		if (current) await kit.Model.updateOne({ _id: current._id }, { $set: fields });
-		else await kit.Model.create(fields);
+		if (current) {
+			const doc: any = await kit.Model.findById(current._id);
+			doc.set(fields);
+			await doc.save();
+		} else await kit.Model.create(fields);
 	}
 };
 
@@ -425,8 +721,9 @@ export const pullTreeContents = async (tree: any[]) => {
 		for (const [prop, b] of Object.entries<any>(n.bind || {})) {
 			if (b?.from !== 'content') continue;
 			const rec = recs.get(b.slug);
-			if (!rec || rec[b.field] === undefined || rec[b.field] === null) continue;
-			const v = propValue(rec[b.field], kinds.get(n.type)?.get(prop));
+			const raw = rec ? pathValue(flatContent(rec), b.field) : undefined;
+			if (raw === undefined || raw === null) continue;
+			const v = propValue(raw, kinds.get(n.type)?.get(prop));
 			if (v !== '' && v !== n.props?.[prop]) {
 				n.props = { ...(n.props || {}), [prop]: v };
 				changed = true;
@@ -454,9 +751,29 @@ export const pushTreeContents = async (before: any[][], after: any[][], page?: a
 	if (!kit) return 0;
 	const allowed = new Set<string>(kit.def.fields.map((f: any) => f.key));
 	const bySlug = new Map<string, Bound[]>();
-	for (const c of changed) if (allowed.has(c.field)) bySlug.set(c.slug, [...(bySlug.get(c.slug) || []), c]);
+	for (const c of changed) bySlug.set(c.slug, [...(bySlug.get(c.slug) || []), c]);
+	const recs: any[] = await kit.Model.find({ slug: { $in: [...bySlug.keys()] }, archivedAt: null }, { slug: 1, block: 1 }).lean();
+	const bySlugRec = new Map(recs.map(r => [r.slug, r]));
+	const types = await typesForConnect(kit.def);
 	let kitPage: any;
-	for (const [slug, list] of bySlug) {
+	for (const [slug, all] of bySlug) {
+		const rec = bySlugRec.get(slug);
+		const item = typedItem(rec);
+		if (item) {
+			// A typed record: each word at its path in the item (its type's kind: rich text as HTML, the rest as words).
+			const kinds = types?.find(t => t.uid === item.__component);
+			const $set: any = { updatedAt: new Date() };
+			for (const c of all) {
+				const path = typedPath(c.field);
+				const [head, , cell] = path.split('.');
+				if (kinds && !(cell ? kinds.rows?.has(cell) : kinds.fields.has(head))) continue;
+				$set[`block.0.${path}`] = asKind(c.value, cell ? kinds?.rows?.get(cell) : kinds?.fields.get(head));
+			}
+			if (Object.keys($set).length > 1) await kit.Model.collection.updateOne({ _id: rec._id }, { $set });
+			continue;
+		}
+		const list = all.filter(c => allowed.has(c.field));
+		if (!list.length) continue;
 		const $set: any = Object.fromEntries(list.map(c => [c.field, c.value]));
 		const res = await kit.Model.updateOne({ slug, archivedAt: null }, { $set });
 		if (!res.matchedCount) {
@@ -490,6 +807,7 @@ export const syncPage = async (page: any, { connect }: { connect: boolean }) => 
 	}
 	if (!pulled.changed && !made) return page;
 	const saved = await SitePage.findOneAndUpdate({ _id: page._id, 'draft.rev': page.draft.rev }, { $set: { 'draft.tree': tree }, $inc: { 'draft.rev': 1 } }, { new: true }).lean();
+	if (made) await orderContents(page.kitPage || (await pushPage(page)), tree);
 	return saved || page;
 };
 

@@ -1,3 +1,4 @@
+import { unpublishedContents } from './kit.js';
 import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import SiteRelease from '../models/siteBuilder/siteRelease.model.js';
@@ -133,6 +134,13 @@ export const sectionUsage = (design: any, pages: any[]) => {
 	return usage;
 };
 
+/** Every tree the site's drafts draw: the pages (not taken off), the layouts' header and footer, the shared sections. */
+export const draftTrees = (pages: any[], design: any): any[][] => [
+	...pages.filter(p => p.status !== 'unpublished').map(p => p.draft?.tree || []),
+	...Object.values<any>(design?.draft?.layouts || {}).flatMap(l => [Array.isArray(l?.header) ? l.header : [], Array.isArray(l?.footer) ? l.footer : []]),
+	...Object.values<any>(design?.draft?.sections || {}).map(x => x?.tree || []),
+];
+
 export const livePages = () => SitePage.find({ deletedAt: null }).sort({ isHome: -1, priority: -1, name: 1 }).lean();
 
 /* ---------------------------------------------------------- checking */
@@ -177,10 +185,13 @@ export const siteChanges = async () => {
 		unpublished: pages.filter((p: any) => p.status === 'unpublished').map(short),
 	};
 	const designChanged = !(design as any)?.published || (design as any).published.rev !== (design as any).draft?.rev;
+	// The Contents the site shows that aren't live yet (docs/cms D5): Publish puts them live with the layout.
+	const contents = await unpublishedContents(draftTrees(pages, design));
 	return {
 		pages: changes,
 		design: designChanged,
-		any: designChanged || !!(changes.added.length || changes.changed.length || changes.removed.length),
+		contents,
+		any: designChanged || !!(changes.added.length || changes.changed.length || changes.removed.length || contents.length),
 		problems,
 		canPublish: !problems.some(p => p.level !== 'warning'),
 		live: last ? { version: (last as any).version, publishedAt: (last as any).publishedAt } : null,

@@ -14,7 +14,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-04 | Dynamic zone: `blocks` field kind, panel editor, API shape (D4) | backend + mint-tenant | L | done 2026-10-15 |
 | CMS-05 | Draft & publish per entry: `_published` snapshot, status, publish/unpublish/discard, every read path (D5, D11) | backend + mint-tenant | L | done 2026-10-15 (publish webhooks → CMS-09) |
 | CMS-06a | Typed contents + the Contents screen: content types (components `content.*`), `type` / `order` / `block` on Contents, page dropdown, type first, List type (model, how many, order, conditions, card fields) read on the site (D1) | backend + mint-tenant | L | done 2026-10-15 |
-| CMS-06b | The site on typed contents: builder words land in typed records (one per section, paths like `items.2.title`), legacy field aliases for the builder, Contents drafts + Publish with the site, Publish / status on the Contents screen (D1, D5) | backend + mint-tenant | L | — |
+| CMS-06b | The site on typed contents: builder words land in typed records (one per section, paths like `items.2.title`), legacy field aliases for the builder, Contents drafts + Publish with the site, Publish / status on the Contents screen (D1, D5) | backend + mint-tenant | L | done 2026-10-15 |
 | CMS-06c | Moving sites over: migration script + lazy, theme starters and templates making typed records, header/footer on Whole site, Site design as a single type (D1, §6) | backend + mint-builder + mint-sites | L | — |
 | CMS-07 | Content manager: "Content" in the sidebar, entry editor with status sidebar, list badges (D5, D11) | mint-tenant | L | — |
 | CMS-08 | Preview on the real site: tokens, mint-sites draft render, side-by-side pane (D9) | backend + mint-sites + mint-tenant | M | — |

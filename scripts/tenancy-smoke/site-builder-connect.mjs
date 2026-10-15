@@ -1,4 +1,4 @@
-// Every word in Contents (docs/site-builder SB-29): a new site's demo binds every
+// Every word in Contents (docs/site-builder SB-29), typed (docs/cms D1, CMS-06b): a new site's demo binds every
 // text, picture and button to a Contents record and turns grids of look-alike
 // cards into lists of cards; blocks added later (POST /connect) get records of
 // their own with demo words; a copy gets new records; an edit in the builder
@@ -28,6 +28,9 @@ const walk = (nodes, fn, inList = false) =>
 		Object.values(n.slots || {}).forEach(s => walk(s, fn, inList || n.type === 'collection'));
 	});
 const WORDS = { heading: ['text'], text: ['html'], button: ['label'], link: ['text'], badge: ['text'], stat: ['value', 'label'], quote: ['text', 'author', 'role'], 'accordion-item': ['title'] };
+/** A typed Contents record's item, and the value at a binding's path in it. */
+const item = rec => rec?.block?.[0] || {};
+const at = (rec, path) => String(path).split('.').reduce((v, k) => (v == null ? v : v[k]), item(rec));
 /** Words outside lists that aren't bound to Contents (or a record / the site). */
 const loose = tree => {
 	const out = [];
@@ -58,7 +61,8 @@ ok('…their card is bound to the item', cardLists.every(l => JSON.stringify(l.c
 r = await call('GET', P('/web-contents?limit=500'), null, T);
 const contents = r.body?.doc || [];
 const cardsRec = contents.find(c => c.slug === cardLists[0]?.props.source.content);
-ok('…each list is one Contents record of category card, with its cards', cardsRec?.category === 'card' && cardsRec.card?.length >= 3 && cardsRec.card[0].title, JSON.stringify(cardsRec).slice(0, 200));
+ok('…each list is one typed Contents record, its cards its rows', /^content\./.test(cardsRec?.type) && item(cardsRec).items?.length >= 3 && item(cardsRec).items[0].title, JSON.stringify(cardsRec).slice(0, 200));
+ok('…one record per section: every record has a type', contents.length > 0 && contents.every(c => /^content\./.test(c.type)), contents.map(c => c.type).join());
 ok('the header and footer words are in Contents too', contents.some(c => c.slug.startsWith('header-')) && contents.some(c => c.slug.startsWith('footer-')), contents.map(c => c.slug).slice(0, 12).join());
 
 r = await call('GET', SB(`/pages/${pages.find(p => p.path === '/services').id}`), null, T);
@@ -74,7 +78,7 @@ ok('published', r.status === 200, `${r.status} ${r.body?.message}`);
 const render = async path => call('GET', `/public/api/${site.publicSlug}/render?path=${encodeURIComponent(path)}`);
 r = await render('/');
 const live = r.body?.data || {};
-ok('render: the cards come from Contents', live.nodes?.[cardLists[0].id]?.items?.length === cardsRec.card.length, JSON.stringify(live.nodes?.[cardLists[0].id]).slice(0, 160));
+ok('render: the cards come from Contents', live.nodes?.[cardLists[0].id]?.items?.length === item(cardsRec).items.length, JSON.stringify(live.nodes?.[cardLists[0].id]).slice(0, 160));
 
 /* ------------------------------------------- builder edit ⇄ the panel */
 let heading;
@@ -84,11 +88,28 @@ walk(tree, n => n.id === heading.id && (n.props.text = 'Typed in the builder'));
 r = await call('PUT', SB(`/pages/${home.id}`), { rev: home.draft.rev, tree }, T);
 ok('a bound heading edited in the builder saves', r.status === 200, `${r.status} ${r.body?.message}`);
 let rec = (await call('GET', P('/web-contents?limit=500'), null, T)).body.doc.find(c => c.slug === heading.bind.text.slug);
-ok('…its Contents record has the new words', rec?.content === 'Typed in the builder', JSON.stringify(rec).slice(0, 160));
+const hPath = heading.bind.text.field;
+ok('…its Contents record has the new words, at the binding’s path', at(rec, hPath) === 'Typed in the builder', `${hPath}: ${JSON.stringify(item(rec)).slice(0, 160)}`);
 r = await render('/');
-ok('…and the live site shows them without a Publish', r.body?.data?.contents?.[heading.bind.text.slug]?.content === 'Typed in the builder');
+const liveWord = () => String(hPath).split('.').reduce((v, k) => (v == null ? v : v[k]), r.body?.data?.contents?.[heading.bind.text.slug]);
+ok('…a draft: the live site keeps what’s published (docs/cms D5)', liveWord() !== 'Typed in the builder', liveWord());
+r = await call('GET', SB('/changes'), null, T);
+ok('…Publish says a content changed', r.body?.contents?.some(c => c.slug === heading.bind.text.slug) && r.body.any === true, JSON.stringify(r.body?.contents));
+r = await call('POST', SB('/publish'), { note: 'words' }, T);
+ok('…the site’s Publish puts it live', r.status === 200 && r.body?.contents >= 1, `${r.status} ${r.body?.message} ${r.body?.contents}`);
+r = await render('/');
+ok('…the live site shows it', liveWord() === 'Typed in the builder', liveWord());
 
-r = await call('PUT', P(`/web-contents/${rec._id}`), { content: 'Changed in the panel' }, T);
+const changed = JSON.parse(JSON.stringify(item(rec)));
+delete changed.__component;
+delete changed._key;
+{
+	const keys = String(hPath).split('.');
+	let o = changed;
+	for (const k of keys.slice(0, -1)) o = o[k];
+	o[keys[keys.length - 1]] = 'Changed in the panel';
+}
+r = await call('PUT', P(`/site-contents/${rec._id}`), { data: changed }, T);
 ok('the record is changed in the panel', r.status === 200, `${r.status} ${r.body?.message}`);
 r = await call('GET', SB(`/pages/${home.id}`), null, T);
 let back;
@@ -98,10 +119,10 @@ ok('…the builder opens the page with the panel’s words', back?.props.text ==
 /* --------------------------------------------- blocks added later */
 r = await call('POST', SB('/connect'), { pageId: home.id, nodes: [{ id: 'newHead1', type: 'heading', props: { text: 'Heading', level: 2 } }, { id: 'newText1', type: 'text', props: { html: '<p>Write something here.</p>' } }] }, T);
 const [h1, t1] = r.body?.nodes || [];
-ok('connect: a new heading and text get Contents records', r.status === 200 && h1?.bind?.text?.from === 'content' && t1?.bind?.html?.field === 'richContent' && r.body.records === 2, JSON.stringify(r.body).slice(0, 240));
+ok('connect: a new heading and text get Contents records', r.status === 200 && h1?.bind?.text?.from === 'content' && h1.bind.text.field === 'heading' && t1?.bind?.html?.field === 'text' && r.body.records === 2, JSON.stringify(r.body).slice(0, 240));
 ok('…with demo words, rich text as lorem ipsum', h1.props.text.startsWith('Lorem') && t1.props.html.includes('Lorem ipsum'), `${h1.props.text} / ${t1.props.html}`);
 rec = (await call('GET', P('/web-contents?limit=500'), null, T)).body.doc.find(c => c.slug === t1.bind.html.slug);
-ok('…the record holds them, slug made from the page', rec?.richContent?.includes('Lorem ipsum') && /^home-/.test(rec.slug), JSON.stringify(rec).slice(0, 160));
+ok('…the record holds them, slug made from the page', item(rec).text?.includes('Lorem ipsum') && /^home-/.test(rec.slug), JSON.stringify(rec).slice(0, 160));
 
 const grid = {
 	id: 'newGrid1',
@@ -121,18 +142,18 @@ r = await call('POST', SB('/connect'), { pageId: home.id, nodes: [grid] }, T);
 const list = r.body?.nodes?.[0]?.children?.[0];
 ok('connect: a grid of look-alike cards becomes a list of cards', list?.type === 'collection' && list.props.source.content && list.children.length === 1, JSON.stringify(r.body?.nodes).slice(0, 200));
 rec = (await call('GET', P('/web-contents?limit=500'), null, T)).body.doc.find(c => c.slug === list?.props.source.content);
-ok('…its cards in one Contents record', rec?.card?.map(c => c.title).join() === 'Fast,Kind,Clear' && rec.card[1].description === 'Kind help.', JSON.stringify(rec?.card));
+ok('…its cards in one Contents record, as its rows', /^content\.(cards|section)$/.test(rec?.type) && item(rec).items?.map(c => c.title).join() === 'Fast,Kind,Clear' && item(rec).items[1].description === 'Kind help.', JSON.stringify(rec?.block));
 
 r = await call('POST', SB('/connect'), { pageId: home.id, nodes: [{ id: 'newList1', type: 'collection', props: { source: { model: '' }, layout: 'grid', columns: 3 }, children: [{ id: 'newLc001', type: 'card', props: {}, children: [{ id: 'newLh001', type: 'heading', props: { text: '{{item.title}}', level: 3 } }] }] }] }, T);
 const empty = r.body?.nodes?.[0];
 rec = (await call('GET', P('/web-contents?limit=500'), null, T)).body.doc.find(c => c.slug === empty?.props.source.content);
-ok('connect: a new empty list gets three demo cards', !!empty?.props.source.content && rec?.card?.length === 3, JSON.stringify(empty?.props));
+ok('connect: a new empty list gets three demo cards', !!empty?.props.source.content && item(rec).items?.length === 3, JSON.stringify(empty?.props));
 
 r = await call('POST', SB('/connect'), { pageId: home.id, fresh: true, nodes: [h1, list] }, T);
 const [h2, list2] = r.body?.nodes || [];
 ok('connect fresh (a copy): new records of its own', h2?.bind?.text?.slug && h2.bind.text.slug !== h1.bind.text.slug && list2?.props.source.content !== list.props.source.content, JSON.stringify(r.body?.nodes).slice(0, 200));
 rec = (await call('GET', P('/web-contents?limit=500'), null, T)).body.doc.find(c => c.slug === list2?.props.source.content);
-ok('…the copied list has the same cards', rec?.card?.map(c => c.title).join() === 'Fast,Kind,Clear');
+ok('…the copied list has the same cards', item(rec).items?.map(c => c.title).join() === 'Fast,Kind,Clear', JSON.stringify(rec?.block));
 
 const now = (await call('GET', SB(`/pages/${home.id}`), null, T)).body;
 r = await call('PUT', SB(`/pages/${home.id}`), { rev: now.draft.rev, tree: [...now.draft.tree, grid] }, T);

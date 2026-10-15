@@ -13,7 +13,8 @@ import { publishSite, restoreRelease, siteUrl } from '../library/siteBuilder/pub
 import { dataModels, resolveCollections, sampleRecord } from '../library/siteBuilder/resolve.js';
 import { applyStarter, isBlankSite, isUntouchedSite, starterSummaries } from '../library/siteBuilder/starter.js';
 import { connectNodes, layoutTrees, pushTreeContents, syncLayouts, syncPage } from '../library/siteBuilder/connect.js';
-import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
+import { ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
+import { contentList, ensureDesignModel, orderContents, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
 
 /**
  * /tenant/api/p/:projectId/site-builder — the site builder (docs/site-builder
@@ -193,7 +194,11 @@ router.put(
 		if (body.seo !== undefined) await pushSeo(saved, saved.draft.seo);
 		else if (Object.keys(fields).length) await pushPage(saved);
 		// The words edited in the builder, into their Contents records.
-		if (body.tree !== undefined) await pushTreeContents([page.draft?.tree || []], [saved.draft.tree], saved);
+		if (body.tree !== undefined) {
+			await pushTreeContents([page.draft?.tree || []], [saved.draft.tree], saved);
+			// The Contents screen lists the page's pieces in the order the page shows them.
+			if (saved.kitPage) await orderContents(saved.kitPage, saved.draft.tree);
+		}
 		return { ...pageView(saved), problems };
 	})
 );
@@ -283,7 +288,11 @@ router.get(
 	handle(async (req: any) => {
 		await ensureSite();
 		const build = grants(req.permissions, ['build']);
-		if (build) await ensureDesignModel(req);
+		if (build) {
+			await ensureDesignModel(req);
+			// Contents hold typed records from here on — new sections' words go into one per section (docs/cms D1).
+			await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
+		}
 		return designWithUsage(await syncLayouts(await pullDesign(), { connect: build }));
 	})
 );
@@ -404,6 +413,7 @@ router.post(
 	handle(async (req: any) => {
 		mayBuild(req);
 		await ensureDesignModel(req);
+		await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
 		const out = await applyStarter(req, String(req.body?.theme || ''), { replace: req.body?.replace === true });
 		recordProjectEvent({ req, model: 'Site', modelPath: 'site-builder', document: req.project._id, name: 'Site', text: `loaded the ${out.theme} theme’s demo site` });
 		return out;
@@ -430,8 +440,9 @@ router.post(
 		const trees = [body.tree, layout.header || [], layout.footer || [], ...Object.values<any>(design?.draft?.sections || {}).map(x => x?.tree || [])];
 		const page: any = body.pageId && isId(body.pageId) ? await SitePage.findOne({ _id: body.pageId }, { kind: 1, source: 1 }).lean() : null;
 		const [nodes, contents, record] = await Promise.all([
-			resolveCollections(trees, { page: Number(body.page) || 1 }),
-			resolveContents(trees),
+			// The editor shows the drafts (Contents keeps them until Publish, docs/cms D5).
+			resolveCollections(trees, { page: Number(body.page) || 1, drafts: true }),
+			resolveContents(trees, { drafts: true }),
 			page?.kind === 'template' ? sampleRecord(page.source, typeof body.recordId === 'string' ? body.recordId : undefined) : null,
 		]);
 		return { nodes, contents, record };

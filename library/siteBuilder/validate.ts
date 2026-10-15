@@ -20,7 +20,7 @@ export type Result = { ok: boolean; problems: Problem[] };
 const BREAKPOINTS = ['base', 'md', 'lg'];
 const NODE_KEYS = new Set(['id', 'type', 'name', 'props', 'style', 'hidden', 'bind', 'children', 'slots', 'action', 'locked']);
 const BINDING_FROM = ['record', 'item', 'site', 'content', 'customer'];
-const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){0,4}$/;
+const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+){0,5}$/; // a list's row by its number: items.2.title (docs/cms D1)
 const WIDGET = /^[a-z0-9-]{1,40}$/;
 const MAX_PROBLEMS = 100;
 

@@ -31,6 +31,13 @@ await call('POST', P(site, '/web-contents'), { name: 'About hero', page: about._
 await call('POST', P(site, '/web-contents'), { name: 'Team cards', page: about._id, section: 'team', category: 'card', card: [{ title: 'Ada', subTitle: 'Founder' }], priority: 5 }, s.pat);
 await call('POST', P(site, '/web-contents'), { name: 'Hidden block', page: about._id, isVisible: false, category: 'content' }, s.pat);
 await call('POST', P(site, '/web-contents'), { name: 'Draft block', page: about._id, status: 'draft', category: 'content' }, s.pat);
+// Contents are drafts until published (docs/cms D5): none of them is on the API yet.
+r = await call('GET', P(site, '/web-contents?limit=50'), null, s.pat);
+const blockIds = (r.body?.doc || []).map(d => d._id);
+r = await pub('web-contents');
+ok('contents are drafts until published', r.status === 200 && r.body?.total === 0, JSON.stringify(r.body?.total));
+r = await call('POST', P(site, '/web-contents/bulk/publish'), { ids: blockIds }, s.pat);
+ok('…published together', r.status === 200 && r.body?.published === 4, JSON.stringify(r.body));
 
 r = await pub('site');
 ok('GET /site: settings + menu', r.status === 200 && r.body?.settings?.siteName === 'Example Co' && r.body.menu.map(m => m.path).join() === '/about,/', JSON.stringify(r.body?.menu));

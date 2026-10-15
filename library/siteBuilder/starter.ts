@@ -11,7 +11,7 @@ import { newId } from './ids.js';
 import { EMPTY_SEO, ensureSite } from './site.js';
 import { validateTree } from './validate.js';
 import { kitModel, KIT_ROUTES, pushDesign, pushSeo, upsertContents } from './kit.js';
-import { connectTree, holdsCards } from './connect.js';
+import { connectTree, holdsCards, typesForConnect } from './connect.js';
 import { loadSite } from '../functions/siteConfig.function.js';
 
 /**
@@ -352,13 +352,15 @@ export const applyStarter = async (req: any, theme: string, { replace = false, p
 
 	const contents = await kitModel(KIT_ROUTES.contents);
 	const cards = holdsCards(contents?.def);
+	// Typed Contents (docs/cms D1): one record per section, of the section's type.
+	const types = contents ? await typesForConnect(contents.def) : undefined;
 
 	// The design: the theme as it comes, its header and footer (their words in Contents too).
 	const design: any = await SiteDesign.findOne({}).lean();
 	const header = presetTree(starter.header);
 	const footer = presetTree(starter.footer);
 	const layoutRecords = contents
-		? [...connectTree(header, { pageKey: 'header', pageName: 'Header', slugs: 'count', cards }).records, ...connectTree(footer, { pageKey: 'footer', pageName: 'Footer', slugs: 'count', cards }).records]
+		? [...connectTree(header, { pageKey: 'header', pageName: 'Header', slugs: 'count', cards, types }).records, ...connectTree(footer, { pageKey: 'footer', pageName: 'Footer', slugs: 'count', cards, types }).records]
 		: [];
 	const draft = { ...design.draft, theme, tokens: {}, layouts: { ...(design.draft?.layouts || {}), default: { header, footer } } };
 	const savedDesign: any = await SiteDesign.findOneAndUpdate({ _id: design._id }, { $set: { draft: { ...draft, rev: (design.draft?.rev || 1) + 1 } } }, { new: true }).lean();
@@ -383,7 +385,7 @@ export const applyStarter = async (req: any, theme: string, { replace = false, p
 				tree.push(...t);
 			} else tree.push(listSection(listSpec, s));
 		}
-		const records = contents ? connectTree(tree, { pageKey: slug(spec.name) || 'home', pageName: spec.name, slugs: 'count', cards }).records : [];
+		const records = contents ? connectTree(tree, { pageKey: slug(spec.name) || 'home', pageName: spec.name, slugs: 'count', cards, types }).records : [];
 		const errors = validateTree(tree).problems.filter(p => p.level === 'error');
 		if (errors.length) throw new TenancyError(500, `The ${theme} demo’s ${spec.name} page has problems: ${errors.slice(0, 3).map(e => e.message).join('; ')}`);
 		const fields = { name: spec.name, path: spec.path, kind: 'static', showInMenu: true, menuLabel: '', priority: priority--, layout: 'default' };

@@ -122,3 +122,27 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Verified: `cms-site-contents.mjs` (31 checks) passes; site-builder(-data/-starter/-connect), website(-mcp), cms-*,
   templates-apply pass. Headless Chrome: the screen, the type picker, the List editor showing what it lists, the
   Cards form, a Call to action added through the form, phone width.
+
+## 2026-10-15 — CMS-06b The site on typed contents
+- Backend: `connect.ts` `connectTyped` — each top-level section's words go into one record of the section's type
+  (by its name: Hero, Call to action, Questions, Numbers, Reviews, Logos, Gallery, Cards for features/team/steps/
+  pricing/services/products/blog, Text for a page title, Header/Footer by part, else Section), bound by path
+  (`heading`, `buttonLabel` + `buttonUrl` from the button's link, `items.2.title`); a grid of look-alike cards becomes
+  the record's `items` drawn by a list (`source.content`); other look-alike rows (questions, quotes, numbers, links)
+  bind to `items.<n>.<field>`; words with no room go into extra Section records ("(more)"); a copy is connected anew;
+  empty records aren't made. Unit tests for every preset (`test/connect.test.ts`). `kit.ts`: `flatContent` (a typed
+  record read flat, with the old names as aliases — `content` → heading, `btnText` → buttonLabel, `card` → items…),
+  `typedPath`, `upsertContents` makes/updates typed records from typed or old-style fields, `resolveContents` and
+  lists read what's published (the editor's `/resolve` reads drafts), `unpublishedContents` / `publishContents`,
+  `orderContents` (a page's pieces in its tree's order, on every save). Contents become drafts until published
+  (`ensureTypedContents`, which runs when the builder opens and publishes what's there). The site's Publish publishes
+  the words it shows; `/changes` lists the unpublished ones (`contents`) and counts as a change. Binding paths may name
+  a row (validator `FIELD_PATH`). `/pages/by-path` serves published contents in order; the website MCP's `upsert_page`
+  publishes the blocks it writes (and unpublishes the ones it archives) — templates build through it.
+  `/site-contents/publish` { page } or { ids }. Built-in types have no required fields (a section may lack a heading).
+- Panel: Contents shows Draft / Published / Changes not published per piece, Publish per piece and Publish the page.
+- Docs: Websites → Contents (drafts until you publish), Site builder → Your data on the page; website changelog.
+- Verified: cms-site-contents (37), site-builder(-data/-connect/-starter), website(-mcp), templates(-apply/-preview),
+  widgets(-cart), public-filters, api-builder, cms-* pass; jest connect tests pass. Headless Chrome: statuses, Publish
+  the page.
+- Not yet (06c): moving old one-word records into typed ones, the builder's own pickers showing typed fields.

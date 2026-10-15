@@ -600,8 +600,9 @@ router.get(
 		if (!page) throw new TenancyError(404, 'No published page at that path');
 		const [seoDoc, blocks]: any = await Promise.all([
 			seo?.Model ? seo.Model.findOne({ page: page._id }).lean() : null,
+			// What's published (Contents keeps drafts until Publish, docs/cms D5), in the page's order.
 			contents?.Model
-				? contents.Model.find({ page: page._id, status: 'published', isVisible: { $ne: false } }).sort({ priority: -1, createdAt: 1 }).lean()
+				? liveFind(contents.def, contents.Model, { query: { page: page._id, status: 'published', isVisible: { $ne: false } }, sort: { order: 1, priority: -1, createdAt: 1 }, limit: 500 })
 				: [],
 		]);
 		return {

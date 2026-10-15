@@ -101,6 +101,11 @@ ok('the list on the public API', r.status === 200 && r.body?.doc?.map(p => `${p.
 // Edited in the panel → the site changes, no code
 r = await call('PUT', P(site, `/web-contents/${hero?._id}`), { content: 'Warm bread, every morning' }, s.pat);
 ok('edit the hero in the panel', r.status === 200, r.status);
+// Contents keep drafts until published (docs/cms D5).
+r = await pub('pages/by-path?path=/');
+ok('…a draft: the site keeps what’s published', r.body?.contents?.[0]?.content !== 'Warm bread, every morning', r.body?.contents?.[0]?.content);
+r = await call('POST', P(site, `/web-contents/${hero?._id}/publish`), {}, s.pat);
+ok('…published', r.status === 200, `${r.status} ${r.body?.message}`);
 r = await pub('pages/by-path?path=/');
 ok('the site API serves the edit', r.body?.contents?.[0]?.content === 'Warm bread, every morning', r.body?.contents?.[0]?.content);
 

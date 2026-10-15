@@ -151,14 +151,15 @@ export const readList = async (item: any, { pageSize: wanted, page = 1, paginati
 };
 
 /** A list of cards kept in one Contents record — a typed one's `items`, or the old `card` — or a List's records. */
-const readCards = async (slug: string, props: any, page: number): Promise<CollectionData> => {
+const readCards = async (slug: string, props: any, page: number, drafts = false): Promise<CollectionData> => {
 	const kit = await kitModel(KIT_ROUTES.contents);
 	if (!kit) return empty(DEFAULT_PAGE_SIZE, 'This project has no Contents model (web-contents) for these cards');
 	const cond: any = { slug, archivedAt: null };
 	const has = (k: string) => kit.def.fields.some((f: any) => f.key === k);
 	if (has('status')) cond.status = { $nin: ['draft', 'archived'] };
 	if (has('isVisible')) cond.isVisible = { $ne: false };
-	const rec: any = await kit.Model.findOne(cond, { card: 1, block: 1 }).lean();
+	// What's published (Contents keeps drafts, docs/cms D5) — the editor sees the drafts.
+	const rec: any = drafts || !kit.def.draftAndPublish ? await kit.Model.findOne(cond, { card: 1, block: 1 }).lean() : await liveFindOne(kit.def, kit.Model, { query: cond });
 	if (!rec) return empty(DEFAULT_PAGE_SIZE, `The cards’ Contents record “${slug}” is gone, hidden or a draft`);
 	const typed = Array.isArray(rec.block) ? rec.block[0] : null;
 	if (typed?.__component === LIST_TYPE) return readList(typed, { page, pagination: !!props.pagination, pageSize: Number(props.source?.pageSize) || undefined });
@@ -174,10 +175,10 @@ const readCards = async (slug: string, props: any, page: number): Promise<Collec
 };
 
 /** One collection's records: its source's filter, sort and page size; `page` only when it pages. */
-const readCollection = async (node: any, defs: Map<string, any>, page: number, all: () => Promise<Map<string, any>>): Promise<CollectionData> => {
+const readCollection = async (node: any, defs: Map<string, any>, page: number, all: () => Promise<Map<string, any>>, drafts = false): Promise<CollectionData> => {
 	const props = node.props || {};
 	const source = props.source || {};
-	if (typeof source.content === 'string' && source.content) return readCards(source.content, props, page);
+	if (typeof source.content === 'string' && source.content) return readCards(source.content, props, page, drafts);
 	const pageSize = pageSizeOf(props);
 	if (typeof source.model !== 'string' || !source.model) return empty(pageSize, 'Pick the model this list shows');
 	const def = defs.get(source.model);
@@ -206,7 +207,7 @@ const readCollection = async (node: any, defs: Map<string, any>, page: number, a
 };
 
 /** The records every collection in `trees` shows, by node id (at most MAX_COLLECTIONS; the rest say so). */
-export const resolveCollections = async (trees: any[][], { page = 1 }: { page?: number } = {}) => {
+export const resolveCollections = async (trees: any[][], { page = 1, drafts = false }: { page?: number; drafts?: boolean } = {}) => {
 	const { found } = collectionsIn(trees);
 	if (!found.length) return {} as Record<string, CollectionData>;
 	const defs = await publicDefs();
@@ -216,7 +217,7 @@ export const resolveCollections = async (trees: any[][], { page = 1 }: { page?: 
 	await Promise.all(
 		found.map(async (n, i) => {
 			if (typeof n.id !== 'string') return;
-			out[n.id] = i < MAX_COLLECTIONS ? await readCollection(n, defs, page, all) : empty(pageSizeOf(n.props), `At most ${MAX_COLLECTIONS} lists of records on one page`);
+			out[n.id] = i < MAX_COLLECTIONS ? await readCollection(n, defs, page, all, drafts) : empty(pageSizeOf(n.props), `At most ${MAX_COLLECTIONS} lists of records on one page`);
 		})
 	);
 	return out;

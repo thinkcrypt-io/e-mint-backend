@@ -64,7 +64,7 @@ export const CONTENT_TYPES: ContentType[] = [
 		title: 'Hero',
 		icon: 'panel-top',
 		description: 'The big opening of a page: a heading, a line of text, buttons and a picture.',
-		fields: [eyebrow, { ...heading, required: true }, text, image, imageAlt, ...button, ...second, items('Numbers under it', 'Add number', [row.title('Number'), row.subTitle('Label')])],
+		fields: [eyebrow, heading, text, image, imageAlt, ...button, ...second, items('Numbers under it', 'Add number', [row.title('Number'), row.subTitle('Label')])],
 	},
 	{
 		name: 'text',
@@ -127,7 +127,7 @@ export const CONTENT_TYPES: ContentType[] = [
 		title: 'Call to action',
 		icon: 'megaphone',
 		description: 'A band that asks the visitor to do one thing — book, call, sign up.',
-		fields: [eyebrow, { ...heading, required: true }, text, ...button, ...second],
+		fields: [eyebrow, heading, text, ...button, ...second],
 	},
 	{
 		name: 'logos',
@@ -141,7 +141,7 @@ export const CONTENT_TYPES: ContentType[] = [
 		title: 'Picture',
 		icon: 'image',
 		description: 'One picture with a caption.',
-		fields: [{ ...image, required: true }, imageAlt, { key: 'caption', label: 'Caption', kind: 'text' }],
+		fields: [image, imageAlt, { key: 'caption', label: 'Caption', kind: 'text' }],
 	},
 	{
 		name: 'list',
@@ -230,7 +230,8 @@ const TYPED_FIELDS = (uids: string[]) => [
 /**
  * The project's Contents model, able to hold typed records: `type`, `order`
  * and `block` added, and `block` taking every content type there is (a type
- * the project adds is taken too). The old catch-all fields stay until the
+ * the project adds is taken too), and records drafts until published (D5).
+ * The old catch-all fields stay until the
  * site is moved over (CMS-06 migration). Returns the model's definition, or
  * null when the project has no Contents model.
  */
@@ -251,8 +252,11 @@ export const ensureTypedContents = async (req: any) => {
 			changed = true;
 		}
 	}
+	// Drafts until Publish (D5): the site's Publish, or Publish on the Contents screen, puts words live.
+	if (!def.draftAndPublish) changed = true;
 	if (!changed) return def;
 	const { _id, name, route, sidebar, collectionName, createdAt, updatedAt, version, __v, organization, project, ...rest } = def;
-	const out = await updateModelCore(req, def._id, { ...rest, fields }, { note: 'Contents: typed records (CMS-06)' });
+	// Turning drafts on publishes what's there, so nothing leaves the site.
+	const out = await updateModelCore(req, def._id, { ...rest, fields, draftAndPublish: true }, { note: 'Contents: typed records, drafts until published (CMS-06)' });
 	return out.doc;
 };

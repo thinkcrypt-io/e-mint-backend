@@ -144,9 +144,14 @@ ok('a template page answers with its record', r.status === 200 && r.body?.data?.
 ok('…its SEO filled from the record', r.body?.page?.seo?.title === 'Service 2 — Studio' && r.body.page.seo.description === 'What 2 is', JSON.stringify(r.body?.page?.seo).slice(0, 160));
 r = await render('/services/nope');
 ok('…no such record → 404', r.status === 404, r.status);
-r = await call('PUT', P('/web-contents/' + (await call('GET', P('/web-contents'), null, T)).body.doc.find(c => c.slug === 'home-hero')._id), { content: 'Edited in the panel' }, T);
+const heroId = (await call('GET', P('/web-contents'), null, T)).body.doc.find(c => c.slug === 'home-hero')._id;
+// Typed now (docs/cms D1): the old names land in the record's item — `content` is its heading.
+r = await call('PUT', P('/site-contents/' + heroId), { data: { heading: 'Edited in the panel', subheading: 'A small studio', buttonLabel: 'See services', buttonUrl: '/services' } }, T);
 r = await render('/');
-ok('a Contents edit in the panel shows without a Publish', r.body?.data?.contents?.['home-hero']?.content === 'Edited in the panel', r.body?.data?.contents?.['home-hero']?.content);
+ok('a Contents edit in the panel is a draft: the site keeps what’s published (docs/cms D5)', r.body?.data?.contents?.['home-hero']?.content === 'Design that works', r.body?.data?.contents?.['home-hero']?.content);
+r = await call('POST', P(`/web-contents/${heroId}/publish`), {}, T);
+r = await render('/');
+ok('…published, it shows', r.body?.data?.contents?.['home-hero']?.content === 'Edited in the panel', r.body?.data?.contents?.['home-hero']?.content);
 
 /* -------------------------------------------------------- the editor */
 r = await call('GET', SB('/data'), null, T);
