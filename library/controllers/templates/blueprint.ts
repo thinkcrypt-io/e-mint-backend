@@ -55,6 +55,7 @@ const LIMITS = {
 	pages: 100,
 	blocks: 100,
 	sampleModels: 40,
+	components: 40,
 	sampleRecords: 50,
 	guideSteps: 20,
 	faq: 20,
@@ -112,6 +113,21 @@ const questions = (v: any) =>
 		};
 	});
 
+/**
+ * A component the models use (docs/cms D3, CMS-03b): made in the project
+ * before its models, unless the project has one with the same address.
+ */
+const component = (c: any) => ({
+	category: str(c?.category, 40).toLowerCase(),
+	name: str(c?.name, 40).toLowerCase(),
+	title: str(c?.title, 80),
+	description: str(c?.description, 300),
+	icon: str(c?.icon, 40),
+	fields: list(c?.fields, 60)
+		.filter((f: any) => f && typeof f === 'object' && !Array.isArray(f))
+		.map(plain),
+});
+
 const models = (v: any) => {
 	const o = obj(v);
 	return {
@@ -119,6 +135,7 @@ const models = (v: any) => {
 		steps: list(o.steps, LIMITS.steps)
 			.filter((s: any) => s && typeof s === 'object' && !Array.isArray(s))
 			.map(plain),
+		components: list(o.components, LIMITS.components).map(component),
 	};
 };
 
@@ -373,6 +390,7 @@ export const whatsInside = (bp: any) => {
 	return {
 		type: bp?.type,
 		models,
+		components: (bp?.models?.components || []).map((c: any) => ({ uid: `${c.category}.${c.name}`, title: c.title, fields: (c.fields || []).length })),
 		pages: pages.map((p: any) => ({ path: p.path, name: p.name, blocks: p.contents?.length || 0 })),
 		endpoints: (bp?.endpoints || []).map((e: any) => ({ model: e.model, actions: e.actions, auth: e.auth, ...(e.readOnly?.length && { readOnly: e.readOnly }) })),
 		webhooks: (bp?.webhooks || []).length,

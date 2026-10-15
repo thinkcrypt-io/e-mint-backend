@@ -603,3 +603,16 @@ Newest last. One entry per work order: what, files, how verified.
   browser, New project → Website → Business site with no name → project
   "Business site" opened on its questions, the address cleaned; `?start=own`
   opened the website's own setup; the guide renders.
+
+## Components in templates (docs/cms CMS-03b, 2026-10-15)
+- Blueprint: `models.components` [{ category, name, title, description, icon, fields }] (≤ 40); whatsInside lists them.
+- Capture keeps a field's `component`, `repeatable`, `components` (content blocks) and a uid field's `from` (it was
+  dropped), and carries every component the models use — directly, in blocks, or inside another.
+- Validate: each component's address, title, fields and kinds; links name a model of the template; a component inside
+  another is carried, plain and not itself; every model's component (and blocks' components) carried. The dry run
+  puts the template's components in the dry scope for the planner and takes them out after.
+- Apply: components made before the models (one the project has already is kept, with a warning); links inside them
+  follow a model built under another name; undo removes them.
+- MCP `set_components`; the format guide mentions them. Studio (admin): the Models tab keeps them when it saves.
+- Verified: `templates-components.mjs` (14 checks); templates, templates-manage, templates-apply, templates-mcp,
+  templates-preview pass.

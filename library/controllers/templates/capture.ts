@@ -1,4 +1,5 @@
 import ModelDefinition from '../../models/builder/modelDefinition.model.js';
+import ComponentDefinition from '../../models/builder/componentDefinition.model.js';
 import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import SidebarItem from '../../models/sidebaritems/model.js';
@@ -28,12 +29,38 @@ const SKIP_RECORD_KEYS = new Set(['_id', '__v', 'createdAt', 'updatedAt', 'code'
 
 const fieldForPlan = (f: any) => {
 	const out: any = { key: f.key, label: f.label || f.key, kind: f.kind };
-	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'min', 'max', 'ref', 'addLabel', 'secret'])
+	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'min', 'max', 'ref', 'addLabel', 'secret', 'component', 'repeatable', 'from'])
 		if (f[k] !== undefined && f[k] !== null && f[k] !== false && f[k] !== '') out[k] = f[k];
 	if (f.default !== undefined && f.default !== null && f.default !== '') out.default = f.default;
 	if (Array.isArray(f.options) && f.options.length) out.options = f.options.map((o: any) => ({ value: o.value, label: o.label }));
 	if (Array.isArray(f.fields) && f.fields.length) out.fields = f.fields.map(fieldForPlan);
+	// Content blocks: the components they take.
+	if (Array.isArray(f.components) && f.components.length) out.components = [...f.components];
 	return out;
+};
+
+/**
+ * The components the models use (docs/cms D3, CMS-03b) — directly, in content
+ * blocks, or inside another component — as the blueprint carries them.
+ */
+const usedComponents = async (defs: any[]) => {
+	const all: any[] = await ComponentDefinition.find({}).sort({ category: 1, title: 1 }).lean();
+	const byUid = new Map(all.map(c => [c.uid, c]));
+	const wanted = new Set<string>();
+	const visit = (fields: any[] = []) => {
+		for (const f of fields) {
+			const uids = f.kind === 'component' ? [f.component] : f.kind === 'blocks' ? f.components || [] : [];
+			for (const uid of uids)
+				if (uid && byUid.has(uid) && !wanted.has(uid)) {
+					wanted.add(uid);
+					visit(byUid.get(uid).fields);
+				}
+		}
+	};
+	defs.forEach(d => visit(d.fields));
+	return all
+		.filter(c => wanted.has(c.uid))
+		.map(c => ({ category: c.category, name: c.name, title: c.title, description: c.description || '', icon: c.icon || '', fields: (c.fields || []).map(fieldForPlan) }));
 };
 
 /** A record as sample data: own fields only, links as the linked record's display value. */
@@ -157,7 +184,7 @@ export const captureProject = async (projectId: any, input: { name?: string; sam
 		const template = project.template?.key ? ` (built from “${project.template.key}”)` : '';
 		return normalizeBlueprint(type, {
 			overview: { name: input.name || project.name.replace(/ · preview .*$/, ''), summary: project.description || '', description: `Captured from the project “${project.name}”${template}.` },
-			models: { steps },
+			models: { steps, components: await usedComponents(own) },
 			sidebar,
 			dashboard,
 			endpoints,

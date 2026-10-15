@@ -189,7 +189,8 @@ ${Object.entries(PARTS_BY_TYPE)
 ## Parts
 - overview: { name, summary (one sentence), description (a few short paragraphs: what's inside, how it's used), audience (who should pick it), category, tags[], icon (a lucide.dev icon name), color, cover (image URL), screenshots[] }
 - models: one model per upsert_model call, as a feature-plan step: { name (singular PascalCase), title (plural), description (one line under the page title — required), rationale (why it's there), displayField, code?: { enabled, prefix }, access?: { enabled }, fields: [...], table?, filters?, form?, view? }. Only new models (a project starts empty). Up to ${TEMPLATE_MAX_STEPS} models. Link with reference/references (ref = another model's name) on the "many" side; tabs on the linked model are added for you.
-  Field: { key (camelCase), label, kind, required?, unique?, searchable?, helper (help text under the input), default?, options?: [{value,label}], ref?, formula?, min?, max?, fields? (sectionlist rows) }
+  Field: { key (camelCase), label, kind, required?, unique?, searchable?, helper (help text under the input), default?, options?: [{value,label}], ref?, formula?, min?, max?, fields? (sectionlist rows), component? + repeatable? (kind component), components? (kind blocks) }
+- models.components (set_components): [{ category, name, title, description, icon, fields }] — the components those fields use, uid "category.name"; made before the models.
   Kinds:
 ${Object.entries(KIND_GUIDE)
 	.map(([k, v]) => `  - ${k}: ${v}`)
@@ -350,6 +351,21 @@ const TOOLS: Tool[] = [
 				const steps: any[] = (doc.draft.models?.steps || []).filter((s: any) => stepIdentity(s).name.toLowerCase() !== String(args.name || '').toLowerCase());
 				if (steps.length === (doc.draft.models?.steps || []).length) return refuse(`The template has no model “${args.name}”.`);
 				return savePart(req, doc._id, 'models', { ...doc.draft.models, steps }, `the models without ${args.name}`);
+			}),
+	},
+	{
+		name: 'set_components',
+		title: 'Set the components',
+		description:
+			'The components the template’s models use (field kind "component", or content blocks): [{ category, name, title, description, icon, fields }] — made in the project before its models (one it already has is kept). Their fields are a model’s kinds minus content blocks; links (ref) name the template’s models; a component inside another must be one of these and have only plain fields. Replaces the whole list.',
+		scope: 'write',
+		inputSchema: { type: 'object', required: ['template', 'components'], properties: { template: templateArg, components: { type: 'array', items: { type: 'object' } } } },
+		annotations: writeHints,
+		run: (req, args) =>
+			safely(async () => {
+				const doc: any = await load(args.template);
+				const components = Array.isArray(args.components) ? args.components : [];
+				return savePart(req, doc._id, 'models', { ...doc.draft.models, components }, `${components.length} component(s)`);
 			}),
 	},
 	partTool('set_sidebar', 'Set the sidebar', 'sidebar', 'The sidebar sections in order: [{ name, icon, description, items: [{ model, label? }] }]. Replaces the whole list.', { type: 'array', items: { type: 'object' } }, 'the sidebar'),

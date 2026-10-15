@@ -232,3 +232,8 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Verified: cms-components-nested.mjs now 29 checks (a section and a list made components, a non-section and a taken
   name refused with the model left as it was, records read the same, the component's rules hold). Headless Chrome:
   the dialog, then the field shown as Component · Venue · One with nothing unsaved; the record unchanged.
+
+## 2026-10-15 — CMS-03b Templates carry their components
+- See docs/templates/CHANGELOG.md "Components in templates": blueprint `models.components`, capture, validate (dry run
+  with them), apply (made before the models, links follow renamed models), MCP set_components, the studio keeps them.
+- Docs: mint-docs Templates (what a template holds); website changelog. CMS-03's follow-ups are all done.

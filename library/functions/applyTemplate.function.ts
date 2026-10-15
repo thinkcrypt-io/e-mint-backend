@@ -1,11 +1,12 @@
 import { Feature, ModelDefinition } from '../models/builder/_index.js';
+import ComponentDefinition from '../models/builder/componentDefinition.model.js';
 import DashboardConfig from '../models/builder/dashboardConfig.model.js';
 import SidebarCategory from '../models/sidebarcategories/model.js';
 import SidebarItem from '../models/sidebaritems/model.js';
 import OrganizationRole from '../models/tenancy/organizationRole.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import { ProjectTemplate } from '../models/templates/_index.js';
-import { BuildError, deleteModelCore } from '../controllers/builder/models.controller.js';
+import { BuildError, deleteModelCore, refreshComponentUsers } from '../controllers/builder/models.controller.js';
 import { TEMPLATE_MAX_STEPS, buildFeature } from '../controllers/builder/features.service.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { normalizeWidget } from '../controllers/dashboard/dashboard.controller.js';
@@ -51,6 +52,8 @@ export type ApplyOptions = {
 export type ApplyResult = {
 	template: { key: string; version: number | null; from: 'published' | 'draft' };
 	models: { name: string; title: string; route: string }[];
+	/** Components made for its models (docs/cms CMS-03b); one the project had already is kept and listed in warnings. */
+	components?: string[];
 	categories: string[];
 	widgets: number;
 	roles: { created: string[]; skipped: string[] };
@@ -162,6 +165,23 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				fallback = String(cat._id);
 			}
 
+			/* 3a. Components the models use (docs/cms D3, CMS-03b): made first, as the blueprint has them —
+			 * it was checked above. A component the project has already (same address) is kept. */
+			step = 'Components';
+			const madeComponents: any[] = [];
+			for (const c of bp.models?.components || []) {
+				const uid = `${c.category}.${c.name}`;
+				if (await ComponentDefinition.exists({ uid })) {
+					result.warnings.push(`The project already has the component ${uid} — it was kept as it is.`);
+					continue;
+				}
+				const doc: any = await ComponentDefinition.create({ uid, category: c.category, name: c.name, title: c.title, description: c.description, icon: c.icon, fields: c.fields, version: 1, createdBy: req.user?._id });
+				madeComponents.push(doc);
+				undo.push({ step: 'Components', run: () => ComponentDefinition.deleteOne({ _id: doc._id }) });
+			}
+			result.components = madeComponents.map(d => d.uid);
+			if (madeComponents.length) await syncDynamicModels({ app: req.app, force: true });
+
 			/* 3. Models: one feature plan, all or nothing on its own. */
 			step = 'Models';
 			let routeOf = (q: string) => q;
@@ -185,6 +205,21 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 			}
 			// A model named by the blueprint (its name, title or route) → its route as built; kit models by route.
 			const builtByStep = (i: number) => result.models.find(m => m.name === ids[i]?.name) || result.models[i];
+
+			/* 3b. Links inside the components name the models as built (one may have been renamed). */
+			const linkTo = (ref: string) => {
+				const i = stepOf(ref);
+				return i >= 0 ? builtByStep(i)?.name || ref : ref;
+			};
+			const relink = (fields: any[] = []): any[] =>
+				fields.map(f => ({ ...f, ...(f.ref && { ref: linkTo(f.ref) }), ...(Array.isArray(f.fields) && { fields: relink(f.fields) }) }));
+			for (const doc of madeComponents) {
+				const fields = relink(doc.toObject().fields);
+				if (JSON.stringify(fields) === JSON.stringify(doc.toObject().fields)) continue;
+				await ComponentDefinition.updateOne({ _id: doc._id }, { $set: { fields }, $inc: { version: 1 } });
+				await syncDynamicModels({ app: req.app, force: true });
+				await refreshComponentUsers(req, doc.uid);
+			}
 			routeOf = (q: string) => {
 				const i = stepOf(q);
 				if (i >= 0) return builtByStep(i)?.route || ids[i].route;

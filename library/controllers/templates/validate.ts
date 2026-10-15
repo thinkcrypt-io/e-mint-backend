@@ -5,7 +5,8 @@ import { ORG_PERMISSION_KEYS, SYSTEM_ROLE_DEFAULTS } from '../../functions/tenan
 import { planFeature, TEMPLATE_MAX_STEPS, CreateStep } from '../builder/features.service.js';
 import { planFromAi } from '../builder/features.schema.js';
 import { PUBLIC_API, readOnlyProblem } from '../builder/models.controller.js';
-import { defaultOf, enumOf } from '../../functions/dynamicModels.function.js';
+import { COMPONENT_KINDS, NESTING_KINDS, REFERENCE_KINDS, SECTION_KINDS, defaultOf, enumOf, syncDynamicModels } from '../../functions/dynamicModels.function.js';
+import ComponentDefinition from '../../models/builder/componentDefinition.model.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
 import {
 	BLOCK_CATEGORIES,
@@ -234,6 +235,50 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 	if (rawSteps.length > TEMPLATE_MAX_STEPS)
 		add('error', 'models', 'models.steps', `A template holds at most ${TEMPLATE_MAX_STEPS} models (this one has ${rawSteps.length}).`, 'Remove the models it can do without, or split it into two templates.');
 
+	/* Components the models use (docs/cms D3, CMS-03b): made before the models. */
+	const comps: any[] = bp.models?.components || [];
+	const uidOfComp = (c: any) => `${c.category}.${c.name}`;
+	const compUids = new Set<string>();
+	const knownModels = new Set(
+		[...rawSteps.flatMap(st => Object.values(stepIdentity(st))), ...kit.flatMap((k: any) => [k.name, k.title, k.route])].filter(Boolean).map(lower)
+	);
+	comps.forEach((c, i) => {
+		const where = `models.components[${i}]`;
+		const label = c.title || uidOfComp(c);
+		if (!/^[a-z][a-z0-9-]{0,39}$/.test(c.category || '') || !/^[a-z][a-z0-9-]{0,39}$/.test(c.name || ''))
+			add('error', 'models', where, `Component ${i + 1} needs a category and a name in lowercase letters, digits and dashes.`, 'E.g. category “shared”, name “button” — its address is shared.button.');
+		else if (compUids.has(uidOfComp(c))) add('error', 'models', where, `Two components are called ${uidOfComp(c)}.`, 'Give one of them another name.');
+		compUids.add(uidOfComp(c));
+		if (!c.title) add('error', 'models', where, `${label} has no title.`, 'Give it a title, e.g. “Button”.');
+		if (!c.fields?.length) add('error', 'models', where, `${label} has no fields.`, 'Add the fields it holds.');
+	});
+	const plainComp = (uid: string) => comps.find(c => uidOfComp(c) === uid && !(c.fields || []).some((f: any) => NESTING_KINDS.includes(f?.kind)));
+	comps.forEach((c, i) => {
+		const label = c.title || uidOfComp(c);
+		(c.fields || []).forEach((f: any, j: number) => {
+			const where = `models.components[${i}].fields[${j}]`;
+			const name = `${label} › ${f?.label || f?.key || j + 1}`;
+			if (!f?.key) add('error', 'models', where, `${name} has no key.`, 'Give the field a key, e.g. “label”.');
+			if (!COMPONENT_KINDS.includes(f?.kind)) add('error', 'models', where, `${name} can’t be of the kind “${f?.kind}” inside a component.`, 'Use text, rich text, media, choices, links, a group or another component.');
+			if (REFERENCE_KINDS.includes(f?.kind) && !knownModels.has(lower(f.ref)))
+				add('error', 'models', where, `${name} links to “${f.ref || ''}”, which isn’t a model of the template.`, 'Point it at one of the template’s models.');
+			if (SECTION_KINDS.includes(f?.kind) && !f.fields?.length) add('error', 'models', where, `${name} is a group with no fields.`, 'Add its fields.');
+			if (f?.kind === 'component') {
+				if (f.component === uidOfComp(c)) add('error', 'models', where, `${name}: a component can’t hold itself.`, 'Pick another component.');
+				else if (!compUids.has(f.component)) add('error', 'models', where, `${name} uses “${f.component || ''}”, which the template doesn’t carry.`, 'Add that component to the template’s components.');
+				else if (!plainComp(f.component)) add('error', 'models', where, `${name}: only a component of plain fields can go inside another.`, 'Take the groups or components out of the inner one.');
+			}
+		});
+	});
+	rawSteps.forEach((st, i) =>
+		(st?.fields || []).forEach((f: any, j: number) => {
+			const uids = f?.kind === 'component' ? [f.component] : f?.kind === 'blocks' ? f.components || [] : [];
+			for (const uid of uids)
+				if (!compUids.has(uid))
+					add('error', 'models', `models.steps[${i}].fields[${j}]`, `${stepIdentity(st).title || stepIdentity(st).name} › ${f.label || f.key} uses the component “${uid || ''}”, which the template doesn’t carry.`, 'Add the component to the template (capturing a project brings them along).');
+		})
+	);
+
 	const creates = answerDefaults(rawSteps, bp.questions || [], add)
 		.filter(s => s.action !== 'update')
 		.slice(0, TEMPLATE_MAX_STEPS);
@@ -243,9 +288,23 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 			summary: o.summary || o.name || 'Template',
 			steps: [...kit, ...creates],
 		});
-		const plan = await runInScope(DRY_SCOPE, () =>
-			planFeature(req, { ...input, sidebarCategory: undefined }, { maxSteps: kit.length + TEMPLATE_MAX_STEPS })
-		);
+		// The template's components, in the dry scope only while its models are checked against them.
+		const plan = await runInScope(DRY_SCOPE, async () => {
+			const uids = comps.map(uidOfComp);
+			if (comps.length) {
+				await ComponentDefinition.deleteMany({ uid: { $in: uids } });
+				await ComponentDefinition.insertMany(comps.map(c => ({ ...c, uid: uidOfComp(c), version: 1 })));
+				await syncDynamicModels({ app: req.app, force: true });
+			}
+			try {
+				return await planFeature(req, { ...input, sidebarCategory: undefined }, { maxSteps: kit.length + TEMPLATE_MAX_STEPS });
+			} finally {
+				if (comps.length) {
+					await ComponentDefinition.deleteMany({ uid: { $in: uids } });
+					await syncDynamicModels({ app: req.app, force: true });
+				}
+			}
+		});
 		// Where each checked step sits in the blueprint (update steps were left out).
 		const indexOf = rawSteps.map((s, i) => (s.action !== 'update' ? i : -1)).filter(i => i >= 0);
 		for (const p of plan.problems) add('error', 'models', 'models', p, 'Fix it on the Models tab, then check again.');
