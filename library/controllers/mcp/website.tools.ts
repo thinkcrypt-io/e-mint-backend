@@ -77,7 +77,7 @@ const shape = (doc: any, def: any) => {
 /* ------------------------------------------------------- record writes */
 
 /** The model's formulas, as its form and API apply them. */
-const formulasFor = async (req: any, def: any) => {
+export const formulasFor = async (req: any, def: any) => {
 	const published: any = await getActiveSettings(def.route);
 	const settings = published?.data ? dataToSettings(published.data) : generateSettings(def, makeTargetLookup(req.app, [def]));
 	return formulasOf(settings);
@@ -94,7 +94,7 @@ type RefCache = Map<string, string[]>;
  * or the linked record's name / title / code). Collects unknown keys and links
  * that name nothing.
  */
-const pickFields = async (def: any, input: any, omit: string[] = [], refCache?: RefCache) => {
+export const pickFields = async (def: any, input: any, omit: string[] = [], refCache?: RefCache) => {
 	const body: any = {};
 	const skipped: string[] = [];
 	const problems: string[] = [];
@@ -132,7 +132,7 @@ const pickFields = async (def: any, input: any, omit: string[] = [], refCache?: 
 };
 
 /** A Mongoose validation error as short sentences. */
-const validationProblems = (doc: any, prefix = '') => {
+export const validationProblems = (doc: any, prefix = '') => {
 	const err: any = doc.validateSync();
 	return Object.entries<any>(err?.errors || {}).map(([path, e]) => {
 		const why =
@@ -147,17 +147,17 @@ const validationProblems = (doc: any, prefix = '') => {
 	});
 };
 
-const ownedBy = (Model: mongoose.Model<any>, caller: Caller) => (Model.schema.path('addedBy') ? { addedBy: caller.user._id } : {});
+export const ownedBy = (Model: mongoose.Model<any>, caller: Caller) => (Model.schema.path('addedBy') ? { addedBy: caller.user._id } : {});
 
 /** May the key's owner add and change this model's records (the role's Records: Add and Edit)? */
-const mayWrite = (req: any, caller: Caller, route: string) => {
+export const mayWrite = (req: any, caller: Caller, route: string) => {
 	const permission = routePermission(req.app, route) || route;
 	const missing = ['create', 'edit'].filter(a => !caller.allows(`${a}-${permission}`));
 	return missing.length ? `${caller.user.name || 'The key’s owner'} can't ${missing.join(' or ')} /${route} records (their role needs Records: ${missing.map(a => (a === 'create' ? 'Add' : 'Edit')).join(' and ')}).` : null;
 };
 
 /** Saves checked documents in order; if one fails, the ones it created are taken back. */
-const saveAll = async (docs: { doc: any; Model: mongoose.Model<any>; isNew: boolean }[]) => {
+export const saveAll = async (docs: { doc: any; Model: mongoose.Model<any>; isNew: boolean }[]) => {
 	const created: { Model: mongoose.Model<any>; id: any }[] = [];
 	for (const d of docs) {
 		try {
@@ -170,7 +170,7 @@ const saveAll = async (docs: { doc: any; Model: mongoose.Model<any>; isNew: bool
 	}
 };
 
-const saveFailure = (e: any) =>
+export const saveFailure = (e: any) =>
 	refuse(
 		e?.code === 11000
 			? `Nothing saved — a record with that ${Object.keys(e.keyValue || {}).filter(k => k !== MODEL_KEY).join(', ') || 'value'} already exists.`

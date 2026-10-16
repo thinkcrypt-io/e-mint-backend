@@ -23,7 +23,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-11 | Scheduling: publish at / unpublish at (D7) | backend + mint-tenant | M | — |
 | CMS-12 | Languages: Settings → Languages, per-language inputs only when more than one, `_locales`, API + site `/bn/…`, builder switcher (D8) | all | L+L | — |
 | CMS-13 | Media: alt, caption, focal point; image field `{url, alt…}` opt-in (D12) | backend + mint-tenant | M | done 2026-10-16 (+ mint-sites) |
-| CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | — |
+| CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | done 2026-10-16 (translate → CMS-12) |
 | CMS-15 | Guide, website, templates and theme starters in the new shape | docs + website + backend | M | — |
 
 Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the website's content) → 07 → 08 → 09 → 10 → 11 →

@@ -23,6 +23,7 @@ import { API_ENDPOINT_INSTRUCTIONS, API_ENDPOINT_TOOLS } from './apiEndpoints.to
 import { COMPONENT_TOOLS } from './components.tools.js';
 import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
+import { CONTENT_INSTRUCTIONS, CONTENT_TOOLS } from './content.tools.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -102,10 +103,12 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 	};
 };
 
-const can = (c: Caller, scope: Scope) => {
+const can = (c: Caller, scope: Scope, tool?: ToolDef) => {
 	if (!c.key.scopes?.includes(scope)) return `This key doesn't have the “${scope}” scope`;
 	// Records: each page's own view permission, checked by the tool.
 	if (scope === 'data') return null;
+	// Publishing entries: the person's Publish right on the model, checked by the tool (CMS-14).
+	if (scope === 'publish' && tool?.ownRight) return null;
 	// Publishing a site: the key's owner needs Build in the project (the tool checks it is a website).
 	if (scope === 'publish') return c.builder('build') ? null : `${c.user.name || 'The key’s owner'} can’t change the site`;
 	if (!c.builder(scope)) return `${c.user.name || 'The key’s owner'} doesn't have the builder permission`;
@@ -123,6 +126,8 @@ type ToolDef = {
 	scope: Scope;
 	/** Only offered inside a tenant project, or a website project. */
 	only?: 'project' | 'website';
+	/** A publish-scope tool that checks the person's own right itself (publish_entry: Publish on the model), not Build. */
+	ownRight?: boolean;
 	inputSchema: any;
 	annotations: Record<string, boolean>;
 	run: (req: any, args: any, caller: Caller) => Promise<{ text: string; data?: any; isError?: boolean }>;
@@ -781,6 +786,7 @@ const TOOLS: ToolDef[] = [
 	...PDF_TEMPLATE_TOOLS,
 	...API_ENDPOINT_TOOLS,
 	...COMPONENT_TOOLS,
+	...CONTENT_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */
@@ -796,12 +802,12 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
 		instructions: caller =>
-			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS : ''),
+			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + CONTENT_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
 		listed: (tool, caller) => !!caller.key.scopes?.includes((tool as ToolDef).scope),
-		denied: (tool, caller) => can(caller, (tool as ToolDef).scope),
+		denied: (tool, caller) => can(caller, (tool as ToolDef).scope, tool as ToolDef),
 		authenticate: authenticateWith,
 		// The builder resolves models against the admin API's routes, which it reads off the app.
 		prepare: (req, caller) => {

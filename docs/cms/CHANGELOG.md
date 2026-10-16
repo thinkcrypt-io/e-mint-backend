@@ -298,3 +298,23 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   cms-site-contents, cms-components, projects + models pass; mint-sites type-checks. Headless Chrome: the preview
   with a focal point set and alt text typed.
 - Docs: mint-docs Media (Alt text and focal point), Models (Image fields with details).
+
+## 2026-10-16 — CMS-14 MCP content tools
+- `library/controllers/mcp/content.tools.ts` on the tenant MCP (the user's own AI; no server-side AI):
+  `list_content_types` (drafts models and single types with what isn't live; a website's pages and page content
+  types — the kit's own models left out), `get_entry` (by id, `match` {field: value} or a single type's route: the
+  draft, and when modified what's published and which fields differ), `save_entry_draft` (made or changed, checked
+  like create_records; a draft, never published; history "through the AI assistant"), `publish_entry` (publish /
+  unpublish up to 100; the key's **publish** scope and the person's Publish right on the model — `ownRight` lets it
+  skip the site-publish Build check; webhooks + site refresh via afterPublish), `get_page_contents` and `fill_page`
+  (a website page's typed contents: change by id — only the fields sent — or add by type at the end; all-or-nothing;
+  a builder page gets its Pages record on demand via pushPage), `suggest_seo` (the page's words from its blocks and
+  contents, its SEO now with lengths, how to save it with save_site_page — read-only).
+- Server instructions for projects gain "CONTENT (drafts first)": these tools never publish; publish_entry only when
+  the user has asked in the conversation.
+- Panel: Connect AI's new key gets **Can publish** (the `publish` scope — it couldn't be set from the panel before, so
+  publish_site was API-only); the key list says "+ publish".
+- Not here: `translate_entry` (needs languages, CMS-12).
+- Verified: `cms-mcp-content.mjs` (33 checks) passes; mcp, templates-mcp, website-mcp, site-builder-data,
+  cms-components, cms-media, website pass.
+- Docs: mint-docs Connect AI — Can publish, the content tools, what to ask, staying in control.
