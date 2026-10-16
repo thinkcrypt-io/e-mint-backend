@@ -33,8 +33,9 @@ const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryTyp
 
 			let query: any = (req as any).queryHelper || {};
 
-			// Only include $or operator if searchFields is not empty
-			if (searchFields.length > 0) {
+			// Only include $or operator when there is search text — `$regex: ''` never matches
+			// a missing or empty field, so an empty search box would hide those records.
+			if (searchFields.length > 0 && String(search).trim()) {
 				query.$or = searchFields;
 			}
 

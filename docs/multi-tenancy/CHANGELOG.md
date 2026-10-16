@@ -1809,3 +1809,16 @@ Decisions D14–D17 (README).
   record"; Try it 1010 × 22 + 1212 + 1010 = 24,442; a new Bill's live Total 30 → 42 when VAT (12) is picked, stored 42.
 - Seen in passing, not changed: a list with an empty search hides records whose search field (e.g. Name) is empty —
   `filter.middleware.ts` adds `{ name: { $regex: '' } }`, which never matches a missing field.
+
+## 2026-10-17 — Fix: an empty search box no longer hides records
+- Bug (seen while testing formulas, above): a Bill saved without a Name didn't show in the Bills table. With the search
+  box empty, `filter.middleware.ts` still added `$or: [{ name: { $regex: '' } }, …]`, and `$regex` never matches a
+  missing or null field — so the list said 1 while `/get/count` said 2.
+- Fix: `middleware/filter.middleware.ts` and its `library/middlewares/helper/` copy add the search `$or` only when the
+  search text is non-empty after trimming (a blank `?search=%20%20` used to match nothing at all). A real search is
+  unchanged. Other list paths were already safe: the public API (`publicRecords.function.ts`) and history skip an empty
+  search, the navbar search always sends text, and the dashboard `stats` chain passes `allowSearch: []` (left as is).
+- Verified: new `scripts/tenancy-smoke/empty-search.mjs` (11 checks: a record with a name, one without, one blank; count
+  3; list with no / empty / spaces search → 3; `search=widg` → 1; no match → 0; empty search beside `price_gte=7` → 2)
+  on a private backend (:5043, Mongo :27993) — 4 of them fail with the old middleware; models, public, public-filters,
+  collections, navsearch smoke pass; `tsc` clean. Not deployed.

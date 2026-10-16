@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-16)
+## Handoff — read this first (kept current; last updated 2026-10-17)
 
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
@@ -41,6 +41,11 @@ top level) is looked up on save (`applyFormulasLinked`) and on recalculation
 that sets formula values must use those, not `applyFormulas`/`formulaPipeline`
 alone. A change to the linked record doesn't recalculate its users yet. Smoke:
 `formula-links.mjs` (CHANGELOG).
+
+**2026-10-17 — an empty search box hides nothing.** Both filter middlewares add the
+search `$or` only for non-blank text (`$regex: ''` never matches a missing field,
+so records without a Name vanished from lists). Keep that guard in any new list
+path. Smoke: `empty-search.mjs` (CHANGELOG).
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D21), then the open WO
