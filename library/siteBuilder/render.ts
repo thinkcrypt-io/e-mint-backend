@@ -11,6 +11,7 @@ import { findTemplateRecord, resolveCollections, templatePattern } from './resol
 import { resolveContents } from './kit.js';
 import { asText, interpolate, type Scope } from './bind.js';
 import { loadShop } from '../functions/shop.function.js';
+import { mediaFor } from '../functions/mediaDetails.function.js';
 
 /**
  * What the renderer asks for (docs/site-builder D8, "Render API"):
@@ -144,6 +145,8 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 	const currency = shop?.currency || '';
 	const scope: Scope = { record, site: { name: identity.siteName || project.name, tagline: identity.tagline || '', ...(doc.contact || {}) }, content: contents, currency, locale: identity.locale || 'en' };
 	const seo: any = record ? fillSeo(pub.seo, scope) : pub.seo || {};
+	// The library's alt text and focal points for the pictures it draws (docs/cms D12, CMS-13).
+	const media = await mediaFor({ trees, nodes, contents, record, logo: identity.logo }).catch(() => ({}));
 
 	return {
 		projectId: String(project._id),
@@ -180,6 +183,8 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 			},
 		},
 		data: { nodes, contents, ...(record && { record }), currency },
+		/** url → { alt, focal } for library pictures on the page that have them */
+		media,
 		menu: (menuPages as any[])
 			.map(p => p.published)
 			.sort((a, b) => (b.priority || 0) - (a.priority || 0) || String(a.name).localeCompare(String(b.name)))

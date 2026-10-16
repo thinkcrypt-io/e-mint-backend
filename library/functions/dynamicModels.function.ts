@@ -264,6 +264,8 @@ export type ModelFieldDef = {
 	/** A blocks kind's allowed components (uids) — and, once expanded, what they are (docs/cms D4). */
 	components?: string[];
 	blockTypes?: { uid: string; title: string; icon?: string; description?: string; fields: ModelFieldDef[] }[];
+	/** An image / images kind: the API sends { url, alt, caption, width, height, focal } (mediaDetails.function.ts). */
+	details?: boolean;
 };
 
 export type ModelDef = {

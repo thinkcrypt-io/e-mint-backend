@@ -16,6 +16,7 @@ import { connectNodes, layoutTrees, pushTreeContents, syncLayouts, syncPage } fr
 import { ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
 import { migrateSiteContents } from '../library/siteBuilder/migrateContents.js';
 import { contentList, ensureDesignModel, orderContents, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, resolveContents, upsertContents } from '../library/siteBuilder/kit.js';
+import { describedIn } from '../library/functions/mediaDetails.function.js';
 
 /**
  * /tenant/api/p/:projectId/site-builder — the site builder (docs/site-builder
@@ -87,6 +88,7 @@ const checkTree = async (tree: unknown, page: { layout?: string }) => {
 		externalIds: layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined,
 		pageIds: new Set(pages.map((p: any) => String(p._id))),
 		sectionIds: new Set(Object.keys(design?.draft?.sections || {})),
+		described: await describedIn(tree),
 	});
 	const errors = r.problems.filter(p => p.level === 'error');
 	if (errors.length) throw refuse('The page has problems — nothing was saved.', errors);
@@ -342,7 +344,7 @@ router.post(
 		if (body.design !== undefined) return validateDesign(body.design || {}, { pageIds, sectionIds });
 		if (body.tree !== undefined) {
 			const externalIds = Array.isArray(body.externalIds) ? new Set<string>(body.externalIds.filter((x: any) => typeof x === 'string').slice(0, 5000)) : undefined;
-			return validateTree(body.tree, { pageIds, externalIds, sectionIds });
+			return validateTree(body.tree, { pageIds, externalIds, sectionIds, described: await describedIn(body.tree) });
 		}
 		throw new TenancyError(400, 'Send { tree } or { design }');
 	})

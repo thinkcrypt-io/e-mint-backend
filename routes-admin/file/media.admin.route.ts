@@ -259,17 +259,40 @@ router.patch('/folders/:id', ...edit, async (req: any, res: Response) => {
 
 /* ------------------------------------------------------------------- files */
 
+/**
+ * A file's name, and its details (docs/cms D12, CMS-13): `alt` (what the
+ * picture shows), `caption`, `focal` ({x, y} from 0 to 1 — what stays in view
+ * when it's cropped; null for the middle). Send only what changes.
+ */
 router.patch('/files/:id', ...edit, async (req: any, res: Response) => {
 	try {
-		const name = String(req.body?.name || '').trim();
-		if (!name) return res.status(400).json({ message: 'Name is required' });
-		const doc = await File.findOneAndUpdate(
-			{ _id: req.params.id, ...live },
-			{ $set: { name } },
-			{ new: true }
-		);
+		const body = req.body || {};
+		const $set: any = {};
+		if (body.name !== undefined) {
+			const name = String(body.name || '').trim();
+			if (!name) return res.status(400).json({ message: 'Name is required' });
+			$set.name = name;
+		}
+		if (body.alt !== undefined) {
+			const alt = String(body.alt ?? '').trim();
+			if (alt.length > 300) return res.status(400).json({ message: 'Alt text: at most 300 characters' });
+			$set.alt = alt;
+		}
+		if (body.caption !== undefined) {
+			const caption = String(body.caption ?? '').trim();
+			if (caption.length > 500) return res.status(400).json({ message: 'Caption: at most 500 characters' });
+			$set.caption = caption;
+		}
+		if (body.focal !== undefined) {
+			const f = body.focal;
+			const ok = (n: any) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1;
+			if (f !== null && !(f && ok(f.x) && ok(f.y))) return res.status(400).json({ message: 'The focal point is x and y from 0 to 1' });
+			$set.focal = f === null ? null : { x: Math.round(f.x * 1000) / 1000, y: Math.round(f.y * 1000) / 1000 };
+		}
+		if (!Object.keys($set).length) return res.status(400).json({ message: 'Nothing to change' });
+		const doc = await File.findOneAndUpdate({ _id: req.params.id, ...live }, { $set }, { new: true });
 		if (!doc) return res.status(404).json({ message: 'File not found' });
-		return res.status(200).json({ message: 'File renamed', doc });
+		return res.status(200).json({ message: $set.name && Object.keys($set).length === 1 ? 'File renamed' : 'Saved', doc });
 	} catch (e: any) {
 		return fail(res, e);
 	}

@@ -61,6 +61,14 @@ const schema = new Schema<any>(
 		height: {
 			type: Number,
 		},
+		// What the picture shows, for screen readers and search (docs/cms D12, CMS-13).
+		alt: { type: String, trim: true, maxlength: 300, default: '' },
+		caption: { type: String, trim: true, maxlength: 500, default: '' },
+		/** The point that stays in view when the picture is cropped: 0–1 from the left and the top; none = the middle. */
+		focal: {
+			type: new Schema({ x: { type: Number, min: 0, max: 1 }, y: { type: Number, min: 0, max: 1 } }, { _id: false }),
+			default: null,
+		},
 		// Trash (media manager) — see the Folder model for how trashRoot works.
 		trashedAt: {
 			type: Date,
@@ -78,6 +86,8 @@ const schema = new Schema<any>(
 );
 
 schema.index({ fileFolder: 1, trashedAt: 1 });
+// Image fields and the site look a picture's details up by its address (CMS-13).
+schema.index({ url: 1 });
 schema.index({ key: 1 });
 
 // Virtual for formatted file size

@@ -121,6 +121,8 @@ const subFieldBase = {
 	component: Joi.string().allow('').max(81),
 	repeatable: Joi.boolean(),
 	components: Joi.array().items(Joi.string().max(81)).max(50),
+	// Image fields: the API sends { url, alt, caption, width, height, focal } (docs/cms D12).
+	details: Joi.boolean(),
 };
 
 /** A section's own field: the same, minus links and nested sections. */

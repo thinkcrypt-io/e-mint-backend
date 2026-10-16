@@ -37,6 +37,7 @@ import ApiCall from '../library/models/tenancy/apiCall.model.js';
 import { callRecord } from '../library/functions/apiLogs.function.js';
 import { isDraftModel, liveCount, liveFind, liveFindOne } from '../library/functions/drafts.function.js';
 import { Access, askedPopulate, defaultPopulate, defsByName, populateDocs } from '../library/functions/contentPopulate.function.js';
+import { withImageDetails } from '../library/functions/mediaDetails.function.js';
 import ApiEndpoint from '../library/models/tenancy/apiEndpoint.model.js';
 import {
 	checkCreate,
@@ -883,6 +884,7 @@ const list = async (req: any, ctx: Ctx) => {
 		const doc: any = await liveFindOne(def, Model, { query: reach(ctx), keys, populate, draft, stamp: true });
 		if (!doc) throw new TenancyError(404, 'Not found');
 		await fillLinks(req, ctx, [doc], links, draft);
+		await withImageDetails(def, [doc]);
 		return shapeOut(doc, stampKeys(def, keys));
 	}
 	const max = ep.list?.maxLimit || 100;
@@ -902,6 +904,7 @@ const list = async (req: any, ctx: Ctx) => {
 		liveCount(def, Model, query, { draft }),
 	]);
 	await fillLinks(req, ctx, docs, links, draft);
+	await withImageDetails(def, docs);
 	const out = stampKeys(def, keys);
 	return { doc: docs.map((d: any) => shapeOut(d, out)), total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
 };
@@ -914,6 +917,7 @@ const getOne = async (req: any, ctx: Ctx) => {
 	const doc = await liveFindOne(ctx.def, ctx.Model, { query: { ...reach(ctx), _id: ctx.id }, keys, populate, draft, stamp: true });
 	if (!doc) throw new TenancyError(404, 'Not found');
 	await fillLinks(req, ctx, [doc], links, draft);
+	await withImageDetails(ctx.def, [doc]);
 	return shapeOut(doc, stampKeys(ctx.def, keys));
 };
 

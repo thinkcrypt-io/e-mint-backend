@@ -276,3 +276,25 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   website, automations, templates-apply, templates-mcp, widgets(-cart) pass. Headless Chrome: Linked records
   (desktop, phone, switched off with a two-deep link), the reference's Content block, the webhook dialog.
 - Docs: mint-docs Public API — Linked records, Filling in links, Drafts and publishedAt, webhook events.
+
+## 2026-10-16 — CMS-13 Media details
+- **Library**: files have `alt` (≤300), `caption` (≤500) and `focal` ({x, y} 0–1, null = the middle) next to the
+  width/height uploads already stored; an index on `url`. `PATCH media/files/:id` takes any of name / alt / caption /
+  focal (checked; nothing to change → 400). MCP `upload_media` stores `alt` and `caption`.
+- **Panel** (mint-tenant media preview): a "For the site" part for images — alt text, caption, focal point set by
+  clicking the picture (a ring shows it), Save / Discard; ←/→ don't switch files while typing.
+- **Image fields with details** (`details: true` on image / images, D12's opt-in): the public API answers
+  `{ url, alt, caption, width, height, focal }` — inside sections, components and content blocks too
+  (`functions/mediaDetails.function.ts` `withImageDetails`). Records keep the address; the details are read when they
+  go out, so fixing alt text in the library fixes it everywhere. Not in the library → empty details. Model builder:
+  the field's "On the API" option; templates keep it.
+- **The site**: the render API sends `media` — url → { alt, focal } for library pictures the page draws (trees and the
+  records it binds; `mediaFor`). mint-sites: the image block and gallery use the library's alt when they have none;
+  the focal point is the `object-position` of a cropped image (a ratio, or a gallery tile) and the
+  `background-position` of a background image whose style sets none. The site check stops warning "no alt text" for
+  pictures the library describes (`described` in validateTree).
+- Not here: images inside a filled link (populate) keep the address; an image optimizer (D25 stands).
+- Verified: `cms-media.mjs` (23 checks) passes; cms-content-api, site-builder(-data/-starter/-connect),
+  cms-site-contents, cms-components, projects + models pass; mint-sites type-checks. Headless Chrome: the preview
+  with a focal point set and alt text typed.
+- Docs: mint-docs Media (Alt text and focal point), Models (Image fields with details).

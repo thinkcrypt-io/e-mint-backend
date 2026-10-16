@@ -47,6 +47,8 @@ const fieldSchema = new Schema<any>(
 		repeatable: { type: Boolean },
 		/** For the blocks kind: the components its items can be (docs/cms D4). */
 		components: { type: [String], default: undefined },
+		/** For image kinds: the API sends each picture with its library details, not just its address (docs/cms D12). */
+		details: { type: Boolean },
 	},
 	{ _id: false, minimize: false }
 );

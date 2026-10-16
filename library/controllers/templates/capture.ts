@@ -29,7 +29,7 @@ const SKIP_RECORD_KEYS = new Set(['_id', '__v', 'createdAt', 'updatedAt', 'code'
 
 const fieldForPlan = (f: any) => {
 	const out: any = { key: f.key, label: f.label || f.key, kind: f.kind };
-	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'min', 'max', 'ref', 'addLabel', 'secret', 'component', 'repeatable', 'from'])
+	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'min', 'max', 'ref', 'addLabel', 'secret', 'component', 'repeatable', 'from', 'details'])
 		if (f[k] !== undefined && f[k] !== null && f[k] !== false && f[k] !== '') out[k] = f[k];
 	if (f.default !== undefined && f.default !== null && f.default !== '') out.default = f.default;
 	if (Array.isArray(f.options) && f.options.length) out.options = f.options.map((o: any) => ({ value: o.value, label: o.label }));

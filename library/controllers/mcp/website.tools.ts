@@ -521,6 +521,9 @@ const uploadMedia = async (_req: any, args: any, caller: Caller): Promise<Out> =
 		return new File({
 			name: args.name ? String(args.name).slice(0, 200) : key,
 			description: args.alt ? String(args.alt).slice(0, 500) : undefined,
+			// The site and image fields "with details" read these (docs/cms CMS-13).
+			alt: args.alt ? String(args.alt).trim().slice(0, 300) : '',
+			caption: args.caption ? String(args.caption).trim().slice(0, 500) : '',
 			url: uploaded.Location,
 			key: uploaded.Key,
 			type,
@@ -874,7 +877,8 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 				data: { type: 'string', description: 'Base64 or data:image/…;base64,…' },
 				filename: { type: 'string', description: 'e.g. "logo.png" — needed with bare base64' },
 				name: { type: 'string', description: 'Its name in the media library' },
-				alt: { type: 'string', description: 'What the image shows' },
+				alt: { type: 'string', description: 'What the image shows — its alt text, used by the site wherever the picture has none of its own' },
+				caption: { type: 'string', description: 'A caption, for image fields that send their details' },
 				folder: { type: 'string', description: 'Media folder (default "website")' },
 				keepFormat: { type: 'boolean' },
 			},

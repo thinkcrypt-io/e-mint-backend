@@ -153,6 +153,8 @@ type TreeOptions = {
 	sectionIds?: Set<string>;
 	/** The tree is a saved section's own: no saved sections or overlays in it. */
 	inSection?: boolean;
+	/** Picture addresses the media library has alt text for (CMS-13) — the site uses it, so they aren't missing one. */
+	described?: Set<string>;
 };
 
 export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
@@ -233,9 +235,9 @@ export const validateTree = (tree: unknown, opts: TreeOptions = {}): Result => {
 
 			// Accessibility hints (SB-08) — warnings, never blocking
 			const props = isObj(n.props) ? n.props : {};
-			if (def.type === 'image' && !(isObj(n.bind) && 'alt' in n.bind) && !(typeof props.alt === 'string' && props.alt.trim()))
+			if (def.type === 'image' && !(isObj(n.bind) && 'alt' in n.bind) && !(typeof props.alt === 'string' && props.alt.trim()) && !opts.described?.has(props.src))
 				add('warning', `${at}.props.alt`, 'This picture has no alt text — describe it for people who can’t see it', id);
-			if (def.type === 'gallery' && Array.isArray(props.items) && props.items.some((r: any) => isObj(r) && !(typeof r.alt === 'string' && r.alt.trim())))
+			if (def.type === 'gallery' && Array.isArray(props.items) && props.items.some((r: any) => isObj(r) && !(typeof r.alt === 'string' && r.alt.trim()) && !opts.described?.has(r.src)))
 				add('warning', `${at}.props.items`, 'Some pictures in this gallery have no alt text — describe each one', id);
 			if (def.type === 'heading') headings.push({ level: [1, 2, 3, 4].includes(props.level) ? props.level : 2, at, id });
 

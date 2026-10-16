@@ -8,6 +8,7 @@ import { runInScope, runUnscoped } from '../functions/tenantScope.function.js';
 import { DEFAULT_THEME, presetTree } from './manifest.js';
 import { treeIds, validateDesign, validateTree, type Problem } from './validate.js';
 import { dataProblems } from './resolve.js';
+import { describedIn } from '../functions/mediaDetails.function.js';
 
 /**
  * A website project's builder site (docs/site-builder SB-03): what a new one
@@ -153,6 +154,7 @@ export const siteProblems = async (pages?: any[], design?: any): Promise<SitePro
 	design = design || (await SiteDesign.findOne({}).lean());
 	const pageIds = new Set(pages.map(p => String(p._id)));
 	const draft = design?.draft || {};
+	const described = await describedIn(pages.map(p => p.draft?.tree));
 	const out: SiteProblem[] = validateDesign(draft, { pageIds }).problems.map(p => ({ ...p, part: 'design' as const }));
 	for (const p of pages) {
 		if (p.status === 'unpublished') continue;
@@ -160,7 +162,7 @@ export const siteProblems = async (pages?: any[], design?: any): Promise<SitePro
 		if (p.layout && p.layout !== 'none' && !layout)
 			out.push({ level: 'publish', path: 'layout', message: `The layout “${p.layout}” doesn’t exist any more`, page: String(p._id), pageName: p.name, part: 'page' });
 		const externalIds = layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined;
-		const r = validateTree(p.draft?.tree, { pageIds, externalIds, sectionIds: new Set(Object.keys(draft.sections || {})) });
+		const r = validateTree(p.draft?.tree, { pageIds, externalIds, sectionIds: new Set(Object.keys(draft.sections || {})), described });
 		out.push(...r.problems.map(x => ({ ...x, page: String(p._id), pageName: p.name, part: 'page' as const })));
 	}
 	// Lists and template pages: their models must be readable by the site (SB-09).

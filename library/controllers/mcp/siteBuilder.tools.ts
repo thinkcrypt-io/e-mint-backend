@@ -12,6 +12,7 @@ import { dataModels, dataProblems } from '../../siteBuilder/resolve.js';
 import { applyStarter, starterSummaries } from '../../siteBuilder/starter.js';
 import { contentList, ensureDesignModel, pullDesign, pullSeo, pushDesign, pushPage, pushSeo, upsertContents } from '../../siteBuilder/kit.js';
 import type { Caller, ToolDef } from './mcp.router.js';
+import { describedIn } from '../../functions/mediaDetails.function.js';
 
 /**
  * The site builder over MCP (docs/site-builder SB-12): the user's own AI
@@ -145,6 +146,7 @@ const checkPageTree = async (tree: any[], layoutKey: string) => {
 		externalIds: layout ? treeIds(layout.header, treeIds(layout.footer)) : undefined,
 		pageIds: new Set(pages.map((p: any) => String(p._id))),
 		sectionIds: new Set(Object.keys(design?.draft?.sections || {})),
+		described: await describedIn(tree),
 	}).problems;
 };
 
