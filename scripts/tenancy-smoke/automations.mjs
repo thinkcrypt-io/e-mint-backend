@@ -43,7 +43,7 @@ const beaId = (await call('GET', '/tenant/api/auth/self', null, bea)).body?._id;
 ok('Bea is in Shop', !!beaId);
 
 const model = body => call('POST', P(shop._id, '/builder/models'), body, alma);
-let r = await model({ name: 'Client', title: 'Clients', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }, { key: 'note', label: 'Note', kind: 'text' }] });
+let r = await model({ name: 'Client', title: 'Clients', fields: [{ key: 'name', label: 'Name', kind: 'text', required: true }, { key: 'note', label: 'Note', kind: 'text' }, { key: 'email', label: 'Email', kind: 'email' }] });
 ok('Client model', r.status === 201, r.body?.message);
 r = await model({
 	name: 'Deal',
@@ -76,6 +76,10 @@ r = await save({ name: 'x', route: 'deals', on: ['create'], actions: [{ type: 'n
 ok('only people in the project can be notified', r.status === 400 && r.body?.on === 'actions.0.to.people', JSON.stringify(r.body));
 r = await save({ name: 'x', route: 'deals', on: ['delete'], actions: [{ type: 'update', target: 'this', set: [{ field: 'amount', value: 1 }] }] });
 ok("a deleted record can't be updated", r.status === 400 && r.body?.on === 'actions.0.target', JSON.stringify(r.body));
+r = await save({ name: 'x', route: 'deals', on: ['create'], actions: [{ type: 'email', to: { fields: ['client.nope'] }, subject: 'Hi', body: 'Hi' }] });
+ok("a linked record's unknown field is refused", r.status === 400 && r.body?.on === 'actions.0.to.fields' && /nope/.test(r.body?.message), JSON.stringify(r.body));
+r = await save({ name: 'x', route: 'deals', on: ['create'], actions: [{ type: 'email', to: { fields: ['title.email'] }, subject: 'Hi', body: 'Hi' }] });
+ok('an address through a field that isn’t a link is refused', r.status === 400 && r.body?.on === 'actions.0.to.fields', JSON.stringify(r.body));
 r = await save({ name: 'x', route: 'nope', on: ['create'], actions: [] });
 ok('an unknown page is refused', r.status === 400 && r.body?.on === 'route', JSON.stringify(r.body));
 r = await call('GET', A(), null, bea);
@@ -97,7 +101,7 @@ r = await save({
 });
 ok('saved', r.status === 201 && r.body?.secret?.startsWith('whsec_'), JSON.stringify(r.body));
 const won = r.body;
-const client = (await call('POST', P(shop._id, '/clients'), { name: 'Acme' }, alma)).body;
+const client = (await call('POST', P(shop._id, '/clients'), { name: 'Acme', email: email('acme') }, alma)).body;
 const clientId = client?._id || client?.doc?._id;
 let deal = (await call('POST', P(shop._id, '/deals'), { title: 'Big order', amount: 500, client: clientId, contact: email('buyer') }, alma)).body;
 const dealId = deal?._id || deal?.doc?._id;
@@ -156,6 +160,12 @@ ok('a dry run says what would happen', r.status === 200 && r.body?.conditions ==
 await settle();
 ok('…and does nothing', (await count('Task')) === before && received.length === 1);
 
+/* ---- an address from a linked record: the deal's Client → Email */
+r = await save({ name: 'Email the client', route: 'deals', on: ['update'], enabled: false, actions: [{ type: 'email', to: { fields: ['client.email', 'contact'] }, subject: 'About {{title}}', body: 'Hello' }] });
+ok('an email to a linked record’s field saves', r.status === 201 && r.body?.actions?.[0]?.to?.fields?.includes('client.email'), JSON.stringify(r.body));
+r = await call('POST', A(`/${r.body?._id}/test`), { record: dealId }, alma);
+ok('…and goes to the client’s address and the deal’s own', r.status === 200 && r.body?.steps?.[0]?.detail?.includes(email('acme')) && r.body.steps[0].detail.includes(email('buyer')), JSON.stringify(r.body?.steps));
+
 /* ---- off */
 r = await call('PATCH', A(`/${mail._id}`), { enabled: false }, alma);
 ok('switched off', r.status === 200 && r.body?.enabled === false);
@@ -184,7 +194,7 @@ ok('deleting a deal calls its webhook with the last values', last?.headers['x-mi
 
 /* ---- the list, the runs, deleting */
 r = await call('GET', A(), null, alma);
-ok('the list', r.body?.doc?.length === 4 && !('secret' in r.body.doc[0]), r.body?.doc?.length);
+ok('the list', r.body?.doc?.length === 5 && !('secret' in r.body.doc[0]), r.body?.doc?.length);
 r = await call('GET', A('/runs?status=failed'), null, alma);
 ok('all runs, filtered', r.body?.doc?.length === 1 && r.body.doc[0].name === 'Email the buyer');
 r = await call('DELETE', A(`/${mail._id}`), null, alma);

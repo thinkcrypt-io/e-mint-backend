@@ -35,3 +35,15 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
 - Verified: tsc clean in both panels; screenshots on a private stack (list, runs with a failed email, editor top and
   actions, a `{{nope}}` refused under Title, Try dialog).
 
+## 2026-10-16 — AU-03a Email to a linked record's address
+- The user: when a bill is created, email its customer — choose which field holds the address. `to.fields` now takes
+  `customer.email` (a reference field of the record, then an email/text field of the page it links to) beside the
+  record's own fields; `checkAddressField` checks it at save (400 on `actions.<i>.to.fields`), `addressesAt` reads the
+  linked records (up to 20) at run time.
+- Panels (mint-tenant + admin, same files): the email action's "Send to the address in a field…" picker — the record's
+  email fields and each linked page's ("Customer → Email"); text fields only when named like an email, so no more
+  "The record's Name"; chosen ones listed with a remove button; a hint when no page has an Email field.
+- Guide (mint-docs `/automations`) and website changelog.
+- Verified: `automations.mjs` all passed (new: unknown linked field refused, a non-link path refused, a dry run emailing
+  the client's address and the deal's own); tsc clean in backend and both panels; the picker on a private stack (a Bill
+  linked to Customers offers only "Customer → Email"). Not deployed.

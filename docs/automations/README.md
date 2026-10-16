@@ -56,7 +56,7 @@ type Action =
 type Recipients = {
   people?: string[];      // project members, by id
   actor?: boolean;        // whoever made the change
-  fields?: string[];      // email: email fields of the record
+  fields?: string[];      // email: address fields — the record's own ("email") or a linked record's ("customer.email")
 };
 ```
 

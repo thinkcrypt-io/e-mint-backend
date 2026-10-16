@@ -209,6 +209,27 @@ const checkPeople = async (ids: any, on: string, label: string) => {
 	return clean;
 };
 
+/** Kinds an address can be read from. */
+const ADDRESS_KINDS = ['email', 'text'];
+
+/**
+ * Where an email's address is read from: a field of the record ("email"), or
+ * a field of a record it links to ("customer.email" — a bill's customer).
+ */
+const checkAddressField = async (def: Def, path: string, on: string, label: string) => {
+	const [key, sub, ...rest] = path.split('.');
+	const f = def.fields.find((x: any) => x.key === key);
+	if (!sub) {
+		if (!f || !ADDRESS_KINDS.includes(f.kind)) throw invalid(`${label}: “${path}” isn’t an email field of ${nounOf(def)}`, on);
+		return;
+	}
+	if (rest.length || !f || !REFERENCE_KINDS.includes(f.kind) || !f.ref) throw invalid(`${label}: “${key}” isn’t a linked record of ${nounOf(def)}`, on);
+	const refDef: any = await ModelDefinition.findOne({ name: displayModelName(String(f.ref)) }).lean();
+	if (!refDef) throw invalid(`${label}: the page “${f.label || f.key}” links to is gone`, on);
+	if (!refDef.fields?.some((x: any) => x.key === sub && ADDRESS_KINDS.includes(x.kind)))
+		throw invalid(`${label}: “${sub}” isn’t an email field of ${nounOf(refDef)}`, on);
+};
+
 /**
  * An automation as the API saves it: the page, events, fields, conditions and
  * every action checked against the project — or a 400 that names the input.
@@ -260,9 +281,7 @@ export const checkAutomation = async (body: any) => {
 			const people = await checkPeople(a.to?.people, `${at}.to.people`, label);
 			const actor = !!a.to?.actor;
 			const fields = [...new Set<string>((Array.isArray(a.to?.fields) ? a.to.fields : []).map(String))];
-			for (const f of fields)
-				if (!def.fields.some((x: any) => x.key === f && ['email', 'text'].includes(x.kind)))
-					throw invalid(`${label}: “${f}” isn’t an email field of ${nounOf(def)}`, `${at}.to.fields`);
+			for (const f of fields) await checkAddressField(def, f, `${at}.to.fields`, label);
 			const emails = [...new Set<string>((Array.isArray(a.to?.emails) ? a.to.emails : []).map((e: any) => String(e).trim().toLowerCase()).filter(Boolean))];
 			if (emails.length > MAX_TYPED_EMAILS) throw invalid(`${label}: at most ${MAX_TYPED_EMAILS} addresses`, `${at}.to.emails`);
 			const bad = emails.find(e => !EMAIL_RX.test(e));
@@ -316,6 +335,21 @@ export const checkAutomation = async (body: any) => {
 	};
 };
 
+/** The addresses in `path` of the record: its own field, or that field of each linked record. */
+const addressesAt = async (ctx: Ctx, path: string): Promise<string[]> => {
+	const [key, sub] = path.split('.');
+	const raw = ctx.doc?.[key];
+	if (!sub) return [String(raw || '')];
+	const f = ctx.def.fields.find((x: any) => x.key === key);
+	const refDef: any = f?.ref && (await ModelDefinition.findOne({ name: displayModelName(String(f.ref)) }).lean());
+	const M = refDef && scopedModel(refDef.name);
+	if (!M) return [];
+	const ids = (Array.isArray(raw) ? raw : [raw]).map(v => String(v?._id || v || '')).filter(isId).slice(0, MAX_TARGETS);
+	if (!ids.length) return [];
+	const docs: any[] = await M.find({ _id: { $in: ids } }, { [sub]: 1 }).lean();
+	return docs.map(d => String(d?.[sub] || ''));
+};
+
 /* ------------------------------------------------------------- actions */
 
 type RunArgs = { automation: any; def: Def; Model: mongoose.Model<any>; doc: any; event: string; actor?: any; dry?: boolean };
@@ -335,10 +369,11 @@ const recipientsOf = async (ctx: Ctx, to: any, actor: any, withEmails: boolean) 
 	if (!withEmails) return { users: [...users.values()], emails: [] as string[] };
 	const emails = new Set<string>();
 	for (const u of users.values()) if (u.email) emails.add(String(u.email).toLowerCase());
-	for (const f of to?.fields || []) {
-		const v = String(ctx.doc?.[f] || '').trim().toLowerCase();
-		if (EMAIL_RX.test(v)) emails.add(v);
-	}
+	for (const f of to?.fields || [])
+		for (const raw of await addressesAt(ctx, String(f))) {
+			const v = raw.trim().toLowerCase();
+			if (EMAIL_RX.test(v)) emails.add(v);
+		}
 	for (const e of to?.emails || []) emails.add(String(e).toLowerCase());
 	return { users: [...users.values()], emails: [...emails] };
 };
@@ -373,7 +408,7 @@ const doEmail = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	const { emails } = await recipientsOf(ctx, a.to, args.actor, true);
 	const subject = fill(ctx, a.subject).slice(0, 200);
 	const text = fill(ctx, a.body);
-	if (!emails.length) return { type: 'email', ok: true, detail: 'No address to send to (the record’s email fields were empty)' };
+	if (!emails.length) return { type: 'email', ok: true, detail: 'No address to send to (the chosen email fields were empty)' };
 	if (args.dry) return { type: 'email', ok: true, detail: `Would email ${emails.join(', ')}: “${subject}”` };
 	const scope = currentScope()!;
 	const since = new Date(Date.now() - 24 * 3600 * 1000);
