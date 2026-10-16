@@ -52,3 +52,43 @@ Newest last. One entry per work order: what, files, how verified.
   isolated, removal; with `SMOKE_LOG` it also checks MINT's own welcome and
   waitlist emails in the dev log. `run-all.sh` passes (the sign-up rate limit
   needs a backend restart before the last suites, as before).
+
+## M-14 — Email accounts per project (2026-10-16)
+- **The user's words:** "connect email accounts under projects … smtp server,
+  port, email, password … test result will be red or green … connecting an
+  email account should be modal … select which default account to use."
+- **Model:** `MailAccount` (`mailaccounts`, shared, filtered by `project`; not
+  tenantScoped): name, fromName, host, port, secure (from the port: 465/2465),
+  email (login and from), password sealed `select: false`, isDefault,
+  verifiedAt / lastError / lastErrorAt. `MailMessage` gains `account`.
+- **`mail.function.ts`:** `loadAccountConfig`, `resolveMailConfig` (project
+  default → organization server), `verifyMail` (nodemailer `verify()`: connect
+  + sign in, nothing sent → `{ ok, message }`), `accountView`, `SECURE_PORTS`;
+  `sendOrgMail` takes `meta.account`, falls back as above, keeps the status on
+  the account it used; `recentMail(org, limit, project?)`; `welcomeCustomer`
+  goes through the project (the organization's welcome switch still applies).
+- **Routes:** `routes-tenant/mailAccounts.router.ts` at
+  `/tenant/api/p/:project/mail-accounts` — GET (accounts, project log,
+  `fallback`), POST /test, POST /, PUT /:id (empty password keeps it),
+  POST /:id/default, POST /:id/send-test, DELETE /:id (oldest left becomes the
+  default). Saving re-checks the connection without blocking the save.
+  History events per change. `mail-accounts` / `email-accounts` reserved as
+  model routes; `email-accounts` as a project slug. Project delete removes the
+  project's accounts (`projectLifecycle.function.ts`).
+- **Panel (mint-tenant + admin):** Project → Email (`/email-accounts`,
+  `PROJECT_PAGES`, tenantNav): accounts with Working/Not working, Send from
+  (default), ⋯ Make default / Edit / Send a test email / Remove, the log with
+  a Through column; `_components/ConnectDialog.tsx` (provider presets, port
+  list, Test connection → green/red box, cleared on any edit). Org Email page
+  and the automation email hint say projects use their own accounts first.
+- **Guide:** mint-docs `/email` — #email-accounts, #connect-email,
+  #default-account.
+- **Verified:** `scripts/tenancy-smoke/mail-accounts.mjs` 33/33 on a private
+  backend (local SMTP sink with logins: test ok/refused/no answer/bad port,
+  add, default, sends through the default and a chosen account, fallback to
+  the organization, other organizations 404, project delete). `mail.mjs`
+  26/26 and `automations.mjs` still pass (its no-server message assertion
+  updated). Headless Chrome on mint-tenant: dialog red → green → Connect,
+  second account, default switch, send test, log, edit with the saved
+  password, 390px with no sideways scroll.
+

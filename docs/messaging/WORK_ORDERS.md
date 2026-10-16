@@ -2,7 +2,15 @@
 
 Plan: `README.md`. Site widgets: `../widgets/` (CATALOGUE, WORK_ORDERS).
 
-## Handoff — read this first (last updated 2026-10-05)
+## Handoff — read this first (last updated 2026-10-16)
+
+**M-14 done 2026-10-16** (CHANGELOG): email accounts per project — Project →
+Email (`/<project>/email-accounts`), `MailAccount` (shared `mailaccounts`),
+connect in a dialog with Test connection (green/red, sends nothing), a default
+that every project email uses (`sendOrgMail` → the project's default account →
+else the organization's server). Smoke: `scripts/tenancy-smoke/mail-accounts.mjs`.
+Not yet: choosing an account per automation email action (they use the
+default); not deployed.
 
 **M-02 done 2026-10-06** (CHANGELOG): the user chose nodemailer + each
 organization's own SMTP (README MD1′) — so no SES, shared domain or quotas.
@@ -35,6 +43,7 @@ M-10 SMS/WhatsApp and M-11 inbox. Commit and push each WO when it's done.
 | M-11 | Inbox: replies, live chat, WhatsApp threads | both | L | later |
 | M-12 | Templates + MCP: blueprint `messages` part; MCP tools to draft templates and campaigns | both | M | after M-09 |
 | M-13 | Guides (`/user-docs/email`) + marketing site | admin + website | M | with each WO |
+| M-14 | Email accounts per project: connect (SMTP server, port, email, password, sender name) in a dialog, Test connection green/red, several accounts, a default | both | M | done 2026-10-16 |
 
 ## M-02 — Core (L) — done (revised by the user's MD1′)
 Built: Organization → Email — host, port (SMTP ports only), SSL, username,
@@ -95,3 +104,24 @@ Meta-approved templates; both logged in `Message` and counted in quotas.
 ## M-11 — Inbox (L) — later
 Inbound email replies, live chat (widget #44) and WhatsApp threads in one
 inbox per project, by customer.
+
+## M-14 — Email accounts per project (M) — done 2026-10-16
+The user (2026-10-16): "connect email accounts under projects … nodemailer
+only … the name from where we're sending … smtp server, port, email, password
+… an option to test and test result will be red or green. connecting an email
+account should be modal, and then when modal is closed account will be there,
+with option to select another account, we'll give a name and select which
+default account to use."
+
+Built: `MailAccount` per project (name, sender name, host, port — SSL follows
+the port —, email = login and from address, sealed password, `isDefault`,
+last check/send result). `/tenant/api/p/:project/mail-accounts` (list + the
+project's log, test without saving, add, edit, make default, send a test,
+remove; `manage-projects`). Every project email (welcome, receipts,
+automations) goes through the default; a project with none falls back to the
+organization's server (M-02). Tenant panel: Project → Email — the list with a
+green/red status per account, "Send from" picks the default, the ⋯ menu,
+the connect dialog. Deleting the project deletes its accounts.
+**Next, if asked:** an account picker on the automation email action; a
+reply-to per account.
+

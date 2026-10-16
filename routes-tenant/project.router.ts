@@ -36,6 +36,7 @@ import apiBuilderRouter from './apiBuilder.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
+import mailAccountsRouter from './mailAccounts.router.js';
 import templatesRouter from './templates.router.js';
 import siteBuilderRouter from './siteBuilder.router.js';
 import siteContentsRouter from './siteContents.router.js';
@@ -216,6 +217,8 @@ router.use('/webhooks', webhooksRouter);
 router.use('/widgets', widgetsRouter);
 // Payments (docs/widgets W-06): merchant accounts and what checkout took.
 router.use('/payments', paymentsRouter);
+// Its email accounts — SMTP, test, default (docs/messaging M-14).
+router.use('/mail-accounts', mailAccountsRouter);
 
 router.use('/templates', templatesRouter);
 router.use('/api-overview', overviewRouter);

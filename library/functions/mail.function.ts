@@ -3,6 +3,7 @@ import net from 'net';
 import nodemailer from 'nodemailer';
 import MailSettings from '../models/tenancy/mailSettings.model.js';
 import MailMessage from '../models/tenancy/mailMessage.model.js';
+import MailAccount from '../models/tenancy/mailAccount.model.js';
 import { open, seal } from '../../lib/crypto/secret.js';
 import { TenancyError } from './tenancy.function.js';
 
@@ -13,10 +14,12 @@ import { TenancyError } from './tenancy.function.js';
  * - **MINT's own** (`deliver` in controllers/twoFactor/twoFactor.service.ts,
  *   MAIL_* env): sign-up welcome, invitations, password resets, codes, the
  *   marketing site's waitlist — mail from MINT to the people who use it.
- * - **The organization's own** (this file): its SMTP server, typed in on the
- *   Email page — mail from the business to its customers (welcome on sign-up
- *   now; record emails, newsletters and automations later). Nothing goes out
- *   for an organization until it has set this up: MINT has no shared sender.
+ * - **The business's own** (this file): mail from the business to its
+ *   customers (welcome on sign-up, receipts, automations). A project's email
+ *   goes through its default connected account (Project → Email, M-14,
+ *   `MailAccount`); a project without one falls back to the organization's
+ *   server (Organization → Email, M-02, `MailSettings`). Nothing goes out
+ *   until one is set up: MINT has no shared sender.
  *
  * Every organization send is logged (`MailMessage`, subject only, 180 days).
  */
@@ -42,6 +45,8 @@ export const button = (href: string, text: string) =>
 
 /** The ports email servers take mail on — nothing else (a tenant can't point MINT at any service). */
 export const SMTP_PORTS = [25, 465, 587, 2465, 2525, 2587];
+/** The ports that speak TLS from the start; the rest upgrade with STARTTLS. */
+export const SECURE_PORTS = [465, 2465];
 
 const privateAddress = (ip: string) => {
 	if (net.isIPv4(ip)) {
@@ -57,7 +62,7 @@ const privateAddress = (ip: string) => {
  * private or local addresses are refused (MINT's own network is no business
  * of a tenant's). Local development allows them, for test servers.
  */
-const checkHost = async (host: string, port: number) => {
+export const checkHost = async (host: string, port: number) => {
 	if (!SMTP_PORTS.includes(port)) throw new TenancyError(400, `Email servers take mail on ports ${SMTP_PORTS.join(', ')} — ${port} isn’t one.`);
 	if (process.env.NODE_ENV !== 'production' && !process.env.MAIL_BLOCK_PRIVATE) return;
 	let addresses: string[] = [];
@@ -80,6 +85,8 @@ export type MailConfig = {
 	fromName: string;
 	fromAddress: string;
 	replyTo: string;
+	/** The project's account it is (M-14); absent = the organization's server. */
+	accountId?: string;
 };
 
 /** What the panel sees: everything but the password. */
@@ -112,6 +119,54 @@ export const loadMailConfig = async (organization: any): Promise<(MailConfig & {
 	}
 	return { host: doc.host, port: doc.port, secure: !!doc.secure, username: doc.username || '', password, fromName: doc.fromName || '', fromAddress: doc.fromAddress, replyTo: doc.replyTo || '', doc };
 };
+
+/** What the panel sees of a project's account: everything but the password. */
+export const accountView = (a: any) => ({
+	_id: String(a._id),
+	name: a.name,
+	fromName: a.fromName || '',
+	host: a.host,
+	port: a.port,
+	secure: !!a.secure,
+	email: a.email,
+	isDefault: !!a.isDefault,
+	verifiedAt: a.verifiedAt || null,
+	lastError: a.lastError || '',
+	lastErrorAt: a.lastErrorAt || null,
+	createdAt: a.createdAt,
+	updatedAt: a.updatedAt,
+});
+
+const openPassword = (sealed: string) => {
+	try {
+		return sealed ? open(sealed) : '';
+	} catch {
+		throw new TenancyError(500, 'This email password can’t be read on this server — type it in again on the Email page.', 'mail_secret');
+	}
+};
+
+/** A project account as something to send with: the given one, or the project's default. Null when the project has none. */
+export const loadAccountConfig = async (project: any, accountId?: any): Promise<(MailConfig & { doc: any }) | null> => {
+	const doc: any = await MailAccount.findOne(accountId ? { _id: accountId, project } : { project, isDefault: true })
+		.select('+password')
+		.lean();
+	if (!doc) return null;
+	return {
+		host: doc.host,
+		port: doc.port,
+		secure: !!doc.secure,
+		username: doc.email,
+		password: openPassword(doc.password),
+		fromName: doc.fromName || '',
+		fromAddress: doc.email,
+		replyTo: '',
+		accountId: String(doc._id),
+		doc,
+	};
+};
+
+/** What a project's email goes out through: its default account, else its organization's server. */
+export const resolveMailConfig = async (organization: any, project?: any) => (project && (await loadAccountConfig(project))) || loadMailConfig(organization);
 
 /** Saves the settings. An empty password keeps the one stored; connection changes clear "verified". */
 export const saveMailSettings = async (organization: any, body: any, by?: any) => {
@@ -166,6 +221,20 @@ export const mailProblem = (e: any, cfg: Pick<MailConfig, 'host' | 'port' | 'sec
 	return `The email server said: ${msg.slice(0, 200) || 'something went wrong'}`;
 };
 
+/**
+ * Connects and signs in, sending nothing (the Test button in the panel).
+ * Answers `{ ok, message }` — a refusal is an answer, not an error.
+ */
+export const verifyMail = async (cfg: MailConfig) => {
+	try {
+		await checkHost(cfg.host, cfg.port);
+		await transportOf(cfg).verify();
+		return { ok: true, message: `Connected to ${cfg.host} and signed in as ${cfg.username || cfg.fromAddress}.` };
+	} catch (e: any) {
+		return { ok: false, message: e instanceof TenancyError ? e.message : mailProblem(e, cfg) };
+	}
+};
+
 const transportOf = (cfg: MailConfig) =>
 	nodemailer.createTransport({
 		host: cfg.host,
@@ -180,17 +249,19 @@ const transportOf = (cfg: MailConfig) =>
 	});
 
 export type OutgoingMail = { to: string; subject: string; text: string; html?: string };
-type SendMeta = { organization: any; project?: any; kind: (typeof import('../models/tenancy/mailMessage.model.js').MAIL_KINDS)[number]; sentBy?: any };
+type SendMeta = { organization: any; project?: any; account?: any; kind: (typeof import('../models/tenancy/mailMessage.model.js').MAIL_KINDS)[number]; sentBy?: any };
 
 /**
- * Sends one email through the organization's own server and logs it. Throws
- * a TenancyError (409 `mail_not_set_up`) when there's no server, and a 502
- * with the reason when the server refuses — after logging the failure.
+ * Sends one email and logs it: through `meta.account`, else the project's
+ * default account, else the organization's server. Throws a TenancyError (409
+ * `mail_not_set_up`) when there's none, and a 502 with the reason when the
+ * server refuses — after logging the failure.
  */
 export const sendOrgMail = async (mail: OutgoingMail, meta: SendMeta, cfgIn?: MailConfig | null) => {
-	const cfg = cfgIn || (await loadMailConfig(meta.organization));
-	if (!cfg) throw new TenancyError(409, 'Set up your email first (Organization → Email).', 'mail_not_set_up');
-	const log = { organization: meta.organization, project: meta.project || null, kind: meta.kind, to: mail.to, subject: String(mail.subject).slice(0, 300), sentBy: meta.sentBy || null };
+	const cfg = cfgIn || (meta.account && meta.project ? await loadAccountConfig(meta.project, meta.account) : await resolveMailConfig(meta.organization, meta.project));
+	if (!cfg) throw new TenancyError(409, meta.project ? 'Connect an email account first (Project → Email).' : 'Set up your email first (Organization → Email).', 'mail_not_set_up');
+	const log = { organization: meta.organization, project: meta.project || null, account: cfg.accountId || null, kind: meta.kind, to: mail.to, subject: String(mail.subject).slice(0, 300), sentBy: meta.sentBy || null };
+	const status = (set: any) => (cfg.accountId ? MailAccount.updateOne({ _id: cfg.accountId }, { $set: set }) : MailSettings.updateOne({ organization: meta.organization }, { $set: set }));
 	try {
 		const info: any = await transportOf(cfg).sendMail({
 			from: cfg.fromName ? { name: cfg.fromName, address: cfg.fromAddress } : cfg.fromAddress,
@@ -202,22 +273,22 @@ export const sendOrgMail = async (mail: OutgoingMail, meta: SendMeta, cfgIn?: Ma
 		});
 		await Promise.all([
 			MailMessage.create({ ...log, status: 'sent', messageId: String(info?.messageId || '').slice(0, 300) }),
-			MailSettings.updateOne({ organization: meta.organization }, { $set: { verifiedAt: new Date(), lastError: '', lastErrorAt: null } }),
+			status({ verifiedAt: new Date(), lastError: '', lastErrorAt: null }),
 		]);
 		return { sent: true, messageId: info?.messageId || '' };
 	} catch (e: any) {
 		const problem = mailProblem(e, cfg);
 		await Promise.all([
 			MailMessage.create({ ...log, status: 'failed', error: problem }),
-			MailSettings.updateOne({ organization: meta.organization }, { $set: { lastError: problem, lastErrorAt: new Date() } }),
+			status({ lastError: problem, lastErrorAt: new Date() }),
 		]).catch(() => undefined);
 		throw new TenancyError(502, problem, 'mail_failed');
 	}
 };
 
-/** The organization's recent sends, newest first. */
-export const recentMail = async (organization: any, limit = 50) =>
-	(await MailMessage.find({ organization }).sort({ createdAt: -1 }).limit(limit).lean()).map((m: any) => ({
+/** Recent sends — the organization's, or one project's — newest first. */
+export const recentMail = async (organization: any, limit = 50, project?: any) =>
+	(await MailMessage.find(project ? { organization, project } : { organization }).sort({ createdAt: -1 }).limit(limit).lean()).map((m: any) => ({
 		_id: String(m._id),
 		kind: m.kind,
 		to: m.to,
@@ -225,15 +296,22 @@ export const recentMail = async (organization: any, limit = 50) =>
 		status: m.status,
 		error: m.error || '',
 		project: m.project ? String(m.project) : null,
+		account: m.account ? String(m.account) : null,
 		createdAt: m.createdAt,
 	}));
 
 /* ------------------------------------------------- the emails themselves */
 
-/** A customer signed up on one of the organization's sites: a welcome, from the business. Quiet when email isn't set up or welcomes are off. */
+/**
+ * A customer signed up on one of the project's sites: a welcome, from the
+ * business. Quiet when email isn't set up or the organization turned
+ * welcomes off (its Email page's switch covers its projects' accounts too).
+ */
 export const welcomeCustomer = async (project: any, customer: { name?: string; email: string }, siteUrl?: string) => {
-	const cfg = await loadMailConfig(project.organization).catch(() => null);
-	if (!cfg || cfg.doc.customerWelcome === false) return;
+	const cfg = await resolveMailConfig(project.organization, project._id).catch(() => null);
+	if (!cfg) return;
+	const org: any = cfg.accountId ? await MailSettings.findOne({ organization: project.organization }).select('customerWelcome').lean() : cfg.doc;
+	if (org?.customerWelcome === false) return;
 	const name = project.name;
 	const hi = customer.name ? `Hi ${customer.name},` : 'Hi,';
 	await sendOrgMail(

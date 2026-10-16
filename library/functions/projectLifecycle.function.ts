@@ -39,6 +39,7 @@ import SiteWidgets from '../models/tenancy/siteWidgets.model.js';
 import SiteCart from '../models/tenancy/siteCart.model.js';
 import SitePayment from '../models/tenancy/sitePayment.model.js';
 import SitePaymentSettings from '../models/tenancy/sitePaymentSettings.model.js';
+import MailAccount from '../models/tenancy/mailAccount.model.js';
 import DeletedRecord from '../models/deleted-record/model.js';
 import ContentSchedule from '../models/tenancy/contentSchedule.model.js';
 
@@ -102,6 +103,9 @@ export const removeProjectContents = async (organization: any, projectId: any) =
 		for (const Model of SCOPED) await (Model as any).deleteMany({});
 		return list;
 	});
+	// Its email accounts (docs/messaging M-14) — they hold sealed passwords. Not tenantScoped: filtered by project.
+	// Its sends stay in the organization's log (subject only, 180 days).
+	await MailAccount.deleteMany({ project: projectId });
 	for (const f of files) await deleteS3ObjectIfUnused(f.key, f.bucket).catch((e: any) => console.error('project delete, S3:', e?.message));
 	// Its built models' data: t_<projectId> (D21), and t_<projectId>_<route> from
 	// before WO-43 (README, Naming) — once their index builds are done.

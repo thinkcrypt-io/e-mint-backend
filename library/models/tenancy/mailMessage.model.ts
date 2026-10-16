@@ -12,6 +12,8 @@ const schema = new Schema<any>(
 	{
 		organization: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
 		project: { type: Schema.Types.ObjectId, ref: 'TenantProject', default: null },
+		/** The project's email account it went through (M-14); null = the organization's server. */
+		account: { type: Schema.Types.ObjectId, ref: 'MailAccount', default: null },
 		kind: { type: String, enum: MAIL_KINDS, required: true },
 		to: { type: String, trim: true, lowercase: true, required: true },
 		subject: { type: String, maxlength: 300, default: '' },

@@ -144,7 +144,7 @@ await call('POST', P(shop._id, '/deals'), { title: 'Second', contact: email('buy
 await settle();
 r = await call('GET', A(`/${mail._id}/runs`), null, alma);
 const failed = r.body?.doc?.[0];
-ok('no email server: the run failed with why', failed?.status === 'failed' && /Set up your email first/.test(failed?.error || ''), JSON.stringify(failed));
+ok('no email server: the run failed with why', failed?.status === 'failed' && /Connect an email account first/.test(failed?.error || ''), JSON.stringify(failed));
 ok('…and the next action never ran', failed?.steps?.length === 1 && !(await records('tasks')).some(t => t.title === 'Never made'));
 r = await call('GET', A(`/${mail._id}`), null, alma);
 ok('its counters', r.body?.stats?.runs === 1 && r.body?.stats?.failures === 1 && r.body?.stats?.lastStatus === 'failed', JSON.stringify(r.body?.stats));

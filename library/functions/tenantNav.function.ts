@@ -96,6 +96,8 @@ export const tenantNav = (
 	const project = inProject
 		? section('Project', 'folder-cog', [
 				...(can('manage-projects') ? [{ title: 'Settings', href: '/project-settings', icon: 'settings' }] : []),
+				// The email accounts its emails go out through (docs/messaging M-14).
+				...(can('manage-projects') ? [{ title: 'Email', href: '/email-accounts', icon: 'mail' }] : []),
 				...(can('invite-to-projects') || can('manage-members') ? [{ title: 'Members', href: '/project-people', icon: 'users' }] : []),
 		  ])
 		: [];

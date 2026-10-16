@@ -225,6 +225,8 @@ const TENANT_RESERVED_ROUTES = new Set([
 	'images', 'public-api', 't',
 	// The navbar search (WO-54).
 	'search',
+	// A project's email accounts: the API path and the panel page (docs/messaging M-14).
+	'mail-accounts', 'email-accounts',
 ]);
 
 /**
