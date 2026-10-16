@@ -7,7 +7,7 @@ import { isDraftModel, publishRecord, statusOf, unpublishRecord } from '../../fu
 import { ScheduleError, scheduleOf, setSchedule } from '../../functions/contentSchedule.function.js';
 import { afterPublish } from '../../functions/publishEvents.function.js';
 import { refPopulates } from '../../functions/publicRecords.function.js';
-import { applyFormulas } from '../../functions/formula.function.js';
+import { applyFormulasLinked } from '../../functions/formula.function.js';
 import { MODEL_KEY } from '../../functions/projectIndexes.function.js';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { KIT_ROUTES, kitModel, pullSeo, pushPage } from '../../siteBuilder/kit.js';
@@ -178,7 +178,7 @@ const saveEntryDraft = async (req: any, args: any, caller: Caller): Promise<Out>
 	const doc: any = found.doc || new Model({ ...ownedBy(Model, caller), ...(def.access?.enabled && { privacy: 'public' }) });
 	const before = isNew ? null : doc.toObject();
 	doc.set(picked.body);
-	applyFormulas(doc, await formulasFor(req, def));
+	await applyFormulasLinked(doc, await formulasFor(req, def), Model);
 	const problems = validationProblems(doc);
 	if (problems.length) return refuse(`Nothing saved:\n- ${problems.join('\n- ')}`);
 	if (!isNew && !doc.isModified()) return { text: `Nothing changed — /${def.route} [${doc._id}] already has those values.`, data: { route: def.route, _id: String(doc._id), changed: false } };

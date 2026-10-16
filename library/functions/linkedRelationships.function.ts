@@ -4,7 +4,7 @@ import LinkedChange from '../models/linked-change/model.js';
 import { LOCK_OPS, LockCondition, isRef, meets, lockedChanges, lockedMessage } from './fieldLocks.function.js';
 import { accessRule, isAccessRestricted } from './recordAccess.function.js';
 import { ownRecordsOf } from './projectIndexes.function.js';
-import { applyFormulas, evaluate, formulasOf, parse, refsOf } from './formula.function.js';
+import { applyFormulasLinked, evaluate, formulasOf, parse, refsOf } from './formula.function.js';
 import { permissionsOf, resolveOther, resources } from '../controllers/builder/viewDocument.controller.js';
 import recordHistory, { diffFields } from './recordHistory.function.js';
 import { secretPaths } from './secretFields.function.js';
@@ -388,7 +388,7 @@ const checkTarget = async (step: Step, checkEditable: boolean) => {
 	if (locked.length) throw new LinkedError(`${label}: ${lockedMessage(locked)}`);
 	for (const [k, v] of Object.entries(sets)) doc.set(k, v === null ? undefined : v);
 	for (const [k, d] of Object.entries(incs)) doc.set(k, (Number(doc.get(k)) || 0) + d);
-	applyFormulas(doc, formulasOf(resolved.settings));
+	await applyFormulasLinked(doc, formulasOf(resolved.settings));
 	try {
 		await doc.validate();
 	} catch (e: any) {
@@ -684,7 +684,7 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 		doc = await Model.findById(id);
 	}
 	for (const [k, v] of Object.entries(step.sets)) doc.set(k, v === null ? undefined : v);
-	applyFormulas(doc, formulasOf(resolved.settings));
+	await applyFormulasLinked(doc, formulasOf(resolved.settings));
 	// What the save sets (the rule's fields and the formulas they move), as they were.
 	const paths: string[] = doc.modifiedPaths();
 	const touched = paths.filter(k => !paths.some(p => k !== p && k.startsWith(`${p}.`)));
@@ -852,7 +852,7 @@ export const previewLinked = (Model: mongoose.Model<any>) => async (req: any, re
 				}
 			}
 		} else doc = new Model({ ...values, addedBy: req.user?._id });
-		applyFormulas(doc, formulasOf(req.resolvedRoute?.settings));
+		await applyFormulasLinked(doc, formulasOf(req.resolvedRoute?.settings));
 		const plan = await prepareLinked({ req, resolved: req.resolvedRoute, Model, action: before ? 'update' : 'create', before, after: doc.toObject() });
 		return res.status(200).json({ changes: plan?.preview || [], error: plan?.previewError || null, missing: plan?.missing || [] });
 	} catch (e: any) {

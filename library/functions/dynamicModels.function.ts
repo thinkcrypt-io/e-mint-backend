@@ -148,9 +148,15 @@ export const tidyFormula = (src: any) => {
  * number fields; a section list itself (count) and its rows' values
  * (`items.total`, for sum / avg); a section's values as `address.zip`.
  */
-export const formulaInfoOf = (fields: ModelFieldDef[] = []) =>
+export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: string) => { key: string; label: string }[] | undefined) =>
 	fields.flatMap(x => {
 		const numeric = (k: FieldKind) => k === 'number' || k === 'formula';
+		// A link: itself (not a number), and the linked record's numbers as `tax.amount`.
+		if (x.kind === 'reference')
+			return [
+				{ key: x.key, label: x.label, numeric: false },
+				...(numbersOf?.(x.ref) || []).map(n => ({ key: `${x.key}.${n.key}`, label: `${x.label || humanize(x.key)} › ${n.label}`, numeric: true, linked: x.key })),
+			];
 		if (x.kind === 'sectionlist')
 			return [
 				{ key: x.key, label: x.label, numeric: false, list: true },
@@ -815,7 +821,16 @@ export const buildSchema = (input: ModelDef) => {
 
 /* ------------------------------------------ settings and config, generated */
 
-export type TargetInfo = { route: string; display: string; title?: string; built: boolean };
+/** `numbers`: the target's number fields — what a formula may read through a link to it (`tax.amount`). */
+export type TargetInfo = { route: string; display: string; title?: string; built: boolean; numbers?: { key: string; label: string }[] };
+
+/** A model's top-level number fields (and formulas), for formulas reading them through a link. */
+export const numbersOfDef = (d: Pick<ModelDef, 'fields'>) =>
+	(d.fields || []).filter(f => f.kind === 'number' || f.kind === 'formula').map(f => ({ key: f.key, label: f.label || humanize(f.key) }));
+const numbersOfModel = (Model: mongoose.Model<any>) =>
+	Object.entries<any>(Model.schema.paths)
+		.filter(([k, p]) => p.instance === 'Number' && !k.includes('.') && !k.startsWith('_'))
+		.map(([k]) => ({ key: k, label: humanize(k) }));
 
 /** The field that names a record of a built model when it's linked. */
 export const displayFieldOf = (def: ModelDef) => {
@@ -1434,9 +1449,9 @@ export const makeTargetLookup = (app: any, defs: ModelDef[]) => {
 	return (ref?: string): TargetInfo | null => {
 		if (!ref) return null;
 		const d = byName.get(ref);
-		if (d) return { route: d.route, display: displayFieldOf(d), title: d.title, built: true };
+		if (d) return { route: d.route, display: displayFieldOf(d), title: d.title, built: true, numbers: numbersOfDef(d) };
 		const c = codeRoutes.get(ref);
-		if (c) return { route: c.route, display: guessDisplay(c.Model), title: c.title, built: false };
+		if (c) return { route: c.route, display: guessDisplay(c.Model), title: c.title, built: false, numbers: numbersOfModel(c.Model) };
 		return null;
 	};
 };

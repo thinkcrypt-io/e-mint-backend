@@ -13,7 +13,7 @@ import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
 import { fieldsOfRule } from '../../functions/formRules.function.js';
-import { checkFormula, formulaPipeline, formulasOf } from '../../functions/formula.function.js';
+import { checkFormula, formulaPipeline, formulasOf, recalculateFormulas, usesLinks } from '../../functions/formula.function.js';
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { currentScope } from '../../functions/tenantScope.function.js';
@@ -29,6 +29,7 @@ import {
 	COMPONENT_KINDS,
 	NESTING_KINDS,
 	formulaInfoOf,
+	numbersOfDef,
 	REFERENCE_KINDS,
 	defaultOf,
 	enumOf,
@@ -217,7 +218,11 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 
 	const problems: string[] = [];
 	// `extraTargets`: models planned alongside this one (a feature build) that don't exist yet.
-	const targets = new Set([...(await linkTargets(req.app)).map(t => t.name), ...extraTargets]);
+	const targetList = await linkTargets(req.app);
+	const targets = new Set([...targetList.map(t => t.name), ...extraTargets]);
+	// What a formula may read through a link: the linked model's numbers (this model's own, for a link to itself).
+	const numbersOf = (ref?: string) =>
+		ref === selfName ? numbersOfDef({ fields: (value.fields || []) as any }) : targetList.find(t => t.name === ref)?.numbers;
 
 	/** The checks every field gets — a model's, or a section's own (`scope`: the fields its formulas may use). */
 	const checkField = (f: any, name: string, scope: any[]) => {
@@ -236,7 +241,7 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 			delete f.required;
 			delete f.unique;
 			f.formula = tidyFormula(f.formula);
-			const checked = checkFormula(f.formula || '', formulaInfoOf(scope), f.key);
+			const checked = checkFormula(f.formula || '', formulaInfoOf(scope, scope === value.fields ? numbersOf : undefined), f.key);
 			if (!f.formula) problems.push(`${name}: write its formula`);
 			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
 		} else delete f.formula;
@@ -1048,7 +1053,10 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 			);
 		if (formulaSig(before) !== formulaSig(after)) {
 			const formulas = formulasOf((await generated(req.app, after)).settingsObj);
-			if (formulas.length)
+			// A formula reading a linked record (`tax.amount`) goes record by record through the model.
+			const Built = compiledModel(after.name);
+			if (formulas.length && Built && usesLinks(formulas, Built)) recalculated = await recalculateFormulas(Built, {}, formulas);
+			else if (formulas.length)
 				recalculated = (
 					await mongoose.connection.collection(after.collectionName).updateMany(own, formulaPipeline(formulas))
 				).modifiedCount;

@@ -18,7 +18,7 @@ import {
 import { effectiveSource, getGlobalSources, invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { PROTECTED_ROUTES, checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
-import { formulaPipeline, formulasOf, subFieldsOf } from '../../functions/formula.function.js';
+import { formulasOf, recalculateFormulas, subFieldsOf } from '../../functions/formula.function.js';
 import { scopeKey } from '../../functions/tenantScope.function.js';
 
 type Kind = 'settings' | 'config';
@@ -341,7 +341,7 @@ export const publishBuilderRoute = async (req: any, res: Response): Promise<Resp
 			if (k === 'settings' && formulaSignature(doc.data) !== before) {
 				const formulas = formulasOf(dataToSettings(doc.data));
 				const model = codeFor(req.app, route).model;
-				if (formulas.length && model) recalculated = (await model.updateMany({}, formulaPipeline(formulas))).modifiedCount;
+				if (formulas.length && model) recalculated = await recalculateFormulas(model, {}, formulas);
 			}
 		}
 

@@ -8,7 +8,7 @@ import { runInScope } from './tenantScope.function.js';
 import { compiledModel, generateSettings, makeTargetLookup, syncDynamicModels } from './dynamicModels.function.js';
 import { getActiveSettings } from './resolveRoute.function.js';
 import { dataToSettings } from './routeRegistry.function.js';
-import { applyFormulas, formulasOf } from './formula.function.js';
+import { applyFormulasLinked, formulasOf } from './formula.function.js';
 import { listCountries, providersFor } from './countries.function.js';
 import { fireWebhooks } from './webhooks.function.js';
 import { fireAutomations } from './automations.function.js';
@@ -258,7 +258,7 @@ export const checkout = async ({ app, project, customer, body }: { app: any; pro
 		...(customer && { _customer: customer._id }),
 		...(def.access?.enabled && { privacy: 'public' }),
 	});
-	applyFormulas(doc, formulas);
+	await applyFormulasLinked(doc, formulas, Model);
 	try {
 		await doc.save();
 	} catch (e: any) {

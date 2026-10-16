@@ -17,7 +17,7 @@ import {
 } from '../library/functions/dynamicModels.function.js';
 import { getActiveSettings } from '../library/functions/resolveRoute.function.js';
 import { dataToSettings } from '../library/functions/routeRegistry.function.js';
-import { applyFormulas, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
+import { applyFormulasLinked, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenancy/websiteEvent.model.js';
 import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
@@ -928,7 +928,7 @@ const create = async (req: any, res: any, ctx: Ctx) => {
 		...(ctx.customer && { _customer: ctx.customer._id }),
 		...(ctx.def.access?.enabled && { privacy: 'public' }),
 	});
-	applyFormulas(doc, ctx.formulas);
+	await applyFormulasLinked(doc, ctx.formulas, ctx.Model);
 	// The endpoint's conditions, on the new record (an owner condition makes the customer its owner).
 	checkCreate(ctx.ep, doc, ctx.customer);
 	let plan: any = null;
@@ -967,7 +967,7 @@ const update = async (req: any, ctx: Ctx) => {
 	const before = doc.toObject();
 	const raw = (await hasApiRules(req, ctx)) ? await ctx.Model.collection.findOne({ _id: doc._id }) : null;
 	doc.set(body);
-	applyFormulas(doc, ctx.formulas);
+	await applyFormulasLinked(doc, ctx.formulas, ctx.Model);
 	const changed = doc.isModified();
 	let plan: any = null;
 	try {

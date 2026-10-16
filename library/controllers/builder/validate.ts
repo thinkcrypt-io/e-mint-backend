@@ -2,7 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
-import { FieldInfo, checkFormula, format, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
+import { FieldInfo, checkFormula, format, linkedModelOf, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
 import { ruleSchema, rulesSchema } from '../../functions/formRules.function.js';
 import { linkedRulesSchema } from '../../functions/linkedRelationships.function.js';
 
@@ -284,7 +284,14 @@ export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): Fi
 		if (inside.some(x => x.list)) return inside;
 		const path: any = model?.schema?.path(f.key);
 		const numeric = isFormula(f) || f.type === 'number' || path?.instance === 'Number';
-		return [{ key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) }, ...inside];
+		// A link: the linked record's numbers, read as `tax.amount` when the formula is calculated.
+		const Linked = linkedModelOf(model, f.key);
+		const linked: FieldInfo[] = Linked
+			? Object.entries<any>(Linked.schema.paths)
+					.filter(([k, p]) => p.instance === 'Number' && !k.includes('.') && !k.startsWith('_'))
+					.map(([k]) => ({ key: `${f.key}.${k}`, label: `${f.title || f.key} › ${k}`, numeric: true, linked: f.key }))
+			: [];
+		return [{ key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) }, ...inside, ...linked];
 	});
 
 /** A settings draft with its system fields exactly as generated — changed ones restored, missing ones added back. */

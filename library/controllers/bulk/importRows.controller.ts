@@ -4,7 +4,7 @@ import { scopedModel } from '../../functions/routeRegistry.function.js';
 import ExcelJS from 'exceljs';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { hasLinkedRules, LinkedError, linkedMany } from '../../functions/linkedRelationships.function.js';
-import { applyFormulas, formulasOf, stripFormulaKeys } from '../../functions/formula.function.js';
+import { applyFormulas, applyFormulasLinked, formulasOf, stripFormulaKeys } from '../../functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../functions/formRules.function.js';
 
 /**
@@ -497,6 +497,7 @@ const check = async (req: any, Model: mongoose.Model<any>, format: string, conte
 		}
 
 		const doc = new Model({ ...row, addedBy: req.user?._id });
+		// Only checked here, so a linked record's numbers needn't be looked up (the save does).
 		applyFormulas(doc, formulas);
 		drafts.push(doc);
 		const err: any = doc.validateSync(skip.length ? { pathsToSkip: skip } : undefined);
@@ -585,7 +586,7 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 	const formulas = formulasOf(req.resolvedRoute?.settings);
 	const saveRow = async (i: number) => {
 		const doc = new Model({ ...rows[i], addedBy: req.user?._id });
-		applyFormulas(doc, formulas);
+		await applyFormulasLinked(doc, formulas, Model);
 		const skip = hidden[i];
 		if (skip.length) await doc.validate({ pathsToSkip: skip });
 		const saved = await doc.save(skip.length ? { validateBeforeSave: false } : undefined);

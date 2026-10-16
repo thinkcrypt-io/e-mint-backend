@@ -35,6 +35,13 @@ required: left out, `''` or `null` saves as false (model compile, Joi validators
 required check that treats false as blank. Smoke: `yes-no.mjs`. Not deployed
 (CHANGELOG).
 
+**2026-10-16 — formulas read linked records.** `tax.amount` (a single link at the
+top level) is looked up on save (`applyFormulasLinked`) and on recalculation
+(`recalculateFormulas`, record by record when a formula reads a link). New code
+that sets formula values must use those, not `applyFormulas`/`formulaPipeline`
+alone. A change to the linked record doesn't recalculate its users yet. Smoke:
+`formula-links.mjs` (CHANGELOG).
+
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D21), then the open WO
 below. When an item lands, set its Status here, add a `CHANGELOG.md` entry

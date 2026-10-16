@@ -3,7 +3,7 @@ import { displayModelName } from '../../library/functions/routeRegistry.function
 import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
 import recordHistory from '../../library/functions/recordHistory.function.js';
-import { applyFormulas } from '../../library/functions/formula.function.js';
+import { applyFormulasLinked } from '../../library/functions/formula.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
 
 const createDocument = (model: mongoose.Model<any>) => {
@@ -11,7 +11,7 @@ const createDocument = (model: mongoose.Model<any>) => {
 		try {
 			const document = new model({ ...req.body, addedBy: req.user._id });
 			// Formula fields, from the values just set (and the model's defaults).
-			applyFormulas(document, req.formulas);
+			await applyFormulasLinked(document, req.formulas, model);
 			// Fields hidden by the form's conditions aren't required (formRules.function.ts).
 			const hidden: string[] = req.formHidden || [];
 			// Linked Relationships: what saving this changes in the records it picks,

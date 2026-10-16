@@ -10,7 +10,7 @@ import File from '../../models/admin-file/model.js';
 import { compiledModel, generateSettings, makeTargetLookup, syncDynamicModels } from '../../functions/dynamicModels.function.js';
 import { getActiveSettings } from '../../functions/resolveRoute.function.js';
 import { dataToSettings, scopedModel } from '../../functions/routeRegistry.function.js';
-import { applyFormulas, formulasOf } from '../../functions/formula.function.js';
+import { applyFormulasLinked, formulasOf } from '../../functions/formula.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { runInScope } from '../../functions/tenantScope.function.js';
 import { MODEL_KEY } from '../../functions/projectIndexes.function.js';
@@ -594,7 +594,7 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 		}
 		const doc: any = existing || new Model({ ...ownedBy(Model, caller), ...(restricted && { privacy: 'public' }) });
 		doc.set(picked.body);
-		applyFormulas(doc, formulas);
+		await applyFormulasLinked(doc, formulas, Model);
 		problems.push(...validationProblems(doc, `records[${i}].`));
 		docs.push({ doc, Model, isNew: !existing });
 	}

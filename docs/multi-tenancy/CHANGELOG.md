@@ -1774,3 +1774,38 @@ Decisions D14–D17 (README).
   create) on a private backend (:5043, Mongo :27993); models, public, public-filters, api-builder, collections, secrets,
   navsearch, automations, cms-single/components/components-nested/blocks/drafts smoke all pass; `tsc --noEmit` clean in
   backend, mint-tenant and admin. Not deployed.
+
+## 2026-10-16 — Formulas: a field more than once, a linked record's numbers
+- The user: in the formula window a field picked once (Price) couldn't be picked again; and a formula should reach
+  numbers through a link — a bill's `tax` linking to a Tax record → `tax.amount`.
+- Picking twice: the window's field Dropdown kept its last pick selected inside Chakra's Select, so the same pick
+  fired no change. `FormulaModal.tsx` remounts it after each pick (`key={picks}`). Its "Try it" now reads dotted sample
+  keys as typed (it read `billing.fee`/`tax.amount` samples as 0).
+- Linked numbers (`formula.function.ts`): `linkedModelOf`, `linkedValues` (one `findById` per link the formulas read
+  through, selecting only those paths), `applyFormulasLinked` (model defaults to the document's own),
+  `recalculateFormulas` (an update pipeline can't look up another record, so formulas with linked reads go record by
+  record with `bulkWrite`; others keep `formulaPipeline`). `evaluate`/`applyFormulas` take the linked values as an
+  override. Only a single link at the record's top level; no link picked (or gone) = 0. Row and section formulas
+  don't read through links.
+- Every save path calls `applyFormulasLinked`: create/update/update-many (common controllers), bulk import (save
+  step; its check step stays plain), payments, Linked Relationships (3), MCP content + website tools, the public API
+  (create, update). Publishing a formula (route builder, model builder) uses `recalculateFormulas`.
+- Checks: `TargetInfo.numbers` (built: number/formula fields; code models: Number paths) from `linkTargets` →
+  `/builder/models/options`; `formulaInfoOf(fields, numbersOf)` offers `tax.amount` at the model's top level;
+  the route builder's `formulaFieldInfo` adds a link's Number paths from the model schema. The builder AI's formula
+  hint mentions both.
+- Panels (mint-tenant + admin): `formulaFieldsOf(fields, numbersOf)` + `LinkTarget.numbers` (FieldsEditor);
+  `validateFields` accepts any `link.x` through a link (the server checks it); new
+  `form-components/LinkedFormulaValues.tsx` fetches the picked record for a formula reading through it — FormMain and
+  FormPage pass the values to `withFormulaValues`, which hands them to the formula input via `LINKED_VALUES`.
+  admin's older model-builder files got the same edits by hand.
+- Not covered: a later change to the linked record (Tax amount) doesn't recalculate the records using it until they're
+  saved again (in the mint-docs guide).
+- Docs: mint-docs `models#formulas`, website changelog.
+- Verified: new `formula-links.mjs` 14/14 on a private backend (:5043, Mongo :27993); models, public, public-filters,
+  collections, api-builder, cms-components/-nested/blocks, yes-no, automations, navsearch, mcp smoke and
+  `scripts/linked-relationships/smoke.mjs` pass; tsc clean in backend, mint-tenant, admin. Browser (admin as the tenant
+  panel): Price picked twice in a row goes in twice; the list offers "Tax › Amount (tax.amount) — from the linked
+  record"; Try it 1010 × 22 + 1212 + 1010 = 24,442; a new Bill's live Total 30 → 42 when VAT (12) is picked, stored 42.
+- Seen in passing, not changed: a list with an empty search hides records whose search field (e.g. Name) is empty —
+  `filter.middleware.ts` adds `{ name: { $regex: '' } }`, which never matches a missing field.

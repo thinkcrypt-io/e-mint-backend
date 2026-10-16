@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
-import { applyFormulas } from '../../library/functions/formula.function.js';
+import { applyFormulasLinked } from '../../library/functions/formula.function.js';
 import { secretPaths } from '../../library/functions/secretFields.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
@@ -50,7 +50,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 
 			updates.forEach((update: any) => (data[update] = req.body[update]));
 			// Formula fields, from the record as it now stands.
-			applyFormulas(data, req.formulas);
+			await applyFormulasLinked(data, req.formulas, model);
 			// Fields hidden by the form's conditions aren't required (formRules.function.ts).
 			const hidden: string[] = req.formHidden || [];
 			// Linked Relationships: what this change does to the records it picks,

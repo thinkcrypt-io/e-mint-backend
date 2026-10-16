@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 /**
  * Formula fields: a number field whose value is calculated from the record's
  * other number fields — `due = total - paid` — and never typed in.
@@ -11,6 +13,10 @@
  *
  * - field keys (dotted for nested: `payment.amount`), numbers, `+ - * / %`,
  *   brackets, and round(x[, digits]) floor ceil abs min max;
+ * - a number of a linked record, through the link: `tax.amount` (tax links
+ *   to a Tax record) reads that record's amount when the formula is
+ *   calculated (linkedValues) — a link not picked counts as 0;
+ * - a field can be used any number of times: `price * qty + price`;
  * - over a list of rows (a custom section list, like an invoice's items):
  *   sum(items.total), avg(items.total) and count(items) — a row's value
  *   can't be used on its own, only through these;
@@ -245,6 +251,8 @@ export type FieldInfo = {
 	list?: boolean;
 	/** A value in each row of this list (`items.total` → 'items'): only sum() and avg() take it. */
 	inList?: string;
+	/** A number of the record a link picks (`tax.amount` → 'tax'), read when the formula is calculated. */
+	linked?: string;
 };
 
 export type Checked = {
@@ -385,19 +393,21 @@ const rowCount = (doc: any, key: string): number => {
 	return collect(doc, key.split('.')).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
 };
 
-const ev = (n: Node, doc: any): number | null => {
+type Linked = Record<string, any> | undefined;
+
+const ev = (n: Node, doc: any, linked?: Linked): number | null => {
 	switch (n.t) {
 		case 'num':
 			return n.v;
 		case 'ref':
-			return numberOf(valueAt(doc, n.key));
+			return numberOf(linked && Object.prototype.hasOwnProperty.call(linked, n.key) ? linked[n.key] : valueAt(doc, n.key));
 		case 'neg': {
-			const a = ev(n.a, doc);
+			const a = ev(n.a, doc, linked);
 			return a === null ? null : -a;
 		}
 		case 'bin': {
-			const a = ev(n.a, doc);
-			const b = ev(n.b, doc);
+			const a = ev(n.a, doc, linked);
+			const b = ev(n.b, doc, linked);
 			if (a === null || b === null) return null;
 			switch (n.op) {
 				case '+': return a + b; // prettier-ignore
@@ -408,7 +418,7 @@ const ev = (n: Node, doc: any): number | null => {
 			}
 		}
 		case 'fn': {
-			const args = n.args.map(a => ev(a, doc));
+			const args = n.args.map(a => ev(a, doc, linked));
 			if (n.name === 'min' || n.name === 'max') {
 				const xs = args.filter((x): x is number => x !== null);
 				return xs.length ? Math[n.name](...xs) : null;
@@ -427,9 +437,12 @@ const ev = (n: Node, doc: any): number | null => {
 	}
 };
 
-/** A formula's value for one record (a plain object or a Mongoose document). */
-export const evaluate = (tree: Node, doc: any): number | null => {
-	const v = ev(tree, doc);
+/**
+ * A formula's value for one record (a plain object or a Mongoose document).
+ * `linked`: values read through links (`tax.amount` → 12), from linkedValues.
+ */
+export const evaluate = (tree: Node, doc: any, linked?: Linked): number | null => {
+	const v = ev(tree, doc, linked);
 	return v === null || !Number.isFinite(v) ? null : roundTo(v, 10);
 };
 
@@ -611,17 +624,103 @@ const setOn = (target: any, key: string, v: any) => {
 	parent[last] = v;
 };
 
-/** Sets every formula field on a document (or plain object) from its other fields. */
-export const applyFormulas = (doc: any, formulas: Formula[] = []) => {
+/**
+ * Sets every formula field on a document (or plain object) from its other
+ * fields. `linked`: the values read through links (linkedValues) — without
+ * them a linked number counts as 0, so pass them wherever the model has links
+ * (applyFormulasLinked does both).
+ */
+export const applyFormulas = (doc: any, formulas: Formula[] = [], linked?: Linked) => {
 	for (const f of formulas) {
 		if (f.sub) {
 			const rows = valueAt(doc, f.key);
 			if (Array.isArray(rows)) for (const row of rows) if (row && typeof row === 'object') setOn(row, f.sub, evaluate(f.tree, row));
 			continue;
 		}
-		setOn(doc, f.key, evaluate(f.tree, doc));
+		setOn(doc, f.key, evaluate(f.tree, doc, linked));
 	}
 	return doc;
+};
+
+/* ---------- numbers of linked records (`tax.amount`) ---------- */
+
+/** The model a single link (`tax`) of `model` picks from, or null when the path isn't one. */
+export const linkedModelOf = (model: mongoose.Model<any> | undefined, key: string): mongoose.Model<any> | null => {
+	const path: any = model?.schema?.path?.(key);
+	const ref = path?.instance === 'ObjectId' ? path.options?.ref : null;
+	if (!ref || typeof ref !== 'string') return null;
+	return (mongoose.models[ref] as any) || (model as any)?.db?.models?.[ref] || null;
+};
+
+/** A link and the paths a model's formulas read through it: `tax.amount` → tax: [amount]. */
+const linkedReads = (formulas: Formula[], model?: mongoose.Model<any>) => {
+	const out = new Map<string, { Linked: mongoose.Model<any>; paths: Set<string> }>();
+	for (const f of formulas) {
+		if (f.sub) continue; // a row reads only its own values
+		for (const r of f.refs) {
+			const dot = r.indexOf('.');
+			if (dot < 1) continue;
+			const head = r.slice(0, dot);
+			const Linked = linkedModelOf(model, head);
+			if (!Linked) continue;
+			if (!out.has(head)) out.set(head, { Linked, paths: new Set() });
+			out.get(head)!.paths.add(r.slice(dot + 1));
+		}
+	}
+	return out;
+};
+
+/** Whether any of a model's formulas reads a linked record. */
+export const usesLinks = (formulas: Formula[] = [], model?: mongoose.Model<any>) => linkedReads(formulas, model).size > 0;
+
+const idOf = (v: any) => (v && typeof v === 'object' && v._id ? v._id : v);
+
+/**
+ * The values a record's formulas read through its links, by formula key
+ * (`{ 'tax.amount': 12 }`): one lookup per link picked. A link not picked, or
+ * to a record that's gone, reads as empty (0).
+ */
+export const linkedValues = async (doc: any, formulas: Formula[] = [], model?: mongoose.Model<any>): Promise<Record<string, any>> => {
+	const out: Record<string, any> = {};
+	for (const [head, { Linked, paths }] of linkedReads(formulas, model)) {
+		for (const p of paths) out[`${head}.${p}`] = null;
+		const id = idOf(valueAt(doc, head));
+		if (!id || !mongoose.isValidObjectId(id)) continue;
+		const rec: any = await Linked.findById(id).select([...paths].join(' ')).lean();
+		if (rec) for (const p of paths) out[`${head}.${p}`] = valueAt(rec, p);
+	}
+	return out;
+};
+
+/** applyFormulas with the values read through links looked up first. `model`: the document's own, by default. */
+export const applyFormulasLinked = async (doc: any, formulas: Formula[] = [], model: mongoose.Model<any> | undefined = doc?.constructor?.schema ? doc.constructor : undefined) =>
+	applyFormulas(doc, formulas, usesLinks(formulas, model) ? await linkedValues(doc, formulas, model) : undefined);
+
+/**
+ * Recalculates the formula fields of every record `filter` matches: in the
+ * database (formulaPipeline) — or, when a formula reads a linked record
+ * (which an update pipeline can't look up), record by record. Returns how
+ * many records changed.
+ */
+export const recalculateFormulas = async (model: mongoose.Model<any>, filter: any, formulas: Formula[] = []): Promise<number> => {
+	if (!formulas.length) return 0;
+	if (!usesLinks(formulas, model)) return (await model.updateMany(filter, formulaPipeline(formulas))).modifiedCount;
+	let changed = 0;
+	let ops: any[] = [];
+	const flush = async () => {
+		if (ops.length) changed += (await model.bulkWrite(ops)).modifiedCount;
+		ops = [];
+	};
+	for await (const raw of model.find(filter).lean().cursor()) {
+		const doc: any = { ...raw };
+		applyFormulas(doc, formulas, await linkedValues(doc, formulas, model));
+		const set: Record<string, any> = {};
+		for (const f of formulas) set[f.key] = valueAt(doc, f.key);
+		ops.push({ updateOne: { filter: { _id: raw._id }, update: { $set: set } } });
+		if (ops.length >= 500) await flush();
+	}
+	await flush();
+	return changed;
 };
 
 /** Pipeline stages that recalculate the formula fields of every matched record, in order. */

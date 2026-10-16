@@ -1,6 +1,6 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
-import { applyFormulas, formulaPipeline } from '../../library/functions/formula.function.js';
+import { applyFormulasLinked, recalculateFormulas } from '../../library/functions/formula.function.js';
 import { hasLinkedRules, linkedFailure, linkedMany } from '../../library/functions/linkedRelationships.function.js';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
@@ -68,14 +68,14 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 				? await linkedMany(
 						req,
 						model,
-						before.map((b: any) => {
+						await Promise.all(before.map(async (b: any) => {
 							const doc: any = model.hydrate({ ...b });
 							for (const k of updateKeys)
 								if (keyType === 'array') doc.set(k, [...(doc.get(k) || []), ...(Array.isArray(updates[k]) ? updates[k] : [updates[k]])]);
 								else doc.set(k, updates[k]);
-							applyFormulas(doc, req.formulas);
+							await applyFormulasLinked(doc, req.formulas, model);
 							return { action: 'update' as const, before: b, after: doc.toObject(), label: String(b.name || b.title || b.code || b._id) };
-						})
+						}))
 				  )
 				: null;
 			if (linked?.error) return res.status(400).json(linked.error);
@@ -95,8 +95,7 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 			}
 
 			// Formula fields of the records just changed, recalculated in the database.
-			if (req.formulas?.length)
-				await model.updateMany({ _id: { $in: ids }, store: req.store }, formulaPipeline(req.formulas));
+			if (req.formulas?.length) await recalculateFormulas(model, { _id: { $in: ids }, store: req.store }, req.formulas);
 
 			if (result.modifiedCount === 0) {
 				return res.status(404).json({ message: 'No documents found or updated' });
