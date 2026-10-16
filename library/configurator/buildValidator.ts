@@ -18,7 +18,8 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 				base = Joi.number();
 				break;
 			case 'boolean':
-				base = Joi.boolean();
+				// A Yes/No left blank is a No (false), never "missing" — so it's never required.
+				base = Joi.boolean().allow('', null);
 				break;
 			case 'uri':
 				base = Joi.string().uri();
@@ -52,7 +53,7 @@ const buildValidator = (config: Record<string, ConfigItem>): { insert: any; upda
 		if (!required) base = base.allow('');
 
 		insert[key] = base.messages(error(title || ''));
-		if (required) insert[key] = insert[key].required();
+		if (required && type !== 'boolean') insert[key] = insert[key].required();
 		update[key] = base.messages(error(title || ''));
 		if (!edit) delete update[key];
 	});

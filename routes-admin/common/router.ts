@@ -190,6 +190,17 @@ const defineRoutes = ({
 		next();
 	};
 
+	// A Yes/No sent blank ('' or null) is a No: false is a real answer, so a
+	// required Yes/No left unticked saves as false instead of being refused.
+	const yesNoBlanks = (req: any, _res: any, next: any) => {
+		const settings = req.resolvedRoute?.settings || {};
+		for (const body of [req.body, req.body?.updates])
+			if (body && typeof body === 'object')
+				for (const key of Object.keys(body))
+					if (settings[key]?.type === 'boolean' && (body[key] === '' || body[key] === null)) body[key] = false;
+		next();
+	};
+
 	// Conditional form fields (formRules.function.ts): a field hidden by its
 	// rule for the values being saved is dropped from the body — and, on create,
 	// isn't required. An update reads the rules against the record as it will be.
@@ -233,6 +244,7 @@ const defineRoutes = ({
 		post: [
 			protect,
 			formulas,
+			yesNoBlanks,
 			formRules,
 			linkedFills,
 			R(c => (req: any, res: any, next: any) => validate(relaxed(c.VALIDATORS.POST, req.formHidden))(req, res, next)),
@@ -252,6 +264,7 @@ const defineRoutes = ({
 		update: [
 			protect,
 			formulas,
+			yesNoBlanks,
 			formRules,
 			R(c => validate(c.VALIDATORS.UPDATE)),
 			hasPermission([permissions.update]),
@@ -261,6 +274,7 @@ const defineRoutes = ({
 		updateMany: [
 			protect,
 			formulas,
+			yesNoBlanks,
 			hasPermission([permissions.update]),
 			...(injectMiddleware?.updateMany || []),
 		],

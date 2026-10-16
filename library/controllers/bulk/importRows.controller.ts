@@ -98,7 +98,8 @@ const columnsOf = (req: any, Model: mongoose.Model<any>): Column[] => {
 				key,
 				label: s.title || s?.schema?.label || key,
 				type: list ? `list of ${String(inner?.instance || 'text').toLowerCase()}` : String(path?.instance || s.type || 'text').toLowerCase(),
-				required: described[key]?.flags?.presence === 'required' || !!s.required || !!path?.isRequired,
+				// A Yes/No left blank saves as No, so it's never a column the file must fill.
+				required: !(inner?.instance === 'Boolean' && !list) && (described[key]?.flags?.presence === 'required' || !!s.required || !!path?.isRequired),
 				ref: inner?.options?.ref || undefined,
 				options: (enumValues.length ? enumValues : options).map(String).filter(Boolean),
 				list,

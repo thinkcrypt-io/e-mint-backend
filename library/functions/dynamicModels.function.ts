@@ -446,6 +446,8 @@ export const checkAvailability = async (
 /* ------------------------------------------------------------ the model */
 
 const blankToUndefined = (v: any) => (v === '' || v === null ? undefined : v);
+/** A Yes/No left blank is a No: false is an answer, never "missing". */
+const blankToFalse = (v: any) => (v === '' || v === null || v === undefined ? false : v);
 const idsOnly = (v: any) =>
 	Array.isArray(v) ? v.map(x => (x && typeof x === 'object' && x._id ? x._id : x)).filter(x => x !== '' && x != null) : v;
 const idOnly = (v: any) => blankToUndefined(v && typeof v === 'object' && v._id ? v._id : v);
@@ -482,7 +484,8 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 
 	for (const f of fields) {
 		const label = f.label || humanize(f.key);
-		const required = f.required ? [true, `${label} is required`] : undefined;
+		// A Yes/No always has an answer (unset saves as No), so required never refuses one.
+		const required = f.required && f.kind !== 'boolean' ? [true, `${label} is required`] : undefined;
 		let p: any;
 
 		const allowed = enumOf(f);
@@ -519,7 +522,7 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				if (typeof f.max === 'number') p.max = f.max;
 				break;
 			case 'boolean':
-				p = { type: Boolean, set: blankToUndefined, default: dflt === true };
+				p = { type: Boolean, set: blankToFalse, default: dflt === true };
 				break;
 			case 'date':
 				p = { type: Date, set: blankToUndefined };
@@ -850,8 +853,9 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 		// The form still marks it required, and starts from the default.
 		// A uid made from another field fills itself on save — like a default (docs/cms D2).
 		const fillsItself = defaultOf(f) !== undefined || (f.kind === 'uid' && !!f.from);
-		if (f.required && !fillsItself) s.required = true;
-		else if (f.required) s.schema.isRequired = true;
+		// A Yes/No is never required: left unticked it saves as No (false), a real answer.
+		if (f.required && f.kind !== 'boolean' && !fillsItself) s.required = true;
+		else if (f.required && f.kind !== 'boolean') s.schema.isRequired = true;
 		if (f.unique) s.unique = true;
 		// `helperText` is what the form reads.
 		if (f.helper) s.schema.helperText = f.helper;
@@ -1220,7 +1224,7 @@ export const dataModelOf = (fields: ModelFieldDef[] = [], target?: (ref?: string
 			label: x.label || humanize(x.key),
 			type: SUB_INPUT[x.kind] || 'text',
 			kind: x.kind,
-			...(x.required && x.kind !== 'formula' && { isRequired: true }),
+			...(x.required && x.kind !== 'formula' && x.kind !== 'boolean' && { isRequired: true }),
 			...(x.helper && { helper: x.helper }),
 			...(allowed && { options: allowed.map((v, i) => ({ value: v, label: x.options![i].label || humanize(String(v)) })) }),
 			...(x.kind === 'formula' && { formula: tidyFormula(x.formula) }),

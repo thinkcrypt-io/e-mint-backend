@@ -1755,3 +1755,22 @@ Decisions D14–D17 (README).
   ↵ on the picked row, arrow keys scroll it into view, an empty state, key hints along the bottom (desktop).
 - Verified: navsearch.mjs 41/41 (3 new for `code`); browser pane at 1280 and 375 — the window's top stays at 96px while
   its height goes 244–578px across searches.
+
+## 2026-10-16 — Fix: a required Yes/No no longer refuses "No"
+- Bug: a Yes/No (`boolean`, form `checkbox`) field marked Required showed "is required" when left unticked — the form's
+  checkbox carried a native `required`, and the backend's checks treated a blank as missing. A No (false) is a real answer.
+- Decision: an unset Yes/No saves as **false**; Required never blocks one. Every other kind still refuses a truly empty value.
+- Backend: `dynamicModels.function.ts` — a boolean path is never Mongoose-required, its setter turns `''`/`null` into false
+  (`blankToFalse`), settings never mark it `required`/`isRequired` (also inside sections, `dataModelOf`);
+  `library/` + `lib/configurator/buildValidator.ts` — Joi `boolean` allows `''`/`null` and is never `.required()`;
+  `routes-admin/common/router.ts` `yesNoBlanks` (create, update, update many) turns a blank Yes/No in the body into false
+  for every model; `library/` + `functions/convertToFormFields.ts` never mark a `checkbox` form field required;
+  bulk import (`importRows.controller.ts`) no longer lists a Yes/No column as required.
+- Panels (mint-tenant + admin, same file): `fields/registry/descriptors/boolean.tsx` — the checkbox and switch inputs never
+  pass `isRequired`, so no native `required` on the hidden input.
+- Docs: mint-docs `models` (Yes / No row), website changelog.
+- Verified: new `scripts/tenancy-smoke/yes-no.mjs` (21 checks: the form config, create left out / `''` / `null` / false /
+  true, a blank one inside a group, edit to false and blank, required text still refused on create and edit, public API
+  create) on a private backend (:5043, Mongo :27993); models, public, public-filters, api-builder, collections, secrets,
+  navsearch, automations, cms-single/components/components-nested/blocks/drafts smoke all pass; `tsc --noEmit` clean in
+  backend, mint-tenant and admin. Not deployed.

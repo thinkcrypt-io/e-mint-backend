@@ -6,7 +6,7 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-15)
+## Handoff — read this first (kept current; last updated 2026-10-16)
 
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
@@ -28,6 +28,12 @@ projects have none and show the organization's until saved
 Project → Settings and hides Organization → Settings. New org-level
 /tenant/api/upload and /media (manage-organization, shared library). Smoke:
 scripts/tenancy-smoke/business.mjs. Not deployed.
+
+**2026-10-16 — a required Yes/No saves as No.** A Yes/No (`boolean`) is never
+required: left out, `''` or `null` saves as false (model compile, Joi validators,
+`yesNoBlanks` in the common router, form config, panel checkbox). Don't add a
+required check that treats false as blank. Smoke: `yes-no.mjs`. Not deployed
+(CHANGELOG).
 
 **This file is the to-do list and the hand-over.** An agent picking this up:
 read this section, then `README.md` (decisions D1–D21), then the open WO

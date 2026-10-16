@@ -44,7 +44,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 
 							name: subField,
 							label: fieldConfig.label || fieldConfig.title,
-							isRequired: fieldConfig.isRequired || fieldConfig.required || false,
+							// A Yes/No is never required: unticked is a No (false), a real answer.
+							isRequired: fieldConfig.type !== 'checkbox' && !!(fieldConfig.isRequired || fieldConfig.required),
 							type: typeDetail,
 							...(fieldConfig.limit && { limit: fieldConfig.limit }),
 							...(fieldConfig.section && { section: fieldConfig.section }),
@@ -87,7 +88,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(firstIndex && { sectionTitle, description, collapsible }),
 						name: field,
 						label: fieldConfig.label || fieldConfig.title,
-						isRequired: fieldConfig.isRequired || fieldConfig.required || false,
+						// A Yes/No is never required: unticked is a No (false), a real answer.
+						isRequired: fieldConfig.type !== 'checkbox' && !!(fieldConfig.isRequired || fieldConfig.required),
 						type: typeDetail,
 						...(fieldConfig.placeholder && { placeholder: fieldConfig.placeholder }),
 						...(fieldConfig.options && { options: fieldConfig.options }),
