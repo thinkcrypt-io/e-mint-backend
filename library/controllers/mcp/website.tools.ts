@@ -11,6 +11,7 @@ import { compiledModel, generateSettings, makeTargetLookup, syncDynamicModels } 
 import { getActiveSettings } from '../../functions/resolveRoute.function.js';
 import { dataToSettings, scopedModel } from '../../functions/routeRegistry.function.js';
 import { applyFormulasLinked, formulasOf } from '../../functions/formula.function.js';
+import { recalculateDependents } from '../../functions/formulaDependents.function.js';
 import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { runInScope } from '../../functions/tenantScope.function.js';
 import { MODEL_KEY } from '../../functions/projectIndexes.function.js';
@@ -604,6 +605,9 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	} catch (e) {
 		return saveFailure(e);
 	}
+	// Records whose formulas read the ones matched and changed through a link (`tax.amount`).
+	const updated = docs.filter(d => !d.isNew).map(d => d.doc._id);
+	if (updated.length) await recalculateDependents(req.app, Model, updated);
 	const created = docs.filter(d => d.isNew).length;
 	const display = def.displayField || def.fields[0]?.key;
 	const pub = def.publicApi?.enabled ? `\nOn the public API: GET ${publicBase(req, caller.project || { publicSlug: '' })}/${route}` : '';

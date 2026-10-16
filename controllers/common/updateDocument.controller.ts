@@ -2,6 +2,7 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { applyFormulasLinked } from '../../library/functions/formula.function.js';
+import { recalculateDependents } from '../../library/functions/formulaDependents.function.js';
 import { secretPaths } from '../../library/functions/secretFields.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
@@ -71,6 +72,9 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 					if (beforeRaw) await model.collection.replaceOne({ _id: saved._id }, beforeRaw);
 					return linkedFailure(res, e);
 				}
+
+			// Records whose formulas read this one through a link (`tax.amount`).
+			await recalculateDependents(req.app, model, [saved._id], [...updates, ...(req.formulas || []).map((f: any) => f.key)]);
 
 			recordHistory({
 				req,

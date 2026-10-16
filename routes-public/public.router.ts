@@ -18,6 +18,7 @@ import {
 import { getActiveSettings } from '../library/functions/resolveRoute.function.js';
 import { dataToSettings } from '../library/functions/routeRegistry.function.js';
 import { applyFormulasLinked, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
+import { recalculateDependents } from '../library/functions/formulaDependents.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenancy/websiteEvent.model.js';
 import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
@@ -980,6 +981,8 @@ const update = async (req: any, ctx: Ctx) => {
 		throw invalid(e);
 	}
 	await applyLinked(plan, doc, () => ctx.Model.collection.replaceOne({ _id: doc._id }, raw as any));
+	// Records whose formulas read this one through a link (`tax.amount`).
+	if (changed) await recalculateDependents(req.app, ctx.Model, [doc._id], [...Object.keys(body), ...ctx.formulas.map(f => f.key)]);
 	if (changed) fireWebhooks({ route: ctx.def.route, event: 'update', doc, source: 'api' });
 	if (changed) fireAutomations({ route: ctx.def.route, event: 'update', doc: doc, actor: { name: 'Website' } });
 	return shapeOut(doc.toObject(), outOf(ctx.def, ctx.ep));
@@ -997,6 +1000,7 @@ const remove = async (req: any, ctx: Ctx) => {
 	const gone = await ctx.Model.findOneAndDelete({ ...reach(ctx), _id: ctx.id });
 	if (!gone) throw new TenancyError(404, 'Not found');
 	await applyLinked(plan, gone, () => ctx.Model.collection.insertOne(raw));
+	await recalculateDependents(req.app, ctx.Model, [gone._id]);
 	fireWebhooks({ route: ctx.def.route, event: 'delete', doc: gone, source: 'api' });
 	fireAutomations({ route: ctx.def.route, event: 'delete', doc: gone, actor: { name: 'Website' } });
 	return { message: 'Deleted' };

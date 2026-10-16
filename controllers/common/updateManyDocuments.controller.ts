@@ -1,6 +1,7 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 import { applyFormulasLinked, recalculateFormulas } from '../../library/functions/formula.function.js';
+import { recalculateDependents } from '../../library/functions/formulaDependents.function.js';
 import { hasLinkedRules, linkedFailure, linkedMany } from '../../library/functions/linkedRelationships.function.js';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
@@ -115,6 +116,8 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 					for (const b of before as any[]) await model.collection.replaceOne({ _id: b._id }, b);
 					return linkedFailure(res, e);
 				}
+			// Records whose formulas read these through a link (`tax.amount`).
+			await recalculateDependents(req.app, model, after.map((d: any) => d._id), fields);
 			after.forEach((doc: any) =>
 				recordHistory({
 					req,

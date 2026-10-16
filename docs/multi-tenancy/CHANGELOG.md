@@ -1822,3 +1822,31 @@ Decisions D14–D17 (README).
   3; list with no / empty / spaces search → 3; `search=widg` → 1; no match → 0; empty search beside `price_gte=7` → 2)
   on a private backend (:5043, Mongo :27993) — 4 of them fail with the old middleware; models, public, public-filters,
   collections, navsearch smoke pass; `tsc` clean. Not deployed.
+
+## 2026-10-17 — Formulas follow a change to the linked record
+- Before: a Bill's `total = price * qty + tax.amount` was worked out only when the Bill was saved, so editing the Tax's
+  amount (or deleting the Tax) left every Bill on the old total until each was saved again.
+- New `library/functions/formulaDependents.function.ts` — `recalculateDependents(app, Model, ids, fields?)`: finds the
+  routes in the current scope (`collectResourceRoutes`; a tenant project sees only its own) whose model has a single
+  link to `Model` (cached per scope + dynamic-routes version), resolves their settings (`resolveRoute`, published copy
+  or code) and keeps those whose formulas read through that link (`linksRead`). With `fields`, only a model reading one
+  of them is touched (editing a Tax's name recalculates nothing). Each is recalculated with `recalculateFormulas(Dep,
+  { link: { $in: ids } }, formulasOf(settings))`. Its formula fields can be read through a link in turn (a Payment's
+  `bill.total - paid`), so it goes on from the records it changed — each model at most once per change and at most
+  `MAX_DEPTH` (4) links away, so a loop (Bill reads Tax, Tax reads Bill) ends. Errors are logged, never thrown: the
+  save it follows has already happened. A deleted record reads as 0 (`linkedValues` finds nothing).
+- `linkedValues` takes an optional lookup cache; `recalculateFormulas` passes one, so 1,000 bills on one Tax are one
+  `findById`, not 1,000. New `linksRead(formulas, model)` (link → fields read) for the hook.
+- Called after the write by: `updateDocument`, `updateManyDocuments`, `deleteDocument` (common controllers); bulk
+  delete, undo (restore), status and merge (`bulkActions.controller.ts`; merge recalculates everything reading the kept
+  record, the moved links included); the public API update and delete; MCP `save_entry_draft` (existing records) and
+  `create_records` (records matched and updated); Linked Relationships (`applyStep` collects each target it writes and
+  its changed fields in `run.changed`; recalculated once the whole run has gone through — top-level `apply` and
+  `linkedMany`). Creates (panel, import, payments, public create, duplicate) call nothing: no record links to a new one
+  yet. Archive and CMS publish don't change the fields formulas read.
+- Verified: `formula-links.mjs` gains 11 checks (Tax amount edited → both bills 40; bulk edit of the Tax → 30; a
+  Payment reading `bill.total` follows; the Tax reading a bill back — a loop — ends with the right values in ~130 ms;
+  a field no formula reads changes nothing; the Tax deleted → bills 0, payment −5; both models deleted at the end) — 25/25 on a private
+  backend (:5071, Mongo :27961); models, collections and `scripts/linked-relationships/smoke.mjs` pass (models' "super
+  admin sees no tenant models" fails only when run after the linked-relationships smoke on the same DB — its own
+  super-admin models). `tsc` clean. Not deployed.

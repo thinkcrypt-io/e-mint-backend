@@ -15,7 +15,9 @@ import mongoose from 'mongoose';
  *   brackets, and round(x[, digits]) floor ceil abs min max;
  * - a number of a linked record, through the link: `tax.amount` (tax links
  *   to a Tax record) reads that record's amount when the formula is
- *   calculated (linkedValues) — a link not picked counts as 0;
+ *   calculated (linkedValues) — a link not picked counts as 0; a change to
+ *   the linked record recalculates the records reading it
+ *   (formulaDependents.function.ts);
  * - a field can be used any number of times: `price * qty + price`;
  * - over a list of rows (a custom section list, like an invoice's items):
  *   sum(items.total), avg(items.total) and count(items) — a row's value
@@ -680,17 +682,29 @@ const idOf = (v: any) => (v && typeof v === 'object' && v._id ? v._id : v);
  * (`{ 'tax.amount': 12 }`): one lookup per link picked. A link not picked, or
  * to a record that's gone, reads as empty (0).
  */
-export const linkedValues = async (doc: any, formulas: Formula[] = [], model?: mongoose.Model<any>): Promise<Record<string, any>> => {
+export const linkedValues = async (
+	doc: any,
+	formulas: Formula[] = [],
+	model?: mongoose.Model<any>,
+	/** Linked records already looked up, by link and id — many records picking the same one (recalculateFormulas). */
+	cache?: Map<string, any>
+): Promise<Record<string, any>> => {
 	const out: Record<string, any> = {};
 	for (const [head, { Linked, paths }] of linkedReads(formulas, model)) {
 		for (const p of paths) out[`${head}.${p}`] = null;
 		const id = idOf(valueAt(doc, head));
 		if (!id || !mongoose.isValidObjectId(id)) continue;
-		const rec: any = await Linked.findById(id).select([...paths].join(' ')).lean();
+		const at = `${head}|${id}`;
+		const rec: any = cache?.has(at) ? cache.get(at) : await Linked.findById(id).select([...paths].join(' ')).lean();
+		cache?.set(at, rec);
 		if (rec) for (const p of paths) out[`${head}.${p}`] = valueAt(rec, p);
 	}
 	return out;
 };
+
+/** The links of a model's formulas, and the fields each reads through it: tax → [amount]. */
+export const linksRead = (formulas: Formula[] = [], model?: mongoose.Model<any>) =>
+	new Map([...linkedReads(formulas, model)].map(([head, { Linked, paths }]) => [head, { Linked, paths: [...paths] }]));
 
 /** applyFormulas with the values read through links looked up first. `model`: the document's own, by default. */
 export const applyFormulasLinked = async (doc: any, formulas: Formula[] = [], model: mongoose.Model<any> | undefined = doc?.constructor?.schema ? doc.constructor : undefined) =>
@@ -707,13 +721,14 @@ export const recalculateFormulas = async (model: mongoose.Model<any>, filter: an
 	if (!usesLinks(formulas, model)) return (await model.updateMany(filter, formulaPipeline(formulas))).modifiedCount;
 	let changed = 0;
 	let ops: any[] = [];
+	const cache = new Map<string, any>();
 	const flush = async () => {
 		if (ops.length) changed += (await model.bulkWrite(ops)).modifiedCount;
 		ops = [];
 	};
 	for await (const raw of model.find(filter).lean().cursor()) {
 		const doc: any = { ...raw };
-		applyFormulas(doc, formulas, await linkedValues(doc, formulas, model));
+		applyFormulas(doc, formulas, await linkedValues(doc, formulas, model, cache));
 		const set: Record<string, any> = {};
 		for (const f of formulas) set[f.key] = valueAt(doc, f.key);
 		ops.push({ updateOne: { filter: { _id: raw._id }, update: { $set: set } } });

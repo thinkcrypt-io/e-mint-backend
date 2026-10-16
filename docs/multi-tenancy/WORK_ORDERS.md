@@ -39,8 +39,10 @@ required check that treats false as blank. Smoke: `yes-no.mjs`. Not deployed
 top level) is looked up on save (`applyFormulasLinked`) and on recalculation
 (`recalculateFormulas`, record by record when a formula reads a link). New code
 that sets formula values must use those, not `applyFormulas`/`formulaPipeline`
-alone. A change to the linked record doesn't recalculate its users yet. Smoke:
-`formula-links.mjs` (CHANGELOG).
+alone. A change to the linked record recalculates its users: a new path that
+updates or deletes records calls `recalculateDependents(req.app, Model, ids,
+fields?)` after the write (`formulaDependents.function.ts`; fields left out =
+anything changed, as on a delete). Smoke: `formula-links.mjs` (CHANGELOG).
 
 **2026-10-17 — an empty search box hides nothing.** Both filter middlewares add the
 search `$or` only for non-blank text (`$regex: ''` never matches a missing field,

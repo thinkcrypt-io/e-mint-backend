@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
 import recordHistory from '../../library/functions/recordHistory.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
+import { recalculateDependents } from '../../library/functions/formulaDependents.function.js';
 
 const deleteDocument = (model: mongoose.Model<any>) => {
 	return async (req: GetByIdRequestType, res: Response): Promise<Response> => {
@@ -43,6 +44,9 @@ const deleteDocument = (model: mongoose.Model<any>) => {
 					if (raw) await model.collection.insertOne(raw);
 					return linkedFailure(res, e);
 				}
+
+			// Records whose formulas read this one through a link: it reads as 0 now.
+			await recalculateDependents(req.app, model, [data._id]);
 
 			// `findByIdAndDelete` hands back the document as it was, which is the
 			// only chance to record what was removed — after this it is gone.

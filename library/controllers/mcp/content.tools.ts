@@ -8,6 +8,7 @@ import { ScheduleError, scheduleOf, setSchedule } from '../../functions/contentS
 import { afterPublish } from '../../functions/publishEvents.function.js';
 import { refPopulates } from '../../functions/publicRecords.function.js';
 import { applyFormulasLinked } from '../../functions/formula.function.js';
+import { recalculateDependents } from '../../functions/formulaDependents.function.js';
 import { MODEL_KEY } from '../../functions/projectIndexes.function.js';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { KIT_ROUTES, kitModel, pullSeo, pushPage } from '../../siteBuilder/kit.js';
@@ -178,7 +179,8 @@ const saveEntryDraft = async (req: any, args: any, caller: Caller): Promise<Out>
 	const doc: any = found.doc || new Model({ ...ownedBy(Model, caller), ...(def.access?.enabled && { privacy: 'public' }) });
 	const before = isNew ? null : doc.toObject();
 	doc.set(picked.body);
-	await applyFormulasLinked(doc, await formulasFor(req, def), Model);
+	const formulas = await formulasFor(req, def);
+	await applyFormulasLinked(doc, formulas, Model);
 	const problems = validationProblems(doc);
 	if (problems.length) return refuse(`Nothing saved:\n- ${problems.join('\n- ')}`);
 	if (!isNew && !doc.isModified()) return { text: `Nothing changed — /${def.route} [${doc._id}] already has those values.`, data: { route: def.route, _id: String(doc._id), changed: false } };
@@ -187,6 +189,8 @@ const saveEntryDraft = async (req: any, args: any, caller: Caller): Promise<Out>
 	} catch (e) {
 		return saveFailure(e);
 	}
+	// Records whose formulas read this one through a link (`tax.amount`).
+	if (!isNew) await recalculateDependents(req.app, Model, [doc._id], [...Object.keys(picked.body), ...formulas.map(f => f.key)]);
 	recordHistory({ req, action: isNew ? 'create' : 'update', model: Model.modelName, modelPath: def.route, doc: doc.toObject(), note: '— through the AI assistant' } as any);
 	const status = isDraftModel(def) ? statusOf(doc.toObject()) : null;
 	const where = status

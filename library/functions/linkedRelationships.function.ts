@@ -5,6 +5,7 @@ import { LOCK_OPS, LockCondition, isRef, meets, lockedChanges, lockedMessage } f
 import { accessRule, isAccessRestricted } from './recordAccess.function.js';
 import { ownRecordsOf } from './projectIndexes.function.js';
 import { applyFormulasLinked, evaluate, formulasOf, parse, refsOf } from './formula.function.js';
+import { recalculateDependents } from './formulaDependents.function.js';
 import { permissionsOf, resolveOther, resources } from '../controllers/builder/viewDocument.controller.js';
 import recordHistory, { diffFields } from './recordHistory.function.js';
 import { secretPaths } from './secretFields.function.js';
@@ -290,6 +291,8 @@ type Run = {
 	journal: Journal;
 	summary: LinkedSummary[];
 	history: (() => void)[];
+	/** The records the run changed, by model: once it has all gone through, formulas reading them through a link are recalculated. */
+	changed: Map<mongoose.Model<any>, { ids: any[]; fields: Set<string> }>;
 	depth: number;
 	/** Many records in one go (bulk edit, import…): the caller applies, finishes and rolls back. */
 	batch?: boolean;
@@ -297,7 +300,12 @@ type Run = {
 	api?: boolean;
 };
 
-const newRun = (req: any, extra: Partial<Run> = {}): Run => ({ req, seen: new Set(), journal: [], summary: [], history: [], depth: 0, ...extra });
+const newRun = (req: any, extra: Partial<Run> = {}): Run => ({ req, seen: new Set(), journal: [], summary: [], history: [], changed: new Map(), depth: 0, ...extra });
+
+/** After a run went through: the records reading what it changed through a link (`invoice.due`) recalculated. */
+const recalculateChanged = async (run: Run) => {
+	for (const [Model, { ids, fields }] of run.changed) await recalculateDependents(run.req?.app, Model, ids, fields);
+};
 
 type Step = {
 	kind: 'apply' | 'undo';
@@ -625,6 +633,7 @@ export const prepareLinked = async ({
 				}
 				for (const step of steps) await applyStep(run, step, source, saved);
 				if (top) run.history.forEach(h => h());
+				if (top) await recalculateChanged(run);
 				return run.summary;
 			} catch (e) {
 				if (top) await rollback(run.journal);
@@ -691,6 +700,10 @@ const applyStep = async (run: Run, step: Step, source: Source, saved: any) => {
 	const was = touched.length ? await Model.collection.findOne({ _id: id }, { projection: Object.fromEntries(touched.map(k => [k, 1])) }) : null;
 	const after = (await doc.save()).toObject();
 	if (touched.length) run.journal.push({ Model, id, set: Object.fromEntries(touched.map((k: string) => [k, get(was, k)])) });
+	const changed = run.changed.get(Model) || { ids: [], fields: new Set<string>() };
+	changed.ids.push(id);
+	for (const k of [...touched, ...Object.keys(step.incs)]) changed.fields.add(k);
+	run.changed.set(Model, changed);
 
 	if (step.kind === 'undo') {
 		await log(step.change._id, { $set: { revertedAt: new Date() } });
@@ -792,6 +805,7 @@ export const linkedMany = async (
 			try {
 				for (const [i, plan] of plans.entries()) if (plan) await plan.apply(saved[i]);
 				run.history.forEach(h => h());
+				await recalculateChanged(run);
 				return run.summary;
 			} catch (e) {
 				await rollback(run.journal);

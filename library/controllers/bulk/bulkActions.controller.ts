@@ -6,6 +6,7 @@ import recordHistory from '../../functions/recordHistory.function.js';
 import { ownRecordsOf } from '../../functions/projectIndexes.function.js';
 import { lockedChanges } from '../../functions/fieldLocks.function.js';
 import { hasLinkedRules, LinkedError, linkedFor, linkedMany } from '../../functions/linkedRelationships.function.js';
+import { recalculateDependents } from '../../functions/formulaDependents.function.js';
 
 /**
  * Bulk actions on the rows ticked in a table (admin selection bar):
@@ -91,6 +92,8 @@ export const bulkDelete = ({ Model, ownerOnly }: Opts) => async (req: any, res: 
 				await DeletedRecord.deleteMany({ batch });
 				return linkedFail(res, e);
 			}
+		// Records whose formulas read these through a link: they read as 0 now.
+		await recalculateDependents(req.app, Model, docs.map((d: any) => d._id));
 		docs.forEach(doc => recordHistory({ req, action: 'delete', model: Model.modelName, doc }));
 
 		return res.status(200).json({ batch, deleted: deletedCount, skipped: ids.length - docs.length, ...(also.length > 0 && { linked: also }) });
@@ -135,6 +138,8 @@ export const bulkRestore = ({ Model }: Opts) => async (req: any, res: Response) 
 				return linkedFail(res, e);
 			}
 		await DeletedRecord.deleteMany({ _id: { $in: snaps.map((s: any) => s._id) } });
+		// …and read them again once they're back.
+		await recalculateDependents(req.app, Model, back.map((d: any) => d._id));
 		back.forEach(doc => recordHistory({ req, action: 'create', model: Model.modelName, doc }));
 
 		return res.status(200).json({ restored: back.length, ...(also.length > 0 && { linked: also }) });
@@ -309,6 +314,7 @@ export const bulkStatus = ({ Model }: Opts) => async (req: any, res: Response) =
 				for (const d of allowed) await Model.collection.replaceOne({ _id: d._id }, d);
 				return linkedFail(res, e);
 			}
+		await recalculateDependents(req.app, Model, allowed.map(d => d._id), [cfg.field]);
 		const label = labelOf(req, cfg.field);
 		allowed.forEach(doc =>
 			recordHistory({
@@ -452,6 +458,8 @@ export const mergeRecords = ({ Model, ownerOnly }: Opts) => async (req: any, res
 			}))
 		);
 		await Model.deleteMany({ _id: { $in: ids } });
+		// Formulas reading the kept record through a link — the links just moved to it included.
+		await recalculateDependents(req.app, Model, [keepId]);
 
 		recordHistory({
 			req,
