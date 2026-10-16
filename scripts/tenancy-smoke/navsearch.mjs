@@ -107,6 +107,17 @@ ok('one letter searches nothing', r.status === 200 && r.body?.groups?.length ===
 r = await search('Dhaka');
 ok('a text field is Searchable by default (City finds her)', names(group(r.body, 'clients')).includes('Jane Doe'), JSON.stringify(r.body));
 
+/* ---- a numbered model: the hit carries its record number */
+r = await call('POST', P(shop._id, '/builder/models'), { name: 'Invoice', title: 'Invoices', code: { enabled: true, prefix: 'INV' }, fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }] }, alma);
+ok('Invoices made (record numbers)', r.status === 201, r.body?.message);
+await add('invoices', { title: 'Jane website' });
+await setSearch('invoices', { enabled: true });
+r = await search('Jane website');
+const inv = group(r.body, 'invoices')?.hits?.[0];
+ok('…its hit has the name and the record number', inv?.name === 'Jane website' && /^INV-\d+$/.test(inv?.code || ''), JSON.stringify(inv));
+r = await search('Jane Doe');
+ok('…a model without numbers sends none', group(r.body, 'clients')?.hits?.every(h => h.code === undefined), JSON.stringify(group(r.body, 'clients')));
+
 /* ---- picking fields */
 r = await setSearch('clients', { enabled: true, fields: ['name'] });
 ok('Customers searched by Name only', r.status === 200, r.body?.message);

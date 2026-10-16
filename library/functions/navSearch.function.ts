@@ -29,6 +29,8 @@ export type SearchHit = {
 	_id: string;
 	/** The record's name (its display field), or its code / id when it has none. */
 	name: string;
+	/** Its record number, when the model numbers its records. */
+	code?: string;
 	/** The field that matched, when the name didn't. */
 	match?: { field: string; label: string; value: string };
 };
@@ -125,6 +127,8 @@ export const toHits = (docs: any[], { display, fields, labels, q }: { display: s
 		const named = display && display !== '_id' ? textOf(valueAt(doc, display)) : '';
 		const name = named || textOf(doc.code) || String(doc._id);
 		const hit: SearchHit = { _id: String(doc._id), name };
+		const code = textOf(doc.code);
+		if (code) hit.code = code;
 		if (!name.toLowerCase().includes(needle))
 			for (const f of fields) {
 				const value = textOf(valueAt(doc, f));

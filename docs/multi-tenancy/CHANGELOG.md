@@ -1745,3 +1745,13 @@ Decisions D14–D17 (README).
 - Docs: mint-docs `pages#navbar-search`, admin `/docs/builder#navbar-search`, website changelog.
 - Verified: `navsearch.mjs` 38/38, comments/projects/collections smoke pass (private backend :5041, Mongo :27996);
   browser pane on mint-tenant at desktop and phone width. Not deployed.
+
+## 2026-10-16 — WO-54 follow-up: the search window
+- The user: a better-looking search window; it jumped as results grew and shrank (top must stay put); a record should
+  show its record number and which model it's from under its name.
+- Hits carry `code` (navSearch.function.ts). SearchMenu (mint-tenant + admin): pinned at the top (`placement='top'`,
+  12vh / 12px on a phone), only the list scrolls (max 60vh / 520px), search icon + spinner + Esc in the header, Pages and
+  Records sections, an icon tile per row, "INV-0001 · Invoices" under each record (matched field on the next line),
+  ↵ on the picked row, arrow keys scroll it into view, an empty state, key hints along the bottom (desktop).
+- Verified: navsearch.mjs 41/41 (3 new for `code`); browser pane at 1280 and 375 — the window's top stays at 96px while
+  its height goes 244–578px across searches.
