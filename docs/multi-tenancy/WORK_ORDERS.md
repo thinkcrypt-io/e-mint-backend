@@ -1240,6 +1240,7 @@ versions, scheduling, locales, preview, content API, media alt text, MCP content
 Planned and tracked in `docs/automations` (AU-01…05; AU-01–03 done): Build → Automations in tenant projects — when a
 record is created/changed/deleted and meets conditions, notify / email / webhook / update / create, after the save.
 AU-03a (2026-10-16): an email can go to the address in a linked record's field (`to.fields: ['customer.email']`).
+Messaging M-03a (2026-10-16): email designs — Project → Email → How your emails look; every project email uses the default (docs/messaging).
 
 ## Known gaps
 - About 70 hard-coded links to project pages (e.g. `/dashboard-builder`)

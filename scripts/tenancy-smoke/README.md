@@ -26,6 +26,7 @@ Then, from this folder:
 | `node website.mjs` | website kit + `/site`, `/pages/by-path` | |
 | `node website-mcp.mjs` | website settings through the MCP and Site setup (WO-38) | |
 | `node mail-accounts.mjs` | Messaging M-14: a project's email accounts — Test connection (ok, wrong password, nobody answering, bad port), connect, the default, sends through it / a chosen one, edit keeping the password, the log's account, other organizations refused, removing, the organization's server as the fallback, project delete | needs port 2587 free (a local SMTP sink); `SMOKE_MONGO` for the project-delete check |
+| `node mail-designs.mjs` | Messaging M-03a: email designs — plain or designed, save checks (colours, placeholders, logo address), the live preview (escaping), the default, a test send, an automation's email in the default design and a chosen one, back to the classic look | needs port 2587 free (a local SMTP sink) — not beside mail-accounts.mjs |
 | `node secrets.mjs` | Password fields (WO-39): secret-named keys need the kind, stored as text, never in history | |
 | `node analytics.mjs` | tracker endpoint (origins, bots), reports | |
 | `node access.mjs` | WO-21–24: standard role permissions, project access per member/invitation, the shared media library, invitations in the app, several organizations | stands alone; marks the invitees' emails verified directly in the scratch DB (the real code only goes by email) |

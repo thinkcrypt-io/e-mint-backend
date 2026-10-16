@@ -37,6 +37,7 @@ import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import mailAccountsRouter from './mailAccounts.router.js';
+import mailDesignsRouter from './mailDesigns.router.js';
 import templatesRouter from './templates.router.js';
 import siteBuilderRouter from './siteBuilder.router.js';
 import siteContentsRouter from './siteContents.router.js';
@@ -219,6 +220,8 @@ router.use('/widgets', widgetsRouter);
 router.use('/payments', paymentsRouter);
 // Its email accounts — SMTP, test, default (docs/messaging M-14).
 router.use('/mail-accounts', mailAccountsRouter);
+// How its emails look — plain or designed, header, colours, footer (docs/messaging M-03a).
+router.use('/mail-designs', mailDesignsRouter);
 
 router.use('/templates', templatesRouter);
 router.use('/api-overview', overviewRouter);

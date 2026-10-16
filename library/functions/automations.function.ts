@@ -12,7 +12,9 @@ import { REFERENCE_KINDS, displayFieldOf } from './dynamicModels.function.js';
 import { LOCK_OPS, meets } from './fieldLocks.function.js';
 import { TenancyError, projectPeople } from './tenancy.function.js';
 import { notifyTenant, projectHrefFor } from './tenantNotify.function.js';
-import { sendOrgMail, esc, mailPage, para, button } from './mail.function.js';
+import { sendOrgMail, esc, para } from './mail.function.js';
+import { designMail } from './mailDesign.function.js';
+import MailDesign from '../models/tenancy/mailDesign.model.js';
 import { signWebhook, webhookUrlProblem, webhookRecord } from './webhooks.function.js';
 import { recordHistory } from './recordHistory.function.js';
 
@@ -293,7 +295,14 @@ export const checkAutomation = async (body: any) => {
 			if (!text) throw invalid(`${label}: write the message`, `${at}.body`);
 			checkText(def, subject, `${at}.subject`, label);
 			checkText(def, text, `${at}.body`, label);
-			actions.push({ type: 'email', to: { people, actor, fields, emails }, subject: subject.slice(0, 200), body: text.slice(0, 10000) });
+			// The design it goes out in: one of the project's, or (none) the project's default.
+			let design: string | undefined;
+			if (a.design) {
+				if (!isId(a.design) || !(await MailDesign.exists({ _id: a.design, project: currentScope()?.project })))
+					throw invalid(`${label}: that email design is gone — choose another`, `${at}.design`);
+				design = String(a.design);
+			}
+			actions.push({ type: 'email', to: { people, actor, fields, emails }, subject: subject.slice(0, 200), body: text.slice(0, 10000), ...(design && { design }) });
 		} else if (a.type === 'webhook') {
 			const url = String(a.url || '').trim();
 			if (!/^https?:\/\//i.test(url)) throw invalid(`${label}: an address starting with https://`, `${at}.url`);
@@ -419,7 +428,8 @@ const doEmail = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 		.map(p => para(esc(p).replace(/\n/g, '<br>')))
 		.join('');
 	// Sent to people in the project (not to typed or record addresses): a button to the record.
-	const html = mailPage(ctx.project?.name || 'MINT', esc(subject), paragraphs + (ctx.link && !a.to?.emails?.length && !a.to?.fields?.length ? button(ctx.link, `Open in ${ctx.project?.name || 'MINT'}`) : ''));
+	const toTeam = ctx.link && !a.to?.emails?.length && !a.to?.fields?.length;
+	const html = await designMail(ctx.project, { heading: esc(subject), body: paragraphs, ...(toTeam ? { button: { href: ctx.link, text: `Open in ${ctx.project?.name || 'MINT'}` } } : {}) }, a.design);
 	for (const to of emails) await sendOrgMail({ to, subject, text, html }, { organization: scope.organization, project: scope.project, kind: 'automation' });
 	return { type: 'email', ok: true, detail: `Emailed ${emails.join(', ')}` };
 };
@@ -528,7 +538,7 @@ const RUNNERS: Record<string, (ctx: Ctx, a: any, args: RunArgs) => Promise<Step>
 
 /** One automation on one record: every action in order, stopping at the first failure (A5). */
 const runOne = async (args: RunArgs): Promise<{ status: 'success' | 'failed'; steps: Step[]; error?: string }> => {
-	const project: any = await TenantProject.findById(currentScope()?.project, { name: 1, publicSlug: 1 }).lean();
+	const project: any = await TenantProject.findById(currentScope()?.project, { name: 1, publicSlug: 1, organization: 1, business: 1 }).lean();
 	const ctx: Ctx = {
 		def: args.def,
 		doc: args.doc,

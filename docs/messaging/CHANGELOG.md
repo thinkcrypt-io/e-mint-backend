@@ -92,3 +92,22 @@ Newest last. One entry per work order: what, files, how verified.
   second account, default switch, send test, log, edit with the saved
   password, 390px with no sideways scroll.
 
+## 2026-10-16 — M-03a Email designs
+- The user: "the emails … are from the generic MINT template. Projects can set their own email template, design their own
+  — like a plain page or a designer with heading and footer. Similar to the PDF editor but … easier to develop." Built as
+  designs (MD13): a frame around every project email, edited as a form with a live preview.
+- Backend: `MailDesign` model; `mailDesign.function.ts` (render, `designMail`, checks); `routes-tenant/mailDesigns.router.ts`
+  at `/p/:project/mail-designs` (list, preview, add, edit, default, send-test, remove; project History). `para()` no
+  longer hard-codes its colour (the page's text colour applies; `mailPage` sets the same grey). Welcome, receipt
+  (payments) and automation emails go through `designMail`; an automation email takes `design` (checked to be the
+  project's). Deleted with the project.
+- Panels (mint-tenant + admin, same files): Email page gets "How your emails look" (`_components/Designs.tsx`,
+  `DesignDialog.tsx`) — Plain / Designed cards, font, one-click colour themes, header (logo via the media picker, title
+  with Insert a detail, height, line up, colours), colours and shape, footer/signature; the preview iframe is
+  `sandbox="allow-same-origin"` (no scripts; a fully sandboxed one didn't paint in the pane). Automation email action:
+  Design picker. GuideLink anchors email-designs, design-look/header/colours/footer, automation-email-design.
+- Guide: mint-docs `/email` six new sections; `/automations` mentions it. Website changelog.
+- Verified: new `scripts/tenancy-smoke/mail-designs.mjs` all passed (preview + escaping, save checks, default, test send,
+  an automation email in the default and in a chosen plain design, back to classic, other org refused) — in run-all;
+  `automations.mjs`, `mail-accounts.mjs`, `mail.mjs` still pass; tsc clean in backend and both panels. Private stack:
+  editor screenshots (designed, Forest theme, plain), saved row, automation picker. Not deployed.

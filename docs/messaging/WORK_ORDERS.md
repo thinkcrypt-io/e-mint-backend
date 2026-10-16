@@ -32,6 +32,7 @@ M-10 SMS/WhatsApp and M-11 inbox. Commit and push each WO when it's done.
 |---|---|---|---|---|
 | M-01 | Plan & docs | backend | S | done 2026-10-05 |
 | M-02 | Core: the organization's own SMTP (nodemailer), message log, test send, customer welcome; MINT's own welcome + waitlist emails | both | L | done 2026-10-06 |
+| M-03a | Email designs: plain or designed (header, colours, footer), live preview, default per project, picked per automation email; used by receipts, welcomes, automations, tests | both | M | done 2026-10-16 |
 | M-03 | Templates: block editor, variables from models, preview, test send; system templates | both | L | open |
 | M-04 | Customer auth emails: password reset, email verification, magic link; login widget upgrade | both | M | open |
 | M-05 | Send one email from any record; logged on its history; attachments | both | M | open |
@@ -59,6 +60,21 @@ sender (MD2), suppression list, SES bounce and complaint notifications (SNS →
 webhook), automatic pause (MD7), monthly quotas and usage (MD3).
 **Done when** a test email to a verified address is delivered and logged, a
 bounce suppresses the address, and a quota stops sending with a clear message.
+
+## M-03a — Email designs (M) — done 2026-10-16
+`MailDesign` (shared `maildesigns`, by project; deleted with it): name, style
+plain|designed, font (web-safe stacks), width 480/560/640, header {show, logo,
+logoHeight, title, align, background, color}, colors {page, card, text,
+heading, button, buttonText}, radius, footer {text, align}; one default.
+`functions/mailDesign.function.ts`: `renderDesign` (tables + inline styles),
+`designMail(project, {heading, body, button, brand}, designId?)` — what every
+project email uses (welcome, receipt, automation; tests render directly);
+`checkDesign` (Joi + `{{…}}` placeholders checked outside Joi). API
+`/p/:project/mail-designs` (read + preview: manage-projects or build; writes:
+manage-projects). Panel: Project → Email → How your emails look — list,
+editor dialog (form + live preview, desktop/phone), Make default, Send a test,
+Remove; automation email action gets a Design picker (`action.design`).
+**Next:** M-03 block templates (content) sit inside a design.
 
 ## M-03 — Templates (L)
 `MessageTemplate`; block editor in the panel; variables picked from the

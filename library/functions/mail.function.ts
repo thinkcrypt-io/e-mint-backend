@@ -6,6 +6,7 @@ import MailMessage from '../models/tenancy/mailMessage.model.js';
 import MailAccount from '../models/tenancy/mailAccount.model.js';
 import { open, seal } from '../../lib/crypto/secret.js';
 import { TenancyError } from './tenancy.function.js';
+import { designMail } from './mailDesign.function.js';
 
 /**
  * Email (docs/messaging M-02, the user's decision 2026-10-05: "it can be sent
@@ -34,10 +35,11 @@ export const mailPage = (brand: string, heading: string, body: string, color = '
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;"><tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background:#fff;border-radius:12px;overflow:hidden;">
 <tr><td style="background:${/^#[0-9a-f]{6}$/i.test(color) ? color : '#111827'};padding:24px 32px;"><span style="font-size:18px;font-weight:700;color:#fff;">${brand}</span></td></tr>
-<tr><td style="padding:32px;"><h1 style="margin:0 0 16px;font-size:19px;color:#111827;">${heading}</h1>${body}</td></tr>
+<tr><td style="padding:32px;color:#4b5563;"><h1 style="margin:0 0 16px;font-size:19px;color:#111827;">${heading}</h1>${body}</td></tr>
 </table></td></tr></table></body></html>`;
 
-export const para = (html: string) => `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#4b5563;">${html}</p>`;
+/** A paragraph; its colour comes from the page around it (the design's text colour). */
+export const para = (html: string) => `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;">${html}</p>`;
 export const button = (href: string, text: string) =>
 	`<p style="margin:8px 0 20px;"><a href="${esc(href)}" style="display:inline-block;padding:11px 20px;border-radius:8px;background:#111827;color:#fff;font-size:14px;font-weight:600;text-decoration:none;">${esc(text)}</a></p>`;
 
@@ -319,11 +321,12 @@ export const welcomeCustomer = async (project: any, customer: { name?: string; e
 			to: customer.email,
 			subject: `Welcome to ${name}`,
 			text: `${hi}\n\nYour account at ${name} is ready. Sign in any time with ${customer.email}.${siteUrl ? `\n\n${siteUrl}` : ''}\n\n— ${cfg.fromName || name}`,
-			html: mailPage(
-				esc(cfg.fromName || name),
-				`Welcome to ${esc(name)}`,
-				para(esc(hi)) + para(`Your account at ${esc(name)} is ready. Sign in any time with <b>${esc(customer.email)}</b>.`) + (siteUrl ? button(siteUrl, `Visit ${name}`) : '')
-			),
+			html: await designMail(project, {
+				brand: esc(cfg.fromName || name),
+				heading: `Welcome to ${esc(name)}`,
+				body: para(esc(hi)) + para(`Your account at ${esc(name)} is ready. Sign in any time with <b>${esc(customer.email)}</b>.`),
+				...(siteUrl ? { button: { href: siteUrl, text: `Visit ${name}` } } : {}),
+			}),
 		},
 		{ organization: project.organization, project: project._id, kind: 'customer-welcome' },
 		cfg

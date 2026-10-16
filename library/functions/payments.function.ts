@@ -16,7 +16,8 @@ import { later, notifyTenant, projectAudience, projectHrefFor } from './tenantNo
 import { siteOrigin } from './siteConfig.function.js';
 import { TenancyError } from './tenancy.function.js';
 import { ShopMapping, cleanLines, customerCart, loadShop, priceCart, setCustomerCart } from './shop.function.js';
-import { button, esc, mailPage, para, sendOrgMail } from './mail.function.js';
+import { esc, para, sendOrgMail } from './mail.function.js';
+import { designMail } from './mailDesign.function.js';
 import * as stripe from './payments/stripe.js';
 
 /**
@@ -361,19 +362,18 @@ const receipt = async (project: any, payment: any) => {
 			to: payment.email,
 			subject: `Your order${code} at ${project.name}`,
 			text: `Thank you — we've received your payment of ${total}.\n\n${lines.join('\n')}\n\nTotal: ${total}\n\nWe'll be in touch when it's on its way.\n\n— ${project.name}`,
-			html: mailPage(
-				esc(project.name),
-				`Thank you for your order${esc(code)}`,
-				para(`We’ve received your payment of <b>${esc(total)}</b>.`) +
-					`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;font-size:14px;color:#111827;">${(payment.lines || [])
+			html: await designMail(project, {
+				heading: `Thank you for your order${esc(code)}`,
+				body: para(`We’ve received your payment of <b>${esc(total)}</b>.`) +
+					`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;font-size:14px;">${(payment.lines || [])
 						.map(
 							(l: any) =>
 								`<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">${l.quantity} × ${esc(l.name)}${l.variant ? ` <span style="color:#6b7280">(${esc(l.variant)})</span>` : ''}</td><td align="right" style="padding:6px 0;border-bottom:1px solid #eee;">${esc(money(l.total))}</td></tr>`
 						)
 						.join('')}<tr><td style="padding:8px 0;font-weight:700;">Total</td><td align="right" style="padding:8px 0;font-weight:700;">${esc(total)}</td></tr></table>` +
-					para('We’ll be in touch when it’s on its way.') +
-					(siteOrigin(project) ? button(siteOrigin(project), `Back to ${project.name}`) : '')
-			),
+					para('We’ll be in touch when it’s on its way.'),
+				...(siteOrigin(project) ? { button: { href: siteOrigin(project)!, text: `Back to ${project.name}` } } : {}),
+			}),
 		},
 		{ organization: project.organization, project: project._id, kind: 'record' }
 	);
