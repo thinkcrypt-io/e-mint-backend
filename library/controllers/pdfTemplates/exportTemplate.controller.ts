@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { PdfTemplate } from '../../models/pdf-templates/_index.js';
 import { cleanRecord, loadLists, populateFor, templatePaths, under } from '../../functions/pdfTemplates/data.js';
 import { renderPdf } from '../../functions/pdfTemplates/render.js';
-import { LIMITS, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
+import { LIMITS, PdfTemplateData, normalizeTemplate, textsRoot } from '../../functions/pdfTemplates/schema.js';
 import { tokenPaths } from '../../functions/pdfTemplates/tokens.js';
 import { PUBLISHED, findTemplate, loadSettings, sendPdf, zoneOf } from './pdfTemplates.controller.js';
 
@@ -26,6 +26,58 @@ const nameOf = (doc: any) => {
 	return String(doc?._id || 'record');
 };
 
+/**
+ * Records of a page printed with one template, in one PDF — the page's
+ * download and an automation's email attachment (docs/automations) both use
+ * it. `req` needs `user` (record access), `permissions` and `app` (lists of
+ * other pages); `filter` is the reader's list rules for these records.
+ */
+export const printRecords = async (o: {
+	req: any;
+	Model: mongoose.Model<any>;
+	template: PdfTemplateData;
+	ids: string[];
+	routeSettings: Record<string, any>;
+	filter?: any;
+	exclude?: string;
+	tz?: string;
+	asData?: boolean;
+}): Promise<null | { data: any } | { pdf: Buffer; docs: any[]; file: string }> => {
+	const { req, Model, template, ids, routeSettings } = o;
+	const settings = await loadSettings();
+	// The saved texts it prints can read the record's fields too ({{texts.terms}} → "due {{bill.dueDate | date}}").
+	const paths = [...templatePaths(template), ...settings.texts.flatMap(t => tokenPaths(t.text))];
+	const populate = await populateFor(req, Model, under(paths, [template.alias, 'record']));
+	const docs: any[] = await Model.find({ $and: [o.filter || {}, { _id: { $in: ids.map(id => new mongoose.Types.ObjectId(id)) } }] })
+		.select(o.exclude || '')
+		.populate(populate as any)
+		.lean();
+	if (!docs.length) return null;
+	docs.sort((a, b) => ids.indexOf(String(a._id)) - ids.indexOf(String(b._id)));
+	const lists = await loadLists(req, template, docs.map(d => String(d._id)), paths);
+
+	const now = new Date();
+	const records = docs.map(doc => {
+		const record = cleanRecord(doc, Model, routeSettings);
+		return {
+			roots: {
+				...lists.get(String(doc._id)),
+				[template.alias]: record,
+				record,
+				business: settings.business,
+				texts: textsRoot(settings),
+				today: now,
+				now,
+				template: { name: template.name },
+			},
+		};
+	});
+	if (o.asData) return { data: { roots: records[0].roots, settings, tz: zoneOf(settings, o.tz) } };
+	const pdf = await renderPdf({ template, records, settings, tz: zoneOf(settings, o.tz) });
+	const file = docs.length === 1 ? `${template.name} ${nameOf(docs[0])}.pdf` : `${template.name} — ${docs.length} records.pdf`;
+	return { pdf, docs, file };
+};
+
 const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Response) => {
 	try {
 		const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String).filter((id: string) => mongoose.isValidObjectId(id)) : [];
@@ -45,40 +97,21 @@ const exportTemplate = (Model: mongoose.Model<any>) => async (req: any, res: Res
 		if (!raw) return fail(res, 404, req.body?.template ? 'Template not found' : 'This page has no published PDF template yet — publish one under PDF templates');
 		const { template } = normalizeTemplate({ name: 'Document', ...raw });
 
-		const settings = await loadSettings();
-		const routeSettings: Record<string, any> = req.resolvedRoute?.settings || {};
-		// The saved texts it prints can read the record's fields too ({{texts.terms}} → "due {{bill.dueDate | date}}").
-		const paths = [...templatePaths(template), ...settings.texts.flatMap(t => tokenPaths(t.text))];
-		const populate = await populateFor(req, Model, under(paths, [template.alias, 'record']));
-		const docs: any[] = await Model.find({ $and: [req.queryHelper || {}, { _id: { $in: ids.map(id => new mongoose.Types.ObjectId(id)) } }] })
-			.select(req.resolvedRoute?.built?.QUERY_OPTIONS?.exclude || '')
-			.populate(populate as any)
-			.lean();
-		if (!docs.length) return fail(res, 404, 'None of these records were found');
-		docs.sort((a, b) => ids.indexOf(String(a._id)) - ids.indexOf(String(b._id)));
-		const lists = await loadLists(req, template, docs.map(d => String(d._id)), paths);
-
-		const now = new Date();
-		const records = docs.map(doc => {
-			const record = cleanRecord(doc, Model, routeSettings);
-			return {
-				roots: {
-					...lists.get(String(doc._id)),
-					[template.alias]: record,
-					record,
-					business: settings.business,
-					texts: textsRoot(settings),
-					today: now,
-					now,
-					template: { name: template.name },
-				},
-			};
+		const printed = await printRecords({
+			req,
+			Model,
+			template,
+			ids,
+			routeSettings: req.resolvedRoute?.settings || {},
+			filter: req.queryHelper || {},
+			exclude: req.resolvedRoute?.built?.QUERY_OPTIONS?.exclude || '',
+			tz: req.body?.tz,
+			asData: req.body?.as === 'data',
 		});
+		if (!printed) return fail(res, 404, 'None of these records were found');
 		// The designer draws the page itself: the same data, as JSON (first record).
-		if (req.body?.as === 'data') return res.status(200).json({ roots: records[0].roots, settings, tz: zoneOf(settings, req.body?.tz) });
-		const pdf = await renderPdf({ template, records, settings, tz: zoneOf(settings, req.body?.tz) });
-		const file = docs.length === 1 ? `${template.name} ${nameOf(docs[0])}.pdf` : `${template.name} — ${docs.length} records.pdf`;
-		sendPdf(res, pdf, file, req.body?.inline === true);
+		if ('data' in printed) return res.status(200).json(printed.data);
+		sendPdf(res, printed.pdf, printed.file, req.body?.inline === true);
 	} catch (e: any) {
 		if (!res.headersSent) return fail(res, 500, e?.message || 'Could not make the PDF');
 		res.end();

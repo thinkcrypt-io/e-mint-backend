@@ -15,6 +15,10 @@ import { notifyTenant, projectHrefFor } from './tenantNotify.function.js';
 import { sendOrgMail, esc, para } from './mail.function.js';
 import { designMail } from './mailDesign.function.js';
 import MailDesign from '../models/tenancy/mailDesign.model.js';
+import { PdfTemplate } from '../models/pdf-templates/_index.js';
+import { normalizeTemplate } from './pdfTemplates/schema.js';
+import { printRecords } from '../controllers/pdfTemplates/exportTemplate.controller.js';
+import { resources, resolveOther } from '../controllers/builder/viewDocument.controller.js';
 import { signWebhook, webhookUrlProblem, webhookRecord } from './webhooks.function.js';
 import { recordHistory } from './recordHistory.function.js';
 
@@ -38,6 +42,8 @@ export const MAX_ACTIONS = 10;
 const RUNS_PER_HOUR = () => Number(process.env.AUTOMATION_RUNS_PER_HOUR) || 500;
 const EMAILS_PER_DAY = () => Number(process.env.AUTOMATION_EMAILS_PER_DAY) || 300;
 const MAX_TYPED_EMAILS = 10;
+/** PDFs an email can attach — each printed for the record. */
+const MAX_ATTACHMENTS = 3;
 const MAX_TARGETS = 20;
 const TIMEOUT_MS = 10_000;
 
@@ -302,7 +308,16 @@ export const checkAutomation = async (body: any) => {
 					throw invalid(`${label}: that email design is gone — choose another`, `${at}.design`);
 				design = String(a.design);
 			}
-			actions.push({ type: 'email', to: { people, actor, fields, emails }, subject: subject.slice(0, 200), body: text.slice(0, 10000), ...(design && { design }) });
+			// PDFs printed for the record and attached — the page's published templates (an invoice for a bill).
+			const attach = [...new Set<string>((Array.isArray(a.attach) ? a.attach : []).map(String))];
+			if (attach.length > MAX_ATTACHMENTS) throw invalid(`${label}: at most ${MAX_ATTACHMENTS} PDFs`, `${at}.attach`);
+			if (attach.length && on.length === 1 && on[0] === 'delete') throw invalid(`${label}: a deleted record can’t be printed — attach PDFs when it’s created or changed`, `${at}.attach`);
+			for (const id of attach) {
+				const t: any = isId(id) ? await PdfTemplate.findOne({ _id: id }, { route: 1, status: 1, name: 1 }).lean() : null;
+				if (!t || t.route !== def.route) throw invalid(`${label}: choose a PDF template of ${nounOf(def)}`, `${at}.attach`);
+				if (t.status === 'draft') throw invalid(`${label}: “${t.name}” is a draft — publish it to attach it`, `${at}.attach`);
+			}
+			actions.push({ type: 'email', to: { people, actor, fields, emails }, subject: subject.slice(0, 200), body: text.slice(0, 10000), ...(design && { design }), ...(attach.length && { attach }) });
 		} else if (a.type === 'webhook') {
 			const url = String(a.url || '').trim();
 			if (!/^https?:\/\//i.test(url)) throw invalid(`${label}: an address starting with https://`, `${at}.url`);
@@ -413,12 +428,39 @@ const doNotify = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	return { type: 'notify', ok: true, detail: `Notified ${users.map(u => u.name || u.email).join(', ')}` };
 };
 
+/**
+ * The PDFs an email attaches, printed for the record as the page's download
+ * prints them — as the automation's maker (record access), with every page's
+ * lists. A template that's gone or back to draft stops the email: better no
+ * email than one without its invoice.
+ */
+const attachmentsOf = async (ctx: Ctx, a: any, args: RunArgs) => {
+	if (!a.attach?.length) return [];
+	if (args.event === 'delete') throw new Error('The record was deleted — it can’t be printed');
+	const entry = resources(null).get(ctx.def.route);
+	const routeSettings = entry ? (await resolveOther(entry)).settings || {} : {};
+	const req = { app: null, user: { _id: args.automation.createdBy }, permissions: ['*'] };
+	const out: { filename: string; content: Buffer; contentType: string }[] = [];
+	for (const id of a.attach) {
+		const raw: any = await PdfTemplate.findOne({ _id: id }).lean();
+		if (!raw || raw.route !== ctx.def.route) throw new Error('A PDF it attaches is gone — choose another in the automation');
+		if (raw.status === 'draft') throw new Error(`The PDF “${raw.name}” is a draft — publish it to attach it`);
+		const { template } = normalizeTemplate({ name: 'Document', ...raw });
+		const printed: any = await printRecords({ req, Model: args.Model, template, ids: [String(ctx.doc._id)], routeSettings });
+		if (!printed?.pdf) throw new Error('The record is gone — nothing to print');
+		out.push({ filename: printed.file.replace(/[\\/:*?"<>|]+/g, '-'), content: printed.pdf, contentType: 'application/pdf' });
+	}
+	return out;
+};
+
 const doEmail = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	const { emails } = await recipientsOf(ctx, a.to, args.actor, true);
 	const subject = fill(ctx, a.subject).slice(0, 200);
 	const text = fill(ctx, a.body);
 	if (!emails.length) return { type: 'email', ok: true, detail: 'No address to send to (the chosen email fields were empty)' };
-	if (args.dry) return { type: 'email', ok: true, detail: `Would email ${emails.join(', ')}: “${subject}”` };
+	const attachments = await attachmentsOf(ctx, a, args);
+	const files = attachments.length ? ` with ${attachments.map(f => f.filename).join(', ')}` : '';
+	if (args.dry) return { type: 'email', ok: true, detail: `Would email ${emails.join(', ')}: “${subject}”${files}` };
 	const scope = currentScope()!;
 	const since = new Date(Date.now() - 24 * 3600 * 1000);
 	const sent = await MailMessage.countDocuments({ project: scope.project, kind: 'automation', createdAt: { $gte: since } });
@@ -430,8 +472,8 @@ const doEmail = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	// Sent to people in the project (not to typed or record addresses): a button to the record.
 	const toTeam = ctx.link && !a.to?.emails?.length && !a.to?.fields?.length;
 	const html = await designMail(ctx.project, { heading: esc(subject), body: paragraphs, ...(toTeam ? { button: { href: ctx.link, text: `Open in ${ctx.project?.name || 'MINT'}` } } : {}) }, a.design);
-	for (const to of emails) await sendOrgMail({ to, subject, text, html }, { organization: scope.organization, project: scope.project, kind: 'automation' });
-	return { type: 'email', ok: true, detail: `Emailed ${emails.join(', ')}` };
+	for (const to of emails) await sendOrgMail({ to, subject, text, html, attachments }, { organization: scope.organization, project: scope.project, kind: 'automation' });
+	return { type: 'email', ok: true, detail: `Emailed ${emails.join(', ')}${files}` };
 };
 
 const doWebhook = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {

@@ -47,3 +47,20 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
 - Verified: `automations.mjs` all passed (new: unknown linked field refused, a non-link path refused, a dry run emailing
   the client's address and the deal's own); tsc clean in backend and both panels; the picker on a private stack (a Bill
   linked to Customers offers only "Customer → Email"). Not deployed.
+
+## 2026-10-16 — AU-03b PDFs attached to emails
+- The user: "if we have a PDF linked to a model … when a bill is created we'd like to send the invoice to the client's email
+  too … as an attachment. In automation we can link the PDFs too."
+- `printRecords` pulled out of `exportTemplate.controller.ts` (the page's download uses it unchanged); the email action
+  takes `attach` (≤ 3 published PdfTemplates of the same page — a draft, another page's or a delete-only automation is a
+  400 on `actions.<i>.attach`). At run time `attachmentsOf` prints each for the record as the automation's maker
+  (`resources(null)` — in a project scope the registry needs no app), with linked records and lists; a removed or
+  drafted template fails the step ("better no email than one without its invoice"). `sendOrgMail` takes `attachments`.
+  The dry run and Runs name the files.
+- Panels (both): "Attach PDFs" under the message — the page's published templates as checkboxes, or a hint to make one.
+- Guides: mint-docs `/automations` (Send an email) and `/pdf-templates` (Downloading). Website changelog.
+- Verified: new `scripts/tenancy-smoke/automation-pdfs.mjs` all passed (save checks, dry run naming the file, the customer's
+  email carrying "Invoice B-1001.pdf", a real 12 KB PDF showing the linked customer's name and both bill lines, a
+  removed template failing the run with nothing sent) — in run-all; `pdf-templates/smoke.mjs`, `automations.mjs`,
+  `mail-designs.mjs`, `business.mjs` still pass; tsc clean (backend, both panels, docs). Panel: the option listed the
+  page's Invoice and saved `attach`. Not deployed.

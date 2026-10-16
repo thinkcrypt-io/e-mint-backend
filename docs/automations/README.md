@@ -46,7 +46,9 @@ type Automation = {
 
 type Action =
   | { type: 'notify'; to: Recipients; title: string; message?: string }
-  | { type: 'email'; to: Recipients & { emails?: string[] }; subject: string; body: string }
+  | { type: 'email'; to: Recipients & { emails?: string[] }; subject: string; body: string;
+      design?: string;                   // a MailDesign of the project (docs/messaging M-03a); none: the default
+      attach?: string[] }                // ≤ 3 published PdfTemplates of this page, printed for the record (AU-03b)
   | { type: 'webhook'; url: string }                      // signed with the automation's secret
   | { type: 'update'; target: 'this' | string;            // 'this', or a reference field of the record
       set: { field: string; value?: any; from?: string; clear?: boolean }[] }

@@ -250,7 +250,8 @@ const transportOf = (cfg: MailConfig) =>
 		...(process.env.NODE_ENV !== 'production' && { tls: { rejectUnauthorized: false } }),
 	});
 
-export type OutgoingMail = { to: string; subject: string; text: string; html?: string };
+/** One email; `attachments` are files sent with it (an automation's invoice PDF). */
+export type OutgoingMail = { to: string; subject: string; text: string; html?: string; attachments?: { filename: string; content: Buffer; contentType?: string }[] };
 type SendMeta = { organization: any; project?: any; account?: any; kind: (typeof import('../models/tenancy/mailMessage.model.js').MAIL_KINDS)[number]; sentBy?: any };
 
 /**
@@ -272,6 +273,7 @@ export const sendOrgMail = async (mail: OutgoingMail, meta: SendMeta, cfgIn?: Ma
 			subject: mail.subject,
 			text: mail.text,
 			...(mail.html && { html: mail.html }),
+			...(mail.attachments?.length && { attachments: mail.attachments }),
 		});
 		await Promise.all([
 			MailMessage.create({ ...log, status: 'sent', messageId: String(info?.messageId || '').slice(0, 300) }),
