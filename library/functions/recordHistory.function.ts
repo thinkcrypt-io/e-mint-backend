@@ -121,6 +121,13 @@ export const diffFields = ({ before, after, fields, settings, secret = [] }: Dif
 	return changes;
 };
 
+/** "post Spring menu #12" — the record as a sentence names it. */
+const subjectOf = (model: string, doc: any) => {
+	const name = documentName(doc);
+	const code = doc?.code ? String(doc.code) : '';
+	return `${modelLabel(model)}${name ? ` ${name}` : ''}${code ? ` #${code}` : ''}`;
+};
+
 type TextArgs = {
 	userName: string;
 	action: HistoryAction;
@@ -143,9 +150,7 @@ export const buildHistoryText = ({
 	doc,
 	changes,
 }: TextArgs): string => {
-	const name = documentName(doc);
-	const code = doc?.code ? String(doc.code) : '';
-	const subject = `${modelLabel(model)}${name ? ` ${name}` : ''}${code ? ` #${code}` : ''}`;
+	const subject = subjectOf(model, doc);
 
 	if (action === 'create') return `${userName} created ${subject}`;
 	if (action === 'delete') return `${userName} deleted ${subject}`;
@@ -169,6 +174,12 @@ type RecordArgs = {
 	modelPath?: string;
 	/** Added to the sentence: "(by rule Mark invoice paid from Payment PAY-0012)". */
 	note?: string;
+	/**
+	 * Something done to the record that changes none of its fields — publishing
+	 * it (docs/cms D5): the sentence with `{it}` for the record, "published {it}".
+	 * Written even with no changes; no update webhooks or automations follow.
+	 */
+	did?: string;
 };
 
 /**
@@ -178,22 +189,26 @@ type RecordArgs = {
  * failing a save the user already completed, so a broken write is logged and
  * swallowed. Callers do not await it.
  */
-export const recordHistory = ({ req, action, model, doc, changes = [], modelPath, note }: RecordArgs): void => {
+export const recordHistory = ({ req, action, model, doc, changes = [], modelPath, note, did }: RecordArgs): void => {
 	try {
 		if (!doc || SKIP_MODELS.has(model)) return;
 
-		// An update that changed nothing is not worth an entry.
-		if (action === 'update' && changes.length === 0) return;
+		// An update that changed nothing is not worth an entry — unless it did something else (published it).
+		if (action === 'update' && changes.length === 0 && !did) return;
 
-		// Inside a project, the project's webhooks hear about it too (docs/templates T-09).
-		fireWebhooks({ model, event: action, doc, source: 'panel' });
-		// …and its automations on that page (docs/automations).
-		fireAutomations({ model, event: action, doc, changes, actor: req?.user });
+		if (!did) {
+			// Inside a project, the project's webhooks hear about it too (docs/templates T-09).
+			fireWebhooks({ model, event: action, doc, source: 'panel' });
+			// …and its automations on that page (docs/automations).
+			fireAutomations({ model, event: action, doc, changes, actor: req?.user });
+		}
 
 		const userName = req?.user?.name || req?.user?.username || 'Someone';
 		// Inside a project the model is `T<projectId>_Client`: kept and shown as `Client` (WO-36).
 		model = displayModelName(model);
-		const text = buildHistoryText({ userName, action, model, doc, changes }) + (note ? ` ${note}` : '');
+		const text = did
+			? `${userName} ${did.replace('{it}', subjectOf(model, doc))}${note ? ` ${note}` : ''}`
+			: buildHistoryText({ userName, action, model, doc, changes }) + (note ? ` ${note}` : '');
 
 		History.create({
 			user: req?.user?._id,

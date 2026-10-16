@@ -5,15 +5,17 @@ import { grants } from '../library/functions/tenantPermissions.function.js';
 import { compiledModel, displayFieldOf, syncDynamicModels } from '../library/functions/dynamicModels.function.js';
 import { statusOf } from '../library/functions/drafts.function.js';
 import { KIT_ROUTES } from '../library/siteBuilder/kit.js';
+import { upcoming } from '../library/functions/contentSchedule.function.js';
 
 /**
  * /tenant/api/p/:projectId/content — the content manager's home (docs/cms
  * CMS-07): the project's content in one place. Single types first (each one's
  * record and where it stands), then the collections whose records are drafts
  * until published — how many, how many not live, the last edit — and, in a
- * website, its Contents. Only the models the member may see.
+ * website, its Contents — and what's scheduled to publish or come off next
+ * (CMS-11). Only the models the member may see.
  *
- *   GET /    { website, singles: [...], collections: [...] }
+ *   GET /    { website, singles: [...], collections: [...], scheduled: [{ route, title, record, name, action, at, byName }] }
  */
 const router = express.Router({ mergeParams: true });
 
@@ -34,7 +36,7 @@ router.get(
 		await syncDynamicModels({ app: req.app });
 		const defs: any[] = await ModelDefinition.find({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }).sort({ title: 1 }).lean();
 		const mine = defs.filter(d => grants(req.permissions, [`view-${d.route}`]));
-		const out: any = { website: null, singles: [], collections: [] };
+		const out: any = { website: null, singles: [], collections: [], scheduled: [] };
 		for (const d of mine) {
 			const Model: any = compiledModel(d.name);
 			if (!Model) continue;
@@ -51,6 +53,13 @@ router.get(
 			if (req.project?.type === 'website' && d.route === KIT_ROUTES.contents) out.website = item;
 			else out.collections.push(item);
 		}
+		// Coming up: the waiting publishes and take-offs on the models they may see, soonest first.
+		const titles = new Map(mine.map(d => [String(d._id), d]));
+		const jobs: any[] = await upcoming(100);
+		out.scheduled = jobs
+			.filter(j => titles.has(String(j.modelDef)))
+			.slice(0, 20)
+			.map(j => ({ route: titles.get(String(j.modelDef)).route, title: titles.get(String(j.modelDef)).title, record: String(j.record), name: j.name, action: j.action, at: j.at, byName: j.byName }));
 		return out;
 	})
 );

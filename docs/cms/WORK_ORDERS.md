@@ -20,7 +20,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-08 | Preview on the real site: tokens, mint-sites draft render, side-by-side pane (D9) | backend + mint-sites + mint-tenant | M | — |
 | CMS-09 | Content API: status, locale, populate, single types, publish webhooks, site revalidation (D10) | backend + mint-tenant | M | done 2026-10-16 (locale → CMS-12) |
 | CMS-10 | Versions: store, compare, restore (D6) | backend + mint-tenant | M | — |
-| CMS-11 | Scheduling: publish at / unpublish at (D7) | backend + mint-tenant | M | — |
+| CMS-11 | Scheduling: publish at / unpublish at (D7) | backend + mint-tenant | M | done 2026-10-16 (releases later, §7) |
 | CMS-12 | Languages: Settings → Languages, per-language inputs only when more than one, `_locales`, API + site `/bn/…`, builder switcher (D8) | all | L+L | — |
 | CMS-13 | Media: alt, caption, focal point; image field `{url, alt…}` opt-in (D12) | backend + mint-tenant | M | done 2026-10-16 (+ mint-sites) |
 | CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | done 2026-10-16 (translate → CMS-12) |
@@ -108,9 +108,11 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
 - `ContentVersion` (shared collection, scoped): model, record, n, status, data, by, at. On publish, and on save at
   most every 10 min. Retention per D6 (TTL + cap). Drawer: list, compare with now, restore into the draft.
 
-## CMS-11 — Scheduling (M)
-- `_schedule.publishAt / unpublishAt`; a minute tick (one leader — Mongo lock doc) publishes/unpublishes and
-  records who scheduled it; the editor's sidebar sets and clears it; notifications on success/failure.
+## CMS-11 — Scheduling (M) — done 2026-10-16
+- Built as jobs in their own collection (`ContentSchedule`) rather than `_schedule` on the record — the tick then
+  reads one collection, not every project's; the record page gets `_schedule` from it. A minute tick (one leader —
+  Mongo lock doc) publishes/unpublishes as who scheduled it; the record page's Schedule sets and clears it;
+  notifications on success/failure. See CHANGELOG.
 
 ## CMS-12 — Languages (L + L)
 - Website settings → **Languages**: the main language (English by default) and others. One language: forms as

@@ -4,6 +4,7 @@ import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 import SitePage from '../../models/siteBuilder/sitePage.model.js';
 import { compiledModel, displayFieldOf } from '../../functions/dynamicModels.function.js';
 import { isDraftModel, publishRecord, statusOf, unpublishRecord } from '../../functions/drafts.function.js';
+import { ScheduleError, scheduleOf, setSchedule } from '../../functions/contentSchedule.function.js';
 import { afterPublish } from '../../functions/publishEvents.function.js';
 import { refPopulates } from '../../functions/publicRecords.function.js';
 import { applyFormulas } from '../../functions/formula.function.js';
@@ -24,7 +25,7 @@ import type { Caller, ToolDef } from './mcp.router.js';
  *   list_content_types   models with drafts and single types (what isn't live yet), a website's page contents
  *   get_entry            one record: its draft, what's published, its status
  *   save_entry_draft     a record's draft, made or changed — never published
- *   publish_entry        publish / take off records — the key's publish scope and the person's Publish right
+ *   publish_entry        publish / take off records, now or at a time (CMS-11) — the key's publish scope and the person's Publish right
  *   get_page_contents    a website page's contents, in order, with their types' fields
  *   fill_page            a page's contents written from a brief, as drafts
  *   suggest_seo          a page's words and current SEO, to write its title and description (saved with save_site_page)
@@ -125,6 +126,11 @@ const listContentTypes = async (req: any, _args: any, caller: Caller): Promise<O
 
 /* ---------------------------------------------------------------- get_entry */
 
+const scheduleLines = (s: any) => [
+	...(s?.publishAt ? [`Scheduled to publish at ${new Date(s.publishAt).toISOString()} (UTC)${s.publishBy ? `, by ${s.publishBy}` : ''}`] : []),
+	...(s?.unpublishAt ? [`Scheduled to come off at ${new Date(s.unpublishAt).toISOString()} (UTC)${s.unpublishBy ? `, by ${s.unpublishBy}` : ''}`] : []),
+];
+
 const getEntry = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const m = await contentModel(String(args?.route || '').trim());
 	if (m.error) return refuse(m.error);
@@ -141,14 +147,16 @@ const getEntry = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const published = isDraftModel(def) ? raw._published?.data || null : null;
 	const changedKeys = published ? def.fields.map((f: any) => f.key).filter((k: string) => JSON.stringify(raw[k] ?? null) !== JSON.stringify(published[k] ?? null)) : [];
 	const draft = clean(raw);
+	const schedule = isDraftModel(def) ? await scheduleOf(raw._id) : null;
 	return {
 		text: [
 			`/${def.route} ${raw[displayFieldOf(def)] ? `“${raw[displayFieldOf(def)]}” ` : ''}[${raw._id}] — ${status ? STATUS_WORDS[status] : 'no drafts on this model: what’s here is live'}`,
 			`Draft: ${JSON.stringify(draft)}`,
 			...(status === 'modified' ? [`Published (what the site and API show): ${JSON.stringify(clean(published))}`, `Changed since: ${changedKeys.join(', ') || '—'}`] : []),
+			...scheduleLines(schedule),
 			`In the panel: ${caller.page(`${def.route}/${raw._id}`)}`,
 		].join('\n'),
-		data: { route: def.route, _id: String(raw._id), status, draft, published: published && clean(published), changed: changedKeys },
+		data: { route: def.route, _id: String(raw._id), status, draft, published: published && clean(published), changed: changedKeys, schedule },
 	};
 };
 
@@ -208,6 +216,7 @@ const publishEntry = async (req: any, args: any, caller: Caller): Promise<Out> =
 	}
 	if (!ids.length) return refuse('Say which records: ids (from get_entry or query_records).');
 	if (ids.length > MAX_PUBLISH) return refuse(`At most ${MAX_PUBLISH} at a time.`);
+	if (args?.at !== undefined || args?.clear) return scheduleEntries(req, def, Model, ids, action, args);
 	const done: string[] = [];
 	const missing: string[] = [];
 	for (const id of ids) {
@@ -218,12 +227,39 @@ const publishEntry = async (req: any, args: any, caller: Caller): Promise<Out> =
 		}
 		const doc: any = await Model.findById(id).lean();
 		afterPublish(Model, action, action === 'publish' ? out.doc : doc);
-		recordHistory({ req, action: 'update', model: Model.modelName, modelPath: def.route, doc, note: action === 'publish' ? '— published it through the AI assistant' : '— took it off the site through the AI assistant' } as any);
+		recordHistory({ req, action: 'update', model: Model.modelName, modelPath: def.route, doc, did: action === 'publish' ? 'published {it}' : 'took {it} off the site', note: 'through the AI assistant' } as any);
 		done.push(`${doc?.[displayFieldOf(def)] || id}`);
 	}
 	return {
 		text: `/${def.route}: ${done.length} ${action === 'publish' ? 'published — live on the site and API now' : 'taken off — the drafts stay'}${done.length ? ` (${done.slice(0, 20).join(', ')}${done.length > 20 ? '…' : ''})` : ''}.${missing.length ? `\nNot found: ${missing.join(', ')}` : ''}`,
 		data: { route: def.route, action, done: done.length, missing },
+	};
+};
+
+/** publish_entry with `at` (or `clear`): the times set, moved or cleared (docs/cms D7) — applied by the minute tick. */
+const scheduleEntries = async (req: any, def: any, Model: mongoose.Model<any>, ids: string[], action: 'publish' | 'unpublish', args: any): Promise<Out> => {
+	const key = action === 'publish' ? 'publishAt' : 'unpublishAt';
+	const at = args.clear ? null : args.at;
+	const done: string[] = [];
+	const problems: string[] = [];
+	for (const id of ids) {
+		try {
+			await setSchedule(def, Model, id, { [key]: at }, req.user);
+			done.push(id);
+		} catch (e: any) {
+			if (!(e instanceof ScheduleError)) throw e;
+			problems.push(`${id}: ${e.message}`);
+		}
+	}
+	const when = at ? new Date(at).toISOString() : '';
+	const verb = action === 'publish' ? 'publish' : 'come off';
+	return {
+		text: [
+			done.length ? (at ? `/${def.route}: ${done.length} set to ${verb} at ${when} (UTC) — the draft as it is then.` : `/${def.route}: ${done.length} no longer scheduled to ${verb}.`) : '',
+			problems.length ? `Not scheduled:\n${problems.join('\n')}` : '',
+		].filter(Boolean).join('\n'),
+		data: { route: def.route, action, at: at || null, done, problems },
+		isError: !done.length,
 	};
 };
 
@@ -464,7 +500,7 @@ export const CONTENT_TOOLS: ToolDef[] = [
 		name: 'publish_entry',
 		title: 'Publish entries',
 		description:
-			'Puts records’ drafts live on the site and API (or, with action "unpublish", takes them off — the drafts stay). ONLY when the user has asked in this conversation to publish these entries: never on your own, never as a step of writing them. Tell them what goes live first. Needs the key’s publish scope and the person’s Publish right on the model. Sends the project’s publish webhooks and refreshes the site.',
+			'Puts records’ drafts live on the site and API (or, with action "unpublish", takes them off — the drafts stay), now or — with `at` — at a time (get_entry shows what’s scheduled). ONLY when the user has asked in this conversation to publish these entries: never on your own, never as a step of writing them. Tell them what goes live first. Needs the key’s publish scope and the person’s Publish right on the model. Sends the project’s publish webhooks and refreshes the site.',
 		scope: 'publish',
 		ownRight: true,
 		only: 'project',
@@ -475,6 +511,8 @@ export const CONTENT_TOOLS: ToolDef[] = [
 				route: { type: 'string' },
 				ids: { type: 'array', items: { type: 'string' }, description: `Up to ${MAX_PUBLISH}; a single type needs none` },
 				action: { type: 'string', enum: ['publish', 'unpublish'], description: 'Default publish' },
+				at: { type: 'string', description: 'A future date and time (ISO 8601 with its offset, e.g. 2026-11-02T09:00:00+06:00): schedule it then instead of now — the draft as it is then goes live. With action "unpublish": when it comes off.' },
+				clear: { type: 'boolean', description: 'Cancel the waiting scheduled publish (or, with action "unpublish", take-off)' },
 			},
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -536,4 +574,4 @@ export const CONTENT_TOOLS: ToolDef[] = [
 /** How the AI works with content (docs/cms D-AI) — added to a project's server instructions. */
 export const CONTENT_INSTRUCTIONS = `
 
-CONTENT (drafts first). Models with Drafts and publishing keep every record as a draft until someone publishes it: list_content_types shows them, get_entry reads one (draft and live), save_entry_draft writes drafts, and on a website get_page_contents + fill_page write a page's words, suggest_seo gives material for its title and description. These never publish. publish_entry puts drafts live — only when the user has asked for it in this conversation; say what goes live first. After writing, tell the user what's waiting to be published and where to see it in the panel.`;
+CONTENT (drafts first). Models with Drafts and publishing keep every record as a draft until someone publishes it: list_content_types shows them, get_entry reads one (draft and live), save_entry_draft writes drafts, and on a website get_page_contents + fill_page write a page's words, suggest_seo gives material for its title and description. These never publish. publish_entry puts drafts live — only when the user has asked for it in this conversation; say what goes live first. "Publish it on Monday at 9" is publish_entry with at (ask their time zone if it isn't clear). After writing, tell the user what's waiting to be published and where to see it in the panel.`;

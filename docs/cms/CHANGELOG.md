@@ -318,3 +318,39 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Verified: `cms-mcp-content.mjs` (33 checks) passes; mcp, templates-mcp, website-mcp, site-builder-data,
   cms-components, cms-media, website pass.
 - Docs: mint-docs Connect AI — Can publish, the content tools, what to ask, staying in control.
+
+## 2026-10-16 — CMS-11 Scheduling
+- The user: "start with CMS-11".
+- Backend: `ContentSchedule` (`contentschedules`, scoped): one waiting job per record and action (publish /
+  unpublish) — modelDef, route, record, name, at, by/byName, state pending → running → done | failed (+ error);
+  done/failed expire after 30 days. Records carry nothing (a project's records share t_<project>; the tick reads only
+  this collection). `contentSchedule.function.ts`: `setSchedule` (a time sets or moves, null clears, absent leaves;
+  checked: a date, in the future, ≤ 2 years, take-off after publish, a take-off needs it live or a publish first),
+  `scheduleOf`, `upcoming`, and the tick — every minute (`CONTENT_TICK_MS`), one server at a time (a `locks`
+  document, renewed each tick, taken over after 3 ticks), each job claimed on its own (findOneAndUpdate, oldest
+  first, 100 a tick; a job stuck "running" 5 min is retried, 3 tries). Applied in its project as the person who set
+  it: publishRecord / unpublishRecord, afterPublish (webhooks `source: "schedule"`, site refresh), History
+  "published … as scheduled", and a notification to them (`schedule-done` / `schedule-failed`, why). A deleted
+  record's job just ends (no notice); drafts turned off → failed, told. A server that was down catches up.
+- Routes: `POST /<route>/:id/schedule` { publishAt?, unpublishAt? } (the Publish right, like publish). getById on a
+  drafts model adds `_schedule` { publishAt, unpublishAt, publishBy, unpublishBy }. `/content` adds `scheduled` (the
+  next 20 on models the member sees). A deleted project takes its jobs (SCOPED in projectLifecycle).
+- Fixed on the way (CMS-05): Publish / Take off / Discard never wrote History — `recordHistory` dropped an update with
+  no changed fields. It takes `did` now ("published {it}"): written with no changes, no update webhooks/automations.
+  Bulk Publish and MCP publish_entry write it too. Webhook deliveries accept the `schedule` source; the delivery log
+  names publish / unpublish events (CMS-09 had left them raw).
+- MCP: `publish_entry` takes `at` (ISO with offset → scheduled instead) and `clear`; `get_entry` shows what's
+  scheduled; the content instructions mention "publish it on Monday at 9".
+- Panel (mint-tenant): **Schedule** beside Publish on a drafts record (the Publish right) — a dialog with Publish at /
+  Take off at (datetime-local, the browser's time zone named, × clears each, the two checks inline); the button then
+  reads "Publishes 20 Oct, 09:00", and the header meta says it for everyone. All content: **Coming up** (soonest
+  first, each opens its record). Notifications: calendar icons for the two types.
+- Not here: releases (a group published together, README §7); scheduling a website page's Contents from the builder
+  (they're records — Schedule works on each in the table's record page).
+- Verified: `cms-schedule.mjs` (42 checks: validation, set/move/clear, the tick publishing the draft as it then was
+  and taking it off, webhooks, History, notifications, deleted record, drafts off, MCP, project deletion) passes;
+  cms-drafts, cms-mcp-content, cms-content-api, cms-site-contents, cms-single, webhooks, activity, automations,
+  comments, website-mcp, api-builder, projects + models + mcp pass. Headless Chrome (1280 + 390): the record page
+  with a schedule, the dialog (set through it, cleared through it, take-off-before-publish and take-off-without-publish
+  refused inline), All content's Coming up.
+- Docs: mint-docs Models → Scheduling; Public API webhooks (source "schedule"); Connect AI publish_entry.

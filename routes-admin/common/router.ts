@@ -34,7 +34,7 @@ import {
 import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
-import { bulkPublish, publishAction } from '../../library/controllers/crud/publish.controller.js';
+import { bulkPublish, publishAction, scheduleAction } from '../../library/controllers/crud/publish.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
 import { rollupResponses, rollupsOf } from '../../library/functions/rollups.function.js';
 import getStats from '../../library/controllers/aggregate/getStats.controller.js';
@@ -472,6 +472,8 @@ const defineRoutes = ({
 	router.post('/:id/publish', ...publishing, publishAction(config.MODEL, route, 'publish'));
 	router.post('/:id/unpublish', ...publishing, publishAction(config.MODEL, route, 'unpublish'));
 	router.post('/:id/discard', ...publishing, publishAction(config.MODEL, route, 'discard'));
+	// Scheduling (docs/cms D7, CMS-11): publish at / take off at — the Publish right too.
+	router.post('/:id/schedule', ...publishing, scheduleAction(config.MODEL, route));
 
 	// Linked Relationships: what saving the form's values would change in the
 	// records they pick — the form's hint. Nothing is written.

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
+import { scheduleOf } from '../../library/functions/contentSchedule.function.js';
 
 // Define the options type for the getDocumentById function.
 type EndwareType = {
@@ -44,10 +45,14 @@ const getDocumentById = ({ model, populate, select, exclude }: EndwareType) => {
 				return res.status(404).json({ message: 'Document Not Found' });
 			}
 
-			// A drafts record says who last published it (docs/cms D5, CMS-07) — the snapshot itself stays out.
-			if (model.schema.path('_publishedFrom') && (data as any)._publishedAt) {
-				const pub: any = await model.findById(id).select('_published.byName').lean();
-				return res.status(200).json({ ...data.toJSON(), _publishedBy: pub?._published?.byName || '' });
+			// A drafts record says who last published it (docs/cms D5, CMS-07) — the snapshot itself stays out —
+			// and when it's set to publish or come off (CMS-11).
+			if (model.schema.path('_publishedFrom')) {
+				const [pub, schedule]: any[] = await Promise.all([
+					(data as any)._publishedAt ? model.findById(id).select('_published.byName').lean() : null,
+					scheduleOf((data as any)._id),
+				]);
+				return res.status(200).json({ ...data.toJSON(), _publishedBy: pub?._published?.byName || '', _schedule: schedule });
 			}
 
 			// If a document is found, return it with a 200 OK response.

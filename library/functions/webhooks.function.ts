@@ -225,7 +225,7 @@ const payloadOf = async (event: string, route: string, source: string, record: a
  * never failing the change that caused it. Name the model by `route`, or by
  * the name it was compiled under (`T<projectId>_Client` or `Client`).
  */
-export const fireWebhooks = ({ route, model, event, doc, source }: { route?: string; model?: string; event: string; doc: any; source: 'panel' | 'api' }) => {
+export const fireWebhooks = ({ route, model, event, doc, source }: { route?: string; model?: string; event: string; doc: any; source: 'panel' | 'api' | 'schedule' }) => {
 	const scope = currentScope();
 	if (!scope?.project || !(WEBHOOK_EVENTS as readonly string[]).includes(event) || !doc) return;
 	const snapshot = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };

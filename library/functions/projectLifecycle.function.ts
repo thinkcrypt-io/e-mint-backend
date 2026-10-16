@@ -40,6 +40,7 @@ import SiteCart from '../models/tenancy/siteCart.model.js';
 import SitePayment from '../models/tenancy/sitePayment.model.js';
 import SitePaymentSettings from '../models/tenancy/sitePaymentSettings.model.js';
 import DeletedRecord from '../models/deleted-record/model.js';
+import ContentSchedule from '../models/tenancy/contentSchedule.model.js';
 
 /**
  * Making and removing a tenant project — one place for the projects router
@@ -88,6 +89,8 @@ const SCOPED = [
 	SitePayment,
 	// Holds the sealed Stripe secret key and webhook secret.
 	SitePaymentSettings,
+	// Its records' scheduled publishes (docs/cms CMS-11).
+	ContentSchedule,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */

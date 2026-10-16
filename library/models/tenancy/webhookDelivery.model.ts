@@ -7,7 +7,7 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  * 50 per webhook are kept (functions/webhooks.function.ts prunes the rest),
  * none longer than 30 days.
  */
-export const DELIVERY_SOURCES = ['panel', 'api', 'test'] as const;
+export const DELIVERY_SOURCES = ['panel', 'api', 'test', 'schedule'] as const;
 
 const schema = new Schema<any>(
 	{

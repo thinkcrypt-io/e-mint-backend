@@ -42,7 +42,7 @@ export const refreshSiteSoon = () => {
  * One record published or taken off. `Model` is its compiled model; `doc` what
  * the webhooks send — the published snapshot, or the draft when taken off.
  */
-export const afterPublish = (Model: any, event: 'publish' | 'unpublish', doc: any, { source = 'panel', refresh = true }: { source?: 'panel' | 'api'; refresh?: boolean } = {}) => {
+export const afterPublish = (Model: any, event: 'publish' | 'unpublish', doc: any, { source = 'panel', refresh = true }: { source?: 'panel' | 'api' | 'schedule'; refresh?: boolean } = {}) => {
 	if (doc) fireWebhooks({ model: Model?.modelName, event, doc, source });
 	// The site's own Publish refreshes it itself.
 	if (refresh) refreshSiteSoon();

@@ -17,6 +17,7 @@ import { seedStarterTemplates } from './library/functions/templateSeed.function.
 import { seedCountries } from './library/functions/countries.function.js';
 import { schedulePreviewPurge } from './library/functions/templateSandbox.function.js';
 import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
+import { scheduleContentTick } from './library/functions/contentSchedule.function.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
@@ -68,6 +69,8 @@ connectDb().then(() => {
 	seedCountries();
 	// Template previews older than 24 hours go, now and every hour (docs/templates T-04).
 	schedulePreviewPurge();
+	// Scheduled publishes and take-offs, every minute (docs/cms CMS-11).
+	scheduleContentTick();
 });
 
 // Swagger UI setup
