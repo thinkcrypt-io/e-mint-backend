@@ -1197,6 +1197,38 @@ becomes a thread. Also any links posted in comments must be opened in a new tab 
 - Verified: `scripts/tenancy-smoke/comments.mjs` (47 checks, 13 new for replies) on a private backend; headless Chrome on
   mint-tenant (1280 + 390): threads, links, reply box, deep link to a hidden reply, a reply sent through the UI.
 
+## WO-54 — Records in the navbar search (M) — done
+
+The user (2026-10-16): "In model settings or model config, we can define if the items of the model should show on search.
+If yes, then the fields which are searchable must show on search from the navbar search option. By default it will be what
+it is. When searched it should show the names or primary key and which model it is from — of course only if the user
+searching has access to it."
+
+- Before: the navbar search (`menu/SearchMenu.tsx`, ⌘K / Alt+K) only filtered the sidebar's pages, in the browser — no
+  backend call. That stays, first in the list.
+- Setting: the page config, `route.search = { enabled, fields? }` — off unless `enabled: true`; `fields` narrows to some of
+  the route's Searchable settings fields (none, or none still searchable → all). Panel **Navbar search** on the page
+  builder's Fields & rules tab (`builder/_components/NavSearchPanel.tsx`: Show in search + Search by chips; disabled on a
+  route with no table config), doc link `#navbar-search`. Published like the rest of the config; works for code routes too.
+- Backend: `defineRoutes` hangs `searchRecords(req, {key, q, limit, display, title})` on every router
+  (`routes-admin/common/router.ts`): resolves the route, then runs its own list middlewares on a sub-request
+  (`navSearch.function.ts` `subRequest` + `runChain` with a stand-in response) — `filter` with the search fields (archived
+  out), `hasPermission([view-…])`, `injectMiddleware.getAll` (per-record access) — then one find (25 newest candidates,
+  `maxTimeMS` 3s) ranked best-first (exact name, whole-word start, start, word start, anywhere, other field), 5 kept. A
+  replaced list controller opts the route out. Query: trimmed, ≤80 chars, ≥2, regex-escaped, case-insensitive.
+- Endpoints (`library/controllers/search/navSearch.controller.ts`): `GET /tenant/api/p/:project/search?q=` (the project's
+  built models; `search` added to the reserved route names) and `GET /admin/api/search?q=` (adminProtect; code routes +
+  built models — `collectResourceRoutes` entries now carry `router`). Only routes whose published RouteConfig has
+  `data.route.search.enabled` are asked. Answer `{ q, groups: [{ route, title, hits: [{ _id, name, match? }], more }] }`,
+  30 hits in all; name = display field (built: `displayFieldOf`; code: name/title/code/email/label), else code, else id.
+- Panel (mint-tenant + admin, same files): `store/services/navSearchApi.ts` (`getNavSearch`), SearchMenu lists records
+  under "<project> › <page title>" after the pages, with "<field>: <value>" when another field matched, "More in …", and
+  one arrow-key list; 250 ms debounce; in the tenant panel only inside a project. Records open `viewHrefOf(route, id)`.
+- Docs: mint-docs `pages#navbar-search`; admin `/docs/builder#navbar-search`; website changelog.
+- Verified: `scripts/tenancy-smoke/navsearch.mjs` (38 checks) on a private backend; comments, projects and collections
+  smoke still pass; browser pane on mint-tenant at 1280 and 375: grouped results, email match line, Enter opens the
+  record, the panel published from the UI changes the results.
+
 ## CMS (2026-10-15) — agreed, engine first
 
 Planned in `docs/cms` (CMS-01…15), decisions agreed: Contents typed (type first) and shown per page from a

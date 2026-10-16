@@ -43,6 +43,7 @@ import projectCustomerSettings, { projectCustomerConfig } from '../library/model
 import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 import deleteMedia from '../routes-admin/file/deleteMedia.controller.js';
 import { customQuery } from '../middleware/index.js';
+import { tenantNavSearch } from '../library/controllers/search/navSearch.controller.js';
 
 /**
  * /tenant/api/p/:projectId — everything inside one project (docs/multi-tenancy WO-09).
@@ -54,6 +55,7 @@ import { customQuery } from '../middleware/index.js';
  * API's, so the admin app's library components work unchanged:
  *
  *   /comments                     comments and @mentions on a record (WO-49)   view-<route>
+ *   /search?q=                    the navbar search: records of pages with search on (WO-54)   view-<route>
  *   /automations                  the project's automations (docs/automations)   build
  *   /people                       who opens the project; invite people into it (WO-47)   invite-to-projects / manage-members
  *   /builder/*                    models, features, route builder, MCP keys    build / manage-api-keys
@@ -204,6 +206,8 @@ router.use('/', siteRouter);
 router.use('/history', historyRouter);
 // Comments and @mentions on a record (WO-49).
 router.use('/comments', commentsRouter);
+// The navbar search's records: pages with search on, through their own list rules (WO-54).
+router.get('/search', tenantNavSearch);
 // When a record is created, changed or deleted: notify, email, webhook, update, create (docs/automations).
 router.use('/automations', automationsRouter);
 // Outgoing webhooks, and what an API project's dashboard shows (docs/templates T-09).

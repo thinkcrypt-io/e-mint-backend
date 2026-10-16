@@ -202,7 +202,7 @@ export const RESERVED_KEYS = [
  */
 const RESERVED_ROUTES = new Set([
 	'api', 'admin', 'auth', 'builder', 'model-builder', 'docs', 'doc', 'view', 'views', 'dashboard', 'settings',
-	'notifications', 'access-users', 'templates',
+	'notifications', 'access-users', 'templates', 'search',
 	'new', 'edit', 'create', 'test', 'error', 'not-found', 'heroku-doc', 'vercel-doc', 'user-feedback',
 	'user-feedback-success', 'purchased-themes', 'customer-ledger', 'invoices-old', 'repos', 'qr', 'users',
 	'orders', 'payments', 'groups', 'damages', 'deliveries', 'suppliers', 'images', 'fgroups', 'servicecat',
@@ -223,6 +223,8 @@ const TENANT_RESERVED_ROUTES = new Set([
 	'sidebar-builder', 'dashboard-builder', 'account', 'switch', 'webhooks', 'api-overview', 'history', 'widgets', 'templates',
 	// The tenant panel's project pages (/<project>/<page>): a model's table is /<project>/<route>.
 	'images', 'public-api', 't',
+	// The navbar search (WO-54).
+	'search',
 ]);
 
 /**

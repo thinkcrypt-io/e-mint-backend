@@ -111,6 +111,8 @@ export const forgetScopeMounts = (key: string) => {
 export type RouteEntry<T> = {
 	route: string;
 	source: T;
+	/** The router itself — collectResourceRoutes only (the navbar search asks it, WO-54). */
+	router?: any;
 };
 export type FilterRouteEntry = RouteEntry<FilterSource>;
 
@@ -204,7 +206,7 @@ export const collectResourceRoutes = (app: any): ResourceRouteEntry[] => {
 			const source = layer.handle.routeSource;
 			if (source && full.startsWith(`${ADMIN_API_PREFIX}/`)) {
 				const route = full.slice(ADMIN_API_PREFIX.length + 1);
-				if (route && !found.has(route)) found.set(route, { route, source });
+				if (route && !found.has(route)) found.set(route, { route, source, router: layer.handle });
 			}
 			walk(child, full);
 		}
@@ -212,7 +214,7 @@ export const collectResourceRoutes = (app: any): ResourceRouteEntry[] => {
 
 	if (!currentScope()) walk(app?._router?.stack, '');
 	for (const [route, router] of dynamicMounts)
-		if (!found.has(route)) found.set(route, { route, source: router.routeSource });
+		if (!found.has(route)) found.set(route, { route, source: router.routeSource, router });
 
 	return [...found.values()].sort((a, b) => a.route.localeCompare(b.route));
 };

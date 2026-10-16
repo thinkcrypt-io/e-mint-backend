@@ -279,6 +279,7 @@ import dashboardRouter from '../library/controllers/dashboard/_index.js';
 import pdfTemplatesRouter from '../library/controllers/pdfTemplates/_index.js';
 import templatesRouter from '../library/controllers/templates/templates.router.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
+import { adminNavSearch } from '../library/controllers/search/navSearch.controller.js';
 import { Organization, TenantUser, TenantProject } from '../library/models/tenancy/_index.js';
 import {
 	organizationSettings,
@@ -320,6 +321,8 @@ router.use('/pdf-templates', pdfTemplatesRouter);
 router.use('/templates', templatesRouter);
 
 router.get('/sidebar/:platform/:type', adminProtect, getAdminSidebar());
+// The navbar search's records: pages with search on, through their own list rules (WO-54).
+router.get('/search', adminProtect, adminNavSearch);
 // The admin's System Status page — public, just up/down and timings.
 router.get('/status', systemStatus);
 router.get('/permissionlist', getAdminPermissionList());

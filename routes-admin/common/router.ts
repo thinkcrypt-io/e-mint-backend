@@ -56,6 +56,7 @@ import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.fu
 import { fillLinked } from '../../library/functions/linkedFill.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import { previewLinked } from '../../library/functions/linkedRelationships.function.js';
+import { CANDIDATES, literalPattern, rankHits, runChain, searchOptionsOf, subRequest, toHits } from '../../library/functions/navSearch.function.js';
 import {
 	resolveRoute,
 	resourceRouteKey,
@@ -498,6 +499,48 @@ const defineRoutes = ({
 		...middlewares.distinct,
 		replaceController?.distinct || getDistinctFields({ model: config.MODEL })
 	);
+
+	// The navbar search (navSearch.function.ts, WO-54): this page's records
+	// matching `q`, read through its own list middlewares — permission, filters,
+	// per-record access — so it never shows what the list wouldn't. Null when
+	// the page has search off, or the person can't list it.
+	(router as any).searchRecords = async (
+		req: any,
+		{ key, q, limit, display, title }: { key: string; q: string; limit: number; display: string; title?: string }
+	) => {
+		if (replaceController?.getAll) return null;
+		const resolved = await resolveRoute(key, { Model, settings, frontendConfig, built: config });
+		const options = searchOptionsOf(resolved.frontendConfig);
+		if (!options) return null;
+		const searchable: string[] = resolved.built.FILTER_OPTIONS?.allowSearch || [];
+		const picked = (options.fields || []).filter(f => searchable.includes(f));
+		const fields = picked.length ? picked : searchable;
+		if (!fields.length) return null;
+
+		const sub = subRequest(req, { search: literalPattern(q) });
+		sub.resolvedRoute = resolved;
+		const chain = [
+			filter({ ...resolved.built.FILTER_OPTIONS, allowSearch: fields }),
+			hasPermission([permissions.read]),
+			...(injectMiddleware?.getAll || []),
+		];
+		if (!(await runChain(chain, sub))) return null;
+
+		const s: any = resolved.settings || {};
+		const select = Object.fromEntries([...new Set([display, 'code', ...fields])].filter(f => f && f !== '_id').map(f => [f, 1]));
+		const docs = await Model.find(sub.queryHelper || {}, select)
+			.sort({ updatedAt: -1 })
+			.limit(CANDIDATES)
+			.maxTimeMS(3000)
+			.lean();
+		const labels = Object.fromEntries(fields.map(f => [f, s[f]?.label || s[f]?.schema?.label || s[f]?.title || f]));
+		return {
+			route: key,
+			title: resolved.frontendConfig?.route?.title || title || key,
+			hits: rankHits(toHits(docs, { display, fields, labels, q }), q).slice(0, limit),
+			more: docs.length > limit,
+		};
+	};
 
 	customRoutes.forEach((customRoute: CustomRoute) => {
 		const {

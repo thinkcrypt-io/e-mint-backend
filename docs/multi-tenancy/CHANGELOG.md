@@ -1734,3 +1734,14 @@ Decisions D14–D17 (README).
 - Panel `tenant/RecordComments.tsx` (mint-tenant + admin): threads, Reply, View earlier replies, deep link highlight,
   links open in a new tab; `RecordComment.parent` + `addRecordComment` `parent` in tenantApi; notifications `reply` icon.
 - Verified: comments smoke (all passed, incl. 13 new reply checks) on a private backend; headless Chrome screenshots.
+
+## 2026-10-16 — WO-54 Records in the navbar search
+- Page config `route.search = { enabled, fields? }` (off by default) and the **Navbar search** panel on Fields & rules
+  (mint-tenant + admin `NavSearchPanel.tsx`, RouteEditor).
+- `routes-admin/common/router.ts` `searchRecords` (runs the route's own list middlewares on a sub-request),
+  `library/functions/navSearch.function.ts`, `library/controllers/search/navSearch.controller.ts`; `GET
+  /tenant/api/p/:project/search`, `GET /admin/api/search`; `collectResourceRoutes` entries carry `router`; `search` reserved.
+- Panel: `navSearchApi.ts`, `menu/SearchMenu.tsx` records grouped "<project> › <page>" under the page matches.
+- Docs: mint-docs `pages#navbar-search`, admin `/docs/builder#navbar-search`, website changelog.
+- Verified: `navsearch.mjs` 38/38, comments/projects/collections smoke pass (private backend :5041, Mongo :27996);
+  browser pane on mint-tenant at desktop and phone width. Not deployed.
