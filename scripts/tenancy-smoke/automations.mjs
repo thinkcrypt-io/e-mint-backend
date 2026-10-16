@@ -144,7 +144,8 @@ r = await save({
 });
 const mail = r.body;
 ok('an email automation', r.status === 201, r.body?.message);
-await call('POST', P(shop._id, '/deals'), { title: 'Second', contact: email('buyer') }, alma);
+r = await call('POST', P(shop._id, '/deals'), { title: 'Second', contact: email('buyer') }, alma);
+ok('the deal saves even though its automation will fail', r.status === 201 || r.status === 200, `${r.status} ${r.body?.message}`);
 await settle();
 r = await call('GET', A(`/${mail._id}/runs`), null, alma);
 const failed = r.body?.doc?.[0];

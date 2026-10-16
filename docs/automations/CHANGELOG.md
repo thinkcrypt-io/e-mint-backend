@@ -64,3 +64,12 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   removed template failing the run with nothing sent) — in run-all; `pdf-templates/smoke.mjs`, `automations.mjs`,
   `mail-designs.mjs`, `business.mjs` still pass; tsc clean (backend, both panels, docs). Panel: the option listed the
   page's Invoice and saved `attach`. Not deployed.
+
+## 2026-10-16 — Failures always end in Runs, never in the save
+- The user: "if the automation fails it should log in the automation, do not prevent it from saving the record." Saves were
+  already safe (automations start after the save, actions' errors were logged), but an error outside the actions —
+  loading the project, the conditions, writing the run — only reached the server log and skipped the page's other
+  automations. Now each automation runs in its own try: any error is a failed run ("Couldn't run: …") in its Runs and
+  counters, the others still run, and `fireAutomations`' own synchronous part can't throw into the caller.
+- Verified: `automations.mjs` (the deal still saves, 201, while its email fails), `automation-pdfs.mjs` (the bill still saves,
+  200, while its removed PDF fails the run), `mail-designs.mjs` — all passed; tsc clean.

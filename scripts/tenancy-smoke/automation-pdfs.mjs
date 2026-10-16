@@ -153,7 +153,8 @@ ok('Runs says what was attached', /with Invoice B-1001\.pdf/.test(r.body?.doc?.[
 await call('DELETE', P(`/pdf-templates/${inv._id}`), null, T);
 const bill2 = await add('bills', { name: 'B-1002', customer: cust._id });
 n = inbox.length;
-await call('PUT', P(`/bills/${bill2._id}`), { status: 'sent' }, T);
+r = await call('PUT', P(`/bills/${bill2._id}`), { status: 'sent' }, T);
+ok('the bill still saves — a failing automation never blocks it', r.status === 200, `${r.status} ${r.body?.message}`);
 await settle(2500);
 r = await call('GET', P(`/automations/${auto._id}/runs`), null, T);
 const failed = r.body?.doc?.[0];

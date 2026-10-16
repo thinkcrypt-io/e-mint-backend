@@ -648,10 +648,17 @@ export const fireAutomations = ({
 	changes?: { field: string }[];
 	actor?: { _id?: any; name?: string; email?: string };
 }) => {
-	const scope = currentScope();
-	if (!scope?.project || !(AUTOMATION_EVENTS as readonly string[]).includes(event) || !doc?._id) return;
-	const snapshot = plainObj(doc);
-	const from = chain.getStore();
+	// Nothing here may fail the save that called it: the work happens later, and every error ends in Runs (or the log).
+	let scope: any, snapshot: any, from: Chain | undefined;
+	try {
+		scope = currentScope();
+		if (!scope?.project || !(AUTOMATION_EVENTS as readonly string[]).includes(event) || !doc?._id) return;
+		snapshot = plainObj(doc);
+		from = chain.getStore();
+	} catch (e: any) {
+		console.error('automations:', e?.message);
+		return;
+	}
 	setImmediate(() =>
 		runInScope(scope, async () => {
 			const name = model ? displayModelName(String(model)) : undefined;
@@ -665,7 +672,6 @@ export const fireAutomations = ({
 			for (const automation of list) {
 				const key = `${automation._id}:${snapshot._id}`;
 				if (from?.seen.has(key)) continue;
-				if (!startsOn(automation, event, snapshot, changes)) continue;
 				const base = {
 					automation: automation._id,
 					name: automation.name,
@@ -676,19 +682,26 @@ export const fireAutomations = ({
 					depth,
 					actorName: actor?.name || '',
 				};
-				if (depth > MAX_DEPTH) {
-					await finishRun(automation, { ...base, status: 'skipped', error: `Stopped: started by a chain of ${MAX_DEPTH} automations — more could loop forever` });
-					continue;
+				// One automation going wrong — anywhere, not only in an action — is its own failed run; the rest still run.
+				try {
+					if (!startsOn(automation, event, snapshot, changes)) continue;
+					if (depth > MAX_DEPTH) {
+						await finishRun(automation, { ...base, status: 'skipped', error: `Stopped: started by a chain of ${MAX_DEPTH} automations — more could loop forever` });
+						continue;
+					}
+					const hour = await AutomationRun.countDocuments({ createdAt: { $gte: new Date(Date.now() - 3600 * 1000) }, status: { $ne: 'skipped' } });
+					if (hour >= RUNS_PER_HOUR()) {
+						await Automation.updateOne({ _id: automation._id }, { $set: { 'stats.lastStatus': 'skipped', 'stats.lastError': `Skipped: the project ran ${RUNS_PER_HOUR()} automations in the last hour` } });
+						continue;
+					}
+					const seen = new Set(from?.seen || []);
+					seen.add(key);
+					const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor }));
+					await finishRun(automation, { ...base, ...result });
+				} catch (e: any) {
+					const error = `Couldn’t run: ${e?.message || 'something went wrong'}`;
+					await finishRun(automation, { ...base, status: 'failed', steps: [], error }).catch((e2: any) => console.error('automations:', error, e2?.message));
 				}
-				const hour = await AutomationRun.countDocuments({ createdAt: { $gte: new Date(Date.now() - 3600 * 1000) }, status: { $ne: 'skipped' } });
-				if (hour >= RUNS_PER_HOUR()) {
-					await Automation.updateOne({ _id: automation._id }, { $set: { 'stats.lastStatus': 'skipped', 'stats.lastError': `Skipped: the project ran ${RUNS_PER_HOUR()} automations in the last hour` } });
-					continue;
-				}
-				const seen = new Set(from?.seen || []);
-				seen.add(key);
-				const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor }));
-				await finishRun(automation, { ...base, ...result });
 			}
 		}).catch((e: any) => console.error('automations:', e?.message))
 	);
