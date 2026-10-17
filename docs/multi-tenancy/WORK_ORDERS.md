@@ -8,6 +8,10 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-17)
 
+**2026-10-17 — formula conditions.** `if(cond, then, otherwise)`, `= != < <= > >=`, `and` / `or` / `not()`,
+quoted text and `true` / `false` in formulas, in the backend engine (JS and MongoDB) and both panels' copies — keep
+the three `formula` files in step. See CHANGELOG 2026-10-17 "Formula conditions". Not deployed.
+
 **2026-10-05 — production database moved.** Production now runs on its own
 Atlas cluster in AWS N. Virginia (us-east-1), next to the Heroku app (US). The
 old shared cluster (Mumbai) had hit its 500-collection cap, which counts every

@@ -55,7 +55,7 @@ export const KIND_GUIDE: Record<string, string> = {
 	reference: 'a link to ONE record of another model (ref = its model name) — e.g. an order’s customer',
 	references: 'links to SEVERAL records of another model',
 	formula:
-		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee; a number of a linked record is read through the link, tax.amount (tax a reference); a field can be used more than once',
+		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee; a number of a linked record is read through the link, tax.amount (tax a reference); a field can be used more than once; conditions: if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes — e.g. subtotal - if(discountType = "percentage", subtotal * discount / 100, flatDiscount), where discountType is a choice field',
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
 	password:
 		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
@@ -94,7 +94,7 @@ export const fieldProps = {
 	formula: {
 		type: 'string',
 		description:
-			'For kind "formula" only: the calculation using other number/formula field keys, numbers, + - * / %, brackets and round(x, digits), floor, ceil, abs, min, max. E.g. "total - paid" or "round(price * qty, 2)".',
+			'For kind "formula" only: the calculation using other number/formula field keys, numbers, + - * / %, brackets and round(x, digits), floor, ceil, abs, min, max, and if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes. E.g. "total - paid", "round(price * qty, 2)" or "subtotal - if(discountType = \"percentage\", subtotal * discount / 100, flatDiscount)".',
 	},
 	ref: { type: 'string', description: `For reference/references: a model name from the list given, or "${SELF}" for this model` },
 	min: { type: 'number', description: 'Number: minimum. Text: minimum length.' },

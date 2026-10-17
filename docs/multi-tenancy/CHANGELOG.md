@@ -1850,3 +1850,20 @@ Decisions D14–D17 (README).
   backend (:5071, Mongo :27961); models, collections and `scripts/linked-relationships/smoke.mjs` pass (models' "super
   admin sees no tenant models" fails only when run after the linked-relationships smoke on the same DB — its own
   super-admin models). `tsc` clean. Not deployed.
+
+## 2026-10-17 — Formula conditions
+- The user asked for conditions in formulas, e.g. a discount that is flat or a percentage:
+  `subtotal - if(discountType = "percentage", subtotal * discount / 100, flatDiscount)`.
+- `library/functions/formula.function.ts` (and the panels' copies `components/library/functions/formula.ts` in
+  admin and mint-tenant): `if(cond, then, otherwise)` (only the picked branch is worked out — JS and `$cond`),
+  `not(x)`, comparisons `= != < <= > >=` (also `== <> ≠ ≤ ≥`), `and` / `or` (also `&& ||`), quoted text, `true` /
+  `false`. New nodes `str bool cmp logic`. A comparison is numeric when both sides are numbers, empty or
+  number-like text, else text (trimmed, lower case); result 1/0. A non-number field may be used only compared or
+  as a condition (checkFormula context). MongoDB: `rawMongo`, `truthyMongo`, `textMongo`, `isNumeric` mirror
+  `raw`, `truthy`, `textOf`, `numericLike`.
+- Builder FormulaModal: a Conditions row (if, comparisons, and/or, not, "text"), non-number fields in the picker
+  "to compare in a condition", text inputs in Try it. AI builder prompt mentions conditions.
+- Verified: a scratch script ran 24 formulas through `evaluate` and through `toMongo` on a private mongod (:27955)
+  — same results, including a row formula through `formulaPipeline`; checkFormula refuses text outside a
+  comparison, a choice field in a sum, `1 < x < 3` and `if` with two arguments; the panels' copy gives the same
+  results. `tsc` clean in backend, admin and mint-tenant. Not deployed.
