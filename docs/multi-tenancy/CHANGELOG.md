@@ -1867,3 +1867,19 @@ Decisions D14–D17 (README).
   — same results, including a row formula through `formulaPipeline`; checkFormula refuses text outside a
   comparison, a choice field in a sum, `1 < x < 3` and `if` with two arguments; the panels' copy gives the same
   results. `tsc` clean in backend, admin and mint-tenant. Not deployed.
+
+## 2026-10-17 — Formula blocks
+- The user: formulas are too hard for general users — build them by picking or dragging blocks; an If asks for
+  its condition, then the value, then the otherwise, with more conditions as needed; typing stays.
+- admin + mint-tenant `app/builder/_components/FormulaBlocks.tsx` (new): edits the engine's own `Node` tree;
+  an empty box is a `ref` with no key (`HOLE`, counted by `holesIn`). Shelf of draggable blocks and fields
+  (HTML5 drag, `application/x-mint-formula-block`), a menu per box ordered by what it wants (value / condition /
+  compared), If chains shown as If / Otherwise if / Otherwise with Add another condition, comparisons with a
+  choice field's options as a list. `FormulaModal`: Build with blocks (default when the formula parses) / Type it;
+  unfinished blocks leave the text empty so Save stays off; `scrollBehavior='inside'` (tall content was clipped);
+  Try it lists a choice / yes-no field's values. `FieldInfo` gains `options` and `yesNo` (SettingsEditor via
+  choicesOf + model enum; modelKinds via field options / boolean).
+- Verified in the browser pane on a throwaway page (deleted): a saved formula opens as blocks; If → Compare →
+  Discount type → Percentage → values built by clicks and drags; Add another condition / remove; Try it gives 185
+  (flat) and 180 (percentage); Save returns `subtotal - if(discountType = "percentage", subtotal * discount / 100,
+  flatDiscount)`. `tsc` clean in admin and mint-tenant. Not deployed.

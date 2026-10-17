@@ -360,6 +360,10 @@ export type FieldInfo = {
 	inList?: string;
 	/** A number of the record a link picks (`tax.amount` → 'tax'), read when the formula is calculated. */
 	linked?: string;
+	/** A choice field's options — offered as the value to compare it with (the block editor). */
+	options?: { value: any; label?: any }[];
+	/** A yes / no field: compared with true / false. */
+	yesNo?: boolean;
 };
 
 export type Checked = {
