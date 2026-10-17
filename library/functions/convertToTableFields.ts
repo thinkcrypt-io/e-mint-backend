@@ -31,6 +31,8 @@ const createTableField = ({ key, field }: { key: string; field: any }): any => {
 			...(field?.options && { options: field.options }),
 			...(field?.optionColors && { optionColors: field.optionColors }),
 		}),
+		// A linked record as a chip with its card on hover and Quick view (settings schema.linkPreview).
+		...(field?.linkPreview && field?.model && { linkPreview: true, model: field.model }),
 	};
 };
 
