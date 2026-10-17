@@ -8,8 +8,9 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-17)
 
-**2026-10-17 — formula blocks.** The formula dialog builds formulas from blocks (FormulaBlocks.tsx, admin +
-mint-tenant) on the engine's own tree; Type it is the same formula as text. See CHANGELOG "Formula blocks".
+**2026-10-17 — formula editor.** The formula dialog is one screen: buttons and a field dropdown fill a locked
+formula bar on the engine's own tree (FormulaEditor.tsx, admin + mint-tenant; FormulaBlocks.tsx is gone); Type it
+yourself unlocks it. See CHANGELOG "Formula editor: one screen, built by clicking".
 
 **2026-10-17 — formula conditions.** `if(cond, then, otherwise)`, `= != < <= > >=`, `and` / `or` / `not()`,
 quoted text and `true` / `false` in formulas, in the backend engine (JS and MongoDB) and both panels' copies — keep

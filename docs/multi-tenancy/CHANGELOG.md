@@ -1883,3 +1883,22 @@ Decisions D14–D17 (README).
   Discount type → Percentage → values built by clicks and drags; Add another condition / remove; Try it gives 185
   (flat) and 180 (percentage); Save returns `subtotal - if(discountType = "percentage", subtotal * discount / 100,
   flatDiscount)`. `tsc` clean in admin and mint-tenant. Not deployed.
+
+## 2026-10-17 — Formula editor: one screen, built by clicking
+- The user: the blocks were still too much — one view, the formula bar at the bottom, no drag and drop; a clicked
+  button or picked field goes into the formula; fields from a dropdown as before; the formula locked by default,
+  built by the buttons, with a button to unlock and type.
+- admin + mint-tenant `app/builder/_components/FormulaEditor.tsx` (new; `FormulaBlocks.tsx` removed): button rows
+  (Fields dropdown + a choice field's values when checking one, Values: number / text / Yes / No, Calculate:
+  + − × ÷ % and round… max, Decide: If, Otherwise if, = ≠ > ≥ < ≤, and, or, not) over a locked formula bar that
+  draws the `Node` tree as formula text with labelled empty boxes (condition / then / otherwise / compare with…).
+  A pick fills the highlighted box and moves on to the next; a field picked for a condition becomes `field = …`;
+  operators after a finished piece wrap it the way typing would (precedence-aware climb), and on an empty box right
+  after an operator they change that operator; clicking a part or its sign highlights it; Remove / Backspace,
+  Undo / ⌘Z, Clear. Type it yourself → textarea (buttons insert at the cursor; empty boxes become `___`); Back to
+  buttons parses it again (`___` → empty box) or says what's wrong.
+- `FormulaModal`: no mode switch; shorter intro; caret under the error only while typing.
+- Verified in the browser pane on a throwaway page (deleted): If → Discount type → Percentage → Subtotal × Discount
+  ÷ 100 → Flat discount gives `if(discountType = "percentage", subtotal * discount / 100, flatDiscount)`; Otherwise
+  if + Remove; unlock, `+ 5`, lock; save and reopen; click × then Round wraps `subtotal * discount`; Undo. `tsc`
+  clean in both. Not deployed.
