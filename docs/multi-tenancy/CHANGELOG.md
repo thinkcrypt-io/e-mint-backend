@@ -1925,3 +1925,16 @@ Decisions D14–D17 (README).
   opens and scrolls; Esc closes; ⋯ → Duplicate → "Paid (copy)" / paidCopy opened; Undo all; light and dark.
   `tsc` clean in both apps (admin not opened in a browser). Not deployed.
 
+## 2026-10-17 — Page settings fields: the same highlight and ⋯ menu
+- The user: give the Fields & rules list in a page's settings the same open-field highlight and ⋯ menu.
+- admin + mint-tenant `app/builder/_components/SettingsEditor.tsx` (`FieldRow`): a click on the row (not its
+  inputs) opens or closes it; open, it gets the blue edge + ring and shadow, a tinted header, room above and below, a
+  Done button, and Esc closes it; an opened field off screen scrolls into view (`setting-<key>` ids). More / Less →
+  a chevron; the trash button → `RowMenu` (⋯): Move up / down, Duplicate (fields from linked records only — the
+  others are the model's own fields, one row each), Put back as it started (when changed), Copy the API name,
+  Remove from the page. Rule chips no longer open the row themselves (the row click does). New `RowActions`:
+  `move`, `duplicate`.
+- Verified with headless Chrome on the private backend (port 5071): Invoices → Fields and their rules; Status opens
+  by a row click (edge, tinted header), Esc closes, ⋯ shows Move up / Move down / Copy the API name / Remove from
+  the page, Move down swaps Status and Issued on. `tsc` clean in both apps. Not deployed.
+

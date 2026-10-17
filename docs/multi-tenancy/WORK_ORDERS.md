@@ -8,6 +8,10 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-17)
 
+**2026-10-17 — page settings fields.** Fields and their rules (SettingsEditor, admin + mint-tenant) got the same
+open-field highlight, Done / Esc and a ⋯ menu (move, put back, copy API name, remove; duplicate for fields from
+linked records). See CHANGELOG "Page settings fields".
+
 **2026-10-17 — model fields list.** One line per field, click a row to open it (blue edge, Done / Esc), ⋯ menu
 (duplicate, insert below, move, remove), form preview marks and opens fields — FieldsEditor / FormPreview in admin +
 mint-tenant. See CHANGELOG "Model fields list".
