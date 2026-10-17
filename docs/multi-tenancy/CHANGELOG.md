@@ -1902,3 +1902,26 @@ Decisions D14–D17 (README).
   ÷ 100 → Flat discount gives `if(discountType = "percentage", subtotal * discount / 100, flatDiscount)`; Otherwise
   if + Remove; unlock, `+ 5`, lock; save and reopen; click × then Round wraps `subtotal * discount`; Undo. `tsc`
   clean in both. Not deployed.
+
+## 2026-10-17 — Model fields list: clearer rows, an open field that stands out
+- The user: the model fields list works but an opened field doesn't stand apart from the rows around it; plan and
+  improve the page. Looked at it in the browser pane first (a 9-field Invoices model at 1280px): More / delete and
+  the summary badges wrapped onto extra lines, the open row looked the same as the closed ones (only More → Less),
+  options showed twice when open, and the form preview didn't relate to the list.
+- admin + mint-tenant `app/model-builder/_components/FieldsEditor.tsx`: one line per field (grip, kind, name, type,
+  Required, chevron, ⋯) with a line under it for the API name, what the kind needs (links to…, formula, section's
+  fields, component / address pickers in mint-tenant) and summary chips (default, allowed values, no duplicates,
+  not in the table, was <kind>). A click on the row (not its inputs — `INTERACTIVE`) opens or closes it; the open
+  field gets a blue edge + ring and shadow, a tinted header, room above and below, a Done button, and Esc closes it;
+  opening one off screen scrolls it into view. Open, the chip input for options is hidden (the labelled list edits
+  them; Allow several moved there). `RowMenu` (⋯): Duplicate (key `<key>Copy`, opened with its name selected), Add a
+  field below (KindPicker with an insert index), Move up / down, Remove field. A row with a problem gets a red edge.
+  `open` / `onOpenChange` props let the page hold the open field.
+- `FormPreview`: `active` marks the open field, `onPick` opens a field by clicking it (the preview stays inert
+  otherwise). Wired in `ModelEditor` and `ModelWizard` through `ModelPanels` (`openField` / `onOpenField`); the
+  Fields panel's subtitle says to click a field.
+- Verified in the browser pane on a private backend + database (scratch copy, port 5071; test user
+  tess.fields@example.com): rows on one line; open Status (edge, preview marked); click Issued on in the preview →
+  opens and scrolls; Esc closes; ⋯ → Duplicate → "Paid (copy)" / paidCopy opened; Undo all; light and dark.
+  `tsc` clean in both apps (admin not opened in a browser). Not deployed.
+

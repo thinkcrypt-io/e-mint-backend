@@ -8,6 +8,10 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-17)
 
+**2026-10-17 — model fields list.** One line per field, click a row to open it (blue edge, Done / Esc), ⋯ menu
+(duplicate, insert below, move, remove), form preview marks and opens fields — FieldsEditor / FormPreview in admin +
+mint-tenant. See CHANGELOG "Model fields list".
+
 **2026-10-17 — formula editor.** The formula dialog is one screen: buttons and a field dropdown fill a locked
 formula bar on the engine's own tree (FormulaEditor.tsx, admin + mint-tenant; FormulaBlocks.tsx is gone); Type it
 yourself unlocks it. See CHANGELOG "Formula editor: one screen, built by clicking".
