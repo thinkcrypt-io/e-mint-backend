@@ -60,5 +60,6 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   
   mint-sites `?view=richtext` in light and dark: old Quill markup renders headings, nested bullets, numbered lists,
   code blocks and a centred image.
+- Pushed: mint-tenant `372ac69`, admin `43e381f` (main); mint-sites `85ca6b0` (main); backend `4e134de3` (v3 → mint).
 - Not done (later WOs): server-side cleaning on save (RT-03); migrating stored records (RT-04); mint-builder's
   Inspector Quill still has `background: white` on its container (that app has no dark mode).
