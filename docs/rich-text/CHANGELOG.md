@@ -63,3 +63,29 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
 - Pushed: mint-tenant `372ac69`, admin `43e381f` (main); mint-sites `85ca6b0` (main); backend `4e134de3` (v3 → mint).
 - Not done (later WOs): server-side cleaning on save (RT-03); migrating stored records (RT-04); mint-builder's
   Inspector Quill still has `background: white` on its container (that app has no dark mode).
+
+## 2026-10-18 — RT-13 Download DOCX
+- The user: "can we do like if we have a editor file like rich text, we can download as docx. and for editor fields
+  we can add on the table menu, like download docx, and we select which editor field to download", then "no this
+  would be new like download docx, like if we have a blogBODY, we can choose that and download from table menu or
+  from the records field".
+- Backend: `docx@9.8.1` (pinned; the newer 9.9–9.12 were under two weeks old), `functions/richText/{sanitize,docx}.ts`,
+  `controllers/export/exportDocx.controller.ts`, route `POST /export/docx` in `routes-admin/common/router.ts` (both
+  panels' pages run through it), MCP `download-docx` in `controllers/mcp/rowMenu.ts` (+ `rich` in its context).
+- Panel (mint-tenant + admin): `utils/DownloadDocx.tsx`; `download-docx` in menuTypes.ts, MenuItemsEditor (field
+  picker of rich-text fields; "no rich-text field" note), TableMenu (FileText icon; not on rows with the field
+  empty); ConfiguredView (Download DOCX on rich-text panels). Rich text on the record page and in the editor no longer
+  takes the panel's uppercase heading style.
+- Verified:
+  - `docx.mjs` passes 24/24 on a private backend (:5071, Mongo :27961).
+  - The converter's output, opened with macOS Quick Look, shows headings, marks, nested and restarting lists, the image and the alt-text stand-in.
+  - The XML has the quote border, the rule, the code shading and Calibri.
+  - `rowMenuOf` accepts a rich field and refuses a plain or missing one.
+  - In mint-tenant against :5071:
+    - The page builder offers Download DOCX, its picker lists only Body and Excerpt, "Needs field" shows until one is picked, and it publishes.
+    - The table's row menu downloads `Hello world — Body.docx` (a Word file), and the empty draft's menu leaves the item out.
+    - The record page's Body panel downloads the same file.
+    - The table's Body column shows words.
+  - `tsc` is clean in backend, mint-tenant and admin.
+- Docs: mint-docs `pages#row-menu`; website changelog (this and RT-00).
+

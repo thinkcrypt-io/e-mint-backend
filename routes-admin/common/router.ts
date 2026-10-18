@@ -51,6 +51,7 @@ import {
 import exportRows from '../../library/controllers/export/exportRows.controller.js';
 import { importRows, importTemplate } from '../../library/controllers/bulk/importRows.controller.js';
 import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.controller.js';
+import exportDocx from '../../library/controllers/export/exportDocx.controller.js';
 import exportTemplate from '../../library/controllers/pdfTemplates/exportTemplate.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
 import { fillLinked } from '../../library/functions/linkedFill.function.js';
@@ -506,6 +507,8 @@ const defineRoutes = ({
 	router.post('/export/records', ...middlewares.export, exportRecordsPdf(config.MODEL));
 	// Records printed with a PDF template (docs/pdf-templates) — reading them, like the rest.
 	router.post('/export/template', ...middlewares.export, exportTemplate(config.MODEL));
+	// One record's rich-text field as a Word file (row menu → Download DOCX; the record page).
+	router.post('/export/docx', ...middlewares.export, exportDocx(config.MODEL));
 
 	//Get distinct values for a field
 	router.get(

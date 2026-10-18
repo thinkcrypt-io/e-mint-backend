@@ -610,7 +610,8 @@ const TOOLS: ToolDef[] = [
 			let menu: any[] | undefined;
 			if (args?.rowMenu !== undefined) {
 				const current = (await effectiveConfig(req.app, route))?.route?.menu || [];
-				const r = await rowMenuOf(args.rowMenu, { route, known, isRoute: r => !!routeModel(req.app, r) && !PROTECTED_ROUTES.has(r), current });
+				const richKeys = new Set<string>((settings?.fields || []).filter((f: any) => ['editor', 'basic-editor'].includes(f?.schema?.type)).map((f: any) => f.key));
+				const r = await rowMenuOf(args.rowMenu, { route, known, isRoute: r => !!routeModel(req.app, r) && !PROTECTED_ROUTES.has(r), current, rich: k => richKeys.has(k) });
 				if (r.problems) return { text: ['The row menu wasn’t saved:', ...r.problems.map(p => `- ${p}`)].join('\n'), isError: true };
 				menu = r.items;
 			}

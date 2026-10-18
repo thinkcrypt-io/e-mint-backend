@@ -9,7 +9,7 @@ import { LOCK_OPS } from '../../functions/fieldLocks.function.js';
  * (code-defined custom items) can only be kept as they are, never made here.
  */
 
-type Param = { name: string; kind: 'text' | 'field' | 'fields' | 'keyType' | 'json' | 'prompt' | 'route' | 'value' | 'presets' | 'pdfTemplate'; required?: boolean };
+type Param = { name: string; kind: 'text' | 'field' | 'fields' | 'keyType' | 'json' | 'prompt' | 'route' | 'value' | 'presets' | 'pdfTemplate' | 'richField'; required?: boolean };
 
 const prompt: Param = { name: 'prompt', kind: 'prompt' };
 
@@ -36,6 +36,7 @@ export const ROW_MENU_TYPES: Record<string, { hint: string; params?: Param[] }> 
 		params: [{ name: 'key', kind: 'field', required: true }, { name: 'value', kind: 'value', required: true }, prompt],
 	},
 	'download-pdf': { hint: 'Downloads the record printed with one of this page’s PDF templates (empty: the default)', params: [{ name: 'template', kind: 'pdfTemplate' }] },
+	'download-docx': { hint: 'Downloads one rich-text field of the record (a blog post’s body) as a Word file', params: [{ name: 'field', kind: 'richField', required: true }] },
 	'update-api': { hint: 'PUTs a fixed body to the record', params: [{ name: 'path', kind: 'text' }, { name: 'body', kind: 'json', required: true }, prompt] },
 	'add-related': {
 		hint: 'Opens another page’s create form, fields filled from this row — “Add payment” on a bill',
@@ -63,6 +64,8 @@ type Ctx = {
 	known: (k: any) => boolean;
 	/** Another page of the panel. */
 	isRoute: (r: string) => boolean;
+	/** A rich-text field (`editor` / `basic-editor`) of this page — download-docx's `field`. */
+	rich?: (k: any) => boolean;
 	/** The page's row menu as it is — custom items are kept from here. */
 	current: any[];
 };
@@ -150,6 +153,10 @@ export const rowMenuOf = async (raw: any, ctx: Ctx): Promise<{ items?: any[]; pr
 						}));
 					break;
 				}
+				case 'richField':
+					if (ctx.rich?.(v)) out[p.name] = v;
+					else bad(`${p.name} “${v}” is not a rich-text field of this page`);
+					break;
 				case 'pdfTemplate': {
 					const t = templates.find(t => String(t._id) === String(v)) || templates.find(t => t.name === String(v));
 					if (t) out[p.name] = String(t._id);

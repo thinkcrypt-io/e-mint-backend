@@ -21,6 +21,7 @@ Decisions not agreed yet (README status line).
 | RT-10 | Developers' frontends: `/public/rich-text.css`, `mint-rich-text/react` renderer, API reference + snippets, website kit / starters / hongo theme | backend + package + themes | M | — |
 | RT-11 | Embeds (YouTube, Vimeo, Maps), simple tables, callouts | package + editor + mint-sites | M | — |
 | RT-12 | Guide, website, MCP descriptions, changelog for developers (ql-classes notice) | mint-docs + mint-webpage + backend | S | — |
+| RT-13 | **Download DOCX** (the user's request, 2026-10-18): a rich-text field as a Word file — row menu item `download-docx` with a field picker (rich-text fields only), a Download DOCX button on each rich-text panel of a record page, `POST /<route>/export/docx`, MCP `update_page` rowMenu | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
 
 Order: **00** (ships this week, stops the worst breakage) → 02 → 03 → 04 (the data is safe and consistent) → 05 →
 06 → 07 (the editor) → 08 → 09 → 10 (every frontend) → 11 → 12. 02–04 help even before the new editor: every site
@@ -189,6 +190,20 @@ cleaner HTML from records saved after part A, but nothing cleans for them until 
 - Package schema: `<figure data-embed="youtube|vimeo|maps" data-id>`; `<table>` (thead/tbody/th/td, no merged
   cells); `<aside data-callout="info|warning|success">`.
 - Editor: slash-menu items + paste-a-link-to-embed; renderer: iframe allowlist, `loading="lazy"`, a 16:9 box.
+
+## RT-13 — Download DOCX (M) — done 2026-10-18
+- Backend: `library/functions/richText/docx.ts` (`richTextToDocx`, on `docx@9.8.1`): the field cleaned by the site
+  sanitizer (a third copy, `functions/richText/sanitize.ts`, until RT-02), then H2–H4 → Heading 1–3, marks, links
+  (web/mail/phone as hyperlinks), Word numbering (each numbered list restarts; 1./a./i. and •/◦/▪ by level), quotes,
+  `<pre>`, rules, alignment, images through the PDF engine's `ImageLoader` (safe fetch, PNG/JPEG, ≤ 600px wide; a
+  failed one leaves its alt text). `controllers/export/exportDocx.controller.ts`: `POST /<route>/export/docx
+  {id, field}` behind the export middleware (read permission, list filter, record access), a rich-text field only,
+  `cleanRecord` field rules, empty → 400, file `<record name> — <field label>.docx`.
+- Panel (mint-tenant + admin): `utils/DownloadDocx.tsx` (hook + button); row menu type `download-docx` (`field`,
+  kind `richField`: the page's `editor` / `basic-editor` fields) in menuTypes.ts / MenuItemsEditor / TableMenu —
+  hidden on rows whose field is empty; ConfiguredView puts the button on each rich-text panel.
+- MCP: `rowMenu.ts` `download-docx {field}` checked against the page's rich-text fields.
+- Smoke: `scripts/tenancy-smoke/docx.mjs` (24 checks).
 
 ## RT-12 — Docs and website (S)
 - mint-docs guide "Rich text" (writing, images, links, what shows on the site); anchors linked from the editor.
