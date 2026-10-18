@@ -1,5 +1,5 @@
 {
-	"version": "b50083493568",
+	"version": "bc814a248c63",
 	"blocks": [
 		{
 			"type": "accordion",
@@ -3367,7 +3367,7 @@
 			"category": "basic",
 			"icon": "text-t",
 			"description": "Paragraphs with bold, italics, links and lists.",
-			"aiHint": "Body copy as simple HTML: <p>, <strong>, <em>, <a href>, <ul>/<ol>/<li>, <h2>–<h4>, <blockquote>, <code>. Nothing else survives.",
+			"aiHint": "Body copy as simple HTML: <p>, <h2>–<h4>, <strong>, <em>, <u>, <s>, <sub>/<sup>, <a href>, <ul>/<ol>/<li> (nested), <blockquote>, <code>, <pre>, <hr>, <img src alt>; data-align=\"center|right|justify\" on p, headings and li. Nothing else survives.",
 			"props": [
 				{
 					"key": "html",

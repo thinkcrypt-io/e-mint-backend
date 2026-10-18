@@ -6,7 +6,14 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-17)
+## Handoff — read this first (kept current; last updated 2026-10-18)
+
+**2026-10-18 — rich text RT-00.** The panel's Quill editor (admin + mint-tenant `utils/inputs/VEditorr.tsx`,
+`FullEditor`, new `editor/quill.ts` + `editor/editor.css`) saves clean HTML (`getSemanticHTML`), offers only what
+sites show, and follows dark mode and colour themes through Chakra tokens. mint-sites' sanitizer reads Quill's old
+markup (bullets, nesting, code blocks), keeps headings, images and alignment; the panel's record view sanitizes
+(stored-XSS fix) and table cells show the words. `utils/richText.ts` (both panels) is a copy of mint-sites'
+`render/sanitize.ts`: keep them the same until RT-02. Plan RT-00…12 in `docs/rich-text`. Not deployed.
 
 **2026-10-17 — page settings fields.** Fields and their rules (SettingsEditor, admin + mint-tenant) got the same
 open-field highlight, Done / Esc and a ⋯ menu (move, put back, copy API name, remove; duplicate for fields from
@@ -201,6 +208,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 53 | **Replies in comments** — Facebook-style threads (one level; a reply to a reply joins the thread and starts with @their name), reply notifications to the thread, deleting a comment takes its replies, links in comments open in a new tab, notifications open at the comment | all | S | done (2026-10-14; not deployed) |
 | 54 | **API request logs** — every call to a project's API logged 7 days (endpoint, who, error, masked query, origin, client; never bodies/tokens/IPs); API → Logs, an endpoint's Logs tab, Overview chart, `get_api_logs` over MCP. Plan + log in `docs/api-builder` (AB-06, D13) | all | M | done (2026-10-14; not deployed) |
 | 55 | **CMS** — single types, slug fields, components, content blocks, drafts and publishing with its own Publish right, then typed website contents (CMS-06…). Plan + WOs + log in `docs/cms`. `scripts/migratePublishRight.js --apply` **ran on production 2026-10-15** (37 roles got Publish). `scripts/migrateSiteContents.js --apply` **ran on production 2026-10-16** after the deploy (10 websites: Contents typed + drafts on all; 66 typed records for Web Demo 58 and Demo Business Website 8; 4 sites that never opened the builder have no design to mark — guarded since) | all | L | CMS-02…07 + 03b done 2026-10-15 (deployed 2026-10-16); CMS-09 content API (status=draft, populate, publish webhooks, site refresh) and CMS-13 media details (alt/caption/focal, image fields with details; mint-sites uses them — redeploy it too) done 2026-10-16, not deployed; CMS-14 MCP content tools (drafts first; publish_entry with the key's publish scope, now settable on Connect AI) done 2026-10-16, not deployed; CMS-11 scheduling (publish at / take off at, a minute tick, Schedule on the record page, Coming up on All content; also fixed: Publish now writes History) done 2026-10-16, not deployed; left CMS-08 preview, 10, 12, 15 — ask the user |
+| 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00 done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
@@ -1270,6 +1278,12 @@ searching has access to it."
 Planned in `docs/cms` (CMS-01…15), decisions agreed: Contents typed (type first) and shown per page from a
 dropdown, a List type (model, count, order, conditions), single types, components, dynamic zones, draft & publish per entry,
 versions, scheduling, locales, preview, content API, media alt text, MCP content tools.
+
+## Rich text (2026-10-18)
+
+Planned in `docs/rich-text` (RT-00…12): one clean HTML format for every editor field, cleaned on the server, a new
+editor (TipTap), and rendering on every frontend. Decisions D1–D10 proposed, not agreed. RT-00 (quick fix of the
+current Quill editor, dark mode, site renderer, panel view) done 2026-10-18, not deployed.
 
 ## Automations (2026-10-14)
 

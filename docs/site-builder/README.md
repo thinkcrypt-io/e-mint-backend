@@ -169,7 +169,8 @@ per tree, depth ≤ 30, tree JSON ≤ 512 KB, ids unique, every `type` known, ev
 prop known and of the right kind, slots only where the block declares them,
 `canBeChildOf` respected, action targets exist, URLs only relative / `http(s)` /
 `mailto` / `tel` / `#node:` (no `javascript:`), rich text sanitized to an
-allowlist (p, h2–h4, strong, em, a, ul, ol, li, br, blockquote, code), embeds
+allowlist (p, h2–h4, strong, em, u, s, sub, sup, a, ul, ol, li, br, hr,
+blockquote, code, pre, img, `data-align`; Quill's own markup read first — docs/rich-text RT-00), embeds
 only from the manifest's allowlist (YouTube, Vimeo, Google Maps).
 
 ### Style
