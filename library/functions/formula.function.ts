@@ -399,6 +399,8 @@ export type FieldInfo = {
 	yesNo?: boolean;
 	/** A date: a date field, a Date formula, a linked record's date. */
 	date?: boolean;
+	/** Of a kind not known here (a linked record's field before the linked model is at hand): any use is let through, the server checks it. */
+	any?: boolean;
 };
 
 /** Whether a formula works out a date, from its shape alone: a date function, or an if() with one as an answer. */
@@ -436,6 +438,7 @@ export const checkFormula = (src: string, fields: FieldInfo[], self?: string, re
 	const kindOf = (n: Node): 'date' | 'num' | 'other' => {
 		if (n.t === 'ref') {
 			const f = byKey.get(n.key);
+			if (f?.any) return returns === 'date' ? 'date' : 'num';
 			return f?.date ? 'date' : f && !f.numeric ? 'other' : 'num';
 		}
 		if (n.t === 'str' || n.t === 'bool') return 'other';
@@ -455,6 +458,7 @@ export const checkFormula = (src: string, fields: FieldInfo[], self?: string, re
 			else if (!f) say(`There's no field “${n.key}”`, n.at);
 			else if (f.list) say(`“${n.key}” is a list — count(${n.key}) counts its rows`, n.at);
 			else if (f.inList) say(`“${n.key}” is in every row of ${f.inList} — use sum(${n.key}) or avg(${n.key})`, n.at);
+			else if (f.any) return;
 			else if (ctx === 'date' && !f.date) say(`“${n.key}” isn't a date`, n.at);
 			else if (ctx === 'num' && f.date) say(`“${n.key}” is a date — daysBetween(${n.key}, today()) gives a number of days`, n.at);
 			else if (ctx === 'num' && !f.numeric) say(`“${n.key}” isn't a number field — it can be compared: if(${n.key} = "…", …, …)`, n.at);

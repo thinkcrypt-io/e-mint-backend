@@ -61,6 +61,9 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							endOfSection: lastElement && lastSubIndex,
 							...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
+							// A Date formula: a date (`returns`), maybe worked out once (`calc`) — docs/date-formulas.
+							...(fieldConfig?.returns && { returns: fieldConfig.returns }),
+							...(fieldConfig?.calc && { calc: fieldConfig.calc }),
 							...(fieldConfig?.value && { value: fieldConfig.value }),
 							...(fieldConfig?.fetch && { fetch: fieldConfig.fetch }),
 							...(fieldConfig?.isExcluded && { isExcluded: fieldConfig.isExcluded }),
@@ -99,6 +102,9 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig?.helperText && { helper: fieldConfig.helperText }),
 						...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
+							// A Date formula: a date (`returns`), maybe worked out once (`calc`) — docs/date-formulas.
+							...(fieldConfig?.returns && { returns: fieldConfig.returns }),
+							...(fieldConfig?.calc && { calc: fieldConfig.calc }),
 						...(fieldConfig?.value && { value: fieldConfig.value }),
 						...(fieldConfig?.fetch && { fetch: fieldConfig.fetch }),
 						...(fieldConfig?.isExcluded && { isExcluded: fieldConfig.isExcluded }),

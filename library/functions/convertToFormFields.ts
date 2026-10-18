@@ -63,6 +63,9 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							endOfSection: lastElement && lastSubIndex,
 							...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
+							// A Date formula: a date (`returns`), maybe worked out once (`calc`) — docs/date-formulas.
+							...(fieldConfig?.returns && { returns: fieldConfig.returns }),
+							...(fieldConfig?.calc && { calc: fieldConfig.calc }),
 							...(fieldConfig?.renderIf && { renderIf: fieldConfig.renderIf }),
 							...(fieldConfig?.requiredIf && { requiredIf: fieldConfig.requiredIf }),
 							...(fieldConfig?.linkedReads && { linkedReads: fieldConfig.linkedReads, linkedRoute: fieldConfig.linkedRoute }),
@@ -112,6 +115,9 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig?.blocks && { blocks: fieldConfig.blocks }),
 						...(fieldConfig?.renderCondition && { renderCondition: fieldConfig.renderCondition }),
 							...(fieldConfig?.formula && { formula: fieldConfig.formula }),
+							// A Date formula: a date (`returns`), maybe worked out once (`calc`) — docs/date-formulas.
+							...(fieldConfig?.returns && { returns: fieldConfig.returns }),
+							...(fieldConfig?.calc && { calc: fieldConfig.calc }),
 						// Declarative, so it survives a settings copy in the DB: shown while formData[field] equals value.
 						...(fieldConfig?.renderIf && { renderIf: fieldConfig.renderIf }),
 							...(fieldConfig?.requiredIf && { requiredIf: fieldConfig.requiredIf }),
