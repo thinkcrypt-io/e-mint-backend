@@ -2,16 +2,21 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import { cleanRecord } from '../../functions/pdfTemplates/data.js';
 import { richTextToDocx } from '../../functions/richText/docx.js';
+import { richTextToPdf } from '../../functions/richText/pdf.js';
+import { richTextToMarkdown, richTextToText } from '../../functions/richText/text.js';
 
 /**
- * POST /<route>/export/docx — one record's rich-text field as a Word file
- * (row menu → "Download DOCX", and the download beside the field on a record
- * page). Behind the page's export middleware, like PDF downloads: the
- * reader's read permission and the list's filter and record access decide
+ * POST /<route>/export/richtext — one record's rich-text field as a file: Word
+ * (.docx), PDF, Markdown (.md) or plain text (.txt). The row menu's download,
+ * the download beside the field on a record page and the full-page editor's
+ * Export use it; POST /<route>/export/docx is the Word file alone (the first
+ * row-menu item). Behind the page's export middleware, like PDF downloads:
+ * the reader's read permission and the list's filter and record access decide
  * whether the record comes back, and a field they may not read isn't there.
  *
- * Body: `{ id: string, field: string }` — `field` must be a rich-text field
- * (`editor` / `basic-editor`) of this page.
+ * Body: `{ id: string, field: string, format?: 'docx' | 'pdf' | 'md' | 'txt' }`
+ * — `field` must be a rich-text field (`editor` / `basic-editor`) of this
+ * page; `format` defaults to docx.
  */
 
 const RICH = new Set(['editor', 'basic-editor']);
@@ -23,18 +28,28 @@ const nameOf = (doc: any) => {
 	return String(doc?._id || 'record');
 };
 
-export const sendDocx = (res: Response, file: Buffer, name: string) => {
+const FORMATS = {
+	docx: { ext: 'docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', make: richTextToDocx, failed: 'Could not make the Word file' },
+	pdf: { ext: 'pdf', type: 'application/pdf', make: richTextToPdf, failed: 'Could not make the PDF' },
+	md: { ext: 'md', type: 'text/markdown; charset=utf-8', make: richTextToMarkdown, failed: 'Could not make the Markdown file' },
+	txt: { ext: 'txt', type: 'text/plain; charset=utf-8', make: richTextToText, failed: 'Could not make the text file' },
+};
+type Format = keyof typeof FORMATS;
+
+export const sendFile = (res: Response, file: Buffer, name: string, format: Format) => {
 	const safe = name.replace(/[\\/:*?"<>|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150) || 'document';
-	const full = `${safe}.docx`;
+	const full = `${safe}.${FORMATS[format].ext}`;
 	const ascii = full.replace(/[^\x20-\x7e]/g, '_');
 	res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-	res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+	res.setHeader('Content-Type', FORMATS[format].type);
 	res.setHeader('Content-Disposition', `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(full)}`);
 	res.setHeader('Content-Length', String(file.length));
 	res.status(200).end(file);
 };
 
-const exportDocx = (Model: mongoose.Model<any>) => async (req: any, res: Response) => {
+export const exportRichText = (Model: mongoose.Model<any>, fixed?: Format) => async (req: any, res: Response) => {
+	const format: Format = fixed || (String(req.body?.format || 'docx').toLowerCase() as Format);
+	if (!Object.prototype.hasOwnProperty.call(FORMATS, format)) return fail(res, 400, 'Pick a format: docx, pdf, md or txt');
 	try {
 		const id = String(req.body?.id || '');
 		const field = String(req.body?.field || '');
@@ -56,12 +71,14 @@ const exportDocx = (Model: mongoose.Model<any>) => async (req: any, res: Respons
 		if (typeof html !== 'string' || !html.replace(/<[^>]*>/g, '').trim() && !/<img\b/i.test(html)) return fail(res, 400, `“${label}” is empty`);
 
 		const name = nameOf(doc);
-		const file = await richTextToDocx({ html, title: `${name} — ${label}` });
-		sendDocx(res, file, name === label ? name : `${name} — ${label}`);
+		const file = await FORMATS[format].make({ html, title: `${name} — ${label}` });
+		sendFile(res, file, name === label ? name : `${name} — ${label}`, format);
 	} catch (e: any) {
-		if (!res.headersSent) return fail(res, 500, e?.message || 'Could not make the Word file');
+		if (!res.headersSent) return fail(res, 500, e?.message || FORMATS[format].failed);
 		res.end();
 	}
 };
+
+const exportDocx = (Model: mongoose.Model<any>) => exportRichText(Model, 'docx');
 
 export default exportDocx;

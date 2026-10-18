@@ -89,3 +89,30 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   - `tsc` is clean in backend, mint-tenant and admin.
 - Docs: mint-docs `pages#row-menu`; website changelog (this and RT-00).
 
+## 2026-10-18 — RT-14 Full-page editor and four download formats
+- The user: "maybe we have a full page for editing description like a text editor, document. Can we link that, so
+  what i want from table menu, link a field and the menu should open that in a full page editor, saving would only
+  save the field, there will be options, export as pdf, export as docx", then "download must have 4 formats, .md,
+  .docx, .txt and .pdf", then "on the full page editor we do not need the sidebar".
+- Backend: `functions/richText/{tree,pdf,text}.ts` (docx.ts now reads its tree from tree.ts);
+  `exportRichText` + `POST /export/richtext` (`routes-admin/common/router.ts`); MCP `open-editor` and the
+  `download-docx` format.
+- Panel (mint-tenant + admin): `DownloadRichText.tsx` (replaces DownloadDocx.tsx), `RichTextEditorPage.tsx`,
+  `OpenEditorButton.tsx`, `app/write/[slug]/[id]/[field]/page.tsx`, VEditorr `type='document'` + placeholder,
+  editor.css `.mint-editor--doc`, `writePath` + `write` in PROJECT_PAGES (panel.ts), menuTypes / MenuItemsEditor
+  (`docFormat` picker) / TableMenu / ConfiguredView. The editor page sets its tab title on a 1 s check: Next writes
+  its default title into a rebuilt `<head>` after a reload.
+- Verified:
+  - `docx.mjs` 40/40 on a private backend (:5071, Mongo :27961).
+  - Sample PDF rendered with PyMuPDF (3 pages): centred mixed marks, lists, the quote bar across a page break, code, Bangla, page numbers.
+  - Sample Markdown and text read right; the script is gone.
+  - In mint-tenant against :5071, light and dark:
+    - The editor opens from the row menu and the panel with no sidebar.
+    - Typing shows "Unsaved changes"; ⌘S saves only Body (History: "updated Body"; title and excerpt unchanged).
+    - Export → Markdown and → PDF download, and Export saves unsaved words first.
+    - The back arrow with unsaved words asks, and "Leave without saving" leaves them unsaved.
+    - The toolbar stays under the bar on a long page, and at 375px wide nothing scrolls sideways.
+    - The page builder offers "Open in editor" and "Download document" (Field, Format: Ask each time …), and publishes.
+    - The row menu's Download document asks for a format and downloads plain text.
+  - `tsc` is clean in backend, mint-tenant and admin.
+

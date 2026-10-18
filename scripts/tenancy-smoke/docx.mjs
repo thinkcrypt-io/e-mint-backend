@@ -1,8 +1,10 @@
-// Download DOCX (docs/rich-text): POST /<route>/export/docx — one record's
-// rich-text field as a Word file, from the row menu or the field's panel.
-// The file (a real .docx, the text and lists in it, nothing unsafe), the
-// checks (a rich-text field only, empty, unknown record), and who may
-// download: the page's read permission and the project, like PDF downloads.
+// Download document (docs/rich-text RT-13, RT-14): POST /<route>/export/docx
+// and /export/richtext — one record's rich-text field as Word, PDF, Markdown
+// or plain text, from the row menu, the field's panel or the full-page
+// editor. The files (a real .docx and PDF, the words in each, nothing
+// unsafe), the checks (a rich-text field only, empty, unknown record, a
+// known format), who may download (the page's read permission and the
+// project, like PDF downloads), and the editor's save: one field only.
 // Stands alone (its own accounts). Local scratch server only.
 import fs from 'fs';
 import os from 'os';
@@ -48,8 +50,8 @@ const post = await add({ title: 'My first post', body: BODY, summary: '<p><br></
 ok('a post made', !!post);
 
 /** POST export/docx with the raw response — the file, or the JSON error. */
-const docx = async (body, who = alma, route = 'posts') => {
-	const res = await fetch(ROOT + P(blog._id, `/${route}/export/docx`), {
+const docx = async (body, who = alma, route = 'posts', path = 'export/docx') => {
+	const res = await fetch(ROOT + P(blog._id, `/${route}/${path}`), {
 		method: 'POST',
 		headers: { 'content-type': 'application/json', authorization: who },
 		body: JSON.stringify(body),
@@ -82,6 +84,37 @@ ok('nothing of the script or onerror', !/alert|onerror|script/i.test(xml));
 const numbering = r.status === 200 ? unzip(r.buf, 'word/numbering.xml') : '';
 ok('bullets and numbers defined', /w:val="bullet"/.test(numbering) && /w:val="decimal"/.test(numbering));
 
+/* ---- the other formats (/export/richtext) */
+const rich = (format, body = { id: post, field: 'body' }) => docx({ ...body, ...(format && { format }) }, alma, 'posts', 'export/richtext');
+r = await rich();
+ok('no format: a Word file', r.status === 200 && r.buf.subarray(0, 2).toString() === 'PK' && /\.docx/.test(r.disposition), r.json?.message || r.disposition);
+r = await rich('pdf');
+ok('PDF downloads', r.status === 200 && r.type.startsWith('application/pdf') && r.buf.subarray(0, 5).toString() === '%PDF-', r.json?.message || r.type);
+ok('the PDF is named after the record and the field', /My%20first%20post%20%E2%80%94%20Body\.pdf/.test(r.disposition), r.disposition);
+ok('the PDF links out', r.buf.toString('latin1').includes('https://example.com/x'));
+r = await rich('md');
+const md = r.buf.toString('utf8');
+ok('Markdown downloads', r.status === 200 && r.type.startsWith('text/markdown') && /\.md/.test(r.disposition), r.json?.message || r.type);
+ok('Markdown has the heading, marks, link, lists, quote and code', ['## Hello Word', '**bold**', '*italic*', '[a link](https://example.com/x)', '- Bullet one', '  - Nested bullet', '1. Step one', '> Quoted words', '```\nnpm test\n```', 'Tail & end'].every(w => md.includes(w)), md);
+ok('nothing of the script in the Markdown', !/alert|onerror|script/i.test(md));
+r = await rich('txt');
+const txt = r.buf.toString('utf8');
+ok('plain text downloads', r.status === 200 && r.type.startsWith('text/plain') && /\.txt/.test(r.disposition), r.json?.message || r.type);
+ok('plain text has the words, bullets and the link’s address', ['Hello Word', 'Centred bold and italic', 'a link (https://example.com/x)', '• Bullet one', '◦ Nested bullet', '1. Step one'].every(w => txt.includes(w)) && !/[<>*#]/.test(txt), txt);
+r = await rich('rtf');
+ok('an unknown format is refused', r.status === 400 && /docx, pdf, md or txt/.test(r.json?.message), r.json?.message);
+r = await rich('pdf', { id: post, field: 'summary' });
+ok('an empty field says so in any format', r.status === 400 && /is empty/.test(r.json?.message), r.json?.message);
+
+/* ---- the full-page editor saves one field */
+r = await call('PUT', P(blog._id, `/posts/${post}`), { body: '<p>Rewritten</p>' }, alma);
+ok('saving the body alone', r.status === 200, r.body?.message);
+r = await call('GET', P(blog._id, `/posts/${post}`), null, alma);
+const saved = r.body?.doc || r.body;
+ok('…changes the body and nothing else', saved?.body === '<p>Rewritten</p>' && saved?.title === 'My first post' && saved?.note === 'plain' && saved?.summary === '<p><br></p>', JSON.stringify(saved).slice(0, 200));
+r = await rich('md');
+ok('and the download is the saved words', r.buf.toString('utf8') === 'Rewritten\n', JSON.stringify(r.buf.toString('utf8')));
+
 /* ---- checks */
 r = await docx({ id: post, field: 'note' });
 ok('a plain text field is refused', r.status === 400 && /isn’t a rich-text field/.test(r.json?.message), r.json?.message);
@@ -110,6 +143,10 @@ ivy = (await call('POST', `/tenant/api/invitations/for-me/${inv?._id}/accept`, n
 ok('Ivy joins with a role that only views Tags', !!ivy);
 r = await docx({ id: post, field: 'body' }, ivy);
 ok('without Posts’ read permission she can’t', r.status === 403 || r.status === 401, `${r.status} ${r.json?.message}`);
+r = await docx({ id: post, field: 'body', format: 'pdf' }, ivy, 'posts', 'export/richtext');
+ok('…in any format', r.status === 403 || r.status === 401, `${r.status} ${r.json?.message}`);
+r = await call('PUT', P(blog._id, `/posts/${post}`), { body: '<p>Hers</p>' }, ivy);
+ok('…nor save the body from the editor', r.status === 403 || r.status === 401, `${r.status} ${r.body?.message}`);
 
 await call('DELETE', `/tenant/api/projects/${blog._id}?force=1`, null, alma);
 await mongoose.disconnect();

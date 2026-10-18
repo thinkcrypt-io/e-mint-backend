@@ -22,6 +22,7 @@ Decisions not agreed yet (README status line).
 | RT-11 | Embeds (YouTube, Vimeo, Maps), simple tables, callouts | package + editor + mint-sites | M | — |
 | RT-12 | Guide, website, MCP descriptions, changelog for developers (ql-classes notice) | mint-docs + mint-webpage + backend | S | — |
 | RT-13 | **Download DOCX** (the user's request, 2026-10-18): a rich-text field as a Word file — row menu item `download-docx` with a field picker (rich-text fields only), a Download DOCX button on each rich-text panel of a record page, `POST /<route>/export/docx`, MCP `update_page` rowMenu | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
+| RT-14 | **Full-page editor + four download formats** (the user's request, 2026-10-18): row menu item `open-editor` (pick the field) and "Open editor" on rich-text panels open `/write/<route>/<id>/<field>` — a document page with no sidebar; Save writes that field only; Export and every download give Word, PDF, Markdown or text (`POST /<route>/export/richtext {format}`) | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
 
 Order: **00** (ships this week, stops the worst breakage) → 02 → 03 → 04 (the data is safe and consistent) → 05 →
 06 → 07 (the editor) → 08 → 09 → 10 (every frontend) → 11 → 12. 02–04 help even before the new editor: every site
@@ -204,6 +205,27 @@ cleaner HTML from records saved after part A, but nothing cleans for them until 
   hidden on rows whose field is empty; ConfiguredView puts the button on each rich-text panel.
 - MCP: `rowMenu.ts` `download-docx {field}` checked against the page's rich-text fields.
 - Smoke: `scripts/tenancy-smoke/docx.mjs` (24 checks).
+
+## RT-14 — Full-page editor and four download formats (M) — done 2026-10-18
+- Backend: `functions/richText/tree.ts` (the HTML tree and image loading, shared), `pdf.ts` (`richTextToPdf`: A4,
+  Inter, pdfkit; clickable links, drawn bullets, 1./a./i. numbering, quotes with a bar that follows page breaks, grey
+  code panels, images ≤ the text width, centred / right / justified lines laid out word by word because pdfkit can't
+  align continued text, Bangla fallback via `fonts.ts runsOf`, "n / N" page numbers), `text.ts`
+  (`richTextToMarkdown`, `richTextToText`). `exportDocx.controller.ts` → `exportRichText(Model, format?)`:
+  `POST /<route>/export/richtext {id, field, format: docx|pdf|md|txt}` (docx when left out; anything else 400);
+  `/export/docx` stays the Word file alone. MCP `rowMenu.ts`: `download-docx` takes `format` (kind `docFormat`);
+  new type `open-editor {field}`.
+- Panel (mint-tenant + admin): `utils/DownloadRichText.tsx` (`useDownloadRichText`, `DownloadRichTextMenu`,
+  `DownloadFormatDialog` — the last format picked is remembered in the browser) replaces `DownloadDocx.tsx`;
+  `utils/RichTextEditorPage.tsx` + `app/write/[slug]/[id]/[field]` — own top bar (back, page / record, save status,
+  Export, Save), no sidebar or navbar, the Quill editor as `type='document'` (`.mint-editor--doc` in editor.css:
+  toolbar stuck under the bar, a sheet of paper), ⌘S / Ctrl+S, the browser's leave warning and a "Leave without
+  saving?" dialog on the page's own links (Save and leave / Keep editing / Leave); Export saves first.
+  `utils/OpenEditorButton.tsx` on rich-text panels (ConfiguredView) beside a Download menu. `writePath()` in
+  panel.ts (`write` is a project page). Row menu: `open-editor` and `download-docx` (now "Download document", format
+  or "Ask each time") in menuTypes.ts / MenuItemsEditor / TableMenu.
+- Smoke: `docx.mjs` grows to 40 checks (formats, unknown format, saving one field, Ivy can't download any format or
+  save).
 
 ## RT-12 — Docs and website (S)
 - mint-docs guide "Rich text" (writing, images, links, what shows on the site); anchors linked from the editor.
