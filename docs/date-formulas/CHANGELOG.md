@@ -57,3 +57,21 @@ Newest last.
   month = 30 Dec 2026) and Copy from listing Plan › Name / Price / Length / Unit; a member's record page showing
   the date formulas like dates. Nothing saved from the checks. `tsc` clean in all five repos.
 
+## 2026-10-19 — Formula (date) a type of its own; linked numbers in Fields & rules
+- The user: "still can't find numeric fields of other model for calculation inside rules, the way we are finding
+  inside models, separate the formula date and numeric formula, formula (date), must be a separate type".
+- **Separate type**: settings `schema.type: 'dateformula'` (no `returns`); `isFormulaType` / `isDateFormulaSchema` in
+  both engine copies (the first build's `formula` + `returns: 'date'` still reads as one). Backend: formulasOf,
+  validate, linkedCheck, publish signature; panels: a registered `dateformula` form input (DateFormulaInput,
+  datetime family), forms' live values, field locks, form rules (checked like a date), row-menu fields, page
+  preview, automations, public-API rules and examples. Names everywhere: **Formula (number)** / **Formula (date)**
+  (model builder kinds, page builder inputs and "Stored as", formula window titles, messages).
+- **Linked fields in Fields & rules**: the page builder's formula window offered only the page's own fields. Now a
+  shared `linkedFields.tsx` (LinkFields loader, `singlePickers`, `linkedEntries`, `infoOf`) fetches each single
+  record picker's page and offers its numbers, dates and choices — Plan › Price — as the model builder does; the
+  Linked Relationships dialog uses the same helper.
+- Verified: smoke date-formulas 32/32 (settings type `dateformula`), formula-links, Linked Relationships smoke; in
+  mint-tenant, Renewals → Fields & rules shows Fee as Formula (number) and Renewed until as Formula (date), each
+  with its icon, both valid; Fee's window lists Plan › Price / Length (to calculate) and Name / Unit (to compare).
+  Nothing saved. `tsc` clean in backend, mint-tenant, admin, mint-docs, website.
+

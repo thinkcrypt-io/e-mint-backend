@@ -50,7 +50,7 @@ ok('builder: a number is not a date', r.status === 400 && /works out a date/.tes
 r = await make({ name: 'Member', title: 'Members', displayField: 'name', fields: memberFields('add(joinedAt, 1, "fortnights")') });
 ok('builder: an unknown unit is refused', r.status === 400 && /fortnights/.test(JSON.stringify(r.body?.problems)), JSON.stringify(r.body?.problems));
 r = await make({ name: 'Member', title: 'Members', displayField: 'name', fields: memberFields('addDays(joinedAt, 7)', [{ key: 'left', label: 'Days left', kind: 'formula', formula: 'addDays(joinedAt, 7)' }]) });
-ok('builder: a date in a number formula is refused', r.status === 400 && /Date formula/.test(JSON.stringify(r.body?.problems)), JSON.stringify(r.body?.problems));
+ok('builder: a date in a number formula is refused', r.status === 400 && /Formula \(date\)/.test(JSON.stringify(r.body?.problems)), JSON.stringify(r.body?.problems));
 r = await make({
 	name: 'Member',
 	title: 'Members',
@@ -67,7 +67,7 @@ ok('…its date formula keeps its kind and formula', member?.fields?.find(f => f
 r = await call('GET', P(`/builder/route?route=${member?.route}`), null, tok);
 const settingsOf = b => (b?.settings?.data || b?.code?.settings)?.fields || [];
 const fd = settingsOf(r.body).find(f => f.key === 'firstDue');
-ok('settings: read-only, a date, a formula returning a date', fd?.edit === false && fd?.type === 'date' && fd?.schema?.type === 'formula' && fd?.schema?.returns === 'date' && fd?.schema?.viewType === 'date', JSON.stringify(fd));
+ok('settings: read-only, a date, a type of its own (Formula (date))', fd?.edit === false && fd?.type === 'date' && fd?.schema?.type === 'dateformula' && !fd?.schema?.returns && fd?.schema?.viewType === 'date', JSON.stringify(fd));
 
 const monthly = (await call('POST', P(`/${plan.route}`), { name: 'Monthly', price: 30, length: 1, unit: 'months' }, tok)).body?.doc;
 const days10 = (await call('POST', P(`/${plan.route}`), { name: 'Ten days', price: 12, length: 10, unit: 'days' }, tok)).body?.doc;

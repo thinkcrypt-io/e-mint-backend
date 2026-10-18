@@ -2,7 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
-import { FieldInfo, checkFormula, format, linkedModelOf, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
+import { FieldInfo, checkFormula, format, isDateFormulaSchema, isFormulaType, linkedModelOf, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
 import { ruleSchema, rulesSchema } from '../../functions/formRules.function.js';
 import { linkedRulesSchema } from '../../functions/linkedRelationships.function.js';
 
@@ -236,9 +236,9 @@ export const lockedKeys = (model: mongoose.Model<any> | undefined, codeSettings:
 /** Kept for callers that ask which fields can't be removed: the same fields. */
 export const keptKeys = lockedKeys;
 
-const isFormula = (f: any) => f?.schema?.type === 'formula';
-/** A Date formula (docs/date-formulas): a formula that works out a date. */
-const isDateFormula = (f: any) => isFormula(f) && f.schema?.returns === 'date';
+const isFormula = (f: any) => isFormulaType(f?.schema?.type);
+/** A Formula (date) (docs/date-formulas): its own type, `dateformula`. */
+const isDateFormula = (f: any) => isDateFormulaSchema(f?.schema);
 
 /** A formula written out tidily (`total-paid` → `total - paid`) — as typed when it doesn't parse, so checkSettings can say why. */
 const tidy = (src: any) => {

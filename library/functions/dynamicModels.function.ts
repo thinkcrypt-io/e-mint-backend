@@ -1014,12 +1014,11 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				sortable(true);
 				break;
 			case 'dateformula':
-				// Read-only like a formula (schema.type 'formula', so nothing ever sets it), shown as a date.
+				// Formula (date): read-only like a formula, a type of its own, shown as a date.
 				Object.assign(s, { type: 'date', edit: false });
 				delete s.required;
 				delete s.schema.isRequired;
-				s.schema.type = 'formula';
-				s.schema.returns = 'date';
+				s.schema.type = 'dateformula';
 				s.schema.formula = tidyFormula(f.formula);
 				if (f.calc === 'once') s.schema.calc = 'once';
 				s.schema.tableType = 'date';

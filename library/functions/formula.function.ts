@@ -44,8 +44,8 @@ import mongoose from 'mongoose';
  *   its milliseconds, so if / comparisons work on dates as they do on
  *   numbers; an empty date stays empty (null), never 1970. Months and years
  *   are calendar ones in UTC — 31 January + 1 month is the end of February,
- *   as MongoDB's $dateAdd has it. A Date formula field (`returns: 'date'`)
- *   works out a date; a number formula can use dates only through
+ *   as MongoDB's $dateAdd has it. A Formula (date) field (settings type
+ *   `dateformula`) works out a date; a number formula can use dates only through
  *   daysBetween() or in a comparison.
  *
  * Parsed once, a formula is evaluated in JS for one record (create, update)
@@ -516,8 +516,8 @@ export const checkFormula = (src: string, fields: FieldInfo[], self?: string, re
 		n.args.forEach((a, i) => walk(a, kinds[i] || 'num'));
 	};
 	const result = kindOf(tree);
-	if (returns === 'number' && result === 'date') say('This works out a date — use a Date formula field, or daysBetween(…) for a number of days');
-	else if (returns === 'date' && result !== 'date') say('A date formula works out a date — like addDays(startDate, 30) or a date field');
+	if (returns === 'number' && result === 'date') say('This works out a date — use a Formula (date) field, or daysBetween(…) for a number of days');
+	else if (returns === 'date' && result !== 'date') say('A Formula (date) works out a date — like addDays(startDate, 30) or a date field');
 	else walk(tree, returns === 'date' ? 'date' : 'num');
 
 	// Through other formula fields back to this one.
@@ -906,7 +906,7 @@ export type Formula = {
 	tree: Node;
 	refs: string[];
 	sub?: string;
-	/** A Date formula field (`schema.returns: 'date'`): stored as a date. */
+	/** A Formula (date) field (settings type `dateformula`): stored as a date. */
 	date?: boolean;
 	/** Worked out only while it's empty (`schema.calc: 'once'`): when the record is added, then kept. */
 	once?: boolean;
@@ -944,6 +944,11 @@ const parsed = (src: any): Node | null => {
 		return null;
 	}
 };
+
+/** A settings input type worked out by a formula: a number (`formula`) or a date (`dateformula`). */
+export const isFormulaType = (type: any) => type === 'formula' || type === 'dateformula';
+/** A Formula (date)'s settings — `dateformula`, or a formula marked `returns: 'date'` as the first build saved it. */
+export const isDateFormulaSchema = (schema: any) => schema?.type === 'dateformula' || (schema?.type === 'formula' && schema?.returns === 'date');
 
 /** The sub-fields of a custom section (list) field, as its settings describe them. */
 export const subFieldsOf = (f: any): any[] => {
@@ -986,13 +991,13 @@ export const formulasOf = (settings: Record<string, any> | undefined): Formula[]
 	const rows: Formula[] = [];
 	const top = new Map<string, Formula>();
 	for (const [key, f] of Object.entries(settings)) {
-		const tree = f?.schema?.type === 'formula' ? parsed(f?.schema?.formula) : null;
+		const tree = isFormulaType(f?.schema?.type) ? parsed(f?.schema?.formula) : null;
 		if (tree)
 			top.set(key, {
 				key,
 				tree,
 				refs: [...refsOf(tree)],
-				...(f?.schema?.returns === 'date' && { date: true }),
+				...(isDateFormulaSchema(f?.schema) && { date: true }),
 				...(f?.schema?.calc === 'once' && { once: true }),
 			});
 

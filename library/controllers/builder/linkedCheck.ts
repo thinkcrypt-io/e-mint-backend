@@ -1,7 +1,7 @@
 import { PROTECTED_ROUTES } from './validate.js';
 import { resolveOther, resources } from './viewDocument.controller.js';
 import { LinkedRule, linkedRulesOf, targetRouteOf } from '../../functions/linkedRelationships.function.js';
-import { linkedModelOf, parse, refsOf } from '../../functions/formula.function.js';
+import { isFormulaType, linkedModelOf, parse, refsOf } from '../../functions/formula.function.js';
 import { isRef } from '../../functions/fieldLocks.function.js';
 import { collectResourceRoutes } from '../../functions/routeRegistry.function.js';
 
@@ -71,7 +71,7 @@ export const checkLinkedRelationships = async (app: any, route: string, config: 
 			const s = target.settings?.[f];
 			if (!has(target.settings, TModel, f)) say(`${targetRoute} has no field '${f}'.`);
 			else if (SENSITIVE.test(f) || TModel.schema.path(f)?.options?.select === false) say(`'${f}' is a hidden field and can't be set by a rule.`);
-			else if (s?.schema?.type === 'formula' || s?.rollup) say(`'${f}' on ${targetRoute} is worked out by itself and can't be set.`);
+			else if (isFormulaType(s?.schema?.type) || s?.rollup) say(`'${f}' on ${targetRoute} is worked out by itself and can't be set.`);
 			else if (!allow.includes(f)) say(`'${f}' can't be edited on ${targetRoute} — turn on editing for it there first.`);
 			if (a.from && !has(source.settings, Model, a.from)) say(`it copies '${a.from}', which isn't on this page.`);
 			const step = a.dec !== undefined ? a.dec : a.inc;

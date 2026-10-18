@@ -55,8 +55,9 @@ A member expiring 30 Nov who renews on 19 Oct for a month gets 31 Dec; one who e
 - D1 One formula language; dates are numbers of milliseconds inside it, so every number rule (if, comparisons,
   min/max) works on them. A date field used where a number is wanted is refused with a hint (daysBetween).
 - D2 `today()` is the moment of the save (or of the recalculation). No project time zone yet — UTC.
-- D3 A separate model kind (`dateformula`) in the model builder; in a page's settings it is a formula with
-  `schema.returns: 'date'` (data type `date`), so every place that treats formulas as worked-out-not-typed keeps
-  doing so.
+- D3 **Formula (date)** is a type of its own (the user, 2026-10-19): model kind `dateformula`, and settings
+  `schema.type: 'dateformula'` (data type `date`) beside `formula` — Formula (number). Code that treats formulas
+  as worked-out-not-typed asks `isFormulaType`. A formula marked `returns: 'date'` (the first build) still reads
+  as a Formula (date).
 - D4 Once = "while empty": no "is new" tracking, works for records from before the field (publishing fills them).
 - D5 Top-level fields only for now — not inside a section or a list's rows.
