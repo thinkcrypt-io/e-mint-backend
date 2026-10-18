@@ -13,7 +13,7 @@ export type Node = El | string;
 export type Img = { data: Buffer; type: 'png' | 'jpg'; width: number; height: number };
 
 const VOID = new Set(['br', 'hr', 'img']);
-const BLOCK = new Set(['p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'hr']);
+const BLOCK = new Set(['p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'hr', 'table']);
 
 const decode = (s: string) =>
 	s
@@ -60,6 +60,22 @@ export const isBlock = (n: Node) => typeof n !== 'string' && BLOCK.has(n.tag);
 const sources = (nodes: Node[], out: string[] = []) => {
 	for (const n of nodes) if (typeof n !== 'string') n.tag === 'img' ? n.attrs.src && out.push(n.attrs.src) : sources(n.children, out);
 	return out;
+};
+
+/** A table's rows (through thead / tbody) as lists of cells; a row's `head` when all its cells are th. */
+export const tableRows = (table: El): { head: boolean; cells: El[] }[] => {
+	const rows: { head: boolean; cells: El[] }[] = [];
+	const walk = (nodes: Node[]) => {
+		for (const n of nodes) {
+			if (typeof n === 'string') continue;
+			if (n.tag === 'tr') {
+				const cells = n.children.filter((c): c is El => typeof c !== 'string' && (c.tag === 'td' || c.tag === 'th'));
+				if (cells.length) rows.push({ head: cells.every(c => c.tag === 'th'), cells });
+			} else if (n.tag === 'thead' || n.tag === 'tbody') walk(n.children);
+		}
+	};
+	walk(table.children);
+	return rows;
 };
 
 /** Every image the text shows, fetched once, with its size in pixels. */

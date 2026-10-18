@@ -9,10 +9,14 @@ import {
 	Packer,
 	Paragraph,
 	ShadingType,
+	Table,
+	TableCell,
+	TableRow,
 	TextRun,
+	WidthType,
 } from 'docx';
 import { sanitizeRichText } from './sanitize.js';
-import { El, Img, Node, isBlock, loadImages, parse, textOf } from './tree.js';
+import { El, Img, Node, isBlock, loadImages, parse, tableRows, textOf } from './tree.js';
 
 /**
  * A rich-text field as a Word file (row menu → "Download DOCX", and the
@@ -120,9 +124,45 @@ class Writer {
 		return out;
 	}
 
-	/** Block content as paragraphs; loose inline content (no <p> around it) becomes one paragraph. */
-	blocks(nodes: Node[], quote = false): Paragraph[] {
-		const out: Paragraph[] = [];
+	/** A simple table across the page: equal columns, a header row in bold and shaded. */
+	private table(el: El): Table | null {
+		const rows = tableRows(el);
+		const cols = Math.max(0, ...rows.map(r => r.cells.length));
+		if (!rows.length || !cols) return null;
+		const border = { style: BorderStyle.SINGLE, size: 4, color: 'BFBFBF' };
+		const borders = { top: border, bottom: border, left: border, right: border };
+		return new Table({
+			width: { size: 100, type: WidthType.PERCENTAGE },
+			rows: rows.map(
+				(row, i) =>
+					new TableRow({
+						tableHeader: i === 0 && row.head,
+						children: Array.from({ length: cols }, (_, c) => {
+							// The editor's cells hold one line of inline text; a missing cell is left empty.
+							const cell = row.cells[c];
+							const head = cell?.tag === 'th' || (i === 0 && row.head);
+							const children = [
+								new Paragraph({
+									alignment: cell ? ALIGN[cell.attrs['data-align']] : undefined,
+									children: cell ? this.runs(cell.children, head ? { bold: true } : {}) : [],
+								}),
+							];
+							return new TableCell({
+								borders,
+								width: { size: Math.floor(100 / cols), type: WidthType.PERCENTAGE },
+								margins: { top: 60, bottom: 60, left: 100, right: 100 },
+								...(head && { shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'F2F2F2' } }),
+								children,
+							});
+						}),
+					})
+			),
+		});
+	}
+
+	/** Block content as paragraphs (and tables); loose inline content (no <p> around it) becomes one paragraph. */
+	blocks(nodes: Node[], quote = false): (Paragraph | Table)[] {
+		const out: (Paragraph | Table)[] = [];
 		const quoted = quote ? { indent: { left: 720 }, border: { left: { style: BorderStyle.SINGLE, size: 12, color: 'BFBFBF', space: 8 } } } : {};
 		const runStyle: RunStyle = quote ? { color: '595959' } : {};
 		let loose: Node[] = [];
@@ -171,6 +211,12 @@ class Writer {
 				case 'hr':
 					out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'BFBFBF', space: 1 } }, children: [] }));
 					break;
+				case 'table': {
+					const t = this.table(el);
+					// Word wants a paragraph after a table, or two tables run together.
+					if (t) out.push(t, new Paragraph({ children: [] }));
+					break;
+				}
 			}
 		}
 		flush();
@@ -191,8 +237,17 @@ const levels = (format: (level: number) => (typeof LevelFormat)[keyof typeof Lev
 const OL_FORMATS = [LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER, LevelFormat.LOWER_ROMAN];
 const BULLETS = ['•', '◦', '▪'];
 
+/** Paper in twips (1/1440 inch), as the editor's page size names it; anything else is A4. */
+const PAPER: Record<string, { width: number; height: number; margin: number }> = {
+	a4: { width: 11906, height: 16838, margin: 1440 },
+	letter: { width: 12240, height: 15840, margin: 1440 },
+	legal: { width: 12240, height: 20160, margin: 1440 },
+	a5: { width: 8391, height: 11906, margin: 1000 },
+};
+
 /** The field's HTML as a .docx file. */
-export const richTextToDocx = async ({ html, title }: { html: unknown; title?: string }): Promise<Buffer> => {
+export const richTextToDocx = async ({ html, title, pageSize }: { html: unknown; title?: string; pageSize?: unknown }): Promise<Buffer> => {
+	const paper = PAPER[typeof pageSize === 'string' && pageSize in PAPER ? pageSize : 'a4'];
 	const nodes = parse(sanitizeRichText(html));
 	const writer = new Writer(await loadImages(nodes));
 	const children = writer.blocks(nodes);
@@ -207,7 +262,17 @@ export const richTextToDocx = async ({ html, title }: { html: unknown; title?: s
 				{ reference: 'mint-ul', levels: levels(() => LevelFormat.BULLET, l => BULLETS[l % 3]) },
 			],
 		},
-		sections: [{ children: children.length ? children : [new Paragraph({ children: [] })] }],
+		sections: [
+			{
+				properties: {
+					page: {
+						size: { width: paper.width, height: paper.height },
+						margin: { top: paper.margin, bottom: paper.margin, left: paper.margin, right: paper.margin },
+					},
+				},
+				children: children.length ? children : [new Paragraph({ children: [] })],
+			},
+		],
 	});
 	return Packer.toBuffer(doc);
 };

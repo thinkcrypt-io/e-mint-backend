@@ -116,3 +116,29 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
     - The row menu's Download document asks for a format and downloads plain text.
   - `tsc` is clean in backend, mint-tenant and admin.
 
+## 2026-10-18 — RT-15 Document editor and tables
+- The user, with a Google Docs toolbar screenshot: the editor toolbar full width and fixed under the header; a grey
+  desk behind the page in light and dark mode, the page always white with black text; full height even when empty;
+  a menu on click with bold, case, alignment and so on for selected words; page size Infinite (default), A4 and
+  others, with pages separated; then "also must be able to insert tables if quill allows that".
+- Right-click opens the menu (a left click places the cursor); selecting words shows the small bar as well.
+- Files: panel `inputs/editor/{DocumentEditor.tsx,document.css}`, `editor.css` (`.mint-doc`), RichTextEditorPage,
+  DownloadRichText (`pageSize`), VEditorr (the `document` type removed), RichTextValue + table cell (tables);
+  sanitizer copies (tables); mint-sites globals.css, fixture, text block schema + manifest; backend `tree.ts`,
+  `docx.ts`, `pdf.ts`, `text.ts`, `exportDocx.controller.ts` (`pageSize`), smoke `docx.mjs`.
+- Verified:
+  - `docx.mjs` 45/45 on the private backend (:5071, Mongo :27961); mint-sites vitest 92/92 (a table case added).
+  - Sample PDF and Word on Letter with two tables (rendered with PyMuPDF); Markdown and text tables read right.
+  - In mint-tenant against :5071, dark and light:
+    - A white page with black words on the grey desk; the toolbar spans the window under the header.
+    - An empty field fills the window with "Start writing…".
+    - A4 splits a long post into "1 / 2" sheets; the choice is remembered after a reload.
+    - Right-click on a selected word → UPPERCASE; the bar → Bold; the menu flips up near the window's foot and
+      opens again straight after closing.
+    - Table from the toolbar grid at the cursor, Tab between cells, "Insert row below"; saved and shown on the
+      record page.
+    - Export → PDF sends `pageSize: a4`.
+    - 375px wide: A4 paper scrolls sideways inside the desk; the page itself doesn't.
+  - mint-sites `?view=richtext`: the table with its right-aligned column.
+  - `tsc` clean in backend, mint-tenant, admin and mint-sites.
+

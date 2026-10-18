@@ -19,10 +19,11 @@ Decisions not agreed yet (README status line).
 | RT-08 | Mint sites: package sanitizer, `.mint-prose` for every v1 element, heading offset, images lazy + sized, canvas paste/shortcuts on the schema, manifest `aiHint` | mint-sites + backend manifest | M | — |
 | RT-09 | Everywhere else in MINT: panel view/history/comments, table cells + search + notifications (`toText`), PDF runs, email-safe HTML | mint-tenant + admin + backend | M | — |
 | RT-10 | Developers' frontends: `/public/rich-text.css`, `mint-rich-text/react` renderer, API reference + snippets, website kit / starters / hongo theme | backend + package + themes | M | — |
-| RT-11 | Embeds (YouTube, Vimeo, Maps), simple tables, callouts | package + editor + mint-sites | M | — |
+| RT-11 | Embeds (YouTube, Vimeo, Maps), simple tables, callouts | package + editor + mint-sites | M | tables done in RT-15; embeds and callouts — |
 | RT-12 | Guide, website, MCP descriptions, changelog for developers (ql-classes notice) | mint-docs + mint-webpage + backend | S | — |
 | RT-13 | **Download DOCX** (the user's request, 2026-10-18): a rich-text field as a Word file — row menu item `download-docx` with a field picker (rich-text fields only), a Download DOCX button on each rich-text panel of a record page, `POST /<route>/export/docx`, MCP `update_page` rowMenu | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
 | RT-14 | **Full-page editor + four download formats** (the user's request, 2026-10-18): row menu item `open-editor` (pick the field) and "Open editor" on rich-text panels open `/write/<route>/<id>/<field>` — a document page with no sidebar; Save writes that field only; Export and every download give Word, PDF, Markdown or text (`POST /<route>/export/richtext {format}`) | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
+| RT-15 | **Document editor + tables** (the user's request, 2026-10-18): the full-page editor as a document — full-width toolbar under the header, white paper with black words on a grey desk in light and dark mode, page size Infinite (default) / A4 / Letter / Legal / A5 with real page breaks, right-click menu and a bar over selected words (marks, case, text style, alignment, lists, link, image, table rows/columns), tables (Quill 2's table module) kept by the sanitizer and shown on sites, record pages and in Word/PDF/Markdown/text; Word and PDF follow the page size | backend + mint-tenant + admin + mint-sites | M | done 2026-10-18 (not deployed) |
 
 Order: **00** (ships this week, stops the worst breakage) → 02 → 03 → 04 (the data is safe and consistent) → 05 →
 06 → 07 (the editor) → 08 → 09 → 10 (every frontend) → 11 → 12. 02–04 help even before the new editor: every site
@@ -226,6 +227,31 @@ cleaner HTML from records saved after part A, but nothing cleans for them until 
   or "Ask each time") in menuTypes.ts / MenuItemsEditor / TableMenu.
 - Smoke: `docx.mjs` grows to 40 checks (formats, unknown format, saving one field, Ivy can't download any format or
   save).
+
+## RT-15 — Document editor and tables (M) — done 2026-10-18
+- Panel (mint-tenant + admin): `utils/inputs/editor/DocumentEditor.tsx` + `document.css` — Quill 2 made directly
+  (through react-quill-new's `Quill`), its toolbar moved into a full-width bar stuck under the page header
+  (`--doc-top`). Paper is white with #1f2328 ink whatever the theme (the panel's global `p`/`span` colours are
+  overridden; headings get weight through `font-variation-settings`, since the theme pins h1–h3 light with a
+  layered `!important`); the desk is #e9ecf0 light / #0e0e10 dark. Page size (`PAGE_SIZES`: Infinite default, A4
+  794×1123, Letter 816×1056, Legal 816×1344, A5 559×794 px; remembered per route + field in localStorage
+  `mint.docPage.<route>.<field>`): paper sizes draw sheets behind the words and paginate by moving any block that
+  would cross a bottom margin to the next sheet with a top margin from a generated `<style>` (list items one by one;
+  Quill's DOM is never touched; a block taller than a page runs over); "n / N" in each foot. Right-click: a
+  controlled Chakra Menu hung from a 1px fixed trigger at the pointer (Menu.ContextTrigger missed the first
+  right-click after a close); a bar over selected words (marks, case, link, clear) whose buttons keep the
+  selection. Case changes keep each run's formats. Tables: `modules.table`, a grid picker in the toolbar, rows and
+  columns in the right-click menu. `RichTextEditorPage` uses it; VEditorr's short-lived `document` type is gone;
+  `editor.css` colours `.mint-doc` too (never `.full-editor-quill`: FullEditor/style.css forces layout on it).
+- Tables everywhere: the sanitizer (mint-sites + both panels' `utils/richText.ts` + backend `sanitize.ts`, still
+  identical) keeps table / thead / tbody / tr / th / td and `data-align` on cells, nothing else on them;
+  mint-sites `.mint-prose` table styles (scroll sideways on a phone), fixture `?view=richtext` has one, text block
+  `aiHint` + manifest; record pages (RichTextValue) and table cells (words) read them; exports: `tree.ts
+  tableRows`, Word tables (header row bold, shaded), PDF tables (equal columns, ruled, rows move whole), GitHub
+  Markdown tables, lined-up plain text.
+- Paper for files: `pageSize` (a4 | letter | legal | a5) on `POST /export/richtext` and `/export/docx` sets the Word
+  and PDF page (A4 otherwise); the editor's Export sends its page size (Infinite → A4).
+- Smoke: `docx.mjs` 45 checks (+ tables in Markdown/text/Word, Letter and A4 Word pages, an A5 PDF).
 
 ## RT-12 — Docs and website (S)
 - mint-docs guide "Rich text" (writing, images, links, what shows on the site); anchors linked from the editor.

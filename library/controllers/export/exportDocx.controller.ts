@@ -14,9 +14,10 @@ import { richTextToMarkdown, richTextToText } from '../../functions/richText/tex
  * the reader's read permission and the list's filter and record access decide
  * whether the record comes back, and a field they may not read isn't there.
  *
- * Body: `{ id: string, field: string, format?: 'docx' | 'pdf' | 'md' | 'txt' }`
- * — `field` must be a rich-text field (`editor` / `basic-editor`) of this
- * page; `format` defaults to docx.
+ * Body: `{ id: string, field: string, format?: 'docx' | 'pdf' | 'md' | 'txt',
+ * pageSize?: 'a4' | 'letter' | 'legal' | 'a5' }` — `field` must be a rich-text
+ * field (`editor` / `basic-editor`) of this page; `format` defaults to docx;
+ * `pageSize` (the editor's paper) sets the Word and PDF page, A4 otherwise.
  */
 
 const RICH = new Set(['editor', 'basic-editor']);
@@ -71,7 +72,7 @@ export const exportRichText = (Model: mongoose.Model<any>, fixed?: Format) => as
 		if (typeof html !== 'string' || !html.replace(/<[^>]*>/g, '').trim() && !/<img\b/i.test(html)) return fail(res, 400, `“${label}” is empty`);
 
 		const name = nameOf(doc);
-		const file = await FORMATS[format].make({ html, title: `${name} — ${label}` });
+		const file = await FORMATS[format].make({ html, title: `${name} — ${label}`, pageSize: req.body?.pageSize });
 		sendFile(res, file, name === label ? name : `${name} — ${label}`, format);
 	} catch (e: any) {
 		if (!res.headersSent) return fail(res, 500, e?.message || FORMATS[format].failed);

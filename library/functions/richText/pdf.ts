@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { DocFonts, Run, faceFor, runsOf } from '../pdfTemplates/fonts.js';
 import { sanitizeRichText } from './sanitize.js';
-import { El, Img, Node, isBlock, loadImages, parse, textOf } from './tree.js';
+import { El, Img, Node, isBlock, loadImages, parse, tableRows, textOf } from './tree.js';
 
 /**
  * A rich-text field as a PDF (the full-page editor's Export → PDF). The same
@@ -13,8 +13,15 @@ import { El, Img, Node, isBlock, loadImages, parse, textOf } from './tree.js';
  * text runs past one page.
  */
 
-const PAGE = { w: 595.28, h: 841.89 };
-const M = { top: 72, bottom: 72, left: 68, right: 68 };
+/** Paper the editor offers (its page size); anything else — "infinite" too — prints on A4. */
+export type PageSize = 'a4' | 'letter' | 'legal' | 'a5';
+const PAPER: Record<PageSize, { w: number; h: number; m: number }> = {
+	a4: { w: 595.28, h: 841.89, m: 68 },
+	letter: { w: 612, h: 792, m: 68 },
+	legal: { w: 612, h: 1008, m: 68 },
+	a5: { w: 419.53, h: 595.28, m: 44 },
+};
+export const paperOf = (size: unknown): PageSize => (typeof size === 'string' && size in PAPER ? (size as PageSize) : 'a4');
 const INK = '#1f2328';
 const MUTED = '#59636e';
 const LINK = '#0b5fcc';
@@ -48,12 +55,17 @@ const numberOf = (n: number, level: number) => `${[String(n), letters(n), roman(
 
 class Writer {
 	private fonts: DocFonts;
-	constructor(private doc: PDFKit.PDFDocument, private images: Map<string, Img>) {
+	constructor(
+		private doc: PDFKit.PDFDocument,
+		private images: Map<string, Img>,
+		private PAGE: { w: number; h: number },
+		private M: { top: number; bottom: number; left: number; right: number }
+	) {
 		this.fonts = new DocFonts(doc);
 	}
 
 	private get bottom() {
-		return PAGE.h - M.bottom;
+		return this.PAGE.h - this.M.bottom;
 	}
 
 	/** The page being written (the last one: earlier pages are only revisited to finish a quote's bar). */
@@ -64,7 +76,7 @@ class Writer {
 
 	/** Room for `h` more points on this page, or on to the next. */
 	private room(h: number) {
-		if (this.doc.y + h > this.bottom && this.doc.y > M.top + 1) this.doc.addPage();
+		if (this.doc.y + h > this.bottom && this.doc.y > this.M.top + 1) this.doc.addPage();
 	}
 
 	/** Inline content as text pieces with their marks, whitespace as a browser shows it. */
@@ -165,7 +177,7 @@ class Writer {
 			if (i === 0) doc.text(r.text, box.x, doc.y, opts);
 			else doc.text(r.text, opts);
 		});
-		doc.x = M.left;
+		doc.x = this.M.left;
 		return true;
 	}
 
@@ -239,7 +251,7 @@ class Writer {
 				}
 				x += w;
 			});
-			this.doc.x = M.left;
+			this.doc.x = this.M.left;
 			this.doc.y = y + height + LINE_GAP;
 		});
 	}
@@ -253,7 +265,7 @@ class Writer {
 		// Pixels as a browser shows them (96 to the inch), never wider than the text, never taller than a page.
 		let w = Math.min((Number(el.attrs.width) || img.width) * 0.75, box.width);
 		let h = (img.height * w) / img.width;
-		const most = this.bottom - M.top;
+		const most = this.bottom - this.M.top;
 		if (h > most) {
 			w = (w * most) / h;
 			h = most;
@@ -292,7 +304,7 @@ class Writer {
 
 	private heading(el: El, box: Box) {
 		const h = HEADINGS[el.tag];
-		if (this.doc.y > M.top + 1) this.doc.y += h.size * 0.5;
+		if (this.doc.y > this.M.top + 1) this.doc.y += h.size * 0.5;
 		// Kept with the lines after it.
 		this.room(h.size * 1.3 + BODY * 3);
 		this.inline(el.children, { ...box, size: h.size, weight: h.weight, color: box.color === MUTED ? MUTED : INK });
@@ -344,12 +356,12 @@ class Writer {
 		const end = { page: this.page(), y: this.doc.y - PARA_GAP };
 		for (let p = start.page; p <= end.page; p++) {
 			this.doc.switchToPage(p);
-			const y1 = p === start.page ? start.y : M.top;
+			const y1 = p === start.page ? start.y : this.M.top;
 			const y2 = p === end.page ? end.y : this.bottom;
 			if (y2 > y1) this.doc.save().moveTo(base.x + 2, y1).lineTo(base.x + 2, y2).lineWidth(2.5).strokeColor(RULE).stroke().restore();
 		}
 		this.doc.switchToPage(end.page);
-		this.doc.x = M.left;
+		this.doc.x = this.M.left;
 		this.doc.y = end.y + PARA_GAP;
 	}
 
@@ -371,10 +383,50 @@ class Writer {
 			this.doc.save().rect(base.x, y, base.width, h + top + below).fill(CODE_BG).restore();
 			this.fonts.use(face, size);
 			this.doc.fillColor(INK).text(text, base.x + 10, y + top, { width: inner, lineGap: 2 });
-			this.doc.x = M.left;
+			this.doc.x = this.M.left;
 			this.doc.y = y + top + h + below;
 		});
 		this.doc.y += PARA_GAP + 2;
+	}
+
+	/** A simple table across the text: equal columns, ruled cells, a header row bold on grey; rows move whole to the next page. */
+	private table(el: El, base: Box) {
+		const rows = tableRows(el);
+		const cols = Math.max(0, ...rows.map(r => r.cells.length));
+		if (!rows.length || !cols) return;
+		const colW = base.width / cols;
+		const pad = 5;
+		const size = base.size * 0.92;
+		this.doc.y += 2;
+		for (const row of rows) {
+			let h = 0;
+			for (const cell of row.cells) {
+				this.fonts.use(faceFor('inter', cell.tag === 'th' ? 700 : 400, false), size);
+				h = Math.max(h, this.doc.heightOfString(textOf(cell.children) || ' ', { width: colW - 2 * pad, lineGap: LINE_GAP }));
+			}
+			h += 2 * pad;
+			this.room(h);
+			const top = this.doc.y;
+			if (row.head) this.doc.save().rect(base.x, top, base.width, h).fill(CODE_BG).restore();
+			let bottom = top + h;
+			row.cells.forEach((cell, c) => {
+				if (!textOf(cell.children).trim() && !cell.children.some(n => typeof n !== 'string' && n.tag === 'img')) return;
+				this.doc.y = top + pad;
+				this.inline(cell.children, {
+					...base,
+					x: base.x + c * colW + pad,
+					width: colW - 2 * pad,
+					size,
+					weight: cell.tag === 'th' ? 700 : base.weight,
+					align: ALIGN[cell.attrs['data-align']],
+				});
+				bottom = Math.max(bottom, this.doc.y + pad);
+			});
+			for (let c = 0; c < cols; c++) this.doc.save().lineWidth(0.6).strokeColor(RULE).rect(base.x + c * colW, top, colW, bottom - top).stroke().restore();
+			this.doc.x = this.M.left;
+			this.doc.y = bottom;
+		}
+		this.doc.y += PARA_GAP;
 	}
 
 	private hr(base: Box) {
@@ -425,6 +477,9 @@ class Writer {
 				case 'hr':
 					this.hr(box);
 					break;
+				case 'table':
+					this.table(el, box);
+					break;
 			}
 		}
 		flush();
@@ -440,14 +495,17 @@ class Writer {
 			const margins = this.doc.page.margins;
 			this.doc.page.margins = { ...margins, bottom: 0 };
 			this.fonts.use(face, 8.5);
-			this.doc.fillColor(MUTED).text(`${i + 1} / ${count}`, 0, PAGE.h - 44, { width: PAGE.w, align: 'center', lineBreak: false });
+			this.doc.fillColor(MUTED).text(`${i + 1} / ${count}`, 0, this.PAGE.h - 44, { width: this.PAGE.w, align: 'center', lineBreak: false });
 			this.doc.page.margins = margins;
 		}
 	}
 }
 
 /** The field's HTML as a PDF file. */
-export const richTextToPdf = async ({ html, title }: { html: unknown; title?: string }): Promise<Buffer> => {
+export const richTextToPdf = async ({ html, title, pageSize }: { html: unknown; title?: string; pageSize?: unknown }): Promise<Buffer> => {
+	const paper = PAPER[paperOf(pageSize)];
+	const PAGE = { w: paper.w, h: paper.h };
+	const M = { top: paper.m + 4, bottom: paper.m + 4, left: paper.m, right: paper.m };
 	const nodes = parse(sanitizeRichText(html));
 	const images = await loadImages(nodes);
 	const doc = new PDFDocument({
@@ -462,7 +520,7 @@ export const richTextToPdf = async ({ html, title }: { html: unknown; title?: st
 		doc.on('end', () => resolve(Buffer.concat(chunks)));
 		doc.on('error', reject);
 	});
-	const writer = new Writer(doc, images);
+	const writer = new Writer(doc, images, PAGE, M);
 	writer.blocks(nodes, { x: M.left, width: PAGE.w - M.left - M.right, color: INK, size: BODY, weight: 400 });
 	writer.numberPages();
 	doc.end();

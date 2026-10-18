@@ -1,11 +1,11 @@
 import { sanitizeRichText } from './sanitize.js';
-import { El, Node, isBlock, parse, textOf } from './tree.js';
+import { El, Node, isBlock, parse, tableRows, textOf } from './tree.js';
 
 /**
  * A rich-text field as Markdown (.md) or plain text (.txt) — two of the
  * download formats beside Word (docx.ts) and PDF (pdf.ts). The same cleaned
  * HTML as those. Markdown keeps headings, bold / italic / strike, code,
- * links, images, nested lists, quotes and rules (underline and sub/superscript
+ * links, images, nested lists, quotes, rules and tables (underline and sub/superscript
  * have no Markdown, so their words stay plain); plain text keeps the words,
  * the list markers and the indents, with a link's address after its words.
  */
@@ -99,6 +99,33 @@ const list = (el: El, mode: Mode, level: number): string => {
 	return items.join('\n');
 };
 
+/**
+ * Markdown: a GitHub table, the first row as its header (Markdown has to have
+ * one). Text: the columns lined up with spaces, a rule under a header row.
+ */
+const table = (el: El, mode: Mode): string => {
+	const rows = tableRows(el);
+	const cols = Math.max(0, ...rows.map(r => r.cells.length));
+	if (!rows.length || !cols) return '';
+	const grid = rows.map(r =>
+		Array.from({ length: cols }, (_, c) => {
+			const cell = r.cells[c];
+			const t = cell ? inline(cell.children, mode).trim().replace(/\s*\n\s*/g, mode === 'md' ? '<br>' : ' ') : '';
+			return mode === 'md' ? t.replace(/\|/g, '\\|') : t;
+		})
+	);
+	if (mode === 'md') {
+		const line = (cells: string[]) => `| ${cells.map(c => c || ' ').join(' | ')} |`;
+		const rule = `| ${Array.from({ length: cols }, (_, c) => (rows[0].cells[c]?.attrs['data-align'] === 'center' ? ':---:' : rows[0].cells[c]?.attrs['data-align'] === 'right' ? '---:' : '---')).join(' | ')} |`;
+		return [line(grid[0]), rule, ...grid.slice(1).map(line)].join('\n');
+	}
+	const widths = Array.from({ length: cols }, (_, c) => Math.max(...grid.map(r => [...r[c]].length)));
+	const line = (cells: string[]) => cells.map((t, c) => t + ' '.repeat(widths[c] - [...t].length)).join('   ').trimEnd();
+	const out = grid.map(line);
+	if (rows[0].head) out.splice(1, 0, widths.map(w => '-'.repeat(w)).join('   '));
+	return out.join('\n');
+};
+
 const blocks = (nodes: Node[], mode: Mode): string[] => {
 	const out: string[] = [];
 	let loose: Node[] = [];
@@ -146,6 +173,11 @@ const blocks = (nodes: Node[], mode: Mode): string[] => {
 			case 'hr':
 				out.push(mode === 'md' ? '---' : '* * *');
 				break;
+			case 'table': {
+				const t = table(el, mode);
+				if (t) out.push(t);
+				break;
+			}
 		}
 	}
 	flush();
@@ -158,7 +190,7 @@ const render = (html: unknown, mode: Mode) => {
 };
 
 /** The field's HTML as a Markdown file. */
-export const richTextToMarkdown = async ({ html }: { html: unknown; title?: string }): Promise<Buffer> => Buffer.from(render(html, 'md'), 'utf8');
+export const richTextToMarkdown = async ({ html }: { html: unknown; title?: string; pageSize?: unknown }): Promise<Buffer> => Buffer.from(render(html, 'md'), 'utf8');
 
 /** The field's HTML as a plain-text file. */
-export const richTextToText = async ({ html }: { html: unknown; title?: string }): Promise<Buffer> => Buffer.from(render(html, 'txt'), 'utf8');
+export const richTextToText = async ({ html }: { html: unknown; title?: string; pageSize?: unknown }): Promise<Buffer> => Buffer.from(render(html, 'txt'), 'utf8');

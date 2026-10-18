@@ -6,16 +6,17 @@
 //
 // Rich text and URLs from page data. Rich text keeps only the allowlist in the
 // README (p, h2–h4, strong, em, u, s, sub, sup, a, ul, ol, li, br, hr,
-// blockquote, code, pre, img) and comes out balanced, so it can't close the
-// element it's drawn in. Records written in the panel's Quill editor before
+// blockquote, code, pre, img, and simple tables: table, thead, tbody, tr, th,
+// td — no merged cells) and comes out balanced, so it can't close the element
+// it's drawn in. Records written in the panel's Quill editor before
 // docs/rich-text RT-00 hold Quill's own markup; `fromQuill` reads it first.
 
-const ALLOWED = new Set(['p', 'h2', 'h3', 'h4', 'strong', 'em', 'u', 's', 'sub', 'sup', 'a', 'ul', 'ol', 'li', 'br', 'hr', 'blockquote', 'code', 'pre', 'img']);
+const ALLOWED = new Set(['p', 'h2', 'h3', 'h4', 'strong', 'em', 'u', 's', 'sub', 'sup', 'a', 'ul', 'ol', 'li', 'br', 'hr', 'blockquote', 'code', 'pre', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td']);
 // Headings the text block doesn't have become the nearest it does, so they keep their line.
 const ALIAS: Record<string, string> = { b: 'strong', i: 'em', h1: 'h2', h5: 'h4', h6: 'h4', del: 's', strike: 's', ins: 'u' };
 const VOID = new Set(['br', 'hr', 'img']);
 // Elements whose alignment is kept, as `data-align` (never a class or style).
-const ALIGNABLE = new Set(['p', 'h2', 'h3', 'h4', 'li']);
+const ALIGNABLE = new Set(['p', 'h2', 'h3', 'h4', 'li', 'th', 'td']);
 const DROP_WITH_CONTENT = /<(script|style|iframe|object|embed|template|noscript|svg|math)\b[\s\S]*?<\/\1\s*>/gi;
 
 /** Relative paths, anchors, http(s), mailto and tel — never javascript: or data:. */

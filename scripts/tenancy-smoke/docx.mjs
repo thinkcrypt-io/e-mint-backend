@@ -106,6 +106,23 @@ ok('an unknown format is refused', r.status === 400 && /docx, pdf, md or txt/.te
 r = await rich('pdf', { id: post, field: 'summary' });
 ok('an empty field says so in any format', r.status === 400 && /is empty/.test(r.json?.message), r.json?.message);
 
+/* ---- tables and paper (RT-15) */
+const tablePost = await add({
+	title: 'Prices',
+	body: '<p>Plans</p><table style="border:1px solid #000"><tbody><tr><td data-row="r1">Plan</td><td data-row="r1" class="ql-align-right">Price | note</td></tr><tr><td data-row="r2" onclick="x()">Starter</td><td data-row="r2">$9</td></tr></tbody></table>',
+});
+r = await rich('md', { id: tablePost, field: 'body' });
+ok('a table comes through in Markdown', /\| Plan \| Price \\\| note \|\n\| --- \| ---: \|\n\| Starter \| \$9 \|/.test(r.buf.toString('utf8')), r.buf.toString('utf8'));
+r = await rich('txt', { id: tablePost, field: 'body' });
+ok('…and lined up in plain text', /Plan {6}Price \| note\nStarter {3}\$9/.test(r.buf.toString('utf8')), JSON.stringify(r.buf.toString('utf8')));
+r = await docx({ id: tablePost, field: 'body', pageSize: 'letter' });
+const tableXml = r.status === 200 ? unzip(r.buf, 'word/document.xml') : '';
+ok('a Word table, on Letter paper when asked', /<w:tbl>/.test(tableXml) && /<w:pgSz w:w="12240" w:h="15840"/.test(tableXml) && !/onclick/.test(tableXml), r.json?.message || tableXml.slice(0, 120));
+r = await docx({ id: tablePost, field: 'body' });
+ok('A4 when no paper is named', /<w:pgSz w:w="11906" w:h="16838"/.test(unzip(r.buf, 'word/document.xml')));
+r = await rich('pdf', { id: tablePost, field: 'body', pageSize: 'a5' });
+ok('a PDF on A5', r.status === 200 && /\/MediaBox \[0 0 419\.53/.test(r.buf.toString('latin1')), r.json?.message || r.buf.toString('latin1').match(/MediaBox[^\]]*\]/)?.[0]);
+
 /* ---- the full-page editor saves one field */
 r = await call('PUT', P(blog._id, `/posts/${post}`), { body: '<p>Rewritten</p>' }, alma);
 ok('saving the body alone', r.status === 200, r.body?.message);

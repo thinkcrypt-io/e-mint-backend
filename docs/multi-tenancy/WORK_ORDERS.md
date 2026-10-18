@@ -8,6 +8,12 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-18)
 
+**2026-10-18 — document editor + tables (rich text RT-15).** The full-page editor is a document: full-width toolbar
+under the header, white paper on a grey desk in both themes, page size Infinite / A4 / Letter / Legal / A5 with page
+breaks, right-click menu and a bar over selected words (marks, case, alignment…), tables. Tables are kept by every
+sanitizer copy, shown on sites and record pages, and exported to Word / PDF / Markdown / text; Word and PDF follow
+the page size (`pageSize`). `inputs/editor/DocumentEditor.tsx`. Not deployed (mint-sites too).
+
 **2026-10-18 — full-page editor + four download formats (rich text RT-14).** Row menu "Open in editor" (pick the
 field) and "Open editor" on rich-text panels open `/write/<route>/<id>/<field>`: a document page with no sidebar,
 Save writes only that field. Export / row menu "Download document" / the panel's Download menu give Word, PDF,
@@ -217,7 +223,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 53 | **Replies in comments** — Facebook-style threads (one level; a reply to a reply joins the thread and starts with @their name), reply notifications to the thread, deleting a comment takes its replies, links in comments open in a new tab, notifications open at the comment | all | S | done (2026-10-14; not deployed) |
 | 54 | **API request logs** — every call to a project's API logged 7 days (endpoint, who, error, masked query, origin, client; never bodies/tokens/IPs); API → Logs, an endpoint's Logs tab, Overview chart, `get_api_logs` over MCP. Plan + log in `docs/api-builder` (AB-06, D13) | all | M | done (2026-10-14; not deployed) |
 | 55 | **CMS** — single types, slug fields, components, content blocks, drafts and publishing with its own Publish right, then typed website contents (CMS-06…). Plan + WOs + log in `docs/cms`. `scripts/migratePublishRight.js --apply` **ran on production 2026-10-15** (37 roles got Publish). `scripts/migrateSiteContents.js --apply` **ran on production 2026-10-16** after the deploy (10 websites: Contents typed + drafts on all; 66 typed records for Web Demo 58 and Demo Business Website 8; 4 sites that never opened the builder have no design to mark — guarded since) | all | L | CMS-02…07 + 03b done 2026-10-15 (deployed 2026-10-16); CMS-09 content API (status=draft, populate, publish webhooks, site refresh) and CMS-13 media details (alt/caption/focal, image fields with details; mint-sites uses them — redeploy it too) done 2026-10-16, not deployed; CMS-14 MCP content tools (drafts first; publish_entry with the key's publish scope, now settable on Connect AI) done 2026-10-16, not deployed; CMS-11 scheduling (publish at / take off at, a minute tick, Schedule on the record page, Coming up on All content; also fixed: Publish now writes History) done 2026-10-16, not deployed; left CMS-08 preview, 10, 12, 15 — ask the user |
-| 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00, RT-13 (Download DOCX) and RT-14 (full-page editor, Word/PDF/Markdown/text downloads) done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
+| 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00, RT-13 (Download DOCX), RT-14 (full-page editor, Word/PDF/Markdown/text downloads) and RT-15 (document editor, page sizes, tables) done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)
