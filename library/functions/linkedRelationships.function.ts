@@ -4,7 +4,7 @@ import LinkedChange from '../models/linked-change/model.js';
 import { LOCK_OPS, LockCondition, isRef, meets, lockedChanges, lockedMessage } from './fieldLocks.function.js';
 import { accessRule, isAccessRestricted } from './recordAccess.function.js';
 import { ownRecordsOf } from './projectIndexes.function.js';
-import { applyFormulasLinked, evaluate, formulasOf, parse, refsOf } from './formula.function.js';
+import { applyFormulasLinked, evaluateValue, formulasOf, linkedModelOf, parse, refsOf } from './formula.function.js';
 import { recalculateDependents } from './formulaDependents.function.js';
 import { permissionsOf, resolveOther, resources } from '../controllers/builder/viewDocument.controller.js';
 import recordHistory, { diffFields } from './recordHistory.function.js';
@@ -208,27 +208,64 @@ export const fieldsRead = (r: LinkedRule): string[] => {
 	const out = new Set<string>([r.target.via, ...(r.require || [])]);
 	(r.when || []).forEach(c => c?.field && out.add(c.field));
 	[...refsIn(r.when), ...refsIn(r.target.when)].forEach(f => out.add(f));
+	// `plan.price` read through the plan link: picking another plan re-runs it.
+	const add = (k: string) => (out.add(k), k.includes('.') && out.add(k.split('.')[0]));
 	for (const a of r.set || []) {
-		if (a.from) out.add(a.from);
+		if (a.from) add(a.from);
 		const f = stepField(a);
 		if (f) out.add(f);
-		if (a.formula)
-			try {
-				refsOf(parse(a.formula)).forEach(k => k.startsWith('this.') && out.add(k.slice(5)));
-			} catch {
-				/* checked at publish */
-			}
+		for (const k of thisRefs(a)) add(k);
 	}
 	return [...out];
 };
 
-const valueOf = (a: Assignment, source: any, target: any) => {
+/** This record's fields a rule's formula reads (`this.plan.price` → plan.price). */
+const thisRefs = (a: Assignment): string[] => {
+	if (!a.formula) return [];
+	try {
+		return [...refsOf(parse(a.formula))].filter(k => k.startsWith('this.')).map(k => k.slice(5));
+	} catch {
+		return []; // checked at publish
+	}
+};
+
+/**
+ * What a rule reads through this record's links — `plan.price` (Copy from
+ * Plan › Price) or `this.plan.price` in a formula — looked up once per link
+ * picked: `{ 'plan.price': 12 }`. A link not picked reads as empty.
+ */
+const throughLinks = async (rule: LinkedRule, values: any, Model: mongoose.Model<any>, cache: Map<string, any>): Promise<Record<string, any>> => {
+	const out: Record<string, any> = {};
+	const paths = new Set<string>();
+	for (const a of rule.set || []) {
+		if (a.from?.includes('.')) paths.add(a.from);
+		for (const k of thisRefs(a)) if (k.includes('.')) paths.add(k);
+	}
+	for (const path of paths) {
+		const [head, ...rest] = path.split('.');
+		const Linked = linkedModelOf(Model, head);
+		if (!Linked) continue;
+		out[path] = null;
+		const id = asStored(get(values, head));
+		if (!id || !mongoose.isValidObjectId(id)) continue;
+		const at = `${Linked.modelName}|${id}`;
+		if (!cache.has(at)) cache.set(at, await Linked.findById(id).lean());
+		out[path] = get(cache.get(at), rest.join('.')) ?? null;
+	}
+	return out;
+};
+
+/** What an assignment sets. `via`: values read through this record's links (throughLinks). */
+const valueOf = (a: Assignment, source: any, target: any, via: Record<string, any> = {}) => {
 	if (a.clear) return null;
-	if (a.from) return asStored(get(source, a.from));
+	if (a.from) return asStored(a.from in via ? via[a.from] : get(source, a.from));
 	if (a.formula) {
 		const tree = parse(a.formula);
 		const ctx = { this: source, target };
-		return tree.t === 'ref' ? asStored(get(ctx, tree.key)) : evaluate(tree, ctx);
+		const linked = Object.fromEntries(Object.entries(via).map(([k, v]) => [`this.${k}`, v]));
+		if (tree.t === 'ref') return asStored(tree.key in linked ? linked[tree.key] : get(ctx, tree.key));
+		// A date formula sets a date: target.expiresAt from add(latest(target.expiresAt, today()), this.plan.length, this.plan.unit).
+		return evaluateValue(tree, ctx, linked);
 	}
 	return a.value;
 };
@@ -298,9 +335,21 @@ type Run = {
 	batch?: boolean;
 	/** A public-API save: only rules with `fromApi` start, and they run as the system. */
 	api?: boolean;
+	/** Records read through this record's links (`plan.price`), by model and id — once per run. */
+	linkedCache: Map<string, any>;
 };
 
-const newRun = (req: any, extra: Partial<Run> = {}): Run => ({ req, seen: new Set(), journal: [], summary: [], history: [], changed: new Map(), depth: 0, ...extra });
+const newRun = (req: any, extra: Partial<Run> = {}): Run => ({
+	req,
+	seen: new Set(),
+	journal: [],
+	summary: [],
+	history: [],
+	changed: new Map(),
+	depth: 0,
+	linkedCache: new Map(),
+	...extra,
+});
 
 /** After a run went through: the records reading what it changed through a link (`invoice.due`) recalculated. */
 const recalculateChanged = async (run: Run) => {
@@ -566,9 +615,13 @@ export const prepareLinked = async ({
 
 		const now = holds(values, rule.when, rule.match);
 
-		// Fields the rule copies or asks for are required while it holds.
+		// Fields the rule copies or asks for are required while it holds — for one read through a link, the link.
+		const via = now && action !== 'delete' ? await throughLinks(rule, values, Model, run.linkedCache) : {};
 		if (now && action !== 'delete')
-			for (const f of neededBy(rule)) if (blank(get(values, f))) needed[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
+			for (const need of neededBy(rule)) {
+				const f = need in via ? need.split('.')[0] : need;
+				if (blank(get(values, f))) needed[f] = `${labelOf(source.settings, f)} is needed for “${name}”.`;
+			}
 
 		const targets = now ? idsOf(get(values, rule.target.via)) : [];
 		if (action !== 'delete') for (const c of mine) if (!targets.includes(String(c.target))) await takeBack(c);
@@ -598,7 +651,7 @@ export const prepareLinked = async ({
 							short = true;
 						}
 					} else {
-						const v = valueOf(a, values, targetBefore);
+						const v = valueOf(a, values, targetBefore, via);
 						step.asserted[a.field] = v;
 						if (!same(get(targetBefore, a.field), v)) step.sets[a.field] = v;
 					}

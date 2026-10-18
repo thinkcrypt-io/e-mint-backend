@@ -29,6 +29,7 @@ import {
 	COMPONENT_KINDS,
 	NESTING_KINDS,
 	formulaInfoOf,
+	FORMULA_KINDS,
 	numbersOfDef,
 	REFERENCE_KINDS,
 	defaultOf,
@@ -118,6 +119,8 @@ const subFieldBase = {
 	searchable: Joi.boolean(),
 	helper: Joi.string().allow('').max(200),
 	formula: Joi.string().allow('').max(500),
+	// A date formula's timing: worked out once (while empty), not on every save.
+	calc: Joi.string().valid('once', ''),
 	from: Joi.string().allow('').max(40),
 	component: Joi.string().allow('').max(81),
 	repeatable: Joi.boolean(),
@@ -162,7 +165,7 @@ export const readOnlyProblem = (fields: any[], keys: string[] = [], actions: str
 		const f = (fields || []).find((x: any) => x?.key === k);
 		if (!f) return `“${k}” isn’t a field of this model, so it can’t be read-only`;
 		const noDefault = f.default === undefined || f.default === null || f.default === '';
-		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula')
+		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula' && f.kind !== 'dateformula')
 			return `${f.label || f.key} is required and has no default, and the public API can’t write it — every create would fail. Give it a default, or let the API write it.`;
 	}
 	return null;
@@ -236,15 +239,17 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		if (['select', 'multiselect'].includes(f.kind) && !f.options?.length)
 			problems.push(`${name}: add at least one allowed value`);
 		if (!ENUM_KINDS.includes(f.kind) || !f.options?.length) delete f.options;
-		if (f.kind === 'formula') {
+		if (FORMULA_KINDS.includes(f.kind)) {
 			// Calculated, never typed: not required, not unique, no default.
 			delete f.required;
 			delete f.unique;
 			f.formula = tidyFormula(f.formula);
-			const checked = checkFormula(f.formula || '', formulaInfoOf(scope, scope === value.fields ? numbersOf : undefined), f.key);
+			const date = f.kind === 'dateformula';
+			const checked = checkFormula(f.formula || '', formulaInfoOf(scope, scope === value.fields ? numbersOf : undefined), f.key, date ? 'date' : 'number');
 			if (!f.formula) problems.push(`${name}: write its formula`);
 			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
 		} else delete f.formula;
+		if (f.kind !== 'dateformula' || f.calc !== 'once') delete f.calc;
 		if (f.kind === 'number' && f.options?.some((o: any) => !Number.isFinite(Number(o.value))))
 			problems.push(`${name}: the allowed values of a number must be numbers`);
 		// The default as the field stores it; one outside the allowed values would fail every create.
@@ -420,7 +425,7 @@ const keysOf = (d?: ModelDef | null) => [
 ];
 const fieldOf = (d: ModelDef | null | undefined, key: string) => d?.fields.find(f => f.key === key);
 const sig = (f: any) =>
-	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.fields, f.addLabel, f.from, f.component, f.repeatable, f.components] : null);
+	JSON.stringify(f ? [f.kind, f.label, f.required, f.unique, f.ref, f.options, f.min, f.max, f.helper, f.default, f.formula, f.calc, f.fields, f.addLabel, f.from, f.component, f.repeatable, f.components] : null);
 /** What decides a field's input and cell: its kind, and whether it's limited to a list. */
 const shapeOf = (f?: any) => (f ? `${f.kind}:${!!enumOf(f)}` : '');
 /** Settings keys the model decides outright — dropped from a copy when the model no longer sets them. */
@@ -1048,8 +1053,8 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 		const formulaSig = (d: ModelDef) =>
 			JSON.stringify(
 				d.fields
-					.filter(f => f.kind === 'formula' || SECTION_KINDS.includes(f.kind))
-					.map(f => [f.key, f.formula, (f.fields || []).filter(x => x.kind === 'formula').map(x => [x.key, x.formula])])
+					.filter(f => FORMULA_KINDS.includes(f.kind) || SECTION_KINDS.includes(f.kind))
+					.map(f => [f.key, f.kind, f.formula, f.calc, (f.fields || []).filter(x => x.kind === 'formula').map(x => [x.key, x.formula])])
 			);
 		if (formulaSig(before) !== formulaSig(after)) {
 			const formulas = formulasOf((await generated(req.app, after)).settingsObj);

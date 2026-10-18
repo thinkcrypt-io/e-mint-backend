@@ -417,7 +417,7 @@ export const upsertContents = async (records: any[], page?: any) => {
 	if (!kit) throw new Error('This project has no Contents model (web-contents) — it was renamed or deleted');
 	const kitPage = page ? await pushPage(page) : null;
 	const typed = isTyped(kit.def);
-	const allowed = new Set(kit.def.fields.filter((f: any) => f.kind !== 'formula').map((f: any) => f.key));
+	const allowed = new Set(kit.def.fields.filter((f: any) => f.kind !== 'formula' && f.kind !== 'dateformula').map((f: any) => f.key));
 	const out: any[] = [];
 	for (const r of records) {
 		const slug = String(r?.slug || '').trim();

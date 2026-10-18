@@ -29,7 +29,7 @@ const SKIP_RECORD_KEYS = new Set(['_id', '__v', 'createdAt', 'updatedAt', 'code'
 
 const fieldForPlan = (f: any) => {
 	const out: any = { key: f.key, label: f.label || f.key, kind: f.kind };
-	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'min', 'max', 'ref', 'addLabel', 'secret', 'component', 'repeatable', 'from', 'details'])
+	for (const k of ['required', 'unique', 'searchable', 'helper', 'formula', 'calc', 'min', 'max', 'ref', 'addLabel', 'secret', 'component', 'repeatable', 'from', 'details'])
 		if (f[k] !== undefined && f[k] !== null && f[k] !== false && f[k] !== '') out[k] = f[k];
 	if (f.default !== undefined && f.default !== null && f.default !== '') out.default = f.default;
 	if (Array.isArray(f.options) && f.options.length) out.options = f.options.map((o: any) => ({ value: o.value, label: o.label }));
@@ -67,7 +67,7 @@ const usedComponents = async (defs: any[]) => {
 const sampleRow = async (doc: any, def: any, displayOf: Map<string, string>) => {
 	const row: any = {};
 	for (const f of def.fields) {
-		if (SKIP_RECORD_KEYS.has(f.key) || f.kind === 'formula' || f.kind === 'password') continue;
+		if (SKIP_RECORD_KEYS.has(f.key) || f.kind === 'formula' || f.kind === 'dateformula' || f.kind === 'password') continue;
 		const v = doc[f.key];
 		if (v === undefined || v === null || v === '') continue;
 		if ((f.kind === 'reference' || f.kind === 'references') && f.ref) {

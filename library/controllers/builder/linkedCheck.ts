@@ -1,7 +1,7 @@
 import { PROTECTED_ROUTES } from './validate.js';
 import { resolveOther, resources } from './viewDocument.controller.js';
 import { LinkedRule, linkedRulesOf, targetRouteOf } from '../../functions/linkedRelationships.function.js';
-import { parse, refsOf } from '../../functions/formula.function.js';
+import { linkedModelOf, parse, refsOf } from '../../functions/formula.function.js';
 import { isRef } from '../../functions/fieldLocks.function.js';
 import { collectResourceRoutes } from '../../functions/routeRegistry.function.js';
 
@@ -16,8 +16,13 @@ import { collectResourceRoutes } from '../../functions/routeRegistry.function.js
 
 const SENSITIVE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|hash/i;
 
-const has = (settings: Record<string, any>, Model: any, key: string) =>
-	!!settings?.[key] || !!Model?.schema?.path(key) || !!Model?.schema?.path(key.split('.')[0]);
+const has = (settings: Record<string, any>, Model: any, key: string) => {
+	const [head, ...rest] = key.split('.');
+	// Through a link: `plan.price` — a field of the record the link picks.
+	const Linked = rest.length ? linkedModelOf(Model, head) : null;
+	if (Linked) return !!Linked.schema.path(rest.join('.'));
+	return !!settings?.[key] || !!Model?.schema?.path(key) || !!Model?.schema?.path(head);
+};
 
 export const checkLinkedRelationships = async (app: any, route: string, config: any): Promise<string[]> => {
 	const rules: LinkedRule[] = linkedRulesOf(config);
@@ -82,7 +87,7 @@ export const checkLinkedRelationships = async (app: any, route: string, config: 
 						const [side, ...rest] = ref.split('.');
 						const key = rest.join('.');
 						if (side === 'this' ? !has(source.settings, Model, key) : side === 'target' ? !has(target.settings, TModel, key) : true)
-							say(`the formula for '${f}' reads '${ref}' — use this.<field> or target.<field> with fields that exist.`);
+							say(`the formula for '${f}' reads '${ref}' — use this.<field>, this.<link>.<field> or target.<field> with fields that exist.`);
 					}
 				} catch (e: any) {
 					say(`the formula for '${f}' doesn't read right: ${e.message}`);

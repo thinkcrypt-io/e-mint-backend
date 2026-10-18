@@ -20,7 +20,7 @@ export const publicDefs = async () => {
 };
 export const SYSTEM_OUT = ['_id', 'code', 'createdAt', 'updatedAt'];
 
-export const fieldKeys = (def: any) => def.fields.filter((f: any) => f.kind !== 'formula').map((f: any) => f.key);
+export const fieldKeys = (def: any) => def.fields.filter((f: any) => f.kind !== 'formula' && f.kind !== 'dateformula').map((f: any) => f.key);
 export const outKeys = (def: any) => [...SYSTEM_OUT, ...def.fields.map((f: any) => f.key)];
 
 /**

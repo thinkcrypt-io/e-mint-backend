@@ -56,6 +56,9 @@ export const FIELD_KINDS = [
 	'number',
 	// A number calculated from the record's other number fields (`formula`) — never typed.
 	'formula',
+	// A date worked out by a formula (`formula`): addDays(start, 30) — never typed (docs/date-formulas).
+	// `calc: 'once'` works it out while it's empty, then keeps it.
+	'dateformula',
 	'boolean',
 	'date',
 	'select',
@@ -131,7 +134,11 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'section', 'sectionlist', 'password'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password'];
+/** Kinds worked out by a formula, never typed: a number and a date. */
+export const FORMULA_KINDS: FieldKind[] = ['formula', 'dateformula'];
+/** Kinds holding a date — what a date formula reads. */
+export const DATE_KINDS: FieldKind[] = ['date', 'dateformula'];
 /** Kinds whose key may say what they hold (password, pin, token): they're encrypted and hidden. */
 export const SECRET_KINDS: FieldKind[] = ['password'];
 /** A formula written out tidily, or as typed when it doesn't parse (the builder says why). */
@@ -145,17 +152,23 @@ export const tidyFormula = (src: any) => {
 };
 /**
  * What a formula may use among `fields` (formula.function.ts FieldInfo): the
- * number fields; a section list itself (count) and its rows' values
+ * number and date fields; a section list itself (count) and its rows' values
  * (`items.total`, for sum / avg); a section's values as `address.zip`.
  */
-export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: string) => { key: string; label: string }[] | undefined) =>
+export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: string) => LinkedValueInfo[] | undefined) =>
 	fields.flatMap(x => {
 		const numeric = (k: FieldKind) => k === 'number' || k === 'formula';
-		// A link: itself (not a number), and the linked record's numbers as `tax.amount`.
+		// A link: itself (not a number), and the linked record's numbers and dates as `tax.amount`, `member.expiresAt`.
 		if (x.kind === 'reference')
 			return [
 				{ key: x.key, label: x.label, numeric: false },
-				...(numbersOf?.(x.ref) || []).map(n => ({ key: `${x.key}.${n.key}`, label: `${x.label || humanize(x.key)} › ${n.label}`, numeric: true, linked: x.key })),
+				...(numbersOf?.(x.ref) || []).map(n => ({
+					key: `${x.key}.${n.key}`,
+					label: `${x.label || humanize(x.key)} › ${n.label}`,
+					numeric: !n.date && !n.text,
+					...(n.date && { date: true }),
+					linked: x.key,
+				})),
 			];
 		if (x.kind === 'sectionlist')
 			return [
@@ -164,7 +177,15 @@ export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: s
 			];
 		if (x.kind === 'section')
 			return (x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y.kind) }));
-		return [{ key: x.key, label: x.label, numeric: numeric(x.kind), ...(x.kind === 'formula' && { formula: x.formula }) }];
+		return [
+			{
+				key: x.key,
+				label: x.label,
+				numeric: numeric(x.kind),
+				...(DATE_KINDS.includes(x.kind) && { date: true }),
+				...(FORMULA_KINDS.includes(x.kind) && { formula: x.formula }),
+			},
+		];
 	});
 
 /** Kinds whose text length can be limited. */
@@ -262,6 +283,8 @@ export type ModelFieldDef = {
 	helper?: string;
 	/** A formula kind's calculation, e.g. `total - paid` (formula.function.ts). */
 	formula?: string;
+	/** A date formula's timing: every save (default), or `once` — worked out while it's empty, then kept. */
+	calc?: 'once';
 	/** A section's own fields (SUB_KINDS only). */
 	fields?: ModelFieldDef[];
 	/** A section list's add button, e.g. "Add item". */
@@ -521,6 +544,9 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			case 'formula':
 				// Calculated on save (formula.function.ts); never required or typed.
 				p = { type: Number, default: null };
+				break;
+			case 'dateformula':
+				p = { type: Date, default: null };
 				break;
 			case 'number':
 				p = { type: Number, set: blankToUndefined };
@@ -821,16 +847,27 @@ export const buildSchema = (input: ModelDef) => {
 
 /* ------------------------------------------ settings and config, generated */
 
-/** `numbers`: the target's number fields — what a formula may read through a link to it (`tax.amount`). */
-export type TargetInfo = { route: string; display: string; title?: string; built: boolean; numbers?: { key: string; label: string }[] };
+/**
+ * `numbers`: what a formula may read through a link to the target (`tax.amount`, `member.expiresAt`,
+ * `plan.unit`): its numbers, its dates (`date`) and its short texts and choices (`text` — to compare, or add()'s unit).
+ */
+export type TargetInfo = { route: string; display: string; title?: string; built: boolean; numbers?: LinkedValueInfo[] };
+export type LinkedValueInfo = { key: string; label: string; date?: boolean; text?: boolean };
 
-/** A model's top-level number fields (and formulas), for formulas reading them through a link. */
-export const numbersOfDef = (d: Pick<ModelDef, 'fields'>) =>
-	(d.fields || []).filter(f => f.kind === 'number' || f.kind === 'formula').map(f => ({ key: f.key, label: f.label || humanize(f.key) }));
+/** A model's top-level numbers, dates and short texts (and formulas), for formulas reading them through a link. */
+export const numbersOfDef = (d: Pick<ModelDef, 'fields'>): LinkedValueInfo[] =>
+	(d.fields || [])
+		.filter(f => f.kind === 'number' || f.kind === 'formula' || DATE_KINDS.includes(f.kind) || f.kind === 'text' || f.kind === 'select')
+		.map(f => ({
+			key: f.key,
+			label: f.label || humanize(f.key),
+			...(DATE_KINDS.includes(f.kind) && { date: true }),
+			...((f.kind === 'text' || f.kind === 'select') && { text: true }),
+		}));
 const numbersOfModel = (Model: mongoose.Model<any>) =>
 	Object.entries<any>(Model.schema.paths)
-		.filter(([k, p]) => p.instance === 'Number' && !k.includes('.') && !k.startsWith('_'))
-		.map(([k]) => ({ key: k, label: humanize(k) }));
+		.filter(([k, p]) => (p.instance === 'Number' || p.instance === 'Date') && !k.includes('.') && !k.startsWith('_'))
+		.map(([k, p]) => ({ key: k, label: humanize(k), ...(p.instance === 'Date' && { date: true }) }));
 
 /** The field that names a record of a built model when it's linked. */
 export const displayFieldOf = (def: ModelDef) => {
@@ -975,6 +1012,20 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				s.schema.tableType = 'number';
 				s.schema.viewType = 'number';
 				sortable(true);
+				break;
+			case 'dateformula':
+				// Read-only like a formula (schema.type 'formula', so nothing ever sets it), shown as a date.
+				Object.assign(s, { type: 'date', edit: false });
+				delete s.required;
+				delete s.schema.isRequired;
+				s.schema.type = 'formula';
+				s.schema.returns = 'date';
+				s.schema.formula = tidyFormula(f.formula);
+				if (f.calc === 'once') s.schema.calc = 'once';
+				s.schema.tableType = 'date';
+				s.schema.viewType = 'date';
+				sortable(true);
+				s.filter = { name: f.key, type: 'date', label: title, title: `Filter by ${title}` };
 				break;
 			case 'boolean':
 				s.type = 'boolean';

@@ -36,7 +36,17 @@ import mongoose from 'mongoose';
  *   yes, or not 0. A comparison is 1 when it holds and 0 when not;
  * - an empty or non-numeric field counts as 0; dividing by 0 leaves the
  *   result empty (null) rather than infinite;
- * - results are rounded to 10 decimals so 0.1 + 0.2 is 0.3.
+ * - results are rounded to 10 decimals so 0.1 + 0.2 is 0.3;
+ * - dates (docs/date-formulas): today(), addDays / addWeeks / addMonths /
+ *   addYears(date, n), add(date, n, unit) with the unit as text or a field
+ *   ("days", "months"…), latest / earliest(a, b, …) and daysBetween(a, b);
+ *   date fields compare with each other and with today(). Inside, a date is
+ *   its milliseconds, so if / comparisons work on dates as they do on
+ *   numbers; an empty date stays empty (null), never 1970. Months and years
+ *   are calendar ones in UTC — 31 January + 1 month is the end of February,
+ *   as MongoDB's $dateAdd has it. A Date formula field (`returns: 'date'`)
+ *   works out a date; a number formula can use dates only through
+ *   daysBetween() or in a comparison.
  *
  * Parsed once, a formula is evaluated in JS for one record (create, update)
  * or compiled to a MongoDB aggregation expression to recalculate many at once
@@ -70,8 +80,30 @@ export const FUNCTIONS = {
 	max: { min: 2, max: 20, hint: 'max(a, b, …) — the largest' },
 	if: { min: 3, max: 3, hint: 'if(condition, then, otherwise) — if(discountType = "percentage", subtotal * discount / 100, flatDiscount)' },
 	not: { min: 1, max: 1, hint: 'not(condition) — when the condition doesn’t hold' },
+	today: { min: 0, max: 0, hint: 'today() — now, when the record is saved' },
+	addDays: { min: 2, max: 2, hint: 'addDays(date, n) — n days later (earlier when n is below 0)' },
+	addWeeks: { min: 2, max: 2, hint: 'addWeeks(date, n) — n weeks later' },
+	addMonths: { min: 2, max: 2, hint: 'addMonths(date, n) — n months later; 31 Jan + 1 month is the end of February' },
+	addYears: { min: 2, max: 2, hint: 'addYears(date, n) — n years later' },
+	add: {
+		min: 3,
+		max: 3,
+		hint: 'add(date, n, unit) — the unit is "days", "weeks", "months" or "years", or a field holding one: add(startDate, plan.length, plan.unit)',
+	},
+	latest: { min: 1, max: 20, hint: 'latest(a, b, …) — the latest date (empty ones left out): latest(expiresAt, today())' },
+	earliest: { min: 1, max: 20, hint: 'earliest(a, b, …) — the earliest date (empty ones left out)' },
+	daysBetween: { min: 2, max: 2, hint: 'daysBetween(from, to) — whole days from one date to the other: daysBetween(today(), expiresAt)' },
 } as const;
 type FnName = keyof typeof FUNCTIONS;
+/** A function's own name, however it's typed: `adddays` → addDays. */
+const FN_NAMES: Record<string, FnName> = Object.fromEntries(Object.keys(FUNCTIONS).map(k => [k.toLowerCase(), k as FnName]));
+
+/** Functions that work out a date. */
+export const DATE_FUNCTIONS = new Set<string>(['today', 'addDays', 'addWeeks', 'addMonths', 'addYears', 'add', 'latest', 'earliest']);
+type Unit = 'day' | 'week' | 'month' | 'year';
+/** What add()'s unit may be, as typed or held by a field (any case, spaces at the ends trimmed). */
+export const DATE_UNITS: Record<string, Unit> = { day: 'day', days: 'day', week: 'week', weeks: 'week', month: 'month', months: 'month', year: 'year', years: 'year' };
+const DAY = 86_400_000;
 
 /** Comparisons and joining words for conditions — `status = "paid" and due > 0`. */
 export const CONDITIONS = {
@@ -205,7 +237,8 @@ const parseTokens = (tokens: Token[]): Node => {
 					if (close.k !== 'op' || close.v !== ')') throw new ParseError(`${name}() takes one field — ${hint}`, close.at);
 					return { t: 'agg', name: name as AggName, key: arg.v, at: arg.at };
 				}
-				if (!(name in FUNCTIONS)) throw new ParseError(`There's no function “${t.v}”`, t.at);
+				const fn = FN_NAMES[name];
+				if (!fn) throw new ParseError(`There's no function “${t.v}”`, t.at);
 				next();
 				const args: Node[] = [];
 				if (!(peek().k === 'op' && peek().v === ')')) {
@@ -216,12 +249,12 @@ const parseTokens = (tokens: Token[]): Node => {
 					}
 				}
 				expectOp(')', '“)” to close the function');
-				const spec = FUNCTIONS[name as FnName];
+				const spec = FUNCTIONS[fn];
 				if (args.length < spec.min || args.length > spec.max)
 					throw new ParseError(`${spec.hint}`, t.at);
-				if (name === 'round' && args[1] && (args[1].t !== 'num' || !Number.isInteger(args[1].v) || args[1].v < 0 || args[1].v > 20))
+				if (fn === 'round' && args[1] && (args[1].t !== 'num' || !Number.isInteger(args[1].v) || args[1].v < 0 || args[1].v > 20))
 					throw new ParseError('round’s digits must be a whole number from 0 to 20', t.at);
-				return { t: 'fn', name: name as FnName, args, at: t.at };
+				return { t: 'fn', name: fn, args, at: t.at };
 			}
 			return { t: 'ref', key: t.v, at: t.at };
 		}
@@ -364,7 +397,13 @@ export type FieldInfo = {
 	options?: { value: any; label?: any }[];
 	/** A yes / no field: compared with true / false. */
 	yesNo?: boolean;
+	/** A date: a date field, a Date formula, a linked record's date. */
+	date?: boolean;
 };
+
+/** Whether a formula works out a date, from its shape alone: a date function, or an if() with one as an answer. */
+export const isDateNode = (n: Node): boolean =>
+	n.t === 'fn' && (DATE_FUNCTIONS.has(n.name) || (n.name === 'if' && (isDateNode(n.args[1]) || isDateNode(n.args[2]))));
 
 export type Checked = {
 	ok: boolean;
@@ -380,7 +419,7 @@ export type Checked = {
  * parses, that every name is a field, that the field holds a number, and that
  * it doesn't depend on itself (directly, or through other formula fields).
  */
-export const checkFormula = (src: string, fields: FieldInfo[], self?: string): Checked => {
+export const checkFormula = (src: string, fields: FieldInfo[], self?: string, returns: 'number' | 'date' = 'number'): Checked => {
 	let tree: Node;
 	try {
 		tree = parse(src);
@@ -390,34 +429,92 @@ export const checkFormula = (src: string, fields: FieldInfo[], self?: string): C
 	const byKey = new Map(fields.map(f => [f.key, f]));
 	const errors: FormulaError[] = [];
 	const refs = [...refsOf(tree)];
-	// `ctx`: where the value is used — in a sum (a number), compared, or as a condition.
-	const walk = (n: Node, ctx: 'num' | 'cmp' | 'cond' = 'num') => {
+	const say = (message: string, at?: number) => errors.push({ message, at });
+	const atOf = (n: Node): number | undefined => ('at' in n ? n.at : undefined);
+
+	/** What a part works out: a date, a number, or something only to compare (text, a choice). */
+	const kindOf = (n: Node): 'date' | 'num' | 'other' => {
 		if (n.t === 'ref') {
 			const f = byKey.get(n.key);
-			if (n.key === self) errors.push({ message: `“${n.key}” is this field — a formula can't use itself`, at: n.at });
-			else if (!f) errors.push({ message: `There's no field “${n.key}”`, at: n.at });
-			else if (f.list) errors.push({ message: `“${n.key}” is a list — count(${n.key}) counts its rows`, at: n.at });
-			else if (f.inList)
-				errors.push({ message: `“${n.key}” is in every row of ${f.inList} — use sum(${n.key}) or avg(${n.key})`, at: n.at });
-			else if (!f.numeric && ctx === 'num')
-				errors.push({ message: `“${n.key}” isn't a number field — it can be compared: if(${n.key} = "…", …, …)`, at: n.at });
-		} else if (n.t === 'str') {
-			if (ctx !== 'cmp') errors.push({ message: `Text can only be compared — like status = "${n.v}"`, at: n.at });
-		} else if (n.t === 'cmp') (walk(n.a, 'cmp'), walk(n.b, 'cmp'));
-		else if (n.t === 'logic') (walk(n.a, 'cond'), walk(n.b, 'cond'));
-		else if (n.t === 'fn' && (n.name === 'if' || n.name === 'not')) n.args.forEach((a, i) => walk(a, i === 0 ? 'cond' : 'num'));
-		else if (n.t === 'agg') {
+			return f?.date ? 'date' : f && !f.numeric ? 'other' : 'num';
+		}
+		if (n.t === 'str' || n.t === 'bool') return 'other';
+		if (n.t === 'fn' && n.name === 'if') return kindOf(n.args[1]) === 'date' || kindOf(n.args[2]) === 'date' ? 'date' : 'num';
+		if (n.t === 'fn' && DATE_FUNCTIONS.has(n.name)) return 'date';
+		return 'num';
+	};
+	const wantDate = (n: Node) => say('A date is wanted here — a date field, today() or addDays(…)', atOf(n));
+	const UNIT_HINT = 'The unit is text — "days", "weeks", "months" or "years" — or a field holding one';
+
+	// `ctx`: what the part must be — a number, a date, compared, a condition, or add()'s unit.
+	type Ctx = 'num' | 'date' | 'cmp' | 'cond' | 'unit';
+	const walk = (n: Node, ctx: Ctx = 'num'): void => {
+		if (n.t === 'ref') {
+			const f = byKey.get(n.key);
+			if (n.key === self) say(`“${n.key}” is this field — a formula can't use itself`, n.at);
+			else if (!f) say(`There's no field “${n.key}”`, n.at);
+			else if (f.list) say(`“${n.key}” is a list — count(${n.key}) counts its rows`, n.at);
+			else if (f.inList) say(`“${n.key}” is in every row of ${f.inList} — use sum(${n.key}) or avg(${n.key})`, n.at);
+			else if (ctx === 'date' && !f.date) say(`“${n.key}” isn't a date`, n.at);
+			else if (ctx === 'num' && f.date) say(`“${n.key}” is a date — daysBetween(${n.key}, today()) gives a number of days`, n.at);
+			else if (ctx === 'num' && !f.numeric) say(`“${n.key}” isn't a number field — it can be compared: if(${n.key} = "…", …, …)`, n.at);
+			return;
+		}
+		if (n.t === 'str') {
+			if (ctx === 'unit') {
+				if (!DATE_UNITS[n.v.trim().toLowerCase()]) say(`“${n.v}” isn't a unit — "days", "weeks", "months" or "years"`, n.at);
+			} else if (ctx === 'date') wantDate(n);
+			else if (ctx !== 'cmp') say(`Text can only be compared — like status = "${n.v}"`, n.at);
+			return;
+		}
+		if (n.t === 'num' || n.t === 'bool') {
+			if (ctx === 'date') wantDate(n);
+			else if (ctx === 'unit') say(UNIT_HINT);
+			return;
+		}
+		if (n.t === 'cmp') return (walk(n.a, 'cmp'), walk(n.b, 'cmp'));
+		if (n.t === 'logic') return (walk(n.a, 'cond'), walk(n.b, 'cond'));
+		if (ctx === 'unit') return void say(UNIT_HINT, atOf(n));
+		if (n.t === 'agg') {
+			if (ctx === 'date') return void wantDate(n);
 			const f = byKey.get(n.key);
 			if (n.name === 'count') {
-				if (!f?.list) errors.push({ message: `count() takes a list — “${n.key}” isn't one`, at: n.at });
-			} else if (!f) errors.push({ message: `There's no field “${n.key}”`, at: n.at });
-			else if (!f.inList) errors.push({ message: `${n.name}() takes a value in a list's rows, like items.total — “${n.key}” isn't one`, at: n.at });
-			else if (!f.numeric) errors.push({ message: `“${n.key}” isn't a number field`, at: n.at });
-		} else if (n.t === 'neg') walk(n.a);
-		else if (n.t === 'bin') (walk(n.a), walk(n.b));
-		else if (n.t === 'fn') n.args.forEach(a => walk(a));
+				if (!f?.list) say(`count() takes a list — “${n.key}” isn't one`, n.at);
+			} else if (!f) say(`There's no field “${n.key}”`, n.at);
+			else if (!f.inList) say(`${n.name}() takes a value in a list's rows, like items.total — “${n.key}” isn't one`, n.at);
+			else if (!f.numeric) say(`“${n.key}” isn't a number field`, n.at);
+			return;
+		}
+		if (n.t === 'neg' || n.t === 'bin') {
+			if (ctx === 'date') return void say('Dates move with addDays(date, n), addMonths(date, n)… — not with + − × ÷');
+			return n.t === 'neg' ? walk(n.a) : (walk(n.a), walk(n.b));
+		}
+		// A function.
+		if (n.name === 'if') {
+			const answers = ctx === 'date' || ctx === 'num' ? ctx : kindOf(n) === 'date' ? 'date' : 'num';
+			walk(n.args[0], 'cond');
+			walk(n.args[1], answers);
+			walk(n.args[2], answers);
+			return;
+		}
+		if (n.name === 'not') return walk(n.args[0], 'cond');
+		const isDate = DATE_FUNCTIONS.has(n.name);
+		if (ctx === 'num' && isDate) return void say(`${n.name}() works out a date — a number is wanted here`, n.at);
+		if (ctx === 'date' && !isDate) return void say(`${n.name}() works out a number — a date is wanted here`, n.at);
+		const kinds: Ctx[] =
+			n.name === 'add'
+				? ['date', 'num', 'unit']
+				: n.name.startsWith('add')
+					? ['date', 'num']
+					: n.name === 'latest' || n.name === 'earliest' || n.name === 'daysBetween'
+						? n.args.map(() => 'date')
+						: n.args.map(() => 'num');
+		n.args.forEach((a, i) => walk(a, kinds[i] || 'num'));
 	};
-	walk(tree);
+	const result = kindOf(tree);
+	if (returns === 'number' && result === 'date') say('This works out a date — use a Date formula field, or daysBetween(…) for a number of days');
+	else if (returns === 'date' && result !== 'date') say('A date formula works out a date — like addDays(startDate, 30) or a date field');
+	else walk(tree, returns === 'date' ? 'date' : 'num');
 
 	// Through other formula fields back to this one.
 	if (self && !errors.length) {
@@ -536,8 +633,24 @@ const textOf = (v: any): string => {
 const numericLike = (x: any) =>
 	x === null || x === undefined || typeof x === 'number' || (typeof x === 'string' && (!x.trim() || Number.isFinite(Number(x))));
 
+/** A date as its milliseconds — a Date, or text that is an ISO date (as a form holds it) — or null. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}([T ][\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
+const timeOf = (v: any): number | null => {
+	if (v instanceof Date) return Number.isFinite(v.getTime()) ? v.getTime() : null;
+	if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+	if (typeof v === 'string' && ISO_DATE.test(v.trim())) {
+		const t = Date.parse(v.trim());
+		return Number.isFinite(t) ? t : null;
+	}
+	return null;
+};
+/** A date compares as its milliseconds — with today(), and with other dates. */
+const comparable = (v: any) => (v instanceof Date || (typeof v === 'string' && ISO_DATE.test(v.trim())) ? timeOf(v) : v);
+
 const compare = (op: CmpOp, a: any, b: any): number => {
 	const numeric = numericLike;
+	a = comparable(a);
+	b = comparable(b);
 	const [x, y]: [any, any] = numeric(a) && numeric(b) ? [numberOf(a), numberOf(b)] : [textOf(a), textOf(b)];
 	switch (op) {
 		case '=': return x === y ? 1 : 0; // prettier-ignore
@@ -550,6 +663,33 @@ const compare = (op: CmpOp, a: any, b: any): number => {
 };
 
 const holds = (n: Node, doc: any, linked?: Linked) => truthy(raw(n, doc, linked));
+
+/** A date part as its milliseconds; an empty date field is null (not 0, which would be 1970). */
+const dv = (n: Node, doc: any, linked?: Linked): number | null => {
+	if (n.t === 'ref') return timeOf(raw(n, doc, linked));
+	if (n.t === 'fn' && n.name === 'if') return dv(holds(n.args[0], doc, linked) ? n.args[1] : n.args[2], doc, linked);
+	return ev(n, doc, linked);
+};
+
+/** Calendar months later in UTC, the day kept or the month's last: 31 Jan + 1 → 28 / 29 Feb. */
+const addMonthsTo = (t: number, months: number) => {
+	const d = new Date(t);
+	const y = d.getUTCFullYear();
+	const m = d.getUTCMonth() + months;
+	const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+	return Date.UTC(y, m, Math.min(d.getUTCDate(), last), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
+};
+/** A date moved by n whole units (n's fraction dropped, as $dateAdd needs). */
+const moveDate = (t: number | null, n: number | null, unit: Unit | undefined): number | null => {
+	if (t === null || n === null || !unit) return null;
+	const k = Math.trunc(n);
+	if (unit === 'day') return t + k * DAY;
+	if (unit === 'week') return t + k * 7 * DAY;
+	return addMonthsTo(t, unit === 'month' ? k : k * 12);
+};
+const unitOf = (v: any): Unit | undefined => DATE_UNITS[String(v ?? '').trim().toLowerCase()];
+/** addDays → day, addMonths → month… */
+const FIXED_UNIT: Record<string, Unit> = { addDays: 'day', addWeeks: 'week', addMonths: 'month', addYears: 'year' };
 
 const ev = (n: Node, doc: any, linked?: Linked): number | null => {
 	switch (n.t) {
@@ -585,6 +725,18 @@ const ev = (n: Node, doc: any, linked?: Linked): number | null => {
 			// Only the part the condition picks is worked out.
 			if (n.name === 'if') return ev(holds(n.args[0], doc, linked) ? n.args[1] : n.args[2], doc, linked);
 			if (n.name === 'not') return holds(n.args[0], doc, linked) ? 0 : 1;
+			if (n.name === 'today') return Date.now();
+			if (n.name === 'add') return moveDate(dv(n.args[0], doc, linked), ev(n.args[1], doc, linked), unitOf(raw(n.args[2], doc, linked)));
+			if (FIXED_UNIT[n.name]) return moveDate(dv(n.args[0], doc, linked), ev(n.args[1], doc, linked), FIXED_UNIT[n.name]);
+			if (n.name === 'latest' || n.name === 'earliest') {
+				const ts = n.args.map(a => dv(a, doc, linked)).filter((x): x is number => x !== null);
+				return ts.length ? Math[n.name === 'latest' ? 'max' : 'min'](...ts) : null;
+			}
+			if (n.name === 'daysBetween') {
+				const a = dv(n.args[0], doc, linked);
+				const b = dv(n.args[1], doc, linked);
+				return a === null || b === null ? null : Math.trunc((b - a) / DAY);
+			}
 			const args = n.args.map(a => ev(a, doc, linked));
 			if (n.name === 'min' || n.name === 'max') {
 				const xs = args.filter((x): x is number => x !== null);
@@ -593,7 +745,7 @@ const ev = (n: Node, doc: any, linked?: Linked): number | null => {
 			const x = args[0];
 			if (x === null) return null;
 			if (n.name === 'round') return roundTo(x, (n.args[1] as any)?.v ?? 0);
-			return Math[n.name](x);
+			return Math[n.name as 'floor' | 'ceil' | 'abs'](x);
 		}
 		case 'agg': {
 			if (n.name === 'count') return rowCount(doc, n.key);
@@ -613,6 +765,16 @@ export const evaluate = (tree: Node, doc: any, linked?: Linked): number | null =
 	return v === null || !Number.isFinite(v) ? null : roundTo(v, 10);
 };
 
+/** A date formula's value: a Date, or null when it works out nothing (an empty date in it). */
+export const evaluateDate = (tree: Node, doc: any, linked?: Linked): Date | null => {
+	const v = dv(tree, doc, linked);
+	return v === null || !Number.isFinite(v) ? null : new Date(Math.round(v));
+};
+
+/** A number — or a Date, when the formula works out one (isDateNode): what a Linked Relationships rule sets. */
+export const evaluateValue = (tree: Node, doc: any, linked?: Linked): number | Date | null =>
+	isDateNode(tree) ? evaluateDate(tree, doc, linked) : evaluate(tree, doc, linked);
+
 /* ---------- MongoDB ---------- */
 
 /** `x` when it's a list, otherwise an empty one. */
@@ -622,6 +784,20 @@ const toDouble = (x: any) => ({ $convert: { input: x, to: 'double', onError: 0, 
 /** A value as stored, for comparing — raw() in JS. */
 const rawMongo = (n: Node, base: string): any =>
 	n.t === 'ref' ? `${base}${n.key}` : n.t === 'str' || n.t === 'bool' ? { $literal: n.v } : mongo(n, base);
+/** comparable() in JS: a stored date compares as its milliseconds. */
+const comparableMongo = (x: any) => ({ $cond: [{ $eq: [{ $type: x }, 'date'] }, { $toDouble: x }, x] });
+/** dv() in JS: a date part as milliseconds, an empty date field null. */
+const dateMongo = (n: Node, base: string): any => {
+	if (n.t === 'ref') return { $convert: { input: `${base}${n.key}`, to: 'double', onError: null, onNull: null } };
+	if (n.t === 'fn' && n.name === 'if') return { $cond: [truthyMongo(rawMongo(n.args[0], base)), dateMongo(n.args[1], base), dateMongo(n.args[2], base)] };
+	return mongo(n, base);
+};
+/** moveDate() in JS: days and weeks as milliseconds, months and years with $dateAdd (which keeps the month's last day). */
+const moveMongo = (date: any, n: any, unit: Unit) => {
+	const k = { $trunc: n };
+	if (unit === 'day' || unit === 'week') return { $add: [date, { $multiply: [k, unit === 'day' ? DAY : 7 * DAY] }] };
+	return { $toDouble: { $dateAdd: { startDate: { $toDate: date }, unit, amount: { $toLong: k } } } };
+};
 /** truthy() in JS: empty, no, 0, '' and an empty list don't hold. */
 const truthyMongo = (x: any) => ({ $not: [{ $in: [{ $ifNull: [x, null] }, [null, false, 0, '', []]] }] });
 /** textOf() in JS. */
@@ -630,7 +806,8 @@ const textMongo = (x: any) => ({ $toLower: { $trim: { input: { $convert: { input
 const isNumeric = (x: any) => ({
 	$cond: [
 		{ $eq: [{ $type: x }, 'string'] },
-		{ $or: [{ $eq: [{ $trim: { input: x } }, ''] }, { $ne: [{ $convert: { input: { $trim: { input: x } }, to: 'double', onError: null, onNull: null } }, null] }] },
+		// $toString: a literal number would otherwise be folded into $trim and refused (aggregate's optimizer).
+		{ $or: [{ $eq: [{ $trim: { input: { $toString: x } } }, ''] }, { $ne: [{ $convert: { input: { $trim: { input: { $toString: x } } }, to: 'double', onError: null, onNull: null } }, null] }] },
 		{ $in: [{ $type: x }, ['double', 'int', 'long', 'decimal', 'null', 'missing']] },
 	],
 });
@@ -646,8 +823,9 @@ const mongo = (n: Node, base = '$'): any => {
 		case 'bool':
 			return { $literal: n.v ? 1 : 0 };
 		case 'cmp': {
-			const a = rawMongo(n.a, base);
-			const b = rawMongo(n.b, base);
+			// A stored date compares as milliseconds (a literal stays one: the optimizer would fold it into $trim).
+			const a = n.a.t === 'ref' ? comparableMongo(rawMongo(n.a, base)) : rawMongo(n.a, base);
+			const b = n.b.t === 'ref' ? comparableMongo(rawMongo(n.b, base)) : rawMongo(n.b, base);
 			const op = CMP_MONGO[n.op];
 			return {
 				$cond: [{ $cond: [{ $and: [isNumeric(a), isNumeric(b)] }, { [op]: [toDouble(a), toDouble(b)] }, { [op]: [textMongo(a), textMongo(b)] }] }, 1, 0],
@@ -674,6 +852,23 @@ const mongo = (n: Node, base = '$'): any => {
 		case 'fn': {
 			if (n.name === 'if') return { $cond: [truthyMongo(rawMongo(n.args[0], base)), mongo(n.args[1], base), mongo(n.args[2], base)] };
 			if (n.name === 'not') return { $cond: [truthyMongo(rawMongo(n.args[0], base)), 0, 1] };
+			if (n.name === 'today') return { $toDouble: '$$NOW' };
+			if (FIXED_UNIT[n.name]) return moveMongo(dateMongo(n.args[0], base), mongo(n.args[1], base), FIXED_UNIT[n.name]);
+			if (n.name === 'add') {
+				const date = dateMongo(n.args[0], base);
+				const k = mongo(n.args[1], base);
+				const unit = textMongo(rawMongo(n.args[2], base));
+				const is = (u: Unit) => ({ $in: [unit, Object.keys(DATE_UNITS).filter(w => DATE_UNITS[w] === u)] });
+				return {
+					$switch: {
+						branches: (['day', 'week', 'month', 'year'] as Unit[]).map(u => ({ case: is(u), then: moveMongo(date, k, u) })),
+						default: null,
+					},
+				};
+			}
+			if (n.name === 'latest' || n.name === 'earliest') return { [n.name === 'latest' ? '$max' : '$min']: n.args.map(a => dateMongo(a, base)) };
+			if (n.name === 'daysBetween')
+				return { $trunc: { $divide: [{ $subtract: [dateMongo(n.args[1], base), dateMongo(n.args[0], base)] }, DAY] } };
 			const args = n.args.map(a => mongo(a, base));
 			if (n.name === 'min') return { $min: args };
 			if (n.name === 'max') return { $max: args };
@@ -692,6 +887,9 @@ const mongo = (n: Node, base = '$'): any => {
 /** The same calculation as an aggregation expression, for pipeline updates. */
 export const toMongo = (tree: Node, base = '$') => ({ $round: [mongo(tree, base), 10] });
 
+/** A date formula as an aggregation expression: a date, or null. */
+export const toMongoDate = (tree: Node, base = '$') => ({ $convert: { input: { $round: [dateMongo(tree, base), 0] }, to: 'date', onError: null, onNull: null } });
+
 /* ---------- a route's formula fields ---------- */
 
 /**
@@ -699,7 +897,16 @@ export const toMongo = (tree: Node, base = '$') => ({ $round: [mongo(tree, base)
  * field — or, with `sub`, the list whose rows each get `sub` calculated from
  * the row's own values.
  */
-export type Formula = { key: string; tree: Node; refs: string[]; sub?: string };
+export type Formula = {
+	key: string;
+	tree: Node;
+	refs: string[];
+	sub?: string;
+	/** A Date formula field (`schema.returns: 'date'`): stored as a date. */
+	date?: boolean;
+	/** Worked out only while it's empty (`schema.calc: 'once'`): when the record is added, then kept. */
+	once?: boolean;
+};
 
 const compiledCache = new WeakMap<object, Formula[]>();
 
@@ -776,7 +983,14 @@ export const formulasOf = (settings: Record<string, any> | undefined): Formula[]
 	const top = new Map<string, Formula>();
 	for (const [key, f] of Object.entries(settings)) {
 		const tree = f?.schema?.type === 'formula' ? parsed(f?.schema?.formula) : null;
-		if (tree) top.set(key, { key, tree, refs: [...refsOf(tree)] });
+		if (tree)
+			top.set(key, {
+				key,
+				tree,
+				refs: [...refsOf(tree)],
+				...(f?.schema?.returns === 'date' && { date: true }),
+				...(f?.schema?.calc === 'once' && { once: true }),
+			});
 
 		// A list's or a section's own formula fields.
 		const subs = subFieldsOf(f).filter((x: any) => x.type === 'formula');
@@ -846,7 +1060,9 @@ export const applyFormulas = (doc: any, formulas: Formula[] = [], linked?: Linke
 			if (Array.isArray(rows)) for (const row of rows) if (row && typeof row === 'object') setOn(row, f.sub, evaluate(f.tree, row));
 			continue;
 		}
-		setOn(doc, f.key, evaluate(f.tree, doc, linked));
+		// Once: kept as soon as it holds something.
+		if (f.once && !isEmpty(valueAt(doc, f.key))) continue;
+		setOn(doc, f.key, f.date ? evaluateDate(f.tree, doc, linked) : evaluate(f.tree, doc, linked));
 	}
 	return doc;
 };
@@ -945,6 +1161,10 @@ export const recalculateFormulas = async (model: mongoose.Model<any>, filter: an
 	return changed;
 };
 
+const isEmpty = (v: any) => v === null || v === undefined || v === '';
+/** A once formula keeps what it holds: only an empty one is worked out. */
+const once = (f: Formula, expr: any) => (f.once ? { $ifNull: [`$${f.key}`, expr] } : expr);
+
 /** Pipeline stages that recalculate the formula fields of every matched record, in order. */
 export const formulaPipeline = (formulas: Formula[] = []) =>
 	formulas.map(f =>
@@ -966,7 +1186,7 @@ export const formulaPipeline = (formulas: Formula[] = []) =>
 						},
 					},
 			  }
-			: { $set: { [f.key]: toMongo(f.tree) } }
+			: { $set: { [f.key]: once(f, f.date ? toMongoDate(f.tree) : toMongo(f.tree)) } }
 	);
 
 /** Removes formula fields from an incoming body: they're calculated, never sent. A list's rows are kept — only their formula values are recalculated. */

@@ -56,6 +56,8 @@ export const KIND_GUIDE: Record<string, string> = {
 	references: 'links to SEVERAL records of another model',
 	formula:
 		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee; a number of a linked record is read through the link, tax.amount (tax a reference); a field can be used more than once; conditions: if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes — e.g. subtotal - if(discountType = "percentage", subtotal * discount / 100, flatDiscount), where discountType is a choice field',
+	dateformula:
+		'a date CALCULATED by a formula (set `formula`): addDays(date, n), addWeeks, addMonths, addYears, add(date, n, unit) where unit is "days"/"weeks"/"months"/"years" or a field holding it, today(), latest(a, b) / earliest(a, b), if(condition, dateA, dateB); reads date and number fields, and a linked record’s through the link (plan.length, member.expiresAt) — e.g. dueDate = addDays(invoiceDate, 30), expiresAt = addMonths(joinedAt, plan.months). `calc: "once"` works it out when the record is added and keeps it (for formulas with today() or a linked record’s date — a renewal’s new expiry = add(latest(member.expiresAt, today()), plan.length, plan.unit))',
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
 	password:
 		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
@@ -94,8 +96,9 @@ export const fieldProps = {
 	formula: {
 		type: 'string',
 		description:
-			'For kind "formula" only: the calculation using other number/formula field keys, numbers, + - * / %, brackets and round(x, digits), floor, ceil, abs, min, max, and if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes. E.g. "total - paid", "round(price * qty, 2)" or "subtotal - if(discountType = \"percentage\", subtotal * discount / 100, flatDiscount)".',
+			'For kind "formula": the calculation using other number/formula field keys, numbers, + - * / %, brackets and round(x, digits), floor, ceil, abs, min, max, and if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes; daysBetween(a, b) gives whole days between two dates. E.g. "total - paid", "round(price * qty, 2)" or "subtotal - if(discountType = \"percentage\", subtotal * discount / 100, flatDiscount)". For kind "dateformula": a date — addDays(invoiceDate, 30), add(latest(member.expiresAt, today()), plan.length, plan.unit).',
 	},
+	calc: { type: 'string', enum: ['once'], description: 'For kind "dateformula": "once" works it out when the record is added and keeps it; left out, it is worked out on every save' },
 	ref: { type: 'string', description: `For reference/references: a model name from the list given, or "${SELF}" for this model` },
 	min: { type: 'number', description: 'Number: minimum. Text: minimum length.' },
 	max: { type: 'number', description: 'Number: maximum. Text: maximum length.' },
@@ -278,7 +281,8 @@ export const normalize = (input: any, targets: Set<string>) => {
 			if (typeof f?.[p] === 'boolean') out[p] = f[p];
 		for (const p of ['min', 'max']) if (typeof f?.[p] === 'number') out[p] = f[p];
 		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
-		if (kind === 'formula') out.formula = String(f?.formula || '').slice(0, 500);
+		if (kind === 'formula' || kind === 'dateformula') out.formula = String(f?.formula || '').slice(0, 500);
+		if (kind === 'dateformula' && f?.calc === 'once') out.calc = 'once';
 		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
 		if (kind === 'blocks') out.components = (Array.isArray(f?.components) ? f.components : []).map((c: any) => String(c).toLowerCase().slice(0, 81)).slice(0, 50);
 		if (kind === 'component') {

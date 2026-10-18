@@ -103,7 +103,7 @@ export const pickFields = async (def: any, input: any, omit: string[] = [], refC
 	for (const [key, value] of Object.entries<any>(input && typeof input === 'object' ? input : {})) {
 		const f = byKey.get(key);
 		if (omit.includes(key)) continue;
-		if (!f || f.kind === 'formula' || NOT_WRITABLE.has(key)) {
+		if (!f || f.kind === 'formula' || f.kind === 'dateformula' || NOT_WRITABLE.has(key)) {
 			if (key !== 'privacy' || !def.access?.enabled) {
 				skipped.push(key);
 				continue;
@@ -565,7 +565,7 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	if (!records?.length) return refuse('Send the records as a list of objects (field key → value).');
 	if (records.length > MAX_WRITE) return refuse(`Up to ${MAX_WRITE} records per call — send the rest in another call.`);
 	const matchOn = args?.matchOn ? String(args.matchOn) : '';
-	if (matchOn && !def.fields.some((f: any) => f.key === matchOn && !['formula', 'section', 'sectionlist', 'references', 'images', 'files'].includes(f.kind)))
+	if (matchOn && !def.fields.some((f: any) => f.key === matchOn && !['formula', 'dateformula', 'section', 'sectionlist', 'references', 'images', 'files'].includes(f.kind)))
 		return refuse(`matchOn must be one of /${route}'s own single-value fields (${def.fields.map((f: any) => f.key).join(', ')}).`);
 
 	const formulas = await formulasFor(req, def);

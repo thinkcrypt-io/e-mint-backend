@@ -237,6 +237,8 @@ export const lockedKeys = (model: mongoose.Model<any> | undefined, codeSettings:
 export const keptKeys = lockedKeys;
 
 const isFormula = (f: any) => f?.schema?.type === 'formula';
+/** A Date formula (docs/date-formulas): a formula that works out a date. */
+const isDateFormula = (f: any) => isFormula(f) && f.schema?.returns === 'date';
 
 /** A formula written out tidily (`total-paid` → `total - paid`) — as typed when it doesn't parse, so checkSettings can say why. */
 const tidy = (src: any) => {
@@ -249,8 +251,9 @@ const tidy = (src: any) => {
 };
 
 /**
- * A formula field is calculated, never typed: stored as a number, not
- * editable, not required, and drawn as a number in tables and views.
+ * A formula field is calculated, never typed: stored as a number (a Date
+ * formula as a date), not editable, not required, and drawn as one in tables
+ * and views.
  */
 export const withFormulaFields = (data: any) => {
 	if (!Array.isArray(data?.fields) || !data.fields.some(isFormula)) return data;
@@ -260,15 +263,15 @@ export const withFormulaFields = (data: any) => {
 			isFormula(f)
 				? {
 						...f,
-						type: 'number',
+						type: isDateFormula(f) ? 'date' : 'number',
 						edit: false,
 						required: false,
 						schema: {
 							...f.schema,
 							formula: tidy(f.schema.formula),
 							isRequired: false,
-							tableType: 'number',
-							viewType: 'number',
+							tableType: isDateFormula(f) ? 'date' : 'number',
+							viewType: isDateFormula(f) ? 'date' : 'number',
 						},
 				  }
 				: f
@@ -283,15 +286,22 @@ export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): Fi
 		const inside = sectionFieldInfo(f.key, f);
 		if (inside.some(x => x.list)) return inside;
 		const path: any = model?.schema?.path(f.key);
-		const numeric = isFormula(f) || f.type === 'number' || path?.instance === 'Number';
-		// A link: the linked record's numbers, read as `tax.amount` when the formula is calculated.
+		const date = isDateFormula(f) || f.type === 'date' || path?.instance === 'Date';
+		const numeric = !date && (isFormula(f) || f.type === 'number' || path?.instance === 'Number');
+		// A link: the linked record's numbers and dates, read as `tax.amount` when the formula is calculated.
 		const Linked = linkedModelOf(model, f.key);
 		const linked: FieldInfo[] = Linked
 			? Object.entries<any>(Linked.schema.paths)
-					.filter(([k, p]) => p.instance === 'Number' && !k.includes('.') && !k.startsWith('_'))
-					.map(([k]) => ({ key: `${f.key}.${k}`, label: `${f.title || f.key} › ${k}`, numeric: true, linked: f.key }))
+					.filter(([k, p]) => (p.instance === 'Number' || p.instance === 'Date') && !k.includes('.') && !k.startsWith('_'))
+					.map(([k, p]) => ({
+						key: `${f.key}.${k}`,
+						label: `${f.title || f.key} › ${k}`,
+						numeric: p.instance === 'Number',
+						...(p.instance === 'Date' && { date: true }),
+						linked: f.key,
+					}))
 			: [];
-		return [{ key: f.key, label: f.title, numeric, ...(isFormula(f) && { formula: f.schema?.formula }) }, ...inside, ...linked];
+		return [{ key: f.key, label: f.title, numeric, ...(date && { date: true }), ...(isFormula(f) && { formula: f.schema?.formula }) }, ...inside, ...linked];
 	});
 
 /** A settings draft with its system fields exactly as generated — changed ones restored, missing ones added back. */
@@ -372,10 +382,11 @@ export const checkSettings = ({
 
 		if (isFormula(field)) {
 			const path: any = model?.schema?.path(key);
-			if (path && path.instance !== 'Number')
-				problems.push(`'${key}' can't be a formula: the model stores it as ${String(path.instance).toLowerCase()}, not a number.`);
+			const date = isDateFormula(field);
+			if (path && path.instance !== (date ? 'Date' : 'Number'))
+				problems.push(`'${key}' can't be a ${date ? 'date ' : ''}formula: the model stores it as ${String(path.instance).toLowerCase()}, not a ${date ? 'date' : 'number'}.`);
 			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be a formula.`);
-			const checked = checkFormula(field.schema?.formula || '', formulaFieldInfo(data.fields, model), key);
+			const checked = checkFormula(field.schema?.formula || '', formulaFieldInfo(data.fields, model), key, date ? 'date' : 'number');
 			if (!checked.ok) problems.push(`'${key}' formula: ${checked.errors.map(e => e.message).join('; ')}`);
 		}
 

@@ -36,6 +36,8 @@ const fieldSchema = new Schema<any>(
 		helper: { type: String, trim: true },
 		/** For the formula kind: the calculation, e.g. `total - paid`. */
 		formula: { type: String, trim: true },
+		/** For the dateformula kind: 'once' — worked out while empty, then kept (docs/date-formulas). */
+		calc: { type: String, enum: ['once'] },
 		/** For section kinds: the section's own fields, shaped like these (no links or nested sections). */
 		fields: { type: [Schema.Types.Mixed], default: undefined },
 		/** For a section list: its add button's text. */

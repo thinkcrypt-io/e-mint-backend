@@ -71,7 +71,7 @@ const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELD_RX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /** Fields an action may never write: system ones and calculated ones. */
 const SYSTEM_FIELDS = new Set(['_id', 'id', 'createdAt', 'updatedAt', 'code', 'addedBy', 'access', 'privacy', 'organization', 'project', '_model', '__v']);
-const UNWRITABLE_KINDS = new Set(['formula', 'section', 'sectionlist', 'component', 'blocks', 'password']);
+const UNWRITABLE_KINDS = new Set(['formula', 'dateformula', 'section', 'sectionlist', 'component', 'blocks', 'password']);
 
 const actionLabel: Record<string, string> = {
 	notify: 'Notify people',

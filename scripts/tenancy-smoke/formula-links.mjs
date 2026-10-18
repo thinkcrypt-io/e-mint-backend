@@ -15,7 +15,7 @@ ok('a Tax model', r.status === 201, `${r.status} ${JSON.stringify(r.body?.proble
 
 r = await call('GET', P('/builder/models/options'), null, s.pat);
 const target = (r.body?.targets || []).find(x => x.name === tax?.name);
-ok('link targets list its number fields', target?.numbers?.some(n => n.key === 'amount') && !target.numbers.some(n => n.key === 'name'), JSON.stringify(target?.numbers));
+ok('link targets list its number fields (a text one only marked as text)', target?.numbers?.some(n => n.key === 'amount' && !n.text) && target.numbers.every(n => n.key !== 'name' || n.text), JSON.stringify(target?.numbers));
 
 const invoiceFields = formula => [
 	{ key: 'price', label: 'Price', kind: 'number' },

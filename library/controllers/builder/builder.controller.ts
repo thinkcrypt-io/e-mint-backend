@@ -289,7 +289,7 @@ export const discardBuilderDraft = async (req: any, res: Response): Promise<Resp
 const formulaSignature = (data: any) =>
 	JSON.stringify(
 		(data?.fields || []).flatMap((f: any) => [
-			...(f?.schema?.type === 'formula' ? [[f.key, f.schema.formula]] : []),
+			...(f?.schema?.type === 'formula' ? [[f.key, f.schema.formula, f.schema.returns, f.schema.calc]] : []),
 			...subFieldsOf(f)
 				.filter((x: any) => x.type === 'formula')
 				.map((x: any) => [`${f.key}.${x.name}`, x.formula]),

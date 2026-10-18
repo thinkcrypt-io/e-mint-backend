@@ -53,7 +53,7 @@ export const generateSampleData = async (req: any, idOrKey: string, input: { mod
 		return s?.displayField || (s?.fields || []).find((f: any) => ['text', 'textarea', 'email'].includes(f.kind))?.key || 'name';
 	};
 	const o = doc.draft?.overview || {};
-	const fields: any[] = (step.fields || []).filter((f: any) => !['formula', 'image', 'images', 'file', 'files', 'video', 'password'].includes(f.kind));
+	const fields: any[] = (step.fields || []).filter((f: any) => !['formula', 'dateformula', 'image', 'images', 'file', 'files', 'video', 'password'].includes(f.kind));
 	const prompt = [
 		`Write ${count} realistic example records for the model “${stepIdentity(step).title}” (${stepIdentity(step).name}) of a project template.`,
 		`The template: ${o.name}${o.summary ? ` — ${o.summary}` : ''}${o.audience ? ` For: ${o.audience}` : ''}`,

@@ -154,7 +154,7 @@ const checkSampleData = (
 				const v = r?.[f.key];
 				const label = f.label || f.key;
 				if (v === undefined || v === null || v === '') {
-					if (f.required && f.default === undefined && !['formula', 'boolean'].includes(f.kind)) issues.push(`${at} has no ${label}, which is required`);
+					if (f.required && f.default === undefined && !['formula', 'dateformula', 'boolean'].includes(f.kind)) issues.push(`${at} has no ${label}, which is required`);
 					continue;
 				}
 				if (isAnswer(v)) continue;
