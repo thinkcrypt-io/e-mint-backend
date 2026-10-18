@@ -24,6 +24,7 @@ Decisions not agreed yet (README status line).
 | RT-13 | **Download DOCX** (the user's request, 2026-10-18): a rich-text field as a Word file — row menu item `download-docx` with a field picker (rich-text fields only), a Download DOCX button on each rich-text panel of a record page, `POST /<route>/export/docx`, MCP `update_page` rowMenu | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
 | RT-14 | **Full-page editor + four download formats** (the user's request, 2026-10-18): row menu item `open-editor` (pick the field) and "Open editor" on rich-text panels open `/write/<route>/<id>/<field>` — a document page with no sidebar; Save writes that field only; Export and every download give Word, PDF, Markdown or text (`POST /<route>/export/richtext {format}`) | backend + mint-tenant + admin | M | done 2026-10-18 (not deployed) |
 | RT-15 | **Document editor + tables** (the user's request, 2026-10-18): the full-page editor as a document — full-width toolbar under the header, white paper with black words on a grey desk in light and dark mode, page size Infinite (default) / A4 / Letter / Legal / A5 with real page breaks, right-click menu and a bar over selected words (marks, case, text style, alignment, lists, link, image, table rows/columns), tables (Quill 2's table module) kept by the sanitizer and shown on sites, record pages and in Word/PDF/Markdown/text; Word and PDF follow the page size | backend + mint-tenant + admin + mint-sites | M | done 2026-10-18 (not deployed) |
+| RT-16 | **Print + Show more** (the user's request, 2026-10-18): Print on the full-page editor (button and ⌘P / Ctrl+P) prints just the words on the chosen paper; a long rich-text field on a record page shows about 20 lines, fading out, with Show more / Show less | mint-tenant + admin | S | done 2026-10-18 (not deployed) |
 
 Order: **00** (ships this week, stops the worst breakage) → 02 → 03 → 04 (the data is safe and consistent) → 05 →
 06 → 07 (the editor) → 08 → 09 → 10 (every frontend) → 11 → 12. 02–04 help even before the new editor: every site
@@ -252,6 +253,18 @@ cleaner HTML from records saved after part A, but nothing cleans for them until 
 - Paper for files: `pageSize` (a4 | letter | legal | a5) on `POST /export/richtext` and `/export/docx` sets the Word
   and PDF page (A4 otherwise); the editor's Export sends its page size (Infinite → A4).
 - Smoke: `docx.mjs` 45 checks (+ tables in Markdown/text/Word, Letter and A4 Word pages, an A5 PDF).
+
+## RT-16 — Print, and Show more on record pages (S) — done 2026-10-18
+- Print (mint-tenant + admin `utils/printRichText.ts`): the editor's current words (saved or not), cleaned by
+  `sanitizeRichText`, written into an off-screen frame (full size: some browsers print a zero-size or hidden
+  frame blank) with its own print styles — `@page` size from the editor's page size (A4 / letter / legal / A5,
+  1 in margins, A5 0.67 in; Infinite → the printer's own paper, 0.75 in), the paper's ink and table rules, rows and
+  images kept whole. The frame's title ("<record> · <field>") names the file for "Save as PDF"; it goes on
+  `afterprint` or after a minute. `RichTextEditorPage`: Print button between Export and Save (icon only on a phone),
+  and ⌘P / Ctrl+P prints this instead of the whole panel once the record is open.
+- Show more (`RichTextValue.tsx`): folded at 32 em (20 lines of 1.6) with a mask fade when the text is over
+  ~23 lines — measured with a ResizeObserver and again as images load; Show more / Show less (`aria-expanded`);
+  folding back scrolls the field into view.
 
 ## RT-12 — Docs and website (S)
 - mint-docs guide "Rich text" (writing, images, links, what shows on the site); anchors linked from the editor.

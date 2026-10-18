@@ -142,3 +142,16 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   - mint-sites `?view=richtext`: the table with its right-aligned column.
   - `tsc` clean in backend, mint-tenant, admin and mint-sites.
 
+## 2026-10-18 — RT-16 Print, and Show more on record pages
+- The user: "can we also add a print option on editor page. also on record page where the editor data is shown,
+  can we show like maybe 20 lines then a show more button, which expands into full."
+- Files: mint-tenant + admin `utils/printRichText.ts` (new), `utils/RichTextEditorPage.tsx` (Print button, ⌘P),
+  `components/view/utils/render-view-item/RichTextValue.tsx` (fold + Show more / Show less).
+- Verified in mint-tenant against the private backend (:5071):
+  - Record page: the 25-block post folds at 486 px (20 lines) with the fade; Show more opens all 1,420 px, Show
+    less folds it again; the one-line Excerpt has no button.
+  - Editor: Print and ⌘P both build the frame (print caught in the page): `@page { size: A4; margin: 1in }` from
+    the A4 choice, title "Hello world · Body", all 25 blocks, the centred line kept, the frame removed after
+    printing; ⌘P's default prevented. The same HTML with a table, printed by headless Chrome: a clean A4 page.
+  - 375 px: Export, Print (icon) and Save fit the header.
+  - `tsc` clean in mint-tenant and admin.
