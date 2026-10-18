@@ -80,7 +80,7 @@ router.get(
 		const counts = await Promise.all(
 			docs.map(p => runInScope({ organization: req.organization._id, project: p._id }, () => ModelDefinition.countDocuments({})))
 		);
-		return { doc: docs.map((p, i) => ({ ...publicProject(p), models: counts[i] })) };
+		return { doc: docs.map((p, i) => ({ ...publicProject(p), logo: p.business?.logo || '', models: counts[i] })) };
 	})
 );
 
