@@ -360,7 +360,7 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 			const other: any = await ModelDefinition.findOne({ 'signIn.enabled': true, active: { $ne: false }, name: { $ne: selfName } }, { title: 1, name: 1 }).lean();
 			if (other)
 				problems.push(
-					`${other.title || other.name} is already the sign-in model — a project has one. Switch it off there first, or tell kinds of people apart with a Role field on ${other.title || other.name}`
+					`${other.title || other.name} is already the sign-in model — a project has one. Switch it off there first, or tell kinds of people apart with a Customer role field on ${other.title || other.name}`
 				);
 		}
 	}

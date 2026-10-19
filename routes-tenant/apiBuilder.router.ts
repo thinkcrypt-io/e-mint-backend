@@ -65,7 +65,7 @@ const view = (e: any) => ({
 	path: e.path,
 	standard: !!e.standard,
 	enabled: e.enabled !== false,
-	access: { who: e.access?.who || 'anyone', when: e.access?.when || [], match: e.access?.match || 'all', roles: e.access?.roles || [] },
+	access: { who: e.access?.who || 'anyone', when: e.access?.when || [], match: e.access?.match || 'all', customerRoles: e.access?.customerRoles || [] },
 	fields: { out: e.fields?.out ?? null, write: e.fields?.write ?? null, readOnly: e.fields?.readOnly || [] },
 	list: {
 		filters: e.list?.filters || [],

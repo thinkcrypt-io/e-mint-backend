@@ -339,17 +339,17 @@ const checkConds = (def: any, conds: any, who: string, on: string): Cond[] => {
 	});
 };
 
-/** "Only these roles" (W-26): values of the sign-in model's Role field. */
+/** "Only these customer roles" (W-26): values of the sign-in model's Customer role field (not the team's roles). */
 const checkRoles = async (raw: any): Promise<string[]> => {
 	if (raw === undefined || raw === null) return [];
-	if (!Array.isArray(raw) || raw.length > 50) throw bad('access.roles', 'Pick roles from the list');
+	if (!Array.isArray(raw) || raw.length > 50) throw bad('access.customerRoles', 'Pick customer roles from the list');
 	const list = [...new Set(raw.map((r: any) => String(r)))];
 	if (!list.length) return [];
 	const scope: any = currentScope();
 	const info = scope?.project ? await signInRoles({ organization: scope.organization, _id: scope.project }) : null;
-	if (!info) throw bad('access.roles', 'Roles come from your sign-in model’s Role field — map one in Widgets → Login & account first');
+	if (!info) throw bad('access.customerRoles', 'Customer roles come from your sign-in model’s Customer role field — choose one in Widgets → Login & account first');
 	const unknown = list.find(r => !info.roles.some((x: any) => x.value === r));
-	if (unknown) throw bad('access.roles', `“${unknown}” isn’t one of ${info.fieldLabel}’s options`);
+	if (unknown) throw bad('access.customerRoles', `“${unknown}” isn’t one of the ${info.fieldLabel} field’s options`);
 	return list;
 };
 
@@ -379,7 +379,7 @@ export const checkEndpoint = async (input: any, current?: any) => {
 	const who = String(input.access?.who ?? current?.access?.who ?? 'anyone');
 	if (!(ENDPOINT_WHO as readonly string[]).includes(who)) throw bad('access.who', 'Pick who can call it');
 	const when = checkConds(def, input.access?.when ?? current?.access?.when, who, 'access.when');
-	const roles = who === 'customer' ? await checkRoles(input.access?.roles ?? current?.access?.roles) : [];
+	const customerRoles = who === 'customer' ? await checkRoles(input.access?.customerRoles ?? current?.access?.customerRoles) : [];
 	const all = def.fields.map((f: any) => f.key);
 	const writable = fieldKeys(def);
 	const fields = {
@@ -413,7 +413,7 @@ export const checkEndpoint = async (input: any, current?: any) => {
 			path,
 			standard: !!current?.standard,
 			enabled: input.enabled ?? current?.enabled ?? true,
-			access: { who, when, match: (input.access?.match ?? current?.access?.match) === 'any' ? 'any' : 'all', roles },
+			access: { who, when, match: (input.access?.match ?? current?.access?.match) === 'any' ? 'any' : 'all', customerRoles },
 			fields,
 			list,
 			populate,

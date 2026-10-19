@@ -397,13 +397,13 @@ Newest last. One entry per work order: what, files, how verified.
   field named like role), `signInRoles`, `customerRole` (only with
   `recordMade` or a model-held account), `signInLocked`;
   `linkCustomerRecord` / `registerInModel` set `ProjectCustomer.recordMade`.
-  `apiEndpoint.model.ts` `access.roles`; `apiEndpoints.function.ts`
+  `apiEndpoint.model.ts` `access.customerRoles`; `apiEndpoints.function.ts`
   `checkRoles`, `customer.role` ref, empty refs match nothing.
   `public.router.ts`: `customerOf` adds the role, `roleAdmits` (403
-  `role_required`, populate too), `bodyOf` drops the locked role,
-  `answerCustomer` puts `role` on `/auth/*`, `GET /` lists roles.
-  `apiBuilder.router.ts` sends `signIn` and `access.roles`. `mint.ts` docs
-  `.user.role`.
+  `customer_role_required`, populate too), `bodyOf` drops the locked role,
+  `answerCustomer` puts `customerRole` on `/auth/*`, `GET /` lists roles.
+  `apiBuilder.router.ts` sends `signIn` and `access.customerRoles`. `mint.ts` docs
+  `.user.customerRole`.
 - **Panels:** Customers step maps Role (both panels; plain kind words);
   model Sign-in panel says a project has one; mint-tenant endpoint page
   "Which roles" (`RolesPicker`), RuleEditor "their role", `SignInRoles` type.
@@ -411,10 +411,16 @@ Newest last. One entry per work order: what, files, how verified.
   refused; role guessed; wrong kind and required-without-default refused;
   roles before a Role is mapped refused; default role on sign-up, a sent role
   ignored; self-promotion through the public API dropped; 401 / 403
-  role_required / let in once the team sets staff, same token; index lists
+  customer_role_required / let in once the team sets staff, same token; index lists
   roles; `customer.role` rule; a team's staff record linked by email grants
   nothing and matches nothing; model-held accounts; unmapping). Re-run
   green: widgets-setup 70, customer-reset 32, widgets 18, widgets-cart 48.
   Headless Chrome: the Role mapping in the wizard and "Which roles" on an
   endpoint.
+- **Renamed (same day)** — the user: "it should be customer role, not the
+  user role we have … so that when we create customers we can define roles
+  like seller, customer, picker". Labels say Customer role / Which customer
+  roles; `ApiEndpoint.access.customerRoles`, 403 `customer_role_required`,
+  `customerRole` on `/auth/*` and `Mint.auth.user` (rules still use
+  `{ref: 'customer.role'}`). Re-run: customer-roles 30, widgets-setup 70.
 

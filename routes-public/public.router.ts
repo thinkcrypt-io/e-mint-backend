@@ -105,10 +105,10 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  *   PUT  /:route/:id            update
  *   DELETE /:route/:id          delete
  *
- * An endpoint for signed-in customers may admit only some roles (W-26,
- * `access.roles`): the role is the sign-in model's Role field on the
- * customer's record — 403 `role_required` otherwise. The public API never
- * writes that field.
+ * An endpoint for signed-in customers may admit only some customer roles
+ * (W-26, `access.customerRoles` — not the team's roles): the sign-in model's
+ * Customer role field on the customer's record — 403
+ * `customer_role_required` otherwise. The public API never writes that field.
  *
  * A model with `auth: 'customer'` needs `Authorization: Bearer <customer
  * token>` of this project; with `ownerOnly` each customer only reaches the
@@ -208,8 +208,9 @@ const customerOf = async (req: any) => {
 		// An account the project's own model holds is as its record is now — gone with it (W-24).
 		const now: any = await currentAccount(req.app, req.project, row);
 		if (!now) return null;
-		// Their role on the sign-in model, as the record has it now (W-26).
-		const customer = { ...now, role: await customerRole(req.app, req.project, now) };
+		// Their customer role on the sign-in model, as the record has it now (W-26). `role` too, for rules' {ref: 'customer.role'}.
+		const cr = await customerRole(req.app, req.project, now);
+		const customer = { ...now, customerRole: cr, role: cr };
 		if (req.apiLog) req.apiLog.customer = customer;
 		return customer;
 	} catch {
@@ -218,10 +219,10 @@ const customerOf = async (req: any) => {
 };
 
 /** `record`: their record in the project's own customer model (W-24), when Login & account has one. */
-const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', record: c.record ? String(c.record) : null, role: c.role ?? null, createdAt: c.createdAt });
+const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', record: c.record ? String(c.record) : null, customerRole: c.customerRole ?? null, createdAt: c.createdAt });
 
-/** The account as the site sees it — with its role (W-26), read from its record. */
-const answerCustomer = async (req: any, c: any) => publicCustomer({ ...c, role: await customerRole(req.app, req.project, c) });
+/** The account as the site sees it — with its customer role (W-26), read from its record. */
+const answerCustomer = async (req: any, c: any) => publicCustomer({ ...c, customerRole: await customerRole(req.app, req.project, c) });
 
 /* ------------------------------------------------------------- models */
 
@@ -274,7 +275,7 @@ router.get(
 						modelTitle: d.title || d.name,
 						standard: !!e.standard,
 						who: e.access?.who || 'anyone',
-						...(e.access?.who === 'customer' && e.access?.roles?.length && { roles: e.access.roles }),
+						...(e.access?.who === 'customer' && e.access?.customerRoles?.length && { customerRoles: e.access.customerRoles }),
 						rules: (e.access?.when || []).length + (e.action === 'list' ? (e.list?.filters || []).length : 0),
 						fields: d.fields
 							.filter((f: any) => out.includes(f.key) || writes.has(f.key))
@@ -799,13 +800,13 @@ type Ctx = {
 	key?: any;
 };
 
-/** Signed-in endpoints limited to some roles (W-26) admit only customers with one of them. */
+/** Signed-in endpoints limited to some customer roles (W-26) admit only customers with one of them. */
 const roleAdmits = (ep: any, customer: any) => {
-	const roles: string[] = ep?.access?.who === 'customer' ? ep.access?.roles || [] : [];
-	return !roles.length || (!!customer?.role && roles.includes(customer.role));
+	const roles: string[] = ep?.access?.who === 'customer' ? ep.access?.customerRoles || [] : [];
+	return !roles.length || (!!customer?.customerRole && roles.includes(customer.customerRole));
 };
 
-/** The endpoint answering this call — or 404, 401 (sign in / a server key), 403 (a role it doesn't admit), as its "who" says. */
+/** The endpoint answering this call — or 404, 401 (sign in / a server key), 403 (a customer role it doesn't admit), as its "who" says. */
 const open = async (req: any): Promise<Ctx> => {
 	await ensureEndpoints();
 	const endpoints: any[] = await ApiEndpoint.find({ enabled: true }).lean();
@@ -822,7 +823,7 @@ const open = async (req: any): Promise<Ctx> => {
 	if (id !== undefined && !isId(id)) throw new TenancyError(404, 'Not found');
 	const customer = await customerOf(req);
 	if (ep.access?.who === 'customer' && !customer) throw new TenancyError(401, 'Sign in first.', 'customer_required');
-	if (!roleAdmits(ep, customer)) throw new TenancyError(403, 'Your account can’t use this.', 'role_required');
+	if (!roleAdmits(ep, customer)) throw new TenancyError(403, 'Your account can’t use this.', 'customer_role_required');
 	const key = ep.access?.who === 'key' ? await serverKeyOf(req) : null;
 	if (ep.access?.who === 'key' && !key)
 		throw new TenancyError(401, sendsServerKey(req) ? 'That server key isn’t valid — it may have been revoked.' : 'This endpoint needs a server key.', 'key_required');

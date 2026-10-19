@@ -20,10 +20,10 @@ page `GET /public/reset-password`. Login widget: "Forgot your password?"
 resetToken`. Suite `customer-reset.mjs`.
 **Then W-26** (the user: "Go with one sign-in model per project plus a role
 field; endpoints pick signed-in customers and optionally which roles"): one
-sign-in model per project; Login maps an optional Role (Options field,
+sign-in model per project; Login maps an optional Customer role (Options field,
 `AuthMapping.fields.role`); `customerRole` reads it from the record the
 account's sign-up made (`ProjectCustomer.recordMade`); the public API never
-writes it; `ApiEndpoint.access.roles` + 403 `role_required`; `customer.role`
+writes it; `ApiEndpoint.access.customerRoles` + 403 `customer_role_required`; `customer.role`
 in rules, `/auth/*` and `Mint.auth.user`. Endpoint page: "Which roles"
 (mint-tenant only — admin's API pages predate the API builder). Suite
 `customer-roles.mjs`.
@@ -146,7 +146,7 @@ Related, running separately: "public API read-only fields" (started
 | W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
 | W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model — MINT's Customers by default, a linked copy or the project's model holding the accounts (WD12) | both | M | done 2026-10-19, not deployed |
 | W-25 | A model's Sign-in switch (only those can be Login's customer model); forgot password for customers (WD13) | both | M | done 2026-10-19, not deployed |
-| W-26 | One sign-in model per project + a Role field; signed-in endpoints may admit only some roles (WD14) | both | M | done 2026-10-19, not deployed |
+| W-26 | One sign-in model per project + a Role field; signed-in endpoints may admit only some customer roles (WD14) | both | M | done 2026-10-19, not deployed |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -290,9 +290,9 @@ customers and optionally which roles." (WD14)
   (`ProjectCustomer.recordMade`; model-held accounts always) — so a team's
   record linked by an unverified email grants nothing, and a change by the
   team counts at once. `customer.role` on `/auth/*` and `Mint.auth.user`.
-- Endpoints: `ApiEndpoint.access.roles` (signed-in only; empty = any),
+- Endpoints: `ApiEndpoint.access.customerRoles` (signed-in only; empty = any),
   checked against the Role field's options; a caller without one gets 403
-  `role_required` (populate too). Rules can compare with `customer.role`; a
+  `customer_role_required` (populate too). Rules can compare with `customer.role`; a
   customer ref that resolves empty matches nothing. `GET /api-builder/endpoints`
   and `/:id` send `signIn` (the Role field and its options); `GET /` lists an
   endpoint's roles.

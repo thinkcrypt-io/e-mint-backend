@@ -114,7 +114,7 @@ type ApiEndpoint = {
   path: string;                 // '/products' | '/products/:id' | '/products/featured'
   standard: boolean;            // generated at the model's own address
   enabled: boolean;
-  access: { who: 'anyone' | 'customer' | 'key'; when: Condition[]; match: 'all' | 'any'; roles: string[] }; // roles: W-26, signed-in only; [] = any
+  access: { who: 'anyone' | 'customer' | 'key'; when: Condition[]; match: 'all' | 'any'; customerRoles: string[] }; // W-26: customer roles (not the team's), signed-in only; [] = any
   fields: { out: string[] | null; write: string[] | null; readOnly: string[] };
   list?: { filters: Condition[]; callerFilters: boolean; sort: string; limit: number; maxLimit: number };
   stats: { calls: number; lastCalledAt?: Date };

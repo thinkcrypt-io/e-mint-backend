@@ -33,11 +33,13 @@ import { TenancyError } from './tenancy.function.js';
  * while chosen (models.controller).
  *
  * A project has one sign-in model (W-26, the user 2026-10-19: "one sign-in
- * model per project plus a role field"). Its optional `role` field (an options
- * field) tells kinds of people apart: sign-ups get its default, the public API
- * never writes it, and endpoints for signed-in customers may admit only some
- * roles (`ApiEndpoint.access.roles`). The customer's role is read from their
- * record on every call (`customerRole`), so a change by the team counts at once.
+ * model per project plus a role field"; then: "it should be customer role, not
+ * the user role we have" — the team's roles are another thing). Its optional
+ * customer role field (`fields.role`, an options field) tells kinds of people
+ * apart: sign-ups get its default, the public API never writes it, and
+ * endpoints for signed-in customers may admit only some customer roles
+ * (`ApiEndpoint.access.customerRoles`). It's read from their record on every
+ * call (`customerRole`), so a change by the team counts at once.
  *
  * Saved in `SiteWidgets.auth`; checked against today's models on every read,
  * like the shop (a field since removed makes it null — accounts keep working,
@@ -308,7 +310,7 @@ export const currentAccount = async (app: any, project: any, customer: any) => {
 
 /* ------------------------------------------------------------ roles (W-26) */
 
-/** The roles signed-in endpoints can admit: the sign-in model's Role field and its options — or null without one. */
+/** The customer roles signed-in endpoints can admit: the sign-in model's Customer role field and its options — or null without one. */
 export const signInRoles = async (project: any) => {
 	const m = await loadAuth(project);
 	if (!m?.fields.role) return null;
@@ -327,7 +329,7 @@ export const signInRoles = async (project: any) => {
 };
 
 /**
- * The customer's role, as their record has it now — or null (no Role field
+ * The customer's role, as their record has it now — or null (no Customer role field
  * mapped, no record, none set, or a record their sign-up didn't make).
  */
 export const customerRole = async (app: any, project: any, customer: any): Promise<string | null> => {
@@ -344,7 +346,7 @@ export const customerRole = async (app: any, project: any, customer: any): Promi
 	}
 };
 
-/** The fields of `def` the public API must never write: the sign-in model's role (a customer can't promote themselves). */
+/** The fields of `def` the public API must never write: the sign-in model's customer role (a customer can't promote themselves). */
 export const signInLocked = async (project: any, def: any): Promise<string[]> => {
 	const m = await loadAuth(project);
 	return m && m.model === def.name && m.fields.role ? [m.fields.role] : [];
