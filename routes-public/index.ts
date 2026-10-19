@@ -147,6 +147,7 @@ router.get('/sites/resolve', async (req, res) => {
 	}
 });
 
-router.use('/api/:project', publicApiRouter);
+// A project's public API (docs/api-builder D14): /public/api/<route>?apiKey=<project key>.
+router.use('/api', publicApiRouter);
 
 export default router;

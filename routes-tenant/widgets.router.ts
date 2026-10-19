@@ -1,3 +1,4 @@
+import { ensureProjectKey } from '../library/functions/projectKey.function.js';
 import express from 'express';
 import { handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
@@ -25,10 +26,11 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 const router = express.Router({ mergeParams: true });
 const build = tenantPermissions(['build']);
 
-const view = (req: any, saved: any) => ({
+// The project key names the project to mint.js (docs/api-builder D14).
+const view = async (req: any, saved: any) => ({
 	catalog: widgetCatalog(),
 	...saved,
-	script: `<script src="${apiOrigin(req)}/public/mint.js" data-project="${req.project.publicSlug}" async></script>`,
+	script: `<script src="${apiOrigin(req)}/public/mint.js" data-key="${await ensureProjectKey(req.project)}" async></script>`,
 });
 
 router.get(

@@ -1,7 +1,7 @@
 /**
  * The website tracker (docs/multi-tenancy WO-19), served at GET /public/track.js:
  *
- *   <script src="https://<api>/public/track.js" data-project="<project public slug>" defer></script>
+ *   <script src="https://<api>/public/track.js" data-key="<project key>" defer></script>
  *
  * Counts a page view on load and on every client-side navigation (history
  * pushState/replaceState/popstate), clicks on links that leave the site and on
@@ -25,12 +25,14 @@
  */
 export const TRACK_JS = `(function () {
 	'use strict';
-	var script = document.currentScript || document.querySelector('script[data-project][src*="/public/track.js"]');
+	var script = document.currentScript || document.querySelector('script[data-key][src*="/public/track.js"]');
 	if (!script) return;
-	var project = script.getAttribute('data-project');
-	if (!project) { console.warn('MINT analytics: add data-project="<your project slug>"'); return; }
-	var api = new URL(script.src, location.href).origin + '/public/api/' + encodeURIComponent(project);
-	var endpoint = api + '/track';
+	// The project key names the project on its API (docs/api-builder D14).
+	var project = script.getAttribute('data-key');
+	if (!project) { console.warn('MINT analytics: add data-key="<your project key>" — it is on API → Keys in your project'); return; }
+	var api = new URL(script.src, location.href).origin + '/public/api';
+	var withKey = '?apiKey=' + encodeURIComponent(project);
+	var endpoint = api + '/track' + withKey;
 	var off = script.hasAttribute('data-no-track') || navigator.doNotTrack === '1';
 	var tagged = false;
 	function id() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -153,7 +155,7 @@ export const TRACK_JS = `(function () {
 		tagged = true;
 	}
 	if (!script.hasAttribute('data-no-tags')) {
-		fetch(api + '/site/tags').then(function (r) { return r.ok ? r.json() : null; }).then(function (t) {
+		fetch(api + '/site/tags' + withKey).then(function (r) { return r.ok ? r.json() : null; }).then(function (t) {
 			if (!t) return;
 			if (document.body) applyTags(t);
 			else document.addEventListener('DOMContentLoaded', function () { applyTags(t); });

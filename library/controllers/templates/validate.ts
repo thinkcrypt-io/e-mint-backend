@@ -486,7 +486,7 @@ export const validateTemplate = async (req: any, type: TemplateType, bp: any): P
 				add('error', 'website', `website.starter.env[${i}].key`, `“${e.key}” isn’t an environment variable name.`, 'Use capitals, digits and _, starting with a letter, e.g. NEXT_PUBLIC_API.');
 			else if (envKeys.has(e.key)) add('error', 'website', `website.starter.env[${i}].key`, `${e.key} is listed twice.`, 'Keep one.');
 			envKeys.add(e.key);
-			if (!e.value) add('warning', 'website', `website.starter.env[${i}].value`, `${e.key} has no value.`, 'Fill it in, or use {{api}} / {{slug}} — the project’s API address and public name.');
+			if (!e.value) add('warning', 'website', `website.starter.env[${i}].value`, `${e.key} has no value.`, 'Fill it in, or use {{api}} / {{apiKey}} / {{slug}} — the project’s API address, its project key (every call sends ?apiKey=) and public name.');
 		});
 	}
 

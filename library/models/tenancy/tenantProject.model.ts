@@ -5,7 +5,8 @@ import { businessSchema } from '../../functions/business.function.js';
  * A workspace inside an organization (docs/multi-tenancy, D3): its own built
  * models, pages, sidebar, dashboard, MCP keys and public API. `type: 'website'`
  * projects are seeded with the website kit (D13). `publicSlug` is global — it
- * names the project in the public API (`/public/api/<publicSlug>/…`).
+ * names the project in the panel's addresses (`/<publicSlug>/<page>`); on the
+ * public API its `apiKey` does (`/public/api/<route>?apiKey=…`, docs/api-builder D14).
  */
 /** `api` (docs/templates TD2): a project whose workspace leads with its public API. */
 export const PROJECT_TYPES = ['app', 'website', 'api'] as const;
@@ -18,6 +19,8 @@ const schema = new Schema<any>(
 		name: { type: String, required: true, trim: true, maxlength: 80 },
 		slug: { type: String, required: true, trim: true, lowercase: true },
 		publicSlug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+		/** Names the project on the public API (docs/api-builder D14): `mint_pk_…`, fine in a website's code. */
+		apiKey: { type: String, trim: true },
 		type: { type: String, enum: PROJECT_TYPES, default: 'app' },
 		description: { type: String, trim: true, maxlength: 500 },
 		icon: { type: String, trim: true },
@@ -108,6 +111,7 @@ const schema = new Schema<any>(
 	{ timestamps: true }
 );
 schema.index({ organization: 1, slug: 1 }, { unique: true });
+schema.index({ apiKey: 1 }, { unique: true, sparse: true });
 schema.index({ 'preview.ticketHash': 1 }, { sparse: true });
 schema.index({ 'preview.expiresAt': 1 }, { sparse: true });
 

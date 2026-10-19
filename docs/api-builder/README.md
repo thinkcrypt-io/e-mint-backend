@@ -92,6 +92,17 @@ Choices the user made (same day):
 - **D12 — Admin.** Admin's tenant build (live until mint-tenant is deployed) keeps its old one-page
   `/public-api`; it keeps working because it writes `publicApi` through `applyPublicApi` (D1).
 
+- **D14 — Project keys (AB-08…11, 2026-10-19).** The user: “instead [of the app name in the address] we want a
+  project key linked to every project and when referencing users have to reference in query param ?apiKey=key,
+  without it error will be thrown that key is missing. in api tab should have option to generate key”. Chosen
+  (2026-10-19): **the key names the project** — `/public/api/<route>?apiKey=<key>`, no project name in the
+  address; **a project key that is fine in a website** (`mint_pk_…`, one per project, Regenerate makes a new one
+  and the old one stops) — endpoints set to “server keys” still also need a secret `mint_sk_` key in
+  `Authorization`; **MINT’s own callers move, old addresses stop** — widgets, hosted sites, templates and MCP use
+  the key; `/public/api/<slug>/…` answers 401 `api_key_missing`. Only MINT’s site renderer (with its
+  `x-mint-renderer` secret) still names a project by its slug. Also accepted: header `X-Api-Key`.
+  Errors: 401 `api_key_missing` (“The apiKey is missing — add ?apiKey=<your project key>.”), 401 `api_key_invalid`.
+
 ## 4. An endpoint
 
 ```ts

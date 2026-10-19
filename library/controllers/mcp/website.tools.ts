@@ -1,3 +1,4 @@
+import { ensureProjectKey } from '../../functions/projectKey.function.js';
 import { publishRecord, unpublishRecord } from '../../functions/drafts.function.js';
 import { afterPublish } from '../../functions/publishEvents.function.js';
 import dns from 'dns/promises';
@@ -49,7 +50,8 @@ const refuse = (text: string): Out => ({ text, isError: true });
 export const apiOrigin = (req: any) =>
 	String(process.env.PUBLIC_API_URL || `${String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0]}://${req.get('host')}`).replace(/\/$/, '');
 
-const publicBase = (req: any, project: any) => `${apiOrigin(req)}/public/api/${project.publicSlug}`;
+/** The public API's address; the project key names the project on it — ?apiKey= (docs/api-builder D14). */
+const publicBase = (req: any) => `${apiOrigin(req)}/public/api`;
 
 /* ------------------------------------------------------------ the kit */
 
@@ -323,7 +325,7 @@ export const upsertPage = async (req: any, args: any, caller: Caller): Promise<O
 		...(skipped.size ? [`Ignored (not fields of the kit): ${[...skipped].join(', ')}`] : []),
 		...(page.status !== 'published' ? ['The site API only serves published pages.'] : []),
 		`In the panel: ${caller.page(KIT.pages)}`,
-		`On the site API: GET ${publicBase(req, caller.project)}/pages/by-path?path=${encodeURIComponent(path)}`,
+		`On the site API: GET ${publicBase(req)}/pages/by-path?path=${encodeURIComponent(path)}&apiKey=${await ensureProjectKey(caller.project)}`,
 	];
 	return { text: lines.join('\n'), data: { page: shape(page.toObject(), pages.def), contents: slugs, created: added, archived } };
 };
@@ -396,7 +398,8 @@ const getSite = async (req: any, _args: any, caller: Caller): Promise<Out> => {
 	const config = publicConfig(project, site);
 	const data = {
 		project: { name: project.name, slug: project.publicSlug, domains: project.domains || [] },
-		api: publicBase(req, project),
+		api: publicBase(req),
+		apiKey: await ensureProjectKey(project),
 		settings: publicSettings(site),
 		config: { ...config, headTags: (site.headTags || []).map((t: any) => ({ name: t.name, location: t.location, enabled: t.enabled !== false })) },
 		settingsFields: Object.keys(FLAT).filter(k => k !== 'twitter'),
@@ -610,7 +613,7 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	if (updated.length) await recalculateDependents(req.app, Model, updated);
 	const created = docs.filter(d => d.isNew).length;
 	const display = def.displayField || def.fields[0]?.key;
-	const pub = def.publicApi?.enabled ? `\nOn the public API: GET ${publicBase(req, caller.project || { publicSlug: '' })}/${route}` : '';
+	const pub = def.publicApi?.enabled && caller.project ? `\nOn the public API: GET ${publicBase(req)}/${route}?apiKey=${await ensureProjectKey(caller.project)}` : '';
 	return {
 		text: `/${route}: ${created} created, ${docs.length - created} updated.${skipped.size ? `\nIgnored (not fields of this model): ${[...skipped].join(', ')}` : ''}${restricted ? '\nNew records are Public, so the site can read them.' : ''}\nIn the panel: ${caller.page(route)}${caller.project ? pub : ''}`,
 		data: { route, created, updated: docs.length - created, records: docs.map(d => ({ _id: String(d.doc._id), ...(display && { [display]: d.doc[display] }) })) },
@@ -641,7 +644,8 @@ export const setPublicApi = async (req: any, model: string, input: any) => {
 const publicApiTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const r = await setPublicApi(req, args?.model, { enabled: args?.enabled, actions: args?.actions, auth: args?.auth, ownerOnly: args?.ownerOnly, readOnlyFields: args?.readOnlyFields });
 	if (r.error || !r.def) return refuse(r.error || 'Model not found');
-	const base = `${publicBase(req, caller.project)}/${r.def.route}`;
+	const base = `${publicBase(req)}/${r.def.route}`;
+	const k = `apiKey=${await ensureProjectKey(caller.project)}`;
 	const v = r.value;
 	const lines = v.enabled
 		? [
@@ -649,27 +653,29 @@ const publicApiTool = async (req: any, args: any, caller: Caller): Promise<Out> 
 				...(v.readOnlyFields?.length && v.actions.some((a: string) => a === 'create' || a === 'update')
 					? [`Read-only (the API never writes them — creates get the default, updates ignore them): ${v.readOnlyFields.join(', ')}`]
 					: []),
-				...v.actions.map((a: string) => `- ${{ list: `GET ${base}?limit=20&page=1&sort=-createdAt — filters: <field>=<value>, <field>_<op>=<value> (ne, in, nin, gt, gte, lt, lte, btwn, contains, all), search=, fields=`, get: `GET ${base}/:id`, create: `POST ${base}`, update: `PUT ${base}/:id`, delete: `DELETE ${base}/:id` }[a]}`),
+				...v.actions.map((a: string) => `- ${{ list: `GET ${base}?${k}&limit=20&page=1&sort=-createdAt — filters: <field>=<value>, <field>_<op>=<value> (ne, in, nin, gt, gte, lt, lte, btwn, contains, all), search=, fields=`, get: `GET ${base}/:id?${k}`, create: `POST ${base}?${k}`, update: `PUT ${base}/:id?${k}`, delete: `DELETE ${base}/:id?${k}` }[a]}`),
 		  ]
 		: [`${r.def.title}'s public API is off.`];
-	return { text: lines.join('\n'), data: { model: r.def.name, route: r.def.route, publicApi: v, endpoint: base } };
+	return { text: lines.join('\n'), data: { model: r.def.name, route: r.def.route, publicApi: v, endpoint: base, apiKey: k.slice(7) } };
 };
 
 /* -------------------------------------------------- describe & snippets */
 
-const snippetsOf = (req: any, project: any) => {
+const snippetsOf = async (req: any, project: any) => {
 	const origin = apiOrigin(req);
-	const api = publicBase(req, project);
+	const api = publicBase(req);
+	const apiKey = await ensureProjectKey(project);
 	return {
 		api,
-		env: [`MINT_API=${api}`, `NEXT_PUBLIC_MINT_API=${api}`],
-		track: `<script src="${origin}/public/track.js" data-project="${project.publicSlug}" defer></script>`,
-		login: `<script src="${origin}/public/widget.js" data-project="${project.publicSlug}" async></script>\n<div data-mint-login></div>`,
+		apiKey,
+		env: [`MINT_API=${api}`, `MINT_API_KEY=${apiKey}`, `NEXT_PUBLIC_MINT_API=${api}`, `NEXT_PUBLIC_MINT_API_KEY=${apiKey}`],
+		track: `<script src="${origin}/public/track.js" data-key="${apiKey}" defer></script>`,
+		login: `<script src="${origin}/public/widget.js" data-key="${apiKey}" async></script>\n<div data-mint-login></div>`,
 	};
 };
 
 const siteSnippets = async (req: any, _args: any, caller: Caller): Promise<Out> => {
-	const s = snippetsOf(req, caller.project);
+	const s = await snippetsOf(req, caller.project);
 	const domains: string[] = caller.project.domains || [];
 	return {
 		text: [
@@ -689,7 +695,7 @@ const fieldList = (kit: Kit | null) => (kit ? kit.def.fields.map((f: any) => `${
 
 const describeWebsite = async (req: any, _args: any, caller: Caller): Promise<Out> => {
 	const [pages, seo, contents] = await Promise.all([kitModel(KIT.pages), kitModel(KIT.seo), kitModel(KIT.contents)]);
-	const s = snippetsOf(req, caller.project);
+	const s = await snippetsOf(req, caller.project);
 	const text = `# Building a website that this project manages
 
 This project ("${caller.project.name}") is a WEBSITE project. Build the site so that everything it shows comes from here, and the user edits it afterwards in the panel with no code change: texts, images, buttons, SEO, favicon, colours, contact details and lists. Never hard-code content in the site's code — only layout and styling.
@@ -719,8 +725,8 @@ How a block holds content — pick the category and fill its fields:
 - \`section\` groups blocks into a page section (hero, features, cta…); \`slug\` is how the code finds a block; \`bgColor\`, \`color\`, \`fontSize\` style it.
 Use one block per editable piece (hero, intro, each section), not one block per page.
 
-## The site API — no key needed (read-only, CORS open)
-Base: ${s.api}
+## The site API (read-only, CORS open)
+Base: ${s.api} — every call carries the project key: ?apiKey=${s.apiKey} (or the X-Api-Key header); without it the API answers 401 api_key_missing. The project key is fine in the site's code.
 - GET /site → { settings, menu: [{ _id, name, path, parent }] } (published pages with showInMenu, by priority)
 - GET /pages/by-path?path=/about → { page, seo, contents: [...] } (published, visible blocks, highest priority first); 404 when there's no published page
 - GET /<route> → { doc: [...], total, page, limit, totalPages } — a list model with its public API on. Query (the admin lists' syntax):
@@ -738,8 +744,9 @@ Base: ${s.api}
 \`\`\`ts
 // lib/mint.ts
 const API = process.env.MINT_API!; // ${s.api}
+const KEY = process.env.MINT_API_KEY!; // the project key
 export async function mint<T = any>(path: string): Promise<T | null> {
-  const res = await fetch(\`\${API}\${path}\`, { next: { revalidate: 60 } });
+  const res = await fetch(\`\${API}\${path}\${path.includes('?') ? '&' : '?'}apiKey=\${KEY}\`, { next: { revalidate: 60 } });
   return res.ok ? res.json() : null;
 }
 export const getSite = () => mint('/site');
@@ -753,8 +760,8 @@ export const list = (route: string, query = '') => mint(\`/\${route}?\${query}\`
 - A dynamic catch-all route ([[...slug]]) can render pages added later in the panel with a generic block renderer.
 - Lists: list('products', 'limit=12&sort=-createdAt'), detail pages by /products/<id> or a slug field (list('products', \`slug=\${slug}&limit=1\`)). Filter on the server, not in the site's code: list('products', 'featured=true&limit=3'), list('posts', 'status=published&sort=-createdAt'); build queries with URLSearchParams; page with page/limit and the answer's totalPages.
 - Revalidate (60s) or render on request; a fully static export only changes after a rebuild.
-- The site setup comes from here too: the analytics script injects the tracking tags and custom code by itself. Serve /robots.txt and /sitemap.xml from \`\${API}/site/robots.txt\` and \`\${API}/site/sitemap.xml?origin=https://<domain>\` (route handlers), and apply \`config.redirects\` and \`config.headers\` from GET /site in middleware (Next: middleware.ts, or fetch them in next.config redirects()/headers() at build).
-- Never put an API key in the site — the site API needs none.`;
+- The site setup comes from here too: the analytics script injects the tracking tags and custom code by itself. Serve /robots.txt and /sitemap.xml from \`\${API}/site/robots.txt?apiKey=\${KEY}\` and \`\${API}/site/sitemap.xml?origin=https://<domain>&apiKey=\${KEY}\` (route handlers), and apply \`config.redirects\` and \`config.headers\` from GET /site in middleware (Next: middleware.ts, or fetch them in next.config redirects()/headers() at build).
+- The project key (mint_pk_…) belongs in the site; never put a server key (mint_sk_…) in it — those are for servers only.`;
 	return { text, data: { api: s.api, snippets: s, kit: { pages: !!pages, seo: !!seo, contents: !!contents } } };
 };
 

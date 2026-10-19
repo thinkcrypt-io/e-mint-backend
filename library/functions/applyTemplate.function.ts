@@ -1,3 +1,4 @@
+import { ensureProjectKey } from './projectKey.function.js';
 import { Feature, ModelDefinition } from '../models/builder/_index.js';
 import ComponentDefinition from '../models/builder/componentDefinition.model.js';
 import DashboardConfig from '../models/builder/dashboardConfig.model.js';
@@ -110,7 +111,8 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 	const answers = opts.answers || {};
 	const missing = (source.questions || []).filter((q: any) => q.required && !String(answers[q.key] ?? '').trim() && !q.default);
 	if (missing.length) throw new BuildError(400, 'Answer the template’s questions first', missing.map((q: any) => `${q.label || q.key} is required`));
-	const builtins = { project: project.name, slug: project.publicSlug, api: `${safeOrigin(req)}/public/api/${project.publicSlug}` };
+	// The project key names the project on the public API (docs/api-builder D14): {{api}}/<route>?apiKey={{apiKey}}.
+	const builtins = { project: project.name, slug: project.publicSlug, api: `${safeOrigin(req)}/public/api`, apiKey: await ensureProjectKey(project) };
 	const { blueprint: bp, unknown } = fillPlaceholders(source, answers, builtins);
 	if (unknown.length) throw new BuildError(400, `The template uses placeholders nobody answers: ${unknown.map(k => `{{${k}}}`).join(', ')}`);
 	const check = await validateTemplate(req, template.type, bp);

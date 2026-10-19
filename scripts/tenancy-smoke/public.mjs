@@ -63,7 +63,7 @@ ok('actions not turned on answer 404', r.status === 404);
 r = await pub('clients');
 ok('models without a public API are 404', r.status === 404);
 r = await fetch(`${ROOT}/public/api/no-such-project/products`);
-ok('unknown project 404', r.status === 404);
+ok('no project key (an old-style address) → 401', r.status === 401);
 
 // Customers
 r = await pub('auth/register', { method: 'POST', body: JSON.stringify({ name: 'Cara', email: `cara${stamp}@example.com`, password: 'customer-pass-1' }) });

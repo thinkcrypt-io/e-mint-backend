@@ -32,7 +32,7 @@ ok('widget.js (the old login widget) still works', res.status === 200 && (await 
 
 /* ------------------------------------------------------- the settings */
 r = await call('GET', P(site._id), null, T);
-ok('settings: the catalogue, every widget off, the tag to add', r.status === 200 && r.body.catalog?.some(w => w.name === 'login' && w.options.length && w.texts.length) && r.body.widgets.login.enabled === false && r.body.script.includes(`data-project="${site.publicSlug}"`), JSON.stringify(r.body).slice(0, 300));
+ok('settings: the catalogue, every widget off, the tag to add', r.status === 200 && r.body.catalog?.some(w => w.name === 'login' && w.options.length && w.texts.length) && r.body.widgets.login.enabled === false && /data-key="mint_pk_[a-f0-9]{32}"/.test(r.body.script), JSON.stringify(r.body).slice(0, 300));
 r = await call('GET', `/public/api/${site.publicSlug}/widgets`);
 ok('a site is told about switched-on widgets only — none yet', r.status === 200 && Object.keys(r.body.widgets).length === 0 && /^#[0-9a-f]{6}$/i.test(r.body.theme.primaryColor), JSON.stringify(r.body));
 

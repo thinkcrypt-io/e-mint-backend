@@ -35,7 +35,8 @@ export const PARTS_BY_TYPE: Record<TemplateType, Part[]> = {
 
 export const QUESTION_KINDS = ['text', 'textarea', 'select', 'currency', 'locale', 'color', 'image', 'email', 'url'] as const;
 /** Filled in by the apply engine itself, never asked: the project's name, public slug and API base. */
-export const BUILTIN_PLACEHOLDERS = ['project', 'slug', 'api'];
+// `api` is the public API's address and `apiKey` the project key that names the project on it (docs/api-builder D14).
+export const BUILTIN_PLACEHOLDERS = ['project', 'slug', 'api', 'apiKey'];
 export const PAGE_STATUSES = ['published', 'draft', 'archived'];
 export const PAGE_TEMPLATES = ['default', 'home', 'landing', 'content', 'contact'];
 export const BLOCK_CATEGORIES = ['content', 'rich-content', 'list', 'card', 'image', 'gallery', 'list-of-links', 'video', 'section', 'other'];

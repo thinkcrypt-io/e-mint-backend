@@ -2,13 +2,13 @@
  * The site widgets' runtime (docs/widgets W-03), served at GET /public/mint.js.
  * A tenant's site adds it once:
  *
- *   <script src="https://<api>/public/mint.js" data-project="<project public slug>" async></script>
+ *   <script src="https://<api>/public/mint.js" data-key="<project key>" async></script>
  *
  * and places widgets anywhere: `<div data-mint="login"></div>` (or
  * `<mint-login></mint-login>`). Colours follow the project's look (Site setup →
  * Widgets); in `auto` mode a widget is light or dark to match the page it sits
  * on. The runtime asks the project which widgets are
- * switched on (GET /public/api/:slug/widgets), loads each one's script only
+ * switched on (GET /public/api/widgets?apiKey=, docs/api-builder D14), loads each one's script only
  * when the page has a place for it (/public/widgets/<name>.js), and mounts it
  * in a Shadow DOM so the site's CSS and the widget's never meet. Elements added
  * later (single-page apps) are picked up too. `data-*` attributes on an element
@@ -35,13 +35,19 @@
 export const MINT_JS = `(function () {
 	'use strict';
 	if (window.Mint && window.Mint.__core) return;
-	var script = document.currentScript || document.querySelector('script[data-project][src*="/public/mint.js"]');
+	var script = document.currentScript || document.querySelector('script[data-key][src*="/public/mint.js"]');
 	if (!script) return;
-	var project = script.getAttribute('data-project');
-	if (!project) { console.warn('MINT: add data-project="<your project slug>" to the mint.js script tag'); return; }
+	// The project key names the project on its API (docs/api-builder D14).
+	var project = script.getAttribute('data-key');
+	if (!project) { console.warn('MINT: add data-key="<your project key>" to the mint.js script tag — it is on API → Keys in your project'); return; }
 	var origin = new URL(script.src, location.href).origin;
 	var version = (script.src.match(/[?&]v=([\\w.-]+)/) || [])[1] || '__VERSION__';
-	var api = origin + '/public/api/' + encodeURIComponent(project) + '/';
+	var api = origin + '/public/api/';
+	// An address on the project's API, with its key.
+	function url(path) {
+		var p = String(path).replace(/^\\/+/, '');
+		return api + p + (p.indexOf('?') < 0 ? '?' : '&') + 'apiKey=' + encodeURIComponent(project);
+	}
 	var KEY = 'mint:' + project + ':token';
 
 	/* ------------------------------------------------------------ events */
@@ -63,7 +69,7 @@ export const MINT_JS = `(function () {
 		init = init || {};
 		var headers = Object.assign({ 'Content-Type': 'application/json' }, init.headers || {});
 		if (session.token) headers.Authorization = 'Bearer ' + session.token;
-		return fetch(api + String(path).replace(/^\\/+/, ''), Object.assign({}, init, { headers: headers }));
+		return fetch(url(path), Object.assign({}, init, { headers: headers }));
 	}
 	function json(res) {
 		return res.json().catch(function () { return {}; }).then(function (body) {
@@ -260,9 +266,9 @@ export const MINT_JS = `(function () {
 	var preview = window.__MINT_PREVIEW__ && typeof window.__MINT_PREVIEW__ === 'object' ? window.__MINT_PREVIEW__ : null;
 	var config = preview
 		? Promise.resolve({ theme: preview.theme || {}, widgets: preview.widgets || {} })
-		: fetch(api + 'widgets').then(function (r) {
+		: fetch(url('widgets')).then(function (r) {
 			if (r.ok) return r.json();
-			if (r.status === 404) { warned = null; console.warn('MINT: there is no project "' + project + '" — check data-project on the mint.js script tag'); }
+			if (r.status === 401 || r.status === 404) { warned = null; console.warn('MINT: no project has the key "' + project + '" — check data-key on the mint.js script tag (API → Keys)'); }
 			return { theme: {}, widgets: {} };
 		}).catch(function () { return { theme: {}, widgets: {} }; });
 	cart.ready = config.then(function (cfg) {

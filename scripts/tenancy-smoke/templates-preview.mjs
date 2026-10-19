@@ -222,7 +222,7 @@ r = await call('GET', `/public/api/${bslug}/site`);
 const site = JSON.stringify(r.body);
 ok('T-10 site settings: name, colour, contact, social, SEO defaults', r.status === 200 && ['Field notes', '#0f766e', 'hello@example.com', 'instagram.com/fieldnotes', '%s · Field notes'].every(x => site.includes(x)), site.slice(0, 400));
 r = await call('GET', `/tenant/api/p/${BPID}`, null, BTOK);
-ok('T-10 starter code kept on the project, {{api}} and {{slug}} filled', r.body?.starter?.repoUrl === 'https://github.com/example/blog-starter' && r.body.starter.env[0].value.endsWith(`/public/api/${bslug}`) && r.body.starter.env[1].value === bslug, JSON.stringify(r.body?.starter));
+ok('T-10 starter code kept on the project, {{api}} and {{slug}} filled', r.body?.starter?.repoUrl === 'https://github.com/example/blog-starter' && r.body.starter.env[0].value.endsWith('/public/api') && r.body.starter.env[1].value === bslug, JSON.stringify(r.body?.starter));
 await call('DELETE', `${A}/templates/previews/${BPID}`, null, T);
 await db.collection('projecttemplates').deleteMany({ key: 'smoke-preview-blog' });
 

@@ -426,7 +426,7 @@ const TOOLS: Tool[] = [
 	{
 		name: 'set_starter_code',
 		title: 'Set the starter code (website)',
-		description: 'Where the site’s code starts from: { repoUrl (https), framework, deployUrl, env: [{ key, value }] } — {{api}} and {{slug}} are filled in for each project.',
+		description: 'Where the site’s code starts from: { repoUrl (https), framework, deployUrl, env: [{ key, value }] } — {{api}}, {{apiKey}} and {{slug}} are filled in for each project (calls to {{api}} send ?apiKey={{apiKey}}).',
 		scope: 'write',
 		inputSchema: { type: 'object', required: ['template', 'starter'], properties: { template: templateArg, starter: { type: 'object' } } },
 		annotations: writeHints,

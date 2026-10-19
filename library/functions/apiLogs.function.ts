@@ -22,7 +22,8 @@ export const maskedQuery = (url = '') => {
 	if (at < 0) return '';
 	const params = new URLSearchParams(url.slice(at + 1));
 	const out: string[] = [];
-	params.forEach((v, k) => out.push(`${encodeURIComponent(k)}=${SECRET_NAME.test(k) ? '•••' : encodeURIComponent(v)}`));
+	// The project key (docs/api-builder D14) is on every call — it says nothing about this one.
+	params.forEach((v, k) => k !== 'apiKey' && out.push(`${encodeURIComponent(k)}=${SECRET_NAME.test(k) ? '•••' : encodeURIComponent(v)}`));
 	return out.join('&').slice(0, 500);
 };
 

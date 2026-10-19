@@ -31,7 +31,7 @@ r = await fetch(ROOT + '/tenant/mcp', { method: 'POST', headers: { 'content-type
 ok('…and can’t call them', /Unknown tool/.test(r?.error?.message || ''), JSON.stringify(r).slice(0, 100));
 
 let res = await tool(key, 'describe_website');
-ok('describe_website: the site API with this project’s address', text(res).includes(`/public/api/${slug}`) && /upsert_page/.test(text(res)), text(res).slice(0, 80));
+ok('describe_website: the site API with this project’s address', text(res).includes(`/public/api`) && /apiKey=mint_pk_/.test(text(res)) && /upsert_page/.test(text(res)), text(res).slice(0, 80));
 
 // Settings
 res = await tool(key, 'update_site_settings', { settings: { siteName: 'Crumb & Co', favicon: 'https://cdn.example.com/favicon.png', primaryColor: '#7c2d12', metaTitle: 'Crumb & Co bakery', nonsense: 1 }, domains: ['crumb.example.com'] });
@@ -121,7 +121,7 @@ ok('the archived block leaves the site', r.body?.contents?.map(c => c.slug).join
 res = await tool(key, 'get_site');
 ok('get_site shows the pages and blocks', /\| \/ \| Home \| published \| Crumb/.test(text(res)) && /crumb\.example\.com/.test(text(res)), text(res).slice(0, 200));
 res = await tool(key, 'site_snippets');
-ok('site_snippets: env and the tracker', text(res).includes(`MINT_API=${ROOT}/public/api/${slug}`) && text(res).includes(`data-project="${slug}"`), text(res).slice(0, 120));
+ok('site_snippets: env and the tracker', text(res).includes(`MINT_API=${ROOT}/public/api\n`) && /MINT_API_KEY=mint_pk_/.test(text(res)) && /data-key="mint_pk_/.test(text(res)), text(res).slice(0, 120));
 res = await tool(key, 'set_public_api', { model: 'Product', enabled: false });
 r = await pub('products');
 ok('set_public_api turns it off', !res?.isError && r.status === 404, r.status);

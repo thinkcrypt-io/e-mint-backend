@@ -28,6 +28,7 @@ import { runInScope } from './tenantScope.function.js';
 import { settleProjectModels } from './dynamicModels.function.js';
 import { PANEL_PAGES, uniqueSlug } from './tenancy.function.js';
 import { projectHooks } from './projectHooks.function.js';
+import { newProjectKey } from './projectKey.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import './websiteKit.function.js';
 // …and the site builder's starter design and home page (docs/site-builder SB-03).
@@ -129,7 +130,8 @@ export const createProject = async (req: any, organization: any, body: { name: s
 	// The tenant panel's addresses start with it (/<publicSlug>/<page>): never one of the panel's own pages.
 	const publicSlug = await uniqueSlug(`${org.slug}-${slug}`, async s => PANEL_PAGES.has(s) || TenantProject.exists({ publicSlug: s }));
 	// Its business details start as the organization's (docs/pdf-templates D14).
-	const project: any = await TenantProject.create({ business: orgBusiness(org), ...body, ...extra, slug, publicSlug, organization });
+	// Its key names it on the public API (docs/api-builder D14).
+	const project: any = await TenantProject.create({ business: orgBusiness(org), ...body, ...extra, slug, publicSlug, organization, apiKey: newProjectKey() });
 	try {
 		await runInScope({ organization, project: project._id }, async () => {
 			await SidebarCategory.create({

@@ -122,3 +122,27 @@ agent must know. Decisions live in README.md.
   375 wide, no page overflow); unticking a Sent back field drops it from the sample before saving; the samples'
   shapes, statuses and error bodies match real calls (201 create, list page, 401 `customer_required`, 404,
   400 “Quantity is required”).
+
+## 2026-10-19 — AB-08 Project keys, backend (D14)
+- `TenantProject.apiKey` (`mint_pk_` + 32 hex, unique sparse index); `createProject` makes one;
+  `library/functions/projectKey.function.ts` (`newProjectKey`, `projectByKey`, `ensureProjectKey` — made on first
+  read for an older project, `regenerateProjectKey`); `scripts/migrateProjectKeys.js` (dry run / `--apply`; builds
+  the index).
+- `/public/api` is mounted without the project name: the public router finds the project by `?apiKey=` or
+  `X-Api-Key` (removed from `req.query`; left out of logged queries), 401 `api_key_missing` / `api_key_invalid`;
+  the site renderer (its `x-mint-renderer` secret) still names a project by its slug as the first path part, so
+  mint-sites needs no change to its fetches. OPTIONS answers 204.
+- Panel API: `GET /p/:project/project-key` (anyone in the project), `POST /p/:project/api-builder/project-key`
+  (Build; history entry).
+- `mint.js`, `widget.js`, `track.js` read `data-key` (no `data-project` any more) and send `apiKey` on every call;
+  their storage names use the key (a regenerated key signs customers out of a site and empties carts).
+- Render answer: `tags.tracker.key`, `widgets.key`, the tracker tag with `data-key`. Widgets settings' `script`,
+  site check (looks for `data-key`), templates `{{api}}` = `<origin>/public/api` + new `{{apiKey}}`, MCP
+  (`list_endpoints`, `describe_website`, `site_snippets`, `set_public_api`, `create_records`) give key addresses
+  and `MINT_API_KEY`.
+- Smoke: `lib.mjs` rewrites the scripts' `/public/api/<slug>/…` calls to the key form (key read from the scratch
+  DB), `rawFetch` for calling an old address on purpose; new `project-keys.mjs` (in run-all); assertions changed
+  in public, website-mcp, templates-preview, widgets, site-builder.
+- Verified on a private backend (:5073, Mongo :27963): `project-keys.mjs` 30/30 and every script in run-all passes
+  (in batches with restarts for the sign-up rate limit).
+- Template authors: a website starter that calls `{{api}}` must now also send `?apiKey={{apiKey}}`.

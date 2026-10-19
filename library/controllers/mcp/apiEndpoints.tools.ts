@@ -1,3 +1,4 @@
+import { ensureProjectKey } from '../../functions/projectKey.function.js';
 import ApiEndpoint, { ENDPOINT_ACTIONS } from '../../models/tenancy/apiEndpoint.model.js';
 import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 import {
@@ -22,7 +23,8 @@ import type { Caller, ToolDef } from './mcp.router.js';
 
 type Out = { text: string; data?: any; isError?: boolean };
 const refuse = (text: string): Out => ({ text, isError: true });
-const base = (req: any, caller: Caller) => `${apiOrigin(req)}/public/api/${caller.project?.publicSlug}`;
+// The project key names the project on the public API (docs/api-builder D14): ?apiKey= on every call.
+const base = (req: any, _caller: Caller) => `${apiOrigin(req)}/public/api`;
 const WHO: Record<string, string> = { anyone: 'anyone', customer: 'signed-in customers', key: 'a server key' };
 
 const ruleText = (c: any) => {
@@ -43,7 +45,10 @@ const listEndpoints = async (req: any, _args: any, caller: Caller): Promise<Out>
 		ApiEndpoint.find({}).sort({ model: 1, standard: -1, path: 1 }).lean(),
 		ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, fields: 1 }).lean(),
 	]);
-	const lines = [`The API is at ${base(req, caller)} — every path below is under it. Manage it in the panel: ${caller.link('/public-api/endpoints')}`];
+	const apiKey = caller.project ? await ensureProjectKey(caller.project) : '';
+	const lines = [
+		`The API is at ${base(req, caller)} — every path below is under it, and every call carries the project key: ?apiKey=${apiKey} (or the X-Api-Key header; without it: 401 api_key_missing). Manage it in the panel: ${caller.link('/public-api/endpoints')}`,
+	];
 	for (const d of defs) {
 		const mine = eps.filter((e: any) => e.model === d.route);
 		lines.push('', `${d.title || d.name} (${d.route})${mine.length ? '' : ' — not on the API'}`, ...mine.map(line));
@@ -53,6 +58,7 @@ const listEndpoints = async (req: any, _args: any, caller: Caller): Promise<Out>
 		text: lines.join('\n'),
 		data: {
 			base: base(req, caller),
+			apiKey,
 			endpoints: eps.map((e: any) => ({ _id: String(e._id), name: e.name, model: e.model, action: e.action, method: e.method, path: e.path, standard: !!e.standard, enabled: e.enabled !== false, access: e.access, fields: e.fields, list: e.list, populate: e.populate ?? null })),
 		},
 	};

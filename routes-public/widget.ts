@@ -2,7 +2,7 @@
  * The customer login widget (docs/multi-tenancy WO-11), served at
  * GET /public/widget.js. A tenant drops it on their site:
  *
- *   <script src="https://<api>/public/widget.js" data-project="<project public slug>" async></script>
+ *   <script src="https://<api>/public/widget.js" data-key="<project key>" async></script>
  *   <div data-mint-login></div>
  *
  * Every `[data-mint-login]` element becomes a sign-in / create-account card,
@@ -21,12 +21,17 @@
  */
 export const WIDGET_JS = `(function () {
 	'use strict';
-	var script = document.currentScript || document.querySelector('script[data-project][src*="/public/widget.js"]');
+	var script = document.currentScript || document.querySelector('script[data-key][src*="/public/widget.js"]');
 	if (!script) return;
-	var project = script.getAttribute('data-project');
-	if (!project) { console.warn('MINT login widget: add data-project="<your project slug>"'); return; }
+	// The project key names the project on its API (docs/api-builder D14).
+	var project = script.getAttribute('data-key');
+	if (!project) { console.warn('MINT login widget: add data-key="<your project key>" — it is on API → Keys in your project'); return; }
 	var origin = new URL(script.src, location.href).origin;
-	var api = origin + '/public/api/' + encodeURIComponent(project) + '/';
+	var api = origin + '/public/api/';
+	function url(path) {
+		var p = String(path).replace(/^\\/+/, '');
+		return api + p + (p.indexOf('?') < 0 ? '?' : '&') + 'apiKey=' + encodeURIComponent(project);
+	}
 	var KEY = 'mint:' + project + ':token';
 	var listeners = [];
 	var state = { user: null, token: null };
@@ -38,7 +43,7 @@ export const WIDGET_JS = `(function () {
 		init = init || {};
 		var headers = Object.assign({ 'Content-Type': 'application/json' }, init.headers || {});
 		if (state.token) headers.Authorization = 'Bearer ' + state.token;
-		return fetch(api + String(path).replace(/^\\/+/, ''), Object.assign({}, init, { headers: headers }));
+		return fetch(url(path), Object.assign({}, init, { headers: headers }));
 	}
 	function json(res) {
 		return res.json().catch(function () { return {}; }).then(function (body) {

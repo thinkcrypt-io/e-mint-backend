@@ -15,7 +15,7 @@ import { mediaFor } from '../functions/mediaDetails.function.js';
 
 /**
  * What the renderer asks for (docs/site-builder D8, "Render API"):
- * GET /public/api/:slug/render?path= → one answer with everything one page
+ * GET /public/api/:slug/render?path= (the renderer only, by its secret header) → one answer with everything one page
  * of the live site needs. Published copies only — drafts never leave the
  * tenant API. Runs inside the project's scope (the public router sets it).
  * Static pages by path first, then template pages (`/blog/[slug]`) whose
@@ -58,11 +58,12 @@ const headTags = (apiBase: string, project: any, doc: any) => {
 	const t: any = siteTags(doc);
 	const verification = { google: t.googleVerification || '', bing: t.bingVerification || '' };
 	const anything = t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification'].includes(k));
-	const tracker = anything ? { src: `${apiBase}/public/track.js`, project: project.publicSlug } : null;
+	// The project key names the project to track.js (docs/api-builder D14).
+	const tracker = anything ? { src: `${apiBase}/public/track.js`, key: project.apiKey || '' } : null;
 	const parts: string[] = [];
 	if (verification.google) parts.push(`<meta name="google-site-verification" content="${esc(verification.google)}">`);
 	if (verification.bing) parts.push(`<meta name="msvalidate.01" content="${esc(verification.bing)}">`);
-	if (tracker) parts.push(`<script src="${esc(tracker.src)}" data-project="${esc(tracker.project)}" defer></script>`);
+	if (tracker) parts.push(`<script src="${esc(tracker.src)}" data-key="${esc(tracker.key)}" defer></script>`);
 	return { head: parts.join('\n'), bodyStart: '', bodyEnd: '', verification, tracker };
 };
 
@@ -193,7 +194,7 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 		/** page id → live path, for buttons and links that point at a page ({ type: 'page' }) */
 		links: Object.fromEntries((links as any[]).map(p => [String(p._id), p.published.path])),
 		tags: headTags(apiBase, project, doc),
-		widgets: { enabled: Object.keys(widgets.widgets || {}), apiBase },
+		widgets: { enabled: Object.keys(widgets.widgets || {}), apiBase, key: project.apiKey || '' },
 	};
 };
 

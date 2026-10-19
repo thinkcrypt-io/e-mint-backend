@@ -7,6 +7,7 @@ import ModelDefinition from '../library/models/builder/modelDefinition.model.js'
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
+import { regenerateProjectKey } from '../library/functions/projectKey.function.js';
 import {
 	ACTION_LABEL,
 	checkEndpoint,
@@ -38,6 +39,7 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  *   GET    /keys                       server keys (never their secret)
  *   POST   /keys                       { name } → the key's secret, once
  *   DELETE /keys/:id                   revoke
+ *   POST   /project-key                a new project key (docs/api-builder D14); the old one stops at once
  *   GET    /logs                       calls, newest first: ?hours (1|24|168) &endpoint (an id, or none) &status
  *                                      (ok|errors|4xx|5xx|a code) &method &who &customer &key &q &before (cursor) &limit
  *   GET    /logs/summary               the same filters: totals, typical/slow times, a chart, top errors and endpoints
@@ -328,6 +330,17 @@ router.delete(
 		if (!k.revokedAt) await ServerKey.updateOne({ _id: k._id }, { $set: { revokedAt: new Date() } });
 		recordProjectEvent({ req, action: 'delete', model: 'ServerKey', modelPath: 'public-api/keys', document: k._id, name: k.name, text: `revoked the server key “${k.name}”` });
 		return { message: 'Revoked' };
+	})
+);
+
+// The project key names the project on the public API (D14). Reading it is
+// GET /p/:project/project-key, for anyone in the project (snippets need it).
+router.post(
+	'/project-key',
+	handle(async req => {
+		const apiKey = await regenerateProjectKey(req.project);
+		recordProjectEvent({ req, action: 'update', model: 'TenantProject', modelPath: 'public-api/keys', document: req.project._id, name: 'Project key', text: 'made a new project key — the old one no longer works' });
+		return { apiKey };
 	})
 );
 

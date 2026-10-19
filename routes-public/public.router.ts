@@ -53,6 +53,7 @@ import {
 } from '../library/functions/apiEndpoints.function.js';
 import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
+import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import {
 	fieldKeys,
@@ -83,10 +84,11 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
 	});
 
 /**
- * /public/api/:project — a tenant project's public API (docs/multi-tenancy
- * WO-11), for the tenant's own website or app. No admin or tenant token: the
- * project is named by its `publicSlug`, and each model answers only the
- * actions its builder turned on (ModelDefinition.publicApi).
+ * /public/api — a tenant project's public API (docs/multi-tenancy WO-11), for
+ * the tenant's own website or app. No admin or tenant token: the project is
+ * named by its key, `?apiKey=<mint_pk_…>` or `X-Api-Key` (docs/api-builder
+ * D14; 401 api_key_missing / api_key_invalid without a good one), and each
+ * model answers only what its endpoints allow.
  *
  *   GET  /                      the project's public info (name, type, models)
  *   POST /auth/register         { name, email, password }  → { token, customer }
@@ -126,11 +128,32 @@ const check = (schema: Joi.Schema, body: any) => {
 
 router.use(apiLimit);
 
-// The project by its public slug; the rest of the request runs in its scope.
+/** Where a call gets the project key: `?apiKey=` or the `X-Api-Key` header. */
+const projectKeyOf = (req: any) => {
+	const q = req.query?.apiKey;
+	const v = Array.isArray(q) ? q[0] : q;
+	return String(v || req.headers['x-api-key'] || '').trim();
+};
+
+// The project its key names (docs/api-builder D14) — `?apiKey=` or `X-Api-Key`,
+// taken out of the query so it's never read as a filter or logged. Only MINT's
+// site renderer (its secret header) still names a project by its slug, as the
+// first part of the path. The rest of the request runs in the project's scope.
 router.use(async (req: any, res: any, next: any) => {
 	try {
-		const slug = String(req.params.project || '').toLowerCase();
-		const project: any = /^[a-z0-9-]{1,120}$/.test(slug) ? await TenantProject.findOne({ publicSlug: slug }).lean() : null;
+		if (req.method === 'OPTIONS') return res.sendStatus(204);
+		const key = projectKeyOf(req);
+		if (req.query) delete req.query.apiKey;
+		let project: any = null;
+		if (key) {
+			project = await projectByKey(key);
+			if (!project) return res.status(401).json({ message: 'That apiKey isn’t valid — it may have been regenerated. Copy the project key from API → Keys.', code: 'api_key_invalid' });
+		} else if (isRenderer(req)) {
+			const [, first, ...rest] = req.url.split('/');
+			const slug = decodeURIComponent(first || '').toLowerCase();
+			project = /^[a-z0-9-]{1,120}$/.test(slug) ? await TenantProject.findOne({ publicSlug: slug }).lean() : null;
+			req.url = `/${rest.join('/')}`;
+		} else return res.status(401).json({ message: 'The apiKey is missing — add ?apiKey=<your project key>. It’s on API → Keys in your project.', code: 'api_key_missing' });
 		if (!project || project.isActive === false) return res.status(404).json({ message: 'Not found' });
 		const org: any = await Organization.findById(project.organization, { isActive: 1 }).lean();
 		if (!org || org.isActive === false) return res.status(404).json({ message: 'Not found' });
@@ -665,6 +688,7 @@ router.get(
  */
 router.get('/render', async (req: any, res: any) => {
 	try {
+		await ensureProjectKey(req.project); // the page's scripts carry it (docs/api-builder D14)
 		const out = await renderPage({ project: req.project, path: req.query.path, apiBase: apiOrigin(req), query: { page: req.query.page } });
 		res.setHeader('Cache-Control', 'public, max-age=30');
 		res.json(out);

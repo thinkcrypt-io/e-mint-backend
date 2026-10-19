@@ -14,6 +14,10 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | done 2026-10-14 |
 | AB-06 | Request logs (D13): every call logged; API → Logs + an endpoint's Logs tab + Overview glance; `get_api_logs` over MCP; guide, website | all | M | done 2026-10-14 |
 | AB-07 | An endpoint's Reference tab: its request (address, headers, body) and answers (response, errors) as JSON, from the draft | mint-tenant + docs | S | done 2026-10-19 |
+| AB-08 | Project keys, backend (D14): `TenantProject.apiKey`, made with every project + migration script; `/public/api/<route>?apiKey=` (or `X-Api-Key`), 401 `api_key_missing` / `api_key_invalid`; renderer by slug; panel routes to read and regenerate; scripts (`mint.js`, `widget.js`, `track.js`) take `data-key`; render answer, templates `{{apiKey}}`, MCP addresses; smoke | backend | L | done 2026-10-19 |
+| AB-09 | Project keys, panel (mint-tenant): Project key card on API → Keys + Overview (copy, Generate/Regenerate); every address, example, tester, snippet with the key | mint-tenant | M | todo |
+| AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | todo |
+| AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | todo |
 
 ## AB-02 — Engine (L)
 
@@ -88,3 +92,38 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 - `api.ts` `exampleRecord`: links in a sample answer are ids (`66f0…f9a2`), not “<id of the linked record>” — also
   on API → Reference.
 - Docs: mint-docs `public-api#api-reference` paragraph.
+
+## AB-08 — Project keys, backend (L)
+
+- `TenantProject.apiKey` (`mint_pk_` + 32 hex, unique sparse); `createProject` makes one; `ensureProjectKey()`
+  makes one for an older project on first read; `scripts/migrateProjectKeys.js` gives every project one (run at
+  deploy, before the panels — old addresses stop).
+- `routes-public/index.ts`: `/public/api` → the public router; the project from `?apiKey=` or `X-Api-Key`
+  (removed from `req.query`, so it's never a filter and never logged); else, for the renderer only, the first
+  path part is the slug; else 401 `api_key_missing`. A key nobody has: 401 `api_key_invalid`.
+- Panel API: `GET /p/:project/project-key` (anyone in the project — snippets need it), `POST
+  /p/:project/api-builder/project-key` (Build) regenerates.
+- Scripts: `mint.js`, `widget.js`, `track.js` read `data-key` and send `apiKey` on every call (storage names use
+  it). Render answer: `tags.tracker.key`, `widgets.key`. Templates: `{{api}}` = `<origin>/public/api`, new
+  `{{apiKey}}`. MCP: addresses + examples with the key.
+- Smoke: the public calls in `scripts/tenancy-smoke` send the project's key; a new `project-keys.mjs`.
+
+## AB-09 — Project keys, panel (M)
+
+- API → Keys: a **Project key** card first (the key, copy, Regenerate with a PromptDialog — sites using the old key
+  stop working until they're given the new one); Overview shows it too.
+- `apiBase()` → `<origin>/public/api`; every example (Reference, an endpoint's Reference and Code tabs, logs'
+  curl), the tester and the snippets (login widget, analytics, mint.js on Widgets, Site setup, Project settings)
+  carry the key.
+
+## AB-10 — Live panel + hosted sites (M)
+
+- admin (its tenant build is still live): the same addresses and snippets (ApiOverview, Public API page, Site
+  setup, Widgets, Project settings, Templates tabs).
+- mint-sites: `data-key` on `track.js` / `mint.js` from the render answer.
+
+## AB-11 — Docs (S)
+
+- mint-docs: every address and snippet; a “Project key” section (`api-project-key`) in the public-api guide.
+- Website changelog. Handoff (multi-tenancy WORK_ORDERS) with the deploy order: backend + `migrateProjectKeys.js`,
+  then mint-sites, admin, mint-tenant.

@@ -6,6 +6,7 @@ import OrganizationRole from '../library/models/tenancy/organizationRole.model.j
 import peopleRouter from './people.router.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 import { canOpenProject, publicProject, isId, projectPeople } from '../library/functions/tenancy.function.js';
+import { ensureProjectKey } from '../library/functions/projectKey.function.js';
 import { makeBuilderRouter } from '../library/controllers/builder/_index.js';
 import { makeDashboardRouter } from '../library/controllers/dashboard/_index.js';
 import { makePdfTemplatesRouter } from '../library/controllers/pdfTemplates/_index.js';
@@ -57,6 +58,7 @@ import { tenantNavSearch } from '../library/controllers/search/navSearch.control
  * API's, so the admin app's library components work unchanged:
  *
  *   /comments                     comments and @mentions on a record (WO-49)   view-<route>
+ *   /project-key                  the project key for the public API (docs/api-builder D14)   any member
  *   /search?q=                    the navbar search: records of pages with search on (WO-54)   view-<route>
  *   /automations                  the project's automations (docs/automations)   build
  *   /people                       who opens the project; invite people into it (WO-47)   invite-to-projects / manage-members
@@ -102,6 +104,16 @@ router.use(async (req: any, res: any, next: any) => {
 });
 
 router.get('/', (req: any, res: any) => res.status(200).json(publicProject(req.project)));
+
+// The project key — it names the project on the public API (docs/api-builder D14). Anyone in the project
+// reads it (the widget and analytics snippets carry it); Build makes a new one (api-builder POST /project-key).
+router.get('/project-key', async (req: any, res: any, next: any) => {
+	try {
+		res.status(200).json({ apiKey: await ensureProjectKey(req.project) });
+	} catch (e) {
+		next(e);
+	}
+});
 
 // Who works in the project, and inviting people into it (WO-47).
 router.use('/people', peopleRouter);

@@ -120,7 +120,7 @@ export const checkSite = async (project: any, doc: any) => {
 	const page = await fetchPage(`${origin}/`);
 	if (typeof page === 'string') return { ...base, reachable: false, message: page, items: [], extra: [], serverSide: {} };
 	const html = page.html;
-	const scriptTag = [...html.matchAll(/<script\b[^>]*\/public\/track\.js[^>]*>/gi)].map(m => m[0]).find(t => t.includes(`data-project="${project.publicSlug}"`) || t.includes(`data-project='${project.publicSlug}'`));
+	const scriptTag = [...html.matchAll(/<script\b[^>]*\/public\/track\.js[^>]*>/gi)].map(m => m[0]).find(t => !!project.apiKey && (t.includes(`data-key="${project.apiKey}"`) || t.includes(`data-key='${project.apiKey}'`)));
 	const delivers = !!scriptTag && !/data-no-tags/i.test(scriptTag);
 
 	const items: CheckItem[] = [];
