@@ -7,6 +7,7 @@ import { fireWebhooks } from './webhooks.function.js';
 import { fireAutomations } from './automations.function.js';
 import { shopModels } from './shop.function.js';
 import { TenancyError } from './tenancy.function.js';
+import { forgetPublicWidgets } from './widgets.function.js';
 
 /**
  * Login & account's customer model (docs/widgets W-24, decision WD12). MINT's
@@ -46,7 +47,13 @@ import { TenancyError } from './tenancy.function.js';
  * only the copying stops).
  */
 
-export type AuthMapping = { model: string; accounts: 'mint' | 'model'; fields: { email: string; name?: string; phone?: string; role?: string } };
+export type AuthMapping = {
+	model: string;
+	accounts: 'mint' | 'model';
+	fields: { email: string; name?: string; phone?: string; role?: string };
+	/** W-27: customer roles people may sign up as themselves (a role login's sign-up); the default role always may. */
+	signUpRoles?: string[];
+};
 
 /** What each part may be — the panel's CustomersStep keeps the same list. */
 export const AUTH_KINDS: Record<keyof AuthMapping['fields'], string[]> = {
@@ -94,7 +101,13 @@ export const checkAuth = (raw: any, defs: any[]): AuthMapping => {
 			400,
 			`${def.title || def.name} has required fields sign-up can’t fill (${blocking.map((f: any) => f.label || f.key).join(', ')}) — make them optional or give them a default first.`
 		);
-	return { model: def.name, accounts: raw?.accounts === 'model' ? 'model' : 'mint', fields };
+	// Customer roles people may sign up as themselves (W-27): options of the role field.
+	let signUpRoles: string[] = [];
+	if (fields.role && Array.isArray(raw?.signUpRoles)) {
+		const options = ((def.fields || []).find((x: any) => x.key === fields.role)?.options || []).map((o: any) => String(o.value));
+		signUpRoles = [...new Set<string>(raw.signUpRoles.map((r: any) => String(r)))].filter(r => options.includes(r));
+	}
+	return { model: def.name, accounts: raw?.accounts === 'model' ? 'model' : 'mint', fields, signUpRoles };
 };
 
 /** A model that looks like customers (Customer, Client, Member…) with an email field, to start from. */
@@ -160,6 +173,7 @@ export const saveAuth = async (project: any, body: any) => {
 		// Out of `model` mode, accounts the model held become MINT customers again (their record stays linked as a copy).
 		if (auth?.accounts !== 'model') await ProjectCustomer.updateMany({ holder: 'model' }, { $unset: { holder: 1 } });
 	});
+	forgetPublicWidgets(project); // the site's login reads the customer roles (W-27)
 	return authView(project);
 };
 
@@ -183,7 +197,7 @@ const customerModel = async (app: any, project: any) => {
  * model is chosen). Never stops a sign-in: a record that can't be made is
  * logged and skipped, and tried again on the next sign-in.
  */
-export const linkCustomerRecord = async (app: any, project: any, customer: any): Promise<string | null> => {
+export const linkCustomerRecord = async (app: any, project: any, customer: any, opts: { customerRole?: string } = {}): Promise<string | null> => {
 	try {
 		const c = await customerModel(app, project);
 		if (!c) return null;
@@ -197,6 +211,8 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any):
 		if (!doc) {
 			doc = new Model({
 				[m.fields.email]: customer.email,
+				// A role login's sign-up (W-27): its customer role, already checked as one people may sign up as.
+				...(m.fields.role && opts.customerRole && { [m.fields.role]: opts.customerRole }),
 				...(m.fields.name && customer.name && { [m.fields.name]: customer.name }),
 				...(m.fields.phone && customer.phone && { [m.fields.phone]: customer.phone }),
 				// Owner-only endpoints let the customer reach their own record (the path exists when the model's public API is on).
@@ -255,7 +271,11 @@ export const accountsModel = async (app: any, project: any) => {
  * its sign-in row. An email already in the model — an account, or a record the
  * team added — is refused.
  */
-export const registerInModel = async (c: NonNullable<Awaited<ReturnType<typeof accountsModel>>>, body: { name: string; email: string; phone?: string; password: string }) => {
+export const registerInModel = async (
+	c: NonNullable<Awaited<ReturnType<typeof accountsModel>>>,
+	body: { name: string; email: string; phone?: string; password: string },
+	opts: { customerRole?: string } = {}
+) => {
 	const { m, def, Model } = c;
 	if ((await Model.exists(byEmail(m.fields.email, body.email))) || (await ProjectCustomer.exists({ email: body.email })))
 		throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
@@ -264,6 +284,7 @@ export const registerInModel = async (c: NonNullable<Awaited<ReturnType<typeof a
 		[m.fields.email]: body.email,
 		...(m.fields.name && body.name && { [m.fields.name]: body.name }),
 		...(m.fields.phone && body.phone && { [m.fields.phone]: body.phone }),
+		...(m.fields.role && opts.customerRole && { [m.fields.role]: opts.customerRole }),
 		_customer: customer._id,
 		...(def.access?.enabled && { privacy: 'public' }),
 	});
@@ -324,7 +345,12 @@ export const signInRoles = async (project: any) => {
 		field: f.key,
 		fieldLabel: f.label || f.key,
 		default: f.default ?? null,
-		roles: (f.options || []).map((o: any) => ({ value: String(o.value), label: o.label || String(o.value) })),
+		// `signUp`: people may sign up as it themselves (W-27) — the default always, others when the project allows.
+		roles: (f.options || []).map((o: any) => ({
+			value: String(o.value),
+			label: o.label || String(o.value),
+			signUp: String(o.value) === String(f.default ?? '') || (m.signUpRoles || []).includes(String(o.value)),
+		})),
 	};
 };
 
@@ -350,5 +376,19 @@ export const customerRole = async (app: any, project: any, customer: any): Promi
 export const signInLocked = async (project: any, def: any): Promise<string[]> => {
 	const m = await loadAuth(project);
 	return m && m.model === def.name && m.fields.role ? [m.fields.role] : [];
+};
+
+/**
+ * A role login's customer role (W-27), checked: one of the Customer role
+ * field's options — and, for a sign-up, one people may sign up as themselves.
+ * Returns the option, or throws.
+ */
+export const checkCustomerRole = async (project: any, value: string, forSignUp: boolean) => {
+	const info = await signInRoles(project);
+	const role = info?.roles.find((r: any) => r.value === value);
+	if (!info || !role) throw new TenancyError(400, `“${value}” isn’t a customer role of this site.`, 'customer_role_unknown');
+	if (forSignUp && !role.signUp)
+		throw new TenancyError(403, `You can’t sign up as ${role.label} here — ${role.label} accounts are made by the team.`, 'customer_role_closed');
+	return role;
 };
 

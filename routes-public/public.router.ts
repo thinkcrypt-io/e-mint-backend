@@ -31,7 +31,7 @@ import { fireAutomations } from '../library/functions/automations.function.js';
 import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
 import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
-import { accountByEmail, accountsModel, currentAccount, customerRole, linkCustomerRecord, registerInModel, signInLocked, syncCustomerRecord } from '../library/functions/authMapping.function.js';
+import { accountByEmail, accountsModel, checkCustomerRole, currentAccount, customerRole, linkCustomerRecord, registerInModel, signInLocked, syncCustomerRecord } from '../library/functions/authMapping.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { canEmailCustomers, resetPassword, sendResetLink } from '../library/functions/customerReset.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
@@ -92,8 +92,11 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  * model answers only what its endpoints allow.
  *
  *   GET  /                      the project's public info (name, type, models)
- *   POST /auth/register         { name, email, password }  → { token, customer }
- *   POST /auth/login            { email, password }        → { token, customer }
+ *   POST /auth/register         { name, email, password, customerRole? }  → { token, customer }
+ *   POST /auth/login            { email, password, customerRole? }        → { token, customer }
+ *                               customerRole (W-27): a role login — sign up as that customer role
+ *                               (403 customer_role_closed unless people may), sign in only with it
+ *                               (403 customer_role_mismatch)
  *   GET  /auth/me               the signed-in customer (`record`: their record in the project’s own customer model, docs/widgets W-24)
  *   PUT  /auth/me               { name, phone }
  *   POST /auth/logout-everywhere  signs every device out
@@ -322,14 +325,18 @@ router.post(
 				email: Joi.string().trim().lowercase().email().required(),
 				phone: Joi.string().trim().max(40).allow(''),
 				password,
+				// A role login (W-27): sign up as this customer role — only one people may sign up as.
+				customerRole: Joi.string().trim().max(80).allow(''),
 			}),
 			req.body
 		);
+		const { customerRole: asRole, ...fields } = body;
+		if (asRole) await checkCustomerRole(req.project, asRole, true);
 		// The project's own model may hold the accounts (W-24): the record is the account.
 		const held = await accountsModel(req.app, req.project);
 		let customer: any;
 		if (held) {
-			const made = await registerInModel(held, body);
+			const made = await registerInModel(held, fields, { customerRole: asRole || undefined });
 			customer = made.customer;
 			tellTeam(req, {
 				route: made.def.route,
@@ -342,9 +349,9 @@ router.post(
 		} else {
 			if (await ProjectCustomer.exists({ email: body.email }))
 				throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
-			customer = await ProjectCustomer.create({ ...body, lastLoginAt: new Date() });
+			customer = await ProjectCustomer.create({ ...fields, lastLoginAt: new Date() });
 			// A linked copy in the project's own customer model, when Login & account has one (W-24).
-			await linkCustomerRecord(req.app, req.project, customer);
+			await linkCustomerRecord(req.app, req.project, customer, { customerRole: asRole || undefined });
 			tellTeam(req, {
 				route: 'customers',
 				permission: 'view-customers',
@@ -365,7 +372,16 @@ router.post(
 	'/auth/login',
 	authLimit,
 	handle(async req => {
-		const body = check(Joi.object({ email: Joi.string().trim().lowercase().email().required(), password: Joi.string().required() }), req.body);
+		const body = check(
+			Joi.object({
+				email: Joi.string().trim().lowercase().email().required(),
+				password: Joi.string().required(),
+				// A role login (W-27): only accounts with this customer role sign in.
+				customerRole: Joi.string().trim().max(80).allow(''),
+			}),
+			req.body
+		);
+		const role = body.customerRole ? await checkCustomerRole(req.project, body.customerRole, false) : null;
 		// The project's own model may hold the accounts (W-24): its record's email signs in. Accounts made
 		// before that (MINT's Customers) still sign in with theirs.
 		const held = await accountsModel(req.app, req.project);
@@ -373,12 +389,15 @@ router.post(
 			(held && (await accountByEmail(held, body.email))) || (await ProjectCustomer.findOne({ email: body.email, holder: { $ne: 'model' } }).select('+password'));
 		if (!customer || !(await customer.checkPassword(body.password))) throw new TenancyError(400, 'That email and password don’t match.');
 		if (customer.isActive === false) throw new TenancyError(400, 'This account has been switched off.');
-		customer.lastLoginAt = new Date();
-		await customer.save();
 		// Accounts made before a customer model was chosen get their record now (W-24).
 		await linkCustomerRecord(req.app, req.project, customer);
 		const now = (await currentAccount(req.app, req.project, customer.toObject())) || customer.toObject();
-		return { token: customer.generateToken(), customer: await answerCustomer(req, now) };
+		const answer = await answerCustomer(req, now);
+		if (role && answer.customerRole !== role.value)
+			throw new TenancyError(403, `This sign-in is for ${role.label} accounts — yours isn’t one.`, 'customer_role_mismatch');
+		customer.lastLoginAt = new Date();
+		await customer.save();
+		return { token: customer.generateToken(), customer: answer };
 	})
 );
 

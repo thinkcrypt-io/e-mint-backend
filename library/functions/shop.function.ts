@@ -113,6 +113,8 @@ export const shopModels = (defs: any[]) =>
 			kind: f.kind,
 			...(f.ref && { ref: f.ref }),
 			...(f.options?.length && { options: f.options.map((o: any) => ({ value: o.value, label: o.label || o.value })) }),
+			// An options field's default — the Customer role every other sign-up gets (docs/widgets W-27).
+			...(f.options?.length && f.default !== undefined && f.default !== null && f.default !== '' && { default: String(f.default) }),
 			...(f.kind === 'sectionlist' && { fields: (f.fields || []).map((s: any) => ({ key: s.key, label: s.label || s.key, kind: s.kind })) }),
 		})),
 	}));

@@ -424,3 +424,32 @@ Newest last. One entry per work order: what, files, how verified.
   `customerRole` on `/auth/*` and `Mint.auth.user` (rules still use
   `{ref: 'customer.role'}`). Re-run: customer-roles 30, widgets-setup 70.
 
+## W-27 — A login per customer role (2026-10-19)
+- **The user's words:** "so that when we create customers we can define roles
+  like seller, customer, picker etc and make separate logins/auth/protect
+  middlewares for them, and different api's for them if necessary" → "Yes:
+  per role, a switch for whether people can sign up as it themselves; a login
+  widget set to one customer role signs up as it and only lets that role sign
+  in."
+- **Backend:** `authMapping.function.ts` `signUpRoles` (checked against the
+  role field's options), `signInRoles` marks `signUp`, `checkCustomerRole`,
+  `opts.customerRole` on `linkCustomerRecord` / `registerInModel`; saveAuth
+  forgets the public widget cache. `public.router.ts` register/login take
+  `customerRole` (`customer_role_closed`, `customer_role_unknown`,
+  `customer_role_mismatch` — after the password, before any session).
+  `widgets.function.ts`: login option `customerRole`, text `roleNote`,
+  `customerRoles` in the public config. `shop.function.ts` `shopModels` sends
+  an options field's `default`. `mint.ts` `signIn(…, { customerRole })`;
+  `widgets/login.ts` role login (note under the title, sign-up only when
+  open).
+- **Panels (both):** Customers step "Who can sign up as each customer role"
+  (default locked on); Set up shows "Customer role (this login)" as a
+  dropdown of the roles; snippet help names `data-customer-role`.
+- **Verified:** `customer-roles.mjs` now 42 (sign-up roles saved and unknown
+  dropped; public config; closed / unknown role sign-up refused; a VIP
+  login's sign-up makes a VIP; role login admits and turns away; a wrong
+  password still says only that; a team record linked by email gets no
+  role). widgets-setup 70, widgets 18, customer-reset 32. Headless Chrome:
+  the switches saving `signUpRoles`, the role dropdown, a staff login with no
+  sign-up link and a VIP login with one.
+

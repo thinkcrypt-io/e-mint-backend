@@ -3,6 +3,7 @@ import { runInScope } from './tenantScope.function.js';
 import { loadSite } from './siteConfig.function.js';
 import { TenancyError } from './tenancy.function.js';
 import { loadShop } from './shop.function.js';
+import { signInRoles } from './authMapping.function.js';
 
 /**
  * Site widgets (docs/widgets): what each widget accepts, a project's settings
@@ -71,6 +72,13 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 			{ key: 'allowSignUp', label: 'Let visitors create accounts', kind: 'boolean', default: true, help: 'Off: only people who already have an account can sign in.' },
 			{ key: 'askPhone', label: 'Ask for a phone number on sign-up', kind: 'boolean', default: false, help: 'Optional for the visitor. Kept with the account and copied to your customer model’s phone field.' },
 			{
+				key: 'customerRole',
+				label: 'Customer role (this login)',
+				kind: 'text',
+				default: '',
+				help: 'Empty: one login for everyone. A customer role (e.g. seller): this login only lets that role sign in, and its sign-up makes that role — when people may sign up as it. On one page only: data-customer-role="seller".',
+			},
+			{
 				key: 'allowReset',
 				label: 'Show “Forgot your password?”',
 				kind: 'boolean',
@@ -95,6 +103,7 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 			{ key: 'resetTitle', label: 'New-password title', default: 'Choose a new password' },
 			{ key: 'resetButton', label: 'Save-password button', default: 'Save password' },
 			{ key: 'backToSignIn', label: 'Back to sign in', default: 'Back to sign in' },
+			{ key: 'roleNote', label: 'Under the title, on a role login ({role} is the role)', default: 'For {role} accounts' },
 		],
 		snippet: '<div data-mint="login"></div>',
 	},
@@ -326,6 +335,11 @@ export const publicWidgets = async (project: any) => {
 		),
 		...(shop && { shop: { currency: shop.currency } }),
 	};
+	// A role login (W-27) names its role and knows whether it has a sign-up.
+	if (value.widgets.login) {
+		const info = await signInRoles(project).catch(() => null);
+		if (info?.roles.length) (value as any).customerRoles = info.roles.map((r: any) => ({ value: r.value, label: r.label, signUp: !!r.signUp }));
+	}
 	publicCache.set(key, { at: Date.now(), value });
 	return value;
 };

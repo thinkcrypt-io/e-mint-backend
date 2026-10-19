@@ -4,6 +4,7 @@
 // from the customer's own record on every call, never written by the public
 // API, and endpoints for signed-in customers may admit only some roles
 // (`access.customerRoles`, 403 customer_role_required) or compare with `customer.role`.
+// W-27: a login per customer role — sign up as one people may, sign in only with it.
 import { call, ok, done } from './lib.mjs';
 
 const stamp = Date.now();
@@ -101,6 +102,36 @@ r = await call('GET', pub('/staff/members'), null, `Bearer ${fake.token}`);
 ok('…and the staff endpoint refuses them', r.status === 403, r.status);
 r = await call('GET', pub('/same/members'), null, `Bearer ${fake.token}`);
 ok('…a rule comparing with their (missing) role matches nothing', r.status === 200 && r.body.doc.length === 0, `${r.status} ${r.body?.message}`);
+
+/* ------------------------------------------- a login per customer role (W-27) */
+r = await call('PUT', W('/auth'), { auth: { model: 'Member', fields: { email: 'email', name: 'fullName', role: 'role' }, signUpRoles: ['vip', 'boss'] } }, T);
+ok('W-27: which customer roles people may sign up as (unknown ones dropped)', r.status === 200 && r.body.auth?.signUpRoles?.join() === 'vip', JSON.stringify(r.body?.auth));
+await call('PUT', W(), { widgets: { login: { added: true, enabled: true } } }, T);
+r = await call('GET', pub('/widgets'));
+const pubRoles = Object.fromEntries((r.body?.customerRoles || []).map(x => [x.value, x.signUp]));
+ok('the site’s login gets the customer roles and which have a sign-up (the default always)', pubRoles.customer === true && pubRoles.vip === true && pubRoles.staff === false, JSON.stringify(r.body?.customerRoles));
+ok('…and the login widget has the “Customer role (this login)” option, empty by default', r.body?.widgets?.login?.options?.customerRole === '', JSON.stringify(r.body?.widgets?.login?.options));
+
+r = await call('POST', pub('/auth/register'), { name: 'Wannabe Staff', email: `wannabe${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'staff' });
+ok('signing up as a role the team gives is refused (403 customer_role_closed)', r.status === 403 && r.body?.code === 'customer_role_closed', `${r.status} ${r.body?.code} ${r.body?.message}`);
+r = await call('POST', pub('/auth/register'), { name: 'Nobody', email: `nobody${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'wizard' });
+ok('…an unknown role too (400 customer_role_unknown)', r.status === 400 && r.body?.code === 'customer_role_unknown', `${r.status} ${r.body?.code}`);
+r = await call('POST', pub('/auth/register'), { name: 'Vera VIP', email: `vera${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'vip' });
+const vera = r.body;
+ok('the VIP login’s sign-up makes a VIP', r.status === 200 && vera.customer?.customerRole === 'vip', JSON.stringify(r.body?.customer));
+r = await call('GET', P(site._id, `/${route}/${vera.customer.record}`), null, T);
+ok('…on her record', (r.body?.doc || r.body)?.role === 'vip', JSON.stringify(r.body).slice(0, 160));
+r = await call('POST', pub('/auth/login'), { email: `vera${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'vip' });
+ok('the VIP login lets her in', r.status === 200 && r.body.customer?.customerRole === 'vip', `${r.status} ${r.body?.message}`);
+r = await call('POST', pub('/auth/login'), { email: `vera${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'staff' });
+ok('the staff login turns her away (403 customer_role_mismatch, no token)', r.status === 403 && r.body?.code === 'customer_role_mismatch' && !r.body?.token, `${r.status} ${r.body?.code}`);
+r = await call('POST', pub('/auth/login'), { email: `ann${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'staff' });
+ok('…and lets staff in', r.status === 200 && r.body.customer?.customerRole === 'staff', `${r.status} ${r.body?.message}`);
+r = await call('POST', pub('/auth/login'), { email: `vera${stamp}@example.com`, password: 'wrong-password-1', customerRole: 'staff' });
+ok('a wrong password still says only that', r.status === 400 && !r.body?.code, `${r.status} ${r.body?.code}`);
+await call('POST', P(site._id, `/${route}`), { fullName: 'Desk Made', email: `desk${stamp}@example.com`, role: 'customer' }, T);
+r = await call('POST', pub('/auth/register'), { name: 'Claims VIP', email: `desk${stamp}@example.com`, password: 'customer-pass-1', customerRole: 'vip' });
+ok('signing up on the VIP login with the email of a team-made record: linked, no customer role given', r.status === 200 && r.body.customer?.customerRole === null, JSON.stringify(r.body?.customer));
 
 /* -------------------------------------------------- the model holds accounts */
 r = await call('PUT', W('/auth'), { auth: { model: 'Member', accounts: 'model', fields: { email: 'email', name: 'fullName', role: 'role' } } }, T);

@@ -6,7 +6,10 @@
  * link. Layout `card` draws the card in place; `button` draws a button that
  * opens it. `askPhone` adds an optional phone to sign-up. `allowReset`
  * (default on) adds "Forgot your password?": an email gets a link back to
- * this page, which opens on a new password (W-25, Mint.auth.resetToken). Where the account
+ * this page, which opens on a new password (W-25, Mint.auth.resetToken).
+ * `customerRole` (or data-customer-role on the element) makes it a role login
+ * (W-27): only that customer role signs in, its sign-up makes that role, and
+ * the sign-up link shows only when people may sign up as it. Where the account
  * lands — MINT's Customers, plus a record in the project's own customer model
  * when one is chosen (W-24) — is the server's business (authMapping.function). Options and texts come from the panel (Site setup → Widgets).
  */
@@ -20,6 +23,10 @@ export const LOGIN_WIDGET_JS = `(function () {
 		mount: function (host, ctx) {
 			var t = ctx.texts, o = ctx.options;
 			var body = Mint.ui.shadow(host, ctx.theme);
+			// A role login (W-27): one customer role signs in here, and signs up as it when people may.
+			var asRole = String(o.customerRole || '').trim();
+			var roleInfo = null;
+			var canSignUp = function () { return o.allowSignUp && (!asRole || !roleInfo || roleInfo.signUp); };
 			var mode = o.startWith === 'signup' && o.allowSignUp ? 'up' : 'in';
 			var open = false;
 			// Opened from a reset email (W-25): straight to the new password.
@@ -118,21 +125,24 @@ export const LOGIN_WIDGET_JS = `(function () {
 					var data = { email: f.email.value.trim(), password: f.password.value };
 					if (up) data.name = f.name.value.trim();
 					if (up && o.askPhone && f.phone.value.trim()) data.phone = f.phone.value.trim();
+					if (up && asRole) data.customerRole = asRole;
 					error.textContent = '';
 					if (Mint.preview) { error.textContent = 'This is a preview — signing in works on your site.'; return; }
 					submit.disabled = true;
-					(up ? Mint.auth.signUp(data) : Mint.auth.signIn(data.email, data.password)).catch(function (err) {
+					(up ? Mint.auth.signUp(data) : Mint.auth.signIn(data.email, data.password, asRole ? { customerRole: asRole } : null)).catch(function (err) {
 						error.textContent = err.message;
 						submit.disabled = false;
 					});
 				};
-				var card = el('div', 'card', { role: 'dialog' }, [el('h3', 'title', { text: up ? t.signUpTitle : t.signInTitle }), f]);
+				var head = [el('h3', 'title', { text: up ? t.signUpTitle : t.signInTitle })];
+				if (asRole) head.push(el('p', '', { text: String(t.roleNote || '').replace('{role}', roleInfo ? roleInfo.label : asRole), style: 'margin:-6px 0 12px;font-size:13px;opacity:.7' }));
+				var card = el('div', 'card', { role: 'dialog' }, head.concat([f]));
 				if (!up && o.allowReset !== false) {
 					var lost = el('button', 'link', { type: 'button', text: t.forgotLink, style: 'margin-top:12px;display:block' });
 					lost.onclick = function () { mode = 'forgot'; render(); };
 					card.appendChild(lost);
 				}
-				if (o.allowSignUp) {
+				if (canSignUp()) {
 					var swap = el('button', 'link', { type: 'button', text: up ? t.toSignIn : t.toSignUp, style: 'margin-top:12px' });
 					swap.onclick = function () { mode = up ? 'in' : 'up'; render(); };
 					card.appendChild(swap);
@@ -156,7 +166,13 @@ export const LOGIN_WIDGET_JS = `(function () {
 				body.appendChild(wrap);
 			}
 
-			Mint.auth.ready.then(render);
+			// The project's customer roles (their names, and which have a sign-up) come with its widget settings.
+			Promise.all([Mint.auth.ready, Mint.config]).then(function (r) {
+				var roles = (r[1] && r[1].customerRoles) || [];
+				for (var i = 0; i < roles.length; i++) if (roles[i].value === asRole) roleInfo = roles[i];
+				if (mode === 'up' && !canSignUp()) mode = 'in';
+				render();
+			});
 			Mint.auth.onChange(function () { open = false; if (mode !== 'up') mode = 'in'; render(); });
 			document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) { open = false; render(); } });
 		},

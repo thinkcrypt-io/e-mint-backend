@@ -19,7 +19,8 @@
  *   Mint.auth.ready / .user / .token        the signed-in customer (shared with widget.js);
  *                                            .user.record: their record in the project's customer model (W-24)
  *                                            .user.customerRole: their customer role, when one is chosen (W-26)
- *   Mint.auth.signIn(email, password) · signUp({ name, email, password, phone? }) · signOut()
+ *   Mint.auth.signIn(email, password, { customerRole? }) · signUp({ name, email, password, phone?, customerRole? }) · signOut()
+ *                                            customerRole (W-27): a role login — sign up as / only sign in with that customer role
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
  *   Mint.auth.forgotPassword(email) · resetPassword(token, password)   forgot password (W-25); a reset
  *                                            link opens this page with #mint_reset=…, kept as Mint.auth.resetToken
@@ -91,8 +92,11 @@ export const MINT_JS = `(function () {
 		user: null,
 		token: null,
 		fetch: request,
-		signIn: function (email, password) {
-			return request('auth/login', { method: 'POST', body: JSON.stringify({ email: email, password: password }) }).then(json)
+		// opts.customerRole (W-27): a role login — only that customer role signs in.
+		signIn: function (email, password, opts) {
+			var body = { email: email, password: password };
+			if (opts && opts.customerRole) body.customerRole = opts.customerRole;
+			return request('auth/login', { method: 'POST', body: JSON.stringify(body) }).then(json)
 				.then(function (r) { setSession(r.customer, r.token); return r.customer; });
 		},
 		signUp: function (data) {

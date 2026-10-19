@@ -27,6 +27,10 @@ writes it; `ApiEndpoint.access.customerRoles` + 403 `customer_role_required`; `c
 in rules, `/auth/*` and `Mint.auth.user`. Endpoint page: "Which roles"
 (mint-tenant only — admin's API pages predate the API builder). Suite
 `customer-roles.mjs`.
+**Then W-27** (role logins): `AuthMapping.signUpRoles`; `/auth/register` and
+`/auth/login` take `customerRole` (403 `customer_role_closed` /
+`customer_role_mismatch`); login option `customerRole` + `data-customer-role`;
+public config `customerRoles`. Suite `customer-roles.mjs` (42).
 
 **2026-10-19 — W-24 done** (CHANGELOG, not deployed). The user: "on widgets
 screen instead of showing all the widgets must be empty, users can add widget,
@@ -147,6 +151,7 @@ Related, running separately: "public API read-only fields" (started
 | W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model — MINT's Customers by default, a linked copy or the project's model holding the accounts (WD12) | both | M | done 2026-10-19, not deployed |
 | W-25 | A model's Sign-in switch (only those can be Login's customer model); forgot password for customers (WD13) | both | M | done 2026-10-19, not deployed |
 | W-26 | One sign-in model per project + a Role field; signed-in endpoints may admit only some customer roles (WD14) | both | M | done 2026-10-19, not deployed |
+| W-27 | A login per customer role: which roles people may sign up as; role logins (WD15) | both | M | done 2026-10-19, not deployed |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -273,6 +278,28 @@ and model-held accounts: `POST /auth/forgot` (same answer either way; 409
 signs every other device out), MINT's page `GET /public/reset-password`, the
 login widget's forgot / sent / new-password screens (`allowReset`),
 `Mint.auth.forgotPassword / resetPassword / resetToken`.
+
+## W-27 — A login per customer role (M) — done 2026-10-19
+The user: "so that when we create customers we can define roles like seller,
+customer, picker etc and make separate logins/auth/protect middlewares for
+them, and different api's for them if necessary"; then: "Yes: per role, a
+switch for whether people can sign up as it themselves; a login widget set to
+one customer role signs up as it and only lets that role sign in." (WD15)
+- `AuthMapping.signUpRoles` (options of the Customer role field; the default
+  always may) — the Customers step's "Who can sign up as each customer role".
+- `POST /auth/register { customerRole }`: 403 `customer_role_closed` unless
+  people may sign up as it, 400 `customer_role_unknown`; the new record gets
+  it (`linkCustomerRecord` / `registerInModel` `opts.customerRole`). A team's
+  record linked by email still gets no role.
+- `POST /auth/login { customerRole }`: after the password, 403
+  `customer_role_mismatch` (no token) unless the account has it.
+- Login widget option `customerRole` (text; the panel shows a dropdown of the
+  roles), `data-customer-role` per page, text `roleNote`; the public widget
+  config carries `customerRoles` [{value, label, signUp}] so a closed role's
+  login hides "Create an account". `Mint.auth.signIn(…, { customerRole })`,
+  `signUp({ …, customerRole })`.
+- "Protect middlewares / different APIs" are W-26's endpoints: own paths per
+  role with "Which customer roles".
 
 ## W-26 — One sign-in model + roles; endpoints by role (M) — done 2026-10-19
 The user asked whether endpoints should admit several sign-in models or "one
