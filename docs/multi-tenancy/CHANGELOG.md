@@ -1967,3 +1967,21 @@ Decisions D14–D17 (README).
 - Verified on a throwaway page wrapped in `MainBody` (deleted) at 1280px: the scroller's right edge = the window's,
   no sideways page scroll. Permission filter checked by `tsc` only (no backend running). Pushed mint-tenant
   `2a3e5fa`, admin `345ac01`; not deployed.
+
+## 2026-10-20 — Model builder: a new sidebar section from the picker
+- The user: when creating a model you can pick an existing sidebar section but not make one there.
+- admin + mint-tenant `app/model-builder/_components/SectionSelect.tsx` (new): the section dropdown with
+  **+ New section…** last. It opens the sidebar builder's own `SectionDialog` (name, icon, show, tooltip,
+  description), creates the section with the usual `post` on `sidebarcategories` (no new RTK endpoint;
+  `priority: 0` puts it last in the sidebar, the required field the settings validator asks for), invalidates
+  `builder` (options reload) + the live sidebar tag, and picks it. Used in the model wizard's Finish step
+  (`ModelWizard`), the model page's Basics → Sidebar (`ModelPanels`) and the feature wizard's "New pages go in"
+  (`FeatureWizard`, beside "A new category: <title>").
+- `app/sidebar-builder/_components/SectionDialog.tsx`: optional `saving` (button spinner).
+- MCP `plan_feature` / `build_feature` unchanged: they already take a section name or `"new"` (one named after the
+  feature); an unknown name still falls back to the plan's default — not changed here.
+- Verified with headless Chrome on the :3073 mint-tenant / :5071 backend: Finish step → + New section… →
+  "Suppliers" → Add section → picked, summary says "In the sidebar under Suppliers"; Create → the sidebar shows
+  SUPPLIERS › Vendors after a reload. `tsc` clean in both apps (admin's only errors are in generated `.next-*` types).
+  The feature wizard's picker made and picked “Logistics” the same way. Pushed mint-tenant `bc38f8b`, admin `24cde37`,
+  mint-docs `21d9401` (models, getting started, sidebar guides); not deployed.

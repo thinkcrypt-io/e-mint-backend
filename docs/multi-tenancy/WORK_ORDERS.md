@@ -8,6 +8,12 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-20)
 
+**2026-10-20 — New sidebar section from the model builder.** The section pickers (model wizard Finish, model page
+Basics → Sidebar, feature wizard) end with **+ New section…**: the sidebar builder's `SectionDialog`, saved straight
+away through the `sidebarcategories` CRUD (`priority: 0`, last), then picked — `SectionSelect.tsx` in both apps.
+MCP planning unchanged (it already takes a name or `"new"`). Pushed mint-tenant `bc38f8b`, admin `24cde37`,
+mint-docs `21d9401`. Not deployed.
+
 **2026-10-20 — Project dashboard suggestions restyled.** `ProjectSuggestions` (admin + mint-tenant, same file) shows
 large cards in one sideways-scrolling row with back / forward arrows (`CardRow`); the dashboard puts them first only
 while it has nothing else to show, and after the widgets / a website's or API's overview otherwise (`at='bottom'`).
