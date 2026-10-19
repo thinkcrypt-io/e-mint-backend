@@ -1938,3 +1938,20 @@ Decisions D14–D17 (README).
   by a row click (edge, tinted header), Esc closes, ⋯ shows Move up / Move down / Copy the API name / Remove from
   the page, Move down swaps Status and Issued on. `tsc` clean in both apps. Not deployed.
 
+
+## 2026-10-20 — Project dashboard suggestions: featured cards, after the widgets
+- The user: make the dashboard's suggestions look like a "Featured tools" row (big cards, icon tile, title, two-line
+  text, a secondary link bottom-left, a button bottom-right, arrows to scroll), and put them at the very end when the
+  dashboard has other things on it.
+- admin + mint-tenant `components/library/tenant/ProjectSuggestions.tsx`: `SuggestionCard` is a 372px card (86% on
+  phones) — tone icon tile (a check when done), Start here / Done badge and a round Mark done toggle top-right, title,
+  text clamped to two lines, the guide link bottom-left and the action button (solid; outline once done) bottom-right.
+  New `CardRow`: one row that scrolls sideways with scroll snap and a hidden scrollbar, back / forward arrows that
+  switch off at either end. Header keeps the count, progress bar and Hide. New prop `at: 'top' | 'bottom'` sets the
+  spacing (and the "Show suggestions" link's).
+- admin + mint-tenant `app/dashboard/page.tsx`: app projects show the suggestions first only when there are no saved
+  widgets (and not while loading), else after `DashboardGrid`; website / API projects show them after the overview
+  and widgets.
+- Verified on a throwaway page (deleted) in the browser pane at 1280×800, dark and light: cards render, no label is
+  cut off, the forward arrow scrolls to the end and switches off. `tsc` clean in both apps. The real dashboard wasn't
+  opened (no backend running). Pushed mint-tenant `6ff6bda`, admin `a1908f8`; not deployed.

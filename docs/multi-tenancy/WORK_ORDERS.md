@@ -6,7 +6,12 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-19)
+## Handoff — read this first (kept current; last updated 2026-10-20)
+
+**2026-10-20 — Project dashboard suggestions restyled.** `ProjectSuggestions` (admin + mint-tenant, same file) shows
+large cards in one sideways-scrolling row with back / forward arrows (`CardRow`); the dashboard puts them first only
+while it has nothing else to show, and after the widgets / a website's or API's overview otherwise (`at='bottom'`).
+Pushed mint-tenant `6ff6bda`, admin `a1908f8`; not deployed.
 
 **2026-10-19 — Customer sign-in on API → Endpoints (API builder AB-12, D15).** The built-in `/auth/*` endpoints
 are listed on Endpoints (always on, not `ApiEndpoint` rows) with where customers are kept, **Set up sign-in**
