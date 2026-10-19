@@ -4,6 +4,23 @@ Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
 ## Handoff — read this first (last updated 2026-10-19)
 
+**2026-10-19 — W-25 done** (CHANGELOG, not deployed). The user: "in model
+settings an option should be there if this model is allowed to login and
+register … if switched on then only they should appear on the widget … Also
+implement forget password". `ModelDefinition.signIn.enabled` (model page →
+Advanced → Sign-in, tenant panel only): only those models are offered as
+Login's customer model (`checkAuth` refuses others; `authView.closed` counts
+them) and the switch can't go off while the widget uses the model. Forgot
+password: `POST /auth/forgot` / `/auth/reset` (`customerReset.function.ts`),
+an hour-long single-use JWT (`tokenVersion`) emailed from the project's own
+email (kind `customer-reset`); the link returns to the asking page only when
+it's on the project's domains / hosted site (localhost in dev), else MINT's
+page `GET /public/reset-password`. Login widget: "Forgot your password?"
+(`allowReset`, 7 new texts), `Mint.auth.forgotPassword / resetPassword /
+resetToken`. Suite `customer-reset.mjs`. **Waiting on the user (W-26):**
+who signed-in endpoints admit when several models hold accounts — the
+suggestion is one sign-in model per project plus roles (see W-26).
+
 **2026-10-19 — W-24 done** (CHANGELOG, not deployed). The user: "on widgets
 screen instead of showing all the widgets must be empty, users can add widget,
 take through a widget setup wizard. can set up auth widget, where they can set
@@ -121,6 +138,8 @@ Related, running separately: "public API read-only fields" (started
 | W-22 | AI assistant on the site (the project's public data only) | both | L | later (P3) |
 | W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
 | W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model — MINT's Customers by default, a linked copy or the project's model holding the accounts (WD12) | both | M | done 2026-10-19, not deployed |
+| W-25 | A model's Sign-in switch (only those can be Login's customer model); forgot password for customers (WD13) | both | M | done 2026-10-19, not deployed |
+| W-26 | Signed-in endpoints by role — one sign-in model + roles, or several sign-in models | both | M | proposed, waiting on the user |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -235,6 +254,31 @@ MCP `set_widgets`; the T-13 website and API templates switch their widgets on.
 ## W-13 — Guides + marketing (M, with each WO)
 `/user-docs/widgets` and `/user-docs/payments` sections per widget, doc links
 on every panel, marketing site features + a "Sell on your site" workflow.
+
+## W-25 — Sign-in switch + forgot password (M) — done 2026-10-19
+A model's Advanced tab has **Sign-in → People can sign up and sign in**
+(`ModelDefinition.signIn.enabled`; a list with an email or text field; tenant
+panel only). Login & account's Customers step offers only those models and
+says how to open one; the backend refuses others and refuses switching it off
+while the widget uses the model. Forgot password (WD13) for MINT's Customers
+and model-held accounts: `POST /auth/forgot` (same answer either way; 409
+`mail_not_set_up` without an email account), `POST /auth/reset` (signs in,
+signs every other device out), MINT's page `GET /public/reset-password`, the
+login widget's forgot / sent / new-password screens (`allowReset`),
+`Mint.auth.forgotPassword / resetPassword / resetToken`.
+
+## W-26 — Signed-in endpoints by role (M) — proposed, waiting on the user
+The user asked: "If an auth module is created, any endpoint can be selected
+under auth, one or multiple … user and customer … or is it better to have one
+customer model and link it to role and then we can use it everywhere? suggest
+the better approach." Suggested: **one sign-in model per project plus a role
+field** (e.g. Customer / Member / Staff) — one sign-in form, one password per
+person, an email can't be in two account lists, and an endpoint's "who" is
+"Signed-in customers" with an optional "only these roles" (the token carries
+nothing new; the role is read from the record). Extra details per kind of
+person go in linked profile models. The alternative — several sign-in models,
+an endpoint picking which — needs a model chosen at sign-in, tokens naming
+their model and email clashes handled. Nothing built until the user picks.
 
 ## W-24 — Add a widget wizard + the customer model (M) — done 2026-10-19
 The Widgets screen lists only the widgets a project has added — empty at

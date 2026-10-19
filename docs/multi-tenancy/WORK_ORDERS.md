@@ -21,6 +21,13 @@ must be re-pasted with the key. Pushed: backend `95b2fa42`, mint-tenant `60a96e8
 `5b943cc`, mint-docs `542b7ff`, website `94070f5`; not deployed. Smoke `project-keys.mjs`; `lib.mjs` rewrites the
 other scripts' old addresses to the key form.
 
+**2026-10-19 — Widgets: sign-in switch + forgot password (W-25, `docs/widgets`).** A model's Advanced tab →
+Sign-in (`ModelDefinition.signIn.enabled`) decides which models Login & account can keep customers in. Customers
+can reset a forgotten password: `POST /public/api/auth/forgot` + `/auth/reset`, emailed from the project's own
+account, back to the asking page on the project's domains or MINT's `GET /public/reset-password`
+(`customerReset.function.ts`, WD13). Smoke `customer-reset.mjs`. Not deployed. W-26 (signed-in endpoints by role)
+waits on the user's choice.
+
 **2026-10-19 — Widgets: Add a widget wizard + Login's customer model (W-24, `docs/widgets`).** The Widgets screen
 starts empty; "Add a widget" walks through a wizard (widget → customer model or Shop → options → texts → review);
 added widgets switch on/off, edit, remove (`added` per widget in `SiteWidgets`). Login & account: MINT's Customers

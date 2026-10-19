@@ -349,3 +349,42 @@ Newest last. One entry per work order: what, files, how verified.
   private backend (:5071). Headless Chrome on mint-tenant :3073: Edit → How →
   "This model holds the accounts" → Save; the server has `accounts: 'model'`.
 
+## W-25 — Sign-in switch + forgot password (2026-10-19)
+- **The user's words:** "in model settings an option should be there if this
+  model is allowed to login and register, in advance, if set to true, i mean
+  switched on then only they should appear on the widget, while creating
+  login. Also implement forget password on those fields."
+- **Model switch:** `ModelDefinition.signIn.enabled` (schema, `ModelDef`,
+  `models.controller.ts` body + checks: not on a single type, needs an email
+  or text field; can't go off while `SiteWidgets.auth.model` is this model).
+  `authMapping.function.ts`: `checkAuth` refuses a model not switched on;
+  `authView` lists only those, `closed` = how many others.
+- **Forgot password:** `functions/customerReset.function.ts` (`ownPage`,
+  `canEmailCustomers`, `sendResetLink`, `resetPassword`);
+  `routes-public/public.router.ts` `POST /auth/forgot`, `POST /auth/reset`
+  (index names them); `routes-public/index.ts` + `resetPage.ts` serve
+  `GET /public/reset-password?apiKey=` (nonce CSP, no-referrer, no-store);
+  `MailMessage` kind `customer-reset`. `mint.ts`: `Mint.auth.forgotPassword`,
+  `resetPassword`, `resetToken` (from `#mint_reset=`, cleared from the
+  address bar). `widgets/login.ts`: "Forgot your password?" → email → sent;
+  a reset link opens on the new password (button layout opens itself).
+  `widgets.function.ts`: login option `allowReset` (on) and texts
+  forgotLink, forgotTitle, forgotButton, forgotSent, resetTitle, resetButton,
+  backToSignIn.
+- **Panels (mint-tenant + admin):** `ModelPanels` `signIn` + panel `signin`
+  on the model page's Advanced tab (tenant panel only), `featurePlan`
+  default; Customers step says only models open to sign-in are listed and
+  how to open one; `AuthView.closed`; email logs label `Password reset`.
+- **Verified:** new `customer-reset.mjs` (32 checks: no email server → 409;
+  same answer for unknown emails; link to MINT's page for a foreign
+  `returnTo`, back to the page for localhost; MINT's page and its CSP; short
+  password and made-up token refused; reset signs in, signs other devices
+  out, old password stops, link single-use, earlier link spent, another
+  project's link refused; model-held account reset; team-made record gets no
+  email; send log). `widgets-setup.mjs` now 67 (switch required, refused on
+  single types / no email field, can't go off while used, unrelated saves
+  keep it). `widgets.mjs` 18, `widgets-cart.mjs` 48. Private backend :5071
+  (Mongo :27961). Headless Chrome: the wizard's hint with no model open, the
+  Advanced tab's switch saving, the widget's forgot / reset screens and
+  MINT's reset page.
+

@@ -87,6 +87,14 @@ const schema = new Schema<any>(
 			default: { type: String, enum: ['private', 'only-me', 'public'], default: 'private' },
 		},
 		/**
+		 * People can sign up and sign in as a record of this model (docs/widgets
+		 * W-25): only models switched on here can be the Login widget's customer
+		 * model. Off by default; can't go off while the widget uses it.
+		 */
+		signIn: {
+			enabled: { type: Boolean, default: false },
+		},
+		/**
 		 * The model's public API for a tenant project's own site or app
 		 * (docs/multi-tenancy WO-11): /public/api/<project>/<route>. Which actions
 		 * answer, whether they need a signed-in customer of the project, and

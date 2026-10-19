@@ -20,6 +20,8 @@
  *                                            .user.record: their record in the project's customer model (W-24)
  *   Mint.auth.signIn(email, password) · signUp({ name, email, password, phone? }) · signOut()
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
+ *   Mint.auth.forgotPassword(email) · resetPassword(token, password)   forgot password (W-25); a reset
+ *                                            link opens this page with #mint_reset=…, kept as Mint.auth.resetToken
  *   Mint.cart.ready / .lines / .count / .subtotal / .currency   the cart (W-05), priced by the server
  *   Mint.cart.add(productId, { variant, quantity }) · set(id, qty, variant) · remove(id, variant) · clear()
  *   Mint.cart.product(id) · format(amount) · refresh() · onChange(cb)    (also the `mint:cart` DOM event)
@@ -98,7 +100,22 @@ export const MINT_JS = `(function () {
 		},
 		signOut: function () { setSession(null, null); },
 		onChange: function (cb) { return on('auth', cb); },
+		// Forgot password (W-25): the link comes back to this page, with #mint_reset=<token>.
+		resetToken: null,
+		forgotPassword: function (email) {
+			return request('auth/forgot', { method: 'POST', body: JSON.stringify({ email: email, returnTo: location.href.split('#')[0] }) }).then(json);
+		},
+		resetPassword: function (token, password) {
+			return request('auth/reset', { method: 'POST', body: JSON.stringify({ token: token, password: password }) }).then(json)
+				.then(function (r) { auth.resetToken = null; setSession(r.customer, r.token); return r.customer; });
+		},
 	};
+	// Opened from a reset email: keep the token for the login widget (or the page's own code), out of the address bar.
+	var reset = location.hash.match(/(?:^#|&)mint_reset=([^&]+)/);
+	if (reset) {
+		auth.resetToken = decodeURIComponent(reset[1]);
+		try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+	}
 	session.token = read();
 	auth.ready = session.token
 		? request('auth/me').then(json).then(function (u) { setSession(u, session.token); return u; }, function () { setSession(null, null); return null; })

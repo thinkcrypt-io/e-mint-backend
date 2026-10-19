@@ -317,6 +317,8 @@ export type ModelDef = {
 	code?: { enabled?: boolean; prefix?: string; padding?: number; start?: number };
 	/** Per-record access (recordAccess.function.ts): an owner, a privacy and an access list on every record. */
 	access?: { enabled?: boolean; default?: string };
+	/** Tenant projects: people can sign up and sign in as one of its records (docs/widgets W-25). */
+	signIn?: { enabled?: boolean };
 	/** Tenant projects: the model's public API (routes-public). */
 	publicApi?: { enabled?: boolean; actions?: string[]; auth?: 'none' | 'customer'; ownerOnly?: boolean; readOnlyFields?: string[] };
 	fields: ModelFieldDef[];

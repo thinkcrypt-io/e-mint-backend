@@ -15,6 +15,8 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { stripeWebhook } from '../library/functions/payments.function.js';
 import { resolveHost } from '../library/siteBuilder/render.js';
+import { projectByKey } from '../library/functions/projectKey.function.js';
+import { resetPage } from './resetPage.js';
 
 /**
  * /public — what a tenant project's own site or app talks to
@@ -68,6 +70,28 @@ router.get('/track.js', (_req, res) => {
 	res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
 	res.setHeader('Cache-Control', 'public, max-age=300');
 	res.send(TRACK_JS);
+});
+
+/*
+ * MINT's own "choose a new password" page (docs/widgets W-25) — where a
+ * customer's reset link leads when the page they asked from isn't on one of
+ * the project's own domains. The token is in the #fragment; the page posts it
+ * to /public/api/auth/reset with the project key.
+ */
+const pageText = (v: any) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+router.get('/reset-password', async (req, res) => {
+	try {
+		const key = String(req.query.apiKey || '');
+		const project: any = await projectByKey(key);
+		if (!project || project.isActive === false) return res.status(404).send('Not found');
+		const nonce = crypto.randomBytes(16).toString('base64');
+		res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+		res.setHeader('Referrer-Policy', 'no-referrer');
+		res.setHeader('Cache-Control', 'no-store');
+		res.type('html').send(resetPage(pageText(project.name), JSON.stringify(`/public/api/auth/reset?apiKey=${encodeURIComponent(key)}`), nonce));
+	} catch {
+		res.status(500).send('Something went wrong');
+	}
 });
 
 // The marketing website's "Join the waitlist" (mint-webpage).

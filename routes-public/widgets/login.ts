@@ -4,7 +4,9 @@
  * `<div data-mint="login"></div>`. Sign in / create an account against the
  * project's customer accounts; signed in, the customer's name and a sign-out
  * link. Layout `card` draws the card in place; `button` draws a button that
- * opens it. `askPhone` adds an optional phone to sign-up. Where the account
+ * opens it. `askPhone` adds an optional phone to sign-up. `allowReset`
+ * (default on) adds "Forgot your password?": an email gets a link back to
+ * this page, which opens on a new password (W-25, Mint.auth.resetToken). Where the account
  * lands — MINT's Customers, plus a record in the project's own customer model
  * when one is chosen (W-24) — is the server's business (authMapping.function). Options and texts come from the panel (Site setup → Widgets).
  */
@@ -20,6 +22,8 @@ export const LOGIN_WIDGET_JS = `(function () {
 			var body = Mint.ui.shadow(host, ctx.theme);
 			var mode = o.startWith === 'signup' && o.allowSignUp ? 'up' : 'in';
 			var open = false;
+			// Opened from a reset email (W-25): straight to the new password.
+			if (Mint.auth.resetToken) { mode = 'reset'; open = true; }
 
 			function field(name, text, type, auto, optional) {
 				var id = 'm-' + name + '-' + Math.random().toString(36).slice(2, 8);
@@ -38,7 +42,67 @@ export const LOGIN_WIDGET_JS = `(function () {
 				return el('div', 'card', null, [el('p', '', { text: String(t.signedIn).replace('{name}', name), style: 'margin:0 0 10px;font-size:14px' }), out]);
 			}
 
+			function back() {
+				var b = el('button', 'link', { type: 'button', text: t.backToSignIn, style: 'margin-top:12px' });
+				b.onclick = function () { mode = 'in'; render(); };
+				return b;
+			}
+
+			// Forgot password: an email, then "a link is on its way" — the same answer whether there's an account or not.
+			function forgot() {
+				var f = el('form', '', { novalidate: 'novalidate' });
+				f.appendChild(field('email', 'Email', 'email', 'email'));
+				var error = el('p', 'error', { role: 'alert', 'aria-live': 'polite' });
+				var submit = el('button', 'btn block', { type: 'submit', text: t.forgotButton });
+				f.appendChild(error);
+				f.appendChild(submit);
+				f.onsubmit = function (e) {
+					e.preventDefault();
+					error.textContent = '';
+					if (Mint.preview) { error.textContent = 'This is a preview — the email is sent from your site.'; return; }
+					submit.disabled = true;
+					Mint.auth.forgotPassword(f.email.value.trim()).then(function () { mode = 'sent'; render(); }, function (err) {
+						error.textContent = err.message;
+						submit.disabled = false;
+					});
+				};
+				return el('div', 'card', { role: 'dialog' }, [el('h3', 'title', { text: t.forgotTitle }), f, back()]);
+			}
+
+			function sent() {
+				return el('div', 'card', { role: 'dialog' }, [el('h3', 'title', { text: t.forgotTitle }), el('p', '', { text: t.forgotSent, style: 'margin:0;font-size:14px' }), back()]);
+			}
+
+			// The link's token is Mint.auth.resetToken; saving signs in.
+			function reset() {
+				var f = el('form', '', { novalidate: 'novalidate' });
+				f.appendChild(field('password', 'New password', 'password', 'new-password'));
+				f.appendChild(field('again', 'The same again', 'password', 'new-password'));
+				var error = el('p', 'error', { role: 'alert', 'aria-live': 'polite' });
+				var submit = el('button', 'btn block', { type: 'submit', text: t.resetButton });
+				f.appendChild(error);
+				f.appendChild(submit);
+				f.onsubmit = function (e) {
+					e.preventDefault();
+					error.textContent = '';
+					if (f.password.value.length < 8) { error.textContent = 'Use at least 8 characters.'; return; }
+					if (f.password.value !== f.again.value) { error.textContent = 'The two passwords are different.'; return; }
+					submit.disabled = true;
+					Mint.auth.resetPassword(Mint.auth.resetToken, f.password.value).catch(function (err) {
+						error.textContent = err.message;
+						submit.disabled = false;
+					});
+				};
+				var cancel = el('button', 'link', { type: 'button', text: t.backToSignIn, style: 'margin-top:12px' });
+				cancel.onclick = function () { Mint.auth.resetToken = null; mode = 'in'; render(); };
+				return el('div', 'card', { role: 'dialog' }, [el('h3', 'title', { text: t.resetTitle }), f, cancel]);
+			}
+
 			function form() {
+				if (mode === 'forgot') return forgot();
+				if (mode === 'sent') return sent();
+				if (mode === 'reset' && Mint.auth.resetToken) return reset();
+				if (mode === 'reset') mode = 'in';
 				var up = mode === 'up';
 				var f = el('form', '', { novalidate: 'novalidate' });
 				if (up) f.appendChild(field('name', 'Name', 'text', 'name'));
@@ -63,6 +127,11 @@ export const LOGIN_WIDGET_JS = `(function () {
 					});
 				};
 				var card = el('div', 'card', { role: 'dialog' }, [el('h3', 'title', { text: up ? t.signUpTitle : t.signInTitle }), f]);
+				if (!up && o.allowReset !== false) {
+					var lost = el('button', 'link', { type: 'button', text: t.forgotLink, style: 'margin-top:12px;display:block' });
+					lost.onclick = function () { mode = 'forgot'; render(); };
+					card.appendChild(lost);
+				}
 				if (o.allowSignUp) {
 					var swap = el('button', 'link', { type: 'button', text: up ? t.toSignIn : t.toSignUp, style: 'margin-top:12px' });
 					swap.onclick = function () { mode = up ? 'in' : 'up'; render(); };
@@ -73,7 +142,8 @@ export const LOGIN_WIDGET_JS = `(function () {
 
 			function render() {
 				body.innerHTML = '';
-				var user = Mint.auth.user;
+				// A reset link opened while signed in still sets the password.
+				var user = mode === 'reset' && Mint.auth.resetToken ? null : Mint.auth.user;
 				if (o.layout !== 'button') {
 					body.appendChild(user ? signedIn(user) : form());
 					return;
@@ -87,7 +157,7 @@ export const LOGIN_WIDGET_JS = `(function () {
 			}
 
 			Mint.auth.ready.then(render);
-			Mint.auth.onChange(function () { open = false; render(); });
+			Mint.auth.onChange(function () { open = false; if (mode !== 'up') mode = 'in'; render(); });
 			document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) { open = false; render(); } });
 		},
 	});

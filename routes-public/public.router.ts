@@ -33,6 +33,7 @@ import { resolveOther, resources } from '../library/controllers/builder/viewDocu
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
 import { accountByEmail, accountsModel, currentAccount, linkCustomerRecord, registerInModel, syncCustomerRecord } from '../library/functions/authMapping.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
+import { canEmailCustomers, resetPassword, sendResetLink } from '../library/functions/customerReset.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
 import ApiCall from '../library/models/tenancy/apiCall.model.js';
@@ -96,6 +97,8 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  *   GET  /auth/me               the signed-in customer (`record`: their record in the project’s own customer model, docs/widgets W-24)
  *   PUT  /auth/me               { name, phone }
  *   POST /auth/logout-everywhere  signs every device out
+ *   POST /auth/forgot           { email, returnTo? }      → emails a link to choose a new password (W-25)
+ *   POST /auth/reset            { token, password }        → { token, customer } — the link's token, signed in
  *   GET  /:route                list   ?page&limit(≤100)&sort=-a,b&search=&<field>=<value>&<field>[<op>]=<value>
  *   GET  /:route/:id            get
  *   POST /:route                create
@@ -225,7 +228,7 @@ router.get(
 			name: req.project.name,
 			type: req.project.type,
 			slug: req.project.publicSlug,
-			auth: { register: 'auth/register', login: 'auth/login', me: 'auth/me' },
+			auth: { register: 'auth/register', login: 'auth/login', me: 'auth/me', forgot: 'auth/forgot', reset: 'auth/reset' },
 			models: [...defs.values()].map(d => ({
 				route: d.route,
 				title: d.title,
@@ -383,6 +386,37 @@ router.put(
 		const doc = await ProjectCustomer.findByIdAndUpdate(customer._id, { $set: body }, { new: true }).lean();
 		await syncCustomerRecord(req.app, req.project, doc, body);
 		return publicCustomer((await currentAccount(req.app, req.project, doc)) || doc);
+	})
+);
+
+/*
+ * Forgot password (docs/widgets W-25, customerReset.function.ts). The answer
+ * is the same whether the email has an account or not; 409 mail_not_set_up
+ * when the business has no email to send it from.
+ */
+router.post(
+	'/auth/forgot',
+	authLimit,
+	handle(async req => {
+		const body = check(Joi.object({ email: Joi.string().trim().lowercase().email().required(), returnTo: Joi.string().trim().max(2000).allow('') }), req.body);
+		if (!(await canEmailCustomers(req.project)))
+			throw new TenancyError(409, 'This site can’t send emails yet, so a password can’t be reset here — contact the business.', 'mail_not_set_up');
+		const scope = currentScope();
+		const project = req.project;
+		const apiBase = apiOrigin(req);
+		later(() => runInScope(scope!, () => sendResetLink(req.app, project, { email: body.email, returnTo: body.returnTo, apiBase })));
+		return { message: 'If there’s an account for that email, a link to choose a new password is on its way.' };
+	})
+);
+
+router.post(
+	'/auth/reset',
+	authLimit,
+	handle(async req => {
+		const body = check(Joi.object({ token: Joi.string().trim().max(2000).required(), password }), req.body);
+		const row = await resetPassword(req.app, req.project, body.token, body.password);
+		const now = (await currentAccount(req.app, req.project, row.toObject())) || row;
+		return { token: row.generateToken(), customer: publicCustomer(now) };
 	})
 );
 

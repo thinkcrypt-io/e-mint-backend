@@ -3,6 +3,7 @@
 // customer model — MINT's Customers by default; a project's own model either
 // gets a linked copy of each account (`accounts: 'mint'`) or holds the
 // accounts itself (`accounts: 'model'`). Passwords stay in ProjectCustomer.
+// W-25: only models switched on for sign-in (Advanced tab → Sign-in) are offered.
 import { call, ok, done } from './lib.mjs';
 
 const stamp = Date.now();
@@ -46,6 +47,7 @@ r = await call('POST', P(site._id, '/builder/models'), {
 	name: 'Customer',
 	title: 'Members',
 	displayField: 'fullName',
+	signIn: { enabled: true },
 	fields: [
 		{ key: 'fullName', label: 'Full name', kind: 'text' },
 		{ key: 'email', label: 'Email', kind: 'email', required: true },
@@ -56,13 +58,21 @@ r = await call('POST', P(site._id, '/builder/models'), {
 }, T);
 const customerDef = idOf(r);
 ok('the project’s own customers model', r.status === 201, `${r.status} ${r.body?.message}`);
+ok('…switched on for sign-in', r.body?.signIn?.enabled === true || r.body?.doc?.signIn?.enabled === true, JSON.stringify(r.body?.signIn || r.body?.doc?.signIn));
 r = await call('POST', P(site._id, '/builder/models'), { name: 'Club', title: 'Clubs', kind: 'single', fields: [{ key: 'name', label: 'Name', kind: 'text' }] }, T);
-r = await call('POST', P(site._id, '/builder/models'), { name: 'Strict', title: 'Strict list', fields: [{ key: 'email', label: 'Email', kind: 'email' }, { key: 'memberNo', label: 'Member number', kind: 'text', required: true }] }, T);
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Strict', title: 'Strict list', signIn: { enabled: true }, fields: [{ key: 'email', label: 'Email', kind: 'email' }, { key: 'memberNo', label: 'Member number', kind: 'text', required: true }] }, T);
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Contact', title: 'Contacts', fields: [{ key: 'name', label: 'Name', kind: 'text' }, { key: 'email', label: 'Email', kind: 'email' }] }, T);
+ok('(a list with an email that isn’t switched on for sign-in)', r.status === 201, `${r.status} ${r.body?.message}`);
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Setting', title: 'Settings', kind: 'single', signIn: { enabled: true }, fields: [{ key: 'email', label: 'Email', kind: 'email' }] }, T);
+ok('sign-in can’t be switched on for a single-record model', r.status === 400 && /holds one record can’t hold accounts/.test(JSON.stringify(r.body?.problems)), `${r.status} ${JSON.stringify(r.body?.problems)}`);
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Badge', title: 'Badges', signIn: { enabled: true }, fields: [{ key: 'count', label: 'Count', kind: 'number' }] }, T);
+ok('…nor for one with no email or text field', r.status === 400 && /Add an Email field/.test(JSON.stringify(r.body?.problems)), `${r.status} ${JSON.stringify(r.body?.problems)}`);
 
 r = await call('GET', W('/auth'), null, T);
 const route = r.body?.models?.find(m => m.name === 'Customer')?.route;
 ok('a suggestion: Customer, its email, name and phone fields', r.status === 200 && !r.body.auth && r.body.guess?.model === 'Customer' && r.body.guess.fields.email === 'email' && r.body.guess.fields.name === 'fullName' && r.body.guess.fields.phone === 'mobile', JSON.stringify(r.body?.guess));
 ok('…single-record models aren’t offered', r.body.models.every(m => m.name !== 'Club') && route, route);
+ok('…nor models not switched on for sign-in (and the panel is told how many)', r.body.models.every(m => m.name !== 'Contact') && r.body.closed >= 1, `${r.body.models.map(m => m.name)} closed=${r.body.closed}`);
 
 for (const [label, auth, re] of [
 	['no model', { fields: { email: 'email' } }, /Pick the model/],
@@ -71,6 +81,7 @@ for (const [label, auth, re] of [
 	['a field that isn’t there', { model: 'Customer', fields: { email: 'mail' } }, /no “mail” field/],
 	['a field of the wrong kind', { model: 'Customer', fields: { email: 'email', phone: 'joined' } }, /phone needs a text field/],
 	['a required field sign-up can’t fill', { model: 'Strict', fields: { email: 'email' } }, /required fields sign-up can’t fill \(Member number\)/],
+	['a model not switched on for sign-in', { model: 'Contact', fields: { email: 'email' } }, /isn’t open to sign-in/],
 ]) {
 	r = await call('PUT', W('/auth'), { auth }, T);
 	ok(`refused: ${label}`, r.status === 400 && re.test(r.body?.message), `${r.status} ${r.body?.message}`);
@@ -84,6 +95,11 @@ ok('before a model is chosen: accounts have no record', r.status === 200 && r.bo
 
 r = await call('PUT', W('/auth'), { auth: { model: 'Customer', fields: { email: 'email', name: 'fullName', phone: 'mobile' } } }, T);
 ok('the customer model saved — a linked copy by default', r.status === 200 && r.body.auth?.model === 'Customer' && r.body.auth.accounts === 'mint' && r.body.auth.fields.phone === 'mobile', `${r.status} ${r.body?.message}`);
+const customerBody = { title: 'Members', displayField: 'fullName', fields: [{ key: 'fullName', label: 'Full name', kind: 'text' }, { key: 'email', label: 'Email', kind: 'email', required: true }, { key: 'mobile', label: 'Mobile', kind: 'text' }, { key: 'tier', label: 'Tier', kind: 'select', default: 'basic', options: [{ value: 'basic', label: 'Basic' }, { value: 'gold', label: 'Gold' }] }, { key: 'joined', label: 'Joined', kind: 'number' }] };
+r = await call('PUT', P(site._id, `/builder/models/${customerDef}`), { ...customerBody, signIn: { enabled: false } }, T);
+ok('sign-in can’t be switched off while the Login widget uses the model', r.status === 400 && /Login widget keeps its customers in Members/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await call('PUT', P(site._id, `/builder/models/${customerDef}`), customerBody, T);
+ok('…a save that doesn’t mention it leaves it on', r.status === 200 && (r.body?.signIn?.enabled ?? r.body?.doc?.signIn?.enabled) === true, `${r.status} ${JSON.stringify(r.body?.signIn ?? r.body?.doc?.signIn)}`);
 
 r = await call('POST', pub('/auth/register'), { name: 'New Member', email: `New${stamp}@Example.com`, password: 'customer-pass-1', phone: '+8801700000000' });
 const newbie = r.body;
@@ -149,6 +165,7 @@ r = await call('POST', G('/builder/models'), {
 	name: 'Member',
 	title: 'Members',
 	displayField: 'fullName',
+	signIn: { enabled: true },
 	fields: [
 		{ key: 'fullName', label: 'Full name', kind: 'text' },
 		{ key: 'email', label: 'Email', kind: 'email', required: true },

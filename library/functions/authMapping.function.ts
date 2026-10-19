@@ -28,6 +28,10 @@ import { TenancyError } from './tenancy.function.js';
  * mode marked `holder: 'model'` and left off MINT's Customers page. Nothing
  * secret is ever written to a tenant's model.
  *
+ * Only a model switched on for it can be chosen — its Advanced tab → Sign-in,
+ * `ModelDefinition.signIn.enabled` (W-25) — and it can't be switched off
+ * while chosen (models.controller).
+ *
  * Saved in `SiteWidgets.auth`; checked against today's models on every read,
  * like the shop (a field since removed makes it null — accounts keep working,
  * only the copying stops).
@@ -54,6 +58,9 @@ export const checkAuth = (raw: any, defs: any[]): AuthMapping => {
 	const def = defs.find(d => d.name === name);
 	if (!def) throw new TenancyError(400, `There's no “${name}” model.`);
 	if (def.kind === 'single') throw new TenancyError(400, `${def.title || def.name} holds one record, not a list — pick a model with a record per customer.`);
+	// Only a model the builder opened to accounts (W-25): Models → it → Advanced → Sign-in.
+	if (!def.signIn?.enabled)
+		throw new TenancyError(400, `${def.title || def.name} isn’t open to sign-in — switch on “People can sign up and sign in” on its Advanced tab (Models → ${def.title || def.name} → Advanced) first.`);
 	const fields: any = {};
 	for (const part of PARTS) {
 		const key = String(raw?.fields?.[part] || '').trim();
@@ -122,7 +129,9 @@ export const authView = async (project: any) => {
 			problem = e.message;
 		}
 	const lists = defs.filter((d: any) => d.kind !== 'single');
-	return { auth, saved: doc?.auth || null, problem, guess: guessAuth(lists), models: shopModels(lists) };
+	// Only models switched on for sign-in are offered (W-25); `closed` says how many others there are.
+	const open = lists.filter((d: any) => d.signIn?.enabled);
+	return { auth, saved: doc?.auth || null, problem, guess: guessAuth(open), models: shopModels(open), closed: lists.length - open.length };
 };
 
 /** Saves the mapping (checked) — or clears it with null: accounts stay in MINT's Customers only. */

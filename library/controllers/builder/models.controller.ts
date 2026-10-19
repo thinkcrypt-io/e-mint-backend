@@ -8,6 +8,7 @@ import Permission from '../../models/permissions/model.js';
 import SidebarItem from '../../models/sidebaritems/model.js';
 import SidebarCategory from '../../models/sidebarcategories/model.js';
 import Counter from '../../../models/counter/counter.model.js';
+import SiteWidgets from '../../models/tenancy/siteWidgets.model.js';
 import { configToData, displayModelName, listModelFields, scopedModelNames, settingsToData } from '../../functions/routeRegistry.function.js';
 import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
@@ -200,6 +201,8 @@ const bodySchema = Joi.object({
 		default: Joi.string().valid(...PRIVACY_VALUES),
 	}),
 	publicApi: PUBLIC_API,
+	/** People can sign up and sign in as one of its records (docs/widgets W-25). */
+	signIn: Joi.object({ enabled: Joi.boolean() }),
 	fields: Joi.array()
 		.items(fieldSchema)
 		.unique((a: any, b: any) => a.key.toLowerCase() === b.key.toLowerCase())
@@ -346,6 +349,12 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		if (value.displayField !== 'code' && !(df && TEXT_KINDS.includes(df.kind)))
 			problems.push('The display field must be a text, email, link or select field — or the code');
 		if (value.displayField === 'code' && !value.code?.enabled) problems.push('The display field is the code, but codes are off');
+	}
+	// Sign-in (W-25): a record per person, found by an email.
+	if (value.signIn?.enabled) {
+		if (value.kind === 'single') problems.push('A model that holds one record can’t hold accounts — people sign in as records of a list');
+		if (!(value.fields || []).some((f: any) => f.kind === 'email' || f.kind === 'text'))
+			problems.push('Add an Email field first — people sign in with it');
 	}
 	return { value, problems };
 };
@@ -979,6 +988,12 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 			publishedBy: req.user?._id,
 		});
 
+		// The Login widget's customer model keeps people signing in: it stays switched on while chosen (W-25).
+		if (currentScope() && before.signIn?.enabled && value.signIn && !value.signIn.enabled) {
+			const widgets: any = await SiteWidgets.findOne({}, { auth: 1 }).lean();
+			if (widgets?.auth?.model === before.name)
+				throw new BuildError(400, `The Login widget keeps its customers in ${before.title} — choose another model (or MINT’s Customers) in Widgets → Login & account first.`);
+		}
 		// A collection becomes a single type only while it holds at most one record.
 		if (value.kind === 'single' && before.kind !== 'single') {
 			const Model: any = compiledModel(before.name);

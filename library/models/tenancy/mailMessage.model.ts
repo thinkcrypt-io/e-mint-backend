@@ -9,7 +9,7 @@ import mongoose, { Schema } from 'mongoose';
  * AU-03c); a failed one keeps its attached files too until it's resent. One
  * shared collection for every organization (MD10).
  */
-export const MAIL_KINDS = ['test', 'customer-welcome', 'record', 'campaign', 'automation'] as const;
+export const MAIL_KINDS = ['test', 'customer-welcome', 'customer-reset', 'record', 'campaign', 'automation'] as const;
 
 const schema = new Schema<any>(
 	{
