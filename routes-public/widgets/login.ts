@@ -4,7 +4,9 @@
  * `<div data-mint="login"></div>`. Sign in / create an account against the
  * project's customer accounts; signed in, the customer's name and a sign-out
  * link. Layout `card` draws the card in place; `button` draws a button that
- * opens it. Options and texts come from the panel (Site setup → Widgets).
+ * opens it. `askPhone` adds an optional phone to sign-up. Where the account
+ * lands — MINT's Customers, plus a record in the project's own customer model
+ * when one is chosen (W-24) — is the server's business (authMapping.function). Options and texts come from the panel (Site setup → Widgets).
  */
 export const LOGIN_WIDGET_JS = `(function () {
 	'use strict';
@@ -19,11 +21,13 @@ export const LOGIN_WIDGET_JS = `(function () {
 			var mode = o.startWith === 'signup' && o.allowSignUp ? 'up' : 'in';
 			var open = false;
 
-			function field(name, text, type, auto) {
+			function field(name, text, type, auto, optional) {
 				var id = 'm-' + name + '-' + Math.random().toString(36).slice(2, 8);
+				var attrs = { id: id, name: name, type: type, autocomplete: auto };
+				if (!optional) attrs.required = 'required';
 				return el('div', 'field', null, [
 					el('label', 'label', { for: id, text: text }),
-					el('input', 'input', { id: id, name: name, type: type, autocomplete: auto, required: 'required' }),
+					el('input', 'input', attrs),
 				]);
 			}
 
@@ -39,6 +43,7 @@ export const LOGIN_WIDGET_JS = `(function () {
 				var f = el('form', '', { novalidate: 'novalidate' });
 				if (up) f.appendChild(field('name', 'Name', 'text', 'name'));
 				f.appendChild(field('email', 'Email', 'email', 'email'));
+				if (up && o.askPhone) f.appendChild(field('phone', 'Phone (optional)', 'tel', 'tel', true));
 				f.appendChild(field('password', 'Password', 'password', up ? 'new-password' : 'current-password'));
 				var error = el('p', 'error', { role: 'alert', 'aria-live': 'polite' });
 				var submit = el('button', 'btn block', { type: 'submit', text: up ? t.signUpButton : t.signInButton });
@@ -48,6 +53,7 @@ export const LOGIN_WIDGET_JS = `(function () {
 					e.preventDefault();
 					var data = { email: f.email.value.trim(), password: f.password.value };
 					if (up) data.name = f.name.value.trim();
+					if (up && o.askPhone && f.phone.value.trim()) data.phone = f.phone.value.trim();
 					error.textContent = '';
 					if (Mint.preview) { error.textContent = 'This is a preview — signing in works on your site.'; return; }
 					submit.disabled = true;

@@ -20,6 +20,13 @@ const schema = new Schema<any>(
 		 * functions/shop.function.ts (`checkShop`); null until it's set up.
 		 */
 		shop: { type: Schema.Types.Mixed, default: null },
+		/**
+		 * Login & account's customer model (W-24): which of the project's models
+		 * gets a record per customer account, and its email / name / phone fields.
+		 * Checked by functions/authMapping.function.ts (`checkAuth`); null: the
+		 * accounts are in MINT's Customers only.
+		 */
+		auth: { type: Schema.Types.Mixed, default: null },
 		theme: {
 			/** Buttons and links; empty: the site's own primary colour (website projects), else near-black. */
 			primaryColor: { type: String, trim: true, default: '' },

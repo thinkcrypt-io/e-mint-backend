@@ -25,6 +25,13 @@ const schema = new Schema<any>(
 		isActive: { type: Boolean, default: true },
 		tokenVersion: { type: Number, default: 0 },
 		lastLoginAt: { type: Date },
+		/**
+		 * Their record in the project's own customer model, when Login & account
+		 * has one (docs/widgets W-24, functions/authMapping.function.ts) — and
+		 * which model that was, so choosing another links again.
+		 */
+		record: { type: Schema.Types.ObjectId },
+		recordModel: { type: String, trim: true },
 	},
 	{ timestamps: true }
 );

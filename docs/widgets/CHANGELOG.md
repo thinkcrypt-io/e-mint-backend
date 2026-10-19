@@ -276,3 +276,43 @@ Newest last. One entry per work order: what, files, how verified.
   webhook: add a mug → checkout page (Test mode badge, BDT 650.00) → Pay →
   thank-you "Your payment is confirmed — order ORD-0001", guest cart emptied.
   Panel Payments page and the Shop's Orders part checked headless on :3021.
+
+## W-24 — Add a widget wizard, the customer model (2026-10-19)
+- **The user's words:** "on widgets screen instead of showing all the widgets
+  must be empty, users can add widget, take through a widget setup wizard. can
+  set up auth widget, where they can set up customer model into it."
+- **Backend:** `functions/widgets.function.ts` — each widget's settings carry
+  `added` and `addedAt`; a widget already switched on counts as added (old
+  projects, MCP and templates that send `enabled` only keep working); only an
+  added widget can be on; `PUT /widgets { [name]: { added: false } }` removes
+  it (defaults, off). Login gains `askPhone` (optional phone on sign-up;
+  `routes-public/widgets/login.ts`). `routes-tenant/widgets.router.ts`
+  records "added the … widget" / "removed the … widget" in history and serves
+  `GET/PUT /widgets/auth`.
+- **Customer model** (WD12, `functions/authMapping.function.ts`):
+  `SiteWidgets.auth = { model, fields: { email, name?, phone? } }`, checked
+  against today's models (list models only; email/text for the email, text for
+  name and phone; a model with a required field sign-up can't fill is
+  refused); a suggestion from a Customer/Client/Member-like model.
+  `linkCustomerRecord` on `/auth/register` and `/auth/login` links the account
+  to the record with its email (any case) or makes one (mapped fields, the
+  model's defaults, `_customer` so owner-only endpoints reach it, webhooks and
+  automations fire); `syncCustomerRecord` copies `PUT /auth/me` name/phone.
+  `ProjectCustomer.record` / `recordModel`; `customer.record` in every
+  `/auth/*` answer and so `Mint.auth.user.record`. Never blocks a sign-in.
+- **Panels** (mint-tenant and admin, `app/widgets`): `page.tsx` (empty state,
+  added widgets with on/off, Edit, Remove; script, Look with its own Save, the
+  Shop when a selling widget is added), `_components/WidgetWizard.tsx`,
+  `CustomersStep.tsx`, `parts.tsx` (Code, Preview, OptionInput). `tenantApi`
+  `AuthMapping`/`AuthView`, `getWidgetsAuth`/`saveWidgetsAuth`; WidgetSettings
+  `added`/`addedAt`. Guide anchors `add-widget`, `login-customers`.
+- **Verified:** new suite `widgets-setup.mjs` (39 checks: empty start, add
+  off before the shop, remove, history, the customer model's checks, sign-up
+  making / linking records, older accounts linked on sign-in, name/phone
+  copied, owner-only read of one's own record, the mapping going stale and
+  sign-up carrying on); `widgets.mjs` and `widgets-cart.mjs` re-run green on a
+  private backend (:5071, Mongo :27961). Browser pane on mint-tenant :3073:
+  empty state → Add a widget → Login & account (Members model guessed, fields
+  pre-filled) → options → texts → review → added and on; Cart added switched
+  off from the Shop step; Remove prompt; Edit opens on Customers.
+

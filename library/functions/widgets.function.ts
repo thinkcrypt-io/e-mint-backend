@@ -69,6 +69,7 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 				help: 'Which form shows first.',
 			},
 			{ key: 'allowSignUp', label: 'Let visitors create accounts', kind: 'boolean', default: true, help: 'Off: only people who already have an account can sign in.' },
+			{ key: 'askPhone', label: 'Ask for a phone number on sign-up', kind: 'boolean', default: false, help: 'Optional for the visitor. Kept with the account and copied to your customer model’s phone field.' },
 		],
 		texts: [
 			{ key: 'signInTitle', label: 'Sign-in title', default: 'Sign in' },
@@ -189,12 +190,22 @@ const HEX = /^#[0-9a-f]{6}$/i;
 /** The panel's view of every widget: what it is and what can be set. */
 export const widgetCatalog = () => Object.values(WIDGET_TYPES);
 
-/** A widget's settings as used: saved values over the defaults, unknown keys gone. */
-const mergeWidget = (type: WidgetType, saved: any = {}) => ({
-	enabled: saved?.enabled === true,
-	options: Object.fromEntries(type.options.map(o => [o.key, cleanOption(o, saved?.options?.[o.key])])),
-	texts: Object.fromEntries(type.texts.map(t => [t.key, typeof saved?.texts?.[t.key] === 'string' && saved.texts[t.key].trim() ? saved.texts[t.key].trim().slice(0, 200) : t.default])),
-});
+/**
+ * A widget's settings as used: saved values over the defaults, unknown keys
+ * gone. `added`: the project put it on its Widgets screen (W-24) — a widget
+ * switched on before that existed counts as added. Only an added widget can
+ * be on.
+ */
+const mergeWidget = (type: WidgetType, saved: any = {}) => {
+	const added = saved?.added === true || saved?.enabled === true;
+	return {
+		added,
+		enabled: added && saved?.enabled === true,
+		addedAt: added && saved?.addedAt ? saved.addedAt : null,
+		options: Object.fromEntries(type.options.map(o => [o.key, cleanOption(o, saved?.options?.[o.key])])),
+		texts: Object.fromEntries(type.texts.map(t => [t.key, typeof saved?.texts?.[t.key] === 'string' && saved.texts[t.key].trim() ? saved.texts[t.key].trim().slice(0, 200) : t.default])),
+	};
+};
 
 /** One option's value, or its default when it doesn't fit. */
 const cleanOption = (o: WidgetOption, v: any) => {
@@ -228,9 +239,10 @@ export const loadWidgets = async (project: any) => {
 };
 
 /**
- * Saves what's sent — per widget (enabled, options, texts) and the theme —
- * over what's there. Unknown widgets are refused; unknown options and texts
- * are dropped; values that don't fit fall back to the default.
+ * Saves what's sent — per widget (added, enabled, options, texts) and the
+ * theme — over what's there. Unknown widgets are refused; unknown options and
+ * texts are dropped; values that don't fit fall back to the default.
+ * `added: false` removes a widget: it goes back to its defaults and off.
  */
 export const saveWidgets = async (project: any, body: any) => {
 	const current = await loadWidgets(project);
@@ -239,7 +251,14 @@ export const saveWidgets = async (project: any, body: any) => {
 		const type = WIDGET_TYPES[name];
 		if (!type) throw new TenancyError(400, `There's no “${name}” widget — the widgets are ${Object.keys(WIDGET_TYPES).join(', ')}.`);
 		const was = widgets[name];
+		if (patch?.added === false) {
+			widgets[name] = mergeWidget(type, {});
+			continue;
+		}
+		const added = patch?.added === true || patch?.enabled === true || was.added;
 		widgets[name] = mergeWidget(type, {
+			added,
+			addedAt: was.addedAt || (added ? new Date() : null),
 			enabled: typeof patch?.enabled === 'boolean' ? patch.enabled : was.enabled,
 			options: { ...was.options, ...(patch?.options || {}) },
 			texts: { ...was.texts, ...(patch?.texts || {}) },

@@ -2,7 +2,23 @@
 
 Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
-## Handoff — read this first (last updated 2026-10-06)
+## Handoff — read this first (last updated 2026-10-19)
+
+**2026-10-19 — W-24 done** (CHANGELOG, not deployed). The user: "on widgets
+screen instead of showing all the widgets must be empty, users can add widget,
+take through a widget setup wizard. can set up auth widget, where they can set
+up customer model into it." Each widget has `added` (+ `addedAt`) in
+`SiteWidgets.widgets` (a widget already on counts as added; only an added one
+can be on; `added: false` removes it back to defaults). The panel's Widgets
+page (both repos, `app/widgets`) is empty until "Add a widget" → `WidgetWizard`
+(Widget → Customers or Shop → Set up → Texts → Review). Login & account's
+customer model is `SiteWidgets.auth` (`functions/authMapping.function.ts`,
+`GET/PUT /p/:id/widgets/auth`, decision WD12): accounts stay in
+`ProjectCustomer`, each linked to a record in the chosen model
+(`ProjectCustomer.record`), `customer.record` in `/auth/*` and
+`Mint.auth.user`. New login option `askPhone`. Suite `widgets-setup.mjs`.
+**Open:** the user hasn't yet said whether a tenant model may hold the
+accounts itself (passwords/sessions) instead of the linked-record design.
 
 **2026-10-06 — W-07 done** (CHANGELOG): Checkout, Thank-you and My orders
 widgets (`routes-public/widgets/checkout.ts` serves both checkout and thanks;
@@ -99,6 +115,7 @@ Related, running separately: "public API read-only fields" (started
 | W-21 | Events & tickets / RSVP, waitlist | both | L | later (P3) |
 | W-22 | AI assistant on the site (the project's public data only) | both | L | later (P3) |
 | W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
+| W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model (WD12) | both | M | done 2026-10-19, not deployed |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -213,3 +230,15 @@ MCP `set_widgets`; the T-13 website and API templates switch their widgets on.
 ## W-13 — Guides + marketing (M, with each WO)
 `/user-docs/widgets` and `/user-docs/payments` sections per widget, doc links
 on every panel, marketing site features + a "Sell on your site" workflow.
+
+## W-24 — Add a widget wizard + the customer model (M) — done 2026-10-19
+The Widgets screen lists only the widgets a project has added — empty at
+first, with "Add a widget". The wizard: pick a widget (coming ones shown
+greyed), what it needs (Login & account: the customer model and its fields;
+cart / checkout / thank-you / My orders: the Shop, embedded), its options,
+its texts, a review with the preview and the code, "Switch it on now". Added
+widgets: on/off, Edit (the same steps without the first), Remove
+(PromptDialog). The script, the Look and (with a selling widget) the Shop
+show once something is added. Backend: `added`/`addedAt` per widget,
+`SiteWidgets.auth` + `authMapping.function.ts` (WD12), login option
+`askPhone`, history lines for added / removed.

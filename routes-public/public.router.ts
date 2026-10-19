@@ -31,6 +31,7 @@ import { fireAutomations } from '../library/functions/automations.function.js';
 import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
 import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
+import { linkCustomerRecord, syncCustomerRecord } from '../library/functions/authMapping.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
@@ -90,7 +91,7 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  *   GET  /                      the project's public info (name, type, models)
  *   POST /auth/register         { name, email, password }  → { token, customer }
  *   POST /auth/login            { email, password }        → { token, customer }
- *   GET  /auth/me               the signed-in customer
+ *   GET  /auth/me               the signed-in customer (`record`: their record in the project’s own customer model, docs/widgets W-24)
  *   PUT  /auth/me               { name, phone }
  *   POST /auth/logout-everywhere  signs every device out
  *   GET  /:route                list   ?page&limit(≤100)&sort=-a,b&search=&<field>=<value>&<field>[<op>]=<value>
@@ -180,7 +181,8 @@ const customerOf = async (req: any) => {
 	}
 };
 
-const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', createdAt: c.createdAt });
+/** `record`: their record in the project's own customer model (W-24), when Login & account has one. */
+const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', record: c.record ? String(c.record) : null, createdAt: c.createdAt });
 
 /* ------------------------------------------------------------- models */
 
@@ -285,6 +287,8 @@ router.post(
 		if (await ProjectCustomer.exists({ email: body.email }))
 			throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
 		const customer: any = await ProjectCustomer.create({ ...body, lastLoginAt: new Date() });
+		// A record in the project's own customer model, when Login & account has one (W-24).
+		await linkCustomerRecord(req.app, req.project, customer);
 		tellTeam(req, {
 			route: 'customers',
 			permission: 'view-customers',
@@ -310,6 +314,8 @@ router.post(
 		if (customer.isActive === false) throw new TenancyError(400, 'This account has been switched off.');
 		customer.lastLoginAt = new Date();
 		await customer.save();
+		// Accounts made before a customer model was chosen get their record now (W-24).
+		await linkCustomerRecord(req.app, req.project, customer);
 		return { token: customer.generateToken(), customer: publicCustomer(customer) };
 	})
 );
@@ -328,6 +334,7 @@ router.put(
 		const customer = await signedIn(req);
 		const body = check(Joi.object({ name: Joi.string().trim().min(1).max(120), phone: Joi.string().trim().max(40).allow('') }), req.body);
 		const doc = await ProjectCustomer.findByIdAndUpdate(customer._id, { $set: body }, { new: true }).lean();
+		await syncCustomerRecord(req.app, req.project, doc, body);
 		return publicCustomer(doc);
 	})
 );

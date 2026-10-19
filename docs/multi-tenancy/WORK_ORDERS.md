@@ -8,6 +8,14 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-19)
 
+**2026-10-19 — Widgets: Add a widget wizard + Login's customer model (W-24, `docs/widgets`).** The Widgets screen
+starts empty; "Add a widget" walks through a wizard (widget → customer model or Shop → options → texts → review);
+added widgets switch on/off, edit, remove (`added` per widget in `SiteWidgets`). Login & account can name the
+project's own customer model (`SiteWidgets.auth`, `authMapping.function.ts`): sign-in stays in `ProjectCustomer`,
+each account gets a linked record (`ProjectCustomer.record`, by email) — decision WD12, pending the user's word on a
+tenant model holding the accounts itself. Smoke `widgets-setup.mjs`. Backend, mint-tenant, admin, mint-docs,
+website; not deployed.
+
 **2026-10-19 — Linked details in automation texts (AU-03d).** `{{member.email}}` — a field of the record a reference
 picks (one level) — in every automation text; Insert a field lists them as "Member › Email" under the link. Backend
 `placeholderRx`/`loadRefNames`/`checkText` in automations.function.ts; panels `placeholdersOf(page, pages)`. Not deployed.

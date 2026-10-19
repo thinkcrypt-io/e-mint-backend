@@ -16,8 +16,9 @@
  *
  * The page's own code gets `window.Mint`:
  *
- *   Mint.auth.ready / .user / .token        the signed-in customer (shared with widget.js)
- *   Mint.auth.signIn(email, password) · signUp({ name, email, password }) · signOut()
+ *   Mint.auth.ready / .user / .token        the signed-in customer (shared with widget.js);
+ *                                            .user.record: their record in the project's customer model (W-24)
+ *   Mint.auth.signIn(email, password) · signUp({ name, email, password, phone? }) · signOut()
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
  *   Mint.cart.ready / .lines / .count / .subtotal / .currency   the cart (W-05), priced by the server
  *   Mint.cart.add(productId, { variant, quantity }) · set(id, qty, variant) · remove(id, variant) · clear()
