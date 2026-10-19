@@ -133,3 +133,6 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   (backend, both panels, docs, website). Headless Chrome on a private stack (the pane was hidden): Jobs → Member, the menu
   listing Member's details, Phone inserted at the cursor as `{{member.phone}}`, the search narrowing to Email, Preview.
   Not deployed.
+- Follow-up (the user: "should show like member > email, member > name"): linked fields are labelled "Member › Email" in
+  every list (dropdowns, the click menu, Preview chips) and sit right under their link field, indented; the "Member's
+  details" headings are gone. Checked in headless Chrome: Title, Member, Member › Name, Member › Email, Member › Phone, Link…
