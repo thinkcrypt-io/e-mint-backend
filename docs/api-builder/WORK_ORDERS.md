@@ -18,6 +18,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-09 | Project keys, panel (mint-tenant): Project key card on API → Keys + Overview (copy, Generate/Regenerate); every address, example, tester, snippet with the key | mint-tenant | M | done 2026-10-19 |
 | AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | done 2026-10-19 |
 | AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | done 2026-10-19 |
+| AB-12 | Customer sign-in on Endpoints (D15): the built-in /auth/* listed with where customers are kept, Set up sign-in, the token how-to; Generate “Only their own records” (+ owners for the sign-in model's earlier sign-ups); Overview snippet on mint.js; guide, website | all | S | done 2026-10-19 |
 
 ## AB-02 — Engine (L)
 
@@ -121,6 +122,16 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 - admin (its tenant build is still live): the same addresses and snippets (ApiOverview, Public API page, Site
   setup, Widgets, Project settings, Templates tabs).
 - mint-sites: `data-key` on `track.js` / `mint.js` from the render answer.
+
+## AB-12 — Customer sign-in on Endpoints (S) — done
+
+- backend: `GET /api-builder/endpoints` adds `customerAuth` { model (title, route, accounts) | null, customers };
+  `POST /endpoints/generate` takes `own` (signed-in customers only) → the owner condition on each; on the sign-in
+  model, `ownSignUpRecords` gives the records customers' sign-ups made their owner. Smoke `customer-api.mjs`.
+- mint-tenant: Endpoints → Customer sign-in (`_components/CustomerSignIn.tsx`, `#customer-sign-in`), Generate's
+  “Only their own records”, `/widgets?add=login` opens Login & account's setup (or its edit), Overview's
+  signed-in snippet on `mint.js` + `data-mint="login"`, Reference adds /auth/forgot and /auth/reset.
+- mint-docs `public-api#api-customer-sign-in`; website changelog.
 
 ## AB-11 — Docs (S)
 

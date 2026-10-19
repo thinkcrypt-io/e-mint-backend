@@ -170,3 +170,23 @@ agent must know. Decisions live in README.md.
   section (`public-api#api-project-key`, linked from the panel's card), errors and troubleshooting rows; `data-key` in
   the customers, widgets and analytics snippets; projects guide “Its public address and key”.
 - Website: examples on Backend / Developers / mocks with the key; changelog “A key for every project’s API”.
+
+## 2026-10-19 — AB-12 Customer sign-in on Endpoints (D15)
+- The user asked why the auth endpoints weren't there by default. They were (every project, `/auth/*`), but only
+  API → Reference listed them. Endpoints now has a **Customer sign-in** section after the models: the seven
+  built-in endpoints (Built in, “needs their token”), where customers are kept and how many signed up
+  (`customerAuth` on `GET /api-builder/endpoints`), **Set up sign-in** → `/widgets?add=login` (the Widgets page
+  opens Login & account's setup, or its edit once added — after the auth settings load, so the wizard shows the
+  saved model), and “Their own data, with their token” (fetch code: sign in, keep the token, call with
+  `Authorization: Bearer`; `Mint.auth.fetch` for the widget) with **Generate endpoints for customers**.
+- Generate: with Signed-in customers, **Only their own records** (on by default) → `own: true` → the owner condition
+  on each made endpoint (a create makes the customer the owner). On the sign-in model, `ownSignUpRecords`
+  (authMapping.function.ts) sets `_customer` on records the customers' sign-ups made before it had an API (the
+  path only exists while it has one); a team's record linked by email stays nobody's.
+- Reference: /auth/forgot and /auth/reset added (with the forgot answer). Overview: the signed-in snippet moved from
+  `widget.js` + `MintAuth.fetch` to `mint.js` + `data-mint="login"` + `Mint.auth.fetch`, linking the token how-to.
+- Verified: smoke `customer-api.mjs` 24/24 (sign-up before any endpoint, `customerAuth`, own records for the sign-in
+  model incl. records made before its API, Bookings create/list per customer, own off, own ignored for anyone);
+  customer-roles 42, widgets-setup 70, projects 14 + api-builder 78. Headless Chrome on the private backend:
+  the section, the Generate dialog's checkbox, `?add=login` opening the setup with Members chosen.
+- Admin's tenant build has no API builder pages (D12) — not changed there.

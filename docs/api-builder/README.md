@@ -102,6 +102,17 @@ Choices the user made (same day):
   the key; `/public/api/<slug>/…` answers 401 `api_key_missing`. Only MINT’s site renderer (with its
   `x-mint-renderer` secret) still names a project by its slug. Also accepted: header `X-Api-Key`.
   Errors: 401 `api_key_missing` (“The apiKey is missing — add ?apiKey=<your project key>.”), 401 `api_key_invalid`.
+- **D15 — Customer sign-in is built in (AB-12, 2026-10-19).** The user: “why the auth endpoints are not there by
+  default? they should be there by default for customers, or there should be a button to setup the auth for
+  customers, where they sign in/sign up, and how to use their token for their specific data fetch”. They always
+  were (`/auth/register|login|me|forgot|reset|logout-everywhere`, every project, nothing to generate) — but only
+  Reference listed them. Now: **Endpoints lists them** as a built-in, always-on “Customer sign-in” section (not
+  `ApiEndpoint` rows — they can't be switched off or given rules), says where customers are kept (Login &
+  account's model, docs/widgets W-24) with **Set up sign-in** (→ `/widgets?add=login`), and shows how the token
+  reaches their own data (sign in → `Authorization: Bearer <token>` → endpoints for signed-in customers).
+  **Generate for signed-in customers offers “Only their own records”** (on by default; `own: true` adds the owner
+  condition — the same as the old `ownerOnly`). On the sign-in model, records the customers' own sign-ups made
+  before it had an API get their owner then (`ownSignUpRecords`; a team's record linked by email never does).
 
 ## 4. An endpoint
 

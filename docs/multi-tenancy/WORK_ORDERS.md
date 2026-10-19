@@ -8,6 +8,12 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-19)
 
+**2026-10-19 — Customer sign-in on API → Endpoints (API builder AB-12, D15).** The built-in `/auth/*` endpoints
+are listed on Endpoints (always on, not `ApiEndpoint` rows) with where customers are kept, **Set up sign-in**
+(`/widgets?add=login`) and how a customer's token reaches their data; Generate for signed-in customers has
+“Only their own records” (`own`, the owner condition; owners filled in for the sign-in model's earlier sign-ups).
+Smoke `customer-api.mjs`. Not deployed.
+
 **2026-10-19 — Project keys (API builder AB-08…11, D14, `docs/api-builder`).** The public API no longer names a project
 in the address: `/public/api/<route>?apiKey=<mint_pk_…>` (or `X-Api-Key`); no key → 401 `api_key_missing`, a wrong
 one → 401 `api_key_invalid`; `/public/api/<slug>/…` stops answering. Every project has `TenantProject.apiKey`

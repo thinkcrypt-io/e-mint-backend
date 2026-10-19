@@ -236,6 +236,27 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any, 
 	}
 };
 
+/**
+ * The sign-in model's records the customers' own sign-ups made, owned by them
+ * (`_customer`) — for records made while the model had no API (the field only
+ * exists while it has one), so "their own records" endpoints reach them. A
+ * team's record linked by email is never handed over. Returns how many changed.
+ */
+export const ownSignUpRecords = async (app: any, project: any, route: string): Promise<number> => {
+	const c = await customerModel(app, project);
+	if (!c || c.def.route !== route) return 0;
+	const rows: any[] = await ProjectCustomer.find(
+		{ record: { $exists: true }, recordModel: c.m.model, $or: [{ recordMade: true }, { holder: 'model' }] },
+		{ record: 1 }
+	).lean();
+	let changed = 0;
+	for (const r of rows) {
+		const res: any = await c.Model.updateOne({ _id: r.record, _customer: null }, { $set: { _customer: r._id } }, { strict: false });
+		changed += res?.modifiedCount || 0;
+	}
+	return changed;
+};
+
 /** A signed-in customer changed their name or phone on the site: the same change on their record. */
 export const syncCustomerRecord = async (app: any, project: any, customer: any, patch: { name?: string; phone?: string }) => {
 	try {

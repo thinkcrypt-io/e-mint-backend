@@ -1,5 +1,5 @@
 import express from 'express';
-import { signInRoles } from '../library/functions/authMapping.function.js';
+import { loadAuth, ownSignUpRecords, signInRoles } from '../library/functions/authMapping.function.js';
 import mongoose from 'mongoose';
 import ApiEndpoint, { ENDPOINT_ACTIONS } from '../library/models/tenancy/apiEndpoint.model.js';
 import ServerKey, { hashServerKey, newServerKey } from '../library/models/tenancy/serverKey.model.js';
@@ -30,10 +30,10 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  * (docs/api-builder AB-02). Everything here needs Build.
  *
  *   GET    /overview                   counts, models, the newest calls
- *   GET    /endpoints                  every endpoint (standard ones made from `publicApi` first), and the models
+ *   GET    /endpoints                  every endpoint (standard ones made from `publicApi` first), the models, customer sign-in
  *   GET    /endpoints/:id              one, with its model's fields and rule fields
  *   POST   /endpoints                  a custom endpoint { name, note, model, action, path, access, fields, list, populate, enabled }
- *   POST   /endpoints/generate         { model, actions[], who }   a model's standard endpoints
+ *   POST   /endpoints/generate         { model, actions[], who, own }   a model's standard endpoints (own: customers' own records only)
  *   PUT    /endpoints/:id              the same as POST, whole (a standard one keeps its model, action and path)
  *   PATCH  /endpoints/:id              { enabled }
  *   DELETE /endpoints/:id
@@ -169,13 +169,33 @@ router.get(
 
 /* ----------------------------------------------------------- endpoints */
 
+/**
+ * Customer sign-in (/auth/*), built into every project's API: which model
+ * holds the customers when Login & account has one (docs/widgets W-24), and
+ * how many have signed up.
+ */
+const customerAuth = async (project: any, defs: any[]) => {
+	const m = await loadAuth(project);
+	const def: any = m && defs.find((d: any) => d.name === m.model);
+	return {
+		model: def ? { title: def.title || def.name, route: def.route, accounts: m!.accounts } : null,
+		customers: await ProjectCustomer.countDocuments({}),
+	};
+};
+
 router.get(
 	'/endpoints',
 	handle(async req => {
 		await ensureEndpoints();
 		const [docs, defs]: any[] = await Promise.all([ApiEndpoint.find({}).sort({ model: 1, standard: -1, path: 1, method: 1 }).lean(), models()]);
 		const byName = defsByName(defs);
-		return { doc: docs.map(view), total: docs.length, models: defs.map((d: any) => modelView(d, byName)), signIn: await signInRoles(req.project) };
+		return {
+			doc: docs.map(view),
+			total: docs.length,
+			models: defs.map((d: any) => modelView(d, byName)),
+			signIn: await signInRoles(req.project),
+			customerAuth: await customerAuth(req.project, defs),
+		};
 	})
 );
 
@@ -200,6 +220,8 @@ router.post(
 		);
 		if (!actions.length) throw Object.assign(new TenancyError(400, 'Pick at least one action'), { extra: { on: 'actions' } });
 		const who = ['anyone', 'customer', 'key'].includes(req.body?.who) ? req.body.who : 'anyone';
+		// Signed-in customers' own records only: the owner condition on each — a create makes the customer its owner.
+		const own = who === 'customer' && req.body?.own === true;
 		const auth = { anyone: 'none', customer: 'customer', key: 'key' }[who as 'anyone'] as any;
 		await ensureEndpoints();
 		const made: any[] = [];
@@ -214,8 +236,7 @@ router.post(
 				} else skipped.push(`${existing.method} ${existing.path}`);
 				continue;
 			}
-			// Owner-only for customers' own records is a choice made after, on the endpoint's Access tab.
-			const doc = { ...newStandard(def, action, { auth, ownerOnly: false, readOnlyFields: [] }), createdBy: req.user._id, updatedBy: req.user._id };
+			const doc = { ...newStandard(def, action, { auth, ownerOnly: own, readOnlyFields: [] }), createdBy: req.user._id, updatedBy: req.user._id };
 			try {
 				made.push((await ApiEndpoint.create(doc)).toObject());
 			} catch (e: any) {
@@ -224,6 +245,8 @@ router.post(
 			}
 		}
 		await syncSummary(route);
+		// The sign-in model: records customers' sign-ups made before it had an API become theirs.
+		if (own && made.length) await ownSignUpRecords(req.app, req.project, route).catch(() => 0);
 		if (made.length || turnedOn.length)
 			recordProjectEvent({
 				req,
