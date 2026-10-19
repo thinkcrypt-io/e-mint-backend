@@ -13,6 +13,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-04 | Panel II: an endpoint's page (Access, Fields, Filters, Try it, Code), Keys, Reference | mint-tenant | L | done 2026-10-14 |
 | AB-05 | Guide (mint-docs), website, MCP endpoint tools, handoff | docs + backend | M | done 2026-10-14 |
 | AB-06 | Request logs (D13): every call logged; API → Logs + an endpoint's Logs tab + Overview glance; `get_api_logs` over MCP; guide, website | all | M | done 2026-10-14 |
+| AB-07 | An endpoint's Reference tab: its request (address, headers, body) and answers (response, errors) as JSON, from the draft | mint-tenant + docs | S | done 2026-10-19 |
 
 ## AB-02 — Engine (L)
 
@@ -72,3 +73,18 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 - Docs: mint-docs `public-api#api-logs`, Connect AI tools table; website changelog + feature card “API logs”.
 - Smoke: `scripts/tenancy-smoke/api-logs.mjs` (in run-all). Verified with screenshots (1280 + 390).
 
+
+## AB-07 — An endpoint's Reference tab (S) — done
+
+- The user (2026-10-19): “when users go into a single endpoint there must be a reference tab for that specific
+  endpoint with sample return data and post data (if applicable), as json.”
+- Panel (mint-tenant): `public-api/_components/EndpointReference.tsx`, tab **Reference** (`?tab=reference`) between
+  Filters and Try it. Request (method + address, `:id`, a list's query parameters, Headers JSON, Body JSON for
+  create/update — every field it writes, required ones named, read-only ones listed), Response (201/200: a list's
+  `{ doc, total, page, limit, totalPages }`, one record, or `{ message: 'Deleted' }`), Errors (400 with the first
+  required field's real message, 401 `customer_required` / `key_required`, 403 `rule_failed` on a create with
+  rules, 404 on one-record actions, 429 `rate_limited`). Built from the *draft*, so unsaved Fields edits show at once
+  (with a “unsaved changes” note). Each block copies.
+- `api.ts` `exampleRecord`: links in a sample answer are ids (`66f0…f9a2`), not “<id of the linked record>” — also
+  on API → Reference.
+- Docs: mint-docs `public-api#api-reference` paragraph.

@@ -113,3 +113,12 @@ agent must know. Decisions live in README.md.
   `widgets-cart` pass; `public.mjs` passes on a fresh database (on the reused one it fails only on counts left by
   earlier runs). Headless Chrome: Logs page, a call's dialog, the phone layout, an endpoint's Logs tab, Overview.
 
+
+## 2026-10-19 — AB-07 An endpoint's Reference tab
+- New tab on an endpoint's page: its request (address, headers, body) and its answers (response, errors) as JSON,
+  copyable, worked out from the endpoint as drafted. Sample links in answers are ids (also on API → Reference).
+  Guide `public-api#api-reference`.
+- Verified on a private backend + mint-tenant (:5073 / :3075): create, list endpoints in the browser pane (1280 and
+  375 wide, no page overflow); unticking a Sent back field drops it from the sample before saving; the samples'
+  shapes, statuses and error bodies match real calls (201 create, list page, 401 `customer_required`, 404,
+  400 “Quantity is required”).
