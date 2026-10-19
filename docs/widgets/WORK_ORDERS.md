@@ -17,8 +17,13 @@ customer model is `SiteWidgets.auth` (`functions/authMapping.function.ts`,
 `ProjectCustomer`, each linked to a record in the chosen model
 (`ProjectCustomer.record`), `customer.record` in `/auth/*` and
 `Mint.auth.user`. New login option `askPhone`. Suite `widgets-setup.mjs`.
-**Open:** the user hasn't yet said whether a tenant model may hold the
-accounts itself (passwords/sessions) instead of the linked-record design.
+**Then the user's answer** ("There will be a default customer model, a
+tenant's model may hold accounts too if needed and configured"): MINT's
+Customers stays the default; `auth.accounts` is `mint` (linked copy) or
+`model` (the model holds the accounts — `registerInModel`, `accountByEmail`,
+`currentAccount` in authMapping; `ProjectCustomer.holder: 'model'`, hidden
+from the Customers page). The wizard's Customers step defaults to MINT's
+Customers and offers both ways once a model is picked.
 
 **2026-10-06 — W-07 done** (CHANGELOG): Checkout, Thank-you and My orders
 widgets (`routes-public/widgets/checkout.ts` serves both checkout and thanks;
@@ -115,7 +120,7 @@ Related, running separately: "public API read-only fields" (started
 | W-21 | Events & tickets / RSVP, waitlist | both | L | later (P3) |
 | W-22 | AI assistant on the site (the project's public data only) | both | L | later (P3) |
 | W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
-| W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model (WD12) | both | M | done 2026-10-19, not deployed |
+| W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model — MINT's Customers by default, a linked copy or the project's model holding the accounts (WD12) | both | M | done 2026-10-19, not deployed |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -240,5 +245,6 @@ its texts, a review with the preview and the code, "Switch it on now". Added
 widgets: on/off, Edit (the same steps without the first), Remove
 (PromptDialog). The script, the Look and (with a selling widget) the Shop
 show once something is added. Backend: `added`/`addedAt` per widget,
-`SiteWidgets.auth` + `authMapping.function.ts` (WD12), login option
-`askPhone`, history lines for added / removed.
+`SiteWidgets.auth` + `authMapping.function.ts` (WD12: MINT's Customers by
+default; a model's linked copy, or the model holding the accounts), login
+option `askPhone`, history lines for added / removed.

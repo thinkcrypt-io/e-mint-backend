@@ -316,3 +316,36 @@ Newest last. One entry per work order: what, files, how verified.
   pre-filled) → options → texts → review → added and on; Cart added switched
   off from the Shop step; Remove prompt; Edit opens on Customers.
 
+## W-24 (continued) — a project's model may hold the accounts (2026-10-19)
+- **The user's words** (answering whether a tenant model may hold accounts):
+  "There will be a default customer model, a tenant's model may hold accounts
+  too if needed and configured."
+- **Backend** (`functions/authMapping.function.ts`): `AuthMapping.accounts`
+  `'mint' | 'model'` (saved mappings without it read as `mint`).
+  `registerInModel` (the record first, then its sign-in row; an email already
+  in the model — an account or a team-made record — or in MINT's Customers is
+  `email_taken`; a record the model refuses is 409 `account_invalid`),
+  `accountByEmail` (the record's email signs in), `currentAccount` (a signed-in
+  account the model holds takes its name/email/phone from the record and ends
+  when the record is removed or archived). `ProjectCustomer.holder: 'model'`;
+  the Customers page (`routes-tenant/project.router.ts`) leaves those rows
+  out; switching back to `mint` unsets `holder` (they become MINT customers,
+  still linked). In model mode older MINT accounts keep signing in and get no
+  copy. `routes-public/public.router.ts` register/login/me/customerOf use
+  them; the new-customer notification links the model's record.
+- **Fixed on the way:** linking an existing record by email (`mint` mode) no
+  longer sets its `_customer` — emails aren't verified, so signing up with
+  someone's email mustn't give owner-only access to their record.
+- **Panels:** the Customers step defaults to MINT's Customers (a likely model
+  is offered as "Use Members instead"); with a model picked, "How": keep
+  accounts in MINT's Customers with a copy here / this model holds the
+  accounts. Review says which. `AuthMapping.accounts` in `tenantApi`.
+- **Verified:** `widgets-setup.mjs` now 59 checks (model mode: sign-up as a
+  record, nothing secret in it, off the Customers page, double sign-up and
+  claiming a team-made record refused, team edits of name and email followed
+  and the new email signing in, older accounts still signing in without a
+  copy, name/phone from the site, a deleted record signing the account out,
+  switching back); `widgets.mjs` 18 and `widgets-cart.mjs` 48 green on a
+  private backend (:5071). Headless Chrome on mint-tenant :3073: Edit → How →
+  "This model holds the accounts" → Save; the server has `accounts: 'model'`.
+

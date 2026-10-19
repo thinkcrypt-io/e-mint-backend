@@ -1,7 +1,8 @@
 // Site widgets W-24: the Widgets screen starts empty, widgets are added (and
 // removed) one by one through the setup wizard, and Login & account's
-// customer model — each account gets a record in the project's own Customers
-// model, linked by email, while passwords stay in MINT's ProjectCustomer.
+// customer model — MINT's Customers by default; a project's own model either
+// gets a linked copy of each account (`accounts: 'mint'`) or holds the
+// accounts itself (`accounts: 'model'`). Passwords stay in ProjectCustomer.
 import { call, ok, done } from './lib.mjs';
 
 const stamp = Date.now();
@@ -82,7 +83,7 @@ r = await call('POST', pub('/auth/register'), { name: 'Early Bird', email: `earl
 ok('before a model is chosen: accounts have no record', r.status === 200 && r.body.customer.record === null, JSON.stringify(r.body?.customer));
 
 r = await call('PUT', W('/auth'), { auth: { model: 'Customer', fields: { email: 'email', name: 'fullName', phone: 'mobile' } } }, T);
-ok('the customer model saved', r.status === 200 && r.body.auth?.model === 'Customer' && r.body.auth.fields.phone === 'mobile', `${r.status} ${r.body?.message}`);
+ok('the customer model saved — a linked copy by default', r.status === 200 && r.body.auth?.model === 'Customer' && r.body.auth.accounts === 'mint' && r.body.auth.fields.phone === 'mobile', `${r.status} ${r.body?.message}`);
 
 r = await call('POST', pub('/auth/register'), { name: 'New Member', email: `New${stamp}@Example.com`, password: 'customer-pass-1', phone: '+8801700000000' });
 const newbie = r.body;
@@ -99,6 +100,7 @@ r = await call('GET', P(site._id, `/${route}/${newbie.customer.record}`), null, 
 ok('a name or phone change on the site reaches the record', (r.body?.doc || r.body)?.fullName === 'Renamed Member' && (r.body?.doc || r.body)?.mobile === '+8801711111111', JSON.stringify(r.body).slice(0, 200));
 
 r = await call('POST', pub('/auth/register'), { name: 'Old Member Again', email: `OLD${stamp}@example.com`, password: 'customer-pass-1' });
+const oldAgain = r.body;
 ok('signing up with an email already in Members links that record (any case), no duplicate', r.status === 200 && r.body.customer.record === existing, `${r.body?.customer?.record} vs ${existing}`);
 r = await call('GET', P(site._id, `/${route}/${existing}`), null, T);
 ok('…and leaves the team’s record as it was', (r.body?.doc || r.body)?.fullName === 'Old Member' && (r.body?.doc || r.body)?.tier === 'gold', JSON.stringify(r.body).slice(0, 200));
@@ -119,6 +121,8 @@ r = await call('GET', pub(`/${route}/${olly.customer.record}`), null, `Bearer ${
 ok('with an owner-only public API, a customer reads their own record', r.status === 200 && (r.body?.doc || r.body)?.fullName === 'Owner Olly', `${r.status} ${JSON.stringify(r.body).slice(0, 160)}`);
 r = await call('GET', pub(`/${route}/${olly.customer.record}`), null, `Bearer ${newbie.token}`);
 ok('…and not someone else’s', r.status === 404 || r.status === 403, `${r.status}`);
+r = await call('GET', pub(`/${route}/${existing}`), null, `Bearer ${oldAgain.token}`);
+ok('signing up with the email of a record the team made links it but doesn’t hand it over (emails aren’t verified)', r.status === 404 || r.status === 403, `${r.status}`);
 
 /* ------------------------------------------------------- the model goes away */
 r = await call('PUT', W('/auth'), { auth: null }, T);
@@ -135,5 +139,77 @@ ok('…and sign-up keeps working without a record', r.status === 200 && r.body.c
 
 r = await call('GET', W('/auth'));
 ok('the customer model needs a sign-in', r.status === 401, r.status);
+
+/* ------------------------------------------- the model holds the accounts */
+r = await call('POST', '/tenant/api/projects', { name: 'Gym site', type: 'website' }, T);
+const gym = r.body;
+const G = path => P(gym._id, path);
+const gpub = path => `/public/api/${gym.publicSlug}${path}`;
+r = await call('POST', G('/builder/models'), {
+	name: 'Member',
+	title: 'Members',
+	displayField: 'fullName',
+	fields: [
+		{ key: 'fullName', label: 'Full name', kind: 'text' },
+		{ key: 'email', label: 'Email', kind: 'email', required: true },
+		{ key: 'mobile', label: 'Mobile', kind: 'text' },
+	],
+}, T);
+const memberDef = idOf(r);
+const mroute = (await call('GET', G('/widgets/auth'), null, T)).body?.models?.find(m => m.name === 'Member')?.route;
+r = await call('POST', gpub('/auth/register'), { name: 'Before Switch', email: `before${stamp}@example.com`, password: 'customer-pass-1' });
+ok('another project: an account in MINT’s Customers (the default) before anything is chosen', r.status === 200 && r.body.customer.record === null && mroute, mroute);
+
+r = await call('PUT', G('/widgets/auth'), { auth: { model: 'Member', accounts: 'model', fields: { email: 'email', name: 'fullName', phone: 'mobile' } } }, T);
+ok('Members set to hold the accounts', r.status === 200 && r.body.auth?.accounts === 'model', `${r.status} ${r.body?.message}`);
+
+r = await call('POST', gpub('/auth/register'), { name: 'Held Hana', email: `Hana${stamp}@example.com`, password: 'customer-pass-1', phone: '+111' });
+const hana = r.body;
+ok('sign-up makes the account as a record in Members', r.status === 200 && hana.customer?.record && hana.customer.email === `hana${stamp}@example.com`, JSON.stringify(r.body).slice(0, 200));
+r = await call('GET', G(`/${mroute}/${hana.customer.record}`), null, T);
+const hrec = r.body?.doc || r.body;
+ok('…the record has the email, name and phone, and nothing secret', hrec?.email === `hana${stamp}@example.com` && hrec.fullName === 'Held Hana' && hrec.mobile === '+111' && !JSON.stringify(hrec).match(/password|tokenVersion|\$2[aby]\$/i), JSON.stringify(hrec).slice(0, 200));
+r = await call('GET', G('/customers?limit=50'), null, T);
+const listed = (r.body?.doc || []).map(c => c.email);
+ok('MINT’s Customers page lists the older account, not the ones Members holds', listed.includes(`before${stamp}@example.com`) && !listed.includes(`hana${stamp}@example.com`), listed.join(', '));
+r = await call('POST', gpub('/auth/register'), { name: 'Hana Again', email: `hana${stamp}@example.com`, password: 'customer-pass-1' });
+ok('signing up twice with one email is refused', r.status === 400 && r.body?.code === 'email_taken', `${r.status} ${r.body?.code}`);
+
+const teamMade = idOf(await call('POST', G(`/${mroute}`), { fullName: 'Front Desk Added', email: `desk${stamp}@example.com` }, T));
+r = await call('POST', gpub('/auth/register'), { name: 'Claimer', email: `desk${stamp}@example.com`, password: 'customer-pass-1' });
+ok('a record the team added can’t be claimed by signing up with its email', teamMade && r.status === 400 && r.body?.code === 'email_taken', `${r.status} ${r.body?.code}`);
+r = await call('POST', gpub('/auth/login'), { email: `desk${stamp}@example.com`, password: 'customer-pass-1' });
+ok('…nor sign in (it has no password)', r.status === 400, `${r.status}`);
+
+r = await call('PUT', G(`/${mroute}/${hana.customer.record}`), { fullName: 'Hana Renamed', email: `hana.new${stamp}@example.com` }, T);
+r = await call('GET', gpub('/auth/me'), null, `Bearer ${hana.token}`);
+ok('the team renames the record and changes its email: the signed-in account follows', r.status === 200 && r.body.name === 'Hana Renamed' && r.body.email === `hana.new${stamp}@example.com`, JSON.stringify(r.body));
+r = await call('POST', gpub('/auth/login'), { email: `hana.new${stamp}@example.com`, password: 'customer-pass-1' });
+ok('…the record’s new email signs in', r.status === 200 && r.body.customer.record === hana.customer.record && r.body.customer.name === 'Hana Renamed', `${r.status} ${r.body?.message}`);
+r = await call('POST', gpub('/auth/login'), { email: `hana${stamp}@example.com`, password: 'customer-pass-1' });
+ok('…the old one no longer does', r.status === 400, `${r.status}`);
+r = await call('POST', gpub('/auth/login'), { email: `before${stamp}@example.com`, password: 'customer-pass-1' });
+ok('an account from before the switch still signs in (and gets no record)', r.status === 200 && r.body.customer.record === null, JSON.stringify(r.body?.customer));
+
+r = await call('PUT', gpub('/auth/me'), { name: 'Hana Herself', phone: '+222' }, `Bearer ${hana.token}`);
+ok('a name change on the site is the record’s name', r.status === 200 && r.body.name === 'Hana Herself' && r.body.phone === '+222', JSON.stringify(r.body));
+r = await call('GET', G(`/${mroute}/${hana.customer.record}`), null, T);
+ok('…in Members too', (r.body?.doc || r.body)?.fullName === 'Hana Herself' && (r.body?.doc || r.body)?.mobile === '+222', JSON.stringify(r.body).slice(0, 160));
+
+r = await call('POST', gpub('/auth/register'), { name: 'Gone Soon', email: `gone${stamp}@example.com`, password: 'customer-pass-1' });
+const gone = r.body;
+r = await call('DELETE', G(`/${mroute}/${gone.customer.record}`), null, T);
+ok('(the team deletes a member’s record)', r.status === 200, `${r.status} ${r.body?.message}`);
+r = await call('GET', gpub('/auth/me'), null, `Bearer ${gone.token}`);
+ok('…their account ends: signed out', r.status === 401, `${r.status}`);
+r = await call('POST', gpub('/auth/login'), { email: `gone${stamp}@example.com`, password: 'customer-pass-1' });
+ok('…and can’t sign in', r.status === 400, `${r.status}`);
+
+r = await call('PUT', G('/widgets/auth'), { auth: { model: 'Member', accounts: 'mint', fields: { email: 'email', name: 'fullName' } } }, T);
+r = await call('GET', G('/customers?limit=50'), null, T);
+ok('switched back to MINT’s Customers: the accounts Members held are MINT customers again', (r.body?.doc || []).some(c => c.email === `hana${stamp}@example.com` || c.email === `hana.new${stamp}@example.com`), (r.body?.doc || []).map(c => c.email).join(', '));
+r = await call('GET', gpub('/auth/me'), null, `Bearer ${hana.token}`);
+ok('…and stay signed in, still linked to their record', r.status === 200 && r.body.record === hana.customer.record, JSON.stringify(r.body));
+await call('DELETE', `/tenant/api/projects/${gym._id}?force=true`, null, T);
 
 done();

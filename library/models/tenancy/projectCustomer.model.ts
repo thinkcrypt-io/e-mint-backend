@@ -32,6 +32,12 @@ const schema = new Schema<any>(
 		 */
 		record: { type: Schema.Types.ObjectId },
 		recordModel: { type: String, trim: true },
+		/**
+		 * 'model': the project's own customer model holds this account (W-24,
+		 * `accounts: 'model'`) — the record is the account, this row only signs
+		 * it in; kept off MINT's Customers page. Unset: a MINT customer.
+		 */
+		holder: { type: String, enum: ['model'] },
 	},
 	{ timestamps: true }
 );

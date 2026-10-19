@@ -31,7 +31,7 @@ import { fireAutomations } from '../library/functions/automations.function.js';
 import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
 import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
-import { linkCustomerRecord, syncCustomerRecord } from '../library/functions/authMapping.function.js';
+import { accountByEmail, accountsModel, currentAccount, linkCustomerRecord, registerInModel, syncCustomerRecord } from '../library/functions/authMapping.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
 import { cleanLines, customerCart, getProduct, loadShop, priceCart, setCustomerCart } from '../library/functions/shop.function.js';
@@ -172,8 +172,11 @@ const customerOf = async (req: any) => {
 	try {
 		const claims: any = jwt.verify(header.slice(7).trim(), secret());
 		if (claims?.kind !== CUSTOMER_TOKEN_KIND || claims.project !== String(req.project._id)) return null;
-		const customer: any = await ProjectCustomer.findById(claims._id).lean();
-		if (!customer || customer.isActive === false || (customer.tokenVersion || 0) !== (claims.v || 0)) return null;
+		const row: any = await ProjectCustomer.findById(claims._id).lean();
+		if (!row || row.isActive === false || (row.tokenVersion || 0) !== (claims.v || 0)) return null;
+		// An account the project's own model holds is as its record is now — gone with it (W-24).
+		const customer: any = await currentAccount(req.app, req.project, row);
+		if (!customer) return null;
 		if (req.apiLog) req.apiLog.customer = customer;
 		return customer;
 	} catch {
@@ -284,19 +287,35 @@ router.post(
 			}),
 			req.body
 		);
-		if (await ProjectCustomer.exists({ email: body.email }))
-			throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
-		const customer: any = await ProjectCustomer.create({ ...body, lastLoginAt: new Date() });
-		// A record in the project's own customer model, when Login & account has one (W-24).
-		await linkCustomerRecord(req.app, req.project, customer);
-		tellTeam(req, {
-			route: 'customers',
-			permission: 'view-customers',
-			title: `New customer on ${req.project.name}: ${customer.name}`,
-			message: customer.email,
-			path: `/customers/${customer._id}`,
-			record: customer._id,
-		});
+		// The project's own model may hold the accounts (W-24): the record is the account.
+		const held = await accountsModel(req.app, req.project);
+		let customer: any;
+		if (held) {
+			const made = await registerInModel(held, body);
+			customer = made.customer;
+			tellTeam(req, {
+				route: made.def.route,
+				permission: `view-${made.def.route}`,
+				title: `New customer on ${req.project.name}: ${customer.name}`,
+				message: customer.email,
+				path: `/${made.def.route}/${made.record._id}`,
+				record: made.record._id,
+			});
+		} else {
+			if (await ProjectCustomer.exists({ email: body.email }))
+				throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
+			customer = await ProjectCustomer.create({ ...body, lastLoginAt: new Date() });
+			// A linked copy in the project's own customer model, when Login & account has one (W-24).
+			await linkCustomerRecord(req.app, req.project, customer);
+			tellTeam(req, {
+				route: 'customers',
+				permission: 'view-customers',
+				title: `New customer on ${req.project.name}: ${customer.name}`,
+				message: customer.email,
+				path: `/customers/${customer._id}`,
+				record: customer._id,
+			});
+		}
 		if (req.project.type === 'website') forwardConversion(req.project, req, 'signup', { email: customer.email, phone: customer.phone });
 		// A welcome from the business, through its own email server (docs/messaging M-02) — when it has one.
 		later(() => welcomeCustomer(req.project, customer, siteOrigin(req.project) || undefined));
@@ -309,14 +328,19 @@ router.post(
 	authLimit,
 	handle(async req => {
 		const body = check(Joi.object({ email: Joi.string().trim().lowercase().email().required(), password: Joi.string().required() }), req.body);
-		const customer: any = await ProjectCustomer.findOne({ email: body.email }).select('+password');
+		// The project's own model may hold the accounts (W-24): its record's email signs in. Accounts made
+		// before that (MINT's Customers) still sign in with theirs.
+		const held = await accountsModel(req.app, req.project);
+		const customer: any =
+			(held && (await accountByEmail(held, body.email))) || (await ProjectCustomer.findOne({ email: body.email, holder: { $ne: 'model' } }).select('+password'));
 		if (!customer || !(await customer.checkPassword(body.password))) throw new TenancyError(400, 'That email and password don’t match.');
 		if (customer.isActive === false) throw new TenancyError(400, 'This account has been switched off.');
 		customer.lastLoginAt = new Date();
 		await customer.save();
 		// Accounts made before a customer model was chosen get their record now (W-24).
 		await linkCustomerRecord(req.app, req.project, customer);
-		return { token: customer.generateToken(), customer: publicCustomer(customer) };
+		const now = (await currentAccount(req.app, req.project, customer.toObject())) || customer;
+		return { token: customer.generateToken(), customer: publicCustomer(now) };
 	})
 );
 
@@ -335,7 +359,7 @@ router.put(
 		const body = check(Joi.object({ name: Joi.string().trim().min(1).max(120), phone: Joi.string().trim().max(40).allow('') }), req.body);
 		const doc = await ProjectCustomer.findByIdAndUpdate(customer._id, { $set: body }, { new: true }).lean();
 		await syncCustomerRecord(req.app, req.project, doc, body);
-		return publicCustomer(doc);
+		return publicCustomer((await currentAccount(req.app, req.project, doc)) || doc);
 	})
 );
 

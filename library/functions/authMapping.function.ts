@@ -9,22 +9,31 @@ import { shopModels } from './shop.function.js';
 import { TenancyError } from './tenancy.function.js';
 
 /**
- * Login & account's customer model (docs/widgets W-24, decision WD12): which
- * of the project's own models holds its customers, and which of its fields
- * are their email, name and phone. Sign-in itself — the password (hashed),
- * staying signed in, signing out everywhere — always stays in MINT's
- * ProjectCustomer: nothing secret is ever written to a tenant's model. Each
- * account gets one record in the chosen model, linked by
- * `ProjectCustomer.record`: on sign-up (or the first sign-in after the model
- * is chosen) the record with the same email is linked, or a new one is made;
- * a name or phone change on the site is copied onto it.
+ * Login & account's customer model (docs/widgets W-24, decision WD12). MINT's
+ * own Customers (ProjectCustomer) is the default; a project can name one of
+ * its own models and which of its fields are the email, name and phone, in
+ * one of two ways (`accounts`):
+ *
+ *  - `mint` — accounts stay in MINT's Customers and each gets a linked copy in
+ *    the model: on sign-up (or the first sign-in after the model is chosen)
+ *    the record with the same email is linked, or a new one is made; a name or
+ *    phone change on the site is copied onto it.
+ *  - `model` — the model holds the accounts: every sign-up is a record there,
+ *    the record's email is what signs in, and removing (or archiving) the
+ *    record ends the account. Records the team adds have no password and
+ *    can't sign in (or be claimed by signing up with their email).
+ *
+ * Either way the password (hashed), staying signed in and signing out
+ * everywhere live in a ProjectCustomer row linked by `record` — in `model`
+ * mode marked `holder: 'model'` and left off MINT's Customers page. Nothing
+ * secret is ever written to a tenant's model.
  *
  * Saved in `SiteWidgets.auth`; checked against today's models on every read,
  * like the shop (a field since removed makes it null — accounts keep working,
  * only the copying stops).
  */
 
-export type AuthMapping = { model: string; fields: { email: string; name?: string; phone?: string } };
+export type AuthMapping = { model: string; accounts: 'mint' | 'model'; fields: { email: string; name?: string; phone?: string } };
 
 /** What each part may be — the panel's CustomersStep keeps the same list. */
 export const AUTH_KINDS: Record<keyof AuthMapping['fields'], string[]> = {
@@ -66,7 +75,7 @@ export const checkAuth = (raw: any, defs: any[]): AuthMapping => {
 			400,
 			`${def.title || def.name} has required fields sign-up can’t fill (${blocking.map((f: any) => f.label || f.key).join(', ')}) — make them optional or give them a default first.`
 		);
-	return { model: def.name, fields };
+	return { model: def.name, accounts: raw?.accounts === 'model' ? 'model' : 'mint', fields };
 };
 
 /** A model that looks like customers (Customer, Client, Member…) with an email field, to start from. */
@@ -78,7 +87,7 @@ const guessAuth = (defs: any[]): AuthMapping | null => {
 	const pick = (kinds: string[], re: RegExp) => (def.fields || []).find((f: any) => kinds.includes(f.kind) && re.test(f.key))?.key;
 	const email = pick(AUTH_KINDS.email, /e-?mail/i);
 	if (!email) return null;
-	const out: AuthMapping = { model: def.name, fields: { email } };
+	const out: AuthMapping = { model: def.name, accounts: 'mint', fields: { email } };
 	const name = pick(AUTH_KINDS.name, /^(name|full_?name|customer_?name)$/i);
 	const phone = pick(AUTH_KINDS.phone, /phone|mobile/i);
 	if (name) out.fields.name = name;
@@ -123,7 +132,11 @@ export const saveAuth = async (project: any, body: any) => {
 		const defs: any[] = await runInScope(scopeOf(project), () => activeDefs());
 		auth = checkAuth(body?.auth, defs);
 	}
-	await runInScope(scopeOf(project), () => SiteWidgets.updateOne({}, { $set: { auth } }, { upsert: true }));
+	await runInScope(scopeOf(project), async () => {
+		await SiteWidgets.updateOne({}, { $set: { auth } }, { upsert: true });
+		// Out of `model` mode, accounts the model held become MINT customers again (their record stays linked as a copy).
+		if (auth?.accounts !== 'model') await ProjectCustomer.updateMany({ holder: 'model' }, { $unset: { holder: 1 } });
+	});
 	return authView(project);
 };
 
@@ -152,6 +165,9 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any):
 		const c = await customerModel(app, project);
 		if (!c) return null;
 		const { m, def, Model } = c;
+		if (customer.holder === 'model') return customer.record ? String(customer.record) : null;
+		// While the model holds the accounts, older MINT accounts stay MINT customers — a copy would look like one it holds.
+		if (m.accounts === 'model') return customer.record ? String(customer.record) : null;
 		if (customer.record && customer.recordModel === m.model && (await Model.exists({ _id: customer.record }))) return String(customer.record);
 		let doc: any = await Model.findOne({ [m.fields.email]: new RegExp(`^${escape(String(customer.email))}$`, 'i') });
 		if (!doc) {
@@ -166,9 +182,9 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any):
 			await doc.save();
 			fireWebhooks({ route: def.route, event: 'create', doc, source: 'api' });
 			fireAutomations({ route: def.route, event: 'create', doc, actor: { name: 'Sign-up' } });
-		} else if (!doc._customer && Model.schema.path('_customer')) {
-			await Model.updateOne({ _id: doc._id }, { $set: { _customer: customer._id } });
 		}
+		// A record that was already there (the team's) is linked, never handed over: emails aren't verified, so
+		// signing up with someone's email mustn't give owner-only access to their record.
 		await ProjectCustomer.updateOne({ _id: customer._id }, { $set: { record: doc._id, recordModel: m.model } });
 		customer.record = doc._id;
 		customer.recordModel = m.model;
@@ -196,4 +212,73 @@ export const syncCustomerRecord = async (app: any, project: any, customer: any, 
 	} catch (e: any) {
 		console.warn(`[widgets] couldn't update customer ${customer?._id}'s record:`, e?.message);
 	}
+};
+
+/* ------------------------------------------- the model holds the accounts */
+
+const byEmail = (field: string, email: string) => ({ [field]: new RegExp(`^${escape(String(email).trim())}$`, 'i'), archivedAt: null });
+
+/** The model and mapping when the model holds the accounts (`accounts: 'model'`), or null. */
+export const accountsModel = async (app: any, project: any) => {
+	const c = await customerModel(app, project);
+	return c && c.m.accounts === 'model' ? c : null;
+};
+
+/**
+ * Sign-up when the model holds the accounts: the record first (mapped fields,
+ * the model's defaults, `_customer` so owner-only endpoints reach it), then
+ * its sign-in row. An email already in the model — an account, or a record the
+ * team added — is refused.
+ */
+export const registerInModel = async (c: NonNullable<Awaited<ReturnType<typeof accountsModel>>>, body: { name: string; email: string; phone?: string; password: string }) => {
+	const { m, def, Model } = c;
+	if ((await Model.exists(byEmail(m.fields.email, body.email))) || (await ProjectCustomer.exists({ email: body.email })))
+		throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
+	const customer: any = new ProjectCustomer({ ...body, holder: 'model', recordModel: m.model, lastLoginAt: new Date() });
+	const doc: any = new Model({
+		[m.fields.email]: body.email,
+		...(m.fields.name && body.name && { [m.fields.name]: body.name }),
+		...(m.fields.phone && body.phone && { [m.fields.phone]: body.phone }),
+		_customer: customer._id,
+		...(def.access?.enabled && { privacy: 'public' }),
+	});
+	try {
+		await doc.save();
+	} catch (e: any) {
+		const first: any = e?.name === 'ValidationError' ? Object.values(e.errors || {})[0] : null;
+		throw new TenancyError(409, `The account couldn’t be made${first?.message ? `: ${first.message}` : ''}.`, 'account_invalid');
+	}
+	customer.record = doc._id;
+	try {
+		await customer.save();
+	} catch (e) {
+		await Model.deleteOne({ _id: doc._id });
+		throw e;
+	}
+	fireWebhooks({ route: def.route, event: 'create', doc, source: 'api' });
+	fireAutomations({ route: def.route, event: 'create', doc, actor: { name: 'Sign-up' } });
+	return { customer, def, record: doc };
+};
+
+/** Sign-in when the model holds the accounts: the record with this email, then its sign-in row (with the password). */
+export const accountByEmail = async (c: NonNullable<Awaited<ReturnType<typeof accountsModel>>>, email: string) => {
+	const doc: any = await c.Model.findOne(byEmail(c.m.fields.email, email), { _id: 1 }).lean();
+	if (!doc) return null;
+	return ProjectCustomer.findOne({ record: doc._id, holder: 'model' }).select('+password');
+};
+
+/**
+ * A signed-in account the model holds, as it is now: its name, email and
+ * phone from the record (the team may have changed them), or null when the
+ * record was removed or archived — the account is gone. Accounts MINT holds
+ * pass through.
+ */
+export const currentAccount = async (app: any, project: any, customer: any) => {
+	if (customer?.holder !== 'model') return customer;
+	const c = await accountsModel(app, project);
+	if (!c || c.m.model !== customer.recordModel) return customer;
+	const doc: any = await c.Model.findOne({ _id: customer.record, archivedAt: null }).lean();
+	if (!doc) return null;
+	const text = (k?: string) => (k && typeof doc[k] === 'string' ? doc[k] : undefined);
+	return { ...customer, email: text(c.m.fields.email)?.toLowerCase() || customer.email, name: text(c.m.fields.name) || customer.name, phone: text(c.m.fields.phone) ?? customer.phone };
 };

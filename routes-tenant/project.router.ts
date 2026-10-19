@@ -189,6 +189,8 @@ router.use(
 		permission: 'customers',
 		route: 'customers',
 		frontendConfig: projectCustomerConfig,
+		// Accounts the project's own customer model holds are listed there, not here (docs/widgets W-24).
+		injectMiddleware: { getAll: [customQuery({ query: { holder: { $ne: 'model' } } })] },
 		// Customers are records like any other (WO-21): view-/edit-/delete-customers.
 		auth: { protect: (_req: any, _res: any, next: any) => next(), hasPermission: tenantPermissions },
 	})
