@@ -1955,3 +1955,15 @@ Decisions D14–D17 (README).
 - Verified on a throwaway page (deleted) in the browser pane at 1280×800, dark and light: cards render, no label is
   cut off, the forward arrow scrolls to the end and switches off. `tsc` clean in both apps. The real dashboard wasn't
   opened (no backend running). Pushed mint-tenant `6ff6bda`, admin `a1908f8`; not deployed.
+
+## 2026-10-20 — Dashboard suggestions: to the screen edge; model steps on websites
+- The user: the card row should run to the end of the screen (no right padding), and the model steps were missing —
+  show them when the user has permission.
+- admin + mint-tenant `ProjectSuggestions.tsx`: `CardRow`'s scroller gets a negative right margin equal to MainBody's
+  side padding (`BLEED`, from `padding.BASE/MD/LG`), plus a spacer after the last card so scrolled to the end it stops
+  where the padding would. Website projects' cards: site setup, pages, **model, records**, dashboard, team, AI,
+  guides. The model, sidebar and dashboard cards show only with the `build` right; the built-models query now runs
+  for any project type when the user has `build`. Dashboard card's button "Open builder" (the guide label was cut).
+- Verified on a throwaway page wrapped in `MainBody` (deleted) at 1280px: the scroller's right edge = the window's,
+  no sideways page scroll. Permission filter checked by `tsc` only (no backend running). Pushed mint-tenant
+  `2a3e5fa`, admin `345ac01`; not deployed.
