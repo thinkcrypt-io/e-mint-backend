@@ -8,6 +8,13 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-19)
 
+**2026-10-19 — Automation emails: write in place, see, resend (AU-03c, `docs/automations`).** Insert a field goes in at
+the cursor; the email message (`MessageEditor`) opens a menu where you click — field, bold, italic, list — with ⌘B/⌘I
+and Preview (`**`/`*`/"- " marks, rendered by `emailBody`). Automation emails keep their body on `MailMessage`
+(`kept`; files while failed): the eye shows one as sent, Resend sends a failed one again (`/automations/emails/:id`,
+`/mail-accounts/messages/:id`), in Runs and Project → Email. Smoke `automation-email-resend.mjs`. Backend, mint-tenant,
+admin, mint-docs, website; not deployed.
+
 **2026-10-19 — Date formulas (DF-01…05, `docs/date-formulas`).** The formula engine does dates (today, addDays /
 Weeks / Months / Years, add(date, n, unit), latest, earliest, daysBetween — JS and MongoDB alike); a new field kind
 `dateformula` (settings: a formula with `schema.returns: 'date'`, `calc: 'once'` keeps it once worked out);

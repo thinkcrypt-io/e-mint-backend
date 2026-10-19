@@ -73,3 +73,43 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   counters, the others still run, and `fireAutomations`' own synchronous part can't throw into the caller.
 - Verified: `automations.mjs` (the deal still saves, 201, while its email fails), `automation-pdfs.mjs` (the bill still saves,
   200, while its removed PDF fails the run), `mail-designs.mjs` — all passed; tsc clean.
+
+## 2026-10-19 — AU-03c Email editor; seeing and resending emails
+- The user: "on the email writing part, on automation, when a field is inserted it gets inserted at the end not where the
+  cursor is … when on editor left click should open option to insert, bold/italic text. Also in case of failed emails,
+  should have a resend option … also an eye icon that opens a modal to view the email."
+- Writing (panels, both, `src/app/automations/_components`): `PlaceholderText`'s Insert a field puts `{{key}}` at the
+  cursor or over the selection (a space where it would touch a word) and puts the cursor after it; new `MessageEditor`
+  for the email message — a left click opens a small menu at the pointer once the click has placed the cursor (a drag
+  selection too), right-click the same; Insert a field, Bold, Italic, Bulleted list (buttons never take the focus, so the
+  selection stays); ⌘B / ⌘I; typing, Escape or a click elsewhere closes it; Preview renders the message with fields as
+  chips. Pure helpers in `textEdit.ts` (insertToken, toggleMark — adds or takes off `**`/`*`, toggleList, marksAt,
+  previewHtml). A pending edit is kept until the box has caught up, so ⌘B then ⌘I in quick succession compose.
+- Formatting (backend `emailBody` / `formatHtml` in automations.function.ts): `**bold**`, `*italic*`, `***both***`,
+  runs of "- " lines → a list (even right under a text line), blank line → paragraph. Placeholders are swapped for
+  sentinels before formatting and filled (escaped) after, so a value's `*` stays literal; a `*` inside a word (2*3*4)
+  isn't italic. The text part has the marks taken out.
+- Kept emails (`MailMessage`: `kept`, `text`/`html` select:false, `files` names, `attachments` only while failed, `automation`,
+  `run`, `route`, `record`, `design`, `resendOf`, `resent {at, by, status, error, message}`): `sendOrgMail(…, { keep })`;
+  with no email account a kept email is logged failed (409 still thrown). The run's id is made before the run so its
+  emails point to it. Every address now gets its try — "Emailed a, but not b: …" fails the step (later actions still
+  stop). The daily 300 is `emailAllowance()` (429 `email_limit`) and counts resends.
+- `mailMessageView`, `findMail`, `resendMail` in mail.function.ts: a resend goes through the project's account as it is
+  now, logs a new email with `resendOf`, and records `resent` on the failed one (its files dropped once it went); a sent
+  email, or one already resent, is a 400; another project's a 404. Routes: automations router `GET /emails/:id`,
+  `POST /emails/:id/resend` (Build, automation kind only), runs carry `emails` (first attempts); mailAccounts router
+  `GET /messages/:id`, `POST /messages/:id/resend` (manage projects). History: "resent an … email to …".
+- Panels: `SentEmailDialog.tsx` — the eye's dialog (status, resend state, to, subject, files, the error, the HTML in a
+  sandboxed iframe or the plain text, Resend in the ModalFooter) and `ResendPrompt` (PromptDialog) + `EmailRowActions`;
+  Runs lists each run's emails (open by default when one can be resent); Project → Email's log gets the eye, Resend,
+  Resent / A resend. tenantApi: `getSentEmail`, `resendEmail`, `MailLogEntry` fields. GuideLink `automation-emails`.
+- Note: messaging MD8 said only the subject is kept — automation emails now keep their body (180 days, same TTL), so they
+  can be shown and resent; other kinds unchanged.
+- Guide: mint-docs `/automations#automation-emails` (+ `/email#email-log`). Website changelog.
+- Verified: new `scripts/tenancy-smoke/automation-email-resend.mjs` 32/32 (in run-all; bold/italic/list in HTML, marks out of
+  the text, a value's * kept, one of two addresses refused, resend carrying the PDF, no second resend, a resend failing
+  again, no account → failed → resent once connected, the Email log, another project 404); `automations.mjs`,
+  `automation-pdfs.mjs`, `mail.mjs`, `mail-accounts.mjs`, `mail-designs.mjs` pass; tsc clean in backend, both panels and
+  mint-docs. Browser pane (mint-tenant on a private backend, light and dark): the menu at the pointer with the cursor where
+  clicked, a field inserted mid-line, bold/italic on and off keeping the selection, ⌘B/⌘I, typing closing the menu,
+  Preview, a field inserted mid-subject, the eye's dialog, Resend from Runs and from Project → Email. Not deployed.

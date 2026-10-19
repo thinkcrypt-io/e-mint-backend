@@ -166,6 +166,64 @@ export const fill = (ctx: Ctx, text: any): string =>
 		}
 	});
 
+/**
+ * An email's message as HTML and as plain text (AU-03c). A blank line starts
+ * a paragraph; `**bold**` and `*italic*` show as such; lines starting with
+ * "- " are a bulleted list. Placeholders are filled after the
+ * formatting, so a value with a * in it stays as it is.
+ */
+export const emailBody = (ctx: Ctx, template: any) => {
+	const values: string[] = [];
+	const marked = String(template ?? '').replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, m => {
+		values.push(fill(ctx, m));
+		return `\uE000${values.length - 1}\uE001`;
+	});
+	const back = (s: string, f: (v: string) => string) => s.replace(/\uE000(\d+)\uE001/g, (_, i) => f(values[Number(i)] ?? ''));
+	return {
+		html: back(formatHtml(marked), v => esc(v).replace(/\n/g, '<br>')),
+		text: back(stripMarks(marked), v => v),
+	};
+};
+
+const BULLET = /^\s*[-•]\s+/;
+const BOTH = /\*\*\*(?=[^\s*])([^\n]*?[^\s*])\*\*\*/g;
+const BOLD = /\*\*(?=\S)([^\n]*?\S)\*\*/g;
+const ITALIC = /(^|[^*\w])\*(?=[^\s*])([^*\n]*?[^\s*])?\*(?![*\w])/g;
+const italicOf = (s: string, wrap: (t: string) => string) => s.replace(ITALIC, (m, pre, t) => (t === undefined ? m : `${pre}${wrap(t)}`));
+
+/** The message's HTML: paragraphs, lists, bold and italic; text escaped. */
+export const formatHtml = (text: string) => {
+	const inline = (line: string) => italicOf(esc(line).replace(BOTH, '<b><i>$1</i></b>').replace(BOLD, '<b>$1</b>'), t => `<i>${t}</i>`);
+	return text
+		.replace(/\r\n/g, '\n')
+		.split(/\n{2,}/)
+		.filter(block => block.trim())
+		.map(block => {
+			// Lines starting with "- " in a row are a list; the lines around them, paragraphs.
+			const runs: { list: boolean; lines: string[] }[] = [];
+			for (const l of block.split('\n')) {
+				const list = BULLET.test(l);
+				if (runs.length && runs[runs.length - 1].list === list) runs[runs.length - 1].lines.push(l);
+				else runs.push({ list, lines: [l] });
+			}
+			return runs
+				.map(r =>
+					r.list
+						? `<ul style="margin:0 0 16px;padding-left:22px;font-size:14px;line-height:1.6;">${r.lines.map(l => `<li>${inline(l.replace(BULLET, ''))}</li>`).join('')}</ul>`
+						: para(r.lines.map(inline).join('<br>'))
+				)
+				.join('');
+		})
+		.join('');
+};
+
+/** The plain-text version: the same words without the ** and * marks. */
+const stripMarks = (text: string) =>
+	text
+		.split('\n')
+		.map(l => italicOf(l.replace(BOTH, '$1').replace(BOLD, '$1'), t => t))
+		.join('\n');
+
 /* ------------------------------------------------------------ checking */
 
 const PLACEHOLDER_KEYS = new Set(['link', 'page', 'project', 'actor', 'event', 'today']);
@@ -376,7 +434,7 @@ const addressesAt = async (ctx: Ctx, path: string): Promise<string[]> => {
 
 /* ------------------------------------------------------------- actions */
 
-type RunArgs = { automation: any; def: Def; Model: mongoose.Model<any>; doc: any; event: string; actor?: any; dry?: boolean };
+type RunArgs = { automation: any; def: Def; Model: mongoose.Model<any>; doc: any; event: string; actor?: any; dry?: boolean; runId?: any };
 type Step = { type: string; ok: boolean; detail: string };
 
 /** A write by an action: what History and the next automations see as the person. */
@@ -453,26 +511,40 @@ const attachmentsOf = async (ctx: Ctx, a: any, args: RunArgs) => {
 	return out;
 };
 
+/** Throws when the project's automation emails for the last 24 hours (resends too) would pass the limit. */
+export const emailAllowance = async (project: any, count = 1) => {
+	const since = new Date(Date.now() - 24 * 3600 * 1000);
+	const sent = await MailMessage.countDocuments({ project, kind: 'automation', createdAt: { $gte: since } });
+	if (sent + count > EMAILS_PER_DAY()) throw new TenancyError(429, `This project sent its ${EMAILS_PER_DAY()} automation emails for today — try again tomorrow`, 'email_limit');
+};
+
 const doEmail = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	const { emails } = await recipientsOf(ctx, a.to, args.actor, true);
 	const subject = fill(ctx, a.subject).slice(0, 200);
-	const text = fill(ctx, a.body);
+	const { html: paragraphs, text } = emailBody(ctx, a.body);
 	if (!emails.length) return { type: 'email', ok: true, detail: 'No address to send to (the chosen email fields were empty)' };
 	const attachments = await attachmentsOf(ctx, a, args);
 	const files = attachments.length ? ` with ${attachments.map(f => f.filename).join(', ')}` : '';
 	if (args.dry) return { type: 'email', ok: true, detail: `Would email ${emails.join(', ')}: “${subject}”${files}` };
 	const scope = currentScope()!;
-	const since = new Date(Date.now() - 24 * 3600 * 1000);
-	const sent = await MailMessage.countDocuments({ project: scope.project, kind: 'automation', createdAt: { $gte: since } });
-	if (sent + emails.length > EMAILS_PER_DAY()) throw new Error(`This project sent its ${EMAILS_PER_DAY()} automation emails for today — try again tomorrow`);
-	const paragraphs = text
-		.split(/\n{2,}/)
-		.map(p => para(esc(p).replace(/\n/g, '<br>')))
-		.join('');
+	await emailAllowance(scope.project, emails.length);
 	// Sent to people in the project (not to typed or record addresses): a button to the record.
 	const toTeam = ctx.link && !a.to?.emails?.length && !a.to?.fields?.length;
 	const html = await designMail(ctx.project, { heading: esc(subject), body: paragraphs, ...(toTeam ? { button: { href: ctx.link, text: `Open in ${ctx.project?.name || 'MINT'}` } } : {}) }, a.design);
-	for (const to of emails) await sendOrgMail({ to, subject, text, html, attachments }, { organization: scope.organization, project: scope.project, kind: 'automation' });
+	// Kept with the log (AU-03c): Runs and Project → Email show it as sent and resend a failed one.
+	const keep = { automation: args.automation._id, run: args.runId, route: ctx.def.route, record: args.event === 'delete' ? undefined : ctx.doc._id, design: a.design };
+	// Every address gets its try; one refusing doesn't stop the others.
+	const failed: string[] = [];
+	let problem = '';
+	for (const to of emails)
+		try {
+			await sendOrgMail({ to, subject, text, html, attachments }, { organization: scope.organization, project: scope.project, kind: 'automation', keep });
+		} catch (e: any) {
+			failed.push(to);
+			problem ||= e?.message || 'Not sent';
+		}
+	if (failed.length === emails.length) throw new Error(problem);
+	if (failed.length) throw new Error(`Emailed ${emails.filter(e => !failed.includes(e)).join(', ')}, but not ${failed.join(', ')}: ${problem}`);
 	return { type: 'email', ok: true, detail: `Emailed ${emails.join(', ')}${files}` };
 };
 
@@ -618,7 +690,7 @@ export const startsOn = (automation: any, event: string, doc: any, changes?: { f
 };
 
 const finishRun = async (automation: any, run: any) => {
-	await AutomationRun.create(run);
+	await AutomationRun.create(run); // `_id` given when its emails point to it
 	await Automation.updateOne(
 		{ _id: automation._id },
 		{
@@ -696,8 +768,9 @@ export const fireAutomations = ({
 					}
 					const seen = new Set(from?.seen || []);
 					seen.add(key);
-					const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor }));
-					await finishRun(automation, { ...base, ...result });
+					const runId = new mongoose.Types.ObjectId();
+					const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor, runId }));
+					await finishRun(automation, { _id: runId, ...base, ...result });
 				} catch (e: any) {
 					const error = `Couldn’t run: ${e?.message || 'something went wrong'}`;
 					await finishRun(automation, { ...base, status: 'failed', steps: [], error }).catch((e2: any) => console.error('automations:', error, e2?.message));

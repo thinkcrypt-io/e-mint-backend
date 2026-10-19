@@ -4,7 +4,9 @@ import Automation from '../library/models/tenancy/automation.model.js';
 import AutomationRun from '../library/models/tenancy/automationRun.model.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
-import { checkAutomation, dryRun, newAutomationSecret } from '../library/functions/automations.function.js';
+import MailMessage from '../library/models/tenancy/mailMessage.model.js';
+import { checkAutomation, dryRun, emailAllowance, newAutomationSecret } from '../library/functions/automations.function.js';
+import { findMail, mailMessageView, resendMail } from '../library/functions/mail.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 
 /**
@@ -15,11 +17,16 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   GET    /runs?status&limit   recent runs of all of them
  *   GET    /:id                 one, with its webhook secret
  *   GET    /:id/runs            its recent runs
+ *   GET    /emails/:id          one email a run sent, as sent: to, subject, body (HTML and text), files, error (AU-03c)
+ *   POST   /emails/:id/resend   send a failed one again → the new attempt (502 with the reason when it fails too)
  *   POST   /                    { name, route, on, changed, when, match, actions, enabled }
  *   PUT    /:id                 the same, whole
  *   PATCH  /:id                 { enabled }   the on/off switch
  *   POST   /:id/test            { record, event }   a dry run on a record — nothing sent or written
  *   DELETE /:id
+ *
+ * Runs carry `emails`: what each run's email actions sent (to, status,
+ * error, resent), newest attempt kept on the failed one.
  *
  * A bad automation answers 400 with `on`, the path of the input at fault
  * ("actions.1.url"), so the panel shows the message under it.
@@ -62,6 +69,12 @@ const runView = (r: any) => ({
 	createdAt: r.createdAt,
 });
 
+/** Runs with the emails they sent (only the first attempts; a resend shows on its failed one). */
+const withEmails = async (req: any, docs: any[]) => {
+	const mails: any[] = docs.length ? await MailMessage.find({ project: req.project._id, run: { $in: docs.map(r => r._id) }, resendOf: { $exists: false } }).sort({ createdAt: 1 }).lean() : [];
+	return docs.map(r => ({ ...runView(r), emails: mails.filter(m => String(m.run) === String(r._id)).map(m => mailMessageView(m)) }));
+};
+
 const load = async (id: any, secret = false) => {
 	if (!isId(id)) throw new TenancyError(404, 'Automation not found');
 	const q = Automation.findById(id);
@@ -87,7 +100,21 @@ router.get(
 		if (['success', 'failed', 'skipped'].includes(String(req.query.status))) q.status = String(req.query.status);
 		if (isId(req.query.automation)) q.automation = req.query.automation;
 		const docs = await AutomationRun.find(q).sort({ createdAt: -1 }).limit(limitOf(req.query.limit)).lean();
-		return { doc: docs.map(runView) };
+		return { doc: await withEmails(req, docs) };
+	})
+);
+
+router.get(
+	'/emails/:id',
+	handle(async (req: any) => mailMessageView(await findMail(req.project._id, req.params.id, 'automation'), true))
+);
+
+router.post(
+	'/emails/:id/resend',
+	handle(async (req: any) => {
+		const doc = await resendMail({ _id: req.project._id, organization: req.organization._id }, req.params.id, req.user._id, { kind: 'automation', limit: () => emailAllowance(req.project._id) });
+		recordProjectEvent({ req, model: 'MailMessage', modelPath: 'automations', document: doc._id, name: doc.subject, text: `resent an automation email to ${doc.to}` });
+		return doc;
 	})
 );
 
@@ -101,7 +128,7 @@ router.get(
 	handle(async req => {
 		const a = await load(req.params.id);
 		const docs = await AutomationRun.find({ automation: a._id }).sort({ createdAt: -1 }).limit(limitOf(req.query.limit)).lean();
-		return { doc: docs.map(runView) };
+		return { doc: await withEmails(req, docs) };
 	})
 );
 

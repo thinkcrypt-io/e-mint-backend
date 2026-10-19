@@ -22,7 +22,8 @@ import { designMail } from './mailDesign.function.js';
  *   server (Organization → Email, M-02, `MailSettings`). Nothing goes out
  *   until one is set up: MINT has no shared sender.
  *
- * Every organization send is logged (`MailMessage`, subject only, 180 days).
+ * Every organization send is logged (`MailMessage`, subject only — automation
+ * emails keep their body for viewing and Resend — 180 days).
  */
 
 /* ---------------------------------------------------------------- html */
@@ -252,7 +253,20 @@ const transportOf = (cfg: MailConfig) =>
 
 /** One email; `attachments` are files sent with it (an automation's invoice PDF). */
 export type OutgoingMail = { to: string; subject: string; text: string; html?: string; attachments?: { filename: string; content: Buffer; contentType?: string }[] };
-type SendMeta = { organization: any; project?: any; account?: any; kind: (typeof import('../models/tenancy/mailMessage.model.js').MAIL_KINDS)[number]; sentBy?: any };
+type SendMeta = {
+	organization: any;
+	project?: any;
+	account?: any;
+	kind: (typeof import('../models/tenancy/mailMessage.model.js').MAIL_KINDS)[number];
+	sentBy?: any;
+	/**
+	 * Keep the body on the log (automation emails, AU-03c) — its text, HTML and
+	 * these links (the run, the record, the email it resends) — so the panel can
+	 * show it and resend it when it failed. A kept email that can't go out for
+	 * want of an email account is logged as failed too.
+	 */
+	keep?: { automation?: any; run?: any; route?: string; record?: any; design?: any; resendOf?: any };
+};
 
 /**
  * Sends one email and logs it: through `meta.account`, else the project's
@@ -262,8 +276,24 @@ type SendMeta = { organization: any; project?: any; account?: any; kind: (typeof
  */
 export const sendOrgMail = async (mail: OutgoingMail, meta: SendMeta, cfgIn?: MailConfig | null) => {
 	const cfg = cfgIn || (meta.account && meta.project ? await loadAccountConfig(meta.project, meta.account) : await resolveMailConfig(meta.organization, meta.project));
-	if (!cfg) throw new TenancyError(409, meta.project ? 'Connect an email account first (Project → Email).' : 'Set up your email first (Organization → Email).', 'mail_not_set_up');
-	const log = { organization: meta.organization, project: meta.project || null, account: cfg.accountId || null, kind: meta.kind, to: mail.to, subject: String(mail.subject).slice(0, 300), sentBy: meta.sentBy || null };
+	const kept = meta.keep
+		? {
+				kept: true,
+				text: mail.text,
+				html: mail.html || '',
+				...(mail.attachments?.length && { files: mail.attachments.map(f => ({ filename: f.filename, size: f.content?.length || 0 })) }),
+				...Object.fromEntries(Object.entries(meta.keep).filter(([, v]) => v != null && v !== '')),
+			}
+		: {};
+	// Failed and kept: its files stay with it, so Resend sends the same email.
+	const keptFiles = meta.keep && mail.attachments?.length ? { attachments: mail.attachments.map(f => ({ filename: f.filename, content: f.content, contentType: f.contentType || 'application/octet-stream' })) } : {};
+	if (!cfg) {
+		const problem = meta.project ? 'Connect an email account first (Project → Email).' : 'Set up your email first (Organization → Email).';
+		if (meta.keep)
+			await MailMessage.create({ organization: meta.organization, project: meta.project || null, kind: meta.kind, to: mail.to, subject: String(mail.subject).slice(0, 300), sentBy: meta.sentBy || null, status: 'failed', error: problem, ...kept, ...keptFiles }).catch(() => undefined);
+		throw new TenancyError(409, problem, 'mail_not_set_up');
+	}
+	const log = { organization: meta.organization, project: meta.project || null, account: cfg.accountId || null, kind: meta.kind, to: mail.to, subject: String(mail.subject).slice(0, 300), sentBy: meta.sentBy || null, ...kept };
 	const status = (set: any) => (cfg.accountId ? MailAccount.updateOne({ _id: cfg.accountId }, { $set: set }) : MailSettings.updateOne({ organization: meta.organization }, { $set: set }));
 	try {
 		const info: any = await transportOf(cfg).sendMail({
@@ -275,34 +305,80 @@ export const sendOrgMail = async (mail: OutgoingMail, meta: SendMeta, cfgIn?: Ma
 			...(mail.html && { html: mail.html }),
 			...(mail.attachments?.length && { attachments: mail.attachments }),
 		});
-		await Promise.all([
+		const [logged] = await Promise.all([
 			MailMessage.create({ ...log, status: 'sent', messageId: String(info?.messageId || '').slice(0, 300) }),
 			status({ verifiedAt: new Date(), lastError: '', lastErrorAt: null }),
 		]);
-		return { sent: true, messageId: info?.messageId || '' };
+		return { sent: true, messageId: info?.messageId || '', log: logged?._id };
 	} catch (e: any) {
 		const problem = mailProblem(e, cfg);
-		await Promise.all([
-			MailMessage.create({ ...log, status: 'failed', error: problem }),
+		const [logged]: any = await Promise.all([
+			MailMessage.create({ ...log, ...keptFiles, status: 'failed', error: problem }),
 			status({ lastError: problem, lastErrorAt: new Date() }),
-		]).catch(() => undefined);
-		throw new TenancyError(502, problem, 'mail_failed');
+		]).catch(() => [null]);
+		throw Object.assign(new TenancyError(502, problem, 'mail_failed'), { log: logged?._id });
+	}
+};
+
+/** A logged email as the panel shows it; `withBody` adds what was kept of it (AU-03c). */
+export const mailMessageView = (m: any, withBody = false) => ({
+	_id: String(m._id),
+	kind: m.kind,
+	to: m.to,
+	subject: m.subject,
+	status: m.status,
+	error: m.error || '',
+	project: m.project ? String(m.project) : null,
+	account: m.account ? String(m.account) : null,
+	createdAt: m.createdAt,
+	kept: !!m.kept,
+	files: (m.files || []).map((f: any) => ({ filename: f.filename, size: f.size || 0 })),
+	run: m.run ? String(m.run) : null,
+	route: m.route || null,
+	record: m.record ? String(m.record) : null,
+	resendOf: m.resendOf ? String(m.resendOf) : null,
+	resent: m.resent?.at ? { at: m.resent.at, status: m.resent.status, error: m.resent.error || '', message: m.resent.message ? String(m.resent.message) : null } : null,
+	/** A failed email whose body was kept, not already resent: Resend sends it again. */
+	canResend: !!m.kept && m.status === 'failed' && m.resent?.status !== 'sent',
+	...(withBody && { text: m.text || '', html: m.html || '' }),
+});
+
+/** One of a project's logged emails, with its body (404 when it's another project's, or gone). */
+export const findMail = async (project: any, id: any, kind?: string) => {
+	const ok = /^[a-f0-9]{24}$/i.test(String(id || ''));
+	const m: any = ok ? await MailMessage.findOne({ _id: id, project, ...(kind && { kind }) }).select('+text +html').lean() : null;
+	if (!m) throw new TenancyError(404, 'That email isn’t in the log any more.');
+	return m;
+};
+
+/**
+ * Sends a failed email again — the same to, subject, body and files —
+ * through the project's email account as it is now, and logs the attempt as
+ * a new email (`resendOf`); the failed one remembers how it went.
+ * `limit(count)` throws when the project's daily allowance is used up.
+ */
+export const resendMail = async (project: { _id: any; organization: any }, id: any, by: any, opts: { kind?: string; limit?: () => Promise<void> } = {}) => {
+	const m: any = await MailMessage.findOne({ _id: (await findMail(project._id, id, opts.kind))._id }).select('+text +html +attachments').lean();
+	if (!m.kept) throw new TenancyError(400, 'Only the subject of this email was kept, so it can’t be sent again.');
+	if (m.status !== 'failed') throw new TenancyError(400, 'This email went — there’s nothing to resend.');
+	if (m.resent?.status === 'sent') throw new TenancyError(400, 'This email was already resent.');
+	await opts.limit?.();
+	const keep = { automation: m.automation, run: m.run, route: m.route, record: m.record, design: m.design, resendOf: m._id };
+	const attachments = (m.attachments || []).map((f: any) => ({ filename: f.filename, content: Buffer.from(f.content?.buffer || f.content), contentType: f.contentType }));
+	const mail = { to: m.to, subject: m.subject, text: m.text || '', html: m.html || undefined, ...(attachments.length && { attachments }) };
+	try {
+		const r = await sendOrgMail(mail, { organization: project.organization, project: project._id, kind: m.kind, sentBy: by, keep });
+		await MailMessage.updateOne({ _id: m._id }, { $set: { resent: { at: new Date(), by, status: 'sent', error: '', message: r.log } }, $unset: { attachments: 1 } });
+		return mailMessageView(await MailMessage.findById(r.log).lean());
+	} catch (e: any) {
+		await MailMessage.updateOne({ _id: m._id }, { $set: { resent: { at: new Date(), by, status: 'failed', error: e?.message || 'Not sent', ...(e?.log && { message: e.log }) } } });
+		throw e;
 	}
 };
 
 /** Recent sends — the organization's, or one project's — newest first. */
 export const recentMail = async (organization: any, limit = 50, project?: any) =>
-	(await MailMessage.find(project ? { organization, project } : { organization }).sort({ createdAt: -1 }).limit(limit).lean()).map((m: any) => ({
-		_id: String(m._id),
-		kind: m.kind,
-		to: m.to,
-		subject: m.subject,
-		status: m.status,
-		error: m.error || '',
-		project: m.project ? String(m.project) : null,
-		account: m.account ? String(m.account) : null,
-		createdAt: m.createdAt,
-	}));
+	(await MailMessage.find(project ? { organization, project } : { organization }).sort({ createdAt: -1 }).limit(limit).lean()).map(m => mailMessageView(m));
 
 /* ------------------------------------------------- the emails themselves */
 

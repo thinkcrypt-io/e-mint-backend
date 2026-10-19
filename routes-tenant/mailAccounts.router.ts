@@ -6,7 +6,8 @@ import MailSettings from '../library/models/tenancy/mailSettings.model.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { seal } from '../lib/crypto/secret.js';
-import { accountView, checkHost, esc, loadAccountConfig, mailPage, para, recentMail, sendOrgMail, SECURE_PORTS, SMTP_PORTS, verifyMail } from '../library/functions/mail.function.js';
+import { accountView, checkHost, esc, findMail, loadAccountConfig, mailMessageView, mailPage, para, recentMail, resendMail, sendOrgMail, SECURE_PORTS, SMTP_PORTS, verifyMail } from '../library/functions/mail.function.js';
+import { emailAllowance } from '../library/functions/automations.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 
 /**
@@ -24,6 +25,8 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   POST   /:id/default     make it the default
  *   POST   /:id/send-test   { to? }   a real test email (to you by default)
  *   DELETE /:id             the oldest left becomes the default
+ *   GET    /messages/:id    one logged email; automation emails with their body (docs/automations AU-03c)
+ *   POST   /messages/:id/resend   send a failed automation email again → the new attempt
  *
  * Saving checks the connection too (never blocking the save), so each row
  * shows whether it works.
@@ -98,6 +101,22 @@ router.get(
 			MailSettings.findOne({ organization: req.organization._id }).select('fromAddress').lean(),
 		]);
 		return { doc, messages, ports: SMTP_PORTS, fallback: (org as any)?.fromAddress || null };
+	})
+);
+
+router.get(
+	'/messages/:id',
+	handle(async (req: any) => mailMessageView(await findMail(req.project._id, req.params.id), true))
+);
+
+router.post(
+	'/messages/:id/resend',
+	handle(async (req: any) => {
+		const doc = await resendMail({ _id: req.project._id, organization: req.organization._id }, req.params.id, req.user._id, {
+			limit: async () => emailAllowance(req.project._id),
+		});
+		recordProjectEvent({ req, model: 'MailMessage', modelPath: 'email-accounts', document: doc._id, name: doc.subject, text: `resent an email to ${doc.to}` });
+		return doc;
 	})
 );
 
