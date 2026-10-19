@@ -26,7 +26,9 @@ Sign-in (`ModelDefinition.signIn.enabled`) decides which models Login & account 
 can reset a forgotten password: `POST /public/api/auth/forgot` + `/auth/reset`, emailed from the project's own
 account, back to the asking page on the project's domains or MINT's `GET /public/reset-password`
 (`customerReset.function.ts`, WD13). Smoke `customer-reset.mjs`. Not deployed. W-26 (signed-in endpoints by role)
-waits on the user's choice.
+is done too: one sign-in model per project with an optional Role field (Options), read live from the
+customer's own record; signed-in endpoints may admit only some roles (`ApiEndpoint.access.roles`, 403
+`role_required`), rules can use `customer.role`; smoke `customer-roles.mjs`.
 
 **2026-10-19 — Widgets: Add a widget wizard + Login's customer model (W-24, `docs/widgets`).** The Widgets screen
 starts empty; "Add a widget" walks through a wizard (widget → customer model or Shop → options → texts → review);

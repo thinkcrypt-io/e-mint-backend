@@ -1,4 +1,5 @@
 import express from 'express';
+import { signInRoles } from '../library/functions/authMapping.function.js';
 import mongoose from 'mongoose';
 import ApiEndpoint, { ENDPOINT_ACTIONS } from '../library/models/tenancy/apiEndpoint.model.js';
 import ServerKey, { hashServerKey, newServerKey } from '../library/models/tenancy/serverKey.model.js';
@@ -64,7 +65,7 @@ const view = (e: any) => ({
 	path: e.path,
 	standard: !!e.standard,
 	enabled: e.enabled !== false,
-	access: { who: e.access?.who || 'anyone', when: e.access?.when || [], match: e.access?.match || 'all' },
+	access: { who: e.access?.who || 'anyone', when: e.access?.when || [], match: e.access?.match || 'all', roles: e.access?.roles || [] },
 	fields: { out: e.fields?.out ?? null, write: e.fields?.write ?? null, readOnly: e.fields?.readOnly || [] },
 	list: {
 		filters: e.list?.filters || [],
@@ -170,11 +171,11 @@ router.get(
 
 router.get(
 	'/endpoints',
-	handle(async () => {
+	handle(async req => {
 		await ensureEndpoints();
 		const [docs, defs]: any[] = await Promise.all([ApiEndpoint.find({}).sort({ model: 1, standard: -1, path: 1, method: 1 }).lean(), models()]);
 		const byName = defsByName(defs);
-		return { doc: docs.map(view), total: docs.length, models: defs.map((d: any) => modelView(d, byName)) };
+		return { doc: docs.map(view), total: docs.length, models: defs.map((d: any) => modelView(d, byName)), signIn: await signInRoles(req.project) };
 	})
 );
 
@@ -184,7 +185,7 @@ router.get(
 		const e = await load(req.params.id);
 		const defs = await models();
 		const def: any = defs.find((d: any) => d.route === e.model);
-		return { ...view(e), modelInfo: def ? modelView(def, defsByName(defs)) : null };
+		return { ...view(e), modelInfo: def ? modelView(def, defsByName(defs)) : null, signIn: await signInRoles(req.project) };
 	})
 );
 

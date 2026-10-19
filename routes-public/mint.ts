@@ -18,6 +18,7 @@
  *
  *   Mint.auth.ready / .user / .token        the signed-in customer (shared with widget.js);
  *                                            .user.record: their record in the project's customer model (W-24)
+ *                                            .user.role: its Role field, when one is mapped (W-26)
  *   Mint.auth.signIn(email, password) · signUp({ name, email, password, phone? }) · signOut()
  *   Mint.auth.onChange(cb)                   on every sign-in / sign-out
  *   Mint.auth.forgotPassword(email) · resetPassword(token, password)   forgot password (W-25); a reset

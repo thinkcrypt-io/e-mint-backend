@@ -33,6 +33,8 @@ const schema = new Schema<any>(
 			/** {field, op, value} — the shared ConditionsEditor shape; value may be {ref: 'customer' | 'customer.email' …}. */
 			when: { type: [Schema.Types.Mixed], default: [] },
 			match: { type: String, enum: ['all', 'any'], default: 'all' },
+			/** Signed-in customers only: just these roles (the sign-in model's Role field, W-26); empty = any. */
+			roles: { type: [String], default: [] },
 		},
 		fields: {
 			/** What goes out; null = every field. */

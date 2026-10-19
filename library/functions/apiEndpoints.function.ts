@@ -6,6 +6,8 @@ import { TenancyError } from './tenancy.function.js';
 import { conditionQuery, fieldKeys, filterable, outKeys } from './publicRecords.function.js';
 import { lockText, meets } from './fieldLocks.function.js';
 import { checkPopulate, defsByName } from './contentPopulate.function.js';
+import { currentScope } from './tenantScope.function.js';
+import { signInRoles } from './authMapping.function.js';
 
 /**
  * The API builder's engine (docs/api-builder): a project's public API as
@@ -28,7 +30,7 @@ export const ACTION_LABEL: Record<string, string> = { list: 'List', get: 'Read o
 export const OWNER: Cond = { field: '_customer', op: 'is', value: { ref: 'customer' } };
 const isRef = (v: any): v is { ref: string } => !!v && typeof v === 'object' && !Array.isArray(v) && typeof v.ref === 'string';
 export const isOwner = (c: any) => c?.field === '_customer' && c?.op === 'is' && isRef(c.value) && c.value.ref === 'customer';
-const CUSTOMER_REFS = new Set(['customer', 'customer.email', 'customer.name', 'customer.phone']);
+const CUSTOMER_REFS = new Set(['customer', 'customer.email', 'customer.name', 'customer.phone', 'customer.role']);
 const OPS = new Set(['is', 'not', 'in', 'gt', 'gte', 'lt', 'lte', 'contains', 'empty', 'filled']);
 
 /* --------------------------------------------------------------- paths */
@@ -245,7 +247,8 @@ const resolveValue = (v: any, customer: any) => {
 
 const asQuery = (def: any, c: Cond, customer: any) => {
 	const value = resolveValue(c.value, customer);
-	if (value === MISSING) return { _id: null }; // nobody to compare with: nothing matches
+	// Nobody to compare with, or the customer has no such detail (no role, no phone): nothing matches.
+	if (value === MISSING || (isRef(c.value) && (value === '' || value === null))) return { _id: null };
 	return conditionQuery(def, { ...c, value });
 };
 
@@ -336,6 +339,20 @@ const checkConds = (def: any, conds: any, who: string, on: string): Cond[] => {
 	});
 };
 
+/** "Only these roles" (W-26): values of the sign-in model's Role field. */
+const checkRoles = async (raw: any): Promise<string[]> => {
+	if (raw === undefined || raw === null) return [];
+	if (!Array.isArray(raw) || raw.length > 50) throw bad('access.roles', 'Pick roles from the list');
+	const list = [...new Set(raw.map((r: any) => String(r)))];
+	if (!list.length) return [];
+	const scope: any = currentScope();
+	const info = scope?.project ? await signInRoles({ organization: scope.organization, _id: scope.project }) : null;
+	if (!info) throw bad('access.roles', 'Roles come from your sign-in model’s Role field — map one in Widgets → Login & account first');
+	const unknown = list.find(r => !info.roles.some((x: any) => x.value === r));
+	if (unknown) throw bad('access.roles', `“${unknown}” isn’t one of ${info.fieldLabel}’s options`);
+	return list;
+};
+
 const subset = (def: any, list: any, on: string, allowed: string[]): string[] | null => {
 	if (list === null || list === undefined) return null;
 	if (!Array.isArray(list)) throw bad(on, 'Pick fields from the list');
@@ -362,6 +379,7 @@ export const checkEndpoint = async (input: any, current?: any) => {
 	const who = String(input.access?.who ?? current?.access?.who ?? 'anyone');
 	if (!(ENDPOINT_WHO as readonly string[]).includes(who)) throw bad('access.who', 'Pick who can call it');
 	const when = checkConds(def, input.access?.when ?? current?.access?.when, who, 'access.when');
+	const roles = who === 'customer' ? await checkRoles(input.access?.roles ?? current?.access?.roles) : [];
 	const all = def.fields.map((f: any) => f.key);
 	const writable = fieldKeys(def);
 	const fields = {
@@ -395,7 +413,7 @@ export const checkEndpoint = async (input: any, current?: any) => {
 			path,
 			standard: !!current?.standard,
 			enabled: input.enabled ?? current?.enabled ?? true,
-			access: { who, when, match: (input.access?.match ?? current?.access?.match) === 'any' ? 'any' : 'all' },
+			access: { who, when, match: (input.access?.match ?? current?.access?.match) === 'any' ? 'any' : 'all', roles },
 			fields,
 			list,
 			populate,

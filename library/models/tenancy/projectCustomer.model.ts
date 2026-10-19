@@ -32,6 +32,8 @@ const schema = new Schema<any>(
 		 */
 		record: { type: Schema.Types.ObjectId },
 		recordModel: { type: String, trim: true },
+		/** The record was made by this account's sign-up (not a team's record linked by email) — only then does its role count (W-26). */
+		recordMade: { type: Boolean },
 		/**
 		 * 'model': the project's own customer model holds this account (W-24,
 		 * `accounts: 'model'`) — the record is the account, this row only signs

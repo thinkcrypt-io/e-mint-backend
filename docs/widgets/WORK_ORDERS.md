@@ -17,9 +17,16 @@ email (kind `customer-reset`); the link returns to the asking page only when
 it's on the project's domains / hosted site (localhost in dev), else MINT's
 page `GET /public/reset-password`. Login widget: "Forgot your password?"
 (`allowReset`, 7 new texts), `Mint.auth.forgotPassword / resetPassword /
-resetToken`. Suite `customer-reset.mjs`. **Waiting on the user (W-26):**
-who signed-in endpoints admit when several models hold accounts — the
-suggestion is one sign-in model per project plus roles (see W-26).
+resetToken`. Suite `customer-reset.mjs`.
+**Then W-26** (the user: "Go with one sign-in model per project plus a role
+field; endpoints pick signed-in customers and optionally which roles"): one
+sign-in model per project; Login maps an optional Role (Options field,
+`AuthMapping.fields.role`); `customerRole` reads it from the record the
+account's sign-up made (`ProjectCustomer.recordMade`); the public API never
+writes it; `ApiEndpoint.access.roles` + 403 `role_required`; `customer.role`
+in rules, `/auth/*` and `Mint.auth.user`. Endpoint page: "Which roles"
+(mint-tenant only — admin's API pages predate the API builder). Suite
+`customer-roles.mjs`.
 
 **2026-10-19 — W-24 done** (CHANGELOG, not deployed). The user: "on widgets
 screen instead of showing all the widgets must be empty, users can add widget,
@@ -139,7 +146,7 @@ Related, running separately: "public API read-only fields" (started
 | W-23 | Growth: referrals, affiliates, loyalty points | both | L | later (P3) |
 | W-24 | Widgets screen starts empty; Add a widget setup wizard; remove; Login & account's customer model — MINT's Customers by default, a linked copy or the project's model holding the accounts (WD12) | both | M | done 2026-10-19, not deployed |
 | W-25 | A model's Sign-in switch (only those can be Login's customer model); forgot password for customers (WD13) | both | M | done 2026-10-19, not deployed |
-| W-26 | Signed-in endpoints by role — one sign-in model + roles, or several sign-in models | both | M | proposed, waiting on the user |
+| W-26 | One sign-in model per project + a Role field; signed-in endpoints may admit only some roles (WD14) | both | M | done 2026-10-19, not deployed |
 
 ## W-01 — Plan & docs (S) — done
 `README.md` (what, catalogue, payments, commerce mapping, WD1–WD10, where
@@ -267,18 +274,28 @@ signs every other device out), MINT's page `GET /public/reset-password`, the
 login widget's forgot / sent / new-password screens (`allowReset`),
 `Mint.auth.forgotPassword / resetPassword / resetToken`.
 
-## W-26 — Signed-in endpoints by role (M) — proposed, waiting on the user
-The user asked: "If an auth module is created, any endpoint can be selected
-under auth, one or multiple … user and customer … or is it better to have one
-customer model and link it to role and then we can use it everywhere? suggest
-the better approach." Suggested: **one sign-in model per project plus a role
-field** (e.g. Customer / Member / Staff) — one sign-in form, one password per
-person, an email can't be in two account lists, and an endpoint's "who" is
-"Signed-in customers" with an optional "only these roles" (the token carries
-nothing new; the role is read from the record). Extra details per kind of
-person go in linked profile models. The alternative — several sign-in models,
-an endpoint picking which — needs a model chosen at sign-in, tokens naming
-their model and email clashes handled. Nothing built until the user picks.
+## W-26 — One sign-in model + roles; endpoints by role (M) — done 2026-10-19
+The user asked whether endpoints should admit several sign-in models or "one
+customer model and link it to role"; on the suggestion they chose: "Go with
+one sign-in model per project plus a role field; endpoints pick signed-in
+customers and optionally which roles." (WD14)
+- A project has **one** sign-in model: switching Sign-in on for a second is
+  refused, naming the first (`models.controller.ts`).
+- Login & account maps an optional **Role** (an Options field) next to email,
+  name and phone (`AuthMapping.fields.role`). Sign-ups get its default (a
+  required Role needs one); the public API never writes it (`signInLocked`
+  in `bodyOf`), so nobody promotes themselves.
+- The role is read from the customer's record on every call
+  (`customerRole`) — only from a record the account's own sign-up made
+  (`ProjectCustomer.recordMade`; model-held accounts always) — so a team's
+  record linked by an unverified email grants nothing, and a change by the
+  team counts at once. `customer.role` on `/auth/*` and `Mint.auth.user`.
+- Endpoints: `ApiEndpoint.access.roles` (signed-in only; empty = any),
+  checked against the Role field's options; a caller without one gets 403
+  `role_required` (populate too). Rules can compare with `customer.role`; a
+  customer ref that resolves empty matches nothing. `GET /api-builder/endpoints`
+  and `/:id` send `signIn` (the Role field and its options); `GET /` lists an
+  endpoint's roles.
 
 ## W-24 — Add a widget wizard + the customer model (M) — done 2026-10-19
 The Widgets screen lists only the widgets a project has added — empty at

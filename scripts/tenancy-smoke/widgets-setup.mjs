@@ -3,7 +3,8 @@
 // customer model — MINT's Customers by default; a project's own model either
 // gets a linked copy of each account (`accounts: 'mint'`) or holds the
 // accounts itself (`accounts: 'model'`). Passwords stay in ProjectCustomer.
-// W-25: only models switched on for sign-in (Advanced tab → Sign-in) are offered.
+// W-25: only models switched on for sign-in (Advanced tab → Sign-in) are offered;
+// W-26: one sign-in model per project.
 import { call, ok, done } from './lib.mjs';
 
 const stamp = Date.now();
@@ -60,7 +61,11 @@ const customerDef = idOf(r);
 ok('the project’s own customers model', r.status === 201, `${r.status} ${r.body?.message}`);
 ok('…switched on for sign-in', r.body?.signIn?.enabled === true || r.body?.doc?.signIn?.enabled === true, JSON.stringify(r.body?.signIn || r.body?.doc?.signIn));
 r = await call('POST', P(site._id, '/builder/models'), { name: 'Club', title: 'Clubs', kind: 'single', fields: [{ key: 'name', label: 'Name', kind: 'text' }] }, T);
-r = await call('POST', P(site._id, '/builder/models'), { name: 'Strict', title: 'Strict list', signIn: { enabled: true }, fields: [{ key: 'email', label: 'Email', kind: 'email' }, { key: 'memberNo', label: 'Member number', kind: 'text', required: true }] }, T);
+const strictBody = { title: 'Strict list', fields: [{ key: 'email', label: 'Email', kind: 'email' }, { key: 'memberNo', label: 'Member number', kind: 'text', required: true }] };
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Strict', ...strictBody, signIn: { enabled: true } }, T);
+ok('W-26: a second sign-in model is refused — a project has one', r.status === 400 && /Members is already the sign-in model/.test(JSON.stringify(r.body?.problems)), `${r.status} ${JSON.stringify(r.body?.problems)}`);
+r = await call('POST', P(site._id, '/builder/models'), { name: 'Strict', ...strictBody }, T);
+const strictDef = idOf(r);
 r = await call('POST', P(site._id, '/builder/models'), { name: 'Contact', title: 'Contacts', fields: [{ key: 'name', label: 'Name', kind: 'text' }, { key: 'email', label: 'Email', kind: 'email' }] }, T);
 ok('(a list with an email that isn’t switched on for sign-in)', r.status === 201, `${r.status} ${r.body?.message}`);
 r = await call('POST', P(site._id, '/builder/models'), { name: 'Setting', title: 'Settings', kind: 'single', signIn: { enabled: true }, fields: [{ key: 'email', label: 'Email', kind: 'email' }] }, T);
@@ -80,12 +85,21 @@ for (const [label, auth, re] of [
 	['no email field', { model: 'Customer', fields: { name: 'fullName' } }, /email field/],
 	['a field that isn’t there', { model: 'Customer', fields: { email: 'mail' } }, /no “mail” field/],
 	['a field of the wrong kind', { model: 'Customer', fields: { email: 'email', phone: 'joined' } }, /phone needs a text field/],
-	['a required field sign-up can’t fill', { model: 'Strict', fields: { email: 'email' } }, /required fields sign-up can’t fill \(Member number\)/],
 	['a model not switched on for sign-in', { model: 'Contact', fields: { email: 'email' } }, /isn’t open to sign-in/],
 ]) {
 	r = await call('PUT', W('/auth'), { auth }, T);
 	ok(`refused: ${label}`, r.status === 400 && re.test(r.body?.message), `${r.status} ${r.body?.message}`);
 }
+// Sign-in moved to Strict for a moment (one model at a time), to check its required field.
+const customerBody0 = { title: 'Members', displayField: 'fullName', fields: [{ key: 'fullName', label: 'Full name', kind: 'text' }, { key: 'email', label: 'Email', kind: 'email', required: true }, { key: 'mobile', label: 'Mobile', kind: 'text' }, { key: 'tier', label: 'Tier', kind: 'select', default: 'basic', options: [{ value: 'basic', label: 'Basic' }, { value: 'gold', label: 'Gold' }] }, { key: 'joined', label: 'Joined', kind: 'number' }] };
+r = await call('PUT', P(site._id, `/builder/models/${customerDef}`), { ...customerBody0, signIn: { enabled: false } }, T);
+r = await call('PUT', P(site._id, `/builder/models/${strictDef}`), { ...strictBody, signIn: { enabled: true } }, T);
+ok('(sign-in moved: off on Members, then on for Strict)', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('PUT', W('/auth'), { auth: { model: 'Strict', fields: { email: 'email' } } }, T);
+ok('refused: a required field sign-up can’t fill', r.status === 400 && /required fields sign-up can’t fill \(Member number\)/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+await call('PUT', P(site._id, `/builder/models/${strictDef}`), { ...strictBody, signIn: { enabled: false } }, T);
+r = await call('PUT', P(site._id, `/builder/models/${customerDef}`), { ...customerBody0, signIn: { enabled: true } }, T);
+ok('(and back to Members)', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
 
 // Someone already in the model (added by the team) before the site went live.
 const existing = idOf(await call('POST', P(site._id, `/${route}`), { fullName: 'Old Member', email: `old${stamp}@example.com`, tier: 'gold' }, T));

@@ -355,6 +355,14 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		if (value.kind === 'single') problems.push('A model that holds one record can’t hold accounts — people sign in as records of a list');
 		if (!(value.fields || []).some((f: any) => f.kind === 'email' || f.kind === 'text'))
 			problems.push('Add an Email field first — people sign in with it');
+		// One sign-in model per project (W-26): kinds of people are told apart by a role field, not by models.
+		if (currentScope()) {
+			const other: any = await ModelDefinition.findOne({ 'signIn.enabled': true, active: { $ne: false }, name: { $ne: selfName } }, { title: 1, name: 1 }).lean();
+			if (other)
+				problems.push(
+					`${other.title || other.name} is already the sign-in model — a project has one. Switch it off there first, or tell kinds of people apart with a Role field on ${other.title || other.name}`
+				);
+		}
 	}
 	return { value, problems };
 };

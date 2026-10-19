@@ -31,7 +31,7 @@ import { fireAutomations } from '../library/functions/automations.function.js';
 import { LinkedError, linkedForApi, linkedRulesOf } from '../library/functions/linkedRelationships.function.js';
 import { resolveOther, resources } from '../library/controllers/builder/viewDocument.controller.js';
 import { loadWidgets, publicWidgets } from '../library/functions/widgets.function.js';
-import { accountByEmail, accountsModel, currentAccount, linkCustomerRecord, registerInModel, syncCustomerRecord } from '../library/functions/authMapping.function.js';
+import { accountByEmail, accountsModel, currentAccount, customerRole, linkCustomerRecord, registerInModel, signInLocked, syncCustomerRecord } from '../library/functions/authMapping.function.js';
 import { welcomeCustomer } from '../library/functions/mail.function.js';
 import { canEmailCustomers, resetPassword, sendResetLink } from '../library/functions/customerReset.function.js';
 import { checkout, checkoutOptions, customerOrders, paymentStatus } from '../library/functions/payments.function.js';
@@ -104,6 +104,11 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  *   POST /:route                create
  *   PUT  /:route/:id            update
  *   DELETE /:route/:id          delete
+ *
+ * An endpoint for signed-in customers may admit only some roles (W-26,
+ * `access.roles`): the role is the sign-in model's Role field on the
+ * customer's record — 403 `role_required` otherwise. The public API never
+ * writes that field.
  *
  * A model with `auth: 'customer'` needs `Authorization: Bearer <customer
  * token>` of this project; with `ownerOnly` each customer only reaches the
@@ -201,8 +206,10 @@ const customerOf = async (req: any) => {
 		const row: any = await ProjectCustomer.findById(claims._id).lean();
 		if (!row || row.isActive === false || (row.tokenVersion || 0) !== (claims.v || 0)) return null;
 		// An account the project's own model holds is as its record is now — gone with it (W-24).
-		const customer: any = await currentAccount(req.app, req.project, row);
-		if (!customer) return null;
+		const now: any = await currentAccount(req.app, req.project, row);
+		if (!now) return null;
+		// Their role on the sign-in model, as the record has it now (W-26).
+		const customer = { ...now, role: await customerRole(req.app, req.project, now) };
 		if (req.apiLog) req.apiLog.customer = customer;
 		return customer;
 	} catch {
@@ -211,7 +218,10 @@ const customerOf = async (req: any) => {
 };
 
 /** `record`: their record in the project's own customer model (W-24), when Login & account has one. */
-const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', record: c.record ? String(c.record) : null, createdAt: c.createdAt });
+const publicCustomer = (c: any) => ({ _id: String(c._id), name: c.name, email: c.email, phone: c.phone || '', record: c.record ? String(c.record) : null, role: c.role ?? null, createdAt: c.createdAt });
+
+/** The account as the site sees it — with its role (W-26), read from its record. */
+const answerCustomer = async (req: any, c: any) => publicCustomer({ ...c, role: await customerRole(req.app, req.project, c) });
 
 /* ------------------------------------------------------------- models */
 
@@ -264,6 +274,7 @@ router.get(
 						modelTitle: d.title || d.name,
 						standard: !!e.standard,
 						who: e.access?.who || 'anyone',
+						...(e.access?.who === 'customer' && e.access?.roles?.length && { roles: e.access.roles }),
 						rules: (e.access?.when || []).length + (e.action === 'list' ? (e.list?.filters || []).length : 0),
 						fields: d.fields
 							.filter((f: any) => out.includes(f.key) || writes.has(f.key))
@@ -345,7 +356,7 @@ router.post(
 		if (req.project.type === 'website') forwardConversion(req.project, req, 'signup', { email: customer.email, phone: customer.phone });
 		// A welcome from the business, through its own email server (docs/messaging M-02) — when it has one.
 		later(() => welcomeCustomer(req.project, customer, siteOrigin(req.project) || undefined));
-		return { token: customer.generateToken(), customer: publicCustomer(customer) };
+		return { token: customer.generateToken(), customer: await answerCustomer(req, customer.toObject()) };
 	})
 );
 
@@ -365,8 +376,8 @@ router.post(
 		await customer.save();
 		// Accounts made before a customer model was chosen get their record now (W-24).
 		await linkCustomerRecord(req.app, req.project, customer);
-		const now = (await currentAccount(req.app, req.project, customer.toObject())) || customer;
-		return { token: customer.generateToken(), customer: publicCustomer(now) };
+		const now = (await currentAccount(req.app, req.project, customer.toObject())) || customer.toObject();
+		return { token: customer.generateToken(), customer: await answerCustomer(req, now) };
 	})
 );
 
@@ -385,7 +396,7 @@ router.put(
 		const body = check(Joi.object({ name: Joi.string().trim().min(1).max(120), phone: Joi.string().trim().max(40).allow('') }), req.body);
 		const doc = await ProjectCustomer.findByIdAndUpdate(customer._id, { $set: body }, { new: true }).lean();
 		await syncCustomerRecord(req.app, req.project, doc, body);
-		return publicCustomer((await currentAccount(req.app, req.project, doc)) || doc);
+		return answerCustomer(req, (await currentAccount(req.app, req.project, doc)) || doc);
 	})
 );
 
@@ -415,8 +426,8 @@ router.post(
 	handle(async req => {
 		const body = check(Joi.object({ token: Joi.string().trim().max(2000).required(), password }), req.body);
 		const row = await resetPassword(req.app, req.project, body.token, body.password);
-		const now = (await currentAccount(req.app, req.project, row.toObject())) || row;
-		return { token: row.generateToken(), customer: publicCustomer(now) };
+		const now = (await currentAccount(req.app, req.project, row.toObject())) || row.toObject();
+		return { token: row.generateToken(), customer: await answerCustomer(req, now) };
 	})
 );
 
@@ -788,7 +799,13 @@ type Ctx = {
 	key?: any;
 };
 
-/** The endpoint answering this call — or 404, 401 (sign in / a server key), as its "who" says. */
+/** Signed-in endpoints limited to some roles (W-26) admit only customers with one of them. */
+const roleAdmits = (ep: any, customer: any) => {
+	const roles: string[] = ep?.access?.who === 'customer' ? ep.access?.roles || [] : [];
+	return !roles.length || (!!customer?.role && roles.includes(customer.role));
+};
+
+/** The endpoint answering this call — or 404, 401 (sign in / a server key), 403 (a role it doesn't admit), as its "who" says. */
 const open = async (req: any): Promise<Ctx> => {
 	await ensureEndpoints();
 	const endpoints: any[] = await ApiEndpoint.find({ enabled: true }).lean();
@@ -805,6 +822,7 @@ const open = async (req: any): Promise<Ctx> => {
 	if (id !== undefined && !isId(id)) throw new TenancyError(404, 'Not found');
 	const customer = await customerOf(req);
 	if (ep.access?.who === 'customer' && !customer) throw new TenancyError(401, 'Sign in first.', 'customer_required');
+	if (!roleAdmits(ep, customer)) throw new TenancyError(403, 'Your account can’t use this.', 'role_required');
 	const key = ep.access?.who === 'key' ? await serverKeyOf(req) : null;
 	if (ep.access?.who === 'key' && !key)
 		throw new TenancyError(401, sendsServerKey(req) ? 'That server key isn’t valid — it may have been revoked.' : 'This endpoint needs a server key.', 'key_required');
@@ -858,7 +876,7 @@ const accessFor = (req: any, ctx: Ctx): Access => {
 			const eps: any[] = await ApiEndpoint.find({ model: target.route, standard: true, enabled: true, action: { $in: ['get', 'list'] } }).lean();
 			const ep = eps.find(e => e.action === 'get') || eps.find(e => e.action === 'list');
 			const who = ep?.access?.who || 'anyone';
-			const may = ep && (who === 'anyone' || (who === 'customer' && ctx.customer) || (who === 'key' && (await keyOf(req, ctx))));
+			const may = ep && (who === 'anyone' || (who === 'customer' && ctx.customer && roleAdmits(ep, ctx.customer)) || (who === 'key' && (await keyOf(req, ctx))));
 			if (may) out = { query: reachOf(target, ep, ctx.customer), keys: outOf(target, ep) };
 		}
 		seen.set(target.route, out);
@@ -913,9 +931,11 @@ const readOnlyOf = (def: any) => new Set<string>(def.publicApi?.readOnlyFields |
  * on create they take their default, on update they keep what they have — so a
  * site can send back a record it read without being refused.
  */
-const bodyOf = (req: any, ctx: Ctx) => {
+const bodyOf = async (req: any, ctx: Ctx) => {
 	const body: any = {};
-	for (const k of writableOf(ctx.def, ctx.ep)) if (req.body?.[k] !== undefined) body[k] = req.body[k];
+	// The sign-in model's role is the team's to set (W-26): sign-ups get its default, nobody promotes themselves.
+	const locked = new Set(await signInLocked(req.project, ctx.def));
+	for (const k of writableOf(ctx.def, ctx.ep)) if (req.body?.[k] !== undefined && !locked.has(k)) body[k] = req.body[k];
 	stripFormulaKeys(body, ctx.formulas);
 	return body;
 };
@@ -1014,7 +1034,7 @@ const getOne = async (req: any, ctx: Ctx) => {
 const create = async (req: any, res: any, ctx: Ctx) => {
 	// On a model with per-record access, what a site sends in is public: the team sees it (it has no owner among them).
 	const doc: any = new ctx.Model({
-		...bodyOf(req, ctx),
+		...(await bodyOf(req, ctx)),
 		...(ctx.customer && { _customer: ctx.customer._id }),
 		...(ctx.def.access?.enabled && { privacy: 'public' }),
 	});
@@ -1051,7 +1071,7 @@ const create = async (req: any, res: any, ctx: Ctx) => {
 const update = async (req: any, ctx: Ctx) => {
 	const doc: any = await ctx.Model.findOne({ ...reach(ctx), _id: ctx.id });
 	if (!doc) throw new TenancyError(404, 'Not found');
-	const body = bodyOf(req, ctx);
+	const body = await bodyOf(req, ctx);
 	// Locked by the record's state (a paid order's status): kept as it is, like a read-only field.
 	for (const l of lockedChanges(ctx.settings, doc.toObject(), body)) delete body[l.field];
 	const before = doc.toObject();

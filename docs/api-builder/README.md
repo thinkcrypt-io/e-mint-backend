@@ -114,12 +114,12 @@ type ApiEndpoint = {
   path: string;                 // '/products' | '/products/:id' | '/products/featured'
   standard: boolean;            // generated at the model's own address
   enabled: boolean;
-  access: { who: 'anyone' | 'customer' | 'key'; when: Condition[]; match: 'all' | 'any' };
+  access: { who: 'anyone' | 'customer' | 'key'; when: Condition[]; match: 'all' | 'any'; roles: string[] }; // roles: W-26, signed-in only; [] = any
   fields: { out: string[] | null; write: string[] | null; readOnly: string[] };
   list?: { filters: Condition[]; callerFilters: boolean; sort: string; limit: number; maxLimit: number };
   stats: { calls: number; lastCalledAt?: Date };
 };
-type Condition = { field: string; op: Op; value?: any | { ref: 'customer' | 'customer.email' | 'customer.name' | 'customer.phone' } };
+type Condition = { field: string; op: Op; value?: any | { ref: 'customer' | 'customer.email' | 'customer.name' | 'customer.phone' | 'customer.role' } };
 ```
 
 ## 5. A call

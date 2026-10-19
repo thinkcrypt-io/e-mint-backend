@@ -32,21 +32,30 @@ import { TenancyError } from './tenancy.function.js';
  * `ModelDefinition.signIn.enabled` (W-25) — and it can't be switched off
  * while chosen (models.controller).
  *
+ * A project has one sign-in model (W-26, the user 2026-10-19: "one sign-in
+ * model per project plus a role field"). Its optional `role` field (an options
+ * field) tells kinds of people apart: sign-ups get its default, the public API
+ * never writes it, and endpoints for signed-in customers may admit only some
+ * roles (`ApiEndpoint.access.roles`). The customer's role is read from their
+ * record on every call (`customerRole`), so a change by the team counts at once.
+ *
  * Saved in `SiteWidgets.auth`; checked against today's models on every read,
  * like the shop (a field since removed makes it null — accounts keep working,
  * only the copying stops).
  */
 
-export type AuthMapping = { model: string; accounts: 'mint' | 'model'; fields: { email: string; name?: string; phone?: string } };
+export type AuthMapping = { model: string; accounts: 'mint' | 'model'; fields: { email: string; name?: string; phone?: string; role?: string } };
 
 /** What each part may be — the panel's CustomersStep keeps the same list. */
 export const AUTH_KINDS: Record<keyof AuthMapping['fields'], string[]> = {
 	email: ['email', 'text'],
 	name: ['text'],
 	phone: ['text'],
+	/** W-26: an options field — its options are the roles, its default is every sign-up's. */
+	role: ['select'],
 };
-const PARTS: (keyof AuthMapping['fields'])[] = ['email', 'name', 'phone'];
-const PART_NAMES = { email: 'email', name: 'name', phone: 'phone' };
+const PARTS: (keyof AuthMapping['fields'])[] = ['email', 'name', 'phone', 'role'];
+const PART_NAMES = { email: 'email', name: 'name', phone: 'phone', role: 'role' };
 
 const scopeOf = (project: any) => ({ organization: project.organization, project: project._id });
 const activeDefs = () => ModelDefinition.find({ active: { $ne: false } }).lean();
@@ -75,7 +84,8 @@ export const checkAuth = (raw: any, defs: any[]): AuthMapping => {
 		fields[part] = key;
 	}
 	// A record is made from the sign-up form alone: a required field it doesn't fill would refuse every sign-up's record.
-	const mapped = new Set(Object.values(fields));
+	// The role isn't on the form (W-26): sign-ups get its default, so a required role needs one.
+	const mapped = new Set(Object.entries(fields).filter(([part]) => part !== 'role').map(([, key]) => key));
 	const blocking = (def.fields || []).filter((f: any) => f.required && !mapped.has(f.key) && (f.default === undefined || f.default === null || f.default === ''));
 	if (blocking.length)
 		throw new TenancyError(
@@ -97,8 +107,10 @@ const guessAuth = (defs: any[]): AuthMapping | null => {
 	const out: AuthMapping = { model: def.name, accounts: 'mint', fields: { email } };
 	const name = pick(AUTH_KINDS.name, /^(name|full_?name|customer_?name)$/i);
 	const phone = pick(AUTH_KINDS.phone, /phone|mobile/i);
+	const role = pick(AUTH_KINDS.role, /role/i);
 	if (name) out.fields.name = name;
 	if (phone) out.fields.phone = phone;
+	if (role) out.fields.role = role;
 	try {
 		return checkAuth(out, defs);
 	} catch {
@@ -179,6 +191,7 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any):
 		if (m.accounts === 'model') return customer.record ? String(customer.record) : null;
 		if (customer.record && customer.recordModel === m.model && (await Model.exists({ _id: customer.record }))) return String(customer.record);
 		let doc: any = await Model.findOne({ [m.fields.email]: new RegExp(`^${escape(String(customer.email))}$`, 'i') });
+		const made = !doc;
 		if (!doc) {
 			doc = new Model({
 				[m.fields.email]: customer.email,
@@ -194,9 +207,10 @@ export const linkCustomerRecord = async (app: any, project: any, customer: any):
 		}
 		// A record that was already there (the team's) is linked, never handed over: emails aren't verified, so
 		// signing up with someone's email mustn't give owner-only access to their record.
-		await ProjectCustomer.updateOne({ _id: customer._id }, { $set: { record: doc._id, recordModel: m.model } });
+		await ProjectCustomer.updateOne({ _id: customer._id }, { $set: { record: doc._id, recordModel: m.model, recordMade: made } });
 		customer.record = doc._id;
 		customer.recordModel = m.model;
+		customer.recordMade = made;
 		return String(doc._id);
 	} catch (e: any) {
 		console.warn(`[widgets] couldn't link customer ${customer?._id} to their record:`, e?.message);
@@ -243,7 +257,7 @@ export const registerInModel = async (c: NonNullable<Awaited<ReturnType<typeof a
 	const { m, def, Model } = c;
 	if ((await Model.exists(byEmail(m.fields.email, body.email))) || (await ProjectCustomer.exists({ email: body.email })))
 		throw new TenancyError(400, 'An account with this email exists — sign in instead.', 'email_taken');
-	const customer: any = new ProjectCustomer({ ...body, holder: 'model', recordModel: m.model, lastLoginAt: new Date() });
+	const customer: any = new ProjectCustomer({ ...body, holder: 'model', recordModel: m.model, recordMade: true, lastLoginAt: new Date() });
 	const doc: any = new Model({
 		[m.fields.email]: body.email,
 		...(m.fields.name && body.name && { [m.fields.name]: body.name }),
@@ -291,3 +305,48 @@ export const currentAccount = async (app: any, project: any, customer: any) => {
 	const text = (k?: string) => (k && typeof doc[k] === 'string' ? doc[k] : undefined);
 	return { ...customer, email: text(c.m.fields.email)?.toLowerCase() || customer.email, name: text(c.m.fields.name) || customer.name, phone: text(c.m.fields.phone) ?? customer.phone };
 };
+
+/* ------------------------------------------------------------ roles (W-26) */
+
+/** The roles signed-in endpoints can admit: the sign-in model's Role field and its options — or null without one. */
+export const signInRoles = async (project: any) => {
+	const m = await loadAuth(project);
+	if (!m?.fields.role) return null;
+	const def: any = await runInScope(scopeOf(project), () => ModelDefinition.findOne({ name: m.model, active: { $ne: false } }).lean());
+	const f = (def?.fields || []).find((x: any) => x.key === m.fields.role);
+	if (!f) return null;
+	return {
+		model: def.name,
+		modelTitle: def.title || def.name,
+		route: def.route,
+		field: f.key,
+		fieldLabel: f.label || f.key,
+		default: f.default ?? null,
+		roles: (f.options || []).map((o: any) => ({ value: String(o.value), label: o.label || String(o.value) })),
+	};
+};
+
+/**
+ * The customer's role, as their record has it now — or null (no Role field
+ * mapped, no record, none set, or a record their sign-up didn't make).
+ */
+export const customerRole = async (app: any, project: any, customer: any): Promise<string | null> => {
+	try {
+		const c = await customerModel(app, project);
+		if (!c?.m.fields.role || !customer?.record || customer.recordModel !== c.m.model) return null;
+		// Only a record the account's own sign-up made: one the team had (linked by an unverified email) grants nothing.
+		if (!customer.recordMade && customer.holder !== 'model') return null;
+		const doc: any = await c.Model.findOne({ _id: customer.record, archivedAt: null }, { [c.m.fields.role]: 1 }).lean();
+		const v = doc?.[c.m.fields.role];
+		return v === undefined || v === null || v === '' ? null : String(v);
+	} catch {
+		return null;
+	}
+};
+
+/** The fields of `def` the public API must never write: the sign-in model's role (a customer can't promote themselves). */
+export const signInLocked = async (project: any, def: any): Promise<string[]> => {
+	const m = await loadAuth(project);
+	return m && m.model === def.name && m.fields.role ? [m.fields.role] : [];
+};
+
