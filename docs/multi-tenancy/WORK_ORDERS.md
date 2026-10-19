@@ -8,6 +8,19 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-19)
 
+**2026-10-19 — Project keys (API builder AB-08…11, D14, `docs/api-builder`).** The public API no longer names a project
+in the address: `/public/api/<route>?apiKey=<mint_pk_…>` (or `X-Api-Key`); no key → 401 `api_key_missing`, a wrong
+one → 401 `api_key_invalid`; `/public/api/<slug>/…` stops answering. Every project has `TenantProject.apiKey`
+(made with the project, lazily for older ones); API → Keys shows it with Regenerate (the old key stops at once).
+`mint.js` / `widget.js` / `track.js` take `data-key`; hosted sites get it from the render answer (the renderer
+alone still names a project by slug, with its secret header); templates `{{apiKey}}`; MCP gives keyed addresses.
+**Deploy order (live sites break in between):** backend, then at once `node scripts/migrateProjectKeys.js --apply`
+(after `npm run build`), then mint-sites, admin (live tenant panel), mint-tenant, mint-docs, website. Anything a
+tenant pasted by hand (widget/tracker snippets with `data-project`, their own code calling `/public/api/<slug>/…`)
+must be re-pasted with the key. Pushed: backend `95b2fa42`, mint-tenant `60a96e8`, mint-sites `4d0333a`, admin
+`5b943cc`, mint-docs `542b7ff`, website `94070f5`; not deployed. Smoke `project-keys.mjs`; `lib.mjs` rewrites the
+other scripts' old addresses to the key form.
+
 **2026-10-19 — Widgets: Add a widget wizard + Login's customer model (W-24, `docs/widgets`).** The Widgets screen
 starts empty; "Add a widget" walks through a wizard (widget → customer model or Shop → options → texts → review);
 added widgets switch on/off, edit, remove (`added` per widget in `SiteWidgets`). Login & account: MINT's Customers
@@ -251,6 +264,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 50 | **Project roles + invite fix** — Full access / Member / Developer and each project's own per-model roles (Project → Members → Roles); the “Developer” name clash behind “Something went wrong” on invites; Project → Settings/Members only for managers; `/invitations` page from the notification; comments and mentions switched per page on Fields & rules | all | M | done (2026-10-14; not deployed) |
 | 51 | **The tenant panel as an installable app (PWA)** — manifest, icons, service worker with an offline page, **Install app** in the account menu (browser prompt, or the browser's own steps; a QR code for the phone on a computer) | tenant | S | done (2026-10-14; pushed: mint-tenant `1b330bf`, mint-docs `95cf525`, website `0b9b89c`; live once mint-tenant is deployed) |
 | 52 | **API builder** — the public API as endpoints (generate from a model or create one), who + conditions, fields, list settings, server keys, an own API section of pages. Plan + WOs in `docs/api-builder` (AB-01…05) | all | L | done (2026-10-14; AB-01…05 pushed — backend, mint-tenant, mint-docs, website, admin redirect; not deployed) |
+| 58 | **Project keys** — the public API names a project by `?apiKey=<project key>` instead of its name in the address; key on API → Keys with Regenerate; widgets/tracker `data-key`; old addresses 401. Plan in `docs/api-builder` (AB-08…11, D14) | all | M | done (2026-10-19; pushed backend `95b2fa42`, mint-tenant `60a96e8`, mint-sites `4d0333a`, admin `5b943cc`, mint-docs `542b7ff`, website `94070f5`; not deployed — run `migrateProjectKeys.js --apply` right after the backend) |
 | 53 | **Replies in comments** — Facebook-style threads (one level; a reply to a reply joins the thread and starts with @their name), reply notifications to the thread, deleting a comment takes its replies, links in comments open in a new tab, notifications open at the comment | all | S | done (2026-10-14; not deployed) |
 | 54 | **API request logs** — every call to a project's API logged 7 days (endpoint, who, error, masked query, origin, client; never bodies/tokens/IPs); API → Logs, an endpoint's Logs tab, Overview chart, `get_api_logs` over MCP. Plan + log in `docs/api-builder` (AB-06, D13) | all | M | done (2026-10-14; not deployed) |
 | 55 | **CMS** — single types, slug fields, components, content blocks, drafts and publishing with its own Publish right, then typed website contents (CMS-06…). Plan + WOs + log in `docs/cms`. `scripts/migratePublishRight.js --apply` **ran on production 2026-10-15** (37 roles got Publish). `scripts/migrateSiteContents.js --apply` **ran on production 2026-10-16** after the deploy (10 websites: Contents typed + drafts on all; 66 typed records for Web Demo 58 and Demo Business Website 8; 4 sites that never opened the builder have no design to mark — guarded since) | all | L | CMS-02…07 + 03b done 2026-10-15 (deployed 2026-10-16); CMS-09 content API (status=draft, populate, publish webhooks, site refresh) and CMS-13 media details (alt/caption/focal, image fields with details; mint-sites uses them — redeploy it too) done 2026-10-16, not deployed; CMS-14 MCP content tools (drafts first; publish_entry with the key's publish scope, now settable on Connect AI) done 2026-10-16, not deployed; CMS-11 scheduling (publish at / take off at, a minute tick, Schedule on the record page, Coming up on All content; also fixed: Publish now writes History) done 2026-10-16, not deployed; left CMS-08 preview, 10, 12, 15 — ask the user |

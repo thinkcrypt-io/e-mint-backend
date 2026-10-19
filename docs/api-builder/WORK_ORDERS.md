@@ -15,9 +15,9 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-06 | Request logs (D13): every call logged; API → Logs + an endpoint's Logs tab + Overview glance; `get_api_logs` over MCP; guide, website | all | M | done 2026-10-14 |
 | AB-07 | An endpoint's Reference tab: its request (address, headers, body) and answers (response, errors) as JSON, from the draft | mint-tenant + docs | S | done 2026-10-19 |
 | AB-08 | Project keys, backend (D14): `TenantProject.apiKey`, made with every project + migration script; `/public/api/<route>?apiKey=` (or `X-Api-Key`), 401 `api_key_missing` / `api_key_invalid`; renderer by slug; panel routes to read and regenerate; scripts (`mint.js`, `widget.js`, `track.js`) take `data-key`; render answer, templates `{{apiKey}}`, MCP addresses; smoke | backend | L | done 2026-10-19 |
-| AB-09 | Project keys, panel (mint-tenant): Project key card on API → Keys + Overview (copy, Generate/Regenerate); every address, example, tester, snippet with the key | mint-tenant | M | todo |
-| AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | todo |
-| AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | todo |
+| AB-09 | Project keys, panel (mint-tenant): Project key card on API → Keys + Overview (copy, Generate/Regenerate); every address, example, tester, snippet with the key | mint-tenant | M | done 2026-10-19 |
+| AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | done 2026-10-19 |
+| AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | done 2026-10-19 |
 
 ## AB-02 — Engine (L)
 

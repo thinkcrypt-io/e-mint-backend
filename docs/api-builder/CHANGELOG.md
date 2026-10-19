@@ -146,3 +146,27 @@ agent must know. Decisions live in README.md.
 - Verified on a private backend (:5073, Mongo :27963): `project-keys.mjs` 30/30 and every script in run-all passes
   (in batches with restarts for the sign-up rate limit).
 - Template authors: a website starter that calls `{{api}}` must now also send `?apiKey={{apiKey}}`.
+
+## 2026-10-19 — AB-09 Project keys, panel (mint-tenant `60a96e8`)
+- `ProjectKey` card (key, copy, the address shape, Regenerate behind a warning PromptDialog) first on API → Keys and on
+  the Overview; RTK `getProjectKey` (`GET /p/:project/project-key`) / `regenerateProjectKey`; hook
+  `components/library/tenant/useProjectKey`. `apiBase()` = `<origin>/public/api`; `withKey()` puts `?apiKey=` on every
+  example (`exampleRequests`), the tester's requests, logs' curl, the endpoint Reference tab (plus 401 api_key_missing /
+  api_key_invalid in its errors), the reference page's live `GET /`, Overview snippets (`data-key`), Site setup's
+  robots/sitemap addresses, Project settings (Project key row), the API project's dashboard, the Widgets preview.
+- Verified in the browser pane (private backend :5073): the card, Regenerate (new key 200, old key 401
+  api_key_invalid), the reference loading through the key, the tester sending `?apiKey=` (200), Overview snippets.
+
+## 2026-10-19 — AB-10 Live panel + hosted sites (admin `5b943cc`, mint-sites `4d0333a`)
+- admin's tenant build (still the live panel): the same on its one-page Public API (key card, reference, tester,
+  snippets), Project settings, Site setup, Widgets preview, API dashboard; Template studio: `{{apiKey}}` button,
+  “Add the API address and key”, examples without a project name. RTK tag `tenant-project-key`.
+- mint-sites: `track.js` / `mint.js` get `data-key` from the render answer (`tags.tracker.key`, `widgets.key`).
+- Verified: admin's Public API page in headless Chrome (live reference through the key, card, keyed snippets);
+  mint-sites type-checks (its render answer is covered by `site-builder.mjs`).
+
+## 2026-10-19 — AB-11 Docs (mint-docs `542b7ff`, website `94070f5`)
+- mint-docs: `PUBLIC_API` = `<origin>/public/api`, `PROJECT_KEY`; every example with `?apiKey=`; a “The project key”
+  section (`public-api#api-project-key`, linked from the panel's card), errors and troubleshooting rows; `data-key` in
+  the customers, widgets and analytics snippets; projects guide “Its public address and key”.
+- Website: examples on Backend / Developers / mocks with the key; changelog “A key for every project’s API”.
