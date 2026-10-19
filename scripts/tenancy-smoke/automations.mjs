@@ -167,6 +167,19 @@ ok('an email to a linked record’s field saves', r.status === 201 && r.body?.ac
 r = await call('POST', A(`/${r.body?._id}/test`), { record: dealId }, alma);
 ok('…and goes to the client’s address and the deal’s own', r.status === 200 && r.body?.steps?.[0]?.detail?.includes(email('acme')) && r.body.steps[0].detail.includes(email('buyer')), JSON.stringify(r.body?.steps));
 
+/* ---- a linked record's details in a text: {{client.email}} */
+const linked = title => save({ name: 'Linked', route: 'deals', on: ['update'], enabled: false, actions: [{ type: 'notify', to: { people: [beaId] }, title }] });
+r = await linked('For {{client.nope}}');
+ok('{{client.nope}} is refused, naming the linked page', r.status === 400 && r.body?.on === 'actions.0.title' && /“nope” isn’t a field of Client/.test(r.body?.message), JSON.stringify(r.body));
+r = await linked('For {{title.email}}');
+ok('{{title.email}} is refused: Title links to nothing', r.status === 400 && /doesn’t link to another record/.test(r.body?.message), JSON.stringify(r.body));
+r = await linked('For {{client.email.x}}');
+ok('only one level deep', r.status === 400 && r.body?.on === 'actions.0.title', JSON.stringify(r.body));
+r = await linked('{{title}} for {{client}} <{{client.email}}> {{client.name}}');
+ok('{{client.email}} and {{client.name}} save', r.status === 201, JSON.stringify(r.body));
+r = await call('POST', A(`/${r.body?._id}/test`), { record: dealId }, alma);
+ok('…and show the client’s details', r.status === 200 && r.body?.steps?.[0]?.detail?.includes(`for Acme <${email('acme')}> Acme`), JSON.stringify(r.body?.steps));
+
 /* ---- off */
 r = await call('PATCH', A(`/${mail._id}`), { enabled: false }, alma);
 ok('switched off', r.status === 200 && r.body?.enabled === false);
@@ -195,7 +208,7 @@ ok('deleting a deal calls its webhook with the last values', last?.headers['x-mi
 
 /* ---- the list, the runs, deleting */
 r = await call('GET', A(), null, alma);
-ok('the list', r.body?.doc?.length === 5 && !('secret' in r.body.doc[0]), r.body?.doc?.length);
+ok('the list', r.body?.doc?.length === 6 && !('secret' in r.body.doc[0]), r.body?.doc?.length);
 r = await call('GET', A('/runs?status=failed'), null, alma);
 ok('all runs, filtered', r.body?.doc?.length === 1 && r.body.doc[0].name === 'Email the buyer');
 r = await call('DELETE', A(`/${mail._id}`), null, alma);

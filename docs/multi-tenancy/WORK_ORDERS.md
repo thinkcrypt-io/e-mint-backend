@@ -8,6 +8,10 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-19)
 
+**2026-10-19 — Linked details in automation texts (AU-03d).** `{{member.email}}` — a field of the record a reference
+picks (one level) — in every automation text; Insert a field lists them under "Member's details". Backend
+`placeholderRx`/`loadRefNames`/`checkText` in automations.function.ts; panels `placeholdersOf(page, pages)`. Not deployed.
+
 **2026-10-19 — Automation emails: write in place, see, resend (AU-03c, `docs/automations`).** Insert a field goes in at
 the cursor; the email message (`MessageEditor`) opens a menu where you click — field, bold, italic, list — with ⌘B/⌘I
 and Preview (`**`/`*`/"- " marks, rendered by `emailBody`). Automation emails keep their body on `MailMessage`

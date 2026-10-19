@@ -110,12 +110,22 @@ type Ctx = {
 	link: string;
 	/** Names of referenced records, loaded once per run. */
 	refNames: Map<string, string>;
+	/** The records a reference field links to, with their page — for `{{member.email}}` (loaded once per run). */
+	linked?: Map<string, { def: Def; docs: any[] }>;
 };
 
+/**
+ * `{{key}}`, or `{{ref.key}}` — a field of the record a reference field links
+ * to (a Task's `{{member.email}}`). One level, like the email action's
+ * address fields.
+ */
+const PH = '([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)?)';
+const placeholderRx = () => new RegExp(`\\{\\{\\s*${PH}\\s*\\}\\}`, 'g');
+
 /** A value as text: a date by its day, a list joined, a reference by its record's name. */
-const show = (ctx: Ctx, key: string, value: any): string => {
+const show = (ctx: Ctx, key: string, value: any, def: Def = ctx.def): string => {
 	if (value === undefined || value === null) return '';
-	const field = ctx.def.fields.find((f: any) => f.key === key);
+	const field = def.fields.find((f: any) => f.key === key);
 	if (field && REFERENCE_KINDS.includes(field.kind)) {
 		const ids = (Array.isArray(value) ? value : [value]).map(v => String(v?._id || v));
 		return ids.map(id => ctx.refNames.get(id) || id).join(', ');
@@ -128,26 +138,61 @@ const show = (ctx: Ctx, key: string, value: any): string => {
 	return String(value);
 };
 
-/** Loads the names of the records the text's reference placeholders name. */
+/** The page a reference field links to. */
+const refDefOf = async (field: any): Promise<Def | null> => (field?.ref ? ((await ModelDefinition.findOne({ name: displayModelName(String(field.ref)) }).lean()) as any) : null);
+
+/** The records a field of `doc` links to (up to MAX_TARGETS), in its order. */
+const linkedDocs = async (field: any, raw: any) => {
+	const Ref = field?.ref && scopedModel(String(field.ref));
+	const ids = (Array.isArray(raw) ? raw : [raw]).map(v => String(v?._id || v || '')).filter(isId).slice(0, MAX_TARGETS);
+	if (!Ref || !ids.length) return [];
+	const docs: any[] = await Ref.find({ _id: { $in: ids } }).lean();
+	return ids.map(id => docs.find(d => String(d._id) === id)).filter(Boolean);
+};
+
+const nameOf = (def: Def | null, d: any) => (def && recordName(def, d)) || String(d.name || d.title || d.code || d._id);
+
+/**
+ * Loads what the texts' placeholders need: the names of the records a
+ * reference shows, and for `{{member.email}}` the linked records themselves
+ * (and the names of the records *their* reference fields pick).
+ */
 const loadRefNames = async (ctx: Ctx, texts: string[]) => {
 	const keys = new Set<string>();
-	for (const t of texts) for (const m of String(t || '').matchAll(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g)) keys.add(m[1]);
+	for (const t of texts) for (const m of String(t || '').matchAll(placeholderRx())) keys.add(m[1]);
+	const refs = new Map<string, Set<string>>(); // reference field → the fields of it used ('' = its name)
 	for (const key of keys) {
-		const field = ctx.def.fields.find((f: any) => f.key === key && REFERENCE_KINDS.includes(f.kind));
-		if (!field?.ref) continue;
-		const Ref = scopedModel(String(field.ref));
-		const refDef: any = Ref && (await ModelDefinition.findOne({ name: displayModelName(String(field.ref)) }).lean());
-		const raw = ctx.doc?.[key];
-		const ids = (Array.isArray(raw) ? raw : [raw]).map(v => String(v?._id || v || '')).filter(isId).slice(0, MAX_TARGETS);
-		if (!Ref || !ids.length) continue;
-		const docs: any[] = await Ref.find({ _id: { $in: ids } }).lean();
-		for (const d of docs) ctx.refNames.set(String(d._id), (refDef && recordName(refDef, d)) || String(d.name || d.title || d.code || d._id));
+		const [ref, sub = ''] = key.split('.');
+		if (!ctx.def.fields.some((f: any) => f.key === ref && REFERENCE_KINDS.includes(f.kind))) continue;
+		refs.set(ref, (refs.get(ref) || new Set()).add(sub));
+	}
+	ctx.linked ||= new Map();
+	for (const [key, subs] of refs) {
+		const field = ctx.def.fields.find((f: any) => f.key === key);
+		const refDef = await refDefOf(field);
+		const docs = await linkedDocs(field, ctx.doc?.[key]);
+		for (const d of docs) ctx.refNames.set(String(d._id), nameOf(refDef, d));
+		if (!refDef) continue;
+		ctx.linked.set(key, { def: refDef, docs });
+		// A linked record's own links ({{member.company}}) show by name too.
+		for (const sub of subs) {
+			const subField = sub && refDef.fields.find((f: any) => f.key === sub && REFERENCE_KINDS.includes(f.kind));
+			if (!subField) continue;
+			const subDef = await refDefOf(subField);
+			for (const d of docs) for (const x of await linkedDocs(subField, d[sub])) ctx.refNames.set(String(x._id), nameOf(subDef, x));
+		}
 	}
 };
 
-/** `{{field}}`, `{{link}}`, `{{page}}`, `{{project}}`, `{{actor}}`, `{{event}}`, `{{today}}` → their values. */
+/** `{{field}}`, `{{member.email}}` (a linked record's field), `{{link}}`, `{{page}}`, `{{project}}`, `{{actor}}`, `{{event}}`, `{{today}}` → their values. */
 export const fill = (ctx: Ctx, text: any): string =>
-	String(text ?? '').replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (_, key: string) => {
+	String(text ?? '').replace(placeholderRx(), (_, key: string) => {
+		if (key.includes('.')) {
+			// A field of the linked record(s): each one's, joined.
+			const [ref, sub] = key.split('.');
+			const l = ctx.linked?.get(ref);
+			return l ? l.docs.map(d => show(ctx, sub, d[sub], l.def)).filter(Boolean).join(', ') : '';
+		}
 		switch (key) {
 			case 'link':
 				return ctx.link;
@@ -174,7 +219,7 @@ export const fill = (ctx: Ctx, text: any): string =>
  */
 export const emailBody = (ctx: Ctx, template: any) => {
 	const values: string[] = [];
-	const marked = String(template ?? '').replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, m => {
+	const marked = String(template ?? '').replace(placeholderRx(), m => {
 		values.push(fill(ctx, m));
 		return `\uE000${values.length - 1}\uE001`;
 	});
@@ -228,12 +273,37 @@ const stripMarks = (text: string) =>
 
 const PLACEHOLDER_KEYS = new Set(['link', 'page', 'project', 'actor', 'event', 'today']);
 
+/** The pages a page's reference fields link to, by field key — for checking `{{member.email}}`. */
+type Links = Map<string, Def>;
+const linksOf = async (def: Def): Promise<Links> => {
+	const out: Links = new Map();
+	for (const f of def.fields.filter((x: any) => REFERENCE_KINDS.includes(x.kind) && x.ref)) {
+		const d = await refDefOf(f);
+		if (d) out.set(f.key, d);
+	}
+	return out;
+};
+
+/** Kinds a placeholder never shows: layout, and secrets. */
+const HIDDEN_KINDS = new Set(['section', 'sectionlist', 'password']);
+
 /** Unknown `{{names}}` in a text: refused at save, so a typo shows at once. */
-const checkText = (def: Def, text: string, on: string, label: string) => {
+const checkText = (def: Def, text: string, on: string, label: string, links: Links = new Map()) => {
 	for (const m of String(text || '').matchAll(/\{\{\s*([^}]*?)\s*\}\}/g)) {
 		const key = m[1];
+		if (key.includes('.')) {
+			const [ref, sub, ...rest] = key.split('.');
+			const f = def.fields.find((x: any) => x.key === ref);
+			if (!f || rest.length) throw invalid(`${label}: {{${key}}} isn’t a field of this page or of a record it links to.`, on);
+			if (!REFERENCE_KINDS.includes(f.kind)) throw invalid(`${label}: {{${key}}} — ${f.label || ref} doesn’t link to another record, so it has no fields of its own.`, on);
+			const refDef = links.get(ref);
+			if (!refDef) throw invalid(`${label}: {{${key}}} — the page ${f.label || ref} links to is gone.`, on);
+			const sf = refDef.fields.find((x: any) => x.key === sub);
+			if (!sf || HIDDEN_KINDS.has(sf.kind)) throw invalid(`${label}: {{${key}}} — “${sub}” isn’t a field of ${nounOf(refDef)}.`, on);
+			continue;
+		}
 		if (!PLACEHOLDER_KEYS.has(key) && !def.fields.some((f: any) => f.key === key))
-			throw invalid(`${label}: {{${key}}} isn’t a field of this page. Use a field’s key, or {{link}}, {{page}}, {{project}}, {{actor}}, {{event}}, {{today}}.`, on);
+			throw invalid(`${label}: {{${key}}} isn’t a field of this page. Use a field’s key (or a linked record’s, like {{customer.email}}), or {{link}}, {{page}}, {{project}}, {{actor}}, {{event}}, {{today}}.`, on);
 	}
 };
 
@@ -243,7 +313,7 @@ const writableField = (def: Def, key: string) => {
 };
 
 /** One assignment list (`set`) of an update or create action, against the target page. */
-const checkSet = (source: Def, target: Def, set: any, on: string, label: string) => {
+const checkSet = (source: Def, target: Def, set: any, on: string, label: string, links?: Links) => {
 	if (!Array.isArray(set) || !set.length) throw invalid(`${label}: choose at least one field to set`, on);
 	if (set.length > 30) throw invalid(`${label}: at most 30 fields`, on);
 	const seen = new Set<string>();
@@ -259,7 +329,7 @@ const checkSet = (source: Def, target: Def, set: any, on: string, label: string)
 			if (s.from !== '_id' && !source.fields.some((x: any) => x.key === s.from)) throw invalid(`${label}: copy from a field of ${nounOf(source)}`, `${at}.from`);
 			return { field: f.key, from: String(s.from) };
 		}
-		if (typeof s.value === 'string') checkText(source, s.value, `${at}.value`, label);
+		if (typeof s.value === 'string') checkText(source, s.value, `${at}.value`, label, links);
 		return { field: f.key, value: s.value ?? '' };
 	});
 };
@@ -308,6 +378,7 @@ export const checkAutomation = async (body: any) => {
 	const page = route ? await pageOf(route) : null;
 	if (!page) throw invalid('Choose the page whose records start it', 'route');
 	const { def } = page;
+	const links = await linksOf(def);
 
 	const on = [...new Set<string>((Array.isArray(body.on) ? body.on : []).map(String))].filter(e => (AUTOMATION_EVENTS as readonly string[]).includes(e));
 	if (!on.length) throw invalid('Choose when it runs: created, changed or deleted', 'on');
@@ -340,8 +411,8 @@ export const checkAutomation = async (body: any) => {
 			if (!people.length && !actor) throw invalid(`${label}: choose who to notify`, `${at}.to`);
 			const title = String(a.title || '').trim();
 			if (!title) throw invalid(`${label}: write the notification’s title`, `${at}.title`);
-			checkText(def, title, `${at}.title`, label);
-			checkText(def, a.message || '', `${at}.message`, label);
+			checkText(def, title, `${at}.title`, label, links);
+			checkText(def, a.message || '', `${at}.message`, label, links);
 			actions.push({ type: 'notify', to: { people, actor }, title: title.slice(0, 200), message: String(a.message || '').slice(0, 1000) });
 		} else if (a.type === 'email') {
 			const people = await checkPeople(a.to?.people, `${at}.to.people`, label);
@@ -357,8 +428,8 @@ export const checkAutomation = async (body: any) => {
 			const text = String(a.body || '').trim();
 			if (!subject) throw invalid(`${label}: write a subject`, `${at}.subject`);
 			if (!text) throw invalid(`${label}: write the message`, `${at}.body`);
-			checkText(def, subject, `${at}.subject`, label);
-			checkText(def, text, `${at}.body`, label);
+			checkText(def, subject, `${at}.subject`, label, links);
+			checkText(def, text, `${at}.body`, label, links);
 			// The design it goes out in: one of the project's, or (none) the project's default.
 			let design: string | undefined;
 			if (a.design) {
@@ -392,12 +463,12 @@ export const checkAutomation = async (body: any) => {
 				if (!refDef) throw invalid(`${label}: the page “${f.label || f.key}” links to is gone`, `${at}.target`);
 				targetDef = refDef;
 			} else if (on.length === 1 && on[0] === 'delete') throw invalid(`${label}: a deleted record can’t be updated — choose a linked record`, `${at}.target`);
-			actions.push({ type: 'update', target, set: checkSet(def, targetDef, a.set, `${at}.set`, label) });
+			actions.push({ type: 'update', target, set: checkSet(def, targetDef, a.set, `${at}.set`, label, links) });
 		} else if (a.type === 'create') {
 			const r = String(a.route || '').toLowerCase();
 			const p = r ? await pageOf(r) : null;
 			if (!p) throw invalid(`${label}: choose the page to add a record to`, `${at}.route`);
-			const set = checkSet(def, p.def, a.set, `${at}.set`, label);
+			const set = checkSet(def, p.def, a.set, `${at}.set`, label, links);
 			const missing = p.def.fields.filter((f: any) => f.required && !UNWRITABLE_KINDS.has(f.kind) && f.default === undefined && !set.some((s: any) => s.field === f.key));
 			if (missing.length) throw invalid(`${label}: also set ${missing.map((f: any) => f.label || f.key).join(', ')} — ${nounOf(p.def)} needs ${missing.length === 1 ? 'it' : 'them'}`, `${at}.set`);
 			actions.push({ type: 'create', route: r, set });

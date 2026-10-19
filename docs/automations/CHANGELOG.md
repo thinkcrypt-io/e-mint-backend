@@ -113,3 +113,23 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   mint-docs. Browser pane (mint-tenant on a private backend, light and dark): the menu at the pointer with the cursor where
   clicked, a field inserted mid-line, bold/italic on and off keeping the selection, ⌘B/⌘I, typing closing the menu,
   Preview, a field inserted mid-subject, the eye's dialog, Resend from Runs and from Project → Email. Not deployed.
+
+## 2026-10-19 — AU-03d A linked record's details as placeholders
+- The user: "like we can enter the member which gives the name, but in case we want to show a detail of the member, for
+  example email, or phone number, like nested details, we should be able to enter that too."
+- Backend (automations.function.ts): one placeholder pattern (`placeholderRx`) takes `{{key}}` or `{{ref.key}}`;
+  `loadRefNames` loads, once per run, the records each used reference field picks (`ctx.linked`, in the field's order) and
+  the names of *their* links (so `{{member.company}}` shows a name); `fill` shows each linked record's field with the
+  linked page's formatting (`show(…, def)`), several joined by ", ". `checkText` (via `linksOf(def)`, loaded once per
+  save) refuses an unknown sub-field ("“nope” isn't a field of Client"), a non-link ("Title doesn't link to another
+  record"), more than one level, and password/section fields.
+- Panels (both): `placeholdersOf(page, pages)` adds each reference field's page's fields ("Member → Email", group
+  "Member"); `PlaceholderText`, `SetRows` and `MessageEditor` take `pages`. The message's click menu groups them under
+  "Member's details" and has a search box (Enter inserts the first match) once the list passes 8; Preview chips read
+  "Member → Phone".
+- Guide (`/automations#automation-placeholders`), website changelog, README placeholder line.
+- Verified: `automations.mjs` all passed (new: the three refusals, `{{client.email}}`/`{{client.name}}` saving and a dry run
+  reading "Big order for Acme <acme…@example.com> Acme"); `automation-email-resend.mjs`, `automation-pdfs.mjs` pass; tsc clean
+  (backend, both panels, docs, website). Headless Chrome on a private stack (the pane was hidden): Jobs → Member, the menu
+  listing Member's details, Phone inserted at the cursor as `{{member.phone}}`, the search narrowing to Email, Preview.
+  Not deployed.

@@ -63,7 +63,8 @@ type Recipients = {
 ```
 
 Text (titles, subjects, bodies, set values) takes **placeholders**:
-`{{<field key>}}` (a reference shows the picked record's name; a date its day),
+`{{<field key>}}` (a reference shows the picked record's name; a date its day), `{{<reference>.<field>}}` — a
+field of the linked record, one level (`{{member.email}}`; several linked records joined by commas),
 `{{link}}` (the record in the panel), `{{page}}`, `{{project}}`, `{{actor}}`,
 `{{event}}`, `{{today}}`.
 

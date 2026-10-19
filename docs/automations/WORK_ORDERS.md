@@ -14,6 +14,7 @@ mint-webpage → `origin` main), then go on.
 | AU-03a | Email to the address in a linked record's field (a bill's Customer → Email) | backend + panels + docs | S | done 2026-10-16 |
 | AU-03b | Email attachments: the page's published PDF templates printed for the record (a bill's invoice to its customer) | backend + panels + docs | S | done 2026-10-16 |
 | AU-03c | Email editor (field at the cursor, click menu: bold / italic / list, preview); every automation email kept — the eye shows it as sent, Resend for a failed one | backend + panels + docs | M | done 2026-10-19 |
+| AU-03d | Linked records' details as placeholders: `{{member.email}}` (one level), in Insert a field under “Member's details” | backend + panels + docs | S | done 2026-10-19 |
 | AU-04 | Date-reached and schedule triggers (job queue), waits | both | L | later |
 | AU-05 | MCP tools, recipes, template blueprints | both | M | later |
 
