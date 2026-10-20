@@ -350,6 +350,12 @@ export const saveSite = async (project: any, patch: any, { req }: { req?: any } 
 	if (!Object.keys($set).length) throw Object.assign(new Error('Nothing to change'), { status: 400 });
 	await runInScope({ organization: project.organization, project: project._id }, () => WebsiteSettings.updateOne({}, { $set }, { runValidators: true }));
 	forgetSite(project);
+	// A builder site shows the setup (scripts, tags, SEO defaults) from the renderer's cache:
+	// drop it so the change is live now, not when the cache runs out (SB-30). Never waits, never fails the save.
+	if (project.type === 'website')
+		import('../siteBuilder/publish.js')
+			.then(m => m.revalidateSite(project))
+			.catch(() => undefined);
 	return loadSite(project, { req });
 };
 
@@ -436,12 +442,19 @@ export const robotsTxt = (project: any, doc: any) => {
 
 const xml = (s: string) => s.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c] as string));
 
-/** Published pages (not hidden from search) as a sitemap; `origin` is the site's address. */
-export const sitemapXml = (origin: string, pages: { path: string; updatedAt?: any }[]) =>
+const FREQUENCIES = ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'];
+
+/**
+ * Published pages (not hidden from search) as a sitemap; `origin` is the site's address.
+ * A builder page's SEO → Sitemap (docs/site-builder SB-31) adds its priority and change frequency.
+ */
+export const sitemapXml = (origin: string, pages: { path: string; updatedAt?: any; priority?: number; changeFrequency?: string }[]) =>
 	`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
 		.map(
 			p =>
-				`  <url><loc>${xml(`${origin}${p.path === '/' ? '/' : p.path}`)}</loc>${p.updatedAt ? `<lastmod>${new Date(p.updatedAt).toISOString().slice(0, 10)}</lastmod>` : ''}</url>`
+				`  <url><loc>${xml(`${origin}${p.path === '/' ? '/' : p.path}`)}</loc>${p.updatedAt ? `<lastmod>${new Date(p.updatedAt).toISOString().slice(0, 10)}</lastmod>` : ''}${
+					p.changeFrequency && FREQUENCIES.includes(p.changeFrequency) ? `<changefreq>${p.changeFrequency}</changefreq>` : ''
+				}${typeof p.priority === 'number' && p.priority >= 0 && p.priority <= 1 ? `<priority>${p.priority.toFixed(1)}</priority>` : ''}</url>`
 		)
 		.join('\n')}\n</urlset>\n`;
 

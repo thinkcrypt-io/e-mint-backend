@@ -702,16 +702,25 @@ router.get(
 		const seo = await kitModel(req, 'seo');
 		const list: any[] = pages?.Model ? await pages.Model.find({ status: 'published' }, { path: 1, updatedAt: 1 }).sort({ path: 1 }).limit(5000).lean() : [];
 		const hidden = new Set(seo?.Model ? (await seo.Model.distinct('page', { noIndex: true })).map(String) : []);
-		// Site builder pages (docs/site-builder SB-03): the published static ones not hidden from search.
-		const built: any[] = await SitePage.find(
-			{ published: { $ne: null }, 'published.kind': { $ne: 'template' }, 'published.seo.noIndex': { $ne: true } },
-			{ 'published.path': 1, 'published.publishedAt': 1 }
+		// Site builder pages (docs/site-builder SB-03): the published static ones not hidden from search
+		// nor taken out of the sitemap (SEO → Sitemap, SB-31), with their priority and change frequency.
+		// Each also has a kit Pages record at the same path (kit.ts pushPage) — the builder page decides.
+		const builtAll: any[] = await SitePage.find(
+			{ published: { $ne: null }, 'published.kind': { $ne: 'template' } },
+			{ 'published.path': 1, 'published.publishedAt': 1, 'published.seo.noIndex': 1, 'published.seo.sitemapInclude': 1, 'published.seo.sitemapPriority': 1, 'published.seo.sitemapChangeFrequency': 1 }
 		)
 			.limit(5000)
 			.lean();
-		const kit = list.filter(p => p.path && !hidden.has(String(p._id)));
-		const seen = new Set(kit.map(p => p.path));
-		const all = [...kit, ...built.filter(p => !seen.has(p.published.path)).map(p => ({ path: p.published.path, updatedAt: p.published.publishedAt }))].sort((a, b) =>
+		const builtBy = new Map(builtAll.map(p => [p.published.path, p.published]));
+		const listed = (pub: any) => pub.seo?.noIndex !== true && pub.seo?.sitemapInclude !== false;
+		const extra = (pub: any) => ({ priority: pub.seo?.sitemapPriority, changeFrequency: pub.seo?.sitemapChangeFrequency });
+		const kit = list
+			.filter(p => p.path && !hidden.has(String(p._id)) && (!builtBy.has(p.path) || listed(builtBy.get(p.path))))
+			.map(p => (builtBy.has(p.path) ? { ...p, ...extra(builtBy.get(p.path)) } : p));
+		const seen = new Set(list.map(p => p.path));
+		const all = [...kit, ...builtAll
+				.filter(p => !seen.has(p.published.path) && listed(p.published))
+				.map(p => ({ path: p.published.path, updatedAt: p.published.publishedAt, ...extra(p.published) }))].sort((a, b) =>
 			a.path.localeCompare(b.path)
 		);
 		const xmlText = doc.seo?.indexing !== false && doc.seo?.sitemap !== false ? sitemapXml(origin, all) : sitemapXml(origin, []);

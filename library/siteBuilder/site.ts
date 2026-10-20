@@ -23,7 +23,9 @@ export const siteInfo = async (project: any) => {
 	return { name: identity.siteName || project.name, tagline: identity.tagline || '', logo: identity.logo || '', contact: doc.contact || {}, social: doc.social || {} };
 };
 
-export const EMPTY_SEO = { title: '', description: '', image: '', noIndex: false, canonical: '', keywords: [] as string[] };
+import { EMPTY_SEO } from './seo.js';
+
+export { EMPTY_SEO };
 
 /** A new site: the Studio theme, a header and footer, and a home page with a hero. */
 const starterDesign = () => ({

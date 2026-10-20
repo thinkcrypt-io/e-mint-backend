@@ -1,4 +1,5 @@
 import { NODE_ID } from './ids.js';
+import { EMPTY_SEO, validateSeoExtras } from './seo.js';
 import { loadManifest, type LoadedManifest, type PropDef, type StyleKeyDef } from './manifest.js';
 
 /**
@@ -505,7 +506,7 @@ const urlOrEmpty = (v: unknown) => v === '' || isSafeMediaUrl(v);
 export const validateSeo = (seo: unknown, add: (path: string, message: string) => void) => {
 	if (seo === undefined) return;
 	if (!isObj(seo)) return add('seo', 'seo must be an object');
-	const KEYS = ['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'];
+	const KEYS = Object.keys(EMPTY_SEO);
 	for (const k of Object.keys(seo)) if (!KEYS.includes(k)) add(`seo.${k}`, `SEO has no “${k}”`);
 	if (seo.title !== undefined && (typeof seo.title !== 'string' || seo.title.length > 200)) add('seo.title', 'The SEO title is at most 200 characters');
 	if (seo.description !== undefined && (typeof seo.description !== 'string' || seo.description.length > 500)) add('seo.description', 'The description is at most 500 characters');
@@ -514,6 +515,7 @@ export const validateSeo = (seo: unknown, add: (path: string, message: string) =
 	if (seo.canonical !== undefined && !(seo.canonical === '' || /^https?:\/\/\S+$/.test(seo.canonical))) add('seo.canonical', 'The canonical address starts with https://');
 	if (seo.keywords !== undefined && !(Array.isArray(seo.keywords) && seo.keywords.length <= 20 && seo.keywords.every((k: any) => typeof k === 'string' && k.length <= 60)))
 		add('seo.keywords', 'Keywords are up to 20 short words');
+	validateSeoExtras(seo, add, urlOrEmpty);
 };
 
 type PageInput = { name?: unknown; path?: unknown; kind?: unknown; layout?: unknown; showInMenu?: unknown; menuLabel?: unknown; priority?: unknown; seo?: unknown; source?: unknown };

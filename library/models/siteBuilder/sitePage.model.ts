@@ -20,6 +20,27 @@ const seo = {
 	noIndex: { type: Boolean, default: false },
 	canonical: { type: String, default: '' },
 	keywords: { type: [String], default: [] },
+	// SB-31: the rest of the AGS VSeo (siteBuilder/site.ts EMPTY_SEO)
+	focusKeyword: { type: String, default: '' },
+	ogTitle: { type: String, default: '' },
+	ogDescription: { type: String, default: '' },
+	ogType: { type: String, default: '' },
+	ogImageAlt: { type: String, default: '' },
+	twitterCard: { type: String, default: '' },
+	twitterTitle: { type: String, default: '' },
+	twitterDescription: { type: String, default: '' },
+	twitterImage: { type: String, default: '' },
+	noFollow: { type: Boolean, default: false },
+	noArchive: { type: Boolean, default: false },
+	noImageIndex: { type: Boolean, default: false },
+	maxSnippet: { type: Number, default: -1 },
+	maxImagePreview: { type: String, default: 'large' },
+	schemaType: { type: String, default: 'auto' },
+	schemaJson: { type: String, default: '' },
+	breadcrumbTitle: { type: String, default: '' },
+	sitemapInclude: { type: Boolean, default: true },
+	sitemapPriority: { type: Number, default: 0.7 },
+	sitemapChangeFrequency: { type: String, default: 'weekly' },
 };
 
 const schema = new Schema<any>(

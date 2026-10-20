@@ -3,7 +3,8 @@ import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import Organization from '../models/tenancy/organization.model.js';
-import { loadSite, siteOrigin, siteTags } from '../functions/siteConfig.function.js';
+import { codeOf, loadSite, siteOrigin, siteTags } from '../functions/siteConfig.function.js';
+import { EMPTY_SEO } from './seo.js';
 import { publicWidgets } from '../functions/widgets.function.js';
 import { manifestVersion } from './manifest.js';
 import { sectionRefs } from './site.js';
@@ -50,26 +51,31 @@ export const normalizePath = (raw: unknown) => {
 /**
  * The site's tags. Structured for the renderer — search-engine verification
  * (rendered as metadata, so Google sees it server-side) and the tracker
- * script, which loads the pixels and the tenant's own code tags exactly as on
- * a code-built site (skipping what's already on the page) — and the same as
- * HTML in `head` for anything that just prints it.
+ * script, which loads the pixels — and the same as HTML in `head` for
+ * anything that just prints it. `code` is the tenant's own scripts (Site setup
+ * → Add script, SB-30): the renderer prints them into the page's HTML and
+ * tells the tracker (`noCode`, its `data-no-code`) not to add them again.
  */
 const headTags = (apiBase: string, project: any, doc: any) => {
 	const t: any = siteTags(doc);
 	const verification = { google: t.googleVerification || '', bing: t.bingVerification || '' };
-	const anything = t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification'].includes(k));
+	const code = codeOf(doc);
+	const anything =
+		t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification', 'head', 'bodyStart', 'bodyEnd'].includes(k));
 	// The project key names the project to track.js (docs/api-builder D14).
-	const tracker = anything ? { src: `${apiBase}/public/track.js`, key: project.apiKey || '' } : null;
+	const tracker = anything ? { src: `${apiBase}/public/track.js`, key: project.apiKey || '', noCode: true } : null;
 	const parts: string[] = [];
 	if (verification.google) parts.push(`<meta name="google-site-verification" content="${esc(verification.google)}">`);
 	if (verification.bing) parts.push(`<meta name="msvalidate.01" content="${esc(verification.bing)}">`);
-	if (tracker) parts.push(`<script src="${esc(tracker.src)}" data-key="${esc(tracker.key)}" defer></script>`);
-	return { head: parts.join('\n'), bodyStart: '', bodyEnd: '', verification, tracker };
+	if (tracker) parts.push(`<script src="${esc(tracker.src)}" data-key="${esc(tracker.key)}" data-no-code defer></script>`);
+	if (code.head) parts.push(code.head);
+	return { head: parts.join('\n'), bodyStart: code.bodyStart, bodyEnd: code.bodyEnd, verification, tracker, code };
 };
 
 /** The pages above `path` that exist, home first, this page last (the breadcrumbs block). */
-export const crumbsFor = (path: string, pages: { published?: { path: string; name: string } }[]) => {
-	const byPath = new Map(pages.filter(p => p.published).map(p => [p.published!.path, p.published!.name]));
+export const crumbsFor = (path: string, pages: { published?: { path: string; name: string; seo?: { breadcrumbTitle?: string } } }[]) => {
+	// A page's own breadcrumb label (SEO → Structured data, SB-31) wins over its name.
+	const byPath = new Map(pages.filter(p => p.published).map(p => [p.published!.path, p.published!.seo?.breadcrumbTitle?.trim() || p.published!.name]));
 	const parts = path.split('/').filter(Boolean);
 	const paths = ['/', ...parts.map((_, i) => `/${parts.slice(0, i + 1).join('/')}`)];
 	return paths.filter(p => byPath.has(p)).map(p => ({ label: byPath.get(p)!, path: p }));
@@ -117,7 +123,7 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 	const [page, menuPages, links, widgets]: any = await Promise.all([
 		SitePage.findOne({ 'published.path': path, 'published.kind': { $ne: 'template' } }, PAGE_FIELDS).lean(),
 		SitePage.find({ 'published.showInMenu': true, 'published.kind': { $ne: 'template' } }, MENU_FIELDS).lean(),
-		SitePage.find({ published: { $ne: null }, 'published.kind': { $ne: 'template' } }, { 'published.path': 1, 'published.name': 1 }).lean(),
+		SitePage.find({ published: { $ne: null }, 'published.kind': { $ne: 'template' } }, { 'published.path': 1, 'published.name': 1, 'published.seo.breadcrumbTitle': 1 }).lean(),
 		publicWidgets(project).catch(() => ({ widgets: {} })),
 	]);
 	let found = page?.published ? { page, record: null as any } : null;
@@ -181,6 +187,8 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 				noIndex: !!seo.noIndex || siteSeo.indexing === false,
 				canonical: seo.canonical || (origin ? `${origin}${path === '/' ? '' : path}` : ''),
 				keywords: seo.keywords?.length ? seo.keywords : siteSeo.keywords || [],
+				// The rest of the page's SEO (SB-31); empty strings fall back in the renderer.
+				...Object.fromEntries(Object.keys(EMPTY_SEO).filter(k => !['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'].includes(k)).map(k => [k, seo[k] ?? (EMPTY_SEO as any)[k]])),
 			},
 		},
 		data: { nodes, contents, ...(record && { record }), currency },

@@ -78,7 +78,7 @@ The site is made of pages; a page is a tree of blocks (nodes). Build it here wit
 ## Where the content goes (always)
 - Texts, headings, button labels, pictures of each section → **Contents** records (/web-contents), one record per piece, with a stable slug like "home-hero". Save them with set_site_contents, then bind the blocks to them: \`"bind": { "text": { "from": "content", "slug": "home-hero", "field": "content" } }\`. The team then edits the words in the panel's Contents table. Fields: content (main text), subContent, btnText, url, image, richContent (HTML), list (strings), card ([{image,title,subTitle,description}]). Contents need no public API.
 - **save_site_page keeps every word in Contents by itself**: any heading, text, button label, picture… you leave unbound gets a Contents record (slug from the page and section) and is bound to it, and a grid of look-alike cards becomes a list of cards — one Contents record whose \`card\` list holds them, shown by a collection with \`"source": { "content": "<slug>" }\`. The saved page comes back bound; change the words afterwards with set_site_contents (or save the page with new text — a bound block's text is written into its record).
-- Each page's SEO → its **SEO** record: send \`seo\` with save_site_page (title ≤ 120, description ≤ 320, image, keywords).
+- Each page's SEO → its **SEO** record: send \`seo\` with save_site_page (title 30–60 characters, description 70–160, image, keywords, focusKeyword). Optional, like the panel's SEO editor: ogTitle/ogDescription/ogType/ogImageAlt, twitterCard/twitterTitle/twitterDescription/twitterImage, noIndex/noFollow/noArchive/noImageIndex, maxSnippet, maxImagePreview, schemaType ("auto", "none", "Service", "LocalBusiness", "FAQPage"…), schemaJson (a JSON object string merged over the generated JSON-LD), breadcrumbTitle, sitemapInclude/sitemapPriority/sitemapChangeFrequency. Leave them out to use the defaults.
 - The theme, colour scheme, colours and fonts → the **Site design** record: set_site_design.
 - Anything that repeats or grows — services, team, products, projects, testimonials, FAQs, posts — is a **model of its own**: plan_feature then build_feature with publicApi {"enabled": true, "actions": ["list","get"]} (or set_public_api on an existing one), fill it with create_records (matchOn "slug"), and show it with a \`collection\` block. **A list model must have public list and get, or the site can't show it** (check_site says so).
 - Detail pages for a list: a template page — path "/services/[slug]", kind "template", source { "model": "<route>", "match": { "param": "slug", "field": "slug" } }; inside it, bind to \`{ "from": "record", "field": "title" }\` or write "{{record.title}}".
@@ -497,7 +497,38 @@ export const SITE_BUILDER_TOOLS: ToolDef[] = [
 				showInMenu: { type: 'boolean' },
 				menuLabel: { type: 'string' },
 				priority: { type: 'number' },
-				seo: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, image: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } }, noIndex: { type: 'boolean' } } },
+				seo: {
+					type: 'object',
+					description: 'Page SEO (SB-31); send only what changes',
+					properties: {
+						title: { type: 'string' },
+						description: { type: 'string' },
+						image: { type: 'string' },
+						keywords: { type: 'array', items: { type: 'string' } },
+						canonical: { type: 'string' },
+						noIndex: { type: 'boolean' },
+						focusKeyword: { type: 'string' },
+						ogTitle: { type: 'string' },
+						ogDescription: { type: 'string' },
+						ogType: { type: 'string', enum: ['', 'website', 'article', 'book', 'profile'] },
+						ogImageAlt: { type: 'string' },
+						twitterCard: { type: 'string', enum: ['', 'summary', 'summary_large_image', 'app', 'player'] },
+						twitterTitle: { type: 'string' },
+						twitterDescription: { type: 'string' },
+						twitterImage: { type: 'string' },
+						noFollow: { type: 'boolean' },
+						noArchive: { type: 'boolean' },
+						noImageIndex: { type: 'boolean' },
+						maxSnippet: { type: 'number' },
+						maxImagePreview: { type: 'string', enum: ['none', 'standard', 'large'] },
+						schemaType: { type: 'string' },
+						schemaJson: { type: 'string' },
+						breadcrumbTitle: { type: 'string' },
+						sitemapInclude: { type: 'boolean' },
+						sitemapPriority: { type: 'number' },
+						sitemapChangeFrequency: { type: 'string', enum: ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'] },
+					},
+				},
 				tree: PAGE_TREE,
 				ops: { type: 'array', items: { type: 'object' }, description: 'insert / update / move / remove / wrap — see site_builder_guide' },
 			},

@@ -86,7 +86,14 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-07, SB-09, SB-12, SB-27, SB-28, SB-29 done — SB-14 or SB-10 next)
+## Handoff — read this first (last updated 2026-10-20, SB-30 Add script + SB-31 page SEO (AGS VSeo) done, not deployed — SB-14 or SB-10 next)
+
+**2026-10-20 (SB-30/SB-31, not deployed):** deploy order — backend first
+(render answer gains `tags.code` / `tracker.noCode`, track.js learns
+`data-no-code`; an old renderer keeps working because track.js still adds the
+code when the attribute is missing), then mint-sites, mint-builder, the panels.
+Page SEO fields are in `library/siteBuilder/seo.ts`; the renderer reads them in
+`src/render/{metadata,JsonLd}.tsx`; scripts print from `src/render/SiteCode.tsx`.
 
 **Done and pushed:** SB-01…SB-08 (renderer `mint-sites`, backend storage +
 render API, the renderer serving published sites, the editor shell, adding
@@ -417,6 +424,8 @@ Renderer (`mint-sites`)
 | SB-27 | Connect your AI in the builder: toolbar AI menu + Settings → keys, client steps, a prompt with the theme; MCP prompts | mint-builder + backend | M | done 2026-10-07 (mint-builder `c9158ba`, backend `efaf82ba`) |
 | SB-28 | Theme demo sites: choosing a theme loads a whole demo site (pages, a list model with records, Contents) | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `6d24ab07`, mint-builder `c9158ba`, mint-sites `707f457`) |
 | SB-29 | Every word in Contents: blocks connected when added (lists of cards for card grids, demo words), copies get their own records, builder ⇄ panel edits, list source cards ⇄ model, a new site (or a template's build) opens as its theme's demo with every page and its SEO | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `7bf30cc0`, mint-builder `bfd18dc`, mint-sites `12623ba`, mint-docs `b89e115`, mint-webpage `4cb33d3`) |
+| SB-30 | Site setup → **Add script**: paste scripts that go on every page, rendered by the site's server (not only by track.js) | backend + mint-sites + mint-tenant + admin | S | done 2026-10-20 (backend: see CHANGELOG, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
+| SB-31 | Page SEO = the AGS **VSeo** editor (Google preview, Basics / Social / Indexing / Structured data / Sitemap, SEO checks) with every field live on the site | backend + mint-sites + mint-builder + mint-tenant + admin | M | done 2026-10-20 (mint-builder `4c56caf`, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1320,3 +1329,106 @@ named after the site; number and review cards render from Contents; the cards
 editor saves and the canvas follows; switching a list to Services and back to
 cards; adding the Team section makes a list of cards; editing a bound heading
 reaches its Contents record. `next build` clean in mint-builder and mint-sites.
+
+## SB-30 — Add script (S) — done 2026-10-20
+
+**Why:** the user (2026-10-20): "on site setup should have a page called add
+script, where scripts can be pasted and will be on the website". The Site
+setup already kept code tags (`WebsiteSettings.headTags`, the *Code* tab), but
+on a builder site they only reached the page through track.js — no tracker,
+no script, and nothing in the HTML search engines and checkers read.
+
+**Change:**
+- mint-tenant + admin `app/site-setup`: the *Code* tab becomes **Add script**
+  (`?tab=scripts`; the old `?tab=code` still opens it), laid out like the AGS
+  *Custom head tags* card: a row per script (name, where, on/off, first line of
+  the code), Add / Edit in one dialog, Remove through PromptDialog.
+- backend `siteBuilder/render.ts`: the render answer carries `tags.code`
+  `{ head, bodyStart, bodyEnd }` (enabled scripts) and the tracker gets
+  `noCode: true`; `routes-public/track.ts`: `data-no-code` on the script tag
+  skips the code tags (still adds pixels, verification, favicon). Code-built
+  sites keep getting the code from track.js as before.
+- mint-sites `render/SiteCode.tsx`: prints the code into the page's HTML —
+  `<meta>`, `<link>` and `<script async src>` are hoisted into `<head>` by
+  React, inline scripts / noscript / style for *In head* go first in `<body>`,
+  *Start of body* / *End of body* where they say. The tracker is printed with
+  `data-no-code`.
+
+**Done when:** a script added in Site setup shows in the live page's HTML
+(view-source) and runs once (not twice); switching it off removes it after
+Publish/revalidate; code-built sites unchanged; `next build` clean.
+
+## SB-31 — Page SEO like the AGS VSeo (M) — done 2026-10-20
+
+**Why:** the user (2026-10-20): "the VSEO should be like the VSEO which we did
+on akashbari global service project, same" — the `VSeo` input of
+`ags-admin/src/components/library/utils/inputs/VSeo/` (Akashbari Global
+Services, not Akashbari Holidays).
+
+**Change:**
+- Page SEO gains the AGS fields (names kept from e-mint where they already
+  existed: `title`, `description`, `image`, `canonical`, `keywords`, `noIndex`
+  = AGS `metaTitle`, `metaDescription`, `ogImage`, `canonicalUrl`, `keywords`,
+  `robots.index === false`): `focusKeyword`, `ogTitle`, `ogDescription`,
+  `ogType`, `ogImageAlt`, `twitterCard`, `twitterTitle`, `twitterDescription`,
+  `twitterImage`, `noFollow`, `noArchive`, `noImageIndex`, `maxSnippet`,
+  `maxImagePreview`, `schemaType`, `schemaJson`, `breadcrumbTitle`,
+  `sitemapInclude`, `sitemapPriority`, `sitemapChangeFrequency` — SitePage
+  schema, `EMPTY_SEO`, `validateSeo`, MCP `save_site_page`. The kit's SEO
+  record keeps its own fields; pulling it into a page keeps the page's extras.
+- mint-builder `editor/SeoEditor.tsx`: the page settings' *Search engines and
+  sharing* is the VSeo — Google preview, character counters (30–60 / 70–160),
+  tabs Basics · Social · Indexing · Structured data · Sitemap, the 8 SEO
+  checks, JSON status.
+- backend render: every field in `page.seo`; crumbs use `breadcrumbTitle`;
+  sitemap.xml leaves out `sitemapInclude: false` pages and writes
+  `<priority>` / `<changefreq>`.
+- mint-sites `render/metadata.ts` (AGS `buildMetadata`): OG / Twitter title,
+  description, image, alt, type, card; robots with googleBot max-snippet,
+  max-image-preview, noarchive, noimageindex, nofollow; `render/JsonLd.tsx`:
+  the page's schema (auto → WebPage; WebSite + Organization on the home page)
+  merged with `schemaJson`, and a BreadcrumbList.
+- Site setup → SEO → *Default SEO* gets the VSeo's Google preview and
+  counters.
+
+**Done when:** every field saves from the builder, survives a reload and a
+panel SEO-record edit, and shows in the live page's head; jest + smoke pass;
+`next build` clean in mint-builder, mint-sites, mint-tenant.
+
+**Done (SB-30 + SB-31):** as specified above, plus:
+- Saving Site setup asks the renderer to revalidate (`siteConfig.function.ts`,
+  `revalidateSite`, fire-and-forget), so a script switched on or off is live
+  at once on a builder site — before, Site setup changes waited for the
+  renderer's 5-minute cache.
+- sitemap.xml: builder pages are also kit Pages records at the same path; the
+  builder page now decides (left out when `noIndex` or `sitemapInclude: false`,
+  its priority / change frequency written either way).
+- The SEO constants and the extras' checks are in `library/siteBuilder/seo.ts`
+  (`site.ts` re-exports `EMPTY_SEO`; importing it from validate.ts would cycle).
+- SitePage SEO keeps the AGS keys flat (`noFollow`, `sitemapPriority`…), not
+  AGS's nested `robots` / `sitemap`, so the kit record, MCP and template
+  interpolation stay one level.
+- The 404 page draws with another page's data, so it prints no JSON-LD.
+- Builder: the SEO section links to the guide's `#page-seo`; panel counters
+  wrap their spans in `Box as='span' fontSize='inherit'` (the panel's global
+  CSS sizes bare spans at 15px).
+
+**Verified:** smoke `scripts/tenancy-smoke/site-builder-seo.mjs` (30 checks,
+with `SMOKE_SITES` pointing at a mint-sites on the same backend: every field
+saves and comes back, bad values named, a panel SEO-record edit keeps the
+extras, render answer fields + `tags.code` + `noCode`, breadcrumb label,
+track.js `data-no-code`, sitemap priority/changefreq and exclusion, live HTML:
+meta hoisted into `<head>`, head script printed once, chat widget at the end,
+paused script absent, tracker `data-no-code`, OG/Twitter/robots, JSON-LD
+LocalBusiness + WebSite + Organization, BreadcrumbList, a script switched off
+gone without Publish); `site-builder`, `site-builder-connect`,
+`site-builder-data`, `org-1`, `projects`, `website` pass; jest siteBuilder 39
+(new `test/seo.test.ts`); mint-sites vitest 98 + new `test/siteCode.test.tsx`;
+`tsc` clean in backend, mint-sites, mint-builder, mint-tenant, admin; `next
+build` clean in mint-sites, mint-builder, mint-docs, mint-webpage. In the
+browser: the builder's page settings show the Google preview, tabs, counters
+and checks; focus keyword, a keyword chip, schema type and JSON-LD saved from
+the UI reached the database and the live page's head; Site setup's Add script
+tab (opened by the old `?tab=code` link) added a script that appeared once in
+the published page's HTML; Default SEO shows the preview and counters.
+

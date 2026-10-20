@@ -15,7 +15,9 @@
  * Analytics / Ads / Tag Manager, Meta, TikTok, LinkedIn, Pinterest, X and Snap
  * pixels, Clarity, Hotjar, the code tags, verification metas, the favicon — as
  * set on the panel's Site setup page (GET …/site/tags), so they change without
- * a deploy. `data-no-tags` leaves them to the site (e.g. rendered on the server).
+ * a deploy. `data-no-tags` leaves them to the site (e.g. rendered on the server);
+ * `data-no-code` leaves only the code tags (Add script) to it — a builder site's
+ * renderer prints those into the HTML itself (docs/site-builder SB-30).
  *
  * Each page view carries an event id; with Meta's Conversions API on, the pixel
  * tags its PageView with the same id and the server sends it too, so Meta
@@ -149,9 +151,11 @@ export const TRACK_JS = `(function () {
 			w._hjSettings = { hjid: Number(t.hotjar), hjsv: 6 };
 			addScript('https://static.hotjar.com/c/hotjar-' + encodeURIComponent(t.hotjar) + '.js?sv=6');
 		}
-		addHtml(t.head, 'head');
-		addHtml(t.bodyStart, 'bodyStart');
-		addHtml(t.bodyEnd, 'bodyEnd');
+		if (!script.hasAttribute('data-no-code')) {
+			addHtml(t.head, 'head');
+			addHtml(t.bodyStart, 'bodyStart');
+			addHtml(t.bodyEnd, 'bodyEnd');
+		}
 		tagged = true;
 	}
 	if (!script.hasAttribute('data-no-tags')) {

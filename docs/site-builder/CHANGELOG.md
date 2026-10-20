@@ -2,6 +2,38 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-30 + SB-31 — Add script; page SEO like the AGS VSeo (2026-10-20)
+
+**What:** Site setup's *Code* tab is now **Add script** (`?tab=scripts`, old
+`?tab=code` still opens it): paste a script, choose head / start of body /
+end of body, switch it on or off. A builder site prints the scripts into each
+page's HTML (meta and link hoisted into `<head>`), and track.js is told
+(`data-no-code`) not to add them again; a save revalidates the renderer so it
+is live at once. Each builder page's SEO is the Akashbari Global Services
+VSeo: Google preview, character counters, Basics · Social · Indexing ·
+Structured data · Sitemap, eight SEO checks; every field reaches the live
+page — Open Graph / Twitter, robots + googlebot directives, JSON-LD (page type
+merged with custom JSON-LD, BreadcrumbList, WebSite + Organization on the
+home page), breadcrumb labels, sitemap priority / change frequency /
+exclusion. Default SEO in Site setup gets the preview and counters.
+
+**Files:** backend `library/siteBuilder/{seo,site,validate,kit,render}.ts`,
+`library/models/siteBuilder/sitePage.model.ts`,
+`library/functions/siteConfig.function.ts`, `routes-public/{track,public.router}.ts`,
+`library/controllers/mcp/siteBuilder.tools.ts`, `test/seo.test.ts`, smoke
+`site-builder-seo.mjs`; mint-sites `src/render/{SiteCode,JsonLd,metadata,LivePage}.tsx`,
+`src/lib/api.ts`, the site page + 404, tests; mint-builder `src/editor/{SeoEditor,PageDialog,Builder}.tsx`,
+`src/lib/api.ts`, `globals.css`; mint-tenant + admin `app/site-setup/{page,_components/Code,_components/Seo,_components/SeoPreview}.tsx`.
+
+**Guides / marketing:** mint-docs `/websites#site-code` (Add script),
+`#site-seo`, new `/site-builder#page-seo`, `#live-site` table; mint-webpage
+changelog entry "Add script, and full SEO for every page".
+
+**Verified:** smoke `site-builder-seo` 30/30 (incl. the live HTML), the
+site-builder / website suites, jest, vitest, tsc and next builds; browser
+walk-through of the builder's SEO editor and Site setup's Add script tab —
+see WORK_ORDERS SB-31 *Verified*.
+
 ## SB-29 — Every word in Contents (2026-10-07)
 
 **What:** every heading, text, button, picture, number and review a page shows

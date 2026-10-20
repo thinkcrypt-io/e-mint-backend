@@ -247,7 +247,7 @@ export const pushPage = async (page: any) => {
 const SEO_KEYS = ['title', 'description', 'image', 'keywords', 'canonical', 'noIndex'] as const;
 
 const seoFromRecord = (rec: any) => ({
-	...EMPTY_SEO,
+	...Object.fromEntries(SEO_KEYS.map(k => [k, (EMPTY_SEO as any)[k]])),
 	...Object.fromEntries(SEO_KEYS.filter(k => rec?.[k] !== undefined && rec?.[k] !== null).map(k => [k, rec[k]])),
 });
 
@@ -278,9 +278,10 @@ export const pullSeo = async (pages: any[]) => {
 			out.push(p);
 			continue;
 		}
+		// The record holds the first six; the page's other SEO (SB-31) stays as it was.
 		const saved = await SitePage.findOneAndUpdate(
 			{ _id: p._id },
-			{ $set: { 'draft.seo': seoFromRecord(rec), 'draft.seoSyncedAt': rec.updatedAt }, $inc: { 'draft.rev': 1 } },
+			{ $set: { 'draft.seo': { ...EMPTY_SEO, ...(p.draft?.seo || {}), ...seoFromRecord(rec) }, 'draft.seoSyncedAt': rec.updatedAt }, $inc: { 'draft.rev': 1 } },
 			{ new: true }
 		).lean();
 		out.push(saved || p);
