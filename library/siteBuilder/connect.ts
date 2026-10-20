@@ -3,7 +3,7 @@ import { asText, pathValue } from './bind.js';
 import { loadManifest } from './manifest.js';
 import SitePage from '../models/siteBuilder/sitePage.model.js';
 import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
-import { KIT_ROUTES, flatContent, isTyped, kitModel, orderContents, pushPage, typedItem, typedPath } from './kit.js';
+import { KIT_ROUTES, flatContent, isTyped, kitModel, moreBlocks, orderContents, pushPage, typedItem, typedPath } from './kit.js';
 import { contentTypes } from './contentTypes.js';
 
 /**
@@ -353,6 +353,7 @@ export const typeInfos = (types: any[]): TypeInfo[] =>
 
 /** The type a section's words go into, by what the section is (its name, as the presets name them). */
 const TYPE_BY_NAME: [RegExp, string][] = [
+	[/carousel|slider|slideshow/i, 'hero-carousel'],
 	[/^hero/i, 'hero'],
 	[/call to action|newsletter|countdown|sign.?up|cta/i, 'cta'],
 	[/question|faq/i, 'faq'],
@@ -672,9 +673,11 @@ export const saveNew = async (kit: any, docs: any[], kitPage: any, allowed: Set<
 		if (kitPage && allowed.has('page')) fields.page = kitPage;
 		if (allowed.has('status')) fields.status = 'published';
 		if (allowed.has('isVisible')) fields.isVisible = true;
-		const current: any = await kit.Model.findOne({ slug: d.slug, archivedAt: null }, { _id: 1 }).lean();
+		const current: any = await kit.Model.findOne({ slug: d.slug, archivedAt: null }, { _id: 1, block: 1 }).lean();
 		if (current) {
 			const doc: any = await kit.Model.findById(current._id);
+			// Its own block from the section; the blocks added under it in Contents stay.
+			if (Array.isArray(fields.block)) fields.block = [...fields.block.slice(0, 1), ...moreBlocks(current)];
 			doc.set(fields);
 			await doc.save();
 		} else await kit.Model.create(fields);

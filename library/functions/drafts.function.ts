@@ -23,8 +23,8 @@ export const DATA = '_published.data';
 
 export const isDraftModel = (def: any) => !!def?.draftAndPublish;
 
-/** Keys that stay on the record itself, never the snapshot: ids, scope, owner and sharing. */
-const TOP = new Set(['_id', '_model', MODEL_KEY, 'organization', 'project', '_customer', 'privacy', 'access', 'addedBy', '_publishedAt']);
+/** Keys that stay on the record itself, never the snapshot: ids, scope, owner, sharing — and archived (a record archived after it was published leaves the outside too). */
+const TOP = new Set(['_id', '_model', MODEL_KEY, 'organization', 'project', '_customer', 'privacy', 'access', 'addedBy', '_publishedAt', 'archivedAt']);
 
 /** A query on the record's fields as the same query on its published snapshot. */
 export const prefixQuery = (q: any): any => {

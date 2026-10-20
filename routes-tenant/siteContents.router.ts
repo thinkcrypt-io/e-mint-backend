@@ -8,20 +8,21 @@ import { publishRecord, statusOf } from '../library/functions/drafts.function.js
 import { afterPublish } from '../library/functions/publishEvents.function.js';
 import { KIT_ROUTES, kitModel } from '../library/siteBuilder/kit.js';
 import { slugPart } from '../library/siteBuilder/connect.js';
-import { contentTypes, ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
+import { BLOCKS_MAX, LIST_TYPE, contentTypes, ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
 import { dataModels, readList } from '../library/siteBuilder/resolve.js';
 
 /**
  * /tenant/api/p/:projectId/site-contents — the website's Contents, typed and
  * by page (docs/cms D1, CMS-06). One record per piece of a page — a Hero, a
  * row of Cards, Questions, a List of projects — its type chosen first; the
- * record keeps its words in `block` (one item of that type) and its place in
- * `order`. Older one-word-per-record contents are listed too, as they are.
+ * record keeps its words in `block` — first an item of that type, then any
+ * more blocks added under it (`more`: a Text then a Gallery…) — and its place
+ * in `order`. Older one-word-per-record contents are listed too, as they are.
  *
  *   GET    /types                 the content types (fields + form) and the models a List can show
  *   GET    /?page=<id>|site       the pages (with how many contents each) and one page's contents, in order
- *   POST   /                      { page, type, name?, data } → a new record, last on its page
- *   PUT    /:id                   { name?, page?, data? } — data replaces the type's fields
+ *   POST   /                      { page, type, name?, slug?, data, more? } → a new record, last on its page
+ *   PUT    /:id                   { name?, slug?, page?, data?, more? } — data replaces the type's fields, more the blocks under it
  *   DELETE /:id                   archived (the table's Archived view brings it back)
  *   POST   /order                 { ids } — their order on the page, first to last
  *   POST   /list-preview          { data } → the records a List would show now
@@ -77,6 +78,9 @@ const itemOf = (rec: any) => {
 	return { type: __component as string, key: _key as string, data };
 };
 
+/** The blocks added under the first, as the form edits them. */
+const moreOf = (rec: any) => (Array.isArray(rec?.block) ? rec.block.slice(1) : []).map((b: any) => (typeof b?.toObject === 'function' ? b.toObject() : b));
+
 const view = (rec: any, titles: Map<string, any>, drafts: boolean) => {
 	const item = itemOf(rec);
 	const type = item?.type || rec.type || '';
@@ -91,6 +95,7 @@ const view = (rec: any, titles: Map<string, any>, drafts: boolean) => {
 		typeTitle: item ? t?.title || type : null,
 		icon: item ? t?.icon || '' : '',
 		data: item?.data || null,
+		more: item ? moreOf(rec) : [],
 		preview: item ? previewOf(item.data) : String(rec.content || rec.btnText || rec.richContent || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 120),
 		/** One word per record, from before typed contents: edited in the table. */
 		legacy: !item,
@@ -170,6 +175,31 @@ const dataFor = (type: any, raw: any) => {
 	return Object.fromEntries(Object.entries(raw && typeof raw === 'object' ? raw : {}).filter(([key]) => keys.has(key)));
 };
 
+/** The blocks to put under the first, as the form sent them: known types (not a List — it's a content of its own), their fields only, keys kept. */
+const moreFor = (types: any[], raw: any) => {
+	if (raw === undefined) return undefined;
+	if (!Array.isArray(raw)) throw new TenancyError(400, 'Send more as a list of blocks');
+	if (raw.length > BLOCKS_MAX - 1) throw new TenancyError(400, `One content holds at most ${BLOCKS_MAX} blocks`);
+	return raw.map((b: any, i: number) => {
+		const type: any = types.find((t: any) => t.uid === b?.__component);
+		if (!type || type.uid === LIST_TYPE) throw new TenancyError(400, `Block ${i + 2}: ${b?.__component ? `“${b.__component}” isn’t a type that can go here` : 'say its type (__component)'}`);
+		return { __component: type.uid, ...(typeof b._key === 'string' && b._key && { _key: b._key.slice(0, 40) }), ...dataFor(type, b) };
+	});
+};
+
+/** A slug as it's stored, refused when another content has it (the site and the API find a content by it). */
+const slugFor = async (k: any, raw: any, id?: any) => {
+	const slug = String(raw || '')
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9_-]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 120);
+	if (!slug) throw new TenancyError(400, 'A slug needs letters or numbers');
+	if (await k.Model.exists({ slug, archivedAt: null, ...(id && { _id: { $ne: id } }) })) throw new TenancyError(400, `Another content already has the slug “${slug}”`);
+	return slug;
+};
+
 /** A Mongoose validation error as one readable line. */
 const saveError = (e: any) => {
 	if (e?.name === 'ValidationError') return new TenancyError(400, Object.values<any>(e.errors).map(x => x.message).join('; '));
@@ -189,15 +219,17 @@ router.post(
 		const last: any = await k.Model.findOne({ archivedAt: null, ...pageCond(page?._id || SITE) }, { order: 1 }).sort({ order: -1 }).lean();
 		const where = page ? slugPart(page.path === '/' ? 'home' : page.name) || 'page' : SITE;
 		const name = String(body.name || '').trim().slice(0, 120) || `${page?.name || 'Whole site'} — ${type.title}`;
+		const more = moreFor(types, body.more) || [];
+		const slug = String(body.slug || '').trim() ? await slugFor(k, body.slug) : `${where}-${type.name}-${rand()}`.slice(0, 120);
 		let doc: any;
 		try {
 			doc = await k.Model.create({
 				name,
 				...(page && { page: page._id }),
-				slug: `${where}-${type.name}-${rand()}`.slice(0, 120),
+				slug,
 				type: type.uid,
 				order: (last?.order ?? -1) + 1,
-				block: [{ __component: type.uid, ...dataFor(type, body.data) }],
+				block: [{ __component: type.uid, ...dataFor(type, body.data) }, ...more],
 				addedBy: req.user?._id,
 			});
 		} catch (e: any) {
@@ -275,6 +307,13 @@ router.put(
 			changes.push({ field: 'name', label: 'Name', from: doc.name || '', to: body.name.trim() });
 			doc.name = body.name.trim().slice(0, 120);
 		}
+		if (typeof body.slug === 'string' && body.slug.trim() && body.slug.trim() !== doc.slug) {
+			const slug = await slugFor(k, body.slug, doc._id);
+			if (slug !== doc.slug) {
+				changes.push({ field: 'slug', label: 'Slug', from: doc.slug || '', to: slug });
+				doc.slug = slug;
+			}
+		}
 		if ('page' in body) {
 			const page = await pageRecord(body.page);
 			if (String(page?._id || '') !== String(doc.page || '')) {
@@ -282,16 +321,19 @@ router.put(
 				doc.page = page?._id || null;
 			}
 		}
-		if (body.data !== undefined) {
+		if (body.data !== undefined || body.more !== undefined) {
 			const item = itemOf(doc.toObject());
 			if (!item) throw new TenancyError(400, 'This content is from before typed contents — change it in the table');
 			const type: any = titles.get(item.type);
 			if (!type) throw new TenancyError(400, `Its type (${item.type}) is gone — make the component again, or remove this content`);
-			const next = { __component: item.type, _key: item.key, ...dataFor(type, body.data) };
-			if (JSON.stringify(next) !== JSON.stringify({ __component: item.type, _key: item.key, ...item.data })) {
-				changes.push({ field: 'block', label: type.title, from: '', to: previewOf(next) || 'changed' });
-				doc.block = [next];
-			}
+			const now = { __component: item.type, _key: item.key, ...item.data };
+			const next = body.data !== undefined ? { __component: item.type, _key: item.key, ...dataFor(type, body.data) } : now;
+			const was = moreOf(doc.toObject());
+			const more = moreFor(types, body.more) ?? was;
+			if (JSON.stringify(next) !== JSON.stringify(now)) changes.push({ field: 'block', label: type.title, from: '', to: previewOf(next) || 'changed' });
+			if (JSON.stringify(more) !== JSON.stringify(was))
+				changes.push({ field: 'block', label: 'Blocks under it', from: String(was.length), to: more.map((b: any) => titles.get(b.__component)?.title || b.__component).join(', ') || 'none' });
+			if (changes.some(c => c.field === 'block')) doc.block = [next, ...more];
 		}
 		if (changes.length)
 			try {

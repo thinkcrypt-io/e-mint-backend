@@ -310,6 +310,9 @@ export const LEGACY_ALIAS: Record<string, string> = {
 
 export const typedItem = (rec: any) => (Array.isArray(rec?.block) && rec.block[0] && typeof rec.block[0] === 'object' ? rec.block[0] : null);
 
+/** The blocks after the record's own, as stored — kept whenever only the first one's words change. */
+export const moreBlocks = (rec: any) => (Array.isArray(rec?.block) ? rec.block.slice(1).filter((b: any) => b && typeof b === 'object').map((b: any) => (typeof b.toObject === 'function' ? b.toObject() : b)) : []);
+
 /** A Contents record as bindings read it: a typed one flat (and its old names), an old one as it is. */
 export const flatContent = (rec: any, def?: any) => {
 	const item = typedItem(rec);
@@ -317,6 +320,9 @@ export const flatContent = (rec: any, def?: any) => {
 	const { _key, __component, ...fields } = item;
 	const out: any = { _id: rec._id, slug: rec.slug, name: rec.name, page: rec.page, type: __component, ...fields };
 	for (const [old, now] of Object.entries(LEGACY_ALIAS)) if (out[old] === undefined && fields[now] !== undefined) out[old] = fields[now];
+	// The blocks added under its own (a Text, then a Gallery…): a binding reads `more.0.heading`.
+	const more = moreBlocks(rec);
+	if (more.length && out.more === undefined) out.more = more.map(({ _key, ...b }: any) => ({ type: b.__component, ...b }));
 	return out;
 };
 
@@ -440,7 +446,7 @@ export const upsertContents = async (records: any[], page?: any) => {
 				saved = doc.toObject();
 			} else {
 				const doc: any = await kit.Model.findById(current._id);
-				doc.set({ ...own, block: [next] });
+				doc.set({ ...own, block: [next, ...moreBlocks(current)] });
 				await doc.save();
 				saved = doc.toObject();
 			}

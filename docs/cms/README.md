@@ -105,6 +105,12 @@ user's AI fill and translate it.
     (`heading`, `items.2.title`). The builder still edits words in place and adds a typed record with demo words for
     each section it adds (D28's promise kept, its storage tidied).
   - Header, footer, site settings and design become single types (D2).
+  - **More blocks in one record** (the user, 2026-10-20: "if we select text and then we need gallery we can add that…
+    also why slug is not there?" — CMS-16): `block` holds the record's own item first, then up to 19 more of any type
+    but List (`more` on the Contents screen), kept by every write that only changes the first. Text is plain words
+    (`textarea`) in every type; only Rich text has the editor. The **slug** is shown, chosen and copied: the builder
+    binds by it, and a coded site reads `GET /public/api/web-contents/by-slug/<slug>` or a page's
+    `/pages/by-path?path=` (published only), each with `?apiKey=`.
 - **D2 — Single types and a UID field.** A model can be **single** (`kind: 'single'`): exactly one entry, the panel
   opens its form instead of a table, the API answers `GET /<route>` with the entry. **UID** field kind: a slug made
   from another field (`title` → `my-first-post`), unique per model (per locale), editable, checked as you type.

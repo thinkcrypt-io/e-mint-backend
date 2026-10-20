@@ -359,7 +359,7 @@ const fillPage = async (req: any, args: any, caller: Caller): Promise<Out> => {
 			if (unknown.length) problems.push(`${at}: ${t.name} has no ${unknown.join(', ')} — its fields: ${[...keys].join(', ')}`);
 			const { _key, __component, ...now } = typeof b.toObject === 'function' ? b.toObject() : b;
 			const data = { ...now, ...Object.fromEntries(Object.entries(s.data || {}).filter(([k]) => keys.has(k))) };
-			doc.set({ ...(s.name && { name: String(s.name).slice(0, 120) }), block: [{ __component: t.uid, _key, ...data }] });
+			doc.set({ ...(s.name && { name: String(s.name).slice(0, 120) }), block: [{ __component: t.uid, _key, ...data }, ...doc.block.slice(1).map((x: any) => x?.toObject?.() ?? x)] });
 			docs.push({ doc, Model: contents.Model, isNew: false, label: `changed ${t.title} “${doc.name}”` });
 		} else {
 			const t: any = typeOf(s.type);

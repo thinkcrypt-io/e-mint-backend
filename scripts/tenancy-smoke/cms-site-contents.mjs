@@ -27,7 +27,7 @@ ok('…listed under Build → Components (category content)', (r.body?.doc || []
 r = await call('GET', P('/builder/models'), null, T);
 const contentsDef = (r.body?.doc || r.body || []).find(m => m.route === 'web-contents');
 const blockField = contentsDef?.fields?.find(f => f.key === 'block');
-ok('Contents holds a typed item: type, order and a one-item Content field', blockField?.kind === 'blocks' && blockField.max === 1 && blockField.components?.includes('content.hero') && contentsDef.fields.some(f => f.key === 'order'), JSON.stringify(blockField));
+ok('Contents holds a typed item: type, order and a Content field (its own block, then up to 19 more)', blockField?.kind === 'blocks' && blockField.max === 20 && blockField.components?.includes('content.hero') && contentsDef.fields.some(f => f.key === 'order'), JSON.stringify(blockField));
 
 /* ---- a page and its contents */
 const home = (await call('POST', P('/pages'), { name: 'Home', path: '/', status: 'published' }, T)).body?.doc;

@@ -23,7 +23,8 @@ export type ContentType = { name: string; title: string; icon: string; descripti
 
 const eyebrow: F = { key: 'eyebrow', label: 'Small line above', kind: 'text', helper: 'A word or two over the heading — optional' };
 const heading: F = { key: 'heading', label: 'Heading', kind: 'text' };
-const text: F = { key: 'text', label: 'Text', kind: 'editor' };
+// Plain words: only Rich text has the editor (its `body`).
+const text: F = { key: 'text', label: 'Text', kind: 'textarea' };
 const image: F = { key: 'image', label: 'Picture', kind: 'image' };
 const imageAlt: F = { key: 'imageAlt', label: 'Picture description', kind: 'text', helper: 'What the picture shows, for screen readers and search engines' };
 const button: F[] = [
@@ -65,6 +66,24 @@ export const CONTENT_TYPES: ContentType[] = [
 		icon: 'panel-top',
 		description: 'The big opening of a page: a heading, a line of text, buttons and a picture.',
 		fields: [eyebrow, heading, text, image, imageAlt, ...button, ...second, items('Numbers under it', 'Add number', [row.title('Number'), row.subTitle('Label')])],
+	},
+	{
+		name: 'hero-carousel',
+		title: 'Hero carousel',
+		icon: 'gallery-horizontal',
+		description: 'The opening of a page as slides that move on — each with its own heading, text, picture and button.',
+		fields: [
+			items('Slides', 'Add slide', [
+				row.subTitle('Small line above'),
+				row.title('Heading'),
+				row.description('Text'),
+				row.image(),
+				{ key: 'imageAlt', label: 'Picture description', kind: 'text' },
+				{ key: 'buttonLabel', label: 'Button', kind: 'text' },
+				row.url('Button link'),
+			]),
+			{ key: 'interval', label: 'Seconds per slide', kind: 'number', default: 6, helper: '0 to move on only when clicked' },
+		],
 	},
 	{
 		name: 'text',
@@ -195,11 +214,30 @@ export const CONTENT_CATEGORY = 'content';
 export const typeUid = (name: string) => `${CONTENT_CATEGORY}.${name}`;
 export const LIST_TYPE = typeUid('list');
 
+/**
+ * Built-in types made before their Text was plain words (2026-10-20) had the
+ * editor for it: switched to a text box, nothing else of the type touched.
+ * The words stay as they were; the Contents form shows old HTML as plain text.
+ */
+const plainTextUpgrade = async () => {
+	const uids = CONTENT_TYPES.filter(t => t.fields.some(f => f.key === 'text' && f.kind === 'textarea')).map(t => typeUid(t.name));
+	const res = await ComponentDefinition.updateMany(
+		{ category: CONTENT_CATEGORY, uid: { $in: uids }, fields: { $elemMatch: { key: 'text', kind: 'editor' } } },
+		{ $set: { 'fields.$[t].kind': 'textarea' } },
+		{ arrayFilters: [{ 't.key': 'text', 't.kind': 'editor' }] }
+	);
+	return res.modifiedCount || 0;
+};
+
 /** The built-in types this project doesn't have yet, made. A type the project changed stays as it is. Runs in the project's scope. */
 export const ensureContentTypes = async (req?: any) => {
+	const upgraded = await plainTextUpgrade();
 	const have = new Set((await ComponentDefinition.find({ category: CONTENT_CATEGORY }, { uid: 1 }).lean()).map((c: any) => c.uid));
 	const missing = CONTENT_TYPES.filter(t => !have.has(typeUid(t.name)));
-	if (!missing.length) return 0;
+	if (!missing.length) {
+		if (upgraded) await syncDynamicModels({ app: req?.app, force: true });
+		return 0;
+	}
 	for (const t of missing)
 		try {
 			// Checked as any component is, so the fields are stored the way the builder stores them.
@@ -220,11 +258,15 @@ export const contentTypes = async () => {
 	return all.sort((a, b) => (order.get(a.uid) ?? 99) - (order.get(b.uid) ?? 99) || String(a.title).localeCompare(String(b.title)));
 };
 
+/** The most blocks one Contents record holds, its own first one included. */
+export const BLOCKS_MAX = 20;
+
 /** The fields a typed Contents record adds to the kit's model (docs/cms D1). */
 const TYPED_FIELDS = (uids: string[]) => [
 	{ key: 'type', label: 'Type', kind: 'text', index: true, helper: 'The content type — set when the record is made' },
 	{ key: 'order', label: 'Order', kind: 'number', default: 0, helper: 'Its place on the page, smallest first' },
-	{ key: 'block', label: 'Content', kind: 'blocks', components: uids, max: 1 },
+	// Its own type first, then any blocks added under it (a Text, then a Gallery…).
+	{ key: 'block', label: 'Content', kind: 'blocks', components: uids, max: BLOCKS_MAX },
 ];
 
 /**
@@ -247,8 +289,8 @@ export const ensureTypedContents = async (req: any) => {
 		if (i < 0) {
 			fields.push(f);
 			changed = true;
-		} else if (f.kind === 'blocks' && (fields[i].kind !== 'blocks' || [...uids].sort().join() !== [...(fields[i].components || [])].sort().join())) {
-			fields[i] = { ...fields[i], kind: 'blocks', components: uids, max: 1 };
+		} else if (f.kind === 'blocks' && (fields[i].kind !== 'blocks' || fields[i].max !== BLOCKS_MAX || [...uids].sort().join() !== [...(fields[i].components || [])].sort().join())) {
+			fields[i] = { ...fields[i], kind: 'blocks', components: uids, max: BLOCKS_MAX };
 			changed = true;
 		}
 	}

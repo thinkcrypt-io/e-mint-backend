@@ -25,6 +25,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-13 | Media: alt, caption, focal point; image field `{url, alt…}` opt-in (D12) | backend + mint-tenant | M | done 2026-10-16 (+ mint-sites) |
 | CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | done 2026-10-16 (translate → CMS-12) |
 | CMS-15 | Guide, website, templates and theme starters in the new shape | docs + website + backend | M | — |
+| CMS-16 | Contents follow-ups (user, 2026-10-20): Text plain in every type but Rich text, Hero carousel type, more blocks in one record (`more`), slugs shown / chosen / copied, read one by slug on the site API | backend + mint-tenant | M | done 2026-10-21 |
 
 Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the website's content) → 07 → 08 → 09 → 10 → 11 →
 12 → 13 → 14 → 15. 02–05 are useful on their own (any app gets single types, components, zones and drafts).
@@ -130,6 +131,23 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
 - `list_content_types`, `get_entry`, `save_entry_draft`, `publish_entry` (only after the user says so),
   `translate_entry` (the AI writes the translation; the tool stores it as the locale's draft), `fill_page`
   (sections from a brief), `suggest_seo`. Server instructions: drafts first, never publish unasked.
+
+## CMS-16 — Contents follow-ups (M) — done 2026-10-21
+- The user asked (2026-10-20): Text and Hero gave a rich text editor — they should be plain text; once a type is chosen
+  (a Text) more must go in it (a Gallery), especially sections; where is the slug, and how does a frontend connect?
+- Built-in types' `text` is `textarea` (only Rich text's `body` is `editor`); older projects' types are switched by
+  `ensureContentTypes` (plainTextUpgrade), the form shows old HTML as plain words. New type **Hero carousel**.
+- `block` (blocks, max 20): the record's own item first, then the added ones. Contents screen API `more` on POST/PUT and
+  in the view; each checked as its type (no List, unknown refused, fields filtered, `_key` kept); History "Blocks under
+  it". Every writer that changes only the first keeps the rest: the screen's PUT, MCP fill_page, the builder's
+  `/site-builder/contents` (upsertContents), connect's saveNew; the builder's word push already wrote `block.0.<path>`.
+  Bindings can read `more.N.<field>` (flatContent).
+- Slug: chosen on add / edit (cleaned, unique among live records); listed with a copy button; the form shows the slug,
+  `GET /public/api/web-contents/by-slug/<slug>?apiKey=` and its page's `/pages/by-path?path=` with copy buttons.
+- `/web-contents/by-slug/:slug` on the site API (website projects; published, visible, not removed). Fixed on the way:
+  a record archived after it was published stayed on the public API, by-path and the site — `archivedAt` now stays a
+  record key in drafts queries (drafts.function TOP), so `archivedAt: null` tests the record, not the snapshot.
+- Smoke: `cms-content-blocks.mjs`.
 
 ## CMS-15 — Docs, website, templates (M)
 - mint-docs: a "Content" guide (types, components, zones, draft & publish, versions, locales, preview) + updates to

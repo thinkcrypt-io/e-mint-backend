@@ -354,3 +354,29 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   with a schedule, the dialog (set through it, cleared through it, take-off-before-publish and take-off-without-publish
   refused inline), All content's Coming up.
 - Docs: mint-docs Models → Scheduling; Public API webhooks (source "schedule"); Connect AI publish_entry.
+
+## 2026-10-21 — CMS-16 Contents follow-ups (plain text, more blocks, slugs)
+- The user (2026-10-20, in the session that started this): "if we select text or hero the textarea is rich text, they
+  should be text. Also when one content type is selected for example text, we need to be able to add more in that…
+  specially the section area, and how do we handle slugs, for connecting the frontend?" Started 2026-10-20 in an
+  earlier session (cut off by an API error before its browser check); finished, checked and landed here.
+- Backend: contentTypes.ts — `text` is `textarea` in every built-in type (plainTextUpgrade switches existing projects'
+  types once and recompiles); Hero carousel type (slides + seconds per slide); `block` max 20 (BLOCKS_MAX), Contents
+  model upgraded by ensureTypedContents. siteContents.router.ts — `more` and `slug` on POST/PUT, `more` in the view.
+  connect.ts — sections named carousel/slider → Hero carousel. kit.ts — `moreBlocks`; upsertContents keeps the blocks
+  under the first; flatContent gives `more` for bindings. connect.ts saveNew keeps them too. content.tools.ts fill_page
+  keeps them. public.router.ts — `GET /web-contents/by-slug/:slug`; by-path skips removed records. drafts.function.ts —
+  `archivedAt` is a record key (TOP): removed-after-publish records left the outside nowhere before.
+- Panel (mint-tenant): ContentDialog — Slug field, the address box (ContentAddress: slug, this content's address,
+  its page's address, each with Copy; the project key filled in), "More in this block" (VBlocks: add any type but
+  List, reorder, fold, copy, remove); old HTML in a now-plain field shown as plain words. ContentsScreen — "+N blocks"
+  badge, each row's slug with Copy. typeIcon — gallery-horizontal. API reference lists the by-slug call.
+- Verified: `cms-content-blocks.mjs` (41 checks — plain text kinds, more blocks made/edited/reordered/removed/refused,
+  slugs, Hero carousel, the API by slug and by page with blocks, drafts not there, the builder's save keeping the
+  blocks, a removed one gone) on a private backend; cms-site-contents, cms-drafts, cms-content-api, cms-schedule,
+  cms-mcp-content, cms-media, cms-site-migrate, public, public-filters, website, site-builder-data,
+  site-builder-connect, site-builder-starter, models, projects, tenant-auth, org-1 pass. Headless Chrome (1280): the
+  list with slugs and +1 block, a Text's form (plain text box, address box, its Gallery under it), Add → the type
+  menu → a Section added and saved through the form (stored after the Gallery), a Hero with old HTML text shown plain.
+- Docs: mint-docs Websites → Contents (plain text, Hero carousel), More in one piece, Slugs: how a site finds a piece,
+  The site API (by-slug); website changelog.

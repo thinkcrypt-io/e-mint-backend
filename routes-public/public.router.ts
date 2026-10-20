@@ -573,6 +573,8 @@ router.post(
  *   GET /site/sitemap.xml          the published pages (not hidden from search); ?origin=https://…
  *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
  *                                  published contents in priority order
+ *   GET /web-contents/by-slug/:slug one published content by its slug (docs/cms D1) —
+ *                                  its type, its words and the blocks added under it
  *
  * Built on the kit's models (website kit routes); a site that renamed or
  * removed them gets 404 here and can use the per-model routes instead.
@@ -743,7 +745,7 @@ router.get(
 			seo?.Model ? seo.Model.findOne({ page: page._id }).lean() : null,
 			// What's published (Contents keeps drafts until Publish, docs/cms D5), in the page's order.
 			contents?.Model
-				? liveFind(contents.def, contents.Model, { query: { page: page._id, status: 'published', isVisible: { $ne: false } }, sort: { order: 1, priority: -1, createdAt: 1 }, limit: 500 })
+				? liveFind(contents.def, contents.Model, { query: { page: page._id, archivedAt: null, status: 'published', isVisible: { $ne: false } }, sort: { order: 1, priority: -1, createdAt: 1 }, limit: 500 })
 				: [],
 		]);
 		return {
@@ -751,6 +753,20 @@ router.get(
 			seo: seoDoc ? shape(seoDoc, seo!.def) : null,
 			contents: (blocks || []).map((b: any) => shape(b, contents!.def)),
 		};
+	})
+);
+
+router.get(
+	'/web-contents/by-slug/:slug',
+	handle(async req => {
+		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		const contents = await kitModel(req, 'web-contents');
+		if (!contents?.Model) throw new TenancyError(404, 'Not found');
+		const slug = String(req.params.slug || '').trim().toLowerCase();
+		// What's published, like by-path's contents: a draft, a hidden or a removed one isn't there.
+		const doc: any = await liveFindOne(contents.def, contents.Model, { query: { slug, archivedAt: null, status: 'published', isVisible: { $ne: false } } });
+		if (!doc) throw new TenancyError(404, 'No published content with that slug');
+		return shape(doc, contents.def);
 	})
 );
 
