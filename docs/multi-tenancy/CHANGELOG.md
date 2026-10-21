@@ -1985,3 +1985,16 @@ Decisions D14–D17 (README).
   SUPPLIERS › Vendors after a reload. `tsc` clean in both apps (admin's only errors are in generated `.next-*` types).
   The feature wizard's picker made and picked “Logistics” the same way. Pushed mint-tenant `bc38f8b`, admin `24cde37`,
   mint-docs `21d9401` (models, getting started, sidebar guides); not deployed.
+
+## 2026-10-21 — Find any project: Projects search, projects in ⌘K
+- The user: "also add a search on the all projects page, also when organization page, search from navbar, search
+  should fetch projects too".
+- mint-tenant + admin (same files): `ProjectsBoard` — a search beside the kinds (name, publicSlug, description,
+  domains; Enter opens the only match; "No project matches"). `menu/SearchMenu` — projects from auth/self (this
+  organization's + `organizations[].projects`), by name / address / description: on organization pages first (all,
+  up to 8, before typing), inside a project after the pages once typed; another organization's opens through
+  `useOpenAnyProject` (switches). Fixed: Enter read a stale list (key handler now reads `dataRef`). No backend change.
+- Verified with headless Chrome (mint-tenant :3083 / backend :5082): the board's search ("bak" → Corner Bakery, "zzz" →
+  no match), ⌘K on /projects listing the three projects before Pages, "crm" → Clinic CRM, Enter opened it, inside it
+  "ord" → Orders API. `tsc` clean in both apps. Pushed mint-tenant `a75f0dd`, admin `23f8375`, mint-docs `a63fca2`
+  (projects#switching, pages#navbar-search), website `3e0f438`; not deployed.
