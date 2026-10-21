@@ -72,14 +72,52 @@ ok('all removed: its own block stays', r.status === 200 && r.body?.more?.length 
 r = await call('PUT', C(`/${text._id}`), { more: [{ __component: 'content.gallery', heading: 'Again' }] }, T);
 ok('added back on an edit', r.status === 200 && r.body?.more?.[0]?.heading === 'Again' && r.body.more[0]._key, JSON.stringify(r.body?.more));
 
-/* ---- a Hero carousel */
+/* ---- a Hero carousel: slides of heading, subheading, two buttons and a background picture */
+r = await call('GET', C('/types'), null, T);
+const carousel = r.body?.types?.find(t => t.uid === 'content.hero-carousel');
+const slideKeys = carousel?.fields?.find(f => f.key === 'items')?.fields?.map(f => f.key).join();
+ok('a slide: heading, subheading, background picture, two buttons', slideKeys === 'title,subTitle,image,imageAlt,buttonLabel,buttonUrl,secondaryLabel,secondaryUrl', slideKeys);
 r = await call('POST', C('/'), { page: home._id, type: 'content.hero-carousel', data: { interval: 5, items: [
-	{ title: 'Fresh bread', description: 'Every morning', image: 'https://example.com/1.jpg', buttonLabel: 'Order', url: '/shop' },
-	{ title: 'Cakes', description: 'For every day' },
+	{ title: 'Fresh bread', subTitle: 'Every morning', image: 'https://example.com/1.jpg', buttonLabel: 'Order', buttonUrl: '/shop', secondaryLabel: 'Menu', secondaryUrl: '/menu', description: 'not a slide field' },
+	{ title: 'Cakes', subTitle: 'For every day' },
 ] } }, T);
-ok('a Hero carousel with its slides', r.status === 201 && r.body?.typeTitle === 'Hero carousel' && r.body.data?.items?.length === 2 && r.body.data.items[0].buttonLabel === 'Order' && r.body.data.interval === 5 && /^home-hero-carousel-/.test(r.body.slug), JSON.stringify(r.body));
+const slide = r.body?.data?.items?.[0];
+ok('a Hero carousel with its slides', r.status === 201 && r.body?.typeTitle === 'Hero carousel' && r.body.data.items.length === 2 && slide?.subTitle === 'Every morning' && slide.buttonUrl === '/shop' && slide.secondaryLabel === 'Menu' && r.body.data.interval === 5 && /^home-hero-carousel-/.test(r.body.slug), JSON.stringify(r.body));
+ok('…a field slides don’t have is dropped', slide && !('description' in slide), JSON.stringify(slide));
 r = await call('POST', C('/'), { page: home._id, type: 'content.hero-carousel', data: {} }, T);
 ok('…its slide time 6 seconds when not set', r.status === 201 && r.body?.data?.interval === 6, JSON.stringify(r.body?.data));
+
+/* ---- no editor but in Rich text: a project's own type too; the first carousel shape brought up to date */
+const B = path => P(`/builder${path}`);
+r = await call('POST', B('/components'), { category: 'content', name: 'story', title: 'Story', fields: [
+	{ key: 'heading', label: 'Heading', kind: 'text' },
+	{ key: 'body', label: 'Body', kind: 'editor' },
+	{ key: 'outro', label: 'Last words', kind: 'editor' },
+] }, T);
+const story = r.body?.doc || r.body;
+ok('a project’s own content type with editors', (r.status === 200 || r.status === 201) && story?._id, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('GET', B('/components'), null, T);
+const old = (r.body?.doc || r.body || []).find(c => c.uid === 'content.hero-carousel');
+r = await call('PUT', B(`/components/${old?._id}`), { title: 'Hero carousel', fields: [
+	{ key: 'items', label: 'Slides', kind: 'sectionlist', fields: [
+		{ key: 'subTitle', label: 'Small line above', kind: 'text' }, { key: 'title', label: 'Heading', kind: 'text' }, { key: 'description', label: 'Text', kind: 'textarea' },
+		{ key: 'image', label: 'Picture', kind: 'image' }, { key: 'imageAlt', label: 'Picture description', kind: 'text' }, { key: 'buttonLabel', label: 'Button', kind: 'text' }, { key: 'url', label: 'Button link', kind: 'text' },
+	] },
+	{ key: 'interval', label: 'Seconds per slide', kind: 'number' },
+] }, T);
+ok('(the Hero carousel set back to its first shape)', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message)}`);
+r = await call('GET', C('/types'), null, T);
+const kinds = (uid, path) => { let f = { fields: r.body?.types?.find(t => t.uid === uid)?.fields }; for (const k of path) f = f?.fields?.find(x => x.key === k); return f?.kind; };
+ok('its editors are text boxes now', kinds('content.story', ['body']) === 'textarea' && kinds('content.story', ['outro']) === 'textarea', `${kinds('content.story', ['body'])} ${kinds('content.story', ['outro'])}`);
+ok('Rich text keeps the editor', kinds('content.rich-text', ['body']) === 'editor', kinds('content.rich-text', ['body']));
+ok('a Hero carousel on its first shape gets today’s slides', r.body?.types?.find(t => t.uid === 'content.hero-carousel')?.fields?.find(f => f.key === 'items')?.fields?.map(f => f.key).join() === 'title,subTitle,image,imageAlt,buttonLabel,buttonUrl,secondaryLabel,secondaryUrl', JSON.stringify(r.body?.types?.find(t => t.uid === 'content.hero-carousel')?.fields));
+
+/* ---- what to add: suggested types */
+const suggestOf = uid => r.body?.types?.find(t => t.uid === uid)?.suggest || [];
+ok('each type says what goes with it (a Text: a picture, a gallery…)', suggestOf('content.text').slice(0, 2).join() === 'content.image,content.gallery' && suggestOf('content.section').includes('content.cards'), JSON.stringify(suggestOf('content.text')));
+ok('…a project’s own type gets the usual few', suggestOf('content.story').length > 0 && suggestOf('content.story').every(u => r.body.types.some(t => t.uid === u)), JSON.stringify(suggestOf('content.story')));
+ok('…never a List under a piece', r.body?.types?.every(t => !(t.suggest || []).includes('content.list')), '');
+ok('what starts a page, and the whole site', r.body?.start?.page?.[0] === 'content.hero' && r.body.start.site.join() === 'content.header,content.footer', JSON.stringify(r.body?.start));
 
 /* ---- the slug */
 ok('a slug made for it', /^home-text-/.test(text.slug), text.slug);

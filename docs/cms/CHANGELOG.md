@@ -380,3 +380,29 @@ Newest last. One entry per work order: date, WO, what changed, files, how it was
   menu → a Section added and saved through the form (stored after the Gallery), a Hero with old HTML text shown plain.
 - Docs: mint-docs Websites → Contents (plain text, Hero carousel), More in one piece, Slugs: how a site finds a piece,
   The site API (by-slug); website changelog.
+
+## 2026-10-21 — CMS-16b No editor but Rich text; carousel slides; search and suggestions
+- The user: "except for rich-text all the other text areas should be textareas not rich text editor, introduce a field
+  called hero-carousel, where each carousel should have heading, subheading, cta butttons and background image. … should
+  have a search while choosing fields, also first suggest what more fields can be added".
+- Backend: contentTypes.ts — `upgradeTypes` (replaces plainTextUpgrade): every `editor` field in every content type but
+  `content.rich-text`, any depth, the project's own types too, becomes `textarea` (version bumped, models recompiled);
+  Hero carousel slides `CAROUSEL_SLIDE` (Heading, Subheading, Background picture + description, Button + link, Second
+  button + link); a carousel still on the first slide shape gets it. `NEXT` / `nextTypes` / `START_TYPES`;
+  siteContents.router `/types` sends `suggest` per type and `start`. connect.ts: only `hero… carousel` or a bare
+  carousel/slider section is a Hero carousel (a testimonials carousel stays Reviews).
+- Panel (mint-tenant): VBlocks — `suggested` prop, one-click suggestion chips while empty, BlockPicker popover (search,
+  Enter = first match, Suggested then Every type) in place of the menu; `searchTypes` shared. ContentDialog — search box
+  and Suggested / Every type groups on the type grid (from `start` or the last piece's `suggest`), `suggested` passed to
+  More in this block, old HTML made plain in rows and groups too. ContentsScreen passes the page's types and `start`.
+- Verified: `cms-content-blocks.mjs` (52 checks; + slide shape, the old carousel upgraded, a project's own type's
+  editors made text boxes, Rich text kept, suggestions and starts) and cms-components, cms-blocks, cms-site-contents,
+  cms-drafts, cms-content-api, cms-mcp-content, cms-site-migrate, website, site-builder-data/-connect/-starter, models,
+  projects, tenant-auth, org-1 pass on a private backend (re-run after a machine restart). Headless Chrome (1280): New
+  content on a page with a Hero shows "Suggested after the hero" (Text, Cards, Numbers, Logos, Call to action) above
+  Every type, "gall" finds Gallery; a Text's More in this block offers Picture, Gallery, Video, Cards, Call to action as
+  chips; Add opens the picker (search, Suggested first), "quest" + Enter adds Questions and closes it; a Hero carousel
+  slide shows Heading, Subheading (text box), Background picture, Picture description, two buttons and links; no
+  contenteditable anywhere in the form.
+- Docs: mint-docs Websites → Contents (search, Suggested, every text field plain, the carousel's slides), More in one
+  piece (suggestions, search); website changelog.

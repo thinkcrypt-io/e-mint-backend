@@ -8,7 +8,7 @@ import { publishRecord, statusOf } from '../library/functions/drafts.function.js
 import { afterPublish } from '../library/functions/publishEvents.function.js';
 import { KIT_ROUTES, kitModel } from '../library/siteBuilder/kit.js';
 import { slugPart } from '../library/siteBuilder/connect.js';
-import { BLOCKS_MAX, LIST_TYPE, contentTypes, ensureTypedContents } from '../library/siteBuilder/contentTypes.js';
+import { BLOCKS_MAX, LIST_TYPE, START_TYPES, contentTypes, ensureTypedContents, nextTypes } from '../library/siteBuilder/contentTypes.js';
 import { dataModels, readList } from '../library/siteBuilder/resolve.js';
 
 /**
@@ -19,7 +19,7 @@ import { dataModels, readList } from '../library/siteBuilder/resolve.js';
  * more blocks added under it (`more`: a Text then a Gallery…) — and its place
  * in `order`. Older one-word-per-record contents are listed too, as they are.
  *
- *   GET    /types                 the content types (fields + form) and the models a List can show
+ *   GET    /types                 the content types (fields + form + what goes with each), what starts a page, and the models a List can show
  *   GET    /?page=<id>|site       the pages (with how many contents each) and one page's contents, in order
  *   POST   /                      { page, type, name?, slug?, data, more? } → a new record, last on its page
  *   PUT    /:id                   { name?, slug?, page?, data?, more? } — data replaces the type's fields, more the blocks under it
@@ -59,6 +59,8 @@ const typeView = (t: any) => ({
 	description: t.description || '',
 	fields: t.fields || [],
 	dataModel: dataModelOf(t.fields || []),
+	/** The types that go well with it — offered first under it and after it on a page. */
+	suggest: nextTypes(t.uid),
 });
 
 /** The first words of a record, for its row. */
@@ -116,6 +118,8 @@ router.get(
 		const [types, models] = await Promise.all([contentTypes(), dataModels()]);
 		return {
 			types: types.map(typeView),
+			/** Offered first for an empty page, and for the whole site. */
+			start: START_TYPES,
 			// What a List can show: models whose public API lists records for anyone (the site reads them as a visitor).
 			models: models.filter(m => m.model !== ROUTE).map(m => ({ model: m.model, title: m.title, list: m.list, problem: m.problem, fields: m.fields })),
 		};

@@ -44,6 +44,19 @@ const row = {
 	url: (label = 'Link'): F => ({ key: 'url', label, kind: 'text' }),
 };
 const CARD_ROW = [row.title(), row.subTitle(), row.description(), row.image(), row.url()];
+/**
+ * One slide of a Hero carousel: heading, subheading, two call-to-action
+ * buttons and the picture behind it. Row keys (title, subTitle, image) so the
+ * site builder's slide words land in them like any list's (connect.ts ROW).
+ */
+const CAROUSEL_SLIDE: F[] = [
+	row.title('Heading'),
+	{ key: 'subTitle', label: 'Subheading', kind: 'textarea' },
+	{ key: 'image', label: 'Background picture', kind: 'image' },
+	{ key: 'imageAlt', label: 'Picture description', kind: 'text', helper: 'What the picture shows, for screen readers and search engines' },
+	...button,
+	...second,
+];
 
 /** The tests a List's conditions use — the API builder's and the record tabs' (publicRecords conditionQuery). */
 export const LIST_OPS = [
@@ -71,19 +84,8 @@ export const CONTENT_TYPES: ContentType[] = [
 		name: 'hero-carousel',
 		title: 'Hero carousel',
 		icon: 'gallery-horizontal',
-		description: 'The opening of a page as slides that move on — each with its own heading, text, picture and button.',
-		fields: [
-			items('Slides', 'Add slide', [
-				row.subTitle('Small line above'),
-				row.title('Heading'),
-				row.description('Text'),
-				row.image(),
-				{ key: 'imageAlt', label: 'Picture description', kind: 'text' },
-				{ key: 'buttonLabel', label: 'Button', kind: 'text' },
-				row.url('Button link'),
-			]),
-			{ key: 'interval', label: 'Seconds per slide', kind: 'number', default: 6, helper: '0 to move on only when clicked' },
-		],
+		description: 'The opening of a page as slides that move on — each with its own heading, subheading, buttons and background picture.',
+		fields: [items('Slides', 'Add slide', CAROUSEL_SLIDE), { key: 'interval', label: 'Seconds per slide', kind: 'number', default: 6, helper: '0 to move on only when clicked' }],
 	},
 	{
 		name: 'text',
@@ -215,23 +217,88 @@ export const typeUid = (name: string) => `${CONTENT_CATEGORY}.${name}`;
 export const LIST_TYPE = typeUid('list');
 
 /**
- * Built-in types made before their Text was plain words (2026-10-20) had the
- * editor for it: switched to a text box, nothing else of the type touched.
- * The words stay as they were; the Contents form shows old HTML as plain text.
+ * What goes well with each type (the user, 2026-10-21: "first suggest what more
+ * can be added"): offered first when adding a block under a piece, and for the
+ * piece after it on a page. A project's own types get DEFAULT_NEXT.
  */
-const plainTextUpgrade = async () => {
-	const uids = CONTENT_TYPES.filter(t => t.fields.some(f => f.key === 'text' && f.kind === 'textarea')).map(t => typeUid(t.name));
-	const res = await ComponentDefinition.updateMany(
-		{ category: CONTENT_CATEGORY, uid: { $in: uids }, fields: { $elemMatch: { key: 'text', kind: 'editor' } } },
-		{ $set: { 'fields.$[t].kind': 'textarea' } },
-		{ arrayFilters: [{ 't.key': 'text', 't.kind': 'editor' }] }
-	);
-	return res.modifiedCount || 0;
+const NEXT: Record<string, string[]> = {
+	hero: ['text', 'cards', 'stats', 'logos', 'cta'],
+	'hero-carousel': ['text', 'cards', 'logos', 'cta'],
+	text: ['image', 'gallery', 'video', 'cards', 'cta'],
+	'rich-text': ['image', 'gallery', 'video', 'cta'],
+	cards: ['cta', 'text', 'faq', 'testimonials'],
+	faq: ['cta', 'text'],
+	stats: ['text', 'testimonials', 'cards'],
+	testimonials: ['logos', 'stats', 'cta'],
+	gallery: ['text', 'video', 'cta'],
+	video: ['text', 'gallery', 'cta'],
+	cta: ['faq', 'text', 'testimonials'],
+	logos: ['testimonials', 'stats', 'cta'],
+	image: ['text', 'gallery', 'cta'],
+	list: ['text', 'cta'],
+	section: ['cards', 'gallery', 'image', 'faq', 'cta'],
+	header: ['text', 'cta'],
+	footer: ['logos', 'text'],
+};
+const DEFAULT_NEXT = ['text', 'gallery', 'image', 'cta'];
+/** The types suggested after (or under) one of `uid`'s type, most likely first. */
+export const nextTypes = (uid: string) => (NEXT[String(uid).replace(`${CONTENT_CATEGORY}.`, '')] || DEFAULT_NEXT).map(typeUid);
+/** The types suggested first on an empty page, and on the whole site (what's on every page). */
+export const START_TYPES = { page: ['hero', 'hero-carousel', 'text', 'section'].map(typeUid), site: ['header', 'footer'].map(typeUid) };
+
+/** The one type that keeps the editor: everything else's words are plain text (the user, 2026-10-20). */
+export const RICH_TEXT_TYPE = typeUid('rich-text');
+
+/** `fields` with every editor — at any depth, rows and groups too — as a text box; null when there was none. */
+const plainFields = (fields: any[]): any[] | null => {
+	let changed = false;
+	const walk = (list: any[]): any[] =>
+		(list || []).map(f => {
+			let next = f;
+			if (f?.kind === 'editor') {
+				next = { ...f, kind: 'textarea' };
+				changed = true;
+			}
+			return Array.isArray(f?.fields) ? { ...next, fields: walk(f.fields) } : next;
+		});
+	const out = walk(fields);
+	return changed ? out : null;
+};
+
+/** The first Hero carousel's slide (2026-10-20), before slides took a heading, subheading, two buttons and a background. */
+const OLD_SLIDE = 'buttonLabel,description,image,imageAlt,subTitle,title,url';
+
+/**
+ * Content types made before today's shape, brought up to it once:
+ * - every editor in any content type but Rich text — the built-in ones and the
+ *   project's own, rows included — becomes a text box (words stay as they
+ *   are; the Contents form shows old HTML as plain text);
+ * - a Hero carousel still on its first slide shape gets today's.
+ * How many types changed.
+ */
+const upgradeTypes = async (req?: any) => {
+	const all: any[] = await ComponentDefinition.find({ category: CONTENT_CATEGORY, uid: { $ne: RICH_TEXT_TYPE } }).lean();
+	let n = 0;
+	for (const c of all) {
+		let fields = plainFields(c.fields) || c.fields;
+		const slides = c.uid === typeUid('hero-carousel') && fields.find((f: any) => f.key === 'items');
+		if (slides && (slides.fields || []).map((f: any) => f.key).sort().join() === OLD_SLIDE) {
+			const want = CONTENT_TYPES.find(t => t.name === 'hero-carousel')!;
+			const checked = await checkComponentFields(req || {}, JSON.parse(JSON.stringify(want.fields)));
+			if (!checked.problems.length) fields = checked.fields;
+			await ComponentDefinition.updateOne({ _id: c._id }, { $set: { fields, description: want.description }, $inc: { version: 1 } });
+			n++;
+		} else if (fields !== c.fields) {
+			await ComponentDefinition.updateOne({ _id: c._id }, { $set: { fields }, $inc: { version: 1 } });
+			n++;
+		}
+	}
+	return n;
 };
 
 /** The built-in types this project doesn't have yet, made. A type the project changed stays as it is. Runs in the project's scope. */
 export const ensureContentTypes = async (req?: any) => {
-	const upgraded = await plainTextUpgrade();
+	const upgraded = await upgradeTypes(req);
 	const have = new Set((await ComponentDefinition.find({ category: CONTENT_CATEGORY }, { uid: 1 }).lean()).map((c: any) => c.uid));
 	const missing = CONTENT_TYPES.filter(t => !have.has(typeUid(t.name)));
 	if (!missing.length) {

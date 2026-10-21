@@ -353,7 +353,8 @@ export const typeInfos = (types: any[]): TypeInfo[] =>
 
 /** The type a section's words go into, by what the section is (its name, as the presets name them). */
 const TYPE_BY_NAME: [RegExp, string][] = [
-	[/carousel|slider|slideshow/i, 'hero-carousel'],
+	// A hero slider, or a section that's only a slider — not a testimonials carousel (those are reviews).
+	[/^(hero\b.*)?(carousel|slider|slideshow)/i, 'hero-carousel'],
 	[/^hero/i, 'hero'],
 	[/call to action|newsletter|countdown|sign.?up|cta/i, 'cta'],
 	[/question|faq/i, 'faq'],

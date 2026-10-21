@@ -26,6 +26,7 @@ Decisions agreed 2026-10-15 (README status line). Engine first.
 | CMS-14 | MCP content tools: entries, publish, translate, fill, SEO (D-AI) | backend | M | done 2026-10-16 (translate → CMS-12) |
 | CMS-15 | Guide, website, templates and theme starters in the new shape | docs + website + backend | M | — |
 | CMS-16 | Contents follow-ups (user, 2026-10-20): Text plain in every type but Rich text, Hero carousel type, more blocks in one record (`more`), slugs shown / chosen / copied, read one by slug on the site API | backend + mint-tenant | M | done 2026-10-21 |
+| CMS-16b | No editor but Rich text (projects' own types too); Hero carousel slides = heading, subheading, two buttons, background picture; search + suggested types when adding a piece or a block under it | backend + mint-tenant | S | done 2026-10-21 |
 
 Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the website's content) → 07 → 08 → 09 → 10 → 11 →
 12 → 13 → 14 → 15. 02–05 are useful on their own (any app gets single types, components, zones and drafts).
@@ -148,6 +149,17 @@ Order: 02 → 03 → 04 → 05 (the engine every project gets) → 06 (the websi
   a record archived after it was published stayed on the public API, by-path and the site — `archivedAt` now stays a
   record key in drafts queries (drafts.function TOP), so `archivedAt: null` tests the record, not the snapshot.
 - Smoke: `cms-content-blocks.mjs`.
+- **16b** (the user, 2026-10-21: "except for rich-text all the other text areas should be textareas…, introduce
+  hero-carousel, where each carousel should have heading, subheading, cta buttons and background image… should have a
+  search while choosing fields, also first suggest what more fields can be added"): `upgradeTypes` turns every editor
+  in a content type but Rich text into a textarea at any depth — a project's own types too (on each Contents load);
+  Hero carousel slide = `title` (Heading), `subTitle` (Subheading), `image` (Background picture), `imageAlt`,
+  `buttonLabel`/`buttonUrl`, `secondaryLabel`/`secondaryUrl` (row keys, so the builder's slide words land), and a
+  carousel on the first slide shape is brought to it; connect's carousel rule no longer takes "Testimonials carousel".
+  `nextTypes(uid)` / `START_TYPES` → `/types` gives each type `suggest` and `start` { page, site }. Panel: New content
+  has a search and "Suggested" (opening / header + footer / what goes after the last piece) above "Every type"; VBlocks
+  takes `suggested` — one-click chips while empty, and Add is a popover with a search (Enter adds the first match),
+  Suggested first.
 
 ## CMS-15 — Docs, website, templates (M)
 - mint-docs: a "Content" guide (types, components, zones, draft & publish, versions, locales, preview) + updates to
