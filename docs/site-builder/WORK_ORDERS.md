@@ -86,7 +86,14 @@ Guide outline (anchors) to create in SB-03 and fill as you go: `#start`,
 `#kinds`, `#publish`, `#history`, `#domains`, `#faq`. Sections not written yet
 are left out of the page (not shown empty).
 
-## Handoff — read this first (last updated 2026-10-20, SB-30 Add script + SB-31 page SEO (AGS VSeo) done, not deployed — SB-14 or SB-10 next)
+## Handoff — read this first (last updated 2026-10-21, SB-32 panel SEO records use the SEO editor; SB-30/31/32 not deployed — SB-14 or SB-10 next)
+
+**2026-10-21 (SB-32, not deployed):** the panel's SEO page (kit model `/seo`)
+is now the AGS SEO editor, not six plain fields. Deploy the backend with
+SB-30/31 first (backend before mint-tenant: the panel's `seo` input needs the
+backend's new `seo` field kind). Nothing to run on prod: each website project
+is upgraded the first time its site is opened (`ensureSeoModel` in kit.ts, via
+`ensureDesignModel`). See SB-32 below.
 
 **2026-10-20 (SB-30/SB-31, not deployed):** deploy order — backend first
 (render answer gains `tags.code` / `tracker.noCode`, track.js learns
@@ -426,6 +433,7 @@ Renderer (`mint-sites`)
 | SB-29 | Every word in Contents: blocks connected when added (lists of cards for card grids, demo words), copies get their own records, builder ⇄ panel edits, list source cards ⇄ model, a new site (or a template's build) opens as its theme's demo with every page and its SEO | backend + mint-builder + mint-sites | M | done 2026-10-07 (backend `7bf30cc0`, mint-builder `bfd18dc`, mint-sites `12623ba`, mint-docs `b89e115`, mint-webpage `4cb33d3`) |
 | SB-30 | Site setup → **Add script**: paste scripts that go on every page, rendered by the site's server (not only by track.js) | backend + mint-sites + mint-tenant + admin | S | done 2026-10-20 (backend `0add6e24`, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
 | SB-31 | Page SEO = the AGS **VSeo** editor (Google preview, Basics / Social / Indexing / Structured data / Sitemap, SEO checks) with every field live on the site | backend + mint-sites + mint-builder + mint-tenant + admin | M | done 2026-10-20 (backend `0add6e24`, mint-builder `4c56caf`, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
+| SB-32 | The panel's **SEO** records (one per page) edited with the same SEO editor — Google preview, Basics / Social / Indexing / Structured data / Sitemap, share preview — and an **SEO** field kind for any model | backend + mint-tenant | M | done 2026-10-21, not deployed |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1431,4 +1439,54 @@ and checks; focus keyword, a keyword chip, schema type and JSON-LD saved from
 the UI reached the database and the live page's head; Site setup's Add script
 tab (opened by the old `?tab=code` link) added a script that appeared once in
 the published page's HTML; Default SEO shows the preview and counters.
+
+## SB-32 — The panel's SEO records use the SEO editor (M) — done 2026-10-21
+
+**Why (the user, 2026-10-21):** after SB-31 the builder had the AGS VSeo, but
+the tenant panel's SEO page (one record per page, kit model `/seo`) was still
+six plain fields — no social / Open Graph tags, no previews. "Our mint tenant
+is not similar to AGS"; screenshot of the AGS SEO editor: "should have these".
+
+**What:**
+- New field kind **`seo`** (backend `FIELD_KINDS`, mint-tenant model builder
+  "SEO" under Sections): one object in the AGS VSeo shape — `metaTitle`,
+  `metaDescription`, `focusKeyword`, `canonicalUrl`, `keywords`, `og*`,
+  `twitter*`, `robots { index, follow, noArchive, noImageIndex, maxSnippet,
+  maxImagePreview }`, `schemaType`, `schemaJson`, `breadcrumbTitle`,
+  `sitemap { include, priority, changeFrequency }`. Mongoose Mixed; settings
+  `schema.type = 'seo'` → the panel's VSeo input. Any model can have one (a
+  blog post, a product), and the public API returns it as is.
+- The kit's SEO model (`PageSeo`, `seo.ts` `PAGE_SEO_FIELDS` / `PAGE_SEO_FORM`)
+  gains `seo`; its form is Page · SEO (the editor) · Tags. The six plain fields
+  stay (the site, public API and templates read them) but leave the form and
+  stop being required.
+- `kitSeoHooks` (dynamicModels, the `/seo` model with an `seo` field): every
+  save keeps both shapes in step — the editor's object changed → the plain
+  fields from it; else a plain field changed (API, template) → that part of the
+  object. `seo.ts`: `vseoToPage` / `pageToVseo` / `flatFromVseo`.
+- kit.ts: `pushSeo` (builder → record) writes the whole object; `pullSeo`
+  (record → builder draft) reads all of it from the object, so a panel edit of
+  the social / indexing / structured data / sitemap fields reaches the page.
+- `ensureSeoModel` (called from `ensureDesignModel`, i.e. whenever a site is
+  opened in the builder, a starter or template is applied, or MCP builds the
+  site): adds the field to older projects, frees title/description, publishes
+  the form once (RouteVersion note `SEO: the SEO editor is the form (SB-32)`;
+  a form the team changes later is theirs), and gives every record its object.
+- mint-tenant VSeo: the Google preview shows the site's own domain (Site setup
+  → canonical domain, else its first domain) and the linked page's name; the
+  Social tab has a **share preview** (image, domain, title, description).
+
+**Files:** backend `library/siteBuilder/{seo,kit}.ts`,
+`library/functions/{dynamicModels,websiteKit,automations,publicRecords}.function.ts`,
+`library/siteBuilder/test/seo.test.ts`, smoke
+`scripts/tenancy-smoke/site-builder-seo-panel.mjs`; mint-tenant
+`components/library/utils/inputs/VSeo/{VSeo,SerpPreview,SocialPreview}.tsx`,
+`app/model-builder/_components/{modelKinds,KindIcon}.ts(x)`.
+
+**Verified:** smoke `site-builder-seo-panel` 17/17 (new project's model + form;
+builder → record object; panel save → plain fields + the page's draft gets
+every field; plain-field API save → object in step; an old-shape project is
+upgraded when its site opens, old records get the object); SB-31's
+`site-builder-seo` 20/20 again; jest `seo.test.ts` 8/8; backend + mint-tenant
+`tsc` clean.
 

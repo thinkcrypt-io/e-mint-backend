@@ -20,6 +20,7 @@ import { ACCESS_KEYS, PRIVACY_OPTIONS, PRIVACY_VALUES, recordAccessMiddleware } 
 import { accessNotifications } from './notifications.function.js';
 import { format as formatFormula, parse as parseFormula } from './formula.function.js';
 import { MODEL_KEY, projectCollection } from './projectIndexes.function.js';
+import { flatFromVseo, pageToVseo } from '../siteBuilder/seo.js';
 
 /**
  * Models built in the model builder (ModelDefinition documents), made real:
@@ -82,6 +83,9 @@ export const FIELD_KINDS = [
 	'blocks',
 	// A credential kept for someone: stored as text, shown as dots in the panel (click to see); never in history.
 	'password',
+	// A page's search and social details as one object, edited with the panel's SEO editor (the AGS VSeo):
+	// meta title and description, Open Graph / Twitter, robots, structured data, sitemap (site-builder SB-32).
+	'seo',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -134,7 +138,7 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password', 'seo'];
 /** Kinds worked out by a formula, never typed: a number and a date. */
 export const FORMULA_KINDS: FieldKind[] = ['formula', 'dateformula'];
 /** Kinds holding a date — what a date formula reads. */
@@ -631,6 +635,9 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				// `secret` keeps the value out of history (secretFields.function.ts).
 				p = { type: String, secret: true };
 				break;
+			case 'seo':
+				p = { type: Schema.Types.Mixed, default: undefined };
+				break;
 		}
 
 		// A single value limited to a list: blank means "not set", not a value outside it.
@@ -784,6 +791,39 @@ const singleHooks = (schema: Schema, def: ModelDef) => {
 	});
 };
 
+/**
+ * The website kit's SEO records (site-builder SB-32): the panel edits them with
+ * the SEO editor (`seo`, the AGS VSeo shape), while the site, the public API
+ * and templates read the six plain fields beside it. Every save keeps the two
+ * in step — the editor's object wins when it changed, else the plain fields
+ * (a record made through the API or a template) fill it in.
+ */
+const FLAT_SEO = ['title', 'description', 'image', 'keywords', 'canonical', 'noIndex'];
+const kitSeoHooks = (schema: Schema, def: ModelDef) => {
+	if (def.route !== 'seo' || !def.fields.some(f => f.key === 'seo' && f.kind === 'seo')) return;
+	const own = FLAT_SEO.filter(k => def.fields.some(f => f.key === k));
+	schema.pre('validate', function (this: any) {
+		const seo = this.get('seo');
+		const hasSeo = !!seo && typeof seo === 'object' && !Array.isArray(seo);
+		if (hasSeo && (this.isNew || this.isModified('seo'))) {
+			const flat: any = flatFromVseo(seo);
+			for (const k of own) this.set(k, flat[k]);
+			return;
+		}
+		if (!hasSeo || own.some(k => this.isModified(k))) {
+			const page: any = Object.fromEntries(own.map(k => [k, this.get(k)]));
+			const next: any = pageToVseo({ ...page, image: typeof page.image === 'string' ? page.image : page.image?.url || '' });
+			// Only the six plain fields' parts: the rest of an existing object stays as it was.
+			this.set(
+				'seo',
+				hasSeo
+					? { ...seo, metaTitle: next.metaTitle, metaDescription: next.metaDescription, ogImage: next.ogImage, keywords: next.keywords, canonicalUrl: next.canonicalUrl, robots: { ...(seo.robots || {}), index: next.robots.index } }
+					: next
+			);
+		}
+	});
+};
+
 export const buildSchema = (input: ModelDef) => {
 	const def = expandComponents(input);
 	const paths = pathsOf(def.fields);
@@ -824,6 +864,7 @@ export const buildSchema = (input: ModelDef) => {
 	uidHooks(schema, def);
 	blockTypes(schema, def);
 	if (def.kind === 'single') singleHooks(schema, def);
+	kitSeoHooks(schema, def);
 
 	if (restricted) {
 		schema.index({ addedBy: 1 });
@@ -1134,6 +1175,14 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				s.schema.type = 'password';
 				s.schema.tableType = 'password';
 				s.schema.viewType = 'password';
+				break;
+			case 'seo':
+				// The SEO editor: Google preview, then Basics / Social / Indexing / Structured data / Sitemap.
+				Object.assign(s, { type: 'object', search: false });
+				s.schema.type = 'seo';
+				s.schema.viewType = 'seo';
+				s.schema.default = false;
+				s.schema.displayInTable = false;
 				break;
 		}
 

@@ -1,5 +1,5 @@
 import { validatePageFields } from '../validate';
-import { EMPTY_SEO, parseSchemaJson } from '../seo';
+import { EMPTY_SEO, flatFromVseo, pageToVseo, parseSchemaJson, vseoToPage } from '../seo';
 import { sitemapXml } from '../../functions/siteConfig.function';
 
 // SB-31: a page's SEO is the AGS VSeo's — these are the fields past the first six.
@@ -56,5 +56,48 @@ describe('page SEO (SB-31)', () => {
 		const xml = sitemapXml('https://a.com', [{ path: '/', priority: 1, changeFrequency: 'weekly' }, { path: '/x', priority: 5, changeFrequency: 'often' }]);
 		expect(xml).toContain('<loc>https://a.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority>');
 		expect(xml).toContain('<loc>https://a.com/x</loc></url>');
+	});
+});
+
+// SB-32: the panel's SEO records are edited with the SEO editor (AGS VSeo shape) — the two shapes turn into each other.
+describe('the panel SEO editor’s object (SB-32)', () => {
+	const page = {
+		...EMPTY_SEO,
+		title: 'Study in the UK | AGS',
+		description: 'Counselling, applications and visas.',
+		image: 'https://cdn.example.com/og.jpg',
+		keywords: ['uk', 'visa'],
+		canonical: 'https://ags.test/',
+		noIndex: true,
+		ogTitle: 'Share title',
+		ogType: 'article',
+		twitterCard: 'summary',
+		noFollow: true,
+		noArchive: true,
+		maxSnippet: 120,
+		maxImagePreview: 'standard',
+		schemaType: 'LocalBusiness',
+		schemaJson: '{ "areaServed": "BD" }',
+		breadcrumbTitle: 'Home',
+		sitemapInclude: false,
+		sitemapPriority: 0.9,
+		sitemapChangeFrequency: 'daily',
+	};
+
+	it('round-trips a page’s SEO through the editor’s object', () => {
+		expect(vseoToPage(pageToVseo(page))).toEqual(page);
+	});
+
+	it('reads the editor’s robots and sitemap groups', () => {
+		const v = pageToVseo(page);
+		expect(v.robots).toMatchObject({ index: false, follow: false, noArchive: true, maxSnippet: 120 });
+		expect(v.sitemap).toEqual({ include: false, priority: 0.9, changeFrequency: 'daily' });
+	});
+
+	it('fills the record’s six plain fields from it, and falls back on bad or missing values', () => {
+		expect(flatFromVseo(pageToVseo(page))).toEqual({ title: page.title, description: page.description, image: page.image, keywords: page.keywords, canonical: page.canonical, noIndex: true });
+		const empty = vseoToPage({ ogType: 'video', twitterCard: 'nope', robots: { maxImagePreview: 'huge' }, ogImage: { url: 'https://cdn.example.com/a.jpg' } });
+		expect(empty).toMatchObject({ ogType: '', twitterCard: '', maxImagePreview: 'large', image: 'https://cdn.example.com/a.jpg', noIndex: false, sitemapInclude: true, schemaType: 'auto' });
+		expect(vseoToPage(null)).toEqual({ ...EMPTY_SEO });
 	});
 });

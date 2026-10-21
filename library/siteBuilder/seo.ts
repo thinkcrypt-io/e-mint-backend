@@ -99,3 +99,112 @@ export const parseSchemaJson = (raw: unknown) => {
 		return null;
 	}
 };
+
+/* ------------------------------------------------ the panel's SEO editor */
+
+/**
+ * The panel's SEO editor (the AGS VSeo, field kind `seo`) keeps one object
+ * shaped the AGS way — metaTitle, ogImage, robots { index, follow… },
+ * sitemap { include… }. The kit's SEO records (SB-32) hold it as `seo`, beside
+ * the six plain fields the site, public API and templates read. These two turn
+ * one shape into the other; empty values stay empty (= use the fallback).
+ */
+const s = (v: unknown) => (typeof v === 'string' ? v : '');
+const imageUrl = (v: any) => (typeof v === 'string' ? v : s(v?.url));
+
+/** A VSeo object as a page's SEO (EMPTY_SEO's keys). */
+export const vseoToPage = (v: any) => {
+	const o = isObj(v) ? v : {};
+	const robots = isObj(o.robots) ? o.robots : {};
+	const map = isObj(o.sitemap) ? o.sitemap : {};
+	return {
+		title: s(o.metaTitle),
+		description: s(o.metaDescription),
+		image: imageUrl(o.ogImage),
+		keywords: Array.isArray(o.keywords) ? o.keywords.filter(str) : [],
+		canonical: s(o.canonicalUrl),
+		noIndex: robots.index === false,
+		focusKeyword: s(o.focusKeyword),
+		ogTitle: s(o.ogTitle),
+		ogDescription: s(o.ogDescription),
+		ogType: OG_TYPES.includes(o.ogType) ? o.ogType : '',
+		ogImageAlt: s(o.ogImageAlt),
+		twitterCard: TWITTER_CARDS.includes(o.twitterCard) ? o.twitterCard : '',
+		twitterTitle: s(o.twitterTitle),
+		twitterDescription: s(o.twitterDescription),
+		twitterImage: imageUrl(o.twitterImage),
+		noFollow: robots.follow === false,
+		noArchive: robots.noArchive === true,
+		noImageIndex: robots.noImageIndex === true,
+		maxSnippet: Number.isInteger(robots.maxSnippet) ? robots.maxSnippet : EMPTY_SEO.maxSnippet,
+		maxImagePreview: IMAGE_PREVIEWS.includes(robots.maxImagePreview) ? robots.maxImagePreview : EMPTY_SEO.maxImagePreview,
+		schemaType: s(o.schemaType) || EMPTY_SEO.schemaType,
+		schemaJson: s(o.schemaJson),
+		breadcrumbTitle: s(o.breadcrumbTitle),
+		sitemapInclude: map.include !== false,
+		sitemapPriority: typeof map.priority === 'number' ? map.priority : EMPTY_SEO.sitemapPriority,
+		sitemapChangeFrequency: CHANGE_FREQUENCIES.includes(map.changeFrequency) ? map.changeFrequency : EMPTY_SEO.sitemapChangeFrequency,
+	};
+};
+
+/** A page's SEO as a VSeo object, for the panel's editor. */
+export const pageToVseo = (p: any) => {
+	const seo = { ...EMPTY_SEO, ...(isObj(p) ? p : {}) };
+	return {
+		metaTitle: s(seo.title),
+		metaDescription: s(seo.description),
+		focusKeyword: s(seo.focusKeyword),
+		canonicalUrl: s(seo.canonical),
+		keywords: Array.isArray(seo.keywords) ? seo.keywords : [],
+		ogTitle: s(seo.ogTitle),
+		ogDescription: s(seo.ogDescription),
+		ogType: s(seo.ogType),
+		ogImage: s(seo.image),
+		ogImageAlt: s(seo.ogImageAlt),
+		twitterCard: s(seo.twitterCard),
+		twitterTitle: s(seo.twitterTitle),
+		twitterDescription: s(seo.twitterDescription),
+		twitterImage: s(seo.twitterImage),
+		robots: {
+			index: !seo.noIndex,
+			follow: !seo.noFollow,
+			noArchive: !!seo.noArchive,
+			noImageIndex: !!seo.noImageIndex,
+			maxSnippet: seo.maxSnippet,
+			maxImagePreview: seo.maxImagePreview,
+		},
+		schemaType: s(seo.schemaType) || 'auto',
+		schemaJson: s(seo.schemaJson),
+		breadcrumbTitle: s(seo.breadcrumbTitle),
+		sitemap: { include: seo.sitemapInclude !== false, priority: seo.sitemapPriority, changeFrequency: seo.sitemapChangeFrequency },
+	};
+};
+
+/** The record's six plain fields, from its VSeo object (what a panel save writes through). */
+export const flatFromVseo = (v: any) => {
+	const p = vseoToPage(v);
+	return { title: p.title, description: p.description, image: p.image, keywords: p.keywords, canonical: p.canonical, noIndex: p.noIndex };
+};
+
+/**
+ * The kit's SEO model's fields (SB-32): the SEO editor's object (`seo`) is what
+ * the panel edits; the six plain fields are filled from it on every save
+ * (dynamicModels kitSeoHooks) for the site, the public API and templates.
+ */
+export const PAGE_SEO_FIELDS = () => [
+	{ key: 'page', label: 'Page', kind: 'reference', ref: 'WebPage', required: true },
+	{ key: 'seo', label: 'SEO', kind: 'seo' },
+	{ key: 'title', label: 'Title', kind: 'text', max: 120, searchable: true, helper: 'From the SEO editor’s meta title' },
+	{ key: 'description', label: 'Description', kind: 'textarea', max: 320, helper: 'From the SEO editor’s meta description' },
+	{ key: 'image', label: 'Share image', kind: 'image', helper: 'From the SEO editor’s share image' },
+	{ key: 'keywords', label: 'Keywords', kind: 'tags' },
+	{ key: 'tags', label: 'Tags', kind: 'tags' },
+	{ key: 'canonical', label: 'Canonical URL', kind: 'url' },
+	{ key: 'noIndex', label: 'Hide from search engines', kind: 'boolean', default: false },
+];
+
+export const PAGE_SEO_FORM = () => [
+	{ sectionTitle: 'Page', fields: ['page'] },
+	{ sectionTitle: 'SEO', fields: ['seo'] },
+	{ sectionTitle: 'Tags', fields: ['tags'] },
+];

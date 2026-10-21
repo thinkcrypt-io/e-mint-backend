@@ -5,6 +5,7 @@ import { runInScope } from './tenantScope.function.js';
 import { syncDynamicModels } from './dynamicModels.function.js';
 import { projectHooks } from './projectHooks.function.js';
 import { SITE_DESIGN_STEP } from '../siteBuilder/kit.js';
+import { PAGE_SEO_FIELDS, PAGE_SEO_FORM } from '../siteBuilder/seo.js';
 import { ensureTypedContents } from '../siteBuilder/contentTypes.js';
 
 /**
@@ -63,22 +64,9 @@ export const WEBSITE_KIT = (category: string) => ({
 			description: 'Search and share details for each page',
 			buttonTitle: 'Add SEO',
 			displayField: 'title',
-			rationale: 'Per-page title, description, image and keywords (AGS Seo), linked to the page they describe.',
-			fields: [
-				{ key: 'page', label: 'Page', kind: 'reference', ref: 'WebPage', required: true },
-				{ key: 'title', label: 'Title', kind: 'text', required: true, max: 120, searchable: true },
-				{ key: 'description', label: 'Description', kind: 'textarea', required: true, max: 320 },
-				{ key: 'image', label: 'Share image', kind: 'image' },
-				{ key: 'keywords', label: 'Keywords', kind: 'tags' },
-				{ key: 'tags', label: 'Tags', kind: 'tags' },
-				{ key: 'canonical', label: 'Canonical URL', kind: 'url' },
-				{ key: 'noIndex', label: 'Hide from search engines', kind: 'boolean', default: false },
-			],
-			form: [
-				{ sectionTitle: 'Page', fields: ['page'] },
-				{ sectionTitle: 'Search & share', fields: ['title', 'description', 'image'] },
-				{ sectionTitle: 'More', fields: ['keywords', 'tags', ['canonical', 'noIndex']] },
-			],
+			rationale: 'Per-page SEO edited with the AGS SEO editor, linked to the page it describes.',
+			fields: PAGE_SEO_FIELDS(),
+			form: PAGE_SEO_FORM(),
 			table: ['page', 'title', 'noIndex'],
 			filters: ['page', 'noIndex'],
 		},

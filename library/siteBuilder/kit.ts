@@ -5,6 +5,8 @@ import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import { compiledModel, syncDynamicModels } from '../functions/dynamicModels.function.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
 import { updateModelCore } from '../controllers/builder/models.controller.js';
+import { publishConfigPatch } from '../controllers/builder/builder.controller.js';
+import { RouteVersion } from '../models/builder/_index.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { refPopulates, shape } from '../functions/publicRecords.function.js';
 import { liveFind, publishRecord, statusOf } from '../functions/drafts.function.js';
@@ -12,6 +14,7 @@ import { afterPublish } from '../functions/publishEvents.function.js';
 import { ownRecordsOf } from '../functions/projectIndexes.function.js';
 import { loadManifest } from './manifest.js';
 import { EMPTY_SEO } from './site.js';
+import { PAGE_SEO_FIELDS, PAGE_SEO_FORM, pageToVseo, vseoToPage } from './seo.js';
 
 /**
  * The builder site in the project's own models (docs/site-builder D27, SB-09).
@@ -85,8 +88,53 @@ export const SITE_DESIGN_STEP = () => ({
 	filters: ['theme'],
 });
 
+/**
+ * The SEO model with the panel's SEO editor (SB-32), for projects made before
+ * it: adds the `seo` field, makes the editor the form, frees the plain title
+ * and description (the editor fills them), and gives every record its object.
+ */
+export const ensureSeoModel = async (req: any) => {
+	const have: any = await ModelDefinition.findOne({ route: KIT_ROUTES.seo, active: { $ne: false } }).lean();
+	if (!have) return;
+	if (have.fields.some((f: any) => f.key === 'seo')) return seoForm(req);
+	// Only the kit's own model: a project's own /seo model of another shape is left alone.
+	const want = PAGE_SEO_FIELDS();
+	if (!['page', 'title', 'description'].every(k => have.fields.some((f: any) => f.key === k))) return;
+	const fields = [
+		...have.fields.slice(0, 1),
+		want.find(f => f.key === 'seo'),
+		...have.fields.slice(1).map((f: any) => {
+			const kit = want.find(w => w.key === f.key);
+			return kit && ['title', 'description', 'image'].includes(f.key) ? { ...f, required: false, helper: kit.helper } : f;
+		}),
+	];
+	const { _id, name, route, sidebar, collectionName, createdAt, updatedAt, version, __v, organization, project, ...rest } = have;
+	await updateModelCore(req, have._id, { ...rest, fields }, { note: 'SEO: the SEO editor (SB-32)' });
+	await syncDynamicModels({ app: req?.app, force: true });
+	await seoForm(req);
+	const kit = await kitModel(KIT_ROUTES.seo);
+	if (!kit) return;
+	const recs: any[] = await kit.Model.find({ seo: { $exists: false } }).lean();
+	for (const rec of recs)
+		await kit.Model.updateOne({ _id: rec._id }, { $set: { seo: pageToVseo({ ...EMPTY_SEO, ...seoFromRecord(rec) }) } }, { timestamps: false, strict: false });
+};
+
+/**
+ * The SEO page's form is the editor (SB-32): the page, the SEO editor, tags —
+ * the plain fields stay out of it (the editor fills them; a laid-out kit form
+ * gets every field appended). Published once per project — a form the team
+ * changes after that is theirs.
+ */
+const SEO_FORM_NOTE = 'SEO: the SEO editor is the form (SB-32)';
+const seoForm = async (req: any) => {
+	if (await RouteVersion.exists({ route: KIT_ROUTES.seo, kind: 'config', note: SEO_FORM_NOTE })) return;
+	await publishConfigPatch(req, KIT_ROUTES.seo, data => ({ ...data, form: PAGE_SEO_FORM() }), SEO_FORM_NOTE).catch((e: any) => console.error('seo form:', e?.message));
+};
+
 /** Adds the Site design model to a website project that doesn't have it (projects made before it existed). */
 export const ensureDesignModel = async (req: any) => {
+	// The SEO model's editor rides along: every caller is a website project opening its site (SB-32).
+	await ensureSeoModel(req).catch((e: any) => console.error('seo model:', e?.message));
 	const have: any = await ModelDefinition.findOne({ route: KIT_ROUTES.design, active: { $ne: false } }).lean();
 	if (have) {
 		// One record, the site's look: a single type (docs/cms D2, CMS-06c) — its page opens the record, not a table.
@@ -246,10 +294,16 @@ export const pushPage = async (page: any) => {
 
 const SEO_KEYS = ['title', 'description', 'image', 'keywords', 'canonical', 'noIndex'] as const;
 
-const seoFromRecord = (rec: any) => ({
-	...Object.fromEntries(SEO_KEYS.map(k => [k, (EMPTY_SEO as any)[k]])),
-	...Object.fromEntries(SEO_KEYS.filter(k => rec?.[k] !== undefined && rec?.[k] !== null).map(k => [k, rec[k]])),
-});
+const hasSeoObject = (rec: any) => !!rec?.seo && typeof rec.seo === 'object' && !Array.isArray(rec.seo);
+
+/** A record's SEO as a page's: all of it from the SEO editor's object (SB-32), else the six plain fields. */
+const seoFromRecord = (rec: any) => {
+	const flat = {
+		...Object.fromEntries(SEO_KEYS.map(k => [k, (EMPTY_SEO as any)[k]])),
+		...Object.fromEntries(SEO_KEYS.filter(k => rec?.[k] !== undefined && rec?.[k] !== null).map(k => [k, rec[k]])),
+	};
+	return hasSeoObject(rec) ? { ...vseoToPage(rec.seo), ...flat } : flat;
+};
 
 /** Writes a page's SEO into its SEO record (made if there's none). */
 export const pushSeo = async (page: any, seo: any) => {
@@ -257,6 +311,8 @@ export const pushSeo = async (page: any, seo: any) => {
 	if (!kit || !kitPage) return;
 	const fields: any = { page: kitPage, ...Object.fromEntries(SEO_KEYS.filter(k => seo?.[k] !== undefined && has(kit, k)).map(k => [k, seo[k]])) };
 	if (!fields.title) fields.title = page.name;
+	// The whole of it for the panel's SEO editor (SB-32) — social, indexing, structured data, sitemap.
+	if (has(kit, 'seo')) fields.seo = pageToVseo({ ...EMPTY_SEO, ...(seo || {}), title: fields.title });
 	const now = new Date();
 	// Written without the form's checks: a page may have no description yet.
 	await kit.Model.updateOne({ page: kitPage, archivedAt: null }, { $set: { ...fields, updatedAt: now }, $setOnInsert: { createdAt: now } }, { upsert: true, timestamps: false, strict: false });
@@ -278,7 +334,8 @@ export const pullSeo = async (pages: any[]) => {
 			out.push(p);
 			continue;
 		}
-		// The record holds the first six; the page's other SEO (SB-31) stays as it was.
+		// The record holds all of it in its SEO editor's object (SB-32); an older one only the first six,
+		// and the page's other SEO (SB-31) stays as it was.
 		const saved = await SitePage.findOneAndUpdate(
 			{ _id: p._id },
 			{ $set: { 'draft.seo': { ...EMPTY_SEO, ...(p.draft?.seo || {}), ...seoFromRecord(rec) }, 'draft.seoSyncedAt': rec.updatedAt }, $inc: { 'draft.rev': 1 } },

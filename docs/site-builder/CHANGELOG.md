@@ -2,6 +2,24 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-32 — The panel's SEO records use the SEO editor (2026-10-21)
+
+**What:** the tenant panel's SEO page (one record per site page) is the AGS
+SEO editor instead of six plain fields: Google preview with the site's own
+domain, counters, Basics · Social · Indexing · Structured data · Sitemap, a
+share preview on Social, SEO checks. It's a new field kind, **SEO**, that any
+model can use. A save keeps the record's plain fields (read by the site, the
+public API and templates) in step, and the page's SEO in the builder takes all
+of it. Older website projects are upgraded the first time their site opens.
+
+**Files:** backend `library/siteBuilder/{seo,kit}.ts`,
+`library/functions/{dynamicModels,websiteKit,automations,publicRecords}.function.ts`,
+jest `seo.test.ts`, smoke `site-builder-seo-panel.mjs`; mint-tenant VSeo
+(`SerpPreview`, new `SocialPreview`), model builder kinds.
+
+**Verified:** smoke `site-builder-seo-panel` 17/17, `site-builder-seo` 20/20,
+jest 8/8, tsc — see WORK_ORDERS SB-32.
+
 ## SB-30 + SB-31 — Add script; page SEO like the AGS VSeo (2026-10-20)
 
 **What:** Site setup's *Code* tab is now **Add script** (`?tab=scripts`, old
