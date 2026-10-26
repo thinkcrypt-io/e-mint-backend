@@ -61,7 +61,7 @@ const headTags = (apiBase: string, project: any, doc: any) => {
 	const verification = { google: t.googleVerification || '', bing: t.bingVerification || '' };
 	const code = codeOf(doc);
 	const anything =
-		t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification', 'head', 'bodyStart', 'bodyEnd'].includes(k));
+		t.mintAnalytics !== false || Object.entries(t).some(([k, v]) => typeof v === 'string' && v && !['favicon', 'googleVerification', 'bingVerification', 'head', 'bodyStart', 'bodyEnd', 'visitorIp'].includes(k));
 	// The project key names the project to track.js (docs/api-builder D14).
 	const tracker = anything ? { src: `${apiBase}/public/track.js`, key: project.apiKey || '', noCode: true } : null;
 	const parts: string[] = [];

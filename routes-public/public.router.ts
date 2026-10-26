@@ -20,11 +20,10 @@ import { dataToSettings } from '../library/functions/routeRegistry.function.js';
 import { applyFormulasLinked, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
 import { recalculateDependents } from '../library/functions/formulaDependents.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
-import WebsiteEvent, { DEVICE_TYPES, EVENT_TYPES } from '../library/models/tenancy/websiteEvent.model.js';
-import { clientIp, locate, parseUserAgent } from '../library/functions/sessions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
+import { recordBatch } from '../library/functions/visitorAnalytics.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
 import { fireWebhooks } from '../library/functions/webhooks.function.js';
 import { fireAutomations } from '../library/functions/automations.function.js';
@@ -485,23 +484,6 @@ const fromOwnSite = (req: any) => {
 	});
 };
 
-const clip = (v: any, n: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined);
-const hostOf = (url?: string) => {
-	try {
-		return url ? new URL(url).host.toLowerCase().replace(/^www\./, '') : '';
-	} catch {
-		return '';
-	}
-};
-/** A custom event's properties: a flat object of short values, at most 20. */
-const smallProps = (p: any) => {
-	if (!p || typeof p !== 'object' || Array.isArray(p)) return undefined;
-	const out: any = {};
-	for (const [k, v] of Object.entries(p).slice(0, 20))
-		if (['string', 'number', 'boolean'].includes(typeof v)) out[String(k).slice(0, 40)] = typeof v === 'string' ? v.slice(0, 200) : v;
-	return Object.keys(out).length ? out : undefined;
-};
-
 router.post(
 	'/track',
 	trackLimit,
@@ -520,41 +502,9 @@ router.post(
 				return { ok: false };
 			}
 		}
-		const events = Array.isArray(body?.events) ? body.events.slice(0, 20) : [];
-		if (!events.length) return { ok: true };
-		const { browser, os, deviceType } = parseUserAgent(ua);
-		const place: any = await locate(clientIp(req)).catch(() => null);
-		const ownHost = String(req.headers.origin ? hostOf(String(req.headers.origin)) : '');
-		const docs = events
-			.filter((e: any) => EVENT_TYPES.includes(e?.type))
-			.map((e: any) => {
-				const refHost = hostOf(e.referrer);
-				return {
-					type: e.type,
-					name: clip(e.name, 120),
-					path: clip(e.path, 500),
-					title: clip(e.title, 300),
-					referrer: clip(e.referrer, 1000),
-					referrerHost: refHost && refHost !== ownHost ? refHost : '',
-					utmSource: clip(e.utmSource, 120),
-					utmMedium: clip(e.utmMedium, 120),
-					utmCampaign: clip(e.utmCampaign, 120),
-					eventId: e.type === 'pageview' ? clip(e.eventId, 64) : undefined,
-					sessionId: clip(body.sessionId, 64),
-					visitorId: clip(body.visitorId, 64),
-					device: (DEVICE_TYPES as readonly string[]).includes(deviceType) ? deviceType : 'other',
-					os: clip(os, 40),
-					browser: clip(browser, 40),
-					country: place && !place.local ? clip(place.country, 80) : undefined,
-					countryCode: place && !place.local ? clip(place.countryCode, 4) : undefined,
-					city: place && !place.local ? clip(place.city, 80) : undefined,
-					...(e.type === 'click' && e.element && {
-						element: { tag: clip(e.element.tag, 20), text: clip(e.element.text, 200), href: clip(e.element.href, 1000), id: clip(e.element.id, 120) },
-					}),
-					...(e.type === 'event' && { props: smallProps(e.props) }),
-				};
-			});
-		if (docs.length) await WebsiteEvent.insertMany(docs);
+		if (!Array.isArray(body?.events) || !body.events.length) return { ok: true };
+		// Who, where, on what, from where (WO-56) — visitorAnalytics.function.ts.
+		const docs = await recordBatch(req, body);
 		// Page views to Meta's Conversions API too, when it's on (WO-38).
 		forwardPageviews(req.project, visitorOf(req, body), docs.filter((d: any) => d.type === 'pageview'));
 		return { ok: true, recorded: docs.length };

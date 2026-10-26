@@ -2007,3 +2007,14 @@ Decisions D14–D17 (README).
   `f1b5497`.
 - Verified: browser pane against a private backend — the page, tabs, phone width; the plain-HTML snippet's code read the
   site, a page by slug and its SEO cross-origin. `tsc` clean in mint-tenant and mint-docs. Not deployed.
+
+## 2026-10-26 — WO-56 Visitor analytics
+- The user asked for richer tenant analytics: IP, ISP and location, which user visited which page in order, and where
+  visits come from (Google, Meta…).
+- backend: tracker sends screen/language/timezone, customer token or identify(), ad click ids, entry page, time on page
+  and scroll; `visitorAnalytics.function.ts` records it (channel/source, masked IP option, ISP via ipwho.is) and keeps
+  `WebsiteVisitor` summaries; analytics router `/visitors`, `/visitors/:id`, `/live`, new `/top` dims, avgDuration;
+  `tracking.visitorIp` setting. mint-tenant: Analytics tabs Overview / Visitors / Live, a visitor's journey page, the
+  IP setting card. mint-docs: analytics guide sections. website: features + changelog.
+- Verified: smoke `visitor-analytics.mjs` 41/41 (private backend :5073, real ipwho.is lookups); headless Chrome
+  screenshots of every new screen at 1280 and 390 wide. `tsc` clean in backend, mint-tenant, mint-docs. Not deployed.

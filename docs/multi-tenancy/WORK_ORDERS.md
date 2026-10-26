@@ -8,6 +8,15 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-20)
 
+**2026-10-26 — WO-56 Visitor analytics.** A website's Analytics has **Overview · Visitors · Live** tabs and a page per
+visitor (`/analytics/visitors/<visitorId>`): IP (Site setup → Tracking → Visitor IP addresses: whole / masked / off),
+ISP + ASN + region + timezone (ipwho.is via `locate()`), screen, language, device model (ua-parser-js), ad click ids
+and the visit's channel/source (GA4-style, on the visit's `entry` page view), time on page + scroll, and who they are
+(mint.js customer token, checked; or `MintAnalytics.identify`). New `WebsiteVisitor` model (per-visitor summary,
+upserted per batch), `visitorAnalytics.function.ts` (track work moved out of public.router), analytics router
+`/visitors`, `/visitors/:id`, `/live`, ten new `/top` dims. Smoke `visitor-analytics.mjs` (41 checks, needs the
+internet). Needs the backend deploy (track.js + endpoints); older events have none of the new fields.
+
 **2026-10-26 — WO-55 Website setup page.** Website projects have **Site → Website setup** (`/website-setup`, mint-tenant
 only; Build permission): the site API address + project key, then per framework (Plain HTML / React (Vite) / Next.js,
 `?fw=`) the settings file, the site-API helper, a page by slug, track.js and SEO (page SEO, robots.txt + sitemap.xml
@@ -1386,6 +1395,37 @@ with different frameworks, i need for react and plain html website … how to se
 - Verified on a private backend (:5081) + mint-tenant (:3083): the menu entry, all three tabs, the table, 375px (no
   sideways scroll); the plain-HTML `site.js` snippet run cross-origin read /site, the menu, a published page's "hero"
   piece by slug and its SEO; robots.txt and sitemap.xml addresses answer 200.
+
+## WO-56 — Visitor analytics: who, where, from where, page by page (L) — done
+
+The user (2026-10-26): "on the tenant analytics we need to be able to track more info, like ip, and the roadmap of user
+which user visited what page, their isp location meta google whatever info we can gather to make analytics advance".
+
+- Tracker (`routes-public/track.ts`): batches carry screen, language, timezone, the mint.js customer token
+  (`mint:<key>:token`) and `MintAnalytics.identify(id, {name, email})` / `reset()` (`mint:<key>:user`); a visit's first
+  page view is `entry: true` with `utm_term`/`utm_content` and the first ad click id param (gclid, gbraid, wbraid,
+  dclid, msclkid, fbclid, ttclid, li_fat_id, twclid, ScCid, epik); `engagement` events (eventId, visible ms, scroll %)
+  when a page is left/hidden.
+- backend `library/functions/visitorAnalytics.function.ts`: `recordBatch` (the track handler's work), `channelOf`
+  (Paid search / Paid social / Organic search / Social / Email / Referral / Paid other / Direct + source; fbclid is
+  Social unless the UTM medium is paid), `maskIp`, engagement `$max` onto the page view, customer id from the token
+  (jwt only — no account lookups per batch), `WebsiteVisitor` upsert (+ `first` set once from an entry).
+  `WebsiteEvent` gains ip, isp, org, asn, region, timezone, deviceModel, language, screen, utmTerm/Content, clickId,
+  entry, channel, source, eventId (was dropped before), duration, scroll, customer; indexes visitorId, eventId.
+  `locate()` asks ipwho.is for connection + timezone + lat/lng too (admin sessions ignore the extras).
+  `WebsiteSettings.tracking.visitorIp` full|masked|off (Joi, trackingOf; render.ts ignores it when deciding the tracker).
+- `routes-tenant/analytics.router.ts`: summary `avgDuration`; `/top` dims channels, sources, campaigns, entries (per
+  visit), cities (with code), regions, isps, languages, screens, models; paths carry `avgDuration`;
+  `/visitors?q&channel&country&known&sort&page&limit`, `/visitors/:visitorId` (visits newest first with steps; 2,000
+  events max), `/live` (last 5 min).
+- mint-tenant: `app/analytics/page.tsx` (tabs in `?tab=`, Today range), `_components/{Overview,Visitors,Live,format}`,
+  `visitors/[visitorId]/page.tsx`; Site setup → Tracking "Visitor IP addresses" card; tenantApi types + 3 hooks;
+  GuideLink anchors visitors, journey, live-visitors, traffic-sources.
+- Docs: mint-docs `analytics` (#traffic-sources, #visitors, #journey, #live-visitors, #identify, privacy rewritten).
+- Verified: `visitor-analytics.mjs` 41/41 on a private backend (:5073); headless Chrome on mint-tenant :3075 — Overview,
+  Visitors, a visitor's journey (1280 and 390 wide, no sideways scroll), the IP card. Not deployed.
+- Not done / follow-ups: no bot list beyond the UA regex; ipwho.is free tier has a rate limit — set `GEOIP_URL` to a
+  paid service with the same answer shape if visits grow; no export; Live polls (no websockets).
 
 ## CMS (2026-10-15) — agreed, engine first
 

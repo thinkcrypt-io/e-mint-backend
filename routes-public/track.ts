@@ -9,6 +9,13 @@
  * `MintAnalytics.track(name, props)`. No cookies: a random visitor id in
  * localStorage, a session id in sessionStorage (ends with the tab). Sent in
  * small batches with navigator.sendBeacon (text/plain, so no preflight).
+ *
+ * WO-56: each batch also says the screen size, language and timezone, and the
+ * customer signed in through mint.js (their token, checked on the server) or
+ * who the site named with `MintAnalytics.identify(id, { name, email })`. A
+ * visit's first page view is its entry (the server sorts its channel from the
+ * referrer, UTMs and ad click id — gclid, fbclid, msclkid, ttclid…), and each
+ * page's visible time and scroll depth go in when it's left.
  * `data-no-track` on the script, or Do Not Track, turns the counting off.
  *
  * It also puts the website's tags on the page (WO-34, WO-38) — Google
@@ -169,8 +176,12 @@ export const TRACK_JS = `(function () {
 	function stored(store, key) {
 		try { var v = store.getItem(key); if (!v) { v = id(); store.setItem(key, v); } return v; } catch (e) { return id(); }
 	}
+	var newSession = (function () { try { return !sessionStorage.getItem('mint:sid'); } catch (e) { return true; } })();
 	var visitorId = stored(localStorage, 'mint:vid');
 	var sessionId = stored(sessionStorage, 'mint:sid');
+	var USER_KEY = 'mint:' + project + ':user';
+	var user = null;
+	try { user = JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch (e) {}
 	var queue = [];
 	var timer = null;
 
@@ -182,9 +193,23 @@ export const TRACK_JS = `(function () {
 		try { var click = new URLSearchParams(location.search).get('fbclid'); return click ? 'fb.1.' + Date.now() + '.' + click : undefined; } catch (e) { return undefined; }
 	}
 	function utm(name) { try { return new URLSearchParams(location.search).get(name) || undefined; } catch (e) { return undefined; } }
+	// The ad click id in the address, by name — the server knows which network each is.
+	var CLICKS = ['gclid', 'gbraid', 'wbraid', 'dclid', 'msclkid', 'fbclid', 'ttclid', 'li_fat_id', 'twclid', 'ScCid', 'epik'];
+	function clickId() {
+		try { var q = new URLSearchParams(location.search); for (var i = 0; i < CLICKS.length; i++) if (q.get(CLICKS[i])) return CLICKS[i]; } catch (e) {}
+		return undefined;
+	}
+	function timezone() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return undefined; } }
+	// The customer signed in through mint.js: its token, which the server checks.
+	function token() { try { return localStorage.getItem('mint:' + project + ':token') || undefined; } catch (e) { return undefined; } }
 	function flush() {
 		if (off || !queue.length) return;
-		var body = JSON.stringify({ visitorId: visitorId, sessionId: sessionId, fbp: cookie('_fbp'), fbc: fbc(), events: queue.splice(0, 20) });
+		var body = JSON.stringify({
+			visitorId: visitorId, sessionId: sessionId, fbp: cookie('_fbp'), fbc: fbc(),
+			screen: window.screen ? screen.width + 'x' + screen.height : undefined, language: navigator.language, timezone: timezone(),
+			token: token(), user: user || undefined,
+			events: queue.splice(0, 20),
+		});
 		if (navigator.sendBeacon && navigator.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' }))) return;
 		fetch(endpoint, { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(function () {});
 	}
@@ -197,12 +222,36 @@ export const TRACK_JS = `(function () {
 		else { clearTimeout(timer); timer = setTimeout(flush, 2000); }
 	}
 
+	/* ---- time on page: visible time and scroll depth, sent when the page is left (and topped up if it's come back to) ---- */
+	var page = null;
+	function seen() { return page ? page.ms + (page.since ? Date.now() - page.since : 0) : 0; }
+	function engagement() {
+		if (off || !page || seen() < 500) return;
+		queue.push({ type: 'engagement', eventId: page.eventId, duration: seen(), scroll: page.scroll });
+	}
+	function readScroll() {
+		if (!page) return;
+		var h = document.documentElement;
+		var pct = Math.round(Math.min(1, ((window.scrollY || h.scrollTop || 0) + window.innerHeight) / Math.max(h.scrollHeight, 1)) * 100);
+		if (pct > page.scroll) page.scroll = pct;
+	}
+	function startPage(eid) {
+		engagement();
+		page = { eventId: eid, ms: 0, since: document.visibilityState === 'visible' ? Date.now() : null, scroll: 0 };
+		setTimeout(readScroll, 0);
+	}
+	var scrolling = null;
+	addEventListener('scroll', function () { if (!scrolling) scrolling = setTimeout(function () { scrolling = null; readScroll(); }, 250); }, { passive: true });
+
 	var last = null;
+	var entryPending = newSession;
 	function pageview() {
 		if (location.pathname === last) return;
 		var first = last === null;
 		last = location.pathname;
 		var eid = first ? firstEid : id();
+		var entry = entryPending;
+		entryPending = false;
 		// The pixels count their first page view themselves; later ones (client-side navigation) come from here.
 		if (!first && tagged) {
 			if (window.fbq) window.fbq('track', 'PageView', {}, { eventID: eid });
@@ -210,15 +259,27 @@ export const TRACK_JS = `(function () {
 			if (window.pintrk) window.pintrk('page');
 			if (window.snaptr) window.snaptr('track', 'PAGE_VIEW');
 		}
-		push({ type: 'pageview', eventId: eid, referrer: document.referrer || undefined, utmSource: utm('utm_source'), utmMedium: utm('utm_medium'), utmCampaign: utm('utm_campaign') });
+		startPage(eid);
+		push({
+			type: 'pageview', eventId: eid, entry: entry || undefined, referrer: document.referrer || undefined,
+			utmSource: utm('utm_source'), utmMedium: utm('utm_medium'), utmCampaign: utm('utm_campaign'), utmTerm: utm('utm_term'), utmContent: utm('utm_content'),
+			click: clickId(),
+		});
 	}
 	['pushState', 'replaceState'].forEach(function (fn) {
 		var orig = history[fn];
 		history[fn] = function () { var r = orig.apply(this, arguments); setTimeout(pageview, 0); return r; };
 	});
 	addEventListener('popstate', pageview);
-	addEventListener('pagehide', flush);
-	document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+	addEventListener('pagehide', function () { engagement(); flush(); });
+	document.addEventListener('visibilitychange', function () {
+		if (!page) return;
+		if (document.visibilityState === 'hidden') {
+			if (page.since) { page.ms += Date.now() - page.since; page.since = null; }
+			engagement();
+			flush();
+		} else if (!page.since) page.since = Date.now();
+	});
 
 	document.addEventListener('click', function (e) {
 		var el = e.target && e.target.closest && e.target.closest('[data-track], a[href]');
@@ -233,6 +294,14 @@ export const TRACK_JS = `(function () {
 	window.MintAnalytics = {
 		track: function (name, props) { push({ type: 'event', name: String(name).slice(0, 120), props: props }); },
 		pageview: function () { last = null; pageview(); },
+		/** Who this visitor is on the site's own sign-in: shown on their page in Analytics → Visitors. */
+		identify: function (userId, traits) {
+			traits = traits || {};
+			user = { id: userId == null ? undefined : String(userId).slice(0, 120), name: traits.name ? String(traits.name).slice(0, 120) : undefined, email: traits.email ? String(traits.email).slice(0, 200) : undefined };
+			try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (e) {}
+		},
+		/** Forget identify (signing out). */
+		reset: function () { user = null; try { localStorage.removeItem(USER_KEY); } catch (e) {} },
 		visitorId: visitorId,
 		/** Add to the site's own calls to the site API (e.g. a form it sends in): matches a lead sent from the server to this visitor. */
 		headers: function () {

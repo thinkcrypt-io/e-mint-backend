@@ -10,7 +10,21 @@ import mongoose, { Schema } from 'mongoose';
  * Revoking sets `revokedAt` here and adds the sid to BlacklistedToken, which
  * is what every request is checked against.
  */
-export type Place = { ip?: string; city?: string; region?: string; country?: string; countryCode?: string; local?: boolean };
+export type Place = {
+	ip?: string;
+	city?: string;
+	region?: string;
+	country?: string;
+	countryCode?: string;
+	local?: boolean;
+	/** Website analytics only (WO-56) — not kept on sessions. */
+	timezone?: string;
+	lat?: number;
+	lng?: number;
+	isp?: string;
+	org?: string;
+	asn?: number;
+};
 
 const placeSchema = new Schema<Place>(
 	{ ip: String, city: String, region: String, country: String, countryCode: String, local: Boolean },

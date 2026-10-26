@@ -116,6 +116,7 @@ export const SITE_SETTINGS = Joi.object({
 	}),
 	tracking: Joi.object({
 		mintAnalytics: Joi.boolean(),
+		visitorIp: Joi.string().valid('full', 'masked', 'off').label('Visitor IP addresses'),
 		ga4: id(/^G-[A-Z0-9]{4,15}$/, 'G-XXXXXXXXXX').label('Google Analytics ID'),
 		gtm: id(/^GTM-[A-Z0-9]{4,12}$/, 'GTM-XXXXXXX').label('Tag Manager ID'),
 		googleAds: id(/^AW-\d{6,15}$/, 'AW-123456789').label('Google Ads ID'),
@@ -390,6 +391,7 @@ const seoOf = (doc: any) => {
 
 const trackingOf = (doc: any) => ({
 	mintAnalytics: doc?.tracking?.mintAnalytics !== false,
+	visitorIp: ['masked', 'off'].includes(doc?.tracking?.visitorIp) ? doc.tracking.visitorIp : 'full',
 	...Object.fromEntries(TRACKERS.map(k => [k, doc?.tracking?.[k] || ''])),
 });
 

@@ -82,7 +82,7 @@ const deviceOf = (req: any) => {
 /* ------------------------------------------------------------ location */
 
 /**
- * Where an IP is — "Dhaka, Bangladesh" — from ipwho.is (free, no key; set
+ * Where an IP is — "Dhaka, Bangladesh", and its ISP and timezone — from ipwho.is (free, no key; set
  * GEOIP_URL for another service with the same answer shape, GEOIP_LOOKUP=off
  * to never send IPs out). Looked up once per IP a day per process and stored
  * on the session, so a list never waits on it. Private and local addresses
@@ -101,12 +101,25 @@ export const locate = async (ip?: string | null): Promise<Place | null> => {
 	let place: Place | null = null;
 	try {
 		const base = (process.env.GEOIP_URL || 'https://ipwho.is').replace(/\/$/, '');
-		const r = await fetch(`${base}/${encodeURIComponent(ip)}?fields=success,city,region,country,country_code`, {
+		const r = await fetch(`${base}/${encodeURIComponent(ip)}?fields=success,city,region,country,country_code,latitude,longitude,timezone,connection`, {
 			signal: AbortSignal.timeout(3000),
 		});
 		const j: any = await r.json();
 		if (j?.success !== false && (j?.country || j?.city))
-			place = { ip, city: j.city || undefined, region: j.region || undefined, country: j.country || undefined, countryCode: j.country_code || undefined };
+			place = {
+				ip,
+				city: j.city || undefined,
+				region: j.region || undefined,
+				country: j.country || undefined,
+				countryCode: j.country_code || undefined,
+				// The rest feeds website analytics (WO-56): the network they're on and their clock.
+				timezone: j.timezone?.id || undefined,
+				lat: typeof j.latitude === 'number' ? j.latitude : undefined,
+				lng: typeof j.longitude === 'number' ? j.longitude : undefined,
+				isp: j.connection?.isp || undefined,
+				org: j.connection?.org || undefined,
+				asn: typeof j.connection?.asn === 'number' ? j.connection.asn : undefined,
+			};
 	} catch (e: any) {
 		console.error('locate:', e?.message);
 		return null; // not cached: try again next time

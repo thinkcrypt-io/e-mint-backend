@@ -76,6 +76,8 @@ const schema = new Schema<any>(
 		},
 		tracking: {
 			mintAnalytics: { type: Boolean, default: true },
+			/** Visitors' IP addresses in analytics (WO-56): whole, the last part zeroed, or not kept. */
+			visitorIp: { type: String, enum: ['full', 'masked', 'off'], default: 'full' },
 			ga4: str,
 			gtm: str,
 			googleAds: str,
