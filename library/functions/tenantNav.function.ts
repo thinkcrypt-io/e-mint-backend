@@ -68,6 +68,8 @@ export const tenantNav = (
 					// The site builder (docs/site-builder SB-05) first: it's where a site is made.
 					...(can('build') ? [{ title: 'Site builder', href: '/site-builder', icon: 'paintbrush' }] : []),
 					...(can('build') ? [{ title: 'Site setup', href: '/site-setup', icon: 'settings-2' }] : []),
+					// How a site built in code connects: keys, analytics, SEO, per framework.
+					...(can('build') ? [{ title: 'Website setup', href: '/website-setup', icon: 'code-xml' }] : []),
 					...widgetsItem(can),
 					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 			  ])

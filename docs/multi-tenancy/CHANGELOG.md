@@ -1998,3 +1998,12 @@ Decisions D14–D17 (README).
   no match), ⌘K on /projects listing the three projects before Pages, "crm" → Clinic CRM, Enter opened it, inside it
   "ord" → Orders API. `tsc` clean in both apps. Pushed mint-tenant `a75f0dd`, admin `23f8375`, mint-docs `a63fca2`
   (projects#switching, pages#navbar-search), website `3e0f438`; not deployed.
+
+## 2026-10-26 — WO-55 Website setup: connect your own code
+- The user asked for a "website setup" page in the tenant panel: connecting a website (React, plain HTML) to the
+  project, analytics, SEO and which env key goes where.
+- mint-tenant `fade8ff`: `/website-setup` page (keys, per-framework steps, settings table), PROJECT_PAGES, GuideLink
+  anchors, Site setup button. backend: Site → Website setup in `tenantNav.function.ts`. mint-docs `80ebef7`, website
+  `f1b5497`.
+- Verified: browser pane against a private backend — the page, tabs, phone width; the plain-HTML snippet's code read the
+  site, a page by slug and its SEO cross-origin. `tsc` clean in mint-tenant and mint-docs. Not deployed.

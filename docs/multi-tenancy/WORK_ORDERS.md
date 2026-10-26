@@ -8,6 +8,14 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-20)
 
+**2026-10-26 — WO-55 Website setup page.** Website projects have **Site → Website setup** (`/website-setup`, mint-tenant
+only; Build permission): the site API address + project key, then per framework (Plain HTML / React (Vite) / Next.js,
+`?fw=`) the settings file, the site-API helper, a page by slug, track.js and SEO (page SEO, robots.txt + sitemap.xml
+via rewrites or route handlers), filled in with the project's address/key/domain; a "where each setting goes" table.
+Snippets in `src/app/website-setup/_components/snippets.ts` — env names match `website.tools.ts` (MINT_API, MINT_API_KEY,
+NEXT_PUBLIC_…, + VITE_…). Menu entry is in `tenantNav.function.ts`, so it shows after the backend deploy (the page works
+by URL before). Pushed mint-tenant `fade8ff`, mint-docs `80ebef7` (websites#website-setup), website `f1b5497`; not deployed.
+
 **2026-10-20 — New sidebar section from the model builder.** The section pickers (model wizard Finish, model page
 Basics → Sidebar, feature wizard) end with **+ New section…**: the sidebar builder's `SectionDialog`, saved straight
 away through the `sidebarcategories` CRUD (`priority: 0`, last), then picked — `SectionSelect.tsx` in both apps.
@@ -1362,6 +1370,22 @@ searching has access to it."
 - Verified: `scripts/tenancy-smoke/navsearch.mjs` (38 checks) on a private backend; comments, projects and collections
   smoke still pass; browser pane on mint-tenant at 1280 and 375: grouped results, email match line, Enter opens the
   record, the panel published from the UI changes the results.
+
+## WO-55 — Website setup: connect your own code (S) — done
+
+The user (2026-10-26): "Create a page called website setup on tenant … how to connect a website with this project, start
+with different frameworks, i need for react and plain html website … how to set up the analytics on website, and the seo
+… env key where to put what, on projects that are website."
+
+- mint-tenant `src/app/website-setup/` (page + `_components/snippets.ts`): Your keys (address, project key, server-key
+  note), Connect your site (tabs Plain HTML · React (Vite) · Next.js, 4–5 numbered steps each), Where each setting goes,
+  Once it's live. Website projects + Build only (EmptyStates otherwise). `website-setup` in PROJECT_PAGES; GuideLink
+  anchors `website-setup`, `website-setup-keys`; Site setup header has a "Connect your code" button.
+- backend `tenantNav.function.ts`: Site section gets "Website setup" (icon code-xml) after Site setup.
+- Docs: mint-docs `websites#website-setup` + `#website-setup-keys`; website changelog.
+- Verified on a private backend (:5081) + mint-tenant (:3083): the menu entry, all three tabs, the table, 375px (no
+  sideways scroll); the plain-HTML `site.js` snippet run cross-origin read /site, the menu, a published page's "hero"
+  piece by slug and its SEO; robots.txt and sitemap.xml addresses answer 200.
 
 ## CMS (2026-10-15) — agreed, engine first
 
