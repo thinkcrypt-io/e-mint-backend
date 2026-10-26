@@ -24,7 +24,29 @@ export type Cond = { field: string; op: string; value?: any };
 
 export const ID_ACTIONS = new Set<string>(['get', 'update', 'delete']);
 export const WRITE_ACTIONS = new Set<string>(['create', 'update']);
-export const ACTION_LABEL: Record<string, string> = { list: 'List', get: 'Read one', create: 'Create', update: 'Update', delete: 'Delete' };
+export const ACTION_LABEL: Record<string, string> = { list: 'List', get: 'Read one', create: 'Create', update: 'Update', delete: 'Delete', upload: 'Upload files' };
+
+/* ------------------------------------------------------------- uploads */
+
+/** Field kinds an upload endpoint fills (AB-14). */
+export const FILE_KINDS = ['file', 'files', 'image', 'images'];
+/** A model's fields that take files. */
+export const fileFieldsOf = (def: any) => (def?.fields || []).filter((f: any) => FILE_KINDS.includes(f.kind));
+/** Where a model's upload endpoint answers unless given another path. */
+export const uploadPath = (route: string) => `/${route}/files`;
+/** A new upload endpoint for a model — custom, never in step with `publicApi`. */
+export const newUpload = (def: any, who: Who) => ({
+	name: `Upload files for ${(def.title || def.name || def.route).toLowerCase()}`,
+	note: '',
+	model: def.route,
+	action: 'upload',
+	method: 'POST',
+	path: uploadPath(def.route),
+	standard: false,
+	enabled: true,
+	access: { who, when: [], match: 'all' },
+	fields: { out: null, write: null, readOnly: [] },
+});
 
 /** "Owner is the signed-in customer" — the old `ownerOnly`. */
 export const OWNER: Cond = { field: '_customer', op: 'is', value: { ref: 'customer' } };
@@ -372,9 +394,15 @@ export const checkEndpoint = async (input: any, current?: any) => {
 	if (!def) throw bad('model', 'Pick a model');
 	const action = current ? current.action : String(input.action || '');
 	if (!(ENDPOINT_ACTIONS as readonly string[]).includes(action)) throw bad('action', 'Pick what it does');
-	const path = current?.standard ? current.path : normalizePath(input.path ?? current?.path, action);
+	if (action === 'upload' && !fileFieldsOf(def).length)
+		throw bad('model', `${def.title || def.name} has no file or image field to upload to — add one in the model builder first`);
+	const path = current?.standard
+		? current.path
+		: normalizePath(input.path ?? current?.path ?? (action === 'upload' ? uploadPath(route) : undefined), action);
 	if (!current?.standard && RESERVED_SEGMENTS.has(path.split('/')[1])) throw bad('path', `/${path.split('/')[1]} is kept for MINT’s own addresses — start the path with something else`);
-	const name = String(input.name ?? current?.name ?? '').trim() || (current?.standard ? standardName(def, action) : `${ACTION_LABEL[action]} ${words(def).plural.toLowerCase()}`);
+	const name =
+		String(input.name ?? current?.name ?? '').trim() ||
+		(current?.standard ? standardName(def, action) : action === 'upload' ? newUpload(def, 'anyone').name : `${ACTION_LABEL[action]} ${words(def).plural.toLowerCase()}`);
 	if (name.length > 80) throw bad('name', 'At most 80 characters');
 	const who = String(input.access?.who ?? current?.access?.who ?? 'anyone');
 	if (!(ENDPOINT_WHO as readonly string[]).includes(who)) throw bad('access.who', 'Pick who can call it');

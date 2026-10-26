@@ -11,10 +11,14 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  * A model's **standard** endpoints sit at its own address (/<route>,
  * /<route>/:id) and stay in step with `ModelDefinition.publicApi` (D1);
  * custom ones have their own path.
+ *
+ * An `upload` endpoint (AB-14) takes files for a model's file or image fields
+ * (multipart `files`) and answers their URLs; it's always custom, at
+ * /<route>/files unless given another path, and served by routes-public/uploads.ts.
  */
-export const ENDPOINT_ACTIONS = ['list', 'get', 'create', 'update', 'delete'] as const;
+export const ENDPOINT_ACTIONS = ['list', 'get', 'create', 'update', 'delete', 'upload'] as const;
 export const ENDPOINT_WHO = ['anyone', 'customer', 'key'] as const;
-export const METHOD_OF: Record<string, string> = { list: 'GET', get: 'GET', create: 'POST', update: 'PUT', delete: 'DELETE' };
+export const METHOD_OF: Record<string, string> = { list: 'GET', get: 'GET', create: 'POST', update: 'PUT', delete: 'DELETE', upload: 'POST' };
 
 const schema = new Schema<any>(
 	{

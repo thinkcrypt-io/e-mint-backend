@@ -430,7 +430,23 @@ const IMAGE_TYPES: Record<string, string> = {
 	'image/x-icon': 'ico',
 	'image/vnd.microsoft.icon': 'ico',
 };
-const BY_EXTENSION: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', svg: 'image/svg+xml', ico: 'image/x-icon' };
+/** Documents upload_media also takes (AB-14) — stored as they are, e.g. a file to attach to a record. */
+const DOC_TYPES: Record<string, string> = {
+	'application/pdf': 'pdf',
+	'application/msword': 'doc',
+	'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+	'application/vnd.ms-excel': 'xls',
+	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+	'application/vnd.ms-powerpoint': 'ppt',
+	'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+	'text/plain': 'txt',
+	'text/csv': 'csv',
+	'application/zip': 'zip',
+};
+const BY_EXTENSION: Record<string, string> = {
+	png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', svg: 'image/svg+xml', ico: 'image/x-icon',
+	...Object.fromEntries(Object.entries(DOC_TYPES).map(([type, ext]) => [ext, type])),
+};
 /** Kept as sent: vectors, icons, animations. Everything else becomes webp, as the panel's uploads do. */
 const KEEP = new Set(['image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/gif']);
 
@@ -468,13 +484,13 @@ const download = async (raw: string): Promise<{ buffer: Buffer; type: string; na
 			continue;
 		}
 		if (!res.ok) return `The URL answered ${res.status}.`;
-		if (Number(res.headers.get('content-length') || 0) > MAX_BYTES) return 'Images up to 10 MB.';
+		if (Number(res.headers.get('content-length') || 0) > MAX_BYTES) return 'Files up to 10 MB.';
 		const buffer = Buffer.from(await res.arrayBuffer());
-		if (buffer.length > MAX_BYTES) return 'Images up to 10 MB.';
+		if (buffer.length > MAX_BYTES) return 'Files up to 10 MB.';
 		const name = decodeURIComponent(new URL(current).pathname.split('/').pop() || 'image');
 		const ext = name.split('.').pop()?.toLowerCase() || '';
 		const type = String(res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-		return { buffer, type: IMAGE_TYPES[type] ? type : BY_EXTENSION[ext] || type, name };
+		return { buffer, type: IMAGE_TYPES[type] || DOC_TYPES[type] ? type : BY_EXTENSION[ext] || type, name };
 	}
 	return 'Too many redirects.';
 };
@@ -487,6 +503,42 @@ const decodeData = (raw: string, filename: string) => {
 	return { buffer, type: m ? m[1].toLowerCase() : BY_EXTENSION[ext] || '', name: filename || 'image' };
 };
 
+/** A document into the media library as it is (AB-14): its URL, to put in a record's file field. */
+const uploadDocument = async (args: any, caller: Caller, got: { buffer: Buffer; type: string; name: string }, ext: string): Promise<Out> => {
+	const base = slugify(String(args.filename || got.name).replace(/\.[a-z0-9]+$/i, '')) || 'file';
+	const key = `${Date.now()}_${base}.${ext}`;
+	const project = caller.project;
+	const save = async () => {
+		const uploaded: any = await getS3()
+			.upload({ Bucket: process.env.S3_BUCKET_NAME!, Body: got.buffer, Key: key, ContentType: got.type, ContentDisposition: `attachment; filename="${base}.${ext}"` })
+			.promise();
+		const folder = await resolveUploadFolder(String(args.folder || 'documents').slice(0, 60));
+		return new File({
+			name: args.name ? String(args.name).slice(0, 200) : `${base}.${ext}`,
+			description: args.alt ? String(args.alt).slice(0, 500) : undefined,
+			caption: args.caption ? String(args.caption).trim().slice(0, 500) : '',
+			url: uploaded.Location,
+			key: uploaded.Key,
+			type: got.type,
+			fileType: 'document',
+			fileFolder: folder._id,
+			bucket: uploaded.Bucket,
+			size: got.buffer.length,
+			folder: folder.slug,
+		}).save();
+	};
+	let file: any;
+	try {
+		file = project?.mediaScope === 'organization' ? await runInScope({ organization: project.organization }, save) : await save();
+	} catch (e: any) {
+		return refuse(`The upload failed: ${e?.message || 'unknown error'}`);
+	}
+	return {
+		text: `Uploaded to the media library: ${file.url} (${ext}, ${Math.ceil(got.buffer.length / 1024)} KB). Put this URL in a record's file or files field (create_records / save_entry_draft).`,
+		data: { url: file.url, _id: String(file._id), type: got.type, size: got.buffer.length },
+	};
+};
+
 const uploadMedia = async (_req: any, args: any, caller: Caller): Promise<Out> => {
 	if (!args?.url === !args?.data) return refuse('Send either `url` (an image on the web) or `data` (base64 or a data: URL).');
 	if (!process.env.S3_BUCKET_NAME) return refuse('Media storage isn’t set up on this server, so images can’t be uploaded — keep the image URLs as they are.');
@@ -494,9 +546,12 @@ const uploadMedia = async (_req: any, args: any, caller: Caller): Promise<Out> =
 
 	const got = args.url ? await download(String(args.url)) : decodeData(String(args.data), String(args.filename || ''));
 	if (typeof got === 'string') return refuse(got);
-	if (!IMAGE_TYPES[got.type]) return refuse(`Only images can be uploaded here (png, jpg, webp, gif, avif, svg, ico)${got.type ? ` — this is ${got.type}` : ''}.`);
-	if (!got.buffer.length) return refuse('The image is empty.');
-	if (got.buffer.length > MAX_BYTES) return refuse('Images up to 10 MB.');
+	const docExt = DOC_TYPES[got.type];
+	if (!IMAGE_TYPES[got.type] && !docExt)
+		return refuse(`Only images (png, jpg, webp, gif, avif, svg, ico) and documents (pdf, doc(x), xls(x), ppt(x), txt, csv, zip) can be uploaded${got.type ? ` — this is ${got.type}` : ''}.`);
+	if (!got.buffer.length) return refuse('The file is empty.');
+	if (got.buffer.length > MAX_BYTES) return refuse('Files up to 10 MB.');
+	if (docExt) return uploadDocument(args, caller, got, docExt);
 
 	let body = got.buffer;
 	let type = got.type;
@@ -877,16 +932,16 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 	},
 	{
 		name: 'upload_media',
-		title: 'Upload an image',
+		title: 'Upload an image or document',
 		description:
-			'Puts an image into this project’s media library and returns its hosted URL, to use in the settings (logo, favicon), content blocks and records. From `url` (an image on the web) or `data` (base64, or a data: URL, with `filename`). Up to 10 MB; photos become webp, svg/ico/gif stay as they are (`keepFormat` keeps any format, e.g. a png favicon).',
+			'Puts an image or a document into this project’s media library and returns its hosted URL, to use in the settings (logo, favicon), content blocks and records — a document (pdf, doc/docx, xls/xlsx, ppt/pptx, txt, csv, zip) goes in a record’s file or files field, e.g. an attachment on an enquiry. From `url` (on the web) or `data` (base64, or a data: URL, with `filename`). Up to 10 MB; photos become webp, svg/ico/gif stay as they are (`keepFormat` keeps any format, e.g. a png favicon); documents are kept as they are (folder "documents" by default).',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
 			properties: {
 				url: { type: 'string' },
-				data: { type: 'string', description: 'Base64 or data:image/…;base64,…' },
-				filename: { type: 'string', description: 'e.g. "logo.png" — needed with bare base64' },
+				data: { type: 'string', description: 'Base64 or data:<type>;base64,…' },
+				filename: { type: 'string', description: 'e.g. "logo.png" or "brief.pdf" — needed with bare base64' },
 				name: { type: 'string', description: 'Its name in the media library' },
 				alt: { type: 'string', description: 'What the image shows — its alt text, used by the site wherever the picture has none of its own' },
 				caption: { type: 'string', description: 'A caption, for image fields that send their details' },

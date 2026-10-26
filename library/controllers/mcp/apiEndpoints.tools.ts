@@ -6,6 +6,8 @@ import {
 	checkEndpoint,
 	ensureEndpoints,
 	newStandard,
+	newUpload,
+	fileFieldsOf,
 	ruleFields,
 	syncSummary,
 } from '../../functions/apiEndpoints.function.js';
@@ -74,6 +76,27 @@ const generateEndpoints = async (req: any, args: any, caller: Caller): Promise<O
 	await ensureEndpoints();
 	const out: string[] = [];
 	for (const action of actions) {
+		// Uploads (AB-14): a custom endpoint at /<route>/files, only for a model with a file or image field
+		if (action === 'upload') {
+			if (!fileFieldsOf(def).length) {
+				out.push('skipped upload: the model has no file or image field');
+				continue;
+			}
+			const up: any = await ApiEndpoint.findOne({ model: def.route, action: 'upload' }).lean();
+			if (up) {
+				if (!up.enabled) await ApiEndpoint.updateOne({ _id: up._id }, { $set: { enabled: true } });
+				out.push(`${up.enabled ? 'already there' : 'turned on'}: ${up.method} ${up.path}`);
+				continue;
+			}
+			try {
+				const e: any = await ApiEndpoint.create({ ...newUpload(def, who), createdBy: caller.user?._id });
+				out.push(`made: ${e.method} ${e.path} (${ACTION_LABEL.upload}, ${WHO[who]}; multipart \`files\` → their URLs)`);
+			} catch (err: any) {
+				if (err?.code !== 11000) throw err;
+				out.push('skipped upload: another endpoint answers at its address');
+			}
+			continue;
+		}
 		const existing: any = await ApiEndpoint.findOne({ model: def.route, action, standard: true }).lean();
 		if (existing) {
 			if (!existing.enabled) await ApiEndpoint.updateOne({ _id: existing._id }, { $set: { enabled: true } });
@@ -188,7 +211,7 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 		name: 'generate_endpoints',
 		title: 'Generate a model’s endpoints',
 		description:
-			'A model’s standard endpoints at its own address (/<route> for list and create, /<route>/:id for get, update and delete), for `who`: "anyone", "customer" (signed-in customers) or "key" (a server key — for the business’s own server). Endpoints it has already are kept (turned on if off). Show the user what you’ll make first.',
+			'A model’s standard endpoints at its own address (/<route> for list and create, /<route>/:id for get, update and delete), for `who`: "anyone", "customer" (signed-in customers) or "key" (a server key — for the business’s own server). "upload" makes its upload endpoint at /<route>/files (models with a file or image field): POST multipart `files` (≤5 × 10 MB, photos and documents) → their URLs, to send in the record’s file field — a valid server key may always use it. Endpoints it has already are kept (turned on if off). Show the user what you’ll make first.',
 		scope: 'build',
 		only: 'project',
 		inputSchema: {
@@ -196,7 +219,7 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 			required: ['model'],
 			properties: {
 				model: { type: 'string', description: 'The model’s name or route' },
-				actions: { type: 'array', items: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete'] }, description: 'Default list and get' },
+				actions: { type: 'array', items: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete', 'upload'] }, description: 'Default list and get' },
 				who: { type: 'string', enum: ['anyone', 'customer', 'key'] },
 			},
 		},
@@ -215,7 +238,7 @@ export const API_ENDPOINT_TOOLS: ToolDef[] = [
 			properties: {
 				id: { type: 'string', description: 'The endpoint to change (from list_endpoints); leave out to make a new one' },
 				model: { type: 'string', description: 'The model’s route (new endpoints)' },
-				action: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete'] },
+				action: { type: 'string', enum: ['list', 'get', 'create', 'update', 'delete', 'upload'], description: 'upload: takes files for the model’s file/image fields (default path /<route>/files)' },
 				path: { type: 'string', description: 'e.g. /products/featured or /my/orders/:id' },
 				name: { type: 'string' },
 				note: { type: 'string', description: 'What the site or app uses it for — shown in the reference' },

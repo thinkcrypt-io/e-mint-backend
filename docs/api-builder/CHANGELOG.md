@@ -197,3 +197,10 @@ agent must know. Decisions live in README.md.
 - Verified on a private stack (no real S3): every refusal path and a form's first call; the S3 write itself runs on deploy.
 - First user: Thinkcrypt's contact form (Contact us, `contact-requests`).
 
+## 2026-10-26 — AB-14 Upload endpoints
+- Uploads are an endpoint action (`upload`, custom, POST /<route>/files) managed in API → Endpoints and over MCP; a valid
+  server key may always upload. Replaces AB-13's fixed `/public/api/uploads` (never deployed). MCP `upload_media`
+  takes documents. Files: apiEndpoint.model, apiEndpoints.function, routes-public/uploads.ts, server.ts,
+  routes-tenant/apiBuilder.router.ts, mcp/apiEndpoints.tools.ts, mcp/website.tools.ts; mint-tenant public-api; mint-docs.
+- Verified on a throwaway stack (fake S3) — see WORK_ORDERS AB-14.
+

@@ -14,6 +14,8 @@ import {
 	checkEndpoint,
 	ensureEndpoints,
 	newStandard,
+	newUpload,
+	fileFieldsOf,
 	pathTaken,
 	ruleFields,
 	standardPath,
@@ -33,7 +35,8 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  *   GET    /endpoints                  every endpoint (standard ones made from `publicApi` first), the models, customer sign-in
  *   GET    /endpoints/:id              one, with its model's fields and rule fields
  *   POST   /endpoints                  a custom endpoint { name, note, model, action, path, access, fields, list, populate, enabled }
- *   POST   /endpoints/generate         { model, actions[], who, own }   a model's standard endpoints (own: customers' own records only)
+ *   POST   /endpoints/generate         { model, actions[], who, own }   a model's standard endpoints (own: customers' own records only);
+ *                                       `upload` makes its upload endpoint at /<route>/files (AB-14, never standard)
  *   PUT    /endpoints/:id              the same as POST, whole (a standard one keeps its model, action and path)
  *   PATCH  /endpoints/:id              { enabled }
  *   DELETE /endpoints/:id
@@ -228,6 +231,29 @@ router.post(
 		const turnedOn: any[] = [];
 		const skipped: string[] = [];
 		for (const action of actions) {
+			// Uploads (AB-14): a custom endpoint of its own, only for a model with a file or image field
+			if (action === 'upload') {
+				if (!fileFieldsOf(def).length) {
+					skipped.push('Upload files (the model has no file or image field)');
+					continue;
+				}
+				const up: any = await ApiEndpoint.findOne({ model: route, action: 'upload' }).lean();
+				if (up) {
+					if (!up.enabled) {
+						await ApiEndpoint.updateOne({ _id: up._id }, { $set: { enabled: true, updatedBy: req.user._id } });
+						turnedOn.push(up);
+					} else skipped.push(`${up.method} ${up.path}`);
+					continue;
+				}
+				const doc = { ...newUpload(def, who as any), createdBy: req.user._id, updatedBy: req.user._id };
+				try {
+					made.push((await ApiEndpoint.create(doc)).toObject());
+				} catch (e: any) {
+					if (e?.code !== 11000) throw e;
+					skipped.push(`POST ${doc.path} (another endpoint answers there)`);
+				}
+				continue;
+			}
 			const existing: any = await ApiEndpoint.findOne({ model: route, action, standard: true }).lean();
 			if (existing) {
 				if (!existing.enabled) {

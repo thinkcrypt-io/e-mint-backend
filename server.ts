@@ -116,8 +116,8 @@ const logger = async (req: any, res: any, next: any) => {
 app.use('/admin/api', logger, adminRouter);
 // The tenant platform (docs/multi-tenancy): tenant users, organizations, projects.
 app.use('/tenant/api', logger, tenantRouter);
-// Files a visitor attaches to a site's form (docs/api-builder AB-13) — before the public API's catch-all routes.
-app.use('/public/api/uploads', (_req, res, next) => {
+// A project's upload endpoints (docs/api-builder AB-14) — POSTs that match one, before the public API; the rest pass on.
+app.use('/public/api', (_req, res, next) => {
 	res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 	next();
 }, publicUploadsRouter);

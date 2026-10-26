@@ -19,7 +19,8 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | done 2026-10-19 |
 | AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | done 2026-10-19 |
 | AB-12 | Customer sign-in on Endpoints (D15): the built-in /auth/* listed with where customers are kept, Set up sign-in, the token how-to; Generate “Only their own records” (+ owners for the sign-in model's earlier sign-ups); Overview snippet on mint.js; guide, website | all | S | done 2026-10-19 |
-| AB-13 | Form attachments: `POST /public/api/uploads` (multipart `files`, ≤5 × 10 MB; photos and documents, never svg/html) → URLs for a files/image field; only for a project with an open create endpoint on a model that has a file field; rate-limited; files in the media library's "website-uploads" | backend | S | done 2026-10-26, not deployed |
+| AB-13 | Form attachments: `POST /public/api/uploads` (multipart `files`, ≤5 × 10 MB; photos and documents, never svg/html) → URLs for a files/image field; only for a project with an open create endpoint on a model that has a file field; rate-limited; files in the media library's "website-uploads" | backend | S | done 2026-10-26, replaced by AB-14 before it was deployed |
+| AB-14 | Upload endpoints: `upload` is an endpoint action (custom, POST /<route>/files by default) for a model with a file/image field — who: anyone (per-IP limit) / customers / a server key, and a valid server key may always upload; served by `routes-public/uploads.ts` ahead of the public API; Generate (panel + MCP) makes one; `save_endpoint` takes it; MCP `upload_media` takes documents; panel: action, address hint, What it takes / Reference / Code for uploads; guide | all | M | done 2026-10-26, not deployed |
 
 ## AB-02 — Engine (L)
 
@@ -124,7 +125,36 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
   setup, Widgets, Project settings, Templates tabs).
 - mint-sites: `data-key` on `track.js` / `mint.js` from the render answer.
 
-## AB-13 — Form attachments (S) — done, not deployed
+## AB-14 — Upload endpoints (M) — done, not deployed
+
+The user (2026-10-26), after AB-13: “the upload route should be from the api, files uploaded with a server key should
+still upload, make a api route for that, also for the contact via mcp” — and chose: an endpoint in API → Endpoints,
+the Thinkcrypt site sending through its own server route with the server key, and MCP uploading documents + managing
+upload endpoints.
+
+- backend: `ENDPOINT_ACTIONS` + `upload` (POST); `apiEndpoints.function`: `ACTION_LABEL.upload`, `FILE_KINDS`,
+  `fileFieldsOf`, `uploadPath` (/<route>/files), `newUpload` (never standard, so `publicApi` reconcile/syncSummary
+  never touch it); `checkEndpoint` refuses an upload on a model without a file/image field (400 on `model`) and
+  defaults its path. `routes-public/uploads.ts` (replaces AB-13's fixed route), mounted on `/public/api` in
+  `server.ts`: a POST whose path matches an enabled upload endpoint of the key's project is answered here, every
+  other call goes on to `public.router.ts` (left alone — another session's payments work is in it). Access: a valid
+  server key always; else the endpoint's who (key → 401 `key_required`, customer → the customer token +
+  customer roles, anyone → 20 per 15 min per IP); counted in `stats`, logged as an `ApiCall`. Limits as AB-13.
+  Generate (`routes-tenant/apiBuilder.router.ts`) and MCP `generate_endpoints` make the model's upload endpoint
+  for `upload`; `save_endpoint`'s action enum has it. MCP `upload_media` also takes documents (pdf, doc(x),
+  xls(x), ppt(x), txt, csv, zip; stored as sent, folder "documents") for a record's file field.
+- mint-tenant: `EndpointAction` + `upload`; ACTIONS (Generate shows /<model>/files and counts the model's upload
+  endpoint); New endpoint's address hints; an upload endpoint's page: no Fields / Try it tabs, “What it takes” on
+  Access, and the multipart request on Reference and Code.
+- mint-docs: `public-api#api-upload`.
+- Verified on a throwaway stack (fake S3): anyone / key-only / customers endpoints; no key, wrong key (header and
+  Bearer), not signed in refused; a server key passes every kind and skips the IP limit; svg, 6 files, none refused;
+  the 21st anyone call 429 without hanging; non-upload POSTs reach the public API; stats + logs written. Then
+  Thinkcrypt's `/api/contact` against it: create with the server key (CU-0001/0002), files reach the key-only upload
+  endpoint. The real S3 write runs on deploy. Panel screens type-checked, not opened in a browser.
+- Deploy: Heroku runs `mint` **main**, which doesn't have AB-13/AB-14 (they're on v3) — merge v3 first.
+
+## AB-13 — Form attachments (S) — replaced by AB-14 (never deployed)
 
 Asked for by the user for Thinkcrypt's contact form (2026-10-26: “they can add multiple files with the contact
 form”); the public API had no way in for files.
