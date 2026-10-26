@@ -84,4 +84,17 @@ const up = r.body?.doc || r.body;
 form = await formOf();
 ok('…keeps the editor as the form (published once, not again)', form.includes('"seo"'), form);
 ok('…and gives old records the editor’s object', up?.seo?.metaTitle === 'An old record' && up.seo.metaDescription === 'Made before the SEO editor.', JSON.stringify(up?.seo).slice(0, 300));
+
+/* ---------- an old project whose SEO page is opened without the builder */
+r = await call('POST', '/tenant/api/projects', { name: `Panel only ${stamp}`, type: 'website' }, T);
+const site2 = r.body;
+const P2 = path => `/tenant/api/p/${site2._id}${path}`;
+const def2 = ((await call('GET', P2('/builder/models'), null, T)).body?.doc || []).find(m => m.route === 'seo');
+r = await call('PUT', P2(`/builder/models/${def2._id}`), { ...def2, fields: fieldsOf(def2).filter(f => f.key !== 'seo').map(f => (['title', 'description'].includes(f.key) ? { ...f, required: true } : f)) }, T);
+ok('(a second project’s SEO model in its old shape, its builder never opened)', r.status === 200, `${r.status} ${JSON.stringify(r.body?.problems || r.body?.message || '').slice(0, 200)}`);
+const c2 = (await call('GET', P2('/seo/get/config'), null, T)).body || {};
+const form2 = JSON.stringify((c2.doc || c2).form || []);
+ok('opening its SEO page upgrades it first: the form is the editor', form2.includes('"seo"') && !form2.includes('"description"'), form2.slice(0, 300));
+const def2b = ((await call('GET', P2('/builder/models'), null, T)).body?.doc || []).find(m => m.route === 'seo');
+ok('…and the model has the SEO field', def2b?.fields?.some(f => f.key === 'seo' && f.kind === 'seo'), JSON.stringify(def2b?.fields?.map(f => f.key)));
 done();

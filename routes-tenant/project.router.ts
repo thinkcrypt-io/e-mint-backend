@@ -15,6 +15,7 @@ import { tenantContent, tenantLead, tenantNav } from '../library/functions/tenan
 import ModelDefinition from '../library/models/builder/modelDefinition.model.js';
 import contentRouter from './content.router.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
+import { ensureSeoModel } from '../library/siteBuilder/kit.js';
 import defineRoutes from '../routes-admin/common/router.js';
 import SidebarCategory from '../library/models/sidebarcategories/model.js';
 import SidebarItem from '../library/models/sidebaritems/model.js';
@@ -260,6 +261,25 @@ router.get('/access-users/:id', async (req: any, res: any) => {
 	} catch (e: any) {
 		return res.status(500).json({ message: e.message });
 	}
+});
+
+// A website's SEO page (SB-32): a project made before the SEO editor gets it
+// the first time the page is asked for — not only when its site opens in the
+// builder — so the form it answers with is already the editor. Once per project
+// per server; parallel first requests wait on the same upgrade.
+const seoUpgrades = new Map<string, Promise<void>>();
+router.use((req: any, res: any, next: any) => {
+	if (req.project?.type !== 'website' || !/^\/seo(\/|$)/.test(req.path)) return next();
+	const key = String(req.project._id);
+	if (!seoUpgrades.has(key))
+		seoUpgrades.set(
+			key,
+			ensureSeoModel(req).catch((e: any) => {
+				seoUpgrades.delete(key);
+				console.error('seo model:', e?.message);
+			})
+		);
+	seoUpgrades.get(key)!.then(() => next(), next);
 });
 
 // The project's built models, last: anything not answered above.

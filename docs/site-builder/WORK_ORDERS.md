@@ -92,8 +92,11 @@ are left out of the page (not shown empty).
 is now the AGS SEO editor, not six plain fields. Deploy the backend with
 SB-30/31 first (backend before mint-tenant: the panel's `seo` input needs the
 backend's new `seo` field kind). Nothing to run on prod: each website project
-is upgraded the first time its site is opened (`ensureSeoModel` in kit.ts, via
-`ensureDesignModel`). See SB-32 below.
+is upgraded the first time its SEO page is asked for (`routes-tenant/project.router.ts`,
+once per project per server) or its site is opened (`ensureSeoModel` in kit.ts,
+via `ensureDesignModel`). **2026-10-26:** prod still showed the old form — the
+Heroku backend is deployed by hand and was last deployed before SB-30; SB-30/31/32
+and CMS-16/16b need that deploy. See SB-32 below.
 
 **2026-10-20 (SB-30/SB-31, not deployed):** deploy order — backend first
 (render answer gains `tags.code` / `tracker.noCode`, track.js learns
@@ -1469,7 +1472,9 @@ is not similar to AGS"; screenshot of the AGS SEO editor: "should have these".
   the social / indexing / structured data / sitemap fields reaches the page.
 - `ensureSeoModel` (called from `ensureDesignModel`, i.e. whenever a site is
   opened in the builder, a starter or template is applied, or MCP builds the
-  site): adds the field to older projects, frees title/description, publishes
+  site — and, from 2026-10-26, before the first `/seo…` request of a website
+  project in `routes-tenant/project.router.ts`, so the panel's SEO page needs
+  no builder visit): adds the field to older projects, frees title/description, publishes
   the form once (RouteVersion note `SEO: the SEO editor is the form (SB-32)`;
   a form the team changes later is theirs), and gives every record its object.
 - mint-tenant VSeo: the Google preview shows the site's own domain (Site setup
@@ -1483,10 +1488,11 @@ is not similar to AGS"; screenshot of the AGS SEO editor: "should have these".
 `components/library/utils/inputs/VSeo/{VSeo,SerpPreview,SocialPreview}.tsx`,
 `app/model-builder/_components/{modelKinds,KindIcon}.ts(x)`.
 
-**Verified:** smoke `site-builder-seo-panel` 17/17 (new project's model + form;
+**Verified:** smoke `site-builder-seo-panel` 20/20 (new project's model + form;
 builder → record object; panel save → plain fields + the page's draft gets
 every field; plain-field API save → object in step; an old-shape project is
-upgraded when its site opens, old records get the object); SB-31's
+upgraded when its site opens, old records get the object; an old project whose
+SEO page is opened without the builder is upgraded before that request); SB-31's
 `site-builder-seo` 20/20 again; jest `seo.test.ts` 8/8; backend + mint-tenant
 `tsc` clean.
 
