@@ -190,3 +190,10 @@ agent must know. Decisions live in README.md.
   customer-roles 42, widgets-setup 70, projects 14 + api-builder 78. Headless Chrome on the private backend:
   the section, the Generate dialog's checkbox, `?add=login` opening the setup with Members chosen.
 - Admin's tenant build has no API builder pages (D12) — not changed there.
+
+## 2026-10-26 — AB-13 Form attachments
+- `POST /public/api/uploads?apiKey=` (multipart `files`) for a site form's attachments → `{ files: [{ url, name, type, size }] }`;
+  only when the project has a public create endpoint on a model with a file field. `routes-public/uploads.ts`, `server.ts`.
+- Verified on a private stack (no real S3): every refusal path and a form's first call; the S3 write itself runs on deploy.
+- First user: Thinkcrypt's contact form (Contact us, `contact-requests`).
+

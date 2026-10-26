@@ -27,6 +27,7 @@ import tenantRouter from './routes-tenant/tenant.router.js';
 import tenantMcpRouter from './routes-tenant/mcp.router.js';
 import templatesMcpRouter from './library/controllers/templates/mcp.router.js';
 import publicRouter from './routes-public/index.js';
+import publicUploadsRouter from './routes-public/uploads.js';
 
 //User Routes
 
@@ -115,6 +116,11 @@ const logger = async (req: any, res: any, next: any) => {
 app.use('/admin/api', logger, adminRouter);
 // The tenant platform (docs/multi-tenancy): tenant users, organizations, projects.
 app.use('/tenant/api', logger, tenantRouter);
+// Files a visitor attaches to a site's form (docs/api-builder AB-13) — before the public API's catch-all routes.
+app.use('/public/api/uploads', (_req, res, next) => {
+	res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+	next();
+}, publicUploadsRouter);
 // Tenant projects' public APIs and the customer login widget (docs/multi-tenancy WO-11).
 app.use('/public', publicRouter);
 app.use('/user-api', userRouter);

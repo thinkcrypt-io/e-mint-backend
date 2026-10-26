@@ -19,6 +19,7 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 | AB-10 | Project keys, live panel (admin's tenant build) + hosted sites (mint-sites `data-key`) | admin + mint-sites | M | done 2026-10-19 |
 | AB-11 | Guides (mint-docs), website, handoff; deploy order | docs | S | done 2026-10-19 |
 | AB-12 | Customer sign-in on Endpoints (D15): the built-in /auth/* listed with where customers are kept, Set up sign-in, the token how-to; Generate “Only their own records” (+ owners for the sign-in model's earlier sign-ups); Overview snippet on mint.js; guide, website | all | S | done 2026-10-19 |
+| AB-13 | Form attachments: `POST /public/api/uploads` (multipart `files`, ≤5 × 10 MB; photos and documents, never svg/html) → URLs for a files/image field; only for a project with an open create endpoint on a model that has a file field; rate-limited; files in the media library's "website-uploads" | backend | S | done 2026-10-26, not deployed |
 
 ## AB-02 — Engine (L)
 
@@ -122,6 +123,25 @@ mint-tenant → `origin` main; mint-docs and mint-webpage → `origin` main), th
 - admin (its tenant build is still live): the same addresses and snippets (ApiOverview, Public API page, Site
   setup, Widgets, Project settings, Templates tabs).
 - mint-sites: `data-key` on `track.js` / `mint.js` from the render answer.
+
+## AB-13 — Form attachments (S) — done, not deployed
+
+Asked for by the user for Thinkcrypt's contact form (2026-10-26: “they can add multiple files with the contact
+form”); the public API had no way in for files.
+
+- backend: `routes-public/uploads.ts`, mounted in `server.ts` at `/public/api/uploads` ahead of the public
+  router's catch-all (its own file so it stays clear of the payments work in `public.router.ts`). The project from
+  its key as the public API does; 403 `uploads_closed` unless an enabled create endpoint for anyone writes to a
+  model with a file/files/image/images field (`ensureEndpoints()` first, as the public API's first call would);
+  multer in memory, `files` ≤ 5 × 10 MB (400 `upload_invalid` / `upload_empty`), types by mimetype or extension:
+  png jpg webp gif heic pdf doc(x) xls(x) ppt(x) txt csv zip — never svg or html (415 `upload_type`); documents
+  get `Content-Disposition: attachment`; `File` per upload in folder `website-uploads` (organization library when
+  `mediaScope` is organization); 20 calls / 15 min per IP; → 201 `{ files: [{ url, name, type, size }] }`.
+- The site then sends the URLs in the record's field through the model's create endpoint.
+- Verified on a private stack (fake S3): 401 missing/invalid key, 403 for a project with no such form, a form
+  built a moment before works on the first call, svg/html refused, 6 files and 11 MB refused, empty refused;
+  with fake credentials the S3 step fails (500 `upload_failed`) — the real upload runs on deploy.
+- Not yet: the panel's API reference and the public-api guide don't list it.
 
 ## AB-12 — Customer sign-in on Endpoints (S) — done
 
