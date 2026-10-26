@@ -1,5 +1,5 @@
 import { validatePageFields } from '../validate';
-import { EMPTY_SEO, flatFromVseo, pageToVseo, parseSchemaJson, vseoToPage } from '../seo';
+import { EMPTY_SEO, flatFromVseo, pageToVseo, parseSchemaJson, siteSeoDefaults, vseoToPage, withSiteDefaults } from '../seo';
 import { sitemapXml } from '../../functions/siteConfig.function';
 
 // SB-31: a page's SEO is the AGS VSeo's — these are the fields past the first six.
@@ -99,5 +99,24 @@ describe('the panel SEO editor’s object (SB-32)', () => {
 		const empty = vseoToPage({ ogType: 'video', twitterCard: 'nope', robots: { maxImagePreview: 'huge' }, ogImage: { url: 'https://cdn.example.com/a.jpg' } });
 		expect(empty).toMatchObject({ ogType: '', twitterCard: '', maxImagePreview: 'large', image: 'https://cdn.example.com/a.jpg', noIndex: false, sitemapInclude: true, schemaType: 'auto' });
 		expect(vseoToPage(null)).toEqual({ ...EMPTY_SEO });
+	});
+});
+
+// SB-33: Site setup's Default SEO is the same editor — settings for every page, copy for the home page.
+describe('the site’s Default SEO under a page’s own (SB-33)', () => {
+	const site = siteSeoDefaults({ ogTitle: 'Site share title', ogImageAlt: 'Our office', twitterCard: 'summary', robots: { noArchive: true, maxSnippet: 120 }, schemaType: 'LocalBusiness', sitemap: { priority: 0.4, changeFrequency: 'monthly' }, canonicalUrl: 'https://a.test/' });
+
+	it('keeps the four fields of its own out of the defaults', () => {
+		expect(siteSeoDefaults({ metaTitle: 'x', ogTitle: 'y' })).not.toHaveProperty('metaTitle');
+	});
+
+	it('gives the home page the copy and the settings', () => {
+		const home = withSiteDefaults({ ...EMPTY_SEO }, site, { isHome: true, ownImage: false });
+		expect(home).toMatchObject({ ogTitle: 'Site share title', ogImageAlt: 'Our office', twitterCard: 'summary', noArchive: true, maxSnippet: 120, schemaType: 'LocalBusiness', sitemapPriority: 0.4, canonical: 'https://a.test/' });
+	});
+
+	it('gives another page only the settings, and what a page sets wins', () => {
+		const other = withSiteDefaults({ ...EMPTY_SEO, twitterCard: 'summary_large_image', sitemapPriority: 0.9 }, site, { isHome: false, ownImage: true });
+		expect(other).toMatchObject({ ogTitle: '', schemaType: 'auto', ogImageAlt: '', twitterCard: 'summary_large_image', noArchive: true, sitemapPriority: 0.9, sitemapChangeFrequency: 'monthly', canonical: '' });
 	});
 });

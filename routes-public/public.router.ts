@@ -54,6 +54,7 @@ import {
 } from '../library/functions/apiEndpoints.function.js';
 import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
+import { withSiteDefaults } from '../library/siteBuilder/seo.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import {
@@ -715,7 +716,11 @@ router.get(
 			.lean();
 		const builtBy = new Map(builtAll.map(p => [p.published.path, p.published]));
 		const listed = (pub: any) => pub.seo?.noIndex !== true && pub.seo?.sitemapInclude !== false;
-		const extra = (pub: any) => ({ priority: pub.seo?.sitemapPriority, changeFrequency: pub.seo?.sitemapChangeFrequency });
+		// A page's own priority and change frequency, else Site setup's Default SEO (SB-33).
+		const extra = (pub: any) => {
+			const s = withSiteDefaults(pub.seo || {}, doc.seo?.defaults, { isHome: false, ownImage: true });
+			return { priority: s.sitemapPriority, changeFrequency: s.sitemapChangeFrequency };
+		};
 		const kit = list
 			.filter(p => p.path && !hidden.has(String(p._id)) && (!builtBy.has(p.path) || listed(builtBy.get(p.path))))
 			.map(p => (builtBy.has(p.path) ? { ...p, ...extra(builtBy.get(p.path)) } : p));

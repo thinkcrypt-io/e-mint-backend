@@ -437,6 +437,7 @@ Renderer (`mint-sites`)
 | SB-30 | Site setup → **Add script**: paste scripts that go on every page, rendered by the site's server (not only by track.js) | backend + mint-sites + mint-tenant + admin | S | done 2026-10-20 (backend `0add6e24`, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
 | SB-31 | Page SEO = the AGS **VSeo** editor (Google preview, Basics / Social / Indexing / Structured data / Sitemap, SEO checks) with every field live on the site | backend + mint-sites + mint-builder + mint-tenant + admin | M | done 2026-10-20 (backend `0add6e24`, mint-builder `4c56caf`, mint-sites `4542939`, mint-tenant `bd2a904`, admin `a459213`, mint-docs `d814db6`, mint-webpage `ab4995e`) |
 | SB-32 | The panel's **SEO** records (one per page) edited with the same SEO editor — Google preview, Basics / Social / Indexing / Structured data / Sitemap, share preview — and an **SEO** field kind for any model | backend + mint-tenant | M | done 2026-10-21, not deployed |
+| SB-33 | Site setup → SEO: **Default SEO** is the same SEO editor — its social, indexing, structured data and sitemap settings are site-wide defaults | backend + mint-tenant | S | done 2026-10-26, not deployed |
 | SB-25 | Benchmark: same briefs hand-written in Claude Code vs built through the MCP — tokens, time, screenshots | all | M | open (after SB-12, SB-20, SB-21) |
 
 ---
@@ -1495,4 +1496,30 @@ upgraded when its site opens, old records get the object; an old project whose
 SEO page is opened without the builder is upgraded before that request); SB-31's
 `site-builder-seo` 20/20 again; jest `seo.test.ts` 8/8; backend + mint-tenant
 `tsc` clean.
+
+## SB-33 — Default SEO is the SEO editor too (S) — done 2026-10-26
+
+**Why (the user, 2026-10-26):** "make Site setup → SEO's Default SEO use the full VSeo editor too".
+
+**What:**
+- Site setup → SEO → Default SEO is the VSeo (Google preview on the site's domain, Basics / Social / Indexing /
+  Structured data / Sitemap, share preview, checks) with the title template above it. Its meta title, description,
+  share image and keywords stay `seo.metaTitle` / `metaDescription` / `ogImage` / `keywords`; the rest of the
+  editor's object is `WebsiteSettings.seo.defaults` (Mixed, AGS shape, normalised by `siteSeoDefaults`, checked in
+  `saveSite` with the page checks — a bad custom JSON-LD is a 400 "Default SEO: …").
+- `withSiteDefaults` (seo.ts) puts them under each page's own SEO in the render answer: **settings for every page**
+  that doesn't set its own (Open Graph type, X card and image, nofollow / noarchive / noimageindex, max snippet,
+  max image preview, sitemap priority and change frequency — also in sitemap.xml); **copy for the home page only**
+  (Open Graph / X title and description, schema type, custom JSON-LD, canonical, breadcrumb label), or every page
+  would share one share title. The image alt text applies only where the site's share image is used.
+- mint-sites unchanged (it reads the render answer). `SeoPreview.tsx` (SB-31's preview + counters) removed — the
+  editor has its own.
+
+**Files:** backend `library/siteBuilder/{seo,render}.ts`, `library/functions/siteConfig.function.ts`,
+`library/models/tenancy/websiteSettings.model.ts`, `routes-public/public.router.ts` (sitemap), jest `seo.test.ts`,
+smoke `site-builder-seo-panel.mjs`; mint-tenant `app/site-setup/_components/Seo.tsx`.
+
+**Verified:** smoke `site-builder-seo-panel` 28/28 (defaults saved in shape, bad value refused, home page gets copy +
+settings, another page only settings, sitemap defaults), `site-builder-seo` 20/20, jest 11/11, tsc both repos;
+headless-Chrome walk-through of Site setup → SEO (editor loads the saved defaults, a Social edit saves).
 

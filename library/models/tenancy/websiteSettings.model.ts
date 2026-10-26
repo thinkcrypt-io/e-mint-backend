@@ -71,6 +71,8 @@ const schema = new Schema<any>(
 			canonicalDomain: str,
 			googleVerification: str,
 			bingVerification: str,
+			/** The rest of Default SEO's editor (SB-33): social, indexing, structured data, sitemap — the AGS VSeo shape. */
+			defaults: { type: mongoose.Schema.Types.Mixed, default: undefined },
 		},
 		tracking: {
 			mintAnalytics: { type: Boolean, default: true },

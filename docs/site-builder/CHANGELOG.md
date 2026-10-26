@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, where, how it was verified.
 
+## SB-33 — Default SEO is the SEO editor too (2026-10-26)
+
+**What:** Site setup → SEO → Default SEO is the same SEO editor as each page's. Its share cards, robots and
+sitemap settings apply to every page that doesn't set its own; its titles, descriptions and structured data to
+the home page. Also (SB-32 follow-up): an older website project gets the SEO editor on its SEO page the first
+time that page is opened, without visiting the builder.
+
+**Files:** backend `seo.ts`, `render.ts`, `siteConfig.function.ts`, `websiteSettings.model.ts`, sitemap in
+`public.router.ts`, `routes-tenant/project.router.ts`; mint-tenant `site-setup/_components/Seo.tsx`.
+
+**Verified:** smoke 28/28 + 20/20, jest 11/11 — see WORK_ORDERS SB-33.
+
 ## SB-32 — The panel's SEO records use the SEO editor (2026-10-21)
 
 **What:** the tenant panel's SEO page (one record per site page) is the AGS

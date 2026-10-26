@@ -4,7 +4,7 @@ import SiteDesign from '../models/siteBuilder/siteDesign.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import Organization from '../models/tenancy/organization.model.js';
 import { codeOf, loadSite, siteOrigin, siteTags } from '../functions/siteConfig.function.js';
-import { EMPTY_SEO } from './seo.js';
+import { EMPTY_SEO, withSiteDefaults } from './seo.js';
 import { publicWidgets } from '../functions/widgets.function.js';
 import { manifestVersion } from './manifest.js';
 import { sectionRefs } from './site.js';
@@ -152,6 +152,8 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 	const currency = shop?.currency || '';
 	const scope: Scope = { record, site: { name: identity.siteName || project.name, tagline: identity.tagline || '', ...(doc.contact || {}) }, content: contents, currency, locale: identity.locale || 'en' };
 	const seo: any = record ? fillSeo(pub.seo, scope) : pub.seo || {};
+	// Site setup's Default SEO under the page's own (SB-33): settings for every page, copy for the home page.
+	const extras: any = withSiteDefaults(seo, siteSeo.defaults, { isHome: !!pub.isHome && !record, ownImage: !!seo.image });
 	// The library's alt text and focal points for the pictures it draws (docs/cms D12, CMS-13).
 	const media = await mediaFor({ trees, nodes, contents, record, logo: identity.logo }).catch(() => ({}));
 
@@ -185,10 +187,10 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 				description: seo.description || siteSeo.metaDescription || '',
 				image: seo.image || siteSeo.ogImage || '',
 				noIndex: !!seo.noIndex || siteSeo.indexing === false,
-				canonical: seo.canonical || (origin ? `${origin}${path === '/' ? '' : path}` : ''),
+				canonical: seo.canonical || (pub.isHome && extras.canonical) || (origin ? `${origin}${path === '/' ? '' : path}` : ''),
 				keywords: seo.keywords?.length ? seo.keywords : siteSeo.keywords || [],
-				// The rest of the page's SEO (SB-31); empty strings fall back in the renderer.
-				...Object.fromEntries(Object.keys(EMPTY_SEO).filter(k => !['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'].includes(k)).map(k => [k, seo[k] ?? (EMPTY_SEO as any)[k]])),
+				// The rest of the page's SEO (SB-31), over Site setup's Default SEO (SB-33); empty strings fall back in the renderer.
+				...Object.fromEntries(Object.keys(EMPTY_SEO).filter(k => !['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'].includes(k)).map(k => [k, extras[k] ?? (EMPTY_SEO as any)[k]])),
 			},
 		},
 		data: { nodes, contents, ...(record && { record }), currency },

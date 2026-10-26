@@ -3,6 +3,7 @@ import WebsiteSettings from '../models/tenancy/websiteSettings.model.js';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel, syncDynamicModels } from './dynamicModels.function.js';
 import { runInScope } from './tenantScope.function.js';
+import { siteDefaultsProblems, siteSeoDefaults } from '../siteBuilder/seo.js';
 
 /**
  * A website project's settings (docs/multi-tenancy WO-34, WO-38): the
@@ -108,6 +109,10 @@ export const SITE_SETTINGS = Joi.object({
 			.messages({ 'string.pattern.base': 'The main domain looks like example.com' }),
 		googleVerification: text(200).label('Google verification'),
 		bingVerification: text(200).label('Bing verification'),
+		// The rest of Default SEO's editor (SB-33), kept in the AGS shape (checked in saveSite, like a page's).
+		defaults: Joi.object()
+			.unknown(true)
+			.custom(v => siteSeoDefaults(v)),
 	}),
 	tracking: Joi.object({
 		mintAnalytics: Joi.boolean(),
@@ -321,6 +326,9 @@ const asPlain = (v: any) => JSON.parse(JSON.stringify(v ?? null));
  * first — throws the first problem as a 400. Returns the saved settings.
  */
 export const saveSite = async (project: any, patch: any, { req }: { req?: any } = {}) => {
+	// Here rather than in Joi, whose messages read braces as templates (custom JSON-LD has them).
+	const seoProblems = patch?.seo?.defaults ? siteDefaultsProblems(patch.seo.defaults) : [];
+	if (seoProblems.length) throw Object.assign(new Error(`Default SEO: ${seoProblems[0]}`), { status: 400 });
 	const { value, error } = SITE_SETTINGS.validate(patch || {}, { abortEarly: true, stripUnknown: true });
 	if (error) throw Object.assign(new Error(error.details[0].message.replace(/"/g, '')), { status: 400 });
 	const current = await loadSite(project, { req, secrets: true });
@@ -416,7 +424,7 @@ export const panelView = (project: any, doc: any) => ({
 	identity: { siteName: '', tagline: '', logo: '', favicon: '', footerText: '', primaryColor: '', secondaryColor: '', fontFamily: '', ...(doc.identity || {}) },
 	contact: { email: '', phone: '', whatsapp: '', address: '', mapEmbedUrl: '', hours: '', ...(doc.contact || {}) },
 	social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', tiktok: '', pinterest: '', ...(doc.social || {}) },
-	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], ...(doc.seo || {}), ...seoOf(doc) },
+	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], ...(doc.seo || {}), ...seoOf(doc), defaults: siteSeoDefaults(doc.seo?.defaults) },
 	tracking: trackingOf(doc),
 	serverSide: {
 		meta: { enabled: !!doc.serverSide?.meta?.enabled, testEventCode: doc.serverSide?.meta?.testEventCode || '', tokenSet: !!doc.secrets?.metaAccessToken },

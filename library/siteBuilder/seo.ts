@@ -208,3 +208,54 @@ export const PAGE_SEO_FORM = () => [
 	{ sectionTitle: 'SEO', fields: ['seo'] },
 	{ sectionTitle: 'Tags', fields: ['tags'] },
 ];
+
+/* ------------------------------------------- the site's Default SEO (SB-33) */
+
+/**
+ * Site setup → SEO's Default SEO is the same editor (SB-33). Its meta title,
+ * description, share image and keywords stay where they were (`seo.metaTitle`…);
+ * the rest of the editor's object is `seo.defaults`, normalised here (the AGS
+ * shape, without those four).
+ */
+export const siteSeoDefaults = (v: any) => {
+	const { metaTitle, metaDescription, ogImage, keywords, ...rest } = pageToVseo(vseoToPage(v));
+	return rest;
+};
+
+/** Copy for one page — the site's only stands in on the home page, or every page would share it. */
+const HOME_ONLY = ['ogTitle', 'ogDescription', 'twitterTitle', 'twitterDescription', 'focusKeyword', 'breadcrumbTitle', 'schemaJson'] as const;
+/** How every page behaves unless it says otherwise. */
+const ALL_PAGES_TEXT = ['ogType', 'twitterCard', 'twitterImage'] as const;
+const ALL_PAGES_FLAGS = ['noFollow', 'noArchive', 'noImageIndex'] as const;
+
+/**
+ * A page's SEO past the first six (EMPTY_SEO's keys), with the site's Default
+ * SEO under it: what the page sets wins; else the site's — settings for every
+ * page, copy for the home page only. `ownImage` = the page has its own share
+ * image (the site's image alt text only fits the site's image).
+ */
+export const withSiteDefaults = (page: Record<string, any>, siteDefaults: any, { isHome, ownImage }: { isHome: boolean; ownImage: boolean }) => {
+	const p: any = { ...EMPTY_SEO, ...(isObj(page) ? page : {}) };
+	if (!isObj(siteDefaults) || !Object.keys(siteDefaults).length) return p;
+	const s: any = vseoToPage(siteDefaults);
+	for (const k of ALL_PAGES_TEXT) if (!p[k]) p[k] = s[k];
+	for (const k of ALL_PAGES_FLAGS) p[k] = !!p[k] || !!s[k];
+	if (!p.ogImageAlt && !ownImage) p.ogImageAlt = s.ogImageAlt;
+	if (p.maxSnippet === EMPTY_SEO.maxSnippet) p.maxSnippet = s.maxSnippet;
+	if (p.maxImagePreview === EMPTY_SEO.maxImagePreview) p.maxImagePreview = s.maxImagePreview;
+	if (p.sitemapPriority === EMPTY_SEO.sitemapPriority) p.sitemapPriority = s.sitemapPriority;
+	if (p.sitemapChangeFrequency === EMPTY_SEO.sitemapChangeFrequency) p.sitemapChangeFrequency = s.sitemapChangeFrequency;
+	if (isHome) {
+		for (const k of HOME_ONLY) if (!p[k]) p[k] = s[k];
+		if (!p.schemaType || p.schemaType === 'auto') p.schemaType = s.schemaType;
+		if (!p.canonical) p.canonical = s.canonical;
+	}
+	return p;
+};
+
+/** Problems with the Default SEO's editor fields, for the Site setup save (the page checks, SB-31). */
+export const siteDefaultsProblems = (v: any) => {
+	const problems: string[] = [];
+	validateSeoExtras(vseoToPage(v), (_path, message) => problems.push(message), (u: unknown) => typeof u === 'string' && /^https?:\/\/\S+$/.test(u));
+	return problems;
+};

@@ -4,7 +4,7 @@
 // reaches the page's SEO in full (social, indexing, structured data, sitemap);
 // a builder save fills the object; a plain-field save through the API keeps the
 // object in step; and a project made before SB-32 is upgraded when its site opens.
-import { call, ok, done } from './lib.mjs';
+import { call, ok, done, ROOT, projectKey } from './lib.mjs';
 
 const stamp = Date.now();
 let r = await call('POST', '/tenant/api/auth/register', { name: 'Ada Panel', email: `seopanel${stamp}@example.com`, password: 'tenant-pass-123', organization: `Seo Panel ${stamp}`, country: 'BD' });
@@ -97,4 +97,41 @@ const form2 = JSON.stringify((c2.doc || c2).form || []);
 ok('opening its SEO page upgrades it first: the form is the editor', form2.includes('"seo"') && !form2.includes('"description"'), form2.slice(0, 300));
 const def2b = ((await call('GET', P2('/builder/models'), null, T)).body?.doc || []).find(m => m.route === 'seo');
 ok('…and the model has the SEO field', def2b?.fields?.some(f => f.key === 'seo' && f.kind === 'seo'), JSON.stringify(def2b?.fields?.map(f => f.key)));
+
+/* ------------------- Site setup → SEO: Default SEO is the editor (SB-33) */
+const site3 = (await call('POST', '/tenant/api/projects', { name: `Defaults ${stamp}`, type: 'website' }, T)).body;
+const P3 = path => `/tenant/api/p/${site3._id}${path}`;
+const SB3 = path => `/tenant/api/p/${site3._id}/site-builder${path}`;
+await call('GET', SB3('/design'), null, T);
+const defaults = {
+	ogTitle: 'Akashbari Global — study abroad',
+	ogDescription: 'Counselling, applications and visas.',
+	ogType: 'website',
+	ogImageAlt: 'Our Dhaka office',
+	twitterCard: 'summary',
+	twitterTitle: 'Akashbari on X',
+	robots: { index: true, follow: true, noArchive: true, maxSnippet: 150, maxImagePreview: 'standard' },
+	schemaType: 'LocalBusiness',
+	schemaJson: '{ "areaServed": "BD" }',
+	sitemap: { include: true, priority: 0.5, changeFrequency: 'monthly' },
+};
+r = await call('PUT', P3('/site-config'), { seo: { metaTitle: 'Akashbari Global', metaDescription: 'Study abroad from Bangladesh: counselling, university applications and visa support.', ogImage: 'https://cdn.example.com/site.jpg', defaults } }, T);
+ok('Default SEO saves the editor’s fields', r.status === 200 && r.body?.seo?.defaults?.ogTitle === defaults.ogTitle && r.body.seo.defaults.robots?.noArchive === true && r.body.seo.metaTitle === 'Akashbari Global', `${r.status} ${JSON.stringify(r.body?.seo || r.body?.message).slice(0, 300)}`);
+ok('…kept in the editor’s shape, without the four fields of its own', r.body?.seo?.defaults && !('metaTitle' in r.body.seo.defaults) && r.body.seo.defaults.sitemap?.changeFrequency === 'monthly', JSON.stringify(r.body?.seo?.defaults).slice(0, 300));
+r = await call('PUT', P3('/site-config'), { seo: { defaults: { ...defaults, schemaJson: '{nope' } } }, T);
+ok('…a bad value is refused', r.status === 400 && /JSON-LD/.test(r.body?.message || ''), `${r.status} ${r.body?.message}`);
+
+const pages3 = (await call('GET', SB3('/pages'), null, T)).body.pages;
+r = await call('POST', SB3('/pages'), { name: 'Services', path: '/services', seo: { title: 'Services | Akashbari', description: 'What we do for students going abroad.' } }, T);
+r = await call('POST', SB3('/publish'), { note: 'defaults' }, T);
+ok('(published)', r.status === 200, `${r.status} ${r.body?.message}`);
+const live3 = async path => (await call('GET', `/public/api/${site3.publicSlug}/render?path=${encodeURIComponent(path)}`)).body?.page?.seo || {};
+const home3 = await live3('/');
+ok('home page: the defaults’ copy and settings', home3.ogTitle === defaults.ogTitle && home3.ogImageAlt === defaults.ogImageAlt && home3.twitterCard === 'summary' && home3.schemaType === 'LocalBusiness' && home3.noArchive === true && home3.maxSnippet === 150, JSON.stringify(home3).slice(0, 400));
+const svc3 = await live3('/services');
+ok('another page: the settings, not the home page’s copy', svc3.twitterCard === 'summary' && svc3.noArchive === true && svc3.maxImagePreview === 'standard' && svc3.ogTitle === '' && svc3.schemaType === 'auto', JSON.stringify(svc3).slice(0, 400));
+const key3 = await projectKey(site3.publicSlug);
+const xml3 = await (await fetch(`${ROOT}/public/api/site/sitemap.xml?apiKey=${key3}&origin=https://akashbari.test`)).text();
+ok('sitemap: a page without its own uses the default priority and frequency', xml3.includes('<loc>https://akashbari.test/services</loc>') && /services<\/loc>[^]*?<changefreq>monthly<\/changefreq><priority>0\.5<\/priority>/.test(xml3), xml3);
+ok('(the home page is there)', pages3.some(p => p.isHome));
 done();
