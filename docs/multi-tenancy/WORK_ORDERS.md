@@ -15,7 +15,8 @@ and the visit's channel/source (GA4-style, on the visit's `entry` page view), ti
 (mint.js customer token, checked; or `MintAnalytics.identify`). New `WebsiteVisitor` model (per-visitor summary,
 upserted per batch), `visitorAnalytics.function.ts` (track work moved out of public.router), analytics router
 `/visitors`, `/visitors/:id`, `/live`, ten new `/top` dims. Smoke `visitor-analytics.mjs` (41 checks, needs the
-internet). Needs the backend deploy (track.js + endpoints); older events have none of the new fields.
+internet). Pushed backend `6ad90815`, mint-tenant `0940add`, mint-docs `b47f353` (analytics#visitors…), website `50f46c2`.
+Needs the backend deploy (track.js + endpoints); older events have none of the new fields.
 
 **2026-10-26 — WO-55 Website setup page.** Website projects have **Site → Website setup** (`/website-setup`, mint-tenant
 only; Build permission): the site API address + project key, then per framework (Plain HTML / React (Vite) / Next.js,
