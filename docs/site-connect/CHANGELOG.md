@@ -1,5 +1,28 @@
 # Site connect — changelog
 
+## 2026-10-27 — SC-10: the mint-edge Worker
+
+- New repo `mint-edge`: a Cloudflare Worker for the customer's own account, in front of their site.
+  - **HTML pages:** a page added to Website → SEO gets Mint's head (`set` tags replace the page's, `fill` only fill gaps,
+    JSON-LD added, all marked `data-mint-seo="edge"`), so link previews show it. Every page gets
+    `<script src="/_mint/track.js" data-api="/_mint/api" data-seo defer>` before `</body>`, unless it already has the snippet.
+  - **On the site's own domain:** `/_mint/track.js` and `/_mint/api/{track, site/tags, site/head}` go to Mint. Site setup
+    redirects (301/302, query kept). robots.txt and sitemap.xml come from Mint only when switched on.
+  - **Left alone:** images, POSTs, non-200s and other types.
+  - **Settings:** read from Mint and kept a minute, then used for up to a day while new ones load. Mint is asked about
+    the head only for pages that are Mint's.
+  - **Never breaks a site:** if Mint is down (more than 1 s with nothing kept), with Bypass on, for a host the project doesn't
+    name, or with no key, the page passes through untouched. `?mint-bypass=<secret>` skips it for one request.
+- Backend:
+  - `GET /public/api/site/edge` (version, bypass, domains, analytics, pages, redirects, robots, sitemap).
+  - `WebsiteSettings.edge` {bypass, robots, sitemap}, off by default, saved on site-config.
+  - `/track` takes the visitor's address from `X-Mint-Visitor-IP`.
+  - `track.js` `data-api`, and `applyHead` clears the Worker's tags too.
+- Tests:
+  - smoke `site-connect-edge.mjs` (20 checks);
+  - `mint-edge/test/edge.test.mjs` (31 checks under `wrangler dev`, about 7 ms added per page locally);
+  - a browser check through the Worker.
+
 ## 2026-10-27 — Add domain from Analytics
 
 - Each event keeps `host` (the page's host from the browser's Origin / Referer). `GET /tenant/api/p/:id/analytics/hosts`:

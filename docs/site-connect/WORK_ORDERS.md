@@ -27,7 +27,7 @@ SC-01 Plan & docs — done 2026-10-27 (revised the same day: code first, Cloudfl
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | SC-09 | **Spike:** our test zone on a free Cloudflare account; upload a Worker + route with a scoped API token over the API; HTMLRewriter on a real WordPress page; time added per request; Deploy to Cloudflare button | mint-edge | S | after SC-02 |
-| SC-10 | `mint-edge` Worker: config by project key, `fetch(request)` to their server, HTMLRewriter head, `/_mint/*` tracker, robots/sitemap, redirects, fail open, Bypass, version check | mint-edge + backend (edge config endpoint) | L | after SC-09 |
+| SC-10 | `mint-edge` Worker: config by project key, `fetch(request)` to their server, HTMLRewriter head, `/_mint/*` tracker, robots/sitemap, redirects, fail open, Bypass, version check | mint-edge + backend (edge config endpoint) | L | done 2026-10-27, tested locally (`wrangler dev`); not on a real Cloudflare zone yet (SC-09). Version: `/site/edge` says the latest and the Worker sends its own (`x-mint-edge`); comparing them is SC-11's panel |
 | SC-11 | Panel: Cloudflare connect — TXT check, token (encrypted, D8), zone check, upload + route, before/after check, health alerts, push updates (D10), remove; "move your DNS to Cloudflare" walkthrough; Redirects + 404s | backend + mint-tenant + docs | L | after SC-10 (Q1) |
 | SC-13 | Crawler log through the Worker (Googlebot, Bingbot, AI crawlers: which pages, when) | mint-edge + backend + mint-tenant | M | later |
 
@@ -45,6 +45,15 @@ Order: SC-02 → 03 → 08 make the code ways work. SC-04 → 05 → 06 → 07 a
 
 ## Handoff
 
+- 2026-10-27: SC-10 done (user: "build the cloudflare worker, we dont need our own proxy"). The Worker is in the new local
+  repo `mint-edge/` (`src/index.js` + `src/lib.js`, no build step), which has **no GitHub remote yet**.
+  - Backend: `GET /public/api/site/edge` (`library/functions/siteEdge.function.ts`).
+  - Settings: `WebsiteSettings.edge` {bypass, robots, sitemap}, saved on site-config `edge`, no panel UI yet.
+  - `/track` takes `X-Mint-Visitor-IP`; `track.js` reads `data-api` and clears the Worker's `data-mint-seo="edge"` tags.
+  - Tests: smoke `site-connect-edge.mjs` (20 checks); `mint-edge/test/edge.test.mjs` (31 checks: a local site, `wrangler dev`,
+    a private backend; adds about 7 ms per page locally, with Mint down it passes through). Checked in a browser: tags
+    and `/_mint/*` calls once each, no console errors. Not deployed.
+  - Next: SC-09 needs a test domain on Cloudflare and a token from the user; then SC-11 (Connect Cloudflare in the panel).
 - 2026-10-27: SC-08b Test connection done (user: "a button to test on the tenant panel if it is connected") —
   `library/functions/siteConnection.function.ts`; smoke now 50 checks (a local stand-in site). Not deployed.
 - 2026-10-27: SC-02, SC-03, SC-08 done (user: "first implement the code, a snippet not the package … and a simple guide on

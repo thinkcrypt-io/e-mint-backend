@@ -17,8 +17,16 @@ Node / Next.js server print; mint-docs `websites#connect-a-website`; MCP `site_s
 **Test connection** button on that tab (SC-08b: domain, snippet, visits, the page's SEO;
 `POST /site-config/connection`). Analytics header **Add domain** (sites visits came from — events keep `host`, `GET /analytics/hosts` — one click,
 or typed). Smoke `site-connect-head.mjs` (54). The live backend serves `track.js data-seo` and `/site/head` (checked
-2026-10-27, sinammengineering.com connected); Add domain is not deployed. Next: Cloudflare in the customer's own account
-(SC-09…11) — open questions in `docs/site-connect/README.md`.
+2026-10-27, sinammengineering.com connected); Add domain is not deployed. The snippet can't change link previews
+(crawlers don't run JS), so the Cloudflare Worker was built:
+
+- **SC-10 done:** the `mint-edge` Worker, in the local repo `e-mint/mint-edge` with no GitHub remote yet. It runs in the
+  customer's own Cloudflare account and rewrites `<head>` for pages added to SEO, serves `/_mint/track.js` and
+  `/_mint/api`, and fails open.
+- **Backend:** `GET /public/api/site/edge`; `WebsiteSettings.edge` holds bypass, robots and sitemap.
+- **Tests:** 31 Worker checks under `wrangler dev`, plus the `site-connect-edge.mjs` smoke (20 checks). Not deployed.
+- **Next:** SC-09 on a real Cloudflare zone (needs the user's test domain and token), then SC-11 Connect Cloudflare in
+  the panel. No CNAME proxy (user: "we dont need our own proxy").
 
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
 (Manage projects; first = default; `makeDefault`), `send_test_email_design` — `library/controllers/mcp/emailDesigns.tools.ts`;
