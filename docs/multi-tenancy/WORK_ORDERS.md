@@ -8,13 +8,14 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-27)
 
-**2026-10-27 — Site connect planned (SC-01, `docs/site-connect`).** Any website (built anywhere) connects to Mint
-analytics + SEO. Phase 1 (user's order: code first): the head answer `/site/head?path=`, `track.js data-seo`, a
-`@mintapp/seo` package + HTML/PHP snippets, page discovery, Connect + SEO pages (SC-02…08). Phase 2: a `mint-edge`
-Worker uploaded into the customer's **own** Cloudflare account (their domain, scoped API token or Deploy button, our
-TXT record for ownership) that rewrites `<head>` (SC-09…11). Our own CNAME proxy only as a later fallback (D12).
-Alternatives in the README (platform apps, deploy hooks, GTM, AI SEO over MCP). Nothing built; open questions 1–5
-wait for the user, none blocks SC-02.
+**2026-10-27 — Site connect: existing websites by snippet (SC-02, SC-03, SC-08, `docs/site-connect`).** A site built
+anywhere pastes `<script src=…/public/track.js data-key=… data-seo>`: Analytics, plus the SEO of the pages added on
+Website → Pages + SEO — every other page keeps its own (the user's rule, D4). `GET /public/api/site/head?path=`
+(JSON with `set`/`fill` tags, or `&format=html` for the site's server; empty when the page isn't added) —
+`library/functions/siteHead.function.ts`. mint-tenant Website setup → **Existing website** tab (default) with PHP /
+Node / Next.js server print; mint-docs `websites#connect-a-website`; MCP `site_snippets` has `connect` + `head`.
+Smoke `site-connect-head.mjs` (35). Not deployed (backend first). Next: Cloudflare in the customer's own account
+(SC-09…11) — open questions in `docs/site-connect/README.md`.
 
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
 (Manage projects; first = default; `makeDefault`), `send_test_email_design` — `library/controllers/mcp/emailDesigns.tools.ts`;

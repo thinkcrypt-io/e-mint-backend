@@ -18,6 +18,12 @@
  * page's visible time and scroll depth go in when it's left.
  * `data-no-track` on the script, or Do Not Track, turns the counting off.
  *
+ * `data-seo` (docs/site-connect SC-03) also puts each page's SEO from the panel
+ * on it — GET …/site/head?path= on load and on every client-side navigation:
+ * the page's own SEO replaces its tags, the site's defaults only fill tags it
+ * doesn't have. Google reads it (it runs scripts); link previews don't — the
+ * site's server prints the same answer for those (?format=html).
+ *
  * It also puts the website's tags on the page (WO-34, WO-38) — Google
  * Analytics / Ads / Tag Manager, Meta, TikTok, LinkedIn, Pinterest, X and Snap
  * pixels, Clarity, Hotjar, the code tags, verification metas, the favicon — as
@@ -173,6 +179,55 @@ export const TRACK_JS = `(function () {
 		}).catch(function () {});
 	}
 
+	/* ---- each page's SEO from the panel (data-seo, docs/site-connect SC-03): own SEO replaces the page's tags, defaults only fill gaps ---- */
+	var seoOn = script.hasAttribute('data-seo');
+	var seoAsked = 0;
+	function headEl(t) {
+		if (t.tag === 'title') return document.head.querySelector('title');
+		if (t.tag === 'link') return document.head.querySelector('link[rel="canonical"]');
+		return t.name ? document.head.querySelector('meta[name="' + t.name + '"]') : document.head.querySelector('meta[property="' + t.property + '"]');
+	}
+	function readTag(el) { return el.tagName === 'TITLE' ? (el.textContent || '').trim() : el.getAttribute(el.tagName === 'LINK' ? 'href' : 'content') || ''; }
+	function writeTag(el, v) {
+		if (el.tagName === 'TITLE') { el.textContent = v; document.title = v; }
+		else el.setAttribute(el.tagName === 'LINK' ? 'href' : 'content', v);
+	}
+	// The page's own tags this script changed: put back on the next page, unless the site has changed them since.
+	var changed = [];
+	function applyHead(h) {
+		changed.forEach(function (c) { if (readTag(c.el) === c.wrote) writeTag(c.el, c.orig); });
+		changed = [];
+		Array.prototype.slice.call(document.head.querySelectorAll('[data-mint-seo="added"]')).forEach(function (el) { el.parentNode.removeChild(el); });
+		(h.tags || []).forEach(function (t) {
+			var el = headEl(t);
+			var has = el ? readTag(el) : '';
+			if (t.mode === 'fill' && has) return;
+			if (!el) {
+				el = document.createElement(t.tag);
+				if (t.tag === 'link') el.rel = 'canonical';
+				else if (t.tag === 'meta') el.setAttribute(t.name ? 'name' : 'property', t.name || t.property);
+				el.setAttribute('data-mint-seo', 'added');
+				document.head.appendChild(el);
+			} else changed.push({ el: el, orig: has, wrote: t.content });
+			writeTag(el, t.content);
+		});
+		(h.jsonLd || []).forEach(function (s) {
+			var el = document.createElement('script');
+			el.type = 'application/ld+json';
+			el.setAttribute('data-mint-seo', 'added');
+			el.text = JSON.stringify(s).split('<').join('\\\\u003c');
+			document.head.appendChild(el);
+		});
+	}
+	function seo() {
+		if (!seoOn) return;
+		var asked = ++seoAsked;
+		fetch(api + '/site/head' + withKey + '&path=' + encodeURIComponent(location.pathname)).then(function (r) { return r.ok ? r.json() : null; }).then(function (h) {
+			// A later navigation's answer wins over a slow earlier one.
+			if (h && asked === seoAsked) applyHead(h);
+		}).catch(function () {});
+	}
+
 	function stored(store, key) {
 		try { var v = store.getItem(key); if (!v) { v = id(); store.setItem(key, v); } return v; } catch (e) { return id(); }
 	}
@@ -249,6 +304,7 @@ export const TRACK_JS = `(function () {
 		if (location.pathname === last) return;
 		var first = last === null;
 		last = location.pathname;
+		seo();
 		var eid = first ? firstEid : id();
 		var entry = entryPending;
 		entryPending = false;

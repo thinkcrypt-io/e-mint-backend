@@ -13,9 +13,9 @@ SC-01 Plan & docs — done 2026-10-27 (revised the same day: code first, Cloudfl
 
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
-| SC-02 | Head answer `/site/head?path=` (JSON + html), connected pages as kit Pages (`source: 'connected'`), `WebsiteSettings.connection` | backend | M | todo |
-| SC-03 | `track.js` `data-seo`: apply the head answer (replace, not add, D4), re-apply on client-side navigation | backend | S | todo |
-| SC-08 | Code way: `@mintapp/seo` package (Next.js `generateMetadata`, Express middleware, Vite plugin) + plain HTML / PHP snippets on Website setup "SEO for every page" (Alternative B) | new package + mint-tenant + docs | M | todo (needs Q3 for the npm name) |
+| SC-02 | Head answer `/site/head?path=` (JSON + html); only pages added to SEO (D4) | backend | M | done 2026-10-27 (no `connection` settings / `source` field yet — not needed for the snippet) |
+| SC-03 | `track.js` `data-seo`: apply the head answer (replace, not add, D4), re-apply on client-side navigation, put back what it replaced | backend | S | done 2026-10-27 |
+| SC-08 | Code way: snippets on Website setup → **Existing website** (paste the snippet, add pages, check, PHP / Node / Next.js server print, robots + sitemap) + guide | mint-tenant + docs | M | done 2026-10-27 (snippets; the `@mintapp/seo` package later, user's call) |
 | SC-04 | Page discovery: site's sitemap, shallow crawl (current title/description), paths from analytics; **Find pages again** | backend | M | todo |
 | SC-05 | Panel: Site → Connect your site — detect, pick a way, filled-in steps, Check connection, status card | mint-tenant + docs | M | todo |
 | SC-06 | Panel: Website → SEO for connected sites — found pages table (now vs Mint, score), VSeo per page | mint-tenant + docs | M | todo |
@@ -44,6 +44,10 @@ Order: SC-02 → 03 → 08 make the code ways work. SC-04 → 05 → 06 → 07 a
 
 ## Handoff
 
+- 2026-10-27: SC-02, SC-03, SC-08 done (user: "first implement the code, a snippet not the package … and a simple guide on
+  connecting the website on tenant panel"; rule D4: only pages added to SEO are Mint's). Smoke
+  `site-connect-head.mjs` (35 checks) on a private backend; `data-seo` checked in a browser on a plain HTML page (own
+  tags replaced on an added page, put back on a page not added). Not deployed. Next: Cloudflare (SC-09…11), or SC-04…07.
 - 2026-10-27: plan written (SC-01), then revised: code first; Cloudflare = a Worker in the customer's own account
   (D7), our CNAME proxy only as a later fallback (D12). Nothing built. Open questions 1–5 in `README.md` wait for the
   user; none blocks SC-02.

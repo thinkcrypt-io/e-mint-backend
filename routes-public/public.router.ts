@@ -54,6 +54,7 @@ import {
 import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
 import { withSiteDefaults } from '../library/siteBuilder/seo.js';
+import { headHtml, siteHead } from '../library/functions/siteHead.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import {
@@ -520,6 +521,7 @@ router.post(
  *   GET /site                      the site settings (WebsiteSettings, flat), its menu, and its
  *                                  configuration (tags, code, SEO, redirects, headers — WO-34, WO-38)
  *   GET /site/tags                 what /public/track.js injects: the tags and custom code
+ *   GET /site/head?path=/about     one page's SEO by its address, for a site built anywhere (site-connect SC-02)
  *   GET /site/robots.txt           robots.txt from the indexing settings
  *   GET /site/sitemap.xml          the published pages (not hidden from search); ?origin=https://…
  *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
@@ -630,6 +632,26 @@ router.get(
 		websiteOnly(req);
 		res.setHeader('Cache-Control', 'public, max-age=60');
 		return siteTags(await loadSite(req.project, { req, cached: true }));
+	})
+);
+
+/*
+ * One page's SEO by its address, for a website built anywhere (docs/site-connect SC-02):
+ *   GET /site/head?path=/about              JSON — tags (each `set` or `fill`), jsonLd, and the resolved `seo`
+ *   GET /site/head?path=/about&format=html  the same as <head> tags, for the site's own server to print
+ */
+router.get(
+	'/site/head',
+	handle(async (req: any, res) => {
+		websiteOnly(req);
+		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req, cached: true }), kitModel(req, 'pages'), kitModel(req, 'seo')]);
+		const head = await siteHead(req.project, doc, { pages: pages?.Model, seo: seo?.Model }, req.query.path);
+		res.setHeader('Cache-Control', 'public, max-age=60');
+		if (req.query.format === 'html') {
+			res.type('text/html').send(headHtml(head));
+			return undefined;
+		}
+		return head;
 	})
 );
 

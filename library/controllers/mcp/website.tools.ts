@@ -725,6 +725,9 @@ const snippetsOf = async (req: any, project: any) => {
 		apiKey,
 		env: [`MINT_API=${api}`, `MINT_API_KEY=${apiKey}`, `NEXT_PUBLIC_MINT_API=${api}`, `NEXT_PUBLIC_MINT_API_KEY=${apiKey}`],
 		track: `<script src="${origin}/public/track.js" data-key="${apiKey}" defer></script>`,
+		// docs/site-connect: a site built elsewhere — analytics + the SEO of the pages added on Website → SEO
+		connect: `<script src="${origin}/public/track.js" data-key="${apiKey}" data-seo></script>`,
+		head: `${api}/site/head?apiKey=${apiKey}&path=/about`,
 		login: `<script src="${origin}/public/widget.js" data-key="${apiKey}" async></script>\n<div data-mint-login></div>`,
 	};
 };
@@ -784,6 +787,7 @@ Use one block per editable piece (hero, intro, each section), not one block per 
 Base: ${s.api} — every call carries the project key: ?apiKey=${s.apiKey} (or the X-Api-Key header); without it the API answers 401 api_key_missing. The project key is fine in the site's code.
 - GET /site → { settings, menu: [{ _id, name, path, parent }] } (published pages with showInMenu, by priority)
 - GET /pages/by-path?path=/about → { page, seo, contents: [...] } (published, visible blocks, highest priority first); 404 when there's no published page
+- GET /site/head?path=/about → one page's SEO for a site built elsewhere (docs/site-connect): { found, seo, tags: [{ tag, name|property|rel, content, mode: set|fill }], jsonLd }; found:false + no tags when the page isn't added to Website → SEO (it keeps its own). &format=html gives the <head> tags (empty when not added) for the site's server to print. On an existing site, \`data-seo\` on the analytics script applies it in the browser (Google reads it; link previews need the server print).
 - GET /<route> → { doc: [...], total, page, limit, totalPages } — a list model with its public API on. Query (the admin lists' syntax):
   - page (from 1), limit (1–100, default 20); another page exists while page < totalPages
   - sort=-price,name (up to 3 fields, - = descending; default -createdAt)
