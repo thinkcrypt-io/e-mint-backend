@@ -30,6 +30,8 @@ const schema = new Schema<any>(
 		referrer: { type: String, trim: true, maxlength: 1000 },
 		/** The referring site, or '' for direct / internal visits. */
 		referrerHost: { type: String, trim: true, maxlength: 255 },
+		/** The site the visit was on (the page's host, from the browser's Origin) — Analytics offers it as a domain. */
+		host: { type: String, trim: true, lowercase: true, maxlength: 255 },
 		utmSource: { type: String, trim: true, maxlength: 120 },
 		utmMedium: { type: String, trim: true, maxlength: 120 },
 		utmCampaign: { type: String, trim: true, maxlength: 120 },

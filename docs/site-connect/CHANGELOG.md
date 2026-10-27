@@ -1,5 +1,14 @@
 # Site connect — changelog
 
+## 2026-10-27 — Add domain from Analytics
+
+- Each event keeps `host` (the page's host from the browser's Origin / Referer). `GET /tenant/api/p/:id/analytics/hosts`:
+  the sites page views came from in 30 days (top 10, localhost and bare IPs left out), `added` when a domain covers it.
+- mint-tenant Analytics header (`_components/Domains.tsx`): the domains, or "Counting visits from any site"; one-click
+  **Add <busiest site not added>**; **Add domain / Domains** dialog — sites visits came from, type one in (whole
+  addresses trimmed to the host), the list with ×, Save (PUT site-config `domains`, Manage projects). The dialog doesn't
+  close on focus leaving it (an added row disappears under the pointer). Smoke `site-connect-head.mjs` now 54.
+
 ## 2026-10-27 — SC-08b: Test connection
 
 - Website setup → Existing website, step 3: type a page's address (prefilled with the project's domain), press

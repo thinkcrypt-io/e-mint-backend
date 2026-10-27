@@ -254,6 +254,13 @@ export const recordBatch = async (req: any, body: any) => {
 	const mode = ipModeOf(site);
 	const keptIp = mode === 'off' || !ip ? undefined : mode === 'masked' ? maskIp(ip) || undefined : clip(ip, 64);
 	const ownHost = String(req.headers.origin ? hostOf(String(req.headers.origin)) : '');
+	// The site's own address as the browser sent it (www kept, port kept) — the domain Analytics offers to add.
+	let pageHost = '';
+	try {
+		pageHost = new URL(String(req.headers.origin || req.headers.referer || '')).host.toLowerCase().slice(0, 255);
+	} catch {
+		/* no Origin / Referer */
+	}
 	const customer = customerIdOf(body.token, req.project);
 	const shared = {
 		sessionId,
@@ -289,6 +296,7 @@ export const recordBatch = async (req: any, body: any) => {
 			title: clip(e.title, 300),
 			referrer: clip(e.referrer, 1000),
 			referrerHost: external,
+			host: pageHost || undefined,
 			utmSource: clip(e.utmSource, 120),
 			utmMedium: clip(e.utmMedium, 120),
 			utmCampaign: clip(e.utmCampaign, 120),

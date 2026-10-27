@@ -144,6 +144,29 @@ r = await call('POST', `/tenant/api/p/${app?._id}/site-config/connection`, { url
 ok('test: an app project → 404', r.status === 404, r.status);
 server.close();
 
+// Analytics → the sites visits came from, offered as domains (the page's host on each event).
+r = await call('GET', P('/analytics/hosts'), null, T);
+ok('hosts: the project’s own site, already added', r.body?.hosts?.some(h => h.host === 'www.acme-shoes.example.com' && h.added === true), JSON.stringify(r.body));
+const open = (await call('POST', '/tenant/api/projects', { name: 'No domains yet', type: 'website' }, T)).body;
+const openKey = (await call('GET', `/tenant/api/p/${open?._id}/project-key`, null, T)).body?.apiKey;
+const visit = (origin, id) =>
+	fetch(`${ROOT}/public/api/track?apiKey=${openKey}`, {
+		method: 'POST',
+		headers: { 'content-type': 'text/plain', origin, 'user-agent': 'Mozilla/5.0 (Macintosh) Safari/605.1.15' },
+		body: JSON.stringify({ visitorId: id, sessionId: id, events: [{ type: 'pageview', eventId: `${id}-1`, path: '/' }] }),
+	});
+await visit('https://www.newsite.example.com', 'h1');
+await visit('https://www.newsite.example.com', 'h2');
+await visit('https://blog.other.example.org', 'h3');
+await visit('http://localhost:3000', 'h4');
+r = await call('GET', `/tenant/api/p/${open?._id}/analytics/hosts`, null, T);
+const hosts = r.body?.hosts || [];
+ok('hosts: busiest first, with counts; localhost left out', hosts.map(h => `${h.host}:${h.pageviews}:${h.added}`).join(',') === 'www.newsite.example.com:2:false,blog.other.example.org:1:false', JSON.stringify(hosts));
+r = await call('PUT', `/tenant/api/p/${open?._id}/site-config`, { domains: ['newsite.example.com'] }, T);
+ok('a found site added as a domain', r.status === 200, `${r.status} ${JSON.stringify(r.body)?.slice(0, 200)}`);
+r = await call('GET', `/tenant/api/p/${open?._id}/analytics/hosts`, null, T);
+ok('hosts: www. of an added domain counts as added', r.body?.hosts?.find(h => h.host === 'www.newsite.example.com')?.added === true && r.body.hosts.find(h => h.host === 'blog.other.example.org')?.added === false, JSON.stringify(r.body?.hosts));
+
 const js = await (await fetch(`${ROOT}/public/track.js`)).text();
 ok('track.js: data-seo asks /site/head on every page view', js.includes("hasAttribute('data-seo')") && js.includes("'/site/head'") && js.includes('seo();'));
 ok('track.js parses', (() => { try { new Function(js); return true; } catch (e) { return e.message; } })() === true);

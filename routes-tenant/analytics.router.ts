@@ -17,6 +17,7 @@ import { tenantPermissions } from '../library/functions/tenantPermissions.functi
  *                                 the people: each visitor's summary (WebsiteVisitor), last seen in the range
  *   GET /visitors/:visitorId      one visitor and their journey — every visit, page by page, with clicks and events
  *   GET /live                     who is on the site now (the last 5 minutes) and the page they're on
+ *   GET /hosts                    the sites visits came from (30 days) — offered as the project's domains
  *
  * `from`/`to` are dates (YYYY-MM-DD or ISO); the default is the last 30 days.
  * Reading needs view-analytics — records:view (WO-21) or *.
@@ -270,6 +271,32 @@ router.get(
 			/** The journey stops at the latest 2000 events. */
 			truncated: events.length >= 2000,
 		};
+	})
+);
+
+/**
+ * The sites the visits came from (the page's host on each event) in the last 30 days, most visited first —
+ * Analytics offers them as the project's domains (`added` = already one). localhost and bare IPs are left out.
+ */
+const LOCAL_HOST = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\]|\d+\.\d+\.\d+\.\d+)(:\d+)?$/;
+router.get(
+	'/hosts',
+	handle(async (req: any) => {
+		const rows: any[] = await WebsiteEvent.aggregate([
+			{ $match: { type: 'pageview', createdAt: { $gte: new Date(Date.now() - 30 * DAY) }, host: { $type: 'string', $ne: '' } } },
+			{ $group: { _id: '$host', pageviews: { $sum: 1 }, lastSeen: { $max: '$createdAt' } } },
+			{ $sort: { pageviews: -1 } },
+			{ $limit: 25 },
+		]);
+		const domains: string[] = (req.project?.domains || []).map((d: string) => d.toLowerCase().replace(/^www\./, ''));
+		const hosts = rows
+			.filter(r => !LOCAL_HOST.test(r._id))
+			.slice(0, 10)
+			.map(r => {
+				const bare = String(r._id).replace(/:\d+$/, '').replace(/^www\./, '');
+				return { host: String(r._id), pageviews: r.pageviews, lastSeen: r.lastSeen, added: domains.some(d => bare === d || bare.endsWith(`.${d}`)) };
+			});
+		return { hosts };
 	})
 );
 
