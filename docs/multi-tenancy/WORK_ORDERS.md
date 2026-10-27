@@ -16,8 +16,8 @@ Website → Pages + SEO — every other page keeps its own (the user's rule, D4)
 Node / Next.js server print; mint-docs `websites#connect-a-website`; MCP `site_snippets` has `connect` + `head`.
 **Test connection** button on that tab (SC-08b: domain, snippet, visits, the page's SEO;
 `POST /site-config/connection`). Analytics header **Add domain** (sites visits came from — events keep `host`, `GET /analytics/hosts` — one click,
-or typed). Smoke `site-connect-head.mjs` (54). Snippet + Test connection are deployed (the user, 2026-10-27);
-Add domain not yet. Next: Cloudflare in the customer's own account
+or typed). Smoke `site-connect-head.mjs` (54). The live backend serves `track.js data-seo` and `/site/head` (checked
+2026-10-27, sinammengineering.com connected); Add domain is not deployed. Next: Cloudflare in the customer's own account
 (SC-09…11) — open questions in `docs/site-connect/README.md`.
 
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
