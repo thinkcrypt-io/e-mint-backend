@@ -18,7 +18,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | |
 | EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | |
 | EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | |
-| EC-09 | Returns in the panel: order page actions, Returns page, POS Return mode, credit note | mint-tenant | M | |
+| EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | |
 | EC-10 | Pay-by-link for orders through the project's gateways | backend + mint-tenant | M | |
 | EC-11 | Shifts (open / cash in-out / close / Z-report) + reports + dashboard widgets | backend + mint-tenant | M | |
 | EC-12 | Roles: Owner / Store manager / Cashier, outlet assignment, manager PIN over limits | backend + mint-tenant | M | |
@@ -27,7 +27,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-15 | Offline POS | | L | later |
 | EC-16 | Connect a website project's shop / checkout to this store's products, stock and orders | | L | later |
 | EC-17 | Loyalty points | | M | later |
-| EC-18 | Courier booking for delivery orders (Steadfast first) | | M | later |
+| EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
 
 ## Handoff
 
@@ -46,6 +46,8 @@ wizard step and dialog) and the marketing website as it lands.
   negativeStock), `installed` (what's built: feature → model ids), timestamps.
 - API `GET|PUT /commerce/settings` (manage-projects / build), validation with plain messages; tenders offered by
   the org's country (Country.paymentProviders + wallet list).
+- `customers`, `payments` (and the commerce pages `pos`, `store-setup`, `store-settings`, `commerce`) join the
+  tenant's reserved routes (`payments` was mounted but not reserved).
 - Panel: New project offers **E-commerce**; a new store project's home redirects to `/store-setup` until ready
   (page stub; EC-04 builds it).
 - Smoke `commerce-settings.mjs`.
@@ -101,10 +103,25 @@ wizard step and dialog) and the marketing website as it lands.
 - Order: returned quantities, refunded, payment status; customer credit.
 - Smoke `commerce-returns.mjs` (gateway refunds against the providers' sandboxes / the Stripe stub).
 
-## EC-09 — Returns in the panel (M)
+## EC-09 — Orders table, order page, returns in the panel (L)
 
+- The user (2026-10-28): "the order record page should be custom also the order table", "on order page should have
+  detailed order option". Custom `/orders` table and `/orders/<id>` page per README §5 / EC19 (the sidebar's Orders
+  item and record links open them; the builder's generic pages stay reachable for nothing else). Backend
+  `GET /commerce/orders` (list with filters, counts per quick filter) and `GET /commerce/orders/:id` (order +
+  payments + returns + movements + courier + timeline in one call).
 - Order page actions (Take payment, Return items, Refund, Cancel, Print); Returns page with status flow;
   POS Return mode and exchange; credit note print.
+
+## EC-18 — Couriers (L)
+
+- The user (2026-10-28): "option to send it to courier if courier is integrated". `CommerceSettings.delivery`
+  (shipping on manual orders, rates, couriers[]); credentials sealed (`select: false`, as gateways).
+- Adapters `library/functions/commerce/couriers/{steadfast,pathao,redx}.ts`: book, status, (cancel where offered);
+  `Send to courier` dialog (recipient, phone, address, COD prefilled from the order's balance, note, weight / area
+  where the courier needs it); consignment + tracking stored on the order; status refresh (webhook route for
+  Steadfast, else on open + scheduled); delivered with COD writes a `courier-cod` payment; delivery label print.
+- Smoke against each courier's sandbox where one exists, else a local stub.
 
 ## EC-10 — Pay-by-link (M)
 

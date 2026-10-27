@@ -48,12 +48,16 @@ Answers to the first questions (same day):
 | EC15 | **Store credit** is a ledger model (`Store credit`: customer, ±amount, reason, reference); the customer's balance is its rollup. Store credit is a tender at the POS and a refund method. |
 | EC16 | **Receipts print from the browser** (80 mm thermal or A4 CSS, with the order's barcode for returns); invoices and credit notes are PDF templates (docs/pdf-templates) installed with the project. |
 | EC17 | **Engine writes use compensation, not transactions** (as Linked Relationships, D15/D18): stock `$inc` with a floor in the filter; on a later failure, the steps already done are undone and the sale is refused. Every engine action writes record history as the person who did it. |
+| EC19 | **Orders have their own pages** (the user, 2026-10-28): the Orders table and the order record page are custom pages in the panel, not the builder's generic table and detail page. The table: number, date, customer, channel, outlet, items, total, payment and fulfilment badges, quick filters (today, unpaid, to ship, returns) and row actions. The order page is a detailed view: lines with variant, SKU, returned quantities; totals breakdown (discounts, coupon, tax, shipping, paid, refunded, balance); customer and delivery address; payments and refunds; returns; delivery and courier tracking; stock movements; timeline; actions. Fields people add to Orders show in an "More details" card, so the model stays extendable. |
+| EC20 | **Couriers** (the user, 2026-10-28): when a courier is connected, an order page has **Send to courier** — the parcel is booked with the courier's API (recipient, phone, address, COD = the balance due, note), the consignment / tracking number and status are stored on the order and refreshed (webhook where the courier offers one, else on open and on a schedule). Steadfast first, then Pathao and RedX (BD, by the org's country, as gateways are); credentials sealed per project. Delivered with COD collected writes a payment (method `courier-cod`). |
 | EC18 | **Roles:** Owner (everything), Store manager (all outlets or theirs, returns, refunds, stock, reports), Cashier (POS at their outlets: sell, hold, returns within limits, no refunds above a limit without a manager PIN — EC-12). Built on project roles (WO-50). |
 
 ## 3. The pre-built models
 
 Routes are checked against taken routes when built (a taken route gets a
-suffix, as templates do). ★ = core field (locked, EC4); ⚙ = engine-owned
+suffix, as templates do; `customers` and `payments` are the project API's
+own paths, hence `store-customers` and `order-payments`). The engine finds
+each model by what the installer recorded, never by a fixed route. ★ = core field (locked, EC4); ⚙ = engine-owned
 (read-only, EC5). Models marked *(opt)* are built only when the answer turns
 them on.
 
@@ -68,9 +72,9 @@ them on.
 | Stock movements | `stock-movements` | ⚙variant, ⚙outlet, ⚙change, ⚙reason, ⚙reference, ⚙by | engine-only log |
 | Stock adjustments | `stock-adjustments` | ★outlet, ★reason (damage / count / found / other), ★lines (variant, change or counted), ★status (draft / applied) | applying writes movements |
 | Stock transfers | `stock-transfers` | ★from, ★to, ★lines, ★status (draft / sent / received / cancelled) | send = out, receive = in |
-| Customers | `customers` | ★name, ★phone, ★email, address, ⚙store credit, ⚙orders count, ⚙spent | |
-| Orders | `orders` | ⚙number, ★channel (pos / manual), ★outlet, ★customer, ⚙items, ⚙subtotal, ⚙discount, ★coupon, ⚙tax, shipping, ⚙total, ⚙paid, ⚙refunded, ⚙balance, ⚙payment status, ★status (held / open / completed / cancelled), ★fulfilment *(manual orders)*, register, shift, cashier, note | items = section list: variant, name, sku, qty, unit price, discount, tax, total, ⚙returned |
-| Payments | `payments` | ⚙order, ⚙type (payment / refund), ⚙method, ⚙amount, reference, ⚙status (pending / completed / failed), ⚙gateway ref, shift, return, ⚙by | ledger (EC9) |
+| Customers | `store-customers` | ★name, ★phone, ★email, address, ⚙store credit, ⚙orders count, ⚙spent | |
+| Orders | `orders` | ⚙courier (provider, consignment, tracking, status, booked at), ⚙number, ★channel (pos / manual), ★outlet, ★customer, ⚙items, ⚙subtotal, ⚙discount, ★coupon, ⚙tax, shipping, ⚙total, ⚙paid, ⚙refunded, ⚙balance, ⚙payment status, ★status (held / open / completed / cancelled), ★fulfilment *(manual orders)*, register, shift, cashier, note | items = section list: variant, name, sku, qty, unit price, discount, tax, total, ⚙returned |
+| Payments | `order-payments` | ⚙order, ⚙type (payment / refund), ⚙method, ⚙amount, reference, ⚙status (pending / completed / failed), ⚙gateway ref, shift, return, ⚙by | ledger (EC9) |
 | Returns | `returns` | ⚙number, ★order, ⚙customer, ★outlet, ★lines (order line, qty, reason, condition, restock), ⚙refund due, ⚙refunded, ★status (requested / approved / received / refunded / rejected / closed) | (EC10) |
 | Store credit *(opt)* | `store-credit` | ⚙customer, ⚙amount ±, ⚙reason, ⚙reference | (EC15) |
 | Coupons *(opt)* | `coupons` | ★code, ★type (percent / fixed), ★value, min order, starts, ends, usage limit, ⚙used, applies to (all / categories / products), ★active | |
@@ -109,11 +113,12 @@ engine fields are read-only there (EC5).
 ## 5. The panel (mint-tenant)
 
 - **New project → E-commerce** card (beside App / Website / API).
-- **Setup wizard** `/<project>/store-setup` — 7 steps, each with a #anchor guide link: Store (name, currency from
+- **Setup wizard** `/<project>/store-setup` — 8 steps, each with a #anchor guide link: Store (name, currency from
   the org's country, order number prefix, selling below zero), Outlets (one or more, store / warehouse), Products
   (variations on/off + option names, brands, barcodes/SKUs, track stock by default), Payments (in-store tenders,
   online gateways by country — keys can be added later), Returns & refunds (allowed, window in days, partial,
-  restock by default, refund methods, store credit), POS (receipt size + header/footer, shifts and registers,
+  restock by default, refund methods, store credit), Delivery (manual / phone orders with shipping, shipping
+  rates, couriers by country — Steadfast, Pathao, RedX — keys can be added later), POS (receipt size + header/footer, shifts and registers,
   held sales, discounts and coupons, tax mode + rates, customer required), Review → **Set up my store** (background
   build with progress, then the dashboard).
 - **POS** `/<project>/pos` — full screen: outlet / register / shift; product grid by category, search, barcode
@@ -121,13 +126,14 @@ engine fields are read-only there (EC5).
   store credit shown; Hold / Held sales; Pay (split tenders, cash change, store credit, card / wallet references);
   receipt print; **Return** mode (scan the receipt barcode or find the order, pick lines and quantities, reason,
   restock, refund method; exchange carries the credit into a new sale); close shift with cash count.
-- **Order page** actions: Take payment, Send payment link, Return items, Refund, Cancel, Print receipt / invoice;
-  tabs Payments, Returns, Stock movements, History.
+- **Orders table** (custom, EC19) and **order page** (custom, detailed): actions Take payment, Send payment link,
+  **Send to courier** (when a courier is connected, EC20), Mark fulfilled, Return items, Refund, Cancel, Print
+  receipt / invoice / delivery label; sections Lines, Totals, Customer & delivery, Payments, Returns, Delivery
+  tracking, Stock movements, More details (fields people added), Timeline.
 - **Store settings** — the wizard's answers, editable; turning a feature on builds its models.
 - Dashboard widgets for a new store: today's sales, sales by outlet and method, top products, low stock, open shifts.
 
 ## 6. Out of scope for now (later WOs)
 
 Storefront / website connection (EC-16), suppliers and purchase orders (EC-14),
-offline POS (EC-15), loyalty points (EC-17), courier booking for delivery
-orders (EC-18), gift cards, multi-currency per outlet.
+offline POS (EC-15), loyalty points (EC-17), gift cards, multi-currency per outlet.
