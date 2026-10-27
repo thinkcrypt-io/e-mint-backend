@@ -3,6 +3,7 @@ import { displayModelName } from './routeRegistry.function.js';
 import { currentScope } from './tenantScope.function.js';
 import { fireWebhooks } from './webhooks.function.js';
 import { fireAutomations } from './automations.function.js';
+import { fireCommerce } from './commerce/hooks.js';
 import type { HistoryAction, HistoryChange } from '../models/history/model.js';
 
 /**
@@ -192,6 +193,9 @@ type RecordArgs = {
 export const recordHistory = ({ req, action, model, doc, changes = [], modelPath, note, did }: RecordArgs): void => {
 	try {
 		if (!doc || SKIP_MODELS.has(model)) return;
+		// A store keeps a product's variants in step with it (docs/ecommerce EC7) — on every save: the
+		// change list below doesn't see a row list (its options) change.
+		if (!did) fireCommerce({ model, event: action, doc });
 
 		// An update that changed nothing is not worth an entry — unless it did something else (published it).
 		if (action === 'update' && changes.length === 0 && !did) return;

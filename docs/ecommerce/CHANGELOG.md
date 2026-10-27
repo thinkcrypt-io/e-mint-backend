@@ -126,3 +126,52 @@
   wizard (an empty outlet's two problems shown; removed), tax in prices,
   Review summary, Set up → building → ready in ~8 s, Store settings with the
   Store and E-commerce sidebar sections. mint-tenant typecheck clean.
+
+## 2026-10-28 — EC-05 Catalogue + stock
+
+- `commerce/store.ts`: the built store for the engine — answers, features,
+  `M(key)` (the compiled model by what the installer recorded), `is()`;
+  `roundFor(currency)`, `itemName`, `actorName`.
+- `commerce/catalogue.ts`: `syncVariants` — without options one default
+  variant mirroring the product (title, SKU, barcode, sold unless draft /
+  archived); with options the matrix of their values (≤ 100, else a plain
+  400), new combinations added, dropped ones and the default switched off,
+  none deleted. Runs after every product save (`hooks.ts` `fireCommerce`,
+  called from `recordHistory` before its "nothing changed" check — it
+  doesn't see a row list change) and from `POST /products/:id/variants`.
+  `codeTaken` (SKU / barcode one item's each — the guard refuses a taken
+  one, 409 `code_taken`, naming who has it; a product's default variant
+  doesn't count against it). `lookup` (barcode or SKU → the variant; a
+  product's code → its default variant; 404 with a reason), `catalogue`
+  (by name, codes or a variant's title; stock at an outlet), `itemView`
+  (price: the variant's, else the product's).
+- `commerce/stock.ts`: `move` — the level made first (`$setOnInsert`), then
+  one conditional `$inc` (taking out only matches while `onHand ≥ −change`,
+  unless selling below zero); `NotEnoughStock` 409 "Only N of X left at Y";
+  variant and product totals `$inc`; a movement with the figure after.
+  Items that don't track stock move nothing. `moveAll` takes back what it
+  did, newest first, when one fails. `setStock` (counted or a change;
+  reason opening / count / adjustment), `productStock` (variants ×
+  outlets), `applyAdjustment` (claimed once; counted − on hand or the
+  change), `transferAction` send / receive / cancel (a sent one goes
+  back), each claimed by status so a double click acts once.
+- Routes under `/commerce`: catalogue, lookup, products/:id/variants,
+  products/:id/stock, stock/set, adjustments/:id/apply,
+  transfers/:id/(send|receive|cancel). The guard also refuses a variant made
+  by hand while variations are off.
+- mint-tenant: a product's page leads with **In stock** (variants ×
+  outlets, a figure clicked → Counted / Add or take away + note; Make
+  variants from options); adjustments and transfers lead with **Items**
+  (the item picker — matching variants only, stock here — counted or
+  change, quantity; Save items; Apply / Send / Receive / Cancel transfer).
+  `commerceApi` gains the catalogue and stock calls (names checked free).
+- mint-docs `/store`: Variants, SKUs and barcodes; Stock: counts,
+  adjustments, transfers.
+- Verified: `commerce-stock.mjs` (38 checks — variants from options and
+  their changes, the default variant, codes, lookups, counts and totals,
+  movements, transfers refused past the stock, five parallel sends of 3
+  from 6 → exactly two, cancel puts back, adjustments once, the 100 cap,
+  variations kept on) plus `commerce-install` / `commerce-settings` pass;
+  in the browser pane: a product's In stock grid and a count saved (10 →
+  12), an adjustment's picker (navy → the navy variants), −2 applied (7 →
+  5).

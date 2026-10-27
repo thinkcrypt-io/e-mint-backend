@@ -3,6 +3,8 @@ import CommerceSettings from '../../models/tenancy/commerceSettings.model.js';
 import { compiledModel } from '../dynamicModels.function.js';
 import { ModelKey, modelSpecs, ModelSpec } from './blueprint.js';
 import { commerceView } from './settings.js';
+import { storeOf } from './store.js';
+import { codeTaken } from './catalogue.js';
 
 /**
  * Plain record saves on a store's models (docs/ecommerce EC5): money and stock
@@ -59,8 +61,25 @@ export const commerceGuard = async (req: any, res: any, next: any) => {
 			if (!edit) return refuse(res, `${ENGINE_ONLY_TEXT[key] || 'These records are made by the store'} — not from this page.`);
 		}
 
-		// One record changed: the engine's fields must come back as they are.
 		const id = ID.test(rest[0] || '') ? rest[0] : rest[0] === 'edit' && ID.test(rest[1] || '') ? rest[1] : null;
+		const saving = (req.method === 'POST' && (sub === '/' || sub === '')) || ((req.method === 'PUT' || req.method === 'PATCH') && id);
+
+		// Variants are made from a product's options while variations are on; off, each product has its own.
+		if (key === 'variant' && req.method === 'POST' && (sub === '/' || sub === '') && !view.answers.products.variations)
+			return res.status(403).json({ message: 'Variations are off — each product is sold as itself. Switch them on in Store settings.', code: 'commerce_field' });
+
+		// SKUs and barcodes name one item each: the POS finds an item by them.
+		if (saving && (key === 'product' || key === 'variant')) {
+			const store = await storeOf();
+			for (const field of ['sku', 'barcode'] as const) {
+				if (body[field] === undefined) continue;
+				const self = key === 'product' ? { product: id } : { variant: id };
+				const who = await codeTaken(store, field, body[field], self);
+				if (who) return res.status(409).json({ message: `${who} already has the ${field === 'sku' ? 'SKU' : 'barcode'} ${String(body[field]).trim()}`, code: 'code_taken' });
+			}
+		}
+
+		// One record changed: the engine's fields must come back as they are.
 		if ((req.method === 'PUT' || req.method === 'PATCH') && id) {
 			const Model: any = compiledModel(doc.installed[key].name);
 			const before: any = Model && mongoose.isValidObjectId(id) ? await Model.findById(id).lean() : null;

@@ -14,8 +14,8 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-02 | `ecommerce` project type + `CommerceSettings` + settings API | backend + mint-tenant | M | done 2026-10-28 |
 | EC-03 | Blueprint + installer (models from answers, sidebar) + core / engine field locks | backend | L | done 2026-10-28 |
 | EC-04 | Setup wizard + Store settings page (New project card, 8 steps, background build) | mint-tenant + mint-docs | L | done 2026-10-28 |
-| EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | next |
-| EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | |
+| EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | done 2026-10-28 |
+| EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | next |
 | EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | |
 | EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | |
 | EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | |
@@ -31,6 +31,12 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-05 done** (CHANGELOG). Engine: `commerce/store.ts` (`storeOf()` → answers + `M(key)` compiled
+  models; `roundFor`, `itemName`), `catalogue.ts` (`syncVariants`, `codeTaken`, `lookup`, `catalogue`, `itemView`),
+  `stock.ts` (`move` / `moveAll` with the floor and compensation, `setStock`, `productStock`, `applyAdjustment`,
+  `transferAction`), `hooks.ts` (`fireCommerce` from recordHistory on every save). Panel: `commerce/stock.tsx`
+  (`ProductStock`, `ItemPicker`, `StockLines`), `StoreRecordPage.tsx` (the view page routes store records there).
+  EC-06 must sell through `moveAll` (reason `sale`, reference the order code) and price with `itemView().price`.
 - **2026-10-28 — EC-04 done** (CHANGELOG). mint-tenant `components/library/commerce/`: `sections.tsx` (one editor per
   section, shared by the wizard and Store settings), `StoreSetup.tsx` (`/store/setup`), `StoreSettings.tsx`
   (`/store/settings`, behind `StoreGate`). mint-docs `/store` guide (anchors `store-*`). The marketing website wasn't
