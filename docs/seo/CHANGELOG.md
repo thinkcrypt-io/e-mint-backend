@@ -17,16 +17,18 @@
 - **`POST /site-config/link-preview { url }`** — any address; a path is the site's. `mint` names the page's SEO record
   (Edit SEO) when the address is on the project's domain. siteConnection's `target` now refuses `ftp://` and the
   like instead of making `https://ftp//…`.
-- **Panel:** Site setup → Link previews (`site-setup/_components/LinkPreview.tsx`): the address box, the problems,
+- **Panel:** Site setup → Link previews (`app/t/_seo/LinkPreview.tsx`): the address box, the problems,
   the five cards, the page's tags with the image's size, Edit SEO / Add SEO, and Facebook's and LinkedIn's own tools
-  to make them read the page again. `?url=` checks at once; an SEO record's page has a Link previews button.
+  to make them read the page again. `?url=` checks at once. An SEO record's page has a **Link preview** tab with the same checker
+  (`app/t/_seo/LinkPreview.tsx` `LinkPreviewChecker`), filled with its live address and checked when opened (a
+  template page's folder to finish; no Edit SEO for itself).
 - **Guide:** mint-docs `websites#link-preview`. **Website:** a changelog entry.
 - **Tests:** smoke `scripts/tenancy-smoke/seo-link-preview.mjs` (25) against a local pretend website: a correct page
   (five big cards, no problems), a bare page, a JavaScript shell flagged, a tiny relative image with a long title, a
   square image, a redirect, a 404, nothing typed, `ftp://`, a connected page whose SEO is only added by the snippet
   (flagged, its record named) beside one whose server prints `/site/head` (not flagged). `site-connect-head` and
   `site-connect-edge` smokes pass. In the panel: both pages checked, Edit SEO opens the record, the record page's
-  button, phone width.
+  Link preview tab (opened from a link before the page loads too), phone width.
   - **Not run:** real Facebook / LinkedIn / WhatsApp / X / Slack shares — the cards are drawn from the tags the way
     each app lays them out today.
 

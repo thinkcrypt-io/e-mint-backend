@@ -200,7 +200,7 @@ problem).
 - For pages that are Mint's, "Edit SEO" opens their editor.
 - **Done when:** a page with JavaScript-only tags is flagged; a correct page shows all cards.
 - **Done 2026-10-28:** `linkPreview.function.ts`, `POST /site-config/link-preview`, Site setup → Link previews, a Link
-  previews button on an SEO record's page; smoke `seo-link-preview.mjs` (25). See CHANGELOG.
+  preview tab on an SEO record's page; smoke `seo-link-preview.mjs` (25). See CHANGELOG.
 
 ### SEO-15 Google Search Console connection — L
 
