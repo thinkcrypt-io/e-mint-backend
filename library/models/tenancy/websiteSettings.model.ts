@@ -67,6 +67,8 @@ const schema = new Schema<any>(
 			keywords: { type: [String], default: [] },
 			indexing: { type: Boolean, default: true },
 			sitemap: { type: Boolean, default: true },
+			/** Addresses the sitemap lists besides Mint's pages: '/old-page' or a full address on the site (docs/seo SEO-08). */
+			sitemapExtra: { type: [String], default: [] },
 			robots: str,
 			canonicalDomain: str,
 			googleVerification: str,

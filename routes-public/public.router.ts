@@ -21,7 +21,8 @@ import { applyFormulasLinked, formulasOf, stripFormulaKeys } from '../library/fu
 import { recalculateDependents } from '../library/functions/formulaDependents.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags, sitemapXml } from '../library/functions/siteConfig.function.js';
+import { loadSite, publicConfig, publicSettings, robotsTxt, siteOrigin, siteTags } from '../library/functions/siteConfig.function.js';
+import { sitemapEntries, sitemapResponse } from '../library/functions/sitemap.function.js';
 import { contactOf, forwardConversion, forwardPageviews, visitorOf } from '../library/functions/serverTracking.function.js';
 import { recordBatch } from '../library/functions/visitorAnalytics.function.js';
 import { later, notifyTenant, projectAudience, projectHrefFor } from '../library/functions/tenantNotify.function.js';
@@ -51,9 +52,7 @@ import {
 	serverKeyOf,
 	writableOf,
 } from '../library/functions/apiEndpoints.function.js';
-import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
-import { withSiteDefaults } from '../library/siteBuilder/seo.js';
 import { headHtml, siteHead } from '../library/functions/siteHead.function.js';
 import { siteEdge } from '../library/functions/siteEdge.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
@@ -530,7 +529,8 @@ router.post(
  *   GET /site/head?path=/about     one page's SEO by its address, for a site built anywhere (site-connect SC-02)
  *   GET /site/edge                 what the mint-edge Worker in front of a site needs (site-connect SC-10)
  *   GET /site/robots.txt           robots.txt from the indexing settings
- *   GET /site/sitemap.xml          the published pages (not hidden from search); ?origin=https://…
+ *   GET /site/sitemap.xml          the published pages and template pages' records (not hidden from search);
+ *                                  ?origin=https://…, ?part=2 past 5,000 addresses (docs/seo SEO-08)
  *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
  *                                  published contents in priority order
  *   GET /web-contents/by-slug/:slug one published content by its slug (docs/cms D1) —
@@ -694,36 +694,11 @@ router.get(
 		const asked = String(req.query.origin || '').replace(/\/+$/, '');
 		const doc = await loadSite(req.project, { req, cached: true });
 		const origin = /^https?:\/\/[^\s/]+$/.test(asked) ? asked : siteOrigin(req.project, doc);
-		const pages = await kitModel(req, 'pages');
-		const seo = await kitModel(req, 'seo');
-		const list: any[] = pages?.Model ? await pages.Model.find({ status: 'published' }, { path: 1, updatedAt: 1 }).sort({ path: 1 }).limit(5000).lean() : [];
-		const hidden = new Set(seo?.Model ? (await seo.Model.distinct('page', { noIndex: true })).map(String) : []);
-		// Site builder pages (docs/site-builder SB-03): the published static ones not hidden from search
-		// nor taken out of the sitemap (SEO → Sitemap, SB-31), with their priority and change frequency.
-		// Each also has a kit Pages record at the same path (kit.ts pushPage) — the builder page decides.
-		const builtAll: any[] = await SitePage.find(
-			{ published: { $ne: null }, 'published.kind': { $ne: 'template' } },
-			{ 'published.path': 1, 'published.publishedAt': 1, 'published.seo.noIndex': 1, 'published.seo.sitemapInclude': 1, 'published.seo.sitemapPriority': 1, 'published.seo.sitemapChangeFrequency': 1 }
-		)
-			.limit(5000)
-			.lean();
-		const builtBy = new Map(builtAll.map(p => [p.published.path, p.published]));
-		const listed = (pub: any) => pub.seo?.noIndex !== true && pub.seo?.sitemapInclude !== false;
-		// A page's own priority and change frequency, else Site setup's Default SEO (SB-33).
-		const extra = (pub: any) => {
-			const s = withSiteDefaults(pub.seo || {}, doc.seo?.defaults, { isHome: false, ownImage: true });
-			return { priority: s.sitemapPriority, changeFrequency: s.sitemapChangeFrequency };
-		};
-		const kit = list
-			.filter(p => p.path && !hidden.has(String(p._id)) && (!builtBy.has(p.path) || listed(builtBy.get(p.path))))
-			.map(p => (builtBy.has(p.path) ? { ...p, ...extra(builtBy.get(p.path)) } : p));
-		const seen = new Set(list.map(p => p.path));
-		const all = [...kit, ...builtAll
-				.filter(p => !seen.has(p.published.path) && listed(p.published))
-				.map(p => ({ path: p.published.path, updatedAt: p.published.publishedAt, ...extra(p.published) }))].sort((a, b) =>
-			a.path.localeCompare(b.path)
-		);
-		const xmlText = doc.seo?.indexing !== false && doc.seo?.sitemap !== false ? sitemapXml(origin, all) : sitemapXml(origin, []);
+		const [pages, seo] = await Promise.all([kitModel(req, 'pages'), kitModel(req, 'seo')]);
+		// Pages, every template page's records, extra addresses, images; numbered parts past 5,000 (docs/seo SEO-08).
+		const entries = await sitemapEntries({ doc, origin, pagesModel: pages?.Model, seoModel: seo?.Model });
+		const xmlText = sitemapResponse(origin, entries, req.query.part);
+		if (xmlText === null) throw new TenancyError(404, 'No such part of the sitemap');
 		res.setHeader('Cache-Control', 'public, max-age=300');
 		res.type('application/xml').send(xmlText);
 		return undefined;

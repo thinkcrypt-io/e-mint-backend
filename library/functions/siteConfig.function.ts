@@ -99,6 +99,16 @@ export const SITE_SETTINGS = Joi.object({
 		keywords: Joi.array().items(Joi.string().trim().max(60)).max(30).label('Keywords'),
 		indexing: Joi.boolean(),
 		sitemap: Joi.boolean(),
+		sitemapExtra: Joi.array()
+			.items(
+				Joi.string()
+					.trim()
+					.max(500)
+					.pattern(/^(\/(?!\/)|https?:\/\/)\S*$/)
+					.messages({ 'string.pattern.base': 'Each extra address starts with / (like /old-page) or is a full address on your site' })
+			)
+			.max(1000)
+			.label('Extra addresses'),
 		robots: Joi.string().allow('').max(5000).label('Extra robots.txt rules'),
 		canonicalDomain: Joi.string()
 			.trim()
@@ -435,7 +445,7 @@ export const panelView = (project: any, doc: any) => ({
 	identity: { siteName: '', tagline: '', logo: '', favicon: '', footerText: '', primaryColor: '', secondaryColor: '', fontFamily: '', ...(doc.identity || {}) },
 	contact: { email: '', phone: '', whatsapp: '', address: '', mapEmbedUrl: '', hours: '', ...(doc.contact || {}) },
 	social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', tiktok: '', pinterest: '', ...(doc.social || {}) },
-	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], ...(doc.seo || {}), ...seoOf(doc), defaults: siteSeoDefaults(doc.seo?.defaults) },
+	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], sitemapExtra: [], ...(doc.seo || {}), ...seoOf(doc), defaults: siteSeoDefaults(doc.seo?.defaults) },
 	tracking: trackingOf(doc),
 	serverSide: {
 		meta: { enabled: !!doc.serverSide?.meta?.enabled, testEventCode: doc.serverSide?.meta?.testEventCode || '', tokenSet: !!doc.secrets?.metaAccessToken },

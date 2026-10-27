@@ -19,7 +19,7 @@ another.
 | SEO-05 | Multiple languages (hreflang) | Editor + engine | backend + mint-tenant + mint-sites | M | todo |
 | SEO-06 | Share image maker | Editor | backend + mint-tenant | M | todo |
 | SEO-07 | Image alt text check | Editor | backend + mint-tenant | S | todo |
-| SEO-08 | Sitemap: item pages, sitemap index, images | Engine | backend | S | todo |
+| SEO-08 | Sitemap: item pages, sitemap index, images | Engine | backend | S | done 2026-10-27 (+ mint-sites, mint-edge 1.0.1 and mint-tenant for `?part=` and Extra addresses) |
 | SEO-09 | robots.txt editor: whole-file mode + AI crawler switches | Engine | backend + mint-tenant | S | todo |
 | SEO-10 | Connected sites: merge the site's own sitemap and robots.txt | Engine | mint-edge + backend | S | todo |
 | SEO-11 | IndexNow: tell Bing and others when pages change | Engine | backend + mint-sites + mint-edge | S | todo |

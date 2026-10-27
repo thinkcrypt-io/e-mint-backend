@@ -1,5 +1,40 @@
 # SEO engine and editor — changelog
 
+## 2026-10-27 — SEO-08 Sitemap: item pages, sitemap index, images
+
+- **`sitemap.function.ts`:** `sitemapEntries()` builds the list; `GET /site/sitemap.xml` (public.router.ts) is now just
+  that plus `sitemapResponse()`.
+- **Template pages' records:** each published builder template page (`/blog/[slug]`) lists the records of its source
+  model the site may read (the model's public API `get` rules through `siteReach`, published values for a drafts model
+  via `liveFind`), at most 50,000 a page, as `/blog/<value>` (encoded; the renderer decodes it), with the record's
+  `updatedAt` and the page's priority / change frequency.
+  - Left out: a template page hidden from search or taken out of the sitemap; a record with `noIndex: true` or an SEO
+    editor object saying noindex; a record with no value, or one with a `/` in it.
+  - A kit Pages record at a template address (`/blog/[slug]`) is no longer listed as it is (it used to be).
+- **Images:** `<image:image>` for each address: a static page's own share image (builder page SEO, else its SEO record's
+  image); a record's first image field the public API shows (a `{{record.x}}` share image would be filled per record,
+  but the builder refuses bindings in the share image today). Relative images get the site's origin.
+- **Extra addresses:** `WebsiteSettings.seo.sitemapExtra` (up to 1,000; each `/path` or `http(s)://…`). Listed when it's
+  a path or a full address on the site's own domain (www or not); others are ignored. Panel: Site setup → SEO →
+  Indexing → Extra sitemap addresses (one per line, shown while the sitemap is on).
+- **Parts:** over 5,000 addresses `/sitemap.xml` is a `<sitemapindex>` of `/sitemap.xml?part=N` (each with its newest
+  date); `?part=N` answers that part, 404 past the end. At most 100,000 addresses in all.
+  - mint-sites' `/sitemap.xml` route and the mint-edge Worker (1.0.1) pass `part` on; a self-served site has to too
+    (guide says so).
+- **Guides:** mint-docs `websites#indexing` and the site-builder SEO table. **Website:** a changelog entry.
+- **Tests:**
+  - unit `library/siteBuilder/test/sitemap.test.ts` (5): the XML with images and escaping, one sitemap up to 5,000,
+    the index and parts past it, an empty site's part 1, extra addresses;
+  - smoke `scripts/tenancy-smoke/seo-sitemap.mjs` (26): a blog's posts listed with dates and covers, the hidden post and
+    the slugless one left out, an encoded slug (and the renderer opening it), no template address, a hidden template
+    page, a kit page hidden by its SEO record, extra addresses (saved, refused when not an address, read back, other
+    domains ignored, no duplicates), `?part=1` / `?part=2`, the sitemap switched off;
+  - `site-builder`, `site-builder-seo`, `site-builder-seo-panel` smokes pass; `website-mcp`'s sitemap checks pass (its
+    one failure, "a bad page is refused", is in upsert_page, not touched here);
+  - mint-edge `test/edge.test.mjs` passes, with three new checks: Mint's sitemap switched on, `?part=1` passed on,
+    `?part=2` falling back to the site's own;
+  - in the panel: the Extra sitemap addresses box saves, and the sitemap lists both lines.
+
 ## 2026-10-27 — SEO-20 An SEO record's own page (tenant panel)
 
 - **Where:** `/<project>/seo/<id>` in a website project: `mint-tenant/src/app/t/_seo/SeoRecordPage.tsx`, picked in

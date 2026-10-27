@@ -20,7 +20,7 @@ first. Where two touch the same screen, each one says how it looks without the o
 | Template pages' SEO | `backend/library/siteBuilder/render.ts` | `{{record.…}}` filled in per item (`/blog/[slug]`) |
 | Head answer | `GET /public/api/site/head` (`siteHead.function.ts`, site-connect SC-02) | One page's SEO for sites built anywhere; the mint-edge Worker writes it into the HTML |
 | robots.txt | `GET /public/api/site/robots.txt` (`robotsTxt` in `siteConfig.function.ts`) | `Allow: /` or `Disallow: /`, then the extra lines, then the `Sitemap:` line |
-| sitemap.xml | `GET /public/api/site/sitemap.xml` (`public.router.ts`) | Published kit pages + builder static pages not hidden from search, with priority and change frequency. **Template pages' items are left out.** |
+| sitemap.xml | `GET /public/api/site/sitemap.xml` (`public.router.ts`, `sitemap.function.ts`) | Published kit pages + builder static pages not hidden from search, with priority and change frequency; every record a template page shows (SEO-08), with its date and image; Site setup's extra addresses; an index of `?part=N` past 5,000. |
 | Redirects | Site setup → Redirects | Used by mint-sites and the Worker |
 | `suggest_seo` (MCP) | `backend/library/controllers/mcp/content.tools.ts` | A page's words and SEO, for the user's own AI to write a title and description |
 | Page fetcher | `fetchPage` in `siteCheck.function.ts` | Follows redirects, refuses private addresses — reuse it for anything that fetches a URL someone typed |
