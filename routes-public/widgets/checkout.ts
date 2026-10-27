@@ -2,8 +2,9 @@
  * The Checkout and Thank-you widgets (docs/widgets W-07), one script served
  * for both names (/public/widgets/checkout.js and /thanks.js). Checkout: the
  * buyer's details, the order summary from Mint.cart (the server's prices) and
- * Pay → POST checkout → the provider's own page. Thank-you: reads ?ref= from
- * the address and waits for the provider's confirmation (the webhook), then
+ * Pay → POST checkout → the provider's own page (Stripe, SSLCommerz or bKash —
+ * whichever checkout/options lists). Thank-you: reads ?ref= from the address
+ * and waits for the provider's confirmation (webhook, IPN or execute), then
  * shows the order. Neither ever decides a price or a status.
  */
 export const CHECKOUT_WIDGET_JS = `(function () {
@@ -27,6 +28,7 @@ export const CHECKOUT_WIDGET_JS = `(function () {
 		body.parentNode.insertBefore(el('style', null, { text: vars + EXTRA }), body);
 		return body;
 	}
+	var TEST_HINT = { stripe: 'Use a test card — nothing is charged.', sslcommerz: 'SSLCommerz sandbox — pick any test method; nothing is charged.', bkash: 'bKash sandbox — use bKash’s test wallet; nothing is charged.' };
 	function fill(t, k, v) { return String(t).split('{' + k + '}').join(v); }
 	function safeUrl(u) { u = String(u || '').trim(); return /^(\\/(?!\\/)|https?:\\/\\/)/i.test(u) ? u : '/'; }
 
@@ -84,7 +86,7 @@ export const CHECKOUT_WIDGET_JS = `(function () {
 					r.onchange = function () { chosen = m.provider; };
 					summary.appendChild(el('label', 'method', null, [r, m.name, m.mode === 'test' ? el('span', 'badge', { text: 'Test mode' }) : null]));
 				});
-				else if (methods && methods.length === 1 && methods[0].mode === 'test') summary.appendChild(el('p', 'note', null, [el('span', 'badge', { text: 'Test mode' }), ' Use a test card — nothing is charged.']));
+				else if (methods && methods.length === 1 && methods[0].mode === 'test') summary.appendChild(el('p', 'note', null, [el('span', 'badge', { text: 'Test mode' }), ' ' + (TEST_HINT[methods[0].provider] || TEST_HINT.stripe)]));
 				var pay = el('button', 'btn block', { type: 'submit', text: fill(t.pay, 'amount', cart.format(cart.subtotal)) });
 				if (!methods || !methods.length || busy) pay.disabled = true;
 				summary.appendChild(pay);

@@ -1986,6 +1986,21 @@ Decisions D14–D17 (README).
   The feature wizard's picker made and picked “Logistics” the same way. Pushed mint-tenant `bc38f8b`, admin `24cde37`,
   mint-docs `21d9401` (models, getting started, sidebar guides); not deployed.
 
+## 2026-10-20 — SSLCommerz and bKash as payment providers (widgets W-07b part 1)
+- The user: "add sslcommerz and bkash widgets" → "i mean on payments".
+- backend: adapters `library/functions/payments/sslcommerz.ts`, `bkash.ts`; `payments.function.ts` (settings,
+  keys, `checkPaymentKeys`, checkout options by currency, provider sessions, `sslcommerzReturn` / `sslcommerzIpn` /
+  `bkashReturn`); `SitePaymentSettings.sslcommerz/bkash` (secrets sealed), `SitePayment.successUrl/cancelUrl`;
+  return + IPN routes in `routes-public/index.ts`; tenant `PUT /payments/settings`, `POST /settings/check {provider}`;
+  checkout widget's test hint per provider. Details in `docs/widgets/CHANGELOG.md`.
+- mint-tenant + admin (same file): `/site-payments` SSLCommerz and bKash panels, per-panel Save/Check, return pages
+  saved apart, "Paid with" column; `tenantApi` types; GuideLink anchors.
+- mint-docs `/payments` (Connecting SSLCommerz / bKash, statuses, troubleshooting), widgets guide; website changelog,
+  FAQ, features line.
+- Verified: `payments-bd.mjs` 31/31 and `check` 7/7 against the real SSLCommerz and bKash sandboxes (both paid in
+  headless Chrome; forged returns / IPNs / paymentIDs change nothing; risky held); Stripe `payments.mjs` all passed;
+  the page in the browser pane. `tsc` clean in all five repos. Not deployed.
+
 ## 2026-10-21 — Find any project: Projects search, projects in ⌘K
 - The user: "also add a search on the all projects page, also when organization page, search from navbar, search
   should fetch projects too".

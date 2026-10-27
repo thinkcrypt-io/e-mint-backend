@@ -19,9 +19,35 @@ const stripe = new Schema<any>(
 	{ _id: false }
 );
 
+/** SSLCommerz (W-07b): the store id is shown; the store password is sealed. Test = sandbox.sslcommerz.com. */
+const sslcommerz = new Schema<any>(
+	{
+		enabled: { type: Boolean, default: false },
+		mode: { type: String, enum: ['test', 'live'], default: 'test' },
+		storeId: { type: String, trim: true, default: '' },
+		storePassword: { type: String, select: false, default: '' },
+	},
+	{ _id: false }
+);
+
+/** bKash Tokenized Checkout (W-07b): username and app key are shown; password and app secret are sealed. */
+const bkash = new Schema<any>(
+	{
+		enabled: { type: Boolean, default: false },
+		mode: { type: String, enum: ['test', 'live'], default: 'test' },
+		username: { type: String, trim: true, default: '' },
+		appKey: { type: String, trim: true, default: '' },
+		password: { type: String, select: false, default: '' },
+		appSecret: { type: String, select: false, default: '' },
+	},
+	{ _id: false }
+);
+
 const schema = new Schema<any>(
 	{
 		stripe: { type: stripe, default: () => ({}) },
+		sslcommerz: { type: sslcommerz, default: () => ({}) },
+		bkash: { type: bkash, default: () => ({}) },
 		/** Where the buyer lands after paying; `{ref}` becomes the payment's reference. Empty: <site>/thank-you?ref={ref}. */
 		successUrl: { type: String, trim: true, default: '' },
 		/** Where the buyer lands if they go back from the provider's page. Empty: <site>/cart. */

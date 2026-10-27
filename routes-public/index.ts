@@ -13,7 +13,7 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { countryByCode, countryPicture, listCountries } from '../library/functions/countries.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
-import { stripeWebhook } from '../library/functions/payments.function.js';
+import { bkashReturn, sslcommerzIpn, sslcommerzReturn, stripeWebhook } from '../library/functions/payments.function.js';
 import { resolveHost } from '../library/siteBuilder/render.js';
 import { projectByKey } from '../library/functions/projectKey.function.js';
 import { resetPage } from './resetPage.js';
@@ -151,6 +151,63 @@ router.post('/payments/stripe/:project', async (req: any, res) => {
 		if (status === 500) console.error('stripe webhook:', e);
 		// A 5xx makes Stripe try again later; a 400 (bad signature) doesn't.
 		res.status(status).json({ message: status === 500 ? 'Something went wrong' : e.message });
+	}
+});
+
+/*
+ * SSLCommerz and bKash (docs/widgets W-07b) send the buyer back to MINT, and
+ * SSLCommerz also calls an IPN address. Nothing they carry is believed: the
+ * server asks the provider with the project's own keys, then sends the buyer
+ * on to the site's thank-you page (or the cart).
+ */
+const projectBySlug = async (raw: any) => {
+	const slug = String(raw || '').toLowerCase();
+	const project: any = /^[a-z0-9-]{1,120}$/.test(slug) ? await TenantProject.findOne({ publicSlug: slug }).lean() : null;
+	return project && project.isActive !== false ? project : null;
+};
+const formBody = express.urlencoded({ extended: false, limit: '100kb' });
+const goOn = (res: any, to: string | null) =>
+	to ? res.redirect(303, to) : res.status(404).type('text/plain').send('This payment isn’t known here. Go back to the shop and check your order.');
+
+router.all('/payments/sslcommerz/:project/return/:ref/:to', formBody, async (req: any, res) => {
+	try {
+		const project = await projectBySlug(req.params.project);
+		if (!project) return goOn(res, null);
+		const to = String(req.params.to || '');
+		goOn(
+			res,
+			await sslcommerzReturn(req.app, project, {
+				ref: String(req.params.ref || ''),
+				to: ['success', 'fail', 'cancel'].includes(to) ? to : 'success',
+				valId: String(req.body?.val_id || ''),
+			})
+		);
+	} catch (e: any) {
+		console.error('sslcommerz return:', e);
+		res.status(500).type('text/plain').send('Something went wrong — check your order on the shop before paying again.');
+	}
+});
+
+router.post('/payments/sslcommerz/:project/ipn', formBody, async (req: any, res) => {
+	try {
+		const project = await projectBySlug(req.params.project);
+		if (!project) return res.status(404).json({ message: 'Not found' });
+		res.json(await sslcommerzIpn(req.app, project, req.body || {}));
+	} catch (e: any) {
+		console.error('sslcommerz ipn:', e);
+		// A 5xx makes SSLCommerz try again later.
+		res.status(500).json({ message: 'Something went wrong' });
+	}
+});
+
+router.get('/payments/bkash/:project/return/:ref', async (req: any, res) => {
+	try {
+		const project = await projectBySlug(req.params.project);
+		if (!project) return goOn(res, null);
+		goOn(res, await bkashReturn(req.app, project, { ref: String(req.params.ref || ''), paymentID: String(req.query.paymentID || ''), status: String(req.query.status || '') }));
+	} catch (e: any) {
+		console.error('bkash return:', e);
+		res.status(500).type('text/plain').send('Something went wrong — check your order on the shop before paying again.');
 	}
 });
 

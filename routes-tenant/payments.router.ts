@@ -1,7 +1,7 @@
 import express from 'express';
 import { handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
-import { checkStripe, listPayments, paymentSettingsView, savePaymentSettings } from '../library/functions/payments.function.js';
+import { PROVIDERS, checkPaymentKeys, listPayments, paymentSettingsView, savePaymentSettings } from '../library/functions/payments.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 
@@ -11,8 +11,10 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
  *
  *   GET  /                     the last 100 payments                     records:view
  *   GET  /settings             providers (keys only as set / not set), offered by country, webhook URL   manage-projects
- *   PUT  /settings             { stripe?: { enabled, mode, publishableKey, secretKey?, webhookSecret? }, successUrl?, cancelUrl? }
- *   POST /settings/check       asks Stripe whether the secret key works
+ *   PUT  /settings             { stripe?: { enabled, mode, publishableKey, secretKey?, webhookSecret? },
+ *                                sslcommerz?: { enabled, mode, storeId, storePassword? },
+ *                                bkash?: { enabled, mode, username, appKey, password?, appSecret? }, successUrl?, cancelUrl? }
+ *   POST /settings/check       { provider? } asks the provider (Stripe by default) whether the stored keys work
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -40,7 +42,10 @@ router.put(
 			modelPath: 'payments',
 			document: req.project._id,
 			name: 'Payments',
-			text: `changed the payment settings${req.body?.stripe ? ` (Stripe ${req.body.stripe.enabled ? 'on' : 'off'}, ${req.body.stripe.mode === 'live' ? 'live' : 'test'})` : ''}`,
+			text: `changed the payment settings${(['stripe', 'sslcommerz', 'bkash'] as const)
+				.filter(p => req.body?.[p])
+				.map(p => ` (${PROVIDERS[p].name} ${req.body[p].enabled ? 'on' : 'off'}, ${req.body[p].mode === 'live' ? 'live' : 'test'})`)
+				.join('')}`,
 		});
 		return paymentSettingsView(req.project, apiOrigin(req));
 	})
@@ -49,7 +54,7 @@ router.put(
 router.post(
 	'/settings/check',
 	manage,
-	handle(async (req: any) => checkStripe(req.project))
+	handle(async (req: any) => checkPaymentKeys(req.project, String(req.body?.provider || 'stripe')))
 );
 
 export default router;

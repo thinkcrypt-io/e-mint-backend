@@ -2,7 +2,28 @@
 
 Read `README.md` first. Sizes: S (an afternoon), M (a day), L (2–3 days).
 
-## Handoff — read this first (last updated 2026-10-19)
+## Handoff — read this first (last updated 2026-10-20)
+
+**2026-10-20 — W-07b part 1: SSLCommerz and bKash done** (CHANGELOG, not
+deployed). The user: "add sslcommerz and bkash widgets" → "i mean on
+payments". Adapters `library/functions/payments/sslcommerz.ts` (session,
+validation API, transaction lookup) and `bkash.ts` (Tokenized Checkout:
+grant token cached per merchant, create, execute, payment/status). Settings
+`SitePaymentSettings.sslcommerz` {enabled, mode, storeId, storePassword
+sealed} and `.bkash` {enabled, mode, username, appKey, password + appSecret
+sealed}; a mode switch drops the other mode's secrets. Both send the buyer
+back to MINT first: `POST|GET /public/payments/sslcommerz/:slug/return/:ref/:to`
+(+ `/ipn`) and `GET /public/payments/bkash/:slug/return/:ref` — the ref is in
+the path because bKash appends `?paymentID=` to the callback. Only the
+provider, asked server-side, marks paid (`settleSsl`, `bkashReturn` →
+`markPaid`); SSLCommerz `risk_level 1` stays Waiting with a note. Checkout
+options by the shop's currency (bKash BDT only; SSLCommerz BDT/USD/EUR/GBP/
+SGD/INR/MYR/AUD/CAD). Panel: SSLCommerz and bKash panels on /site-payments,
+each with its own Save/Check; return pages saved on their own; "Paid with"
+column. Smoke `payments-bd.mjs` (+ `payments-bd-pay.mjs`, headless Chrome)
+against the real public sandboxes (SSLCommerz `testbox`/`qwerty`, bKash
+`sandboxTokenizedUser02`). **Still open in W-07b:** cash on delivery, bank
+transfer, refunds. Live merchant credentials never tried.
 
 **2026-10-19 — W-25 done** (CHANGELOG, not deployed). The user: "in model
 settings an option should be there if this model is allowed to login and
@@ -131,7 +152,7 @@ Related, running separately: "public API read-only fields" (started
 | W-05 | Commerce mapping + Cart widget (guest cart, server cart after sign-in) | both | L | done 2026-10-05 |
 | W-06 | Payments core: settings + secrets, `Payment`, server-priced checkout, webhooks; providers offered by the organization's country; Stripe | backend | L | done 2026-10-06 |
 | W-07 | Checkout widget, thank-you page, My orders, Payments settings page | both | L | done 2026-10-06 |
-| W-07b | SSLCommerz and bKash (Bangladeshi organizations), cash on delivery, bank transfer, refunds | both | L | open |
+| W-07b | SSLCommerz and bKash (Bangladeshi organizations), cash on delivery, bank transfer, refunds | both | L | SSLCommerz + bKash done 2026-10-20 (sandboxes; not deployed); COD, bank transfer, refunds open |
 | W-08 | Forms widget (contact, newsletter, any create-only model), spam guard, team email | both | M | open |
 | W-09 | Booking widget + server free-slots endpoint | both | M | open |
 | W-10 | WhatsApp button, cookie consent (gates tracking tags), announcement bar, search | both | M | open |

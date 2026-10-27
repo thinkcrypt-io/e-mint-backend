@@ -19,6 +19,8 @@ import { ShopMapping, cleanLines, customerCart, loadShop, priceCart, setCustomer
 import { esc, para, sendOrgMail } from './mail.function.js';
 import { designMail } from './mailDesign.function.js';
 import * as stripe from './payments/stripe.js';
+import * as sslcommerz from './payments/sslcommerz.js';
+import * as bkash from './payments/bkash.js';
 
 /**
  * Payments for a tenant's site (docs/widgets W-06, README §3). The flow, the
@@ -31,10 +33,15 @@ import * as stripe from './payments/stripe.js';
  *    waiting for payment, a `SitePayment` records the amount, and the
  *    provider is asked for a payment page.
  * 2. The buyer pays on the provider's page and comes back to the site.
- * 3. The provider's webhook (`stripeWebhook`) is the only thing that can make
- *    an order paid: its signature is checked with the tenant's signing secret,
- *    the session is fetched again from the provider, and amount and currency
- *    must match what checkout asked for. Then — once, whatever retries come —
+ * 3. Only the provider, asked by the server, can make an order paid. Stripe:
+ *    its webhook (`stripeWebhook`), signature checked with the tenant's
+ *    signing secret, then the session fetched again. SSLCommerz (W-07b): the
+ *    buyer's return post and the IPN only carry a `val_id`, which the
+ *    validation API is asked about (`sslcommerzReturn`, `sslcommerzIpn`).
+ *    bKash (W-07b): the buyer's return only carries a paymentID, which the
+ *    server then executes — or looks up — with bKash (`bkashReturn`). Amount
+ *    and currency must match what checkout asked for. Then — once, whatever
+ *    retries come —
  *    the payment and order become paid, stock goes down, the cart empties, the
  *    order webhook fires, the team is told and the buyer gets an email.
  *
@@ -44,8 +51,8 @@ import * as stripe from './payments/stripe.js';
 
 export const PROVIDERS: Record<string, { name: string; ready: boolean }> = {
 	stripe: { name: 'Stripe', ready: true },
-	sslcommerz: { name: 'SSLCommerz', ready: false },
-	bkash: { name: 'bKash', ready: false },
+	sslcommerz: { name: 'SSLCommerz', ready: true },
+	bkash: { name: 'bKash', ready: true },
 };
 
 const scopeOf = (project: any) => ({ organization: project.organization, project: project._id });
@@ -58,10 +65,16 @@ const offeredFor = async (project: any) => {
 	return providersFor(org?.country);
 };
 
+const SECRETS = '+stripe.secretKey +stripe.webhookSecret +sslcommerz.storePassword +bkash.password +bkash.appSecret';
+const loadSettings = (project: any): Promise<any> => runInScope(scopeOf(project), () => SitePaymentSettings.findOne({}).select(SECRETS).lean());
+
 /** What the panel sees: everything but the keys, which only say whether they're set. */
 export const paymentSettingsView = async (project: any, apiOrigin: string) => {
-	const doc: any = await runInScope(scopeOf(project), () => SitePaymentSettings.findOne({}).select('+stripe.secretKey +stripe.webhookSecret').lean());
+	const doc: any = await loadSettings(project);
 	const s = doc?.stripe || {};
+	const ssl = doc?.sslcommerz || {};
+	const bk = doc?.bkash || {};
+	const shop = await loadShop(project).catch(() => null);
 	return {
 		stripe: {
 			enabled: !!s.enabled,
@@ -71,6 +84,25 @@ export const paymentSettingsView = async (project: any, apiOrigin: string) => {
 			webhookSecretSet: !!s.webhookSecret,
 			webhookUrl: `${apiOrigin}/public/payments/stripe/${project.publicSlug}`,
 		},
+		sslcommerz: {
+			enabled: !!ssl.enabled,
+			mode: ssl.mode || 'test',
+			storeId: ssl.storeId || '',
+			storePasswordSet: !!ssl.storePassword,
+			ipnUrl: `${apiOrigin}/public/payments/sslcommerz/${project.publicSlug}/ipn`,
+			currencies: sslcommerz.SSLCOMMERZ_CURRENCIES,
+		},
+		bkash: {
+			enabled: !!bk.enabled,
+			mode: bk.mode || 'test',
+			username: bk.username || '',
+			appKey: bk.appKey || '',
+			passwordSet: !!bk.password,
+			appSecretSet: !!bk.appSecret,
+			currencies: ['BDT'],
+		},
+		/** The shop's currency — bKash takes BDT only (empty: the shop isn't set up). */
+		currency: shop?.currency || '',
 		successUrl: doc?.successUrl || '',
 		cancelUrl: doc?.cancelUrl || '',
 		offered: await offeredFor(project),
@@ -95,7 +127,7 @@ const URL_OK = /^https?:\/\/[^\s]+$/i;
  * organization's country doesn't offer can't be switched on.
  */
 export const savePaymentSettings = async (project: any, body: any) => {
-	const was: any = await runInScope(scopeOf(project), () => SitePaymentSettings.findOne({}).select('+stripe.secretKey +stripe.webhookSecret').lean());
+	const was: any = await loadSettings(project);
 	const set: any = {};
 	if (body.stripe) {
 		const b = body.stripe;
@@ -127,6 +159,52 @@ export const savePaymentSettings = async (project: any, body: any) => {
 			webhookSecret: webhookSecret ? sealed(webhookSecret) : storedHook,
 		};
 	}
+	if (body.sslcommerz) {
+		const b = body.sslcommerz;
+		const mode = b.mode === 'live' ? 'live' : 'test';
+		const storeId = String(b.storeId ?? was?.sslcommerz?.storeId ?? '').trim();
+		const storePassword = String(b.storePassword || '').trim();
+		if (storeId && !/^[A-Za-z0-9_.-]{2,80}$/.test(storeId)) throw new TenancyError(400, 'That isn’t an SSLCommerz store id — letters and digits, as SSLCommerz emailed it.');
+		if (storePassword.length > 200) throw new TenancyError(400, 'That store password is too long.');
+		const modeChanged = (was?.sslcommerz?.mode || 'test') !== mode;
+		const stored = modeChanged ? '' : was?.sslcommerz?.storePassword || '';
+		const enabled = !!b.enabled;
+		if (enabled) {
+			if (!(await offeredFor(project)).includes('sslcommerz')) throw new TenancyError(400, 'SSLCommerz isn’t offered in your organization’s country.');
+			if (!storeId) throw new TenancyError(400, `Add your SSLCommerz ${mode === 'live' ? 'live' : 'sandbox'} store id before switching SSLCommerz on.`);
+			if (!storePassword && !stored) throw new TenancyError(400, `Add your SSLCommerz ${mode === 'live' ? 'live' : 'sandbox'} store password before switching SSLCommerz on.`);
+		}
+		set.sslcommerz = { enabled, mode, storeId, storePassword: storePassword ? sealed(storePassword) : stored };
+	}
+	if (body.bkash) {
+		const b = body.bkash;
+		const mode = b.mode === 'live' ? 'live' : 'test';
+		const username = String(b.username ?? was?.bkash?.username ?? '').trim();
+		const appKey = String(b.appKey ?? was?.bkash?.appKey ?? '').trim();
+		const password = String(b.password || '').trim();
+		const appSecret = String(b.appSecret || '').trim();
+		if (username.length > 120) throw new TenancyError(400, 'That bKash username is too long.');
+		if (appKey && !/^[A-Za-z0-9_-]{8,200}$/.test(appKey)) throw new TenancyError(400, 'That isn’t a bKash app key — letters and digits, as bKash sent it.');
+		if (appSecret && !/^[A-Za-z0-9_-]{8,300}$/.test(appSecret)) throw new TenancyError(400, 'That isn’t a bKash app secret — letters and digits, as bKash sent it.');
+		if (password.length > 200) throw new TenancyError(400, 'That bKash password is too long.');
+		const modeChanged = (was?.bkash?.mode || 'test') !== mode;
+		const storedPassword = modeChanged ? '' : was?.bkash?.password || '';
+		const storedSecret = modeChanged ? '' : was?.bkash?.appSecret || '';
+		const enabled = !!b.enabled;
+		if (enabled) {
+			if (!(await offeredFor(project)).includes('bkash')) throw new TenancyError(400, 'bKash isn’t offered in your organization’s country.');
+			const missing = [!username && 'username', !password && !storedPassword && 'password', !appKey && 'app key', !appSecret && !storedSecret && 'app secret'].filter(Boolean);
+			if (missing.length) throw new TenancyError(400, `Add your bKash ${mode === 'live' ? 'live' : 'sandbox'} ${missing.join(', ')} before switching bKash on.`);
+		}
+		set.bkash = {
+			enabled,
+			mode,
+			username,
+			appKey,
+			password: password ? sealed(password) : storedPassword,
+			appSecret: appSecret ? sealed(appSecret) : storedSecret,
+		};
+	}
 	for (const k of ['successUrl', 'cancelUrl'] as const) {
 		if (body[k] === undefined) continue;
 		const v = String(body[k] || '').trim();
@@ -138,7 +216,7 @@ export const savePaymentSettings = async (project: any, body: any) => {
 
 /** Stripe's keys, opened — or null when Stripe isn't on. */
 const stripeKeys = async (project: any) => {
-	const doc: any = await runInScope(scopeOf(project), () => SitePaymentSettings.findOne({}).select('+stripe.secretKey +stripe.webhookSecret').lean());
+	const doc: any = await loadSettings(project);
 	const s = doc?.stripe;
 	if (!s?.secretKey) return null;
 	try {
@@ -148,23 +226,72 @@ const stripeKeys = async (project: any) => {
 	}
 };
 
-/** The panel's "check the key" button. */
-export const checkStripe = async (project: any) => {
-	const keys = await stripeKeys(project);
-	if (!keys) throw new TenancyError(400, 'Add your Stripe secret key first.');
+const unreadable = (name: string) => new TenancyError(500, `The ${name} details can’t be read on this server — add them again in Payments.`, 'secret_unreadable');
+
+/** SSLCommerz's store, opened — or null when it has no password stored. */
+const sslKeys = async (project: any) => {
+	const doc: any = await loadSettings(project);
+	const s = doc?.sslcommerz;
+	if (!s?.storeId || !s.storePassword) return null;
 	try {
+		return { enabled: !!s.enabled, mode: s.mode || 'test', storeId: s.storeId, storePassword: open(s.storePassword) };
+	} catch {
+		throw unreadable('SSLCommerz');
+	}
+};
+
+/** bKash's four merchant details, opened — or null when any is missing. */
+const bkashKeys = async (project: any) => {
+	const doc: any = await loadSettings(project);
+	const b = doc?.bkash;
+	if (!b?.username || !b.appKey || !b.password || !b.appSecret) return null;
+	try {
+		return { enabled: !!b.enabled, mode: b.mode || 'test', username: b.username, appKey: b.appKey, password: open(b.password), appSecret: open(b.appSecret) };
+	} catch {
+		throw unreadable('bKash');
+	}
+};
+
+/** The panel's "check the keys" buttons: asks the provider whether the stored details work. */
+export const checkPaymentKeys = async (project: any, provider = 'stripe') => {
+	try {
+		if (provider === 'sslcommerz') {
+			const keys = await sslKeys(project);
+			if (!keys) throw new TenancyError(400, 'Add your SSLCommerz store id and password first.');
+			await sslcommerz.checkKeys(keys);
+			return { ok: true, mode: keys.mode, provider };
+		}
+		if (provider === 'bkash') {
+			const keys = await bkashKeys(project);
+			if (!keys) throw new TenancyError(400, 'Add all four bKash merchant details first.');
+			await bkash.checkKeys(keys);
+			return { ok: true, mode: keys.mode, provider };
+		}
+		const keys = await stripeKeys(project);
+		if (!keys) throw new TenancyError(400, 'Add your Stripe secret key first.');
 		await stripe.checkKey(keys.secretKey);
+		return { ok: true, mode: keys.mode, provider: 'stripe' };
 	} catch (e: any) {
+		if (e instanceof TenancyError) throw e;
 		throw new TenancyError(e.status === 401 ? 400 : 502, e.message);
 	}
-	return { ok: true, mode: keys.mode };
 };
 
 /** What a site may offer at checkout right now (for the checkout widget). */
 export const checkoutOptions = async (project: any) => {
-	const [offered, keys] = await Promise.all([offeredFor(project), stripeKeys(project).catch(() => null)]);
+	const [offered, keys, ssl, bk, shop] = await Promise.all([
+		offeredFor(project),
+		stripeKeys(project).catch(() => null),
+		sslKeys(project).catch(() => null),
+		bkashKeys(project).catch(() => null),
+		loadShop(project).catch(() => null),
+	]);
+	const currency = shop?.currency || '';
 	const methods = [] as { provider: string; name: string; mode: string }[];
 	if (offered.includes('stripe') && keys?.enabled && keys.webhookSecret) methods.push({ provider: 'stripe', name: 'Card (Stripe)', mode: keys.mode });
+	if (offered.includes('sslcommerz') && ssl?.enabled && sslcommerz.SSLCOMMERZ_CURRENCIES.includes(currency))
+		methods.push({ provider: 'sslcommerz', name: 'Card, mobile banking or net banking (SSLCommerz)', mode: ssl.mode });
+	if (offered.includes('bkash') && bk?.enabled && currency === 'BDT') methods.push({ provider: 'bkash', name: 'bKash', mode: bk.mode });
 	return { methods };
 };
 
@@ -207,7 +334,7 @@ const ref = () => crypto.randomBytes(12).toString('base64url');
  * Signed in, the customer's saved cart is bought; a guest sends their lines
  * and an email. Returns where to send the buyer.
  */
-export const checkout = async ({ app, project, customer, body }: { app: any; project: any; customer: any | null; body: any }) => {
+export const checkout = async ({ app, project, customer, body, apiOrigin }: { app: any; project: any; customer: any | null; body: any; apiOrigin: string }) => {
 	const shop = await loadShop(project);
 	if (!shop?.order) throw new TenancyError(409, 'Checkout isn’t set up on this site yet (Site setup → Widgets → Shop → Orders).', 'checkout_off');
 	const provider = String(body?.provider || '');
@@ -268,12 +395,13 @@ export const checkout = async ({ app, project, customer, body }: { app: any; pro
 	fireWebhooks({ route: def.route, event: 'create', doc, source: 'api' });
 	fireAutomations({ route: def.route, event: 'create', doc, actor: { name: 'Checkout' } });
 
-	const keys = (await stripeKeys(project))!;
+	const settings: any = await loadSettings(project);
+	const mode = settings?.[provider]?.mode === 'live' ? 'live' : 'test';
 	const site = siteOrigin(project);
 	const r = ref();
 	const fill = (u: string) => u.replace(/\{ref\}/g, r);
-	const successUrl = fill(keys.successUrl || (site ? `${site}/thank-you?ref={ref}` : ''));
-	const cancelUrl = fill(keys.cancelUrl || (site ? `${site}/cart` : ''));
+	const successUrl = fill(settings?.successUrl || (site ? `${site}/thank-you?ref={ref}` : ''));
+	const cancelUrl = fill(settings?.cancelUrl || (site ? `${site}/cart` : ''));
 	if (!successUrl || !cancelUrl) throw new TenancyError(409, 'Set the thank-you page in Payments (or the site’s domain in Site setup).', 'return_url_missing');
 
 	const payment: any = await SitePayment.create({
@@ -282,26 +410,52 @@ export const checkout = async ({ app, project, customer, body }: { app: any; pro
 		orderModel: def.name,
 		orderCode: doc.code || '',
 		provider,
-		mode: keys.mode,
+		mode,
 		amount,
 		currency: shop.currency,
 		status: 'created',
 		email: contact.email,
 		customer: customer?._id || null,
 		lines: priced.lines.map((l: any) => ({ product: l.product, variant: l.variant, name: l.name, quantity: l.quantity, unitPrice: l.unitPrice, total: l.total })),
+		successUrl,
+		cancelUrl,
 		events: [{ type: 'created', at: new Date(), note: `${priced.count} item(s), ${priced.subtotal} ${shop.currency}` }],
 	});
+	const title = `${project.name} — order ${doc.code || String(doc._id).slice(-6)}`;
+	// SSLCommerz and bKash send the buyer back to MINT first, which asks them what happened, then on to the site.
+	const back = `${apiOrigin}/public/payments/${provider}/${project.publicSlug}`;
 	try {
-		const session = await stripe.createSession(keys.secretKey, {
-			amount,
-			currency: shop.currency,
-			title: `${project.name} — order ${doc.code || String(doc._id).slice(-6)}`,
-			description: priced.lines.map((l: any) => `${l.quantity} × ${l.name}${l.variant ? ` (${l.variant})` : ''}`).join(', '),
-			email: contact.email,
-			ref: r,
-			successUrl,
-			cancelUrl,
-		});
+		let session: { id: string; url: string };
+		if (provider === 'sslcommerz') {
+			const keys = (await sslKeys(project))!;
+			session = await sslcommerz.createSession(keys, {
+				amount: priced.subtotal,
+				currency: shop.currency,
+				ref: r,
+				title,
+				items: priced.count,
+				successUrl: `${back}/return/${r}/success`,
+				failUrl: `${back}/return/${r}/fail`,
+				cancelUrl: `${back}/return/${r}/cancel`,
+				ipnUrl: `${back}/ipn`,
+				customer: { name: contact.name, email: contact.email, phone: contact.phone, address: contact.address },
+			});
+		} else if (provider === 'bkash') {
+			const keys = (await bkashKeys(project))!;
+			session = await bkash.createPayment(keys, { amount: priced.subtotal, ref: r, payer: contact.phone || contact.email, callbackUrl: `${back}/return/${r}` });
+		} else {
+			const keys = (await stripeKeys(project))!;
+			session = await stripe.createSession(keys.secretKey, {
+				amount,
+				currency: shop.currency,
+				title,
+				description: priced.lines.map((l: any) => `${l.quantity} × ${l.name}${l.variant ? ` (${l.variant})` : ''}`).join(', '),
+				email: contact.email,
+				ref: r,
+				successUrl,
+				cancelUrl,
+			});
+		}
 		await SitePayment.updateOne(
 			{ _id: payment._id },
 			{ $set: { status: 'pending', providerSessionId: session.id, checkoutUrl: session.url }, $push: { events: { type: 'session', at: new Date(), note: session.id } } }
@@ -474,6 +628,130 @@ export const stripeWebhook = async (app: any, project: any, raw: Buffer | undefi
 		return { received: true, status: payment.status };
 	});
 };
+
+/* ------------------------------------------- SSLCommerz and bKash returns */
+
+/** Where a returning buyer goes: the thank-you page (paid, waiting or failed — it says which), or the cart if they went back. */
+const landing = (payment: any, project: any, status: string) => {
+	const site = siteOrigin(project) || '';
+	return (status === 'cancelled' ? payment.cancelUrl : payment.successUrl) || site || null;
+};
+
+/** A payment that hasn't happened, marked so — never over one that did. */
+const settleUnpaid = async (payment: any, status: 'failed' | 'cancelled' | 'expired', note: string) => {
+	await SitePayment.updateOne(
+		{ _id: payment._id, status: { $in: ['created', 'pending'] } },
+		{ $set: { status, ...(status === 'failed' && note && { error: note.slice(0, 300) }) }, $push: { events: { type: status, at: new Date(), note: note.slice(0, 300) } } }
+	);
+	return status;
+};
+
+const SSL_UNPAID: Record<string, 'failed' | 'cancelled' | 'expired'> = { FAILED: 'failed', CANCELLED: 'cancelled', EXPIRED: 'expired', UNATTEMPTED: 'expired', INVALID_TRANSACTION: 'failed' };
+
+/**
+ * What SSLCommerz says about one payment — asked with the tenant's password,
+ * by the `val_id` the post brought, else by our reference. Paid → markPaid;
+ * a hint from the post (failed / cancelled) only lands when SSLCommerz has no
+ * successful attempt either.
+ */
+const settleSsl = async (app: any, project: any, payment: any, valId: string, hint?: 'failed' | 'cancelled') => {
+	const keys = await sslKeys(project);
+	if (!keys) return { status: payment.status, reason: 'not set up' };
+	let v: sslcommerz.SslValidation | null = null;
+	if (valId && /^[A-Za-z0-9_-]{4,80}$/.test(valId)) v = await sslcommerz.validate(keys, valId).catch(() => null);
+	let latest = '';
+	if (!sslcommerz.isPaid(v) || v?.tran_id !== payment.ref) {
+		const all = await sslcommerz.byTransaction(keys, payment.ref).catch(() => null);
+		const found = (all?.element || []).filter(e => e.tran_id === payment.ref);
+		v = found.find(sslcommerz.isPaid) || null;
+		latest = found[found.length - 1]?.status || '';
+		// What the transaction lookup returns can lack val_id's checks — confirm the paid one by its val_id.
+		if (v?.val_id) v = (await sslcommerz.validate(keys, v.val_id).catch(() => null)) || v;
+	}
+	if (sslcommerz.isPaid(v) && v!.tran_id === payment.ref) {
+		if (v!.risk_level === '1') {
+			await SitePayment.updateOne(
+				{ _id: payment._id, status: { $in: ['created', 'pending'] } },
+				{
+					$set: { status: 'pending', error: `SSLCommerz flagged this payment as risky (${v!.risk_title || 'risk'}) — check it in your SSLCommerz panel before you ship.` },
+					$push: { events: { type: 'held', at: new Date(), note: v!.val_id } },
+				}
+			);
+			return { status: 'pending', reason: 'risky' };
+		}
+		const currency = String(v!.currency_type || v!.currency || '').toUpperCase();
+		const value = Number(v!.currency_amount || v!.amount);
+		const r = await markPaid(app, project, payment, { amount: stripe.toMinor(value, currency || payment.currency), currency, providerPaymentId: v!.bank_tran_id || v!.val_id });
+		return { status: r.paid ? 'paid' : 'failed', ...r };
+	}
+	const unpaid = hint || SSL_UNPAID[latest];
+	if (unpaid) return { status: await settleUnpaid(payment, unpaid, `SSLCommerz: ${latest || unpaid}`) };
+	return { status: payment.status };
+};
+
+/** The SSLCommerz payment for our reference, in its project. */
+const sslPayment = async (project: any, r: string) => (/^[A-Za-z0-9_-]{8,40}$/.test(r) ? SitePayment.findOne({ provider: 'sslcommerz', ref: r }).lean() : null);
+
+/**
+ * POST /public/payments/sslcommerz/:slug/return/:ref/:to (success|fail|cancel) —
+ * SSLCommerz posts the buyer back here. Returns where to send them on.
+ */
+export const sslcommerzReturn = (app: any, project: any, q: { ref: string; to: string; valId: string }) =>
+	runInScope(scopeOf(project), async () => {
+		const payment: any = await sslPayment(project, q.ref);
+		if (!payment) return siteOrigin(project) || null;
+		await SitePayment.updateOne({ _id: payment._id }, { $push: { events: { type: 'return', at: new Date(), note: q.to } } });
+		const hint = q.to === 'cancel' ? 'cancelled' : q.to === 'fail' ? 'failed' : undefined;
+		const r = await settleSsl(app, project, payment, q.valId, hint).catch((e: any) => {
+			console.error('sslcommerz return:', e?.message);
+			return { status: payment.status };
+		});
+		return landing(payment, project, r.status);
+	});
+
+/** POST /public/payments/sslcommerz/:slug/ipn — SSLCommerz's server-to-server notice. Only its validation API's answer counts. */
+export const sslcommerzIpn = (app: any, project: any, body: any) =>
+	runInScope(scopeOf(project), async () => {
+		const payment: any = await sslPayment(project, String(body?.tran_id || ''));
+		if (!payment) return { received: true, ignored: 'unknown transaction' };
+		await SitePayment.updateOne({ _id: payment._id }, { $push: { events: { type: 'ipn', at: new Date(), note: String(body?.status || '').slice(0, 40) } } });
+		return { received: true, ...(await settleSsl(app, project, payment, String(body?.val_id || ''))) };
+	});
+
+/**
+ * GET /public/payments/bkash/:slug/return/:ref?paymentID&status — bKash sends
+ * the buyer back here. On `success` the server executes the payment with
+ * bKash (or, if that answer is lost or it already ran, looks it up); only a
+ * Completed answer for our invoice and amount marks it paid. Returns where to
+ * send the buyer on.
+ */
+export const bkashReturn = (app: any, project: any, q: { ref: string; paymentID: string; status: string }) =>
+	runInScope(scopeOf(project), async () => {
+		const payment: any = /^[A-Za-z0-9_-]{8,40}$/.test(q.ref) ? await SitePayment.findOne({ provider: 'bkash', ref: q.ref }).lean() : null;
+		if (!payment) return siteOrigin(project) || null;
+		// Someone else's paymentID can't settle this order.
+		if (!q.paymentID || q.paymentID !== payment.providerSessionId) return landing(payment, project, payment.status);
+		await SitePayment.updateOne({ _id: payment._id }, { $push: { events: { type: 'return', at: new Date(), note: q.status.slice(0, 40) } } });
+		if (payment.status === 'paid') return landing(payment, project, 'paid');
+		if (q.status !== 'success') return landing(payment, project, await settleUnpaid(payment, q.status === 'cancel' ? 'cancelled' : 'failed', `bKash: ${q.status || 'failure'}`));
+		const keys = await bkashKeys(project);
+		if (!keys) return landing(payment, project, payment.status);
+		let p: bkash.BkashPayment | null = null;
+		let why = '';
+		try {
+			p = await bkash.executePayment(keys, payment.providerSessionId);
+		} catch (e: any) {
+			why = e.message;
+			// Executed before (a reload), or the answer was lost: bKash's record decides.
+			p = await bkash.queryPayment(keys, payment.providerSessionId).catch(() => null);
+		}
+		if (p?.transactionStatus === 'Completed' && (!p.merchantInvoiceNumber || p.merchantInvoiceNumber === payment.ref)) {
+			const r = await markPaid(app, project, payment, { amount: stripe.toMinor(Number(p.amount), 'BDT'), currency: p.currency || 'BDT', providerPaymentId: p.trxID || p.paymentID });
+			return landing(payment, project, r.paid ? 'paid' : 'failed');
+		}
+		if (p?.transactionStatus === 'Initiated' && !why) return landing(payment, project, payment.status);
+		return landing(payment, project, await settleUnpaid(payment, 'failed', why || `bKash: ${p?.transactionStatus || 'not completed'}`));
+	});
 
 /* ------------------------------------------------------------ my orders */
 

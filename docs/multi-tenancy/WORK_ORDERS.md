@@ -26,6 +26,13 @@ Snippets in `src/app/website-setup/_components/snippets.ts` — env names match 
 NEXT_PUBLIC_…, + VITE_…). Menu entry is in `tenantNav.function.ts`, so it shows after the backend deploy (the page works
 by URL before). Pushed mint-tenant `fade8ff`, mint-docs `80ebef7` (websites#website-setup), website `f1b5497`; not deployed.
 
+**2026-10-20 — SSLCommerz and bKash on Payments (widgets W-07b part 1, `docs/widgets`).** A project in Bangladesh
+can switch on its own SSLCommerz store and bKash merchant account (sandbox or live) on API → Payments, beside
+Stripe; Checkout offers them by the shop's currency (bKash BDT only). Buyers come back through
+`/public/payments/{sslcommerz|bkash}/<slug>/return/<ref>…`; the server validates with SSLCommerz / executes with
+bKash before `markPaid`. Smoke `payments-bd.mjs` + `payments-bd-pay.mjs` against the real public sandboxes.
+Backend, mint-tenant, admin, mint-docs, website; not deployed. Live merchant credentials never tried — ask the user.
+
 **2026-10-20 — New sidebar section from the model builder.** The section pickers (model wizard Finish, model page
 Basics → Sidebar, feature wizard) end with **+ New section…**: the sidebar builder's `SectionDialog`, saved straight
 away through the `sidebarcategories` CRUD (`priority: 0`, last), then picked — `SectionSelect.tsx` in both apps.

@@ -764,7 +764,7 @@ router.get(
 router.post(
 	'/checkout',
 	checkoutLimit,
-	handle(async (req: any) => checkout({ app: req.app, project: req.project, customer: await customerOf(req), body: req.body || {} }))
+	handle(async (req: any) => checkout({ app: req.app, project: req.project, customer: await customerOf(req), body: req.body || {}, apiOrigin: apiOrigin(req) }))
 );
 
 router.get(

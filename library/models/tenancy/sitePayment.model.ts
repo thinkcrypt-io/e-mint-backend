@@ -28,6 +28,9 @@ const schema = new Schema<any>(
 		providerSessionId: { type: String, default: '' },
 		providerPaymentId: { type: String, default: '' },
 		checkoutUrl: { type: String, default: '' },
+		/** Where the buyer goes after the provider sends them back to MINT (SSLCommerz, bKash): the thank-you page, the cart. */
+		successUrl: { type: String, default: '' },
+		cancelUrl: { type: String, default: '' },
 		paidAt: { type: Date, default: null },
 		error: { type: String, default: '' },
 		/** What happened, newest last: created, session, webhook, paid, mismatch… */

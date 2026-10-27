@@ -453,3 +453,39 @@ Newest last. One entry per work order: what, files, how verified.
   the switches saving `signUpRoles`, the role dropdown, a staff login with no
   sign-up link and a VIP login with one.
 
+## W-07b (part 1) — SSLCommerz and bKash on Payments (2026-10-20)
+- **Asked:** "add sslcommerz and bkash widgets", then "i mean on payments" —
+  both as payment providers a project turns on, not new widgets.
+- **Backend:** `functions/payments/sslcommerz.ts` (hosted session
+  `gwprocess/v4/api.php`, `validationserverAPI`, `merchantTransIDvalidationAPI`,
+  `checkKeys`) and `payments/bkash.ts` (tokenized `token/grant` cached ~55 min
+  per merchant, `create` mode 0011, `execute`, `payment/status`; tolerant of
+  bKash's error JSON with raw line breaks). `payments.function.ts`:
+  `loadSettings`, `sslKeys`/`bkashKeys`, `checkPaymentKeys(project, provider)`
+  (replaces `checkStripe`), `checkoutOptions` by offered country + switched on
+  + the shop's currency, `checkout({…, apiOrigin})` opening the chosen
+  provider's page, `sslcommerzReturn`/`sslcommerzIpn` → `settleSsl` (val_id
+  validated, else the reference looked up; risky held), `bkashReturn`
+  (paymentID must match; success → execute, else query; cancel/failure →
+  Cancelled/Failed, never over Paid). `SitePayment.successUrl/cancelUrl` for
+  the onward redirect. Routes in `routes-public/index.ts` (url-encoded
+  bodies). `routes-tenant/payments.router.ts`: `PUT /settings` takes
+  `sslcommerz`/`bkash`; `POST /settings/check { provider }`. Checkout widget:
+  test-mode hint per provider. `PROVIDERS` ready.
+- **Panels (mint-tenant + admin, same file):** `/site-payments` — Stripe,
+  SSLCommerz (store id, store password, IPN address) and bKash (username,
+  password, app key, app secret) panels, each sandbox/live, on/off, Save,
+  Check the details, go-live confirm; currency warning; After paying saved on
+  its own; payments list "Paid with". `tenantApi` types; GuideLink `sslcommerz`,
+  `bkash`.
+- **Verified:** `payments-bd.mjs` 31 checks against the real sandboxes
+  (settings checks, Check right/wrong details, options by currency, real
+  pages, forged return/IPN/paymentID change nothing, cancel → cart); `pay` +
+  `payments-bd-pay.mjs` paid both in headless Chrome (SSLCommerz testbox
+  "Success", bKash sandbox wallet) → `check` 7/7: orders Paid with the
+  provider's reference, IPN after the return idempotent, bKash return reopened
+  still paid; "Success with risk" stayed Waiting. Stripe `payments.mjs` all
+  passed. The page checked in the browser pane (admin tenant mode :3083 →
+  backend :5083). `tsc` clean in backend, mint-tenant, admin, mint-docs,
+  website.
+- **Not done:** cash on delivery, bank transfer, refunds; live credentials.
