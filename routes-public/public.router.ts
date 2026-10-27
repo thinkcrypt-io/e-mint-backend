@@ -55,6 +55,7 @@ import SitePage from '../library/models/siteBuilder/sitePage.model.js';
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
 import { withSiteDefaults } from '../library/siteBuilder/seo.js';
 import { headHtml, siteHead } from '../library/functions/siteHead.function.js';
+import { siteEdge } from '../library/functions/siteEdge.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import {
@@ -493,6 +494,11 @@ router.post(
 	handle(async (req, res) => {
 		res.status(202);
 		if (req.project.type !== 'website') return { ok: false };
+		// Sent on by the mint-edge Worker (SC-10), whose own address is what reaches us: the visitor's. No more
+		// trusted than the rest of a page view (anyone with the public key can send one); used only for analytics.
+		const viaEdge = String(req.headers['x-mint-visitor-ip'] || '').trim();
+		// request-ip's middleware defines req.clientIp as a getter.
+		if (viaEdge && /^[0-9a-f.:]{3,45}$/i.test(viaEdge)) Object.defineProperty(req, 'clientIp', { value: viaEdge, configurable: true });
 		const ua = String(req.headers['user-agent'] || '');
 		if (BOT.test(ua) || !fromOwnSite(req)) return { ok: true }; // quietly dropped
 		let body: any = req.body;
@@ -522,6 +528,7 @@ router.post(
  *                                  configuration (tags, code, SEO, redirects, headers — WO-34, WO-38)
  *   GET /site/tags                 what /public/track.js injects: the tags and custom code
  *   GET /site/head?path=/about     one page's SEO by its address, for a site built anywhere (site-connect SC-02)
+ *   GET /site/edge                 what the mint-edge Worker in front of a site needs (site-connect SC-10)
  *   GET /site/robots.txt           robots.txt from the indexing settings
  *   GET /site/sitemap.xml          the published pages (not hidden from search); ?origin=https://…
  *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
@@ -652,6 +659,20 @@ router.get(
 			return undefined;
 		}
 		return head;
+	})
+);
+
+/*
+ * What the mint-edge Worker in front of a site needs (docs/site-connect SC-10): switched off or not, the domains it
+ * may rewrite, the pages that are Mint's, redirects, and whether robots.txt / sitemap.xml come from Mint.
+ */
+router.get(
+	'/site/edge',
+	handle(async (req: any, res) => {
+		websiteOnly(req);
+		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req, cached: true }), kitModel(req, 'pages'), kitModel(req, 'seo')]);
+		res.setHeader('Cache-Control', 'public, max-age=60');
+		return siteEdge(req.project, doc, { pages: pages?.Model, seo: seo?.Model });
 	})
 );
 

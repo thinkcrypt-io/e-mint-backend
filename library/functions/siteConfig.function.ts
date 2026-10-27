@@ -169,6 +169,12 @@ export const SITE_SETTINGS = Joi.object({
 		bodyStart: code.label('Body start code'),
 		bodyEnd: code.label('Body end code'),
 	}),
+	/** The Cloudflare Worker's switches (docs/site-connect SC-10). */
+	edge: Joi.object({
+		bypass: Joi.boolean(),
+		robots: Joi.boolean(),
+		sitemap: Joi.boolean(),
+	}),
 	redirects: Joi.array()
 		.max(200)
 		.items(
@@ -200,7 +206,7 @@ export const SITE_SETTINGS = Joi.object({
 		),
 });
 
-const SECTIONS = ['identity', 'contact', 'social', 'seo', 'tracking'] as const;
+const SECTIONS = ['identity', 'contact', 'social', 'seo', 'tracking', 'edge'] as const;
 export const TRACKERS = ['ga4', 'gtm', 'googleAds', 'metaPixel', 'tiktokPixel', 'linkedinPartner', 'pinterestTag', 'xPixel', 'snapPixel', 'clarity', 'hotjar'];
 const CODE_TAG: Record<string, string> = { head: 'Head code', bodyStart: 'Body start code', bodyEnd: 'Body end code' };
 
@@ -389,6 +395,9 @@ const seoOf = (doc: any) => {
 	};
 };
 
+/** The Cloudflare Worker's switches (SC-10): all off unless turned on. */
+export const edgeOf = (doc: any) => ({ bypass: !!doc?.edge?.bypass, robots: !!doc?.edge?.robots, sitemap: !!doc?.edge?.sitemap });
+
 const trackingOf = (doc: any) => ({
 	mintAnalytics: doc?.tracking?.mintAnalytics !== false,
 	visitorIp: ['masked', 'off'].includes(doc?.tracking?.visitorIp) ? doc.tracking.visitorIp : 'full',
@@ -435,6 +444,7 @@ export const panelView = (project: any, doc: any) => ({
 	headTags: (doc.headTags || []).map((t: any) => ({ _id: String(t._id), name: t.name, location: t.location, content: t.content || '', enabled: t.enabled !== false })),
 	redirects: doc.redirects || [],
 	headers: doc.headers || [],
+	edge: edgeOf(doc),
 	check: doc.check || null,
 	domains: project.domains || [],
 	origin: siteOrigin(project, doc),

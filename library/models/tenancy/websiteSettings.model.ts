@@ -115,6 +115,15 @@ const schema = new Schema<any>(
 			type: [new Schema({ source: { type: String, trim: true, default: '/(.*)' }, name: { type: String, trim: true }, value: { type: String, trim: true } }, { _id: false })],
 			default: [],
 		},
+		/**
+		 * The Cloudflare Worker in front of the site (docs/site-connect SC-10): `bypass` turns all its rewriting off
+		 * at once; robots.txt and sitemap.xml are answered from Mint only when switched on (the site's own stay otherwise).
+		 */
+		edge: {
+			bypass: { type: Boolean, default: false },
+			robots: { type: Boolean, default: false },
+			sitemap: { type: Boolean, default: false },
+		},
 		/** The last "Check the site" (site.router.ts): what was found, per tag. */
 		check: { type: Schema.Types.Mixed, default: undefined },
 	},

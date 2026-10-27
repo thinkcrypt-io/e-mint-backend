@@ -40,12 +40,13 @@
  */
 export const TRACK_JS = `(function () {
 	'use strict';
-	var script = document.currentScript || document.querySelector('script[data-key][src*="/public/track.js"]');
+	var script = document.currentScript || document.querySelector('script[data-key][src*="/public/track.js"], script[data-key][src*="/_mint/track.js"]');
 	if (!script) return;
 	// The project key names the project on its API (docs/api-builder D14).
 	var project = script.getAttribute('data-key');
 	if (!project) { console.warn('MINT analytics: add data-key="<your project key>" — it is on API → Keys in your project'); return; }
-	var api = new URL(script.src, location.href).origin + '/public/api';
+	// data-api: where the API is when it isn't next to the script — the mint-edge Worker serves both from the site's own domain (/_mint/api).
+	var api = script.getAttribute('data-api') ? new URL(script.getAttribute('data-api'), location.href).href.replace(/\\/+$/, '') : new URL(script.src, location.href).origin + '/public/api';
 	var withKey = '?apiKey=' + encodeURIComponent(project);
 	var endpoint = api + '/track' + withKey;
 	var off = script.hasAttribute('data-no-track') || navigator.doNotTrack === '1';
