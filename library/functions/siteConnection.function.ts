@@ -33,10 +33,11 @@ const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*
 const has = (tag: string, name: string) => new RegExp(`\\s${name}(\\s|=|>|/)`, 'i').test(tag);
 
 /** The address to test: what the owner typed (a path or a whole address), else the site's home page. */
-const target = (raw: unknown, origin: string) => {
+export const target = (raw: unknown, origin: string) => {
 	const v = typeof raw === 'string' ? raw.trim() : '';
 	if (!v) return origin ? `${origin}/` : '';
 	if (v.startsWith('/')) return origin ? origin + v : '';
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v) && !/^https?:\/\//i.test(v)) return ''; // ftp://, file://
 	const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`;
 	try {
 		const u = new URL(withScheme);
@@ -46,7 +47,7 @@ const target = (raw: unknown, origin: string) => {
 	}
 };
 
-const ownDomain = (host: string, domains: string[]) => {
+export const ownDomain = (host: string, domains: string[]) => {
 	const bare = host.toLowerCase().replace(/^www\./, '');
 	return domains.some(d => {
 		const dom = d.toLowerCase().replace(/^www\./, '');

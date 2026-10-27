@@ -1,5 +1,35 @@
 # SEO engine and editor — changelog
 
+## 2026-10-28 — SEO-14 Link preview checker
+
+- **`library/functions/linkPreview.function.ts`:** `linkPreview(project, doc, models, url)` reads an address the way
+  the share apps do — siteCheck's `fetchPage` (redirects followed, private addresses refused, no JavaScript) — then
+  `shareTags` (the first of each tag in the head, entities decoded), the share image downloaded (≤ 10 MB, each redirect
+  checked) and measured with sharp, and `cards` for Facebook, LinkedIn, WhatsApp, X and Slack with each app's
+  fallbacks (og → `<title>` / description, twitter:* → og:*) and layout: big picture, small thumbnail or text only
+  (Facebook big from 600×315, none under 200×200; WhatsApp drops pictures over 600 KB; X big only with
+  `summary_large_image`).
+- **Problems** (`previewProblems`): no title / description / image, a relative og:image, an image too small, too
+  heavy (8 MB Facebook, 5 MB X and LinkedIn, ~300 KB WhatsApp), the wrong shape or type, a long title or description,
+  no twitter:card or og:site_name, og:url elsewhere, a redirect. **Tags only added in the browser:** a page of this
+  project added to SEO here whose server HTML lacks that SEO (the snippet's `data-seo` named; builder pages skipped —
+  mint-sites prints theirs), and any page that's a JavaScript app's empty shell (`isAppShell`).
+- **`POST /site-config/link-preview { url }`** — any address; a path is the site's. `mint` names the page's SEO record
+  (Edit SEO) when the address is on the project's domain. siteConnection's `target` now refuses `ftp://` and the
+  like instead of making `https://ftp//…`.
+- **Panel:** Site setup → Link previews (`site-setup/_components/LinkPreview.tsx`): the address box, the problems,
+  the five cards, the page's tags with the image's size, Edit SEO / Add SEO, and Facebook's and LinkedIn's own tools
+  to make them read the page again. `?url=` checks at once; an SEO record's page has a Link previews button.
+- **Guide:** mint-docs `websites#link-preview`. **Website:** a changelog entry.
+- **Tests:** smoke `scripts/tenancy-smoke/seo-link-preview.mjs` (25) against a local pretend website: a correct page
+  (five big cards, no problems), a bare page, a JavaScript shell flagged, a tiny relative image with a long title, a
+  square image, a redirect, a 404, nothing typed, `ftp://`, a connected page whose SEO is only added by the snippet
+  (flagged, its record named) beside one whose server prints `/site/head` (not flagged). `site-connect-head` and
+  `site-connect-edge` smokes pass. In the panel: both pages checked, Edit SEO opens the record, the record page's
+  button, phone width.
+  - **Not run:** real Facebook / LinkedIn / WhatsApp / X / Slack shares — the cards are drawn from the tags the way
+    each app lays them out today.
+
 ## 2026-10-27 — SEO-04 Structured data forms
 
 - **`library/siteBuilder/schema.ts`:** `schemaProps(type, data, {origin, title, siteName, logo})` turns a form's values

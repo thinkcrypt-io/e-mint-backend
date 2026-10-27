@@ -20,6 +20,7 @@ first. Where two touch the same screen, each one says how it looks without the o
 | Template pages' SEO | `backend/library/siteBuilder/render.ts` | `{{record.…}}` filled in per item (`/blog/[slug]`) |
 | Head answer | `GET /public/api/site/head` (`siteHead.function.ts`, site-connect SC-02) | One page's SEO for sites built anywhere; the mint-edge Worker writes it into the HTML |
 | robots.txt | `GET /public/api/site/robots.txt` (`robots.function.ts`, SEO-09) | Built for you: `Allow: /` or `Disallow: /`, the extra lines, a group per blocked crawler (10 switches), the `Sitemap:` line. Or the whole file as written (`X-Mint-Robots: custom`). `POST /site-config/robots-preview` shows the file and its mistakes |
+| Link preview checker | Site setup → Link previews (`linkPreview.function.ts`, SEO-14) | Any address: the card Facebook, LinkedIn, WhatsApp, X and Slack show, from the server's HTML; the image measured; problems, including tags only added in the browser; Edit SEO for the project's own pages |
 | sitemap.xml | `GET /public/api/site/sitemap.xml` (`public.router.ts`, `sitemap.function.ts`) | Published kit pages + builder static pages not hidden from search, with priority and change frequency; every record a template page shows (SEO-08), with its date and image; Site setup's extra addresses; an index of `?part=N` past 5,000. |
 | Redirects | Site setup → Redirects | Used by mint-sites and the Worker |
 | `suggest_seo` (MCP) | `backend/library/controllers/mcp/content.tools.ts` | A page's words and SEO, for the user's own AI to write a title and description |

@@ -25,7 +25,7 @@ another.
 | SEO-11 | IndexNow: tell Bing and others when pages change | Engine | backend + mint-sites + mint-edge | S | todo |
 | SEO-12 | Redirects: automatic on path change, CSV import, loop check | Engine | backend + mint-tenant | S | todo |
 | SEO-13 | PageSpeed page | Measure | backend + mint-tenant | M | todo |
-| SEO-14 | Link preview checker | Measure | backend + mint-tenant | S | todo |
+| SEO-14 | Link preview checker | Measure | backend + mint-tenant | S | done 2026-10-28 (Site setup → Link previews; real shares not tried) |
 | SEO-15 | Google Search Console connection | Measure | backend + mint-tenant | L | todo |
 | SEO-16 | Whole-site audit (crawler, checks, score) | Measure | backend + mint-tenant | L | todo |
 | SEO-17 | Backlinks: referring sites + Bing Webmaster | Measure | backend + mint-tenant | M | todo |
@@ -33,7 +33,7 @@ another.
 | SEO-19 | MCP: SEO problems and fixing many pages at once | AI | backend | S | todo |
 | SEO-20 | An SEO record's own page: every part, score and previews on one page | Editor | mint-tenant | S | done 2026-10-27 (the user's request, tenant panel only) |
 
-Suggested first picks (most effect for the work): **SEO-08**, **SEO-01**, **SEO-14**, **SEO-09**.
+Suggested first picks (most effect for the work): **SEO-08**, **SEO-01**, **SEO-14**, **SEO-09** (all done).
 
 ---
 
@@ -199,6 +199,8 @@ problem).
   won't see.
 - For pages that are Mint's, "Edit SEO" opens their editor.
 - **Done when:** a page with JavaScript-only tags is flagged; a correct page shows all cards.
+- **Done 2026-10-28:** `linkPreview.function.ts`, `POST /site-config/link-preview`, Site setup → Link previews, a Link
+  previews button on an SEO record's page; smoke `seo-link-preview.mjs` (25). See CHANGELOG.
 
 ### SEO-15 Google Search Console connection — L
 

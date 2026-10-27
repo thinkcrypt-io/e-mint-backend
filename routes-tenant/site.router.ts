@@ -12,6 +12,7 @@ import { testConnection } from '../library/functions/siteConnection.function.js'
 import { seoPageContext } from '../library/functions/seoPage.function.js';
 import { seoIssues } from '../library/functions/seoIssues.function.js';
 import { CRAWLERS, buildRobots, robotsProblems, robotsSettings } from '../library/functions/robots.function.js';
+import { linkPreview } from '../library/functions/linkPreview.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 
@@ -36,6 +37,9 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
  *   POST /site-config/robots-preview  { indexing, sitemap, robots, robotsMode, robotsFile, robotsBlock } — any
  *                             not sent: as saved. The robots.txt it makes, its problems, the crawlers
  *                             with a switch (Site setup → SEO's robots.txt editor, docs/seo SEO-09)
+ *   POST /site-config/link-preview  { url } — any address (a path is the site's): the card Facebook, LinkedIn,
+ *                             WhatsApp, X and Slack show for it, from its server HTML; its problems; and
+ *                             for a page added to SEO here, its SEO record (docs/seo SEO-14)
  *   POST /site-config/connection  { url } — is a site built elsewhere connected: domain, snippet,
  *                             visits arriving, this page's SEO (Website setup → Existing website)  build
  *
@@ -156,6 +160,17 @@ router.get(
 		websiteOnly(req);
 		await syncDynamicModels({ app: req.app });
 		return seoPageContext(req.project, await loadSite(req.project, { req }), { path: req.query.path, page: req.query.page });
+	})
+);
+
+// The link preview checker (docs/seo SEO-14): each app's card for an address, from the HTML its server sends.
+router.post(
+	'/site-config/link-preview',
+	handle(async req => {
+		websiteOnly(req);
+		await syncDynamicModels({ app: req.app });
+		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req }), kit('pages'), kit('seo')]);
+		return linkPreview(req.project, doc, { pages: pages || undefined, seo: seo || undefined }, req.body?.url);
 	})
 );
 
