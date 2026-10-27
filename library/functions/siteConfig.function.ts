@@ -4,6 +4,7 @@ import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { compiledModel, syncDynamicModels } from './dynamicModels.function.js';
 import { runInScope } from './tenantScope.function.js';
 import { siteDefaultsProblems, siteSeoDefaults } from '../siteBuilder/seo.js';
+import { CRAWLER_IDS, buildRobots, robotsSettings } from './robots.function.js';
 
 /**
  * A website project's settings (docs/multi-tenancy WO-34, WO-38): the
@@ -110,6 +111,13 @@ export const SITE_SETTINGS = Joi.object({
 			.max(1000)
 			.label('Extra addresses'),
 		robots: Joi.string().allow('').max(5000).label('Extra robots.txt rules'),
+		// robots.txt (docs/seo SEO-09): built for you, or the whole file as written; crawlers to block.
+		robotsMode: Joi.string().valid('built', 'custom').label('robots.txt mode'),
+		robotsFile: Joi.string().allow('').max(20000).label('robots.txt'),
+		robotsBlock: Joi.array()
+			.items(Joi.string().valid(...CRAWLER_IDS))
+			.unique()
+			.label('Blocked crawlers'),
 		canonicalDomain: Joi.string()
 			.trim()
 			.lowercase()
@@ -445,7 +453,7 @@ export const panelView = (project: any, doc: any) => ({
 	identity: { siteName: '', tagline: '', logo: '', favicon: '', footerText: '', primaryColor: '', secondaryColor: '', fontFamily: '', ...(doc.identity || {}) },
 	contact: { email: '', phone: '', whatsapp: '', address: '', mapEmbedUrl: '', hours: '', ...(doc.contact || {}) },
 	social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', tiktok: '', pinterest: '', ...(doc.social || {}) },
-	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], sitemapExtra: [], ...(doc.seo || {}), ...seoOf(doc), defaults: siteSeoDefaults(doc.seo?.defaults) },
+	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], sitemapExtra: [], ...(doc.seo || {}), ...seoOf(doc), ...robotsSettings(doc.seo), defaults: siteSeoDefaults(doc.seo?.defaults) },
 	tracking: trackingOf(doc),
 	serverSide: {
 		meta: { enabled: !!doc.serverSide?.meta?.enabled, testEventCode: doc.serverSide?.meta?.testEventCode || '', tokenSet: !!doc.secrets?.metaAccessToken },
@@ -461,14 +469,8 @@ export const panelView = (project: any, doc: any) => ({
 	updatedAt: doc.updatedAt,
 });
 
-export const robotsTxt = (project: any, doc: any) => {
-	const seo = seoOf(doc);
-	const origin = siteOrigin(project, doc);
-	const lines = ['User-agent: *', seo.indexing ? 'Allow: /' : 'Disallow: /'];
-	if (seo.robots.trim()) lines.push('', seo.robots.trim());
-	if (seo.indexing && seo.sitemap && origin) lines.push('', `Sitemap: ${origin}/sitemap.xml`);
-	return `${lines.join('\n')}\n`;
-};
+/** The robots.txt the site serves: built from Site setup → SEO, or the whole file as written (docs/seo SEO-09). */
+export const robotsTxt = (project: any, doc: any) => buildRobots(robotsSettings(doc?.seo), siteOrigin(project, doc));
 
 const xml = (s: string) => s.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c] as string));
 

@@ -1,5 +1,41 @@
 # SEO engine and editor — changelog
 
+## 2026-10-27 — SEO-09 robots.txt editor
+
+- **`robots.function.ts`:** `CRAWLERS` (Googlebot, Bingbot, Google-Extended, GPTBot, ChatGPT-User, ClaudeBot,
+  PerplexityBot, CCBot, Bytespider, Applebot-Extended — id, agent, owner, search/ai, what for), `robotsSettings()`,
+  `buildRobots()`, `robotsProblems()`. No imports; `siteConfig.function.ts`'s `robotsTxt` is now `buildRobots` on the
+  saved settings and the site's origin.
+- **Settings:** `WebsiteSettings.seo.robotsMode` ('built' default | 'custom'), `robotsFile` (up to 20,000 characters,
+  not trimmed), `robotsBlock` (crawler ids, unique, unknown ones refused). Saved with `PUT /site-config` `{ seo }`, so
+  the MCP's `update_site_settings` takes them too (its description names them).
+- **Built for you:** `User-agent: *` with `Allow: /` (or `Disallow: /` while indexing is off), the extra rules right
+  under it, then `User-agent: <agent>` / `Disallow: /` per blocked crawler (none while indexing is off), then the
+  Sitemap line. Extra rules come before the crawler groups so they stay in the `*` group.
+- **Written in full:** served exactly (a final newline added), whatever indexing, the switches and the extra rules say.
+  The public route sends `X-Mint-Robots: custom`; mint-sites' `/robots.txt` then doesn't append its Sitemap line.
+- **The check:** the whole site blocked for `*` (error, while indexing is on); Googlebot or Bingbot blocked; no Sitemap
+  line (sitemap on); a Sitemap line without a full address; Noindex lines; lines that aren't rules or fields crawlers
+  don't know; rules before any User-agent; a file with no User-agent at all.
+- **Endpoint:** `POST /site-config/robots-preview` (website projects, readers): the draft's settings over the saved
+  ones → `{ mode, text, problems, notes, crawlers, origin }`. Notes: the Sitemap line waits for a domain (built, no
+  origin); indexing off still means noindex pages (custom).
+- **Panel:** Site setup → SEO → robots.txt card (`site-setup/_components/Robots.tsx`): Built for you / Write the whole
+  file; switches for search engines and AI crawlers; extra rules (moved here from the Indexing card); the file and
+  the check, updated 300 ms after each change. Writing the whole file starts from the built one.
+- **Guide:** mint-docs `websites#robots`. **Website:** a changelog entry.
+- **Tests:**
+  - unit `library/siteBuilder/test/robots.test.ts` (6): the built file, indexing off, no origin, the written file,
+    the mistakes, the crawler list;
+  - smoke `scripts/tenancy-smoke/seo-robots.mjs` (20): the default file; each of the ten switches changes the served
+    file; extra rules and two blocks in order; read back; an unknown crawler refused; the preview uses the draft and
+    saves nothing; a bad written file's problems; the written file served exactly, also with indexing off; back to
+    built; too long and an unknown mode refused; 401; 404 on an app project;
+  - `site-builder`, `site-builder-seo`, `site-connect-edge` smokes pass; `website-mcp`'s robots checks pass (its one
+    failure is the unrelated upsert_page one);
+  - in the panel: a switch updates the preview and, saved, the served file; Write the whole file starts from it and the
+    check flags a Noindex line; Discard; phone width in dark mode.
+
 ## 2026-10-27 — SEO-08 Sitemap: item pages, sitemap index, images
 
 - **`sitemap.function.ts`:** `sitemapEntries()` builds the list; `GET /site/sitemap.xml` (public.router.ts) is now just

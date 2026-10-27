@@ -528,7 +528,8 @@ router.post(
  *   GET /site/tags                 what /public/track.js injects: the tags and custom code
  *   GET /site/head?path=/about     one page's SEO by its address, for a site built anywhere (site-connect SC-02)
  *   GET /site/edge                 what the mint-edge Worker in front of a site needs (site-connect SC-10)
- *   GET /site/robots.txt           robots.txt from the indexing settings
+ *   GET /site/robots.txt           robots.txt from the indexing settings, or the whole file as written
+ *                                  (X-Mint-Robots: custom, docs/seo SEO-09)
  *   GET /site/sitemap.xml          the published pages and template pages' records (not hidden from search);
  *                                  ?origin=https://…, ?part=2 past 5,000 addresses (docs/seo SEO-08)
  *   GET /pages/by-path?path=/about  a published page, its SEO, and its visible
@@ -682,6 +683,8 @@ router.get(
 		websiteOnly(req);
 		const doc = await loadSite(req.project, { req, cached: true });
 		res.setHeader('Cache-Control', 'public, max-age=300');
+		// A file written in full (docs/seo SEO-09) is served exactly: the site adds nothing to it.
+		res.setHeader('X-Mint-Robots', doc.seo?.robotsMode === 'custom' ? 'custom' : 'built');
 		res.type('text/plain').send(robotsTxt(req.project, doc));
 		return undefined;
 	})

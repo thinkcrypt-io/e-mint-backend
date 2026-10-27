@@ -11,6 +11,7 @@ import { checkSite } from '../library/functions/siteCheck.function.js';
 import { testConnection } from '../library/functions/siteConnection.function.js';
 import { seoPageContext } from '../library/functions/seoPage.function.js';
 import { seoIssues } from '../library/functions/seoIssues.function.js';
+import { CRAWLERS, buildRobots, robotsProblems, robotsSettings } from '../library/functions/robots.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 
@@ -32,6 +33,9 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
  *                             for the SEO editor's score (docs/seo SEO-01)
  *   GET  /site-config/seo-health  the site's SEO problems across its published pages: duplicates,
  *                             gaps, conflicts (Website → SEO's health card, docs/seo SEO-03)
+ *   POST /site-config/robots-preview  { indexing, sitemap, robots, robotsMode, robotsFile, robotsBlock } — any
+ *                             not sent: as saved. The robots.txt it makes, its problems, the crawlers
+ *                             with a switch (Site setup → SEO's robots.txt editor, docs/seo SEO-09)
  *   POST /site-config/connection  { url } — is a site built elsewhere connected: domain, snippet,
  *                             visits arriving, this page's SEO (Website setup → Existing website)  build
  *
@@ -165,6 +169,31 @@ router.get(
 		const pages: any[] = Pages ? await Pages.find({ archivedAt: null, status: 'published' }, { name: 1, path: 1, status: 1, showInMenu: 1 }).limit(2000).lean() : [];
 		const records: any[] = Seo ? await Seo.find({ archivedAt: null, page: { $in: pages.map(p => p._id) } }).limit(2000).lean() : [];
 		return { checkedAt: new Date().toISOString(), ...seoIssues({ project: req.project, doc, pages, records }) };
+	})
+);
+
+// Site setup → SEO's robots.txt editor (docs/seo SEO-09): the file the settings being edited make, and its mistakes.
+router.post(
+	'/site-config/robots-preview',
+	handle(async req => {
+		websiteOnly(req);
+		const doc = await loadSite(req.project, { req });
+		const body = req.body && typeof req.body === 'object' ? req.body : {};
+		const keys = ['indexing', 'sitemap', 'robots', 'robotsMode', 'robotsFile', 'robotsBlock'];
+		const s = robotsSettings({ ...(doc.seo || {}), ...Object.fromEntries(keys.filter(k => body[k] !== undefined).map(k => [k, body[k]])) });
+		if (s.robotsFile.length > 20000) throw new TenancyError(400, 'robots.txt is at most 20,000 characters');
+		const origin = siteOrigin(req.project, doc);
+		const text = buildRobots(s, origin);
+		const problems = robotsProblems(text, s);
+		const notes: string[] = [];
+		if (s.robotsMode === 'built' && !origin) {
+			// The site adds its own address's Sitemap line until it has a domain.
+			const i = problems.findIndex(p => /Sitemap line/.test(p.message) && !p.line);
+			if (i >= 0) problems.splice(i, 1);
+			notes.push('The Sitemap line is added with your domain once the site has one (Domains).');
+		}
+		if (s.robotsMode === 'custom' && !s.indexing) notes.push('Indexing is off: every page still says noindex, whatever this file allows.');
+		return { mode: s.robotsMode, text, problems, notes, crawlers: CRAWLERS, origin };
 	})
 );
 

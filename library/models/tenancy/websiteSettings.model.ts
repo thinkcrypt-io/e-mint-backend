@@ -70,6 +70,11 @@ const schema = new Schema<any>(
 			/** Addresses the sitemap lists besides Mint's pages: '/old-page' or a full address on the site (docs/seo SEO-08). */
 			sitemapExtra: { type: [String], default: [] },
 			robots: str,
+			/** robots.txt (docs/seo SEO-09): 'built' from these settings, or 'custom' = robotsFile exactly. */
+			robotsMode: { type: String, enum: ['built', 'custom'], default: 'built' },
+			robotsFile: { type: String, default: '' },
+			/** Crawlers blocked in built mode, by id (robots.function.ts CRAWLERS). */
+			robotsBlock: { type: [String], default: [] },
 			canonicalDomain: str,
 			googleVerification: str,
 			bingVerification: str,
