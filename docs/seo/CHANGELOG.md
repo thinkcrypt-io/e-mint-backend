@@ -1,5 +1,27 @@
 # SEO engine and editor — changelog
 
+## 2026-10-27 — SEO-03 Site SEO health card
+
+- **`seoIssues()`:** `library/functions/seoIssues.function.ts`, the shared check list SEO-02 and SEO-19 are to reuse.
+  It reads published kit Pages, their SEO records (the six plain fields, else the SEO editor's object) and Site setup.
+- **Problems found:**
+  - errors: the whole site hidden; a canonical on the site's own domain (www or not) to a path that isn't a published page;
+  - warnings: hidden but in the menu; the same title, description or focus keyword on several pages (case and spaces
+    aside); no title of its own; no description; no share image when the site has none;
+  - notices: titles over 60 and descriptions over 160 characters; no share image when the site has one; hidden pages;
+    published pages with no SEO record.
+- **Template pages** (`/blog/[slug]`, or `{{…}}` titles) aren't compared with other pages.
+- **Endpoint:** `GET /tenant/api/p/:id/site-config/seo-health` → `{ checkedAt, checked, counts, groups: [{ key, level,
+  label, advice, pages: [{ path, name, page, seo?, detail? }] }] }`.
+- **Panel:** `mint-tenant/src/app/t/_seo/SeoHealth.tsx`, above the table on Website → SEO (website projects; `ServerPage`
+  takes `above`). Problems with a page count, the first one open, each page linked to its SEO record (or Add SEO),
+  and Check again. With no published pages it says so instead of "No problems found".
+- **Guide:** mint-docs `websites#seo-health`, linked from the card. **Website:** a changelog entry.
+- **Tests:**
+  - smoke `scripts/tenancy-smoke/seo-health.mjs`, 22 checks: one page per problem, each reported once with the right
+    pages; drafts left out; the template left out; levels; the site-image switch; 401; 404 on app projects;
+  - in the panel on a published starter site, at desktop and phone widths, in dark and light mode.
+
 ## 2026-10-27 — SEO-01 Focus keyword score (tenant panel)
 
 - **Where:** the tenant panel's SEO editor (VSeo), under Basics, replacing the old 8-item checklist. The score also shows

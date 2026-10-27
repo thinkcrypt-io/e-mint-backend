@@ -11,7 +11,8 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 **2026-10-27 — SEO engine and editor plan (`docs/seo`, SEO-01…19).** Nineteen work orders that don't depend on each
 other (the user's rule); the user picks which to start. **SEO-01 done** (tenant panel only, not deployed): a 0–100
 score with checks in the SEO editor (`VSeo/seoScore.ts`); the page's words from `GET /site-config/seo-page`
-(`seoPage.function.ts`); smoke `seo-score-page.mjs`. SEO-03 next. Found while planning: the sitemap leaves
+(`seoPage.function.ts`); smoke `seo-score-page.mjs`. **SEO-03 done** (not deployed): Website → SEO's health card
+(`app/t/_seo/SeoHealth.tsx`) on `GET /site-config/seo-health` and the shared `seoIssues.function.ts`; smoke `seo-health.mjs` (22). Found while planning: the sitemap leaves
 out template pages' items (every blog post / product page), VSeo's focus keyword is saved but unused, robots.txt can
 only be added to, and the Worker's sitemap switch would replace a connected site's own sitemap.
 

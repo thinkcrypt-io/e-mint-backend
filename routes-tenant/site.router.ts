@@ -10,6 +10,7 @@ import { forgetSite, loadSite, panelView, saveSite, setupChecklist, siteOrigin }
 import { checkSite } from '../library/functions/siteCheck.function.js';
 import { testConnection } from '../library/functions/siteConnection.function.js';
 import { seoPageContext } from '../library/functions/seoPage.function.js';
+import { seoIssues } from '../library/functions/seoIssues.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 
@@ -29,6 +30,8 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
  *   GET  /site-overview       the website's state for its home: settings, pages, checklist
  *   GET  /site-config/seo-page?path= | ?page=<Pages id>  the page's words, headings and the other pages' focus keywords,
  *                             for the SEO editor's score (docs/seo SEO-01)
+ *   GET  /site-config/seo-health  the site's SEO problems across its published pages: duplicates,
+ *                             gaps, conflicts (Website → SEO's health card, docs/seo SEO-03)
  *   POST /site-config/connection  { url } — is a site built elsewhere connected: domain, snippet,
  *                             visits arriving, this page's SEO (Website setup → Existing website)  build
  *
@@ -149,6 +152,19 @@ router.get(
 		websiteOnly(req);
 		await syncDynamicModels({ app: req.app });
 		return seoPageContext(req.project, await loadSite(req.project, { req }), { path: req.query.path, page: req.query.page });
+	})
+);
+
+// Website → SEO's health card (docs/seo SEO-03): problems that only show across pages, and each page's gaps.
+router.get(
+	'/site-config/seo-health',
+	handle(async req => {
+		websiteOnly(req);
+		await syncDynamicModels({ app: req.app });
+		const [doc, Pages, Seo] = await Promise.all([loadSite(req.project, { req }), kit('pages'), kit('seo')]);
+		const pages: any[] = Pages ? await Pages.find({ archivedAt: null, status: 'published' }, { name: 1, path: 1, status: 1, showInMenu: 1 }).limit(2000).lean() : [];
+		const records: any[] = Seo ? await Seo.find({ archivedAt: null, page: { $in: pages.map(p => p._id) } }).limit(2000).lean() : [];
+		return { checkedAt: new Date().toISOString(), ...seoIssues({ project: req.project, doc, pages, records }) };
 	})
 );
 
