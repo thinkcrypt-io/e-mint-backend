@@ -10,7 +10,8 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
 (Manage projects; first = default; `makeDefault`), `send_test_email_design` — `library/controllers/mcp/emailDesigns.tools.ts`;
-`list_automations` data carries `mailFrom`. Smoke: `automations-mcp.mjs`. Not deployed. AU-06 is deployed (2026-10-27);
+`list_automations` data carries `mailFrom`. Smoke: `automations-mcp.mjs`. Deployed 2026-10-27 (AU-06 too); the Thinkcrypt
+Website project's default design "Thinkcrypt" (dark header, teal button) was saved over it and a test sent;
 the Thinkcrypt Website project has the "Welcome new subscribers" automation (made over MCP) — its email goes out in the
 project's default design once one exists. A claude.ai connector keeps the tool list it first loaded: after a deploy that
 adds tools, connect it again (the user added a new connector) to see them.

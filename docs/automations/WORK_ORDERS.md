@@ -18,7 +18,7 @@ mint-webpage → `origin` main), then go on.
 | AU-04 | Date-reached and schedule triggers (job queue), waits | both | L | later |
 | AU-05 | Recipes, template blueprints | both | M | later |
 | AU-06 | MCP tools (list / save / test / runs / delete automations) + `[words](https://…)` links in email messages | backend + panels + docs | S | done + deployed 2026-10-27 |
-| AU-07 | Email designs over MCP (`list_email_designs`, `save_email_design`, `send_test_email_design`); `mailFrom` in `list_automations`' data | backend + docs | S | done 2026-10-27 |
+| AU-07 | Email designs over MCP (`list_email_designs`, `save_email_design`, `send_test_email_design`); `mailFrom` in `list_automations`' data | backend + docs | S | done + deployed 2026-10-27 |
 
 ## Handoff
 
