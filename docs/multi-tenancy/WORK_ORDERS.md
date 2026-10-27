@@ -8,6 +8,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-27)
 
+**2026-10-27 — SEO engine and editor plan (`docs/seo`, SEO-01…19), nothing built yet.** Nineteen work orders that
+don't depend on each other (the user's rule); the user picks which to start. Found while planning: the sitemap leaves
+out template pages' items (every blog post / product page), VSeo's focus keyword is saved but unused, robots.txt can
+only be added to, and the Worker's sitemap switch would replace a connected site's own sitemap.
+
 **2026-10-27 — Site connect: existing websites by snippet (SC-02, SC-03, SC-08, `docs/site-connect`).** A site built
 anywhere pastes `<script src=…/public/track.js data-key=… data-seo>`: Analytics, plus the SEO of the pages added on
 Website → Pages + SEO — every other page keeps its own (the user's rule, D4). `GET /public/api/site/head?path=`
