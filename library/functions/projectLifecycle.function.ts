@@ -44,6 +44,7 @@ import MailAccount from '../models/tenancy/mailAccount.model.js';
 import MailDesign from '../models/tenancy/mailDesign.model.js';
 import DeletedRecord from '../models/deleted-record/model.js';
 import ContentSchedule from '../models/tenancy/contentSchedule.model.js';
+import CommerceSettings from '../models/tenancy/commerceSettings.model.js';
 
 /**
  * Making and removing a tenant project — one place for the projects router
@@ -94,6 +95,8 @@ const SCOPED = [
 	SitePaymentSettings,
 	// Its records' scheduled publishes (docs/cms CMS-11).
 	ContentSchedule,
+	// An e-commerce project's store settings (docs/ecommerce EC2).
+	CommerceSettings,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */

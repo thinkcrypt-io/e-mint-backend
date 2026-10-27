@@ -258,6 +258,8 @@ const TENANT_RESERVED_ROUTES = new Set([
 	'search',
 	// A project's email accounts: the API path and the panel page (docs/messaging M-14).
 	'mail-accounts', 'email-accounts',
+	// Payments (docs/widgets W-06) and an e-commerce project's store and its pages (docs/ecommerce).
+	'payments', 'site-payments', 'commerce', 'store',
 ]);
 
 /**

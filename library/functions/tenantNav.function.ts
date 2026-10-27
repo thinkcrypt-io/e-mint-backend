@@ -44,8 +44,22 @@ const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
  * What goes straight after the Dashboard, before the project's own sections:
  * an API project's API (docs/templates T-09, TD2) — it's what the project is.
  */
-export const tenantLead = (permissions: string[], projectType?: string): SidebarItemType[] =>
-	projectType === 'api' ? section('API', 'plug-zap', apiItems(key => grants(permissions, [key]))) : [];
+export const tenantLead = (permissions: string[], projectType?: string, store?: { status?: string } | null): SidebarItemType[] => {
+	const can = (key: string) => grants(permissions, [key]);
+	if (projectType === 'api') return section('API', 'plug-zap', apiItems(can));
+	// An e-commerce project's store (docs/ecommerce): its setup until it's built, then the till and its orders.
+	if (projectType === 'ecommerce') {
+		if (store?.status !== 'ready')
+			return can('manage-projects') ? section('Store', 'store', [{ title: 'Set up your store', href: '/store/setup', icon: 'wand-sparkles' }]) : [];
+		return section('Store', 'store', [
+			...(can('records:create') ? [{ title: 'POS', href: '/store/pos', icon: 'scan-barcode' }] : []),
+			...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
+			...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
+			...(can('manage-projects') ? [{ title: 'Store settings', href: '/store/settings', icon: 'settings-2' }] : []),
+		]);
+	}
+	return [];
+};
 
 /**
  * The content manager (docs/cms CMS-07): straight after the Dashboard when the
@@ -57,7 +71,7 @@ export const tenantContent = (hasContent: boolean): SidebarItemType[] =>
 
 export const tenantNav = (
 	permissions: string[],
-	{ inProject, projectType, guest }: { inProject: boolean; projectType?: 'app' | 'website' | 'api'; guest?: boolean }
+	{ inProject, projectType, guest }: { inProject: boolean; projectType?: 'app' | 'website' | 'api' | 'ecommerce'; guest?: boolean }
 ): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
 	// A website: its analytics; any project: the customers of its public API.

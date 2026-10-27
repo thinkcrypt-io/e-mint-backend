@@ -38,6 +38,8 @@ import apiBuilderRouter from './apiBuilder.router.js';
 import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
+import commerceRouter from './commerce.router.js';
+import CommerceSettings from '../library/models/tenancy/commerceSettings.model.js';
 import mailAccountsRouter from './mailAccounts.router.js';
 import mailDesignsRouter from './mailDesigns.router.js';
 import templatesRouter from './templates.router.js';
@@ -73,6 +75,7 @@ import { tenantNavSearch } from '../library/controllers/search/navSearch.control
  *                                 (the admin routers, with dual guards — middleware/tenant/dual)
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
  *   /api-builder                  the public API's endpoints and server keys (docs/api-builder)   build
+ *   /commerce                     an e-commerce project's store (docs/ecommerce)   any member reads; manage-projects changes
  *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
  *   /site-builder                 a website's builder pages, design, publish (docs/site-builder)   read; build to change
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
@@ -145,7 +148,8 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));
 		// An API project leads with its API, straight after the dashboard (T-09).
 		const [home, ...own] = project;
-		const lead = tenantLead(req.permissions || [], req.project.type);
+		const store = req.project.type === 'ecommerce' ? await CommerceSettings.findOne({}, { status: 1 }).lean() : null;
+		const lead = tenantLead(req.permissions || [], req.project.type, store as any);
 		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
 		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
 	} catch (e: any) {
@@ -233,6 +237,8 @@ router.use('/webhooks', webhooksRouter);
 router.use('/widgets', widgetsRouter);
 // Payments (docs/widgets W-06): merchant accounts and what checkout took.
 router.use('/payments', paymentsRouter);
+// An e-commerce project's store: settings, setup, POS, orders, returns (docs/ecommerce).
+router.use('/commerce', commerceRouter);
 // Its email accounts — SMTP, test, default (docs/messaging M-14).
 router.use('/mail-accounts', mailAccountsRouter);
 // How its emails look — plain or designed, header, colours, footer (docs/messaging M-03a).

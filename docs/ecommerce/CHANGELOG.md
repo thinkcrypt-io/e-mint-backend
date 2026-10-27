@@ -23,3 +23,31 @@
   wizard.
 - Routes: `customers` and `payments` are the project API's own paths, so the
   models are `store-customers` and `order-payments`.
+
+## 2026-10-28 — EC-02 Project type + store settings
+
+- Backend: `PROJECT_TYPES` gains `ecommerce` (New project's Joi takes it).
+  `CommerceSettings` (tenantScoped, removed with the project): status
+  new / building / ready / failed, the wizard's step, answers, installed,
+  features. `library/functions/commerce/settings.ts`: the answers' shape
+  (store, outlets, products, payments, returns, delivery, pos), defaults
+  from the organization's country (currency; BD: cash, card, bank, bKash /
+  Nagad / Rocket by reference, Stripe / SSLCommerz / bKash, Steadfast /
+  Pathao / RedX; elsewhere a generic wallet, Stripe, no couriers), each
+  section checked on its own with plain problems (400 `commerce_settings`,
+  `problems` by section), `needs` per section for the wizard.
+  `routes-tenant/commerce.router.ts` at `/p/:project/commerce` (404 for
+  other kinds): `GET /settings` any member, `PUT /settings` manage-projects
+  (history line). Sidebar: a Store section leads an e-commerce project —
+  Set up your store until it's ready, then POS / Orders / Returns / Store
+  settings. Tenant reserved routes gain `payments` (mounted but never
+  reserved — a model at /payments was shadowed), `site-payments`,
+  `commerce`, `store`.
+- mint-tenant: New project's fourth kind **E-commerce** (amber, Store
+  icon; no template picker) opens `/<project>/store/setup`; first-run kinds
+  gain "A store"; suggestions for a store; `store` is a project page;
+  `StoreGate` sends a store's dashboard to the wizard until it's ready;
+  `commerceApi.ts` (`getCommerceSettings`, `saveCommerceSettings` — names
+  checked free). The wizard itself is EC-04.
+- Verified: `commerce-settings.mjs` — 33 checks pass on a private server;
+  backend and mint-tenant typecheck clean.

@@ -11,8 +11,8 @@ wizard step and dialog) and the marketing website as it lands.
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | EC-01 | Plan & docs | backend | S | done 2026-10-28 |
-| EC-02 | `ecommerce` project type + `CommerceSettings` + settings API | backend + panels | M | next |
-| EC-03 | Blueprint + installer (models from answers, sidebar, roles, dashboard) + core / engine field locks | backend | L | |
+| EC-02 | `ecommerce` project type + `CommerceSettings` + settings API | backend + mint-tenant | M | done 2026-10-28 |
+| EC-03 | Blueprint + installer (models from answers, sidebar, roles, dashboard) + core / engine field locks | backend | L | next |
 | EC-04 | Setup wizard + Store settings page (New project card, 7 steps, background build) | mint-tenant | L | |
 | EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | |
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | |
@@ -31,6 +31,11 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-02 done** (CHANGELOG). `ecommerce` is a project type; `CommerceSettings` + `functions/commerce/settings.ts`
+  (answers by section, each checked on its own, offered by the org's country); `/commerce/settings`; the sidebar's Store
+  section (`tenantLead`); mint-tenant: New project → E-commerce opens `/store/setup` (stub until EC-04), a store's
+  dashboard redirects there until it's ready (`StoreGate`), `commerceApi.ts`. Panel work is mint-tenant only (admin's
+  tenant build doesn't get the store).
 - Dev: private backend from `git archive HEAD` + changed files (other sessions share the tree), own port and Mongo
   (not 5011 / 27998 — see the parallel-sessions note); panel launch config for mint-tenant pointed at it.
 - Smoke: `scripts/tenancy-smoke/commerce-*.mjs` (one per engine WO), added to `run-all.sh`.

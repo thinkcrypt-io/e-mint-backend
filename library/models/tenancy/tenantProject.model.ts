@@ -8,8 +8,11 @@ import { businessSchema } from '../../functions/business.function.js';
  * names the project in the panel's addresses (`/<publicSlug>/<page>`); on the
  * public API its `apiKey` does (`/public/api/<route>?apiKey=…`, docs/api-builder D14).
  */
-/** `api` (docs/templates TD2): a project whose workspace leads with its public API. */
-export const PROJECT_TYPES = ['app', 'website', 'api'] as const;
+/**
+ * `api` (docs/templates TD2): a project whose workspace leads with its public API.
+ * `ecommerce` (docs/ecommerce EC1): a store — set up by its wizard, with POS, orders and returns; an app otherwise.
+ */
+export const PROJECT_TYPES = ['app', 'website', 'api', 'ecommerce'] as const;
 /** Whose media library a project uses (WO-23): its own, or the organization's shared one. */
 export const MEDIA_SCOPES = ['project', 'organization'] as const;
 
