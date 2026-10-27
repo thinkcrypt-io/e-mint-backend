@@ -198,7 +198,8 @@ export const TRACK_JS = `(function () {
 	function applyHead(h) {
 		changed.forEach(function (c) { if (readTag(c.el) === c.wrote) writeTag(c.el, c.orig); });
 		changed = [];
-		Array.prototype.slice.call(document.head.querySelectorAll('[data-mint-seo="added"]')).forEach(function (el) { el.parentNode.removeChild(el); });
+		// Ours from the last page, and those the mint-edge Worker (SC-10) put in the HTML — this answer replaces them.
+		Array.prototype.slice.call(document.head.querySelectorAll('[data-mint-seo="added"], [data-mint-seo="edge"]')).forEach(function (el) { el.parentNode.removeChild(el); });
 		(h.tags || []).forEach(function (t) {
 			var el = headEl(t);
 			var has = el ? readTag(el) : '';
