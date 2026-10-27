@@ -38,6 +38,17 @@ const schema = new Schema<any>(
 			],
 			default: undefined,
 		},
+		/** Projects they pinned to the top of their projects board, each with when — latest first (WO-57). */
+		pinnedProjects: {
+			type: [
+				{
+					_id: false,
+					project: { type: Schema.Types.ObjectId, ref: 'TenantProject', required: true },
+					pinnedAt: { type: Date, default: Date.now },
+				},
+			],
+			default: undefined,
+		},
 		invitedBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
 		joinedAt: { type: Date, default: Date.now },
 		removedAt: { type: Date },

@@ -2033,3 +2033,12 @@ Decisions D14–D17 (README).
   IP setting card. mint-docs: analytics guide sections. website: features + changelog.
 - Verified: smoke `visitor-analytics.mjs` 41/41 (private backend :5073, real ipwho.is lookups); headless Chrome
   screenshots of every new screen at 1280 and 390 wide. `tsc` clean in backend, mint-tenant, mint-docs. Not deployed.
+
+## 2026-10-28 — WO-57 Pinned projects
+- The user asked to pin important projects to the top of the organization's dashboard, latest pin first.
+- backend: `OrganizationMember.pinnedProjects`; projects list returns `pinnedAt`; `PUT|DELETE /tenant/api/projects/:id/pin`;
+  project delete clears pins. mint-tenant: `usePinProjectMutation`, ProjectsBoard Pinned group + card menu Pin to top / Unpin
+  (menu now shown to members without Manage projects, with only the pin item). mint-docs: projects#pinning. website: changelog.
+- Verified: API script on a private backend (:5073); browser pane on mint-tenant :3075 (pin via menu → first in Pinned,
+  unpin → back to All projects). `tsc` clean in backend and mint-tenant. Not deployed.
+

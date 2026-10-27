@@ -21,6 +21,7 @@ import { businessJoi, cleanBusiness, projectBusiness } from '../../library/funct
  *   GET    /:id          with its details (WO-48): who made it, how many people open it, its template, last change
  *   PUT    /:id          name, description, icon, color, domains, mediaScope, isActive, business, collaboration         manage-projects
  *   DELETE /:id          refused while it has models; ?force=1 (owner) deletes everything in it
+ *   PUT    /:id/pin      pin it to the top of your own board (WO-57); DELETE unpins
  *
  * Only the projects the member can open (WO-22): Owner and Admin open every
  * one; others every one unless their membership lists projects. Another
@@ -80,7 +81,16 @@ router.get(
 		const counts = await Promise.all(
 			docs.map(p => runInScope({ organization: req.organization._id, project: p._id }, () => ModelDefinition.countDocuments({})))
 		);
-		return { doc: docs.map((p, i) => ({ ...publicProject(p), logo: p.business?.logo || '', models: counts[i] })) };
+		// This member's own pins (WO-57): when each was pinned, for the Pinned row (latest first).
+		const pins = new Map<string, Date>((req.member.pinnedProjects || []).map((x: any) => [String(x.project), x.pinnedAt]));
+		return {
+			doc: docs.map((p, i) => ({
+				...publicProject(p),
+				logo: p.business?.logo || '',
+				models: counts[i],
+				...(pins.has(String(p._id)) && { pinnedAt: pins.get(String(p._id)) }),
+			})),
+		};
 	})
 );
 
@@ -148,6 +158,27 @@ router.put(
 	})
 );
 
+/** Pin a project to the top of this member's board (WO-57) — anyone who can open it; a pin again moves it first. */
+router.put(
+	'/:id/pin',
+	handle(async req => {
+		const project = await loadProject(req);
+		const pinnedAt = new Date();
+		await OrganizationMember.updateOne({ _id: req.member._id }, { $pull: { pinnedProjects: { project: project._id } } });
+		await OrganizationMember.updateOne({ _id: req.member._id }, { $push: { pinnedProjects: { project: project._id, pinnedAt } } });
+		return { pinnedAt };
+	})
+);
+
+router.delete(
+	'/:id/pin',
+	handle(async req => {
+		const project = await loadProject(req);
+		await OrganizationMember.updateOne({ _id: req.member._id }, { $pull: { pinnedProjects: { project: project._id } } });
+		return { message: 'Unpinned' };
+	})
+);
+
 router.delete(
 	'/:id',
 	tenantPermissions(['manage-projects']),
@@ -161,7 +192,7 @@ router.delete(
 		await removeProjectContents(req.organization._id, project._id);
 		await TenantProject.deleteOne({ _id: project._id });
 		// Nobody's access list or invitation names it any more (WO-22).
-		await OrganizationMember.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id, projectRoles: { project: project._id } } });
+		await OrganizationMember.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id, projectRoles: { project: project._id }, pinnedProjects: { project: project._id } } });
 		await OrganizationInvitation.updateMany({ organization: req.organization._id }, { $pull: { projects: project._id } });
 		// Its own invitations (WO-47) can't be accepted any more.
 		await OrganizationInvitation.updateMany({ organization: req.organization._id, project: project._id, acceptedAt: null, cancelledAt: null }, { $set: { cancelledAt: new Date() } });

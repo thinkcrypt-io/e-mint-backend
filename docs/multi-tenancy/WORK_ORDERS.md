@@ -8,6 +8,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-28)
 
+**2026-10-28 — WO-57 Pinned projects.** Each member pins projects to the top of the organization's projects board
+(card menu **Pin to top** / **Unpin**); a **Pinned** group leads, latest pin first. Pins are personal —
+`OrganizationMember.pinnedProjects [{project, pinnedAt}]`; `GET /tenant/api/projects` adds `pinnedAt`;
+`PUT|DELETE /projects/:id/pin` (anyone who can open it). mint-tenant `ProjectsBoard.tsx`, mint-docs `projects#pinning`. Not deployed.
+
 **2026-10-27 — SEO engine and editor plan (`docs/seo`, SEO-01…19).** Nineteen work orders that don't depend on each
 other (the user's rule); the user picks which to start. **SEO-01 done** (tenant panel only, not deployed): a 0–100
 score with checks in the SEO editor (`VSeo/seoScore.ts`); the page's words from `GET /site-config/seo-page`
@@ -1509,3 +1514,21 @@ moving files between a project's library and the organization's;
 billing/plans and limits per plan;
 custom domains for the public API; OAuth for MCP; tenant data export;
 deleting an organization.
+
+## WO-57 — Pinned projects on the organization's board (S) — done
+
+The user (2026-10-28): "on the organization dashboard there are projects … sometimes important projects are difficult
+to find, we need to be able to pin them … should appear on the top as pinned projects, the latest pin on top."
+
+- Decision: pins are per member (each person's own board), not organization-wide — pinning needs no Manage projects.
+- backend: `OrganizationMember.pinnedProjects` (`{ project, pinnedAt }`, no `_id`); `routes-tenant/projects/projects.router.ts`
+  list adds `pinnedAt` for this member's pins; `PUT /:id/pin` (pull + push with a fresh `pinnedAt`, so a re-pin moves it
+  first) and `DELETE /:id/pin`, both through `loadProject` (404 for a project they can't open); deleting a project pulls it
+  from everyone's pins.
+- mint-tenant: `tenantApi.ts` `pinProject` mutation (`usePinProjectMutation`), `TenantProject.pinnedAt`;
+  `ProjectsBoard.tsx` — Pinned group (sorted by `pinnedAt` desc) then All projects, both under the kind filter and search;
+  a "Pinned" mark on the card; card menu shown to everyone for Pin to top / Unpin (not on archived), Edit/Archive/Delete
+  still need manage-projects.
+- Docs: mint-docs `projects#pinning`; website changelog entry.
+- Verified: API run on a private backend (:5073) — pin, re-pin order, unpin, 404 for an unknown id; browser pane on
+  mint-tenant :3075 — Pinned row on Home, Pin to top moves a card first, Unpin returns it. Not deployed.
