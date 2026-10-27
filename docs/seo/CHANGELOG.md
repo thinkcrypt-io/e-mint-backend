@@ -1,5 +1,31 @@
 # SEO engine and editor — changelog
 
+## 2026-10-27 — SEO-20 An SEO record's own page (tenant panel)
+
+- **Where:** `/<project>/seo/<id>` in a website project: `mint-tenant/src/app/t/_seo/SeoRecordPage.tsx`, picked in
+  `app/view/[slug]/[id]/page.tsx`. Other projects' records keep the generic page.
+- **The page:** the SEO editor's five parts as cards with jump buttons; beside them (sticky on wide screens) the score,
+  the Google and shared-link previews, and "Across the site": the health problems (SEO-03) this page is part of, linked
+  to the other pages, as of the last save.
+- **Saving:** edits stay in the page until Save or ⌘S / Ctrl+S; a bottom bar offers Discard and Save while there are any,
+  and leaving asks first. Empty values count as unset, so typing and deleting isn't a change. Saves `{ seo }` with
+  the usual `PUT /seo/:id`; the kit's save hook fills the plain fields.
+- **Header:** "SEO · <page name>", the score as the badge, the page's path, **Page** (its Pages record), **View on
+  site** (when the site has a domain and the path isn't a template), Save. `RecordView` takes `noEdit` to hide its Edit
+  dialog here; Overview, Comments and History are the other tabs.
+- **Shared parts:** VSeo's fields, the score card and the score's inputs moved to `VSeo/parts.tsx`
+  (`useSeoAnalysis`, `useSeoSetters`, `Seo*Fields`, `SeoScore`); VSeo is now just its tabs around them.
+- **Fixed on the way:**
+  - the health card linked records as `projectHref('/seo/<id>')`, which isn't a project page and opened the wrong
+    address; it's `/view/seo/<id>` now;
+  - the dev-only crash on SEO record pages: the `url` kind arrives as type `uri`, which `assertSchema` didn't know.
+    `uri` is now in `PLANNED_FIELD_TYPES`.
+- **Guide:** mint-docs `websites#seo-page`, linked from the page. **Website:** a changelog entry.
+- **Tests:** in the panel on a seeded site: the score from the builder words, a live score change while typing, the
+  unsaved bar, ⌘S saving (`seo.focusKeyword` stored, the shared-keyword problem gone after the health refetch), the
+  Overview tab opening without the crash, the health card's link, phone width in dark mode with no sideways scroll,
+  and the create form's editor still working.
+
 ## 2026-10-27 — SEO-03 Site SEO health card
 
 - **`seoIssues()`:** `library/functions/seoIssues.function.ts`, the shared check list SEO-02 and SEO-19 are to reuse.

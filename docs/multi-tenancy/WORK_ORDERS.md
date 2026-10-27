@@ -12,7 +12,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 other (the user's rule); the user picks which to start. **SEO-01 done** (tenant panel only, not deployed): a 0–100
 score with checks in the SEO editor (`VSeo/seoScore.ts`); the page's words from `GET /site-config/seo-page`
 (`seoPage.function.ts`); smoke `seo-score-page.mjs`. **SEO-03 done** (not deployed): Website → SEO's health card
-(`app/t/_seo/SeoHealth.tsx`) on `GET /site-config/seo-health` and the shared `seoIssues.function.ts`; smoke `seo-health.mjs` (22). Found while planning: the sitemap leaves
+(`app/t/_seo/SeoHealth.tsx`) on `GET /site-config/seo-health` and the shared `seoIssues.function.ts`; smoke `seo-health.mjs` (22). **SEO-20 done** (the user's request): an SEO record's own page `/<project>/seo/<id>` (`app/t/_seo/SeoRecordPage.tsx`) with every part, the score, previews and the page's health problems; editor parts in `VSeo/parts.tsx`. Found while planning: the sitemap leaves
 out template pages' items (every blog post / product page), VSeo's focus keyword is saved but unused, robots.txt can
 only be added to, and the Worker's sitemap switch would replace a connected site's own sitemap.
 

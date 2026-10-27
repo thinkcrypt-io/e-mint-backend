@@ -31,6 +31,7 @@ another.
 | SEO-17 | Backlinks: referring sites + Bing Webmaster | Measure | backend + mint-tenant | M | todo |
 | SEO-18 | Search bot and AI crawler visits | Measure | mint-sites + mint-edge + backend + mint-tenant | M | todo |
 | SEO-19 | MCP: SEO problems and fixing many pages at once | AI | backend | S | todo |
+| SEO-20 | An SEO record's own page: every part, score and previews on one page | Editor | mint-tenant | S | done 2026-10-27 (the user's request, tenant panel only) |
 
 Suggested first picks (most effect for the work): **SEO-08**, **SEO-01**, **SEO-14**, **SEO-09**.
 
@@ -252,3 +253,22 @@ problem).
 - `save_seo_many`: titles, descriptions and focus keywords for many pages in one call, shown to the user first (the
   server instructions say so).
 - **Done when:** the user's own AI can fix every missing description on a site in one go.
+
+## Added later
+
+### SEO-20 An SEO record's own page — S
+
+**Why:** the user: an SEO record opened the generic record page; every project has SEO, so it should have its own page
+"where there will be score, preview data and easier way to edit everything in one page".
+
+- `/<project>/seo/<id>` in a website project opens `app/t/_seo/SeoRecordPage.tsx` (picked in `app/view/[slug]/[id]`).
+- Left: the editor's five parts as cards (Search result, Sharing, Search engines, Structured data, Sitemap) with jump
+  buttons. Right, sticky: the score, Google / shared-link previews, and "Across the site" (this page's `seoIssues()`
+  groups from `GET /site-config/seo-health`, with the other pages for the "same …" ones).
+- Edits stay in the page until Save / ⌘S; a bar offers Discard and Save; leaving asks first. Saves `{ seo }` with the
+  usual PUT; the kit's save hook fills the six plain fields.
+- The header: "SEO · <page>", the score as its badge, Page (the page's record) and View on site. Overview, Comments and
+  History stay as tabs; the Edit dialog is hidden (`RecordView` `noEdit`) — changing the linked page is the table's Edit.
+- VSeo's fields were moved to `VSeo/parts.tsx` so the form and the page share them.
+- **Done when:** a page's whole SEO can be edited, scored and previewed on one page and saved once.
+
