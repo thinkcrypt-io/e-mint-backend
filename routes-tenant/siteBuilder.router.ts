@@ -184,7 +184,8 @@ router.put(
 			problems = await checkTree(body.tree, { layout: fields.layout ?? page.layout });
 			$set['draft.tree'] = body.tree;
 		}
-		if (body.seo !== undefined) $set['draft.seo'] = { ...EMPTY_SEO, ...body.seo };
+		// An editor that doesn't send the structured data form's values (the builder app) keeps them (SEO-04).
+		if (body.seo !== undefined) $set['draft.seo'] = { ...EMPTY_SEO, schemaData: page.draft?.seo?.schemaData || {}, ...body.seo };
 		if (body.status !== undefined) {
 			if (body.status !== 'draft' || page.status !== 'unpublished') throw new TenancyError(400, 'Only a page taken off the site can go back to draft (status: draft)');
 			$set.status = 'draft';

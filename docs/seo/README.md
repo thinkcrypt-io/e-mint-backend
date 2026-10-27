@@ -14,7 +14,7 @@ first. Where two touch the same screen, each one says how it looks without the o
 
 | Piece | Where | What it does |
 |---|---|---|
-| Page SEO editor (VSeo) | `mint-tenant/src/components/library/utils/inputs/VSeo/` (admin has a copy) | Title + description with character counts, Google result preview, social preview, Facebook/X overrides, canonical, noindex / nofollow / noarchive / noimageindex, max snippet, max image preview, schema type + own JSON-LD, breadcrumb title, sitemap include / priority / change frequency. **Focus keyword is saved but nothing reads it.** |
+| Page SEO editor (VSeo) | `mint-tenant/src/components/library/utils/inputs/VSeo/` (admin has a copy) | Title + description with character counts, Google result preview, social preview, Facebook/X overrides, canonical, noindex / nofollow / noarchive / noimageindex, max snippet, max image preview, schema type with a form per type (SEO-04: Organization, LocalBusiness, Product, Article, FAQ, Event, Service → `schemaData`, `library/siteBuilder/schema.ts`) + own JSON-LD under Advanced, breadcrumb title, sitemap include / priority / change frequency. **Focus keyword is saved but nothing reads it.** |
 | Page SEO shape | `backend/library/siteBuilder/seo.ts` (`EMPTY_SEO`, `withSiteDefaults`) | The fields above, and Site setup's Default SEO under them |
 | Default SEO | Site setup → SEO (`WebsiteSettings.seo`, SB-33) | Title template, meta description, share image, indexing switch, sitemap switch, extra robots lines, canonical domain, Google / Bing verification |
 | Template pages' SEO | `backend/library/siteBuilder/render.ts` | `{{record.…}}` filled in per item (`/blog/[slug]`) |

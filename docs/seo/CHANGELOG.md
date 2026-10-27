@@ -1,5 +1,41 @@
 # SEO engine and editor — changelog
 
+## 2026-10-27 — SEO-04 Structured data forms
+
+- **`library/siteBuilder/schema.ts`:** `schemaProps(type, data, {origin, title, siteName, logo})` turns a form's values
+  into schema.org properties: Organization / LocalBusiness (name and logo fall back to the site's, PostalAddress,
+  `sameAs`, and for LocalBusiness a business kind as its `@type`, price range, `hasMap`, `openingHoursSpecification`);
+  Product (Brand, sku, image, Offer with price, currency, availability URL; `aggregateRating` only with a count);
+  Article / BlogPosting (headline, author Person, dates, image, the site as publisher); FAQPage (complete pairs only);
+  Event (dates, status, attendance mode, Place / VirtualLocation / both, offer with the tickets link, performer,
+  organiser); Service (type, area, provider, offer). An empty form makes nothing. `fillDeep` fills `{{record.…}}`
+  inside it; `schemaDataProblem` (one object, ≤ 20,000 characters).
+- **Saved as `schemaData`** beside `schemaType` on a page's SEO (EMPTY_SEO, `SitePage` seo subschema, `vseoToPage` /
+  `pageToVseo`, so the kit SEO record and Site setup's Default SEO carry it too). The home page with type auto takes
+  the site's type and its form. A builder save that leaves `schemaData` out keeps the saved one.
+- **Out:** the render answer's `page.seo.schemaProps` (template pages filled per record first); mint-sites
+  `JsonLd.tsx` merges it over the generated block, the custom JSON-LD still on top. `/site/head` merges it into
+  `jsonLd` the same way. MCP `save_site_page`'s `seo.schemaData` (described per type).
+- **`GET /site-config/seo-page`** for a template page returns `record: { model, title, fields }` for the panel's
+  `{ }` menu.
+- **Panel:** VSeo → Structured data: a form per type (`VSeo/schemaForms.ts`, `VSeo/SchemaForm.tsx`) with opening
+  hours and FAQ editors, "Google needs" / "Would help" from what's filled, a `{ }` menu on template pages, a link to
+  Google's Rich Results Test (a record's page for template pages), the JSON box under "Advanced: your own JSON-LD".
+  Event added to the type list. Fixed on the way: the shared Dropdown's search box took its Field's control id — the
+  id Select gives its hidden `<select>` — so picking from a long list inside a Field crashed the page.
+- **Guide:** mint-docs `websites#seo-structured`. **Website:** a changelog entry.
+- **Tests:**
+  - unit `library/siteBuilder/test/schema.test.ts` (9): each type against Google's required properties, bindings,
+    the round trip and the home page fallback (siteBuilder tests: 61 pass);
+  - smoke `scripts/tenancy-smoke/seo-schema.mjs` (23): forms over MCP, a non-object refused, the render answer for
+    LocalBusiness / FAQ / a template Product bound to a record, the record's fields for the menu, a builder save keeps
+    the form, the SEO record carries and edits it, `/site/head` for a connected page's Service, Default SEO;
+  - `site-builder`, `site-builder-seo`, `site-builder-seo-panel`, `seo-score-page`, `seo-sitemap`, `seo-robots`,
+    `site-connect-head` smokes pass;
+  - in the panel: picking LocalBusiness shows the form, filling the city and hours updates the notes, saved; a
+    template page's `{ }` puts `{{record.maker}}` in Brand; phone width in dark mode.
+  - **Not run:** Google's Rich Results Test itself — it needs a published, public address.
+
 ## 2026-10-27 — SEO-09 robots.txt editor
 
 - **`robots.function.ts`:** `CRAWLERS` (Googlebot, Bingbot, Google-Extended, GPTBot, ChatGPT-User, ClaudeBot,

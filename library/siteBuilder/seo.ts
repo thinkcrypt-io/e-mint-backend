@@ -1,3 +1,5 @@
+import { schemaDataProblem } from './schema.js';
+
 /**
  * A page's SEO (SB-31: the AGS VSeo's fields). The first six are the ones the
  * kit's SEO record holds too; the rest live on the page only. Empty strings
@@ -32,6 +34,8 @@ export const EMPTY_SEO = {
 	schemaType: 'auto',
 	/** a JSON object merged over the generated schema */
 	schemaJson: '',
+	/** the structured data form's values for schemaType (docs/seo SEO-04, schema.ts) */
+	schemaData: {} as Record<string, any>,
 	breadcrumbTitle: '',
 	sitemapInclude: true,
 	sitemapPriority: 0.7,
@@ -75,6 +79,8 @@ export const validateSeoExtras = (seo: Record<string, any>, add: (path: string, 
 	for (const k of ['noFollow', 'noArchive', 'noImageIndex', 'sitemapInclude']) bool(k);
 	if (seo.maxSnippet !== undefined && !(Number.isInteger(seo.maxSnippet) && seo.maxSnippet >= -1 && seo.maxSnippet <= 10000)) add('seo.maxSnippet', 'Max snippet length is -1 or a whole number of characters');
 	if (seo.sitemapPriority !== undefined && !(typeof seo.sitemapPriority === 'number' && seo.sitemapPriority >= 0 && seo.sitemapPriority <= 1)) add('seo.sitemapPriority', 'The sitemap priority is between 0 and 1');
+	const formProblem = schemaDataProblem(seo.schemaData);
+	if (formProblem) add('seo.schemaData', formProblem);
 	if (seo.schemaJson !== undefined) {
 		if (!str(seo.schemaJson) || seo.schemaJson.length > 20000) add('seo.schemaJson', 'Custom JSON-LD is at most 20,000 characters');
 		else if (seo.schemaJson.trim()) {
@@ -140,6 +146,7 @@ export const vseoToPage = (v: any) => {
 		maxImagePreview: IMAGE_PREVIEWS.includes(robots.maxImagePreview) ? robots.maxImagePreview : EMPTY_SEO.maxImagePreview,
 		schemaType: s(o.schemaType) || EMPTY_SEO.schemaType,
 		schemaJson: s(o.schemaJson),
+		schemaData: isObj(o.schemaData) ? o.schemaData : {},
 		breadcrumbTitle: s(o.breadcrumbTitle),
 		sitemapInclude: map.include !== false,
 		sitemapPriority: typeof map.priority === 'number' ? map.priority : EMPTY_SEO.sitemapPriority,
@@ -175,6 +182,7 @@ export const pageToVseo = (p: any) => {
 		},
 		schemaType: s(seo.schemaType) || 'auto',
 		schemaJson: s(seo.schemaJson),
+		schemaData: isObj(seo.schemaData) ? seo.schemaData : {},
 		breadcrumbTitle: s(seo.breadcrumbTitle),
 		sitemap: { include: seo.sitemapInclude !== false, priority: seo.sitemapPriority, changeFrequency: seo.sitemapChangeFrequency },
 	};
@@ -247,7 +255,11 @@ export const withSiteDefaults = (page: Record<string, any>, siteDefaults: any, {
 	if (p.sitemapChangeFrequency === EMPTY_SEO.sitemapChangeFrequency) p.sitemapChangeFrequency = s.sitemapChangeFrequency;
 	if (isHome) {
 		for (const k of HOME_ONLY) if (!p[k]) p[k] = s[k];
-		if (!p.schemaType || p.schemaType === 'auto') p.schemaType = s.schemaType;
+		if (!p.schemaType || p.schemaType === 'auto') {
+			p.schemaType = s.schemaType;
+			// The form's values go with the type they were filled for (SEO-04).
+			if (!isObj(p.schemaData) || !Object.keys(p.schemaData).length) p.schemaData = s.schemaData;
+		}
 		if (!p.canonical) p.canonical = s.canonical;
 	}
 	return p;

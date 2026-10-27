@@ -1,4 +1,5 @@
 import SitePage from '../models/siteBuilder/sitePage.model.js';
+import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import { KIT_ROUTES, kitModel } from '../siteBuilder/kit.js';
 import { fetchPage } from './siteCheck.function.js';
 import { siteOrigin } from './siteConfig.function.js';
@@ -79,6 +80,8 @@ export type SeoPageContext = {
 	text: string;
 	/** Other pages' focus keywords. */
 	keywords: { path: string; keyword: string }[];
+	/** A template page (/blog/[slug]): its model's fields, for {{record.…}} in the structured data form (SEO-04). */
+	record?: { model: string; title: string; fields: { key: string; label: string; kind: string }[] };
 };
 
 /** By `path`, or by `page` (a Pages record's id — what an SEO record's form holds). */
@@ -95,7 +98,15 @@ export const seoPageContext = async (project: any, doc: any, { path: rawPath, pa
 		.map(r => ({ path: pathOf.get(String(r.page)) || '', keyword: String(r.seo?.focusKeyword || '').trim() }))
 		.filter(k => k.path && k.keyword && k.path !== path);
 
-	const built: any = await SitePage.findOne({ path, deletedAt: null }, { 'draft.tree': 1 }).lean();
+	const built: any = await SitePage.findOne({ path, deletedAt: null }, { 'draft.tree': 1, kind: 1, source: 1 }).lean();
+	if (built?.kind === 'template' && typeof built.source?.model === 'string') {
+		const def: any = await ModelDefinition.findOne({ route: built.source.model, active: { $ne: false } }, { title: 1, fields: 1 }).lean();
+		const fields = (def?.fields || [])
+			.filter((f: any) => f.kind !== 'password')
+			.map((f: any) => ({ key: f.key, label: f.label || f.key, kind: f.kind }));
+		const record = def ? { model: built.source.model, title: def.title || built.source.model, fields: [...fields, { key: 'createdAt', label: 'Created', kind: 'date' }, { key: 'updatedAt', label: 'Updated', kind: 'date' }] } : undefined;
+		return { path, source: 'builder', headings: [], text: '', keywords, ...(record && { record }), note: 'A template page: its words come from each record.' };
+	}
 	if (built) {
 		const words: string[] = [];
 		const page: any = Pages ? await Pages.Model.findOne({ path, archivedAt: null }, { _id: 1 }).lean() : null;

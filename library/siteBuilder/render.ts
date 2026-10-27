@@ -5,6 +5,7 @@ import TenantProject from '../models/tenancy/tenantProject.model.js';
 import Organization from '../models/tenancy/organization.model.js';
 import { codeOf, loadSite, siteOrigin, siteTags } from '../functions/siteConfig.function.js';
 import { EMPTY_SEO, withSiteDefaults } from './seo.js';
+import { fillDeep, schemaProps } from './schema.js';
 import { publicWidgets } from '../functions/widgets.function.js';
 import { manifestVersion } from './manifest.js';
 import { sectionRefs } from './site.js';
@@ -105,8 +106,13 @@ const templateMatch = async (path: string) => {
 };
 
 /** The SEO a template page shows: its text with {{record.…}} filled in. */
-const fillSeo = (seo: any, scope: Scope) =>
-	Object.fromEntries(Object.entries<any>(seo || {}).map(([k, v]) => [k, typeof v === 'string' ? interpolate(v, scope) : Array.isArray(v) ? v.map(x => (typeof x === 'string' ? interpolate(x, scope) : x)) : v]));
+const fillSeo = (seo: any, scope: Scope) => fillDeep(seo || {}, (v: string) => interpolate(v, scope));
+
+/** The page's SEO with the structured data form's properties (docs/seo SEO-04), for the renderer to merge. */
+const withSchemaProps = (seo: any, ctx: { origin: string; siteName: string; logo: string }) => ({
+	...seo,
+	schemaProps: schemaProps(seo.schemaType, seo.schemaData, { ...ctx, title: seo.title }),
+});
 
 export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { project: any; path: unknown; apiBase: string; query?: { page?: unknown } }) => {
 	if (project.type !== 'website') throw new NotFound();
@@ -181,17 +187,20 @@ export const renderPage = async ({ project, path: raw, apiBase, query = {} }: { 
 			kind: pub.kind || 'static',
 			name: pub.name,
 			tree: pub.tree || [],
-			seo: {
-				title: seo.title || (pub.isHome ? siteSeo.metaTitle || name : record ? asText(record.title ?? record.name) || pub.name : pub.name),
-				titleTemplate: siteSeo.titleTemplate || '',
-				description: seo.description || siteSeo.metaDescription || '',
-				image: seo.image || siteSeo.ogImage || '',
-				noIndex: !!seo.noIndex || siteSeo.indexing === false,
-				canonical: seo.canonical || (pub.isHome && extras.canonical) || (origin ? `${origin}${path === '/' ? '' : path}` : ''),
-				keywords: seo.keywords?.length ? seo.keywords : siteSeo.keywords || [],
-				// The rest of the page's SEO (SB-31), over Site setup's Default SEO (SB-33); empty strings fall back in the renderer.
-				...Object.fromEntries(Object.keys(EMPTY_SEO).filter(k => !['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'].includes(k)).map(k => [k, extras[k] ?? (EMPTY_SEO as any)[k]])),
-			},
+			seo: withSchemaProps(
+				{
+					title: seo.title || (pub.isHome ? siteSeo.metaTitle || name : record ? asText(record.title ?? record.name) || pub.name : pub.name),
+					titleTemplate: siteSeo.titleTemplate || '',
+					description: seo.description || siteSeo.metaDescription || '',
+					image: seo.image || siteSeo.ogImage || '',
+					noIndex: !!seo.noIndex || siteSeo.indexing === false,
+					canonical: seo.canonical || (pub.isHome && extras.canonical) || (origin ? `${origin}${path === '/' ? '' : path}` : ''),
+					keywords: seo.keywords?.length ? seo.keywords : siteSeo.keywords || [],
+					// The rest of the page's SEO (SB-31), over Site setup's Default SEO (SB-33); empty strings fall back in the renderer.
+					...Object.fromEntries(Object.keys(EMPTY_SEO).filter(k => !['title', 'description', 'image', 'noIndex', 'canonical', 'keywords'].includes(k)).map(k => [k, extras[k] ?? (EMPTY_SEO as any)[k]])),
+				},
+				{ origin, siteName: name, logo: identity.logo || '' }
+			),
 		},
 		data: { nodes, contents, ...(record && { record }), currency },
 		/** url → { alt, focal } for library pictures on the page that have them */

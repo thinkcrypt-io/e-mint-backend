@@ -38,6 +38,8 @@ const seo = {
 	schemaType: { type: String, default: 'auto' },
 	schemaJson: { type: String, default: '' },
 	breadcrumbTitle: { type: String, default: '' },
+	/** The structured data form's values for schemaType (docs/seo SEO-04). */
+	schemaData: { type: Schema.Types.Mixed, default: {} },
 	sitemapInclude: { type: Boolean, default: true },
 	sitemapPriority: { type: Number, default: 0.7 },
 	sitemapChangeFrequency: { type: String, default: 'weekly' },

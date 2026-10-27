@@ -1,4 +1,5 @@
 import { EMPTY_SEO, vseoToPage, withSiteDefaults } from '../siteBuilder/seo.js';
+import { schemaProps } from '../siteBuilder/schema.js';
 import { siteOrigin } from './siteConfig.function.js';
 
 /**
@@ -174,7 +175,9 @@ export const siteHead = async (project: any, doc: any, models: Models, rawPath: 
 			image,
 			...(origin && { isPartOf: { '@id': `${origin}/#website` } }),
 		});
-		jsonLd.push({ ...generated, ...(customSchema(x.schemaJson) || {}) });
+		// The structured data form's properties (docs/seo SEO-04), then the custom JSON-LD over both.
+		const props = schemaProps(type, x.schemaData, { origin, title, siteName, logo: str(identity.logo) });
+		jsonLd.push({ ...generated, ...props, ...(customSchema(x.schemaJson) || {}) });
 	}
 	if (isHome && origin) {
 		const social = doc?.social || {};

@@ -15,7 +15,7 @@ another.
 | SEO-01 | Focus keyword score in the editor | Editor | backend + mint-tenant | M | done 2026-10-27 (tenant panel only — the user: “the tenant panel only thats what we want”; not admin or the builder app) |
 | SEO-02 | SEO table: every page in one table, edit in place, bulk changes | Editor | backend + mint-tenant | M | todo |
 | SEO-03 | Site SEO health card: duplicates, gaps, conflicts | Editor | backend + mint-tenant | S | done 2026-10-27 (`seoIssues()` written — SEO-02 and SEO-19 reuse it) |
-| SEO-04 | Structured data forms instead of raw JSON | Editor | backend + mint-tenant | M | todo |
+| SEO-04 | Structured data forms instead of raw JSON | Editor | backend + mint-tenant | M | done 2026-10-27 (+ mint-sites merges `seo.schemaProps`; Google's own test not run, it needs a live address) |
 | SEO-05 | Multiple languages (hreflang) | Editor + engine | backend + mint-tenant + mint-sites | M | todo |
 | SEO-06 | Share image maker | Editor | backend + mint-tenant | M | todo |
 | SEO-07 | Image alt text check | Editor | backend + mint-tenant | S | todo |
