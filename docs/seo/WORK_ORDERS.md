@@ -12,7 +12,7 @@ another.
 
 | WO | Title | Area | Repo | Size | Status |
 |---|---|---|---|---|---|
-| SEO-01 | Focus keyword score in the editor | Editor | mint-tenant (+ admin copy) | M | todo |
+| SEO-01 | Focus keyword score in the editor | Editor | backend + mint-tenant | M | done 2026-10-27 (tenant panel only — the user: “the tenant panel only thats what we want”; not admin or the builder app) |
 | SEO-02 | SEO table: every page in one table, edit in place, bulk changes | Editor | backend + mint-tenant | M | todo |
 | SEO-03 | Site SEO health card: duplicates, gaps, conflicts | Editor | backend + mint-tenant | S | todo |
 | SEO-04 | Structured data forms instead of raw JSON | Editor | backend + mint-tenant | M | todo |

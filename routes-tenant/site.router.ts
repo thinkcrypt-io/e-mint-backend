@@ -9,6 +9,7 @@ import { grants } from '../library/functions/tenantPermissions.function.js';
 import { forgetSite, loadSite, panelView, saveSite, setupChecklist, siteOrigin } from '../library/functions/siteConfig.function.js';
 import { checkSite } from '../library/functions/siteCheck.function.js';
 import { testConnection } from '../library/functions/siteConnection.function.js';
+import { seoPageContext } from '../library/functions/seoPage.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 
@@ -26,6 +27,8 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
  *   POST /site-config/check   fetches the live site and checks each tag is on it; checks the
  *                             IDs and keys with Google and Meta where they allow it            build
  *   GET  /site-overview       the website's state for its home: settings, pages, checklist
+ *   GET  /site-config/seo-page?path= | ?page=<Pages id>  the page's words, headings and the other pages' focus keywords,
+ *                             for the SEO editor's score (docs/seo SEO-01)
  *   POST /site-config/connection  { url } — is a site built elsewhere connected: domain, snippet,
  *                             visits arriving, this page's SEO (Website setup → Existing website)  build
  *
@@ -136,6 +139,16 @@ router.post(
 		await syncDynamicModels({ app: req.app });
 		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req }), kit('pages'), kit('seo')]);
 		return testConnection(req.project, doc, { pages: pages || undefined, seo: seo || undefined }, req.body?.url);
+	})
+);
+
+// The SEO editor's score (docs/seo SEO-01): a builder page's words, or the live page's for a site built elsewhere.
+router.get(
+	'/site-config/seo-page',
+	handle(async req => {
+		websiteOnly(req);
+		await syncDynamicModels({ app: req.app });
+		return seoPageContext(req.project, await loadSite(req.project, { req }), { path: req.query.path, page: req.query.page });
 	})
 );
 

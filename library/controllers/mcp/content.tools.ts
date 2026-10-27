@@ -14,6 +14,7 @@ import recordHistory from '../../functions/recordHistory.function.js';
 import { KIT_ROUTES, kitModel, pullSeo, pushPage } from '../../siteBuilder/kit.js';
 import { slugPart } from '../../siteBuilder/connect.js';
 import { contentTypes, ensureTypedContents } from '../../siteBuilder/contentTypes.js';
+import { wordsIn } from '../../functions/seoPage.function.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { formulasFor, mayWrite, ownedBy, pickFields, saveAll, saveFailure, validationProblems } from './website.tools.js';
 import type { Caller, ToolDef } from './mcp.router.js';
@@ -402,22 +403,6 @@ const fillPage = async (req: any, args: any, caller: Caller): Promise<Out> => {
 };
 
 /* --------------------------------------------------------------- suggest_seo */
-
-const TEXT_KEYS = new Set(['text', 'heading', 'title', 'subtitle', 'eyebrow', 'label', 'body', 'caption', 'description', 'question', 'answer', 'quote', 'content', 'subContent', 'buttonLabel']);
-
-/** The words in a tree or a record, in order, without markup. */
-const wordsIn = (v: any, out: string[], key = '', depth = 0) => {
-	if (v == null || depth > 20 || out.length > 300) return;
-	if (typeof v === 'string') {
-		if (TEXT_KEYS.has(key) && !/^(https?:|\/|#|\{\{)/.test(v)) {
-			const t = v.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-			if (t) out.push(t);
-		}
-		return;
-	}
-	if (Array.isArray(v)) v.forEach(x => wordsIn(x, out, key, depth + 1));
-	else if (typeof v === 'object') for (const [k, x] of Object.entries(v)) wordsIn(x, out, k, depth + 1);
-};
 
 const suggestSeo = async (req: any, args: any, caller: Caller): Promise<Out> => {
 	const ref = String(args?.page || '').trim();
