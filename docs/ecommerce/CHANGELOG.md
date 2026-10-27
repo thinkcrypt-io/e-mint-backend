@@ -97,3 +97,32 @@
   `commerce-settings.mjs` pass; `projects.mjs` passes; `models.mjs` /
   `collections.mjs` only fail their super-admin checks (no super admin
   seeded on the private DB).
+
+## 2026-10-28 — EC-04 Setup wizard + Store settings
+
+- mint-tenant `/<project>/store/setup`: the wizard — a stepper (steps reached
+  can be clicked back to), one panel per section with its "How this works"
+  link, Next saves the step (and the step reached, so it resumes) and shows
+  the server's problems under it, Review (one line per section, "Needs a
+  look", Change), **Set up my store** → `POST /commerce/setup`, then polls
+  every 2 s: Setting up your store… (seconds counted), Your store is ready
+  (Add products / Open the POS / Store settings — full loads), or the last
+  setup's reason above the wizard. The sidebar is refreshed when it's ready.
+- `/<project>/store/settings` (behind `StoreGate`): the same editors as
+  cards, each with Save / Undo changes and the server's refusal (e.g. "2
+  products have several variants…"); Outlets links to the Outlets page.
+  Saving refreshes the sidebar (`SIDEBAR_TAGS`).
+- Section editors (`sections.tsx`): currency (the country's shown), order
+  prefix, selling below zero; outlets (name, code, kind, phone, address);
+  variations + up to three option names, barcodes, track stock, brands;
+  tenders as ticked cards, own ways by name, online gateways; returns
+  (window, partial, restock, store credit, refund by); delivery (charges,
+  couriers); POS (receipt size and lines, shifts, hold, discounts, coupons,
+  customer required, tax mode + rates with one default).
+- mint-docs `/store` "E-commerce: your store" (Go live): setup, each step,
+  what you get, what the store keeps to itself, Store settings,
+  troubleshooting; listed in guides.ts; Storefront icon.
+- Verified in the browser pane against the private backend: walked the
+  wizard (an empty outlet's two problems shown; removed), tax in prices,
+  Review summary, Set up → building → ready in ~8 s, Store settings with the
+  Store and E-commerce sidebar sections. mint-tenant typecheck clean.
