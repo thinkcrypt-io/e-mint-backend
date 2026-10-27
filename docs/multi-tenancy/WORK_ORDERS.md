@@ -20,7 +20,7 @@ or typed). Smoke `site-connect-head.mjs` (54). The live backend serves `track.js
 2026-10-27, sinammengineering.com connected); Add domain is not deployed. The snippet can't change link previews
 (crawlers don't run JS), so the Cloudflare Worker was built:
 
-- **SC-10 done:** the `mint-edge` Worker, in the local repo `e-mint/mint-edge` with no GitHub remote yet. It runs in the
+- **SC-10 done:** the `mint-edge` Worker, in `e-mint/mint-edge` (private repo aiasifistiaque/mint-edge, main). It runs in the
   customer's own Cloudflare account and rewrites `<head>` for pages added to SEO, serves `/_mint/track.js` and
   `/_mint/api`, and fails open.
 - **Backend:** `GET /public/api/site/edge`; `WebsiteSettings.edge` holds bypass, robots and sitemap.

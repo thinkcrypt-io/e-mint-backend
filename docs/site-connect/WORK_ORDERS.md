@@ -46,7 +46,7 @@ Order: SC-02 → 03 → 08 make the code ways work. SC-04 → 05 → 06 → 07 a
 ## Handoff
 
 - 2026-10-27: SC-10 done (user: "build the cloudflare worker, we dont need our own proxy"). The Worker is in the new local
-  repo `mint-edge/` (`src/index.js` + `src/lib.js`, no build step), which has **no GitHub remote yet**.
+  repo `mint-edge/` (`src/index.js` + `src/lib.js`, no build step), pushed to the private repo `aiasifistiaque/mint-edge` (main).
   - Backend: `GET /public/api/site/edge` (`library/functions/siteEdge.function.ts`).
   - Settings: `WebsiteSettings.edge` {bypass, robots, sitemap}, saved on site-config `edge`, no panel UI yet.
   - `/track` takes `X-Mint-Visitor-IP`; `track.js` reads `data-api` and clears the Worker's `data-mint-seo="edge"` tags.
