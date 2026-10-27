@@ -136,3 +136,19 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
 - Follow-up (the user: "should show like member > email, member > name"): linked fields are labelled "Member › Email" in
   every list (dropdowns, the click menu, Preview chips) and sit right under their link field, indented; the "Member's
   details" headings are gone. Checked in headless Chrome: Title, Member, Member › Name, Member › Email, Member › Phone, Link…
+
+## 2026-10-27 — AU-06 Automations over MCP, links in emails
+- The user (making Thinkcrypt's newsletter welcome email): "add panel automation in mcp too so that mcp can create panel automation".
+- `library/controllers/mcp/automations.tools.ts` (registered in `mcp.router.ts`, projects only, + `AUTOMATION_INSTRUCTIONS`):
+  `list_automations` (read: each as a sentence with its id, where emails go out from or that no account is connected,
+  email designs, people for `to.people`), `save_automation` (build: `checkAutomation` like the panel's POST/PUT; with `id`
+  what's left out is kept, so `{ id, enabled: false }` switches it off; project History "… through the AI"),
+  `test_automation` (build: `dryRun`, the page's newest record when none is given), `get_automation_runs` (read: steps
+  and the emails each run sent), `delete_automation` (build, destructive).
+- Email messages: `[words](https://…)` is a link (`LINK` in `formatHtml`, held aside from bold/italic; text version
+  "words: address"); the address may hold placeholders (values HTML-escaped). Both panels' `previewHtml` show it
+  underlined; the editor's hint names it. Guide: `/automations#automation-emails` row, `/connect-ai#tools` rows.
+- Verified: new `scripts/tenancy-smoke/automations-mcp.mjs` (tools listed per scope, refusals with the input's path,
+  save → list → dry run, a create emailing the record's address with the unsubscribe link as `<a href>`, a status
+  change filter + condition, runs with emails, off keeps the rest, the panel API sees the same, delete) all passed on a
+  private stack; `automations.mjs` and `automation-email-resend.mjs` still pass; tsc clean (backend, mint-tenant). Not deployed.

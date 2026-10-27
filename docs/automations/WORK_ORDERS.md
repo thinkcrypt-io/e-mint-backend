@@ -16,14 +16,15 @@ mint-webpage → `origin` main), then go on.
 | AU-03c | Email editor (field at the cursor, click menu: bold / italic / list, preview); every automation email kept — the eye shows it as sent, Resend for a failed one | backend + panels + docs | M | done 2026-10-19 |
 | AU-03d | Linked records' details as placeholders: `{{member.email}}` (one level), in Insert a field as “Member › Email” under its link | backend + panels + docs | S | done 2026-10-19 |
 | AU-04 | Date-reached and schedule triggers (job queue), waits | both | L | later |
-| AU-05 | MCP tools, recipes, template blueprints | both | M | later |
+| AU-05 | Recipes, template blueprints | both | M | later |
+| AU-06 | MCP tools (list / save / test / runs / delete automations) + `[words](https://…)` links in email messages | backend + panels + docs | S | done 2026-10-27 |
 
 ## Handoff
 
 - Dev: private backend from `git archive HEAD` + changed files (another session may have work in progress in the
   tree), `PORT=5031`, Mongo `27996`; panel launch config `mint-tenant-5031` (:3033).
-- Smoke: `scripts/tenancy-smoke/automations.mjs`, `automation-pdfs.mjs`, `automation-email-resend.mjs` (all in `run-all.sh`;
-  the last two run SMTP sinks on :2587 / :2525 — not beside `mail-accounts.mjs`).
+- Smoke: `scripts/tenancy-smoke/automations.mjs`, `automation-pdfs.mjs`, `automation-email-resend.mjs`, `automations-mcp.mjs` (all in `run-all.sh`;
+  the email ones run SMTP sinks on :2587 / :2525 — not beside `mail-accounts.mjs` or each other on the same port).
 
 ## AU-02 — Engine + API (L)
 

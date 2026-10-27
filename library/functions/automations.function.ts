@@ -214,7 +214,8 @@ export const fill = (ctx: Ctx, text: any): string =>
 /**
  * An email's message as HTML and as plain text (AU-03c). A blank line starts
  * a paragraph; `**bold**` and `*italic*` show as such; lines starting with
- * "- " are a bulleted list. Placeholders are filled after the
+ * "- " are a bulleted list; `[words](https://…)` is a link (AU-06), whose
+ * address may hold placeholders. Placeholders are filled after the
  * formatting, so a value with a * in it stays as it is.
  */
 export const emailBody = (ctx: Ctx, template: any) => {
@@ -231,6 +232,8 @@ export const emailBody = (ctx: Ctx, template: any) => {
 };
 
 const BULLET = /^\s*[-•]\s+/;
+// [words](https://…) — the address up to the closing bracket, no spaces
+const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
 const BOTH = /\*\*\*(?=[^\s*])([^\n]*?[^\s*])\*\*\*/g;
 const BOLD = /\*\*(?=\S)([^\n]*?\S)\*\*/g;
 const ITALIC = /(^|[^*\w])\*(?=[^\s*])([^*\n]*?[^\s*])?\*(?![*\w])/g;
@@ -238,7 +241,15 @@ const italicOf = (s: string, wrap: (t: string) => string) => s.replace(ITALIC, (
 
 /** The message's HTML: paragraphs, lists, bold and italic; text escaped. */
 export const formatHtml = (text: string) => {
-	const inline = (line: string) => italicOf(esc(line).replace(BOTH, '<b><i>$1</i></b>').replace(BOLD, '<b>$1</b>'), t => `<i>${t}</i>`);
+	// Links first, kept out of bold/italic's way (an address may hold * or _) and put back last.
+	const inline = (line: string) => {
+		const links: string[] = [];
+		const held = line.replace(LINK, (_, words, href) => {
+			links.push(`<a href="${esc(href)}" style="color:inherit;text-decoration:underline;">${esc(words)}</a>`);
+			return `\uE002${links.length - 1}\uE003`;
+		});
+		return italicOf(esc(held).replace(BOTH, '<b><i>$1</i></b>').replace(BOLD, '<b>$1</b>'), t => `<i>${t}</i>`).replace(/\uE002(\d+)\uE003/g, (_, i) => links[Number(i)]);
+	};
 	return text
 		.replace(/\r\n/g, '\n')
 		.split(/\n{2,}/)
@@ -266,7 +277,7 @@ export const formatHtml = (text: string) => {
 const stripMarks = (text: string) =>
 	text
 		.split('\n')
-		.map(l => italicOf(l.replace(BOTH, '$1').replace(BOLD, '$1'), t => t))
+		.map(l => italicOf(l.replace(LINK, '$1: $2').replace(BOTH, '$1').replace(BOLD, '$1'), t => t))
 		.join('\n');
 
 /* ------------------------------------------------------------ checking */

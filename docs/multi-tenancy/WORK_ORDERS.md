@@ -6,7 +6,14 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-20)
+## Handoff — read this first (kept current; last updated 2026-10-27)
+
+**2026-10-27 — Automations over MCP (AU-06, `docs/automations`).** A project's AI can now `list_automations`,
+`save_automation` (same checks as the panel; `{ id, enabled: false }` switches one off), `test_automation` (dry run),
+`get_automation_runs` and `delete_automation` — `library/controllers/mcp/automations.tools.ts`. Email messages take
+`[words](https://…)` links (address may hold `{{field}}`), previewed underlined in both panels. Smoke
+`automations-mcp.mjs` (SMTP sink :2587). First use: Thinkcrypt's newsletter welcome email with its unsubscribe link —
+needs the backend deploy before the Thinkcrypt MCP shows the tools.
 
 **2026-10-26 — WO-56 Visitor analytics.** A website's Analytics has **Overview · Visitors · Live** tabs and a page per
 visitor (`/analytics/visitors/<visitorId>`): IP (Site setup → Tracking → Visitor IP addresses: whole / masked / off),
