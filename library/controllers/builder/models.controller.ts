@@ -985,6 +985,9 @@ export const updateModelCore = async (req: any, id: any, input: any, opts: { not
 
 		const { value, problems } = await check(req, input, before.name);
 		if (problems?.length) throw new BuildError(400, 'The model isn’t valid', problems);
+		// A pre-built model keeps the fields the part of MINT that made it relies on (docs/ecommerce EC4).
+		const locked = systemProblems(before, value);
+		if (locked.length) throw new BuildError(409, `${before.title} is part of your store — some of its fields can’t change`, locked);
 
 		// Snapshot what's being replaced, so a change can be looked up later.
 		await RouteVersion.create({
@@ -1129,11 +1132,13 @@ export const updateModel = async (req: any, res: Response): Promise<Response> =>
  * sidebar item. The records stay in their collection unless `dropData` —
  * which is why the name stays taken until they're gone.
  */
-export const deleteModelCore = async (req: any, id: any, { dropData = false, ignoreLinks = false } = {}) => {
+export const deleteModelCore = async (req: any, id: any, { dropData = false, ignoreLinks = false, system = false } = {}) => {
 	{
 		if (!mongoose.isValidObjectId(id)) throw new BuildError(400, 'Invalid id');
 		const def: any = await ModelDefinition.findById(id).lean();
 		if (!def) throw new BuildError(404, 'Model not found');
+		// Pre-built models go only with what made them (`system`: the store's installer undoing itself).
+		if (def.system && !system) throw new BuildError(409, `${def.title} is part of your store and can’t be deleted — hide it from the sidebar instead`);
 
 		const linking = ignoreLinks ? [] : await ModelDefinition.find({ 'fields.ref': def.name, _id: { $ne: def._id } }, { title: 1 }).lean();
 		if (linking.length)
@@ -1166,6 +1171,35 @@ export const deleteModelCore = async (req: any, id: any, { dropData = false, ign
 		await syncDynamicModels({ app: req.app, force: true });
 		return { message: dropData ? 'Model and records deleted' : 'Model deleted; its records were kept' };
 	}
+};
+
+/**
+ * What a change would break in a pre-built model (docs/ecommerce EC4): a core
+ * field gone, or its kind, link or row fields changed; its code switched off.
+ */
+export const systemProblems = (before: any, after: any): string[] => {
+	if (!before?.system) return [];
+	const out: string[] = [];
+	const now = new Map<string, any>((after?.fields || []).map((f: any) => [f.key, f]));
+	for (const key of before.systemFields || []) {
+		const was = (before.fields || []).find((f: any) => f.key === key);
+		if (!was) continue;
+		const is = now.get(key);
+		const name = was.label || key;
+		if (!is) out.push(`${name} is one of the store’s own fields — it can’t be removed (you can rename its label or hide it from the page)`);
+		else if (is.kind !== was.kind) out.push(`${name} must stay a ${was.kind} field`);
+		else if ((was.ref || '') !== (is.ref || '')) out.push(`${name} must keep linking to ${was.ref}`);
+		else if (Array.isArray(was.fields)) {
+			const sub = new Map<string, any>((is.fields || []).map((f: any) => [f.key, f]));
+			for (const w of was.fields) {
+				const s = sub.get(w.key);
+				if (!s) out.push(`${name} › ${w.label || w.key} is one of the store’s own fields — it can’t be removed`);
+				else if (s.kind !== w.kind) out.push(`${name} › ${w.label || w.key} must stay a ${w.kind} field`);
+			}
+		}
+	}
+	if (before.code?.enabled && after?.code && after.code.enabled === false) out.push(`${before.title} numbers its records — that can’t be switched off`);
+	return out;
 };
 
 export const deleteModel = async (req: any, res: Response): Promise<Response> => {

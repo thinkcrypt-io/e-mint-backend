@@ -120,6 +120,13 @@ const schema = new Schema<any>(
 		/** Bumped on every change; a process rebuilds its copy when it differs. */
 		version: { type: Number, default: 1 },
 		sidebarItem: { type: Schema.Types.ObjectId, ref: 'SidebarItem' },
+		/**
+		 * Pre-built by a part of MINT that relies on it (docs/ecommerce EC4): 'commerce' for a store's
+		 * models. Its `systemFields` can't be deleted, renamed or retyped, and the model can't be
+		 * deleted; anything else (labels, help, new fields, layout) changes as usual.
+		 */
+		system: { type: String, trim: true, default: undefined },
+		systemFields: { type: [String], default: undefined },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
 		updatedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
 	},

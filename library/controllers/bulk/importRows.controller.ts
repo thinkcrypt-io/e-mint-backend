@@ -563,7 +563,12 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 		return fail(res, 400, message, { problems: [], stage: 'read' });
 	}
 
-	const { rows, hidden, problems, ignored, used, total, linked } = result;
+	const { rows, hidden, problems, ignored, total, linked } = result;
+	// Fields another part of MINT keeps (a store's stock and money, docs/ecommerce EC5) are never imported.
+	const excluded: string[] = Array.isArray(req.importExclude) ? req.importExclude : [];
+	const used = result.used.filter(c => !excluded.includes(c.key));
+	for (const r of rows) for (const k of excluded) delete r[k];
+	if (excluded.length) ignored.push(...result.used.filter(c => excluded.includes(c.key)).map(c => c.label));
 	const badRows = new Set(problems.map(p => p.row)).size;
 	const summary = {
 		total,

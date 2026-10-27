@@ -12,8 +12,8 @@ wizard step and dialog) and the marketing website as it lands.
 |---|---|---|---|---|
 | EC-01 | Plan & docs | backend | S | done 2026-10-28 |
 | EC-02 | `ecommerce` project type + `CommerceSettings` + settings API | backend + mint-tenant | M | done 2026-10-28 |
-| EC-03 | Blueprint + installer (models from answers, sidebar, roles, dashboard) + core / engine field locks | backend | L | next |
-| EC-04 | Setup wizard + Store settings page (New project card, 7 steps, background build) | mint-tenant | L | |
+| EC-03 | Blueprint + installer (models from answers, sidebar) + core / engine field locks | backend | L | done 2026-10-28 |
+| EC-04 | Setup wizard + Store settings page (New project card, 8 steps, background build) | mint-tenant | L | next |
 | EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | |
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | |
 | EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | |
@@ -31,6 +31,12 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-03 done** (CHANGELOG). `commerce/blueprint.ts` (18 models, `engine` / `engineOnly` / `ownPage`
+  per model), `install.ts` (`POST /commerce/setup` → background build, `installed` by key, sidebar, seed outlets /
+  tax rates / registers; `settingsGuard` + `afterSettingsSaved` on Store settings), `locks.ts` (`commerceGuard` before
+  the built models). `ModelDefinition.system` + `systemFields`; `systemProblems` in `updateModelCore`;
+  `deleteModelCore({ system })`. Engine code finds models through `CommerceSettings.installed[key].name` →
+  `compiledModel`, never a fixed route. Roles and dashboard moved to EC-12 / EC-11.
 - **2026-10-28 — EC-02 done** (CHANGELOG). `ecommerce` is a project type; `CommerceSettings` + `functions/commerce/settings.ts`
   (answers by section, each checked on its own, offered by the org's country); `/commerce/settings`; the sidebar's Store
   section (`tenantLead`); mint-tenant: New project → E-commerce opens `/store/setup` (stub until EC-04), a store's

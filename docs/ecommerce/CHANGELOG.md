@@ -51,3 +51,49 @@
   checked free). The wizard itself is EC-04.
 - Verified: `commerce-settings.mjs` — 33 checks pass on a private server;
   backend and mint-tenant typecheck clean.
+
+## 2026-10-28 — EC-03 Blueprint, installer, locks
+
+- `library/functions/commerce/blueprint.ts`: the store's 18 models (Outlets,
+  Categories, Brands, Tax rates, Products, Variants, Stock, Stock movements,
+  Stock adjustments, Stock transfers, Customers `store-customers`, Coupons,
+  Registers, Shifts, Orders, Payments `order-payments`, Returns, Store
+  credit) as one feature plan; per model the fields only the engine writes
+  (`engine`), whether only the store makes its records (`engineOnly`:
+  stock, movements, shifts, orders, payments, returns, credit), when the
+  sidebar shows it (`shownWhen`) and whether a store page replaces its table
+  (`ownPage`: Orders, Returns). Decision changed: every store gets every
+  model; the answers choose what shows and how the engine behaves.
+- `install.ts`: `POST /commerce/setup` (manage-projects) checks every
+  answer (400 with problems by section), claims the store (`building`, one
+  at a time, 409 otherwise) and builds in the background: an E-commerce
+  sidebar category, the plan through `buildFeature` (template step limit),
+  each model marked `system: 'commerce'` with its core fields, the engine's
+  fields `edit: false` in the published settings (forms show them muted;
+  saves can't send them), the sidebar items shown / ordered / iconed, then
+  the wizard's outlets, tax rates and a register at each store. A failure
+  undoes it all and leaves `failed` with the reason (setup can run again).
+  Store settings on a built store: `settingsGuard` refuses variations off
+  while a product has several variants, store credit off while a customer
+  has credit, shifts off while one is open (409 `commerce_in_use`);
+  `afterSettingsSaved` updates the sidebar and features; outlets are kept on
+  the Outlets page once built.
+- Builder (EC4): `ModelDefinition.system` / `systemFields`;
+  `systemProblems` in `updateModelCore` (409: a core field removed,
+  retyped, relinked, a row field removed, numbering switched off — labels,
+  help and new fields are fine), so the model page, features and the MCP
+  are all held; `deleteModelCore` refuses a system model unless the
+  installer undoes itself (`system: true`).
+- Records (EC5): `commerceGuard` (before the project's built models): on a
+  store model, `engineOnly` records can't be made, deleted, duplicated or
+  imported from plain pages (403 `commerce_field`, a plain reason), only
+  their own added fields edited; elsewhere a new record can't carry the
+  engine's fields, an edit can't change them, bulk duplicate / merge /
+  status / update-many / copy are refused, and an import drops their columns
+  (`req.importExclude`, read by `importRows`).
+- Verified: `commerce-install.mjs` (34 checks: setup in ~3 s locally, 18
+  models by key and marked, sidebar, seeded records, builder locks, plain
+  save guard, muted form field, settings on a built store, force delete) and
+  `commerce-settings.mjs` pass; `projects.mjs` passes; `models.mjs` /
+  `collections.mjs` only fail their super-admin checks (no super admin
+  seeded on the private DB).

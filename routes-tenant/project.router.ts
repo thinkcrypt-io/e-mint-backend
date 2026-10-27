@@ -40,6 +40,7 @@ import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import commerceRouter from './commerce.router.js';
 import CommerceSettings from '../library/models/tenancy/commerceSettings.model.js';
+import { commerceGuard } from '../library/functions/commerce/locks.js';
 import mailAccountsRouter from './mailAccounts.router.js';
 import mailDesignsRouter from './mailDesigns.router.js';
 import templatesRouter from './templates.router.js';
@@ -288,6 +289,8 @@ router.use((req: any, res: any, next: any) => {
 	seoUpgrades.get(key)!.then(() => next(), next);
 });
 
+// A store's models (docs/ecommerce EC5): plain saves never write its stock and money.
+router.use(commerceGuard);
 // The project's built models, last: anything not answered above.
 router.use(dynamicModelsDispatcher);
 
