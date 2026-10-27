@@ -8,6 +8,12 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-27)
 
+**2026-10-27 — Site connect planned (SC-01, `docs/site-connect`).** Any website (built anywhere) connects to Mint
+analytics + SEO in one of three ways: Script (`track.js data-seo`, SEO added in the browser, Google only), Code
+(server helpers that fetch `/site/head?path=`), Proxy (Cloudflare for SaaS + a `mint-edge` Worker that rewrites
+`<head>` at the edge; DNS change only). Plan + SC-02…13 written. Nothing built. Open questions 1–5 in its README
+(Cloudflare account, edge domain, pricing, www only, Script copy) wait for the user.
+
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
 (Manage projects; first = default; `makeDefault`), `send_test_email_design` — `library/controllers/mcp/emailDesigns.tools.ts`;
 `list_automations` data carries `mailFrom`. Smoke: `automations-mcp.mjs`. Deployed 2026-10-27 (AU-06 too); the Thinkcrypt
