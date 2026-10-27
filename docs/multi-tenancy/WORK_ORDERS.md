@@ -14,7 +14,8 @@ Website → Pages + SEO — every other page keeps its own (the user's rule, D4)
 (JSON with `set`/`fill` tags, or `&format=html` for the site's server; empty when the page isn't added) —
 `library/functions/siteHead.function.ts`. mint-tenant Website setup → **Existing website** tab (default) with PHP /
 Node / Next.js server print; mint-docs `websites#connect-a-website`; MCP `site_snippets` has `connect` + `head`.
-Smoke `site-connect-head.mjs` (35). Not deployed (backend first). Next: Cloudflare in the customer's own account
+**Test connection** button on that tab (SC-08b: domain, snippet, visits, the page's SEO;
+`POST /site-config/connection`). Smoke `site-connect-head.mjs` (50). Not deployed (backend first). Next: Cloudflare in the customer's own account
 (SC-09…11) — open questions in `docs/site-connect/README.md`.
 
 **2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`

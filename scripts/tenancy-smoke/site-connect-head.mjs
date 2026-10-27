@@ -88,6 +88,62 @@ const appKey = (await call('GET', `/tenant/api/p/${app?._id}/project-key`, null,
 x = await fetch(`${ROOT}/public/api/site/head?apiKey=${appKey}&path=/`);
 ok('an app project: 404', x.status === 404, x.status);
 
+// Website setup → Existing website → Test connection: a stand-in for the customer's site on this machine.
+const http = await import('node:http');
+const snippet = (k, extra = 'data-seo') => `<script src="${ROOT}/public/track.js" data-key="${k}" ${extra}></script>`;
+const PAGES = {
+	'/about': `<html><head><title>Old title</title>${snippet(key)}</head><body>About</body></html>`,
+	'/printed': `<html><head><title>About us | Acme</title>${snippet(key)}</head></html>`,
+	'/deferred': `<html><head>${snippet(key, 'data-seo defer')}</head></html>`,
+	'/plain': `<html><head>${snippet(key, 'defer')}</head></html>`,
+	'/none': '<html><head><title>No snippet</title></head></html>',
+	'/other': `<html><head>${snippet('mint_pk_someone_else')}</head></html>`,
+};
+const server = http.createServer((q, s) => {
+	const body = PAGES[q.url];
+	s.writeHead(body ? 200 : 404, { 'content-type': 'text/html' });
+	s.end(body || 'not here');
+});
+await new Promise(res => server.listen(0, '127.0.0.1', res));
+const SITE = `http://127.0.0.1:${server.address().port}`;
+await call('POST', P('/pages'), { name: 'Printed', path: '/printed', status: 'published' }, T).then(async x => call('POST', P('/seo'), { page: x.body?.doc?._id, seo: { metaTitle: 'About us' } }, T));
+await call('POST', P('/pages'), { name: 'Plain', path: '/plain', status: 'published' }, T).then(async x => call('POST', P('/seo'), { page: x.body?.doc?._id, seo: { metaTitle: 'Plain' } }, T));
+const test = async url => (await call('POST', P('/site-config/connection'), { url }, T)).body;
+const item = (r, k) => r?.items?.find(i => i.key === k);
+
+r = await test(`${SITE}/about`);
+ok('test: localhost isn’t a project domain → missing', item(r, 'domain')?.status === 'missing', JSON.stringify(item(r, 'domain')));
+ok('test: the snippet with this key and data-seo → ok', item(r, 'snippet')?.status === 'ok', JSON.stringify(item(r, 'snippet')));
+ok('test: no visits yet → idle', item(r, 'visits')?.status === 'idle', JSON.stringify(item(r, 'visits')));
+ok('test: /about is added, put on by the snippet → ok', item(r, 'seo')?.status === 'ok' && /in the browser/.test(item(r, 'seo').message), JSON.stringify(item(r, 'seo')));
+ok('test: not connected while something is missing', r?.connected === false);
+
+await fetch(`${ROOT}/public/api/track?apiKey=${key}`, {
+	method: 'POST',
+	headers: { 'content-type': 'text/plain', origin: 'https://www.acme-shoes.example.com', 'user-agent': 'Mozilla/5.0 (Macintosh) Safari/605.1.15', 'x-forwarded-for': '203.0.113.7' },
+	body: JSON.stringify({ visitorId: 'sc1', sessionId: 'sc1', events: [{ type: 'pageview', eventId: 'sc-e1', path: '/about', title: 'About' }] }),
+});
+r = await test(`${SITE}/printed`);
+ok('test: visits arriving → ok, with the last page', item(r, 'visits')?.status === 'ok' && item(r, 'visits').message.includes('/about'), JSON.stringify(item(r, 'visits')));
+ok('test: Mint’s title already in the HTML → link previews see it', item(r, 'seo')?.status === 'ok' && /link previews see it/.test(item(r, 'seo').message), JSON.stringify(item(r, 'seo')));
+r = await test(`${SITE}/deferred`);
+ok('test: data-seo with defer → warning', item(r, 'snippet')?.status === 'warning' && /defer/.test(item(r, 'snippet').message), JSON.stringify(item(r, 'snippet')));
+r = await test(`${SITE}/plain`);
+ok('test: no data-seo → warning; an added page nothing puts on → warning', item(r, 'snippet')?.status === 'warning' && item(r, 'seo')?.status === 'warning', JSON.stringify([item(r, 'snippet'), item(r, 'seo')]));
+r = await test(`${SITE}/none`);
+ok('test: no snippet in the HTML → idle (a tag manager may add it)', item(r, 'snippet')?.status === 'idle' && item(r, 'seo')?.status === 'idle', JSON.stringify([item(r, 'snippet'), item(r, 'seo')]));
+r = await test(`${SITE}/other`);
+ok('test: another project’s key → missing', item(r, 'snippet')?.status === 'missing', JSON.stringify(item(r, 'snippet')));
+r = await test(`${SITE}/gone`);
+ok('test: a page that answers 404 → missing', item(r, 'snippet')?.status === 'missing' && /404/.test(item(r, 'snippet').message), JSON.stringify(item(r, 'snippet')));
+r = await test('/about');
+ok('test: a path uses the project’s domain; its domain → ok', r?.url === 'https://www.acme-shoes.example.com/about' && item(r, 'domain')?.status === 'ok', JSON.stringify(r?.url));
+r = await test('');
+ok('test: no address → the home page', r?.url === 'https://www.acme-shoes.example.com/', r?.url);
+r = await call('POST', `/tenant/api/p/${app?._id}/site-config/connection`, { url: SITE }, T);
+ok('test: an app project → 404', r.status === 404, r.status);
+server.close();
+
 const js = await (await fetch(`${ROOT}/public/track.js`)).text();
 ok('track.js: data-seo asks /site/head on every page view', js.includes("hasAttribute('data-seo')") && js.includes("'/site/head'") && js.includes('seo();'));
 ok('track.js parses', (() => { try { new Function(js); return true; } catch (e) { return e.message; } })() === true);

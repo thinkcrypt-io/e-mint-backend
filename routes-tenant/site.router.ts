@@ -8,6 +8,7 @@ import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { forgetSite, loadSite, panelView, saveSite, setupChecklist, siteOrigin } from '../library/functions/siteConfig.function.js';
 import { checkSite } from '../library/functions/siteCheck.function.js';
+import { testConnection } from '../library/functions/siteConnection.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { runInScope } from '../library/functions/tenantScope.function.js';
 
@@ -25,6 +26,8 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
  *   POST /site-config/check   fetches the live site and checks each tag is on it; checks the
  *                             IDs and keys with Google and Meta where they allow it            build
  *   GET  /site-overview       the website's state for its home: settings, pages, checklist
+ *   POST /site-config/connection  { url } — is a site built elsewhere connected: domain, snippet,
+ *                             visits arriving, this page's SEO (Website setup → Existing website)  build
  *
  * Reading needs to open the project; website projects only.
  */
@@ -123,6 +126,18 @@ const kit = async (route: string) => {
 	const def: any = await ModelDefinition.findOne({ route }, { name: 1, route: 1 }).lean();
 	return def ? compiledModel(def.name) : null;
 };
+
+// Website setup → Existing website → Test connection (docs/site-connect): domain, snippet, visits, the page's SEO.
+router.post(
+	'/site-config/connection',
+	handle(async req => {
+		websiteOnly(req);
+		mayBuild(req);
+		await syncDynamicModels({ app: req.app });
+		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req }), kit('pages'), kit('seo')]);
+		return testConnection(req.project, doc, { pages: pages || undefined, seo: seo || undefined }, req.body?.url);
+	})
+);
 
 router.get(
 	'/site-overview',

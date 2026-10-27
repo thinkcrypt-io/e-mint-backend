@@ -59,7 +59,7 @@ const idsIn = (html: string, key: string) => {
 };
 
 /** The page's HTML, following up to 3 redirects (each address checked). */
-const fetchPage = async (start: string): Promise<{ html: string; status: number; url: string } | string> => {
+export const fetchPage = async (start: string): Promise<{ html: string; status: number; url: string } | string> => {
 	let current = start;
 	for (let i = 0; i < 4; i++) {
 		const refused = await fetchable(current);
