@@ -21,6 +21,7 @@ import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './s
 import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
 import { API_ENDPOINT_INSTRUCTIONS, API_ENDPOINT_TOOLS } from './apiEndpoints.tools.js';
 import { AUTOMATION_INSTRUCTIONS, AUTOMATION_TOOLS } from './automations.tools.js';
+import { EMAIL_DESIGN_INSTRUCTIONS, EMAIL_DESIGN_TOOLS } from './emailDesigns.tools.js';
 import { COMPONENT_TOOLS } from './components.tools.js';
 import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
@@ -788,6 +789,7 @@ const TOOLS: ToolDef[] = [
 	...PDF_TEMPLATE_TOOLS,
 	...API_ENDPOINT_TOOLS,
 	...AUTOMATION_TOOLS,
+	...EMAIL_DESIGN_TOOLS,
 	...COMPONENT_TOOLS,
 	...CONTENT_TOOLS,
 ];
@@ -805,7 +807,7 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
 		instructions: caller =>
-			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + CONTENT_INSTRUCTIONS : ''),
+			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),

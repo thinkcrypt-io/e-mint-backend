@@ -152,3 +152,17 @@ Newest last. One entry per work order or meaningful step: what changed, files, h
   save → list → dry run, a create emailing the record's address with the unsubscribe link as `<a href>`, a status
   change filter + condition, runs with emails, off keeps the rest, the panel API sees the same, delete) all passed on a
   private stack; `automations.mjs` and `automation-email-resend.mjs` still pass; tsc clean (backend, mint-tenant). Not deployed.
+
+## 2026-10-27 — AU-07 Email designs over MCP
+- Asked for while making the Thinkcrypt newsletter's welcome email ("create a designer email"): the AI could pick a
+  design id in an email action but not make one. New `library/controllers/mcp/emailDesigns.tools.ts`:
+  `list_email_designs` (read: each design in full, the default, where emails go out from, business details, fonts,
+  widths, placeholders), `save_email_design` (build + Manage projects, as the panel: `checkDesign`; with `id` what's left
+  out is kept, header/colours/footer part by part; the first is the default; `makeDefault`), `send_test_email_design`
+  (the panel's sample email through `sendOrgMail`, to the key's owner or `to`). Wired in `mcp.router.ts` with an
+  instructions paragraph.
+- `list_automations`' structured data now carries `mailFrom` — Claude's client shows a tool's structuredContent, not its
+  text, so "No email account is connected" was invisible there.
+- Verified: `automations-mcp.mjs` gained the design checks (bad colour / unknown placeholder refused, read-only key
+  refused, first is default, a change keeps the rest, a test arrives in the design, the panel API sees it, the
+  automation's email goes out in the default design) — all passed on a private stack; tsc clean. Not deployed.

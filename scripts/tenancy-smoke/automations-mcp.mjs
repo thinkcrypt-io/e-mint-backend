@@ -1,6 +1,7 @@
 // Automations over MCP (docs/automations AU-06): list_automations, save_automation (checked like the panel's,
 // changes keep what's left out), test_automation (a dry run), get_automation_runs, delete_automation — and an
-// email action's [words](https://…{{field}}) link, sent through the project's email account. A tiny SMTP server
+// email action's [words](https://…{{field}}) link, sent through the project's email account. AU-07: email designs
+// over MCP (list_email_designs, save_email_design, send_test_email_design), and the automation's email in one. A tiny SMTP server
 // on 127.0.0.1:2587 stands in for the real one — don't run it beside mail-accounts.mjs. Stands alone.
 import net from 'net';
 import { call, ok, done, ROOT } from './lib.mjs';
@@ -83,12 +84,13 @@ const text = res => res?.content?.[0]?.text || '';
 const init = await rpc(builder, 'initialize', { protocolVersion: '2025-06-18' });
 ok('instructions mention automations', /list_automations/.test(init?.result?.instructions || ''));
 const names = (await rpc(builder, 'tools/list', {}))?.result?.tools?.map(t => t.name) || [];
-ok('the five tools are listed', ['list_automations', 'save_automation', 'test_automation', 'get_automation_runs', 'delete_automation'].every(n => names.includes(n)), names.join(' '));
+ok('the tools are listed', ['list_automations', 'save_automation', 'test_automation', 'get_automation_runs', 'delete_automation', 'list_email_designs', 'save_email_design', 'send_test_email_design'].every(n => names.includes(n)), names.join(' '));
 const readNames = (await rpc(reader, 'tools/list', {}))?.result?.tools?.map(t => t.name) || [];
-ok('…a read-only key gets only the reading ones', readNames.includes('list_automations') && readNames.includes('get_automation_runs') && !readNames.includes('save_automation') && !readNames.includes('delete_automation'), readNames.filter(n => /automation/.test(n)).join(' '));
+ok('…a read-only key gets only the reading ones', readNames.includes('list_automations') && readNames.includes('get_automation_runs') && readNames.includes('list_email_designs') && !readNames.includes('save_automation') && !readNames.includes('delete_automation') && !readNames.includes('save_email_design'), readNames.filter(n => /automation|design/.test(n)).join(' '));
 
 let res = await tool(builder, 'list_automations');
 ok('none yet, and no email account', !res?.isError && /No automations yet/.test(text(res)) && /No email account is connected/.test(text(res)), text(res));
+ok('…said in its data too (some clients show only that)', /No email account is connected/.test(res?.structuredContent?.mailFrom || ''), JSON.stringify(res?.structuredContent).slice(0, 200));
 
 const welcome = {
 	name: 'Welcome subscribers',
@@ -114,6 +116,29 @@ ok('…and a read-only key can’t save', res?.isError || !res, text(res));
 
 r = await call('POST', P('/mail-accounts'), { name: 'News', fromName: 'Nia News', host: '127.0.0.1', port: PORT, email: 'news@nia.example', password: 'x' }, T);
 ok('an email account', r.status === 201, r.body?.message);
+/* ------------------------------------------------------- email designs */
+res = await tool(builder, 'list_email_designs');
+ok('list_email_designs: none yet, the choices and where emails go from', !res?.isError && /No email designs yet/.test(text(res)) && res?.structuredContent?.fonts?.length && /Nia News <news@nia\.example>/.test(res?.structuredContent?.mailFrom || ''), text(res));
+const look = { name: 'Newsletter', style: 'designed', header: { title: '{{project}}', background: '#0b3d2e', color: '#ffffff' }, colors: { button: '#0b3d2e' }, footer: { text: 'You get this because you subscribed.\n© {{year}} {{project}}' } };
+res = await tool(builder, 'save_email_design', { ...look, header: { ...look.header, background: 'green' } });
+ok('a bad colour is refused', res?.isError && /#1f2937/.test(text(res)), text(res));
+res = await tool(builder, 'save_email_design', { ...look, footer: { text: '{{business.fax}}' } });
+ok('…an unknown detail too', res?.isError && /business\.fax/.test(text(res)), text(res));
+res = await tool(reader, 'save_email_design', look);
+ok('…and a read-only key can’t save one', res?.isError || !res, text(res));
+res = await tool(builder, 'save_email_design', look);
+const designId = res?.structuredContent?._id;
+ok('save_email_design makes it — the first is the default', !res?.isError && designId && res.structuredContent.isDefault === true && /It’s the default/.test(text(res)), text(res));
+res = await tool(builder, 'save_email_design', { id: designId, colors: { text: '#333333' } });
+ok('…changing one keeps what’s left out', !res?.isError && res.structuredContent.header.background === '#0b3d2e' && res.structuredContent.colors.text === '#333333' && res.structuredContent.colors.button === '#0b3d2e', JSON.stringify(res?.structuredContent).slice(0, 300));
+let before0 = inbox.length;
+res = await tool(builder, 'send_test_email_design', { id: designId, to: `look${stamp}@example.com` });
+await settle(1500);
+const testMail = decoded(inbox.find(m => m.to.includes(`look${stamp}@example.com`)));
+ok('send_test_email_design sends the sample in it', !res?.isError && inbox.length === before0 + 1 && /#0b3d2e/.test(testMail) && /View your order/.test(testMail), text(res));
+r = await call('GET', P('/mail-designs'), null, T);
+ok('the panel sees the same design', r.status === 200 && r.body?.doc?.[0]?.name === 'Newsletter' && r.body?.doc?.[0]?.isDefault, JSON.stringify(r.body?.doc).slice(0, 200));
+
 res = await tool(builder, 'save_automation', welcome);
 const id = res?.structuredContent?._id || (text(res).match(/\[id ([a-f0-9]{24})\]/) || [])[1];
 ok('save_automation makes it', !res?.isError && id && /Made it/.test(text(res)) && /changed \(status\)/.test(text(res)) && /status is "subscribed"/.test(text(res)) && /news@nia\.example/.test(text(res)), text(res));
@@ -136,6 +161,7 @@ const mail = inbox.find(m => m.to.includes(`reader${stamp}@example.com`));
 const raw = decoded(mail);
 ok('…gets the email', !!mail, `${inbox.length} in the sink`);
 ok('…with the unsubscribe link as a link', /<a href="https:\/\/example\.com\/newsletter\/unsubscribe\?code=c0de_abc-123"[^>]*>Unsubscribe<\/a>/.test(raw), raw.slice(0, 1500));
+ok('…in the project’s default design', /background:#0b3d2e/.test(raw) && /You get this because you subscribed\./.test(raw));
 ok('…and as words + address in the text version', /Unsubscribe: https:\/\/example\.com\/newsletter\/unsubscribe\?code=c0de_abc-123/.test(raw));
 
 res = await tool(builder, 'test_automation', { id, record: sub._id });

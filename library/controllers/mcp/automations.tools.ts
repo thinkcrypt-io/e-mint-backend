@@ -73,7 +73,7 @@ const view = (a: any) => ({
 const peopleMap = async () => new Map<string, string>((await projectPeople()).map((p: any) => [String(p._id), p.name || p.email]));
 
 /** Where the project's emails go out from — or why they can't. */
-const mailFrom = async (caller: Caller) => {
+export const mailFrom = async (caller: Caller) => {
 	const s = currentScope();
 	const cfg: any = s ? await resolveMailConfig(s.organization, s.project).catch(() => null) : null;
 	return cfg
@@ -102,7 +102,7 @@ const listAutomations = async (_req: any, _args: any, caller: Caller): Promise<O
 	].filter(l => l !== '');
 	return {
 		text: lines.join('\n'),
-		data: { automations: docs.map(view), designs: designs.map((d: any) => ({ _id: String(d._id), name: d.name, isDefault: !!d.isDefault })), people: people.map((p: any) => ({ _id: String(p._id), name: p.name, email: p.email })) },
+		data: { automations: docs.map(view), mailFrom: from, designs: designs.map((d: any) => ({ _id: String(d._id), name: d.name, isDefault: !!d.isDefault })), people: people.map((p: any) => ({ _id: String(p._id), name: p.name, email: p.email })) },
 	};
 };
 

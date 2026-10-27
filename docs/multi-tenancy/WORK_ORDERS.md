@@ -8,6 +8,13 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-27)
 
+**2026-10-27 — Email designs over MCP (AU-07, `docs/automations`).** `list_email_designs`, `save_email_design`
+(Manage projects; first = default; `makeDefault`), `send_test_email_design` — `library/controllers/mcp/emailDesigns.tools.ts`;
+`list_automations` data carries `mailFrom`. Smoke: `automations-mcp.mjs`. Not deployed. AU-06 is deployed (2026-10-27);
+the Thinkcrypt Website project has the "Welcome new subscribers" automation (made over MCP) — its email goes out in the
+project's default design once one exists. A claude.ai connector keeps the tool list it first loaded: after a deploy that
+adds tools, connect it again (the user added a new connector) to see them.
+
 **2026-10-27 — Automations over MCP (AU-06, `docs/automations`).** A project's AI can now `list_automations`,
 `save_automation` (same checks as the panel; `{ id, enabled: false }` switches one off), `test_automation` (dry run),
 `get_automation_runs` and `delete_automation` — `library/controllers/mcp/automations.tools.ts`. Email messages take
