@@ -1,5 +1,5 @@
 import CommerceSettings from '../../models/tenancy/commerceSettings.model.js';
-import { compiledModel } from '../dynamicModels.function.js';
+import { compiledModel, syncDynamicModels } from '../dynamicModels.function.js';
 import { currentScope } from '../tenantScope.function.js';
 import { TenancyError } from '../tenancy.function.js';
 import type { ModelKey } from './blueprint.js';
@@ -24,6 +24,9 @@ export const storeOf = async (): Promise<Store> => {
 	if (!currentScope()?.project) throw new TenancyError(404, 'Only e-commerce projects have a store');
 	const doc: any = await CommerceSettings.findOne({}).lean();
 	if (doc?.status !== 'ready') throw new TenancyError(409, 'Set up your store first', 'store_not_ready');
+	// The project's models compile on first use (a cheap no-op once they have): after a restart the
+	// store's own routes may be called before any model route has been.
+	await syncDynamicModels();
 	const installed = doc.installed || {};
 	const plain = (n: string) => n.replace(/^T[a-f0-9]{24}_/, '');
 	return {

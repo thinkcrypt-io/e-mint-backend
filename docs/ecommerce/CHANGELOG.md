@@ -205,3 +205,26 @@
   `/orders/:id` (+ `/pay`, `/fulfil`, `/cancel`), `/shifts` (+ `/current`,
   `/:id`, `/:id/cash`, `/:id/close`).
 - Smoke: `commerce-orders.mjs` (43 checks); the other commerce suites still pass.
+
+## 2026-10-28 — EC-07 POS page
+
+- mint-tenant: Store → POS (`/store/pos`), full screen. Pick the register
+  (remembered on the device); with shifts on, open a shift with the cash in
+  the drawer. Product grid with category chips and stock at the outlet; the
+  scan box adds by barcode / SKU on Enter; a product with variants asks which
+  one. Basket: quantities, a discount per line, the customer (find or add,
+  with their store credit), a coupon, an order discount; subtotal, discount,
+  tax and total come from the store's quote. Pay: split across the store's
+  ways to pay, cash change shown. Receipt (80 mm or A4) shown after the sale
+  and printed from the page. Hold / Held sales (resume, discard). Shift
+  dialog: what it took by method, cash in / out, close with the count (over /
+  short).
+- Backend: the store engine compiles the project's models itself (a POS call
+  right after a restart failed); held sales list the customer's name; a
+  shift's sales count orders, not payment rows.
+- Docs: the store guide gains "Selling at the POS" (`store-selling`) and three
+  troubleshooting rows; the POS bar links to it.
+- Checked in the browser: shift opened, barcode scan, variant pick, customer,
+  coupon (10% shared over the lines), VAT included, card + cash with 500
+  change, receipt, hold and resume, shift summary; phone width without
+  sideways scroll. The commerce suites still pass.

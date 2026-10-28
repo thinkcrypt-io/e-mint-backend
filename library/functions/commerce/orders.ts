@@ -230,14 +230,19 @@ export const hold = async (store: Store, input: SaleInput, ctx: Ctx) => {
 	return doc.toObject();
 };
 
-export const listHeld = (store: Store, { outlet, register }: { outlet?: any; register?: any }) => {
+/** Held baskets at a register (or outlet), newest first, with their customer's name for the list. */
+export const listHeld = async (store: Store, { outlet, register }: { outlet?: any; register?: any }) => {
 	heldOn(store);
-	return store
+	const docs: any[] = await store
 		.M('order')
 		.find({ status: 'held', ...(isId(register) ? { register } : isId(outlet) && { outlet }) })
 		.sort({ createdAt: -1 })
 		.limit(50)
 		.lean();
+	const ids = docs.map(d => d.customer).filter(Boolean);
+	const people: any[] = ids.length ? await store.M('customer').find({ _id: { $in: ids } }, { name: 1, storeCredit: 1 }).lean() : [];
+	const byId = new Map(people.map(p => [String(p._id), p]));
+	return docs.map(d => ({ ...d, ...(d.customer && byId.has(String(d.customer)) && { customerInfo: byId.get(String(d.customer)) }) }));
 };
 
 export const discardHeld = async (store: Store, id: any) => {

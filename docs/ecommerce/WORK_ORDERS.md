@@ -16,8 +16,8 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-04 | Setup wizard + Store settings page (New project card, 8 steps, background build) | mint-tenant + mint-docs | L | done 2026-10-28 |
 | EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | done 2026-10-28 |
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | done |
-| EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | next |
-| EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | |
+| EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | done |
+| EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | next |
 | EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | |
 | EC-10 | Pay-by-link for orders through the project's gateways | backend + mint-tenant | M | |
 | EC-11 | Shifts (open / cash in-out / close / Z-report) + reports + dashboard widgets | backend + mint-tenant | M | |
@@ -31,6 +31,17 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-07 done** (CHANGELOG). mint-tenant `app/store/pos/page.tsx` (Layout `type='pos'` + `fullBleed`) and
+  `components/library/commerce/pos/`: `Pos.tsx` (register picker remembered per project in localStorage → open-shift
+  screen → `Till`: catalogue grid + category chips + scan box (Enter = `lookup`, else the one match), basket, customer /
+  variant / discount / held / receipt dialogs; every figure from `POST /commerce/quote`, debounced), `pay.tsx` (split
+  tenders; cash sends what was handed over, the server trims it and works out change), `shift.tsx` (`OpenShift`,
+  `ShiftDialog`: summary, cash in / out, close with count), `receipt.ts` (`receiptHtml` for the preview iframe and
+  `printReceipt` through a hidden frame; 80 mm / A4). Hooks in `commerceApi.ts` (POS, orders, shifts — EC-09 uses the
+  order ones). Backend: `storeOf()` now calls `syncDynamicModels()` (after a restart `/commerce/*` was called before any
+  model route had compiled the project's models → "The store's outlet model is missing"); held list carries
+  `customerInfo`; a shift's `sales` counts orders. Receipts show the order number — no barcode yet (EC-09's POS Return
+  mode may add one). Guide: mint-docs `/store#store-selling`.
 - **2026-10-28 — EC-06 done** (CHANGELOG). Backend only. `commerce/pricing.ts` (`quote()` — the one calculation:
   line discount → coupon share → order-discount share → tax inclusive / added, rounded per currency; `problems`
   stop a sale), `payments.ts` (`tendersOf`, `checkPayments` — only cash over, change worked out; `settleOrder` works

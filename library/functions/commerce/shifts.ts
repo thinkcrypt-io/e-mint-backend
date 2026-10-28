@@ -46,7 +46,7 @@ export const summary = async (store: Store, id: any) => {
 	const round = roundFor(store.answers.store.currency);
 	const shift: any = isId(id) ? await store.M('shift').findById(id).lean() : null;
 	if (!shift) throw new TenancyError(404, 'Shift not found');
-	const rows: any[] = await store.M('payment').find({ shift: shift._id, status: 'completed' }, { type: 1, method: 1, methodLabel: 1, amount: 1 }).lean();
+	const rows: any[] = await store.M('payment').find({ shift: shift._id, status: 'completed' }, { type: 1, method: 1, methodLabel: 1, amount: 1, order: 1 }).lean();
 	const by = new Map<string, { method: string; label: string; sales: number; refunds: number }>();
 	for (const r of rows) {
 		const t = by.get(r.method) || { method: r.method, label: r.methodLabel || r.method, sales: 0, refunds: 0 };
@@ -60,7 +60,7 @@ export const summary = async (store: Store, id: any) => {
 	const cashIn = round(moves.filter((m: any) => m.type === 'in').reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0));
 	const cashOut = round(moves.filter((m: any) => m.type === 'out').reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0));
 	const expectedCash = round((Number(shift.openingFloat) || 0) + cash.sales - cash.refunds + cashIn - cashOut);
-	return { shift, totals, cashIn, cashOut, expectedCash, sales: rows.filter(r => r.type !== 'refund').length };
+	return { shift, totals, cashIn, cashOut, expectedCash, sales: new Set(rows.filter(r => r.type !== 'refund' && r.order).map(r => String(r.order))).size };
 };
 
 export const closeShift = async (store: Store, id: any, { countedCash, note }: { countedCash: any; note?: string }, by: string) => {
