@@ -175,3 +175,33 @@
   in the browser pane: a product's In stock grid and a count saved (10 →
   12), an adjustment's picker (navy → the navy variants), −2 applied (7 →
   5).
+
+## 2026-10-28 — EC-06 Orders + payments engine
+
+- `commerce/pricing.ts` `quote()`: what a basket costs, worked out on the
+  server — same variant twice adds up; line discount (amount or %), the
+  coupon (dates, active, uses left, minimum order, everything / categories /
+  products) shared over the lines it covers, the order discount over what's
+  left, tax per product rate (else the default) inside the price or added;
+  rounded to the currency's minor unit. Stock short is a problem for a sale,
+  a warning for a quote. Discounts and coupons refused when switched off.
+- `commerce/payments.ts`: the store's ways to pay (tenders, own names, store
+  credit); payments checked (only cash may be more than due — the rest is
+  change); `settleOrder` works paid, refunded, balance and the payment status
+  out of the Payments ledger; store credit moves atomically, never below 0,
+  with a ledger row.
+- `commerce/shifts.ts`: one open shift per register; cash in / out; expected
+  cash = float + cash taken − cash refunded + in − out; close with the count
+  (over / short).
+- `commerce/orders.ts`: a POS sale (register, open shift when shifts are on,
+  paid in full, taken away → completed), an order by phone / by hand (stock
+  out now, shipping from a delivery rate, the customer's address, paid any
+  part), held sales (no stock or money until resumed), paying the rest,
+  fulfilment (packed → shipped → delivered, delivered completes it), cancel
+  (stock back, money back by method — store credit to the customer — the
+  coupon's use back, customer totals back; shipped orders are returns).
+  A sale's writes are undone newest first when one fails; the order goes too.
+- Routes: `/commerce/pos/setup`, `/quote`, `/sales`, `/orders`, `/held`,
+  `/orders/:id` (+ `/pay`, `/fulfil`, `/cancel`), `/shifts` (+ `/current`,
+  `/:id`, `/:id/cash`, `/:id/close`).
+- Smoke: `commerce-orders.mjs` (43 checks); the other commerce suites still pass.

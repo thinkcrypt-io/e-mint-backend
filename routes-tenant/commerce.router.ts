@@ -7,6 +7,9 @@ import { actorName, storeOf } from '../library/functions/commerce/store.js';
 import { catalogue, lookup, syncVariants } from '../library/functions/commerce/catalogue.js';
 import { applyAdjustment, productStock, setStock, transferAction } from '../library/functions/commerce/stock.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
+import { quote } from '../library/functions/commerce/pricing.js';
+import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail, pay, posSetup, sale } from '../library/functions/commerce/orders.js';
+import { cashMove, closeShift, currentShift, openShift, summary } from '../library/functions/commerce/shifts.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -25,6 +28,19 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   POST /stock/set     { variant, outlet, onHand | change, reason?, note? }   a count or a correction   records:edit
  *   POST /adjustments/:id/apply                         a draft adjustment's lines as movements   records:edit
  *   POST /transfers/:id/(send|receive|cancel)           a transfer's stock out of / into its outlets   records:edit
+ *
+ * Orders, payments, shifts (EC-06) — prices and totals are always worked out here:
+ *   GET  /pos/setup?register=          outlets, registers, ways to pay, switches, the register's open shift   records:view
+ *   POST /quote        { outlet, customer, lines[{ variant, quantity, discount }], orderDiscount, couponCode, shipping }   records:view
+ *   POST /sales        a POS sale, paid in full: + register, payments[{ method, amount, tendered, reference }], heldId   records:create
+ *   POST /orders       an order by phone / by hand: + payments (any part), delivery { name, phone, address, area, rate }   records:create
+ *   GET  /held?outlet=&register=  ·  POST /held  ·  DELETE /held/:id          parked baskets   records:create
+ *   GET  /orders/:id                    the order with its payments, stock moves, returns, credit   records:view
+ *   POST /orders/:id/pay      { payments, register? }   towards what it owes   records:edit
+ *   POST /orders/:id/fulfil   { to: fulfilled | shipped | delivered }   records:edit
+ *   POST /orders/:id/cancel   { reason?, register? }   stock back, money back, coupon back   records:edit
+ *   POST /shifts { register, openingFloat }  ·  GET /shifts/current?register=  ·  GET /shifts/:id
+ *   POST /shifts/:id/cash { type: in | out, amount, reason }  ·  POST /shifts/:id/close { countedCash, note }   records:create
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -108,6 +124,109 @@ router.post(
 	'/transfers/:id/:action(send|receive|cancel)',
 	edit,
 	handle(async (req: any) => transferAction(await storeOf(), req.params.id, req.params.action, actorName(req)))
+);
+
+const create = tenantPermissions(['records:create']);
+const ctx = (req: any) => ({ project: req.project, by: actorName(req) });
+
+router.get(
+	'/pos/setup',
+	view,
+	handle(async (req: any) => posSetup(await storeOf(), req.project, req.query.register))
+);
+router.post(
+	'/quote',
+	view,
+	handle(async (req: any) => quote(await storeOf(), req.body || {}))
+);
+router.post(
+	'/sales',
+	create,
+	handle(async (req: any, res: any) => {
+		const out = await sale(await storeOf(), req.body || {}, ctx(req));
+		res.status(201);
+		return out;
+	})
+);
+router.post(
+	'/orders',
+	create,
+	handle(async (req: any, res: any) => {
+		const out = await createManual(await storeOf(), req.body || {}, ctx(req));
+		res.status(201);
+		return out;
+	})
+);
+router.get(
+	'/held',
+	view,
+	handle(async (req: any) => ({ docs: await listHeld(await storeOf(), { outlet: req.query.outlet, register: req.query.register }) }))
+);
+router.post(
+	'/held',
+	create,
+	handle(async (req: any, res: any) => {
+		const doc = await hold(await storeOf(), req.body || {}, ctx(req));
+		res.status(201);
+		return { doc };
+	})
+);
+router.delete(
+	'/held/:id',
+	create,
+	handle(async (req: any) => discardHeld(await storeOf(), req.params.id))
+);
+router.get(
+	'/orders/:id',
+	view,
+	handle(async (req: any) => orderDetail(await storeOf(), req.params.id))
+);
+router.post(
+	'/orders/:id/pay',
+	edit,
+	handle(async (req: any) => pay(await storeOf(), req.params.id, req.body || {}, ctx(req)))
+);
+router.post(
+	'/orders/:id/fulfil',
+	edit,
+	handle(async (req: any) => fulfil(await storeOf(), req.params.id, String(req.body?.to || '')))
+);
+router.post(
+	'/orders/:id/cancel',
+	edit,
+	handle(async (req: any) => cancel(await storeOf(), req.params.id, req.body || {}, ctx(req)))
+);
+router.post(
+	'/shifts',
+	create,
+	handle(async (req: any, res: any) => {
+		const doc = await openShift(await storeOf(), req.body || {}, actorName(req));
+		res.status(201);
+		return { doc: doc.toObject ? doc.toObject() : doc };
+	})
+);
+router.get(
+	'/shifts/current',
+	view,
+	handle(async (req: any) => {
+		const s = await currentShift(await storeOf(), req.query.register);
+		return s ? summary(await storeOf(), (s as any)._id) : { shift: null };
+	})
+);
+router.get(
+	'/shifts/:id',
+	view,
+	handle(async (req: any) => summary(await storeOf(), req.params.id))
+);
+router.post(
+	'/shifts/:id/cash',
+	create,
+	handle(async (req: any) => cashMove(await storeOf(), req.params.id, req.body || {}, actorName(req)))
+);
+router.post(
+	'/shifts/:id/close',
+	create,
+	handle(async (req: any) => closeShift(await storeOf(), req.params.id, req.body || {}, actorName(req)))
 );
 
 export default router;

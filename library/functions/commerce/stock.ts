@@ -97,9 +97,14 @@ export const moveAll = async (store: Store, moves: Move[]) => {
 		}
 		return done;
 	} catch (e) {
-		for (const m of done.reverse()) await reverse(store, m).catch((err: any) => console.error('stock undo:', err?.message));
+		await undoMoves(store, done);
 		throw e;
 	}
+};
+
+/** Takes back moves that were done (newest first) — when a later step of a sale fails, or an order is cancelled. */
+export const undoMoves = async (store: Store, moves: Move[]) => {
+	for (const m of [...moves].reverse()) await reverse(store, m).catch((err: any) => console.error('stock undo:', err?.message));
 };
 
 /** Sets an item's stock at an outlet to what was counted (or moves it by `change`). */

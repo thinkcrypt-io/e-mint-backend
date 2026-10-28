@@ -15,8 +15,8 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-03 | Blueprint + installer (models from answers, sidebar) + core / engine field locks | backend | L | done 2026-10-28 |
 | EC-04 | Setup wizard + Store settings page (New project card, 8 steps, background build) | mint-tenant + mint-docs | L | done 2026-10-28 |
 | EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | done 2026-10-28 |
-| EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | next |
-| EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | |
+| EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | done |
+| EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | next |
 | EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | |
 | EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | |
 | EC-10 | Pay-by-link for orders through the project's gateways | backend + mint-tenant | M | |
@@ -31,6 +31,16 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-06 done** (CHANGELOG). Backend only. `commerce/pricing.ts` (`quote()` — the one calculation:
+  line discount → coupon share → order-discount share → tax inclusive / added, rounded per currency; `problems`
+  stop a sale), `payments.ts` (`tendersOf`, `checkPayments` — only cash over, change worked out; `settleOrder` works
+  paid / refunded / balance / payment status out of the ledger; `moveCredit` atomic with a floor), `shifts.ts`
+  (open / cash in-out / summary / close), `orders.ts` (`sale`, `createManual`, `hold` / `listHeld` / `discardHeld`,
+  `pay`, `fulfil`, `cancel`, `orderDetail`, `posSetup`). Writes go coupon → stock (`moveAll`) → credit → payments and
+  are undone newest first (`stock.undoMoves`); the order is made first for its code and deleted on failure, so a
+  failed sale leaves a gap in the numbers. Order numbers are the model's code (store prefix), not per outlet yet.
+  Routes in `commerce.router.ts` (`/pos/setup`, `/quote`, `/sales`, `/orders`, `/held`, `/orders/:id[/pay|fulfil|cancel]`,
+  `/shifts…`). EC-07 builds the POS on these; resume = load the held order's lines, sell with `heldId`.
 - **2026-10-28 — EC-05 done** (CHANGELOG). Engine: `commerce/store.ts` (`storeOf()` → answers + `M(key)` compiled
   models; `roundFor`, `itemName`), `catalogue.ts` (`syncVariants`, `codeTaken`, `lookup`, `catalogue`, `itemView`),
   `stock.ts` (`move` / `moveAll` with the floor and compensation, `setStock`, `productStock`, `applyAdjustment`,
