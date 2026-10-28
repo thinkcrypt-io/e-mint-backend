@@ -114,8 +114,24 @@ export const standardName = (def: any, action: string) => {
 	return { list: `List ${plural.toLowerCase()}`, get: `Read one ${one}`, create: `Create ${one}`, update: `Update ${one}`, delete: `Delete ${one}` }[action] || action;
 };
 
+/**
+ * A store model's own list rules (docs/ecommerce): a Status on website field
+ * leaves out what's inactive there, an Order on website sorts the highest
+ * first. Edited on the endpoint like any other filter.
+ */
+export const listDefaultsOf = (def: any) => {
+	if (def?.system !== 'commerce') return null;
+	const has = (key: string) => (def.fields || []).some((f: any) => f.key === key);
+	if (!has('webStatus') && !has('webOrder')) return null;
+	return {
+		filters: has('webStatus') ? [{ field: 'webStatus', op: 'not', value: 'inactive' }] : [],
+		sort: has('webOrder') ? '-webOrder,name' : '',
+	};
+};
+
 /** A model's standard endpoint for one action, its rules from a `publicApi`-shaped summary. */
 export const newStandard = (def: any, action: string, s: Pick<Summary, 'auth' | 'ownerOnly' | 'readOnlyFields'>) => ({
+	...(action === 'list' && listDefaultsOf(def) && { list: listDefaultsOf(def) }),
 	name: standardName(def, action),
 	note: action === 'list' ? def.publicApi?.note || '' : '',
 	model: def.route,
@@ -167,7 +183,7 @@ const reconcile = async (def: any, mine: any[]) => {
 /** Every model's standard endpoints in step with its `publicApi` (D1, D9). Cheap when nothing changed. */
 export const ensureEndpoints = async () => {
 	const [defs, std]: any[] = await Promise.all([
-		ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, publicApi: 1, kind: 1 }).lean(),
+		ModelDefinition.find({ active: { $ne: false } }, { route: 1, name: 1, title: 1, publicApi: 1, kind: 1, system: 1, 'fields.key': 1 }).lean(),
 		ApiEndpoint.find({ standard: true }).lean(),
 	]);
 	for (const def of defs) {

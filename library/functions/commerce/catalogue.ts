@@ -140,6 +140,20 @@ export const lookup = async (store: Store, code: any, outlet?: any) => {
 	return itemView(product, variant, outlet ? stock.get(String(variant._id)) ?? 0 : null);
 };
 
+/**
+ * The POS's category bar: the ones active on the POS (a store from before the
+ * status had none — they're all shown), the highest Order on POS first.
+ */
+export const posCategories = async (store: Store) => {
+	const rows: any[] = await store
+		.M('category')
+		.find({ posStatus: { $ne: 'inactive' } }, { name: 1, parent: 1, image: 1, sortOrder: 1 })
+		.sort({ sortOrder: -1, name: 1 })
+		.limit(200)
+		.lean();
+	return { doc: rows.map(c => ({ _id: String(c._id), name: c.name, parent: c.parent ? String(c.parent) : null, image: c.image || null })) };
+};
+
 /** What's for sale, by product: the POS's grid and the store's item pickers. */
 export const catalogue = async (store: Store, { outlet, q, category, page = 1, limit = 60, all = false }: { outlet?: any; q?: string; category?: string; page?: number; limit?: number; all?: boolean }) => {
 	const Product = store.M('product');

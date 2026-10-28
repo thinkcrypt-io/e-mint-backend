@@ -84,7 +84,8 @@ const constructConfig = ({ model, config, options }: ConstructConfigParams): Ret
 		},
 		EXIST_OPTIONS: {
 			model: model,
-			fields: configKeys.filter(key => config[key].unique).join(' ') || '',
+			// An address (slug) isn't refused when taken: the model gives it the next free -2, -3 (docs/cms D2).
+			fields: configKeys.filter(key => config[key].unique && config[key].schema?.type !== 'slug').join(' ') || '',
 		},
 		DUPLICATE_OPTIONS: {
 			model: model,

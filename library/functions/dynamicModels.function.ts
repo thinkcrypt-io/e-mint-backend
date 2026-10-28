@@ -724,11 +724,18 @@ export const uidOf = (value: any) =>
 		.slice(0, 120)
 		.replace(/-+$/, '');
 
+/** `base`, or `base-2`, `base-3`… — the first no other record of the model has. */
+export const freeUid = async (Model: any, key: string, base: string, id?: any) => {
+	let v = base;
+	for (let n = 2; await Model.exists({ [key]: v, ...(id && { _id: { $ne: id } }) }); n++) v = `${base}-${n}`;
+	return v;
+};
+
 /**
  * uid fields (docs/cms D2), on every save: one typed by hand is put in uid
- * form and must be free in this model; an empty one is made from its `from`
- * field, and gets -2, -3… when that's taken. Left empty with nothing to make
- * it from, the required check (if any) speaks.
+ * form; an empty one is made from its `from` field. Either way, one another
+ * record already has gets -2, -3… so it stays unique. Left empty with
+ * nothing to make it from, the required check (if any) speaks.
  */
 const uidHooks = (schema: Schema, def: ModelDef) => {
 	const uids = def.fields.filter(f => f.kind === 'uid');
@@ -740,17 +747,17 @@ const uidHooks = (schema: Schema, def: ModelDef) => {
 			const typed = this.get(f.key);
 			if (typed) {
 				const v = uidOf(typed);
-				if (v !== typed) this.set(f.key, v);
-				if (!v) this.invalidate(f.key, `${label} needs letters or digits`);
-				else if ((this.isNew || this.isModified(f.key)) && (await Model.exists({ [f.key]: v, _id: { $ne: this._id } })))
-					this.invalidate(f.key, `${label} “${v}” is already used — pick another`);
+				if (!v) {
+					this.invalidate(f.key, `${label} needs letters or digits`);
+					continue;
+				}
+				const free = this.isNew || this.isModified(f.key) ? await freeUid(Model, f.key, v, this._id) : v;
+				if (free !== typed) this.set(f.key, free);
 				continue;
 			}
 			const base = f.from ? uidOf(this.get(f.from)) : '';
 			if (!base) continue;
-			let v = base;
-			for (let n = 2; await Model.exists({ [f.key]: v, _id: { $ne: this._id } }); n++) v = `${base}-${n}`;
-			this.set(f.key, v);
+			this.set(f.key, await freeUid(Model, f.key, base, this._id));
 		}
 	});
 };

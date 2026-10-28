@@ -30,8 +30,21 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-16a | First storefront pieces: Store → Guest checkout on your website, `GET /public/api/store`, a variant's image | backend + mint-tenant + mint-docs | S | done 2026-10-28 |
 | EC-17 | Loyalty points | | M | later |
 | EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
+| EC-21 | Categories (EC21): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
 
 ## Handoff
+
+- **2026-10-28 — EC-21 done** (CHANGELOG). The user: the wizard's Category model must be advanced, and existing stores
+  updated. Blueprint Categories: name, ★slug (`uid` from name, "Web address"), parent, ★posStatus / ★webStatus
+  (active / inactive), ★sortOrder ("Order on POS") / ★webOrder — **higher first now** (was lowest first) — image,
+  images. Slug kind everywhere: a typed address that's taken now gets -2, -3 instead of a 400 (`freeUid` in
+  dynamicModels; `constructConfig` EXIST_OPTIONS skips `slug` fields so the pre-save duplicate check doesn't refuse).
+  POS: `GET /commerce/categories` (`posCategories`). Website: a commerce model with webStatus / webOrder gets a list
+  endpoint filter `webStatus not inactive` + sort `-webOrder,name` when made (`listDefaultsOf` in apiEndpoints).
+  `commerce/upgrade.ts` `upgradeStore` = generic "bring a built store up to the blueprint" (adds missing fields in
+  blueprint order, renews old MINT labels, locks new core fields, category fill-in incl. turning the old ascending
+  order round so it's kept). `scripts/upgradeStores.js` (dry run / `--apply`) — run on prod for Verte 2026-10-28.
+  Smoke `commerce-categories.mjs` (22) + `cms-single.mjs` updated. Live Fresh sorts `-webOrder,name`.
 
 - **2026-10-28 — EC-09 done** (CHANGELOG; ahead of EC-08 — the user found Store → Orders 404ing). Backend
   `commerce/lists.ts`: `listOrders` (views all / today / unpaid / to-ship / returns / cancelled, each counted with the same

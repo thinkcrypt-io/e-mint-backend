@@ -50,6 +50,7 @@ Answers to the first questions (same day):
 | EC17 | **Engine writes use compensation, not transactions** (as Linked Relationships, D15/D18): stock `$inc` with a floor in the filter; on a later failure, the steps already done are undone and the sale is refused. Every engine action writes record history as the person who did it. |
 | EC19 | **Orders have their own pages** (the user, 2026-10-28): the Orders table and the order record page are custom pages in the panel, not the builder's generic table and detail page. The table: number, date, customer, channel, outlet, items, total, payment and fulfilment badges, quick filters (today, unpaid, to ship, returns) and row actions. The order page is a detailed view: lines with variant, SKU, returned quantities; totals breakdown (discounts, coupon, tax, shipping, paid, refunded, balance); customer and delivery address; payments and refunds; returns; delivery and courier tracking; stock movements; timeline; actions. Fields people add to Orders show in an "More details" card, so the model stays extendable. |
 | EC20 | **Couriers** (the user, 2026-10-28): when a courier is connected, an order page has **Send to courier** — the parcel is booked with the courier's API (recipient, phone, address, COD = the balance due, note), the consignment / tracking number and status are stored on the order and refreshed (webhook where the courier offers one, else on open and on a schedule). Steadfast first, then Pathao and RedX (BD, by the org's country, as gateways are); credentials sealed per project. Delivered with COD collected writes a payment (method `courier-cod`). |
+| EC21 | **Categories per channel** (the user, 2026-10-28): a category has a Status and an Order on the POS and on the website — inactive isn't shown there, a higher order shows first — a web address made from its name when left empty (unique: a taken one gets -2, typed or not) and more images. The POS reads `GET /commerce/categories`; the website rule is a filter + sort on the Categories list endpoint, editable like any other. Built stores are brought up to the blueprint by `upgradeStore`. |
 | EC18 | **Roles:** Owner (everything), Store manager (all outlets or theirs, returns, refunds, stock, reports), Cashier (POS at their outlets: sell, hold, returns within limits, no refunds above a limit without a manager PIN — EC-12). Built on project roles (WO-50). |
 
 ## 3. The pre-built models
@@ -64,7 +65,7 @@ them on.
 | Model | Route | Core fields | Notes |
 |---|---|---|---|
 | Outlets | `outlets` | ★name, ★code, ★kind (store / warehouse), ★active, address, phone, receipt header/footer | at least one (wizard) |
-| Categories | `categories` | ★name, ★parent, image | |
+| Categories | `categories` | ★name, ★slug (web address, from the name), ★parent, ★status on POS, ★status on website, ★order on POS, ★order on website, image, images | EC21: inactive = not shown there; higher order first |
 | Brands *(opt)* | `brands` | ★name, logo | |
 | Products | `products` | ★name, ★status (active / draft / archived), ★category, brand, description, images, ★price, cost, ★tax rate, ★track stock, ★options (Size: S,M,L…) *(variations)*, ⚙total stock | price = default for its variants |
 | Variants | `variants` | ★product, ★title, ★options, ★sku, ★barcode, ★price, compare-at price, cost, ★active, ⚙default | hidden page when variations are off |

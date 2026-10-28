@@ -72,7 +72,11 @@ ok('another script kept', r.body?.doc?.slug === 'নতুন-রুটি', r.b
 r = await add({ title: 'Typed', slug: '  Hello World!! ' });
 ok('a typed one is tidied', r.body?.doc?.slug === 'hello-world', r.body?.doc?.slug);
 r = await add({ title: 'Clash', slug: 'my-first-post' });
-ok('a typed one that’s taken is refused', r.status === 400 && /“my-first-post” is already used|Duplicate entry exists for fields: slug/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+ok('a typed one that’s taken gets the next free -n', r.status === 201 && r.body?.doc?.slug === 'my-first-post-3', `${r.status} ${r.body?.doc?.slug || r.body?.message}`);
+const clash = r.body?.doc;
+r = await call('PUT', P(`/${post.route}/${clash?._id}`), { slug: 'Hello World' }, s.pat);
+r = await call('GET', P(`/${post.route}/${clash?._id}`), null, s.pat);
+ok('an edit to a taken one gets -2 too', (r.body?.slug || r.body?.doc?.slug) === 'hello-world-2', JSON.stringify(r.body).slice(0, 200));
 r = await call('PUT', P(`/${post.route}/${first._id}`), { title: 'Renamed post' }, s.pat);
 r = await call('GET', P(`/${post.route}/${first._id}`), null, s.pat);
 ok('renaming keeps the address', (r.body?.slug || r.body?.doc?.slug) === 'my-first-post', JSON.stringify(r.body).slice(0, 200));

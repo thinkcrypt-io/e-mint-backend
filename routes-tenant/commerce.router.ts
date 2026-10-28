@@ -4,7 +4,7 @@ import { tenantPermissions } from '../library/functions/tenantPermissions.functi
 import { commerceView, saveCommerce } from '../library/functions/commerce/settings.js';
 import { afterSettingsSaved, settingsGuard, startSetup } from '../library/functions/commerce/install.js';
 import { actorName, storeOf } from '../library/functions/commerce/store.js';
-import { catalogue, lookup, syncVariants } from '../library/functions/commerce/catalogue.js';
+import { catalogue, lookup, posCategories, syncVariants } from '../library/functions/commerce/catalogue.js';
 import { applyAdjustment, productStock, setStock, transferAction } from '../library/functions/commerce/stock.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { quote } from '../library/functions/commerce/pricing.js';
@@ -23,6 +23,7 @@ import { listOrders, listReturns, moveReturn, returnDetail } from '../library/fu
  *
  * Catalogue and stock (EC-05):
  *   GET  /catalogue?outlet=&q=&category=&page=&all=   products with their variants (stock at the outlet)   records:view
+ *   GET  /categories                                    the POS's category bar: active on the POS, highest Order on POS first   records:view
  *   GET  /lookup?code=&outlet=                          a scanned barcode / SKU → the variant it sells   records:view
  *   POST /products/:id/variants                         brings its variants in step with its options   records:edit
  *   GET  /products/:id/stock                            each variant at each outlet   records:view
@@ -102,6 +103,11 @@ router.get(
 	handle(async (req: any) =>
 		catalogue(await storeOf(), { outlet: req.query.outlet, q: req.query.q, category: req.query.category, page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 60, all: req.query.all === '1' })
 	)
+);
+router.get(
+	'/categories',
+	view,
+	handle(async () => posCategories(await storeOf()))
 );
 router.get(
 	'/lookup',

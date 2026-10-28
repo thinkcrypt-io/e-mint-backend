@@ -257,3 +257,19 @@
   Approve / Reject / Mark received / Close with a note); order and return record links open them.
 - mint-docs `/store`: Orders, An order's page, Returns (anchors `store-orders`, `store-order`, `store-returns-page`).
 - Smoke: `commerce-lists.mjs` (32 checks); `commerce-orders.mjs` still passes.
+
+## 2026-10-28 — EC-21 Categories on the POS and the website
+
+- The user: categories must be advanced in the model the wizard builds — Status on POS / on website (inactive isn't
+  shown), Order on POS / on website (higher first), Web address (slug) made from the name when blank and kept unique
+  with a suffix even when typed, more images; existing stores updated too.
+- Slug kind (`uid`, "Address (slug)"): a typed address that's taken gets -2, -3 like a made one (was refused);
+  the pre-save duplicate check leaves slug fields to the model.
+- Blueprint Categories rebuilt (EC21). POS: `GET /commerce/categories`. A store model with Status / Order on
+  website gets those as its list endpoint's filter and sort when the endpoint is made.
+- `upgradeStore` (commerce/upgrade.ts) + `scripts/upgradeStores.js`: missing blueprint fields added, MINT's old
+  labels renewed, new core fields locked, categories filled in (web addresses, active, old ascending order turned
+  round), the list endpoint given the website rule. Safe to re-run.
+- mint-tenant: POS category bar from the new endpoint; slug kind hint. mint-docs: `/store#store-categories`, the slug
+  rule on `/models`. Live Fresh: categories sorted by Order on website.
+
