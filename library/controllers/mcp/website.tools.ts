@@ -21,6 +21,8 @@ import { PUBLIC_API, mergedPublicApi, readOnlyProblem } from '../builder/models.
 import { routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { refIds } from './records.helpers.js';
+import { commerceWriter } from '../../functions/commerce/locks.js';
+import { fireCommerce } from '../../functions/commerce/hooks.js';
 import { FLAT, TRACKERS, forgetSite, loadSite, patchFromFlat, publicConfig, publicSettings, saveSite } from '../../functions/siteConfig.function.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
@@ -626,6 +628,8 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	if (matchOn && !def.fields.some((f: any) => f.key === matchOn && !['formula', 'dateformula', 'section', 'sectionlist', 'references', 'images', 'files'].includes(f.kind)))
 		return refuse(`matchOn must be one of /${route}'s own single-value fields (${def.fields.map((f: any) => f.key).join(', ')}).`);
 
+	// A store's models: stock, orders and payments move only through the store (docs/ecommerce EC5).
+	const commerce = await commerceWriter(caller.project, route);
 	const formulas = await formulasFor(req, def);
 	const restricted = isAccessRestricted(Model);
 	const problems: string[] = [];
@@ -651,6 +655,11 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 			seen.add(String(value));
 			existing = await Model.findOne({ [matchOn]: value });
 		}
+		const kept = commerce && (await commerce({ id: existing?._id, before: existing?.toObject(), body: picked.body }));
+		if (kept) {
+			problems.push(`records[${i}]: ${kept}`);
+			continue;
+		}
 		const doc: any = existing || new Model({ ...ownedBy(Model, caller), ...(restricted && { privacy: 'public' }) });
 		doc.set(picked.body);
 		await applyFormulasLinked(doc, formulas, Model);
@@ -664,6 +673,8 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 		return saveFailure(e);
 	}
 	// Records whose formulas read the ones matched and changed through a link (`tax.amount`).
+	// What a save from a page sets off in a store — a product's variants follow its options.
+	if (commerce) for (const d of docs) fireCommerce({ model: def.name, event: d.isNew ? 'create' : 'update', doc: d.doc });
 	const updated = docs.filter(d => !d.isNew).map(d => d.doc._id);
 	if (updated.length) await recalculateDependents(req.app, Model, updated);
 	const created = docs.filter(d => d.isNew).length;

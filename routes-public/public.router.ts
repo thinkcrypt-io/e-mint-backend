@@ -57,6 +57,7 @@ import { headHtml, siteHead } from '../library/functions/siteHead.function.js';
 import { siteEdge } from '../library/functions/siteEdge.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
+import { commerceView } from '../library/functions/commerce/settings.js';
 import {
 	fieldKeys,
 	isId,
@@ -554,6 +555,28 @@ const menuOf = async (req: any) => {
 		.lean();
 	return list.map(p => ({ _id: String(p._id), name: p.name, path: p.path, parent: p.parent ? String(p.parent) : null }));
 };
+
+/**
+ * A store's settings its own website needs (docs/ecommerce EC-16a): the currency, whether guests may check out
+ * (off: sign in first), whether stock may go below zero (on: nothing shows as out of stock), and delivery rates.
+ */
+router.get(
+	'/store',
+	handle(async (req: any, res: any) => {
+		if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+		const view = await commerceView(req.project);
+		if (view.status !== 'ready') throw new TenancyError(409, 'This store isn’t set up yet', 'store_not_ready');
+		const a = view.answers;
+		res.setHeader('Cache-Control', 'public, max-age=30');
+		return {
+			currency: a.store.currency,
+			guestCheckout: a.store.guestCheckout !== false,
+			negativeStock: !!a.store.negativeStock,
+			variations: !!a.products.variations,
+			delivery: { enabled: !!a.delivery.enabled, rates: a.delivery.enabled ? a.delivery.rates.map(r => ({ name: r.name, amount: r.amount })) : [] },
+		};
+	})
+);
 
 // The site widgets switched on for this project, and their look (docs/widgets W-03) — read by mint.js.
 router.get(

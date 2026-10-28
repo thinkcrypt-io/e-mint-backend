@@ -41,6 +41,37 @@ const ENGINE_ONLY_TEXT: Partial<Record<ModelKey, string>> = {
 	credit: 'Store credit is given by a refund or on the customer’s page',
 };
 
+/**
+ * The same rules for record writes that don't come through the project's routes — the MCP's create_records:
+ * a checker for one route (null when the store doesn't own it) that gives a record's problem, or null.
+ */
+export const commerceWriter = async (project: any, route: string) => {
+	if (project?.type !== 'ecommerce') return null;
+	const doc: any = await CommerceSettings.findOne({}, { status: 1, installed: 1 }).lean();
+	if (doc?.status !== 'ready') return null;
+	const key = (Object.keys(doc.installed || {}) as ModelKey[]).find(k => doc.installed[k]?.route === route);
+	if (!key) return null;
+	const view = await commerceView(project);
+	const spec = modelSpecs(view.answers).find(s => s.key === key)!;
+	const core = new Set<string>(spec.step.fields.map((f: any) => f.key));
+	return async ({ id, before, body }: { id?: any; before?: any; body: any }): Promise<string | null> => {
+		if (spec.engineOnly && !id) return `${ENGINE_ONLY_TEXT[key] || 'These records are made by the store'} — not added as records.`;
+		if (key === 'variant' && !id && !view.answers.products.variations) return 'Variations are off — each product is sold as itself. Switch them on in Store settings.';
+		if (key === 'product' || key === 'variant') {
+			const store = await storeOf();
+			for (const field of ['sku', 'barcode'] as const) {
+				if (body[field] === undefined) continue;
+				const who = await codeTaken(store, field, body[field], key === 'product' ? { product: id } : { variant: id });
+				if (who) return `${who} already has the ${field === 'sku' ? 'SKU' : 'barcode'} ${String(body[field]).trim()}`;
+			}
+		}
+		const kept = id
+			? Object.keys(body).filter(k => (spec.engine.includes(k) || (spec.engineOnly && core.has(k))) && !same(plain(before?.[k]), plain(body[k])))
+			: spec.engine.filter(k => !blank(body[k]));
+		return kept.length ? `${kept.map(k => labelOf(spec, k)).join(', ')} ${kept.length === 1 ? 'is' : 'are'} kept by the store — leave ${kept.length === 1 ? 'it' : 'them'} out (set_stock changes stock).` : null;
+	};
+};
+
 export const commerceGuard = async (req: any, res: any, next: any) => {
 	try {
 		if (req.project?.type !== 'ecommerce' || READS.has(req.method)) return next();

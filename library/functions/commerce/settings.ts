@@ -19,7 +19,8 @@ export type TaxRate = { name: string; rate: number; default?: boolean };
 export type ShippingRate = { name: string; amount: number };
 
 export type Answers = {
-	store: { currency: string; orderPrefix: string; negativeStock: boolean };
+	/** guestCheckout: the store's website takes orders without an account (EC-16a); off, buyers sign in first. */
+	store: { currency: string; orderPrefix: string; negativeStock: boolean; guestCheckout: boolean };
 	/** Made as Outlet records when the store is set up; after that they're kept on the Outlets page. */
 	outlets: Outlet[];
 	products: { variations: boolean; options: string[]; brands: boolean; barcodes: boolean; trackStock: boolean };
@@ -101,7 +102,7 @@ export type Offered = Awaited<ReturnType<typeof offeredFor>>;
 /* -------------------------------------------------------------- defaults */
 
 export const defaultAnswers = (offered: Offered): Answers => ({
-	store: { currency: offered.currency, orderPrefix: 'ORD', negativeStock: false },
+	store: { currency: offered.currency, orderPrefix: 'ORD', negativeStock: false, guestCheckout: true },
 	outlets: [{ name: 'Main store', code: 'MAIN', kind: 'store' }],
 	products: { variations: true, options: ['Size', 'Colour'], brands: false, barcodes: true, trackStock: true },
 	payments: { tenders: offered.tenders.filter(t => t.id === 'cash' || t.id === 'card').map(t => t.id), custom: [], gateways: [] },
@@ -140,7 +141,7 @@ export const checkSection = (section: Section, input: any, current: Answers, off
 			if (!/^[A-Z]{3}$/.test(currency)) problems.push('Choose the currency the store sells in (a three-letter code like BDT or USD)');
 			const orderPrefix = text(v.orderPrefix ?? cur.orderPrefix, 8).toUpperCase();
 			if (orderPrefix && !/^[A-Z0-9-]+$/.test(orderPrefix)) problems.push('The order number prefix takes letters, numbers and dashes only');
-			return { value: { currency, orderPrefix, negativeStock: bool(v.negativeStock, cur.negativeStock) }, problems };
+			return { value: { currency, orderPrefix, negativeStock: bool(v.negativeStock, cur.negativeStock), guestCheckout: bool(v.guestCheckout, cur.guestCheckout ?? true) }, problems };
 		}
 		case 'outlets': {
 			const list: any[] = Array.isArray(input) ? input : Array.isArray(v.outlets) ? v.outlets : cur;

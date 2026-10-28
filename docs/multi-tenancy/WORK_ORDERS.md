@@ -8,6 +8,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-10-28)
 
+**2026-10-28 — Store over MCP + storefront basics (docs/ecommerce EC-13a, EC-16a).** MCP `store_stock` / `sync_variants` /
+`set_stock` in e-commerce projects; `create_records` keeps to the store's guard (`commerceWriter`) and makes products'
+variants; Store → Guest checkout on your website; `GET /public/api/store`; a variant's image. Smoke `commerce-mcp.mjs`.
+Not deployed. Details in docs/ecommerce/WORK_ORDERS.md.
+
 **2026-10-28 — WO-57 Pinned projects.** Each member pins projects to the top of the organization's projects board
 (card menu **Pin to top** / **Unpin**); a **Pinned** group leads, latest pin first. Pins are personal —
 `OrganizationMember.pinnedProjects [{project, pinnedAt}]`; `GET /tenant/api/projects` adds `pinnedAt`;

@@ -23,13 +23,25 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-11 | Shifts (open / cash in-out / close / Z-report) + reports + dashboard widgets | backend + mint-tenant | M | |
 | EC-12 | Roles: Owner / Store manager / Cashier, outlet assignment, manager PIN over limits | backend + mint-tenant | M | |
 | EC-13 | Docs, website, MCP (`describe_store`, product / stock tools) | all | M | |
+| EC-13a | MCP: `store_stock`, `sync_variants`, `set_stock` (through the engine); `create_records` keeps to the store's rules and makes products' variants | backend | S | done 2026-10-28 |
 | EC-14 | Suppliers + purchase orders + receiving | | L | later |
 | EC-15 | Offline POS | | L | later |
 | EC-16 | Connect a website project's shop / checkout to this store's products, stock and orders | | L | later |
+| EC-16a | First storefront pieces: Store → Guest checkout on your website, `GET /public/api/store`, a variant's image | backend + mint-tenant + mint-docs | S | done 2026-10-28 |
 | EC-17 | Loyalty points | | M | later |
 | EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
 
 ## Handoff
+
+- **2026-10-28 — EC-13a + EC-16a done** (CHANGELOG; a side session, for the Live Fresh demo storefront on Verte).
+  `controllers/mcp/store.tools.ts` (`only: 'ecommerce'`): `store_stock` (data), `sync_variants`, `set_stock` (build) call
+  `syncVariants` / `setStock`, so each change is a movement by "<owner> (AI)"; `set_stock` resolves everything first.
+  `locks.ts` `commerceWriter(project, route)` = the guard's rules for writers outside the routes; `create_records` runs it
+  per record and fires `fireCommerce` after saving (variants follow products made over MCP — before, they never got any).
+  `store.guestCheckout` (default on) in Store settings + mint-tenant switch; `GET /public/api/store` (currency,
+  guestCheckout, negativeStock, variations, delivery rates). Variant `image` field in the blueprint — existing stores get it
+  by adding the field to their Variants model. Smoke `commerce-mcp.mjs`. Checkout itself (EC-16 proper) waits on the
+  user's choice: through the engine (online orders = store orders, SSLCommerz via SitePaymentSettings) or storefront-only.
 
 - **2026-10-28 — EC-07 done** (CHANGELOG). mint-tenant `app/store/pos/page.tsx` (Layout `type='pos'` + `fullBleed`) and
   `components/library/commerce/pos/`: `Pos.tsx` (register picker remembered per project in localStorage → open-shift

@@ -228,3 +228,16 @@
   coupon (10% shared over the lines), VAT included, card + cash with 500
   change, receipt, hold and resume, shift summary; phone width without
   sideways scroll. The commerce suites still pass.
+
+## 2026-10-28 — EC-13a Store over MCP, EC-16a storefront basics
+
+- The user, for the Live Fresh demo storefront on Verte: checkout in three steps with SSLCommerz (sandbox), sign in /
+  sign up / forgot password, guest checkout switchable in the store's settings, a variable product whose picture follows
+  the variant, opening stock of 10 with some products out of stock shown as such on the site.
+- Found: `create_records` (MCP) wrote a store's models with none of the guard's rules — engine fields, orders, stock rows —
+  and products made with it never got variants (`fireCommerce` runs from recordHistory only).
+- Backend: `commerceWriter` in `locks.ts`, used by `create_records`, which also fires the store hook after saving.
+  MCP `store_stock`, `sync_variants`, `set_stock` (store.tools.ts; offered in e-commerce projects only, with a paragraph
+  in the server instructions). Store settings `store.guestCheckout` (default on). `GET /public/api/store`. Variant `image`.
+- mint-tenant: Store → "Guest checkout on your website"; the wizard's review line says which. mint-docs `/store`: the row.
+- Smoke: `commerce-mcp.mjs` (25 checks); `commerce-settings.mjs` still passes.

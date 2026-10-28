@@ -26,6 +26,7 @@ import { COMPONENT_TOOLS } from './components.tools.js';
 import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
 import { CONTENT_INSTRUCTIONS, CONTENT_TOOLS } from './content.tools.js';
+import { STORE_INSTRUCTIONS, STORE_TOOLS } from './store.tools.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -126,8 +127,8 @@ type ToolDef = {
 	title: string;
 	description: string;
 	scope: Scope;
-	/** Only offered inside a tenant project, or a website project. */
-	only?: 'project' | 'website';
+	/** Only offered inside a tenant project, a website project, or a store (e-commerce project). */
+	only?: 'project' | 'website' | 'ecommerce';
 	/** A publish-scope tool that checks the person's own right itself (publish_entry: Publish on the model), not Build. */
 	ownRight?: boolean;
 	inputSchema: any;
@@ -792,11 +793,11 @@ const TOOLS: ToolDef[] = [
 	...EMAIL_DESIGN_TOOLS,
 	...COMPONENT_TOOLS,
 	...CONTENT_TOOLS,
+	...STORE_TOOLS,
 ];
 
-/** Whether a tool is offered to this caller: some only make sense in a project, or a website project. */
-const available = (t: ToolDef, caller: Caller) =>
-	!t.only || (t.only === 'project' ? !!caller.project : caller.project?.type === 'website');
+/** Whether a tool is offered to this caller: some only make sense in a project, a website project or a store. */
+const available = (t: ToolDef, caller: Caller) => !t.only || (t.only === 'project' ? !!caller.project : caller.project?.type === t.only);
 
 /* ------------------------------------------------------------ JSON-RPC */
 
@@ -807,7 +808,8 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
 		instructions: caller =>
-			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : ''),
+			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : '') +
+			(caller.project?.type === 'ecommerce' ? STORE_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),

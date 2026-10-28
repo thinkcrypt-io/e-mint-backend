@@ -199,6 +199,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				money('price', 'Price', { default: undefined, helper: 'Empty: the product’s price' }),
 				money('compareAtPrice', 'Compare-at price', { default: undefined }),
 				money('cost', 'Cost', { default: undefined }),
+				{ key: 'image', label: 'Image', kind: 'image', helper: 'Shown instead of the product’s pictures when this variant is picked' },
 				{ key: 'active', label: 'Sold', kind: 'boolean', default: true },
 				{ key: 'isDefault', label: 'The product’s only variant', kind: 'boolean', default: false },
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
