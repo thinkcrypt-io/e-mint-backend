@@ -5,6 +5,7 @@ import { Move, moveAll, undoMoves } from './stock.js';
 import { Quote, QuoteInput, quote } from './pricing.js';
 import { PaymentInput, checkPayments, moveCredit, recordPayment, settleOrder, tendersOf } from './payments.js';
 import { currentShift, shiftForSale } from './shifts.js';
+import { extraFields } from './lists.js';
 
 /**
  * Orders (docs/ecommerce EC6, EC9, EC17): a POS sale, an order taken by phone
@@ -364,7 +365,7 @@ export const orderDetail = async (store: Store, id: any) => {
 		order.customer ? store.M('customer').findById(order.customer).lean() : null,
 		order.outlet ? store.M('outlet').findById(order.outlet, { name: 1, outletCode: 1, address: 1, phone: 1, receiptHeader: 1 }).lean() : null,
 	]);
-	return { order, payments, movements, returns, credit, customer, outlet };
+	return { order, payments, movements, returns, credit, customer, outlet, extra: await extraFields(store, 'order', order) };
 };
 
 /** What the POS needs to start: outlets that sell, their registers, the ways to pay, the switches. */

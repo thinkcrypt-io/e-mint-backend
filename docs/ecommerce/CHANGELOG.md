@@ -241,3 +241,19 @@
   in the server instructions). Store settings `store.guestCheckout` (default on). `GET /public/api/store`. Variant `image`.
 - mint-tenant: Store → "Guest checkout on your website"; the wizard's review line says which. mint-docs `/store`: the row.
 - Smoke: `commerce-mcp.mjs` (25 checks); `commerce-settings.mjs` still passes.
+
+## 2026-10-28 — EC-09 Orders and Returns pages
+
+- The user: Store → Orders (`/store/orders`) was missing — the sidebar linked to pages EC-09 hadn't built yet, and the
+  plain tables are hidden for them. Built ahead of EC-08, so returns can be listed, opened and moved along but not made
+  or refunded yet.
+- Backend: `commerce/lists.ts` — `GET /commerce/orders` (quick filters with counts, search by number / customer / phone,
+  channel, outlet, paging; held sales never listed), `GET /commerce/returns`, `GET /commerce/returns/:id`,
+  `POST /commerce/returns/:id/status` (refunding stays the engine's); the order page's data gains `extra` (fields people
+  added to Orders).
+- mint-tenant: `/store/orders` (tabs with counts, search, channel / outlet filters), `/store/orders/<id>` (items with
+  returned quantities, totals, payments and refunds, returns, stock movements, timeline, customer, delivery, details,
+  More details; Take payment, Fulfil, Cancel, Print receipt), `/store/returns` and `/store/returns/<id>` (status bar,
+  Approve / Reject / Mark received / Close with a note); order and return record links open them.
+- mint-docs `/store`: Orders, An order's page, Returns (anchors `store-orders`, `store-order`, `store-returns-page`).
+- Smoke: `commerce-lists.mjs` (32 checks); `commerce-orders.mjs` still passes.

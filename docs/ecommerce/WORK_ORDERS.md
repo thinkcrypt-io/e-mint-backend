@@ -18,7 +18,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | done |
 | EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | done |
 | EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | next |
-| EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | |
+| EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | done 2026-10-28 — Return items, refunds, POS Return mode and credit note wait for EC-08 |
 | EC-10 | Pay-by-link for orders through the project's gateways | backend + mint-tenant | M | |
 | EC-11 | Shifts (open / cash in-out / close / Z-report) + reports + dashboard widgets | backend + mint-tenant | M | |
 | EC-12 | Roles: Owner / Store manager / Cashier, outlet assignment, manager PIN over limits | backend + mint-tenant | M | |
@@ -33,6 +33,19 @@ wizard step and dialog) and the marketing website as it lands.
 
 ## Handoff
 
+- **2026-10-28 — EC-09 done** (CHANGELOG; ahead of EC-08 — the user found Store → Orders 404ing). Backend
+  `commerce/lists.ts`: `listOrders` (views all / today / unpaid / to-ship / returns / cancelled, each counted with the same
+  search and filters; parts joined with `$and` so a view's status can't undo "never held"), `listReturns`, `returnDetail`,
+  `moveReturn` (`RETURN_NEXT`: requested → approved | rejected, approved → received | rejected, refunded | rejected →
+  closed — *refunded* is only ever set by EC-08's engine), `extraFields(store, key, record)` (fields people added = model
+  fields minus the blueprint step's, the "More details" card; `orderDetail` returns it as `extra`). Returns are off when
+  `answers.returns.allowed` is false even though the model is built (404 `returns_off`). Routes `GET /commerce/orders`,
+  `GET /commerce/returns[/:id]`, `POST /commerce/returns/:id/status`. mint-tenant `commerce/orders/` (`common.tsx` badges +
+  `storeRoutes`, `OrdersPage`, `OrderPage` with Take payment (PayDialog), Fulfil menu, Cancel (PromptDialog + reason), Print
+  receipt, a disabled Return items, timeline built from the order's own records; `ReturnsPage`, `ReturnPage` with the status
+  bar); `app/store/{orders,returns}[/[id]]`; `StoreRecordPage` sends order / return record links to them. EC-08: make
+  `Return items` work from `OrderPage` and set `refunded`; the Returns page already reads `payments` by `returnRef` and
+  movements by the return's code. Smoke `commerce-lists.mjs` (32 checks; inserts a return in the scratch DB until EC-08).
 - **2026-10-28 — EC-13a + EC-16a done** (CHANGELOG; a side session, for the Live Fresh demo storefront on Verte).
   `controllers/mcp/store.tools.ts` (`only: 'ecommerce'`): `store_stock` (data), `sync_variants`, `set_stock` (build) call
   `syncVariants` / `setStock`, so each change is a movement by "<owner> (AI)"; `set_stock` resolves everything first.

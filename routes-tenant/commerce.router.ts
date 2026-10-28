@@ -10,6 +10,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
 import { quote } from '../library/functions/commerce/pricing.js';
 import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail, pay, posSetup, sale } from '../library/functions/commerce/orders.js';
 import { cashMove, closeShift, currentShift, openShift, summary } from '../library/functions/commerce/shifts.js';
+import { listOrders, listReturns, moveReturn, returnDetail } from '../library/functions/commerce/lists.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -35,12 +36,19 @@ import { cashMove, closeShift, currentShift, openShift, summary } from '../libra
  *   POST /sales        a POS sale, paid in full: + register, payments[{ method, amount, tendered, reference }], heldId   records:create
  *   POST /orders       an order by phone / by hand: + payments (any part), delivery { name, phone, address, area, rate }   records:create
  *   GET  /held?outlet=&register=  ·  POST /held  ·  DELETE /held/:id          parked baskets   records:create
- *   GET  /orders/:id                    the order with its payments, stock moves, returns, credit   records:view
+ *   GET  /orders?view=&q=&channel=&outlet=&paymentStatus=&fulfilment=&page=&limit=   the Orders page (EC-09): a page of
+ *                       orders with customer / outlet names and each quick filter's count (views)   records:view
+ *   GET  /orders/:id                    the order with its payments, stock moves, returns, credit, More details   records:view
  *   POST /orders/:id/pay      { payments, register? }   towards what it owes   records:edit
  *   POST /orders/:id/fulfil   { to: fulfilled | shipped | delivered }   records:edit
  *   POST /orders/:id/cancel   { reason?, register? }   stock back, money back, coupon back   records:edit
  *   POST /shifts { register, openingFloat }  ·  GET /shifts/current?register=  ·  GET /shifts/:id
  *   POST /shifts/:id/cash { type: in | out, amount, reason }  ·  POST /shifts/:id/close { countedCash, note }   records:create
+ *
+ * Returns (EC-09; made and refunded by the returns engine, EC-08):
+ *   GET  /returns?view=&q=&outlet=&page=&limit=   the Returns page   records:view
+ *   GET  /returns/:id                             the return with its order, refunds, stock moves   records:view
+ *   POST /returns/:id/status  { to, note? }       requested → approved | rejected → received …   records:edit
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -177,6 +185,11 @@ router.delete(
 	handle(async (req: any) => discardHeld(await storeOf(), req.params.id))
 );
 router.get(
+	'/orders',
+	view,
+	handle(async (req: any) => listOrders(await storeOf(), req.query || {}))
+);
+router.get(
 	'/orders/:id',
 	view,
 	handle(async (req: any) => orderDetail(await storeOf(), req.params.id))
@@ -195,6 +208,21 @@ router.post(
 	'/orders/:id/cancel',
 	edit,
 	handle(async (req: any) => cancel(await storeOf(), req.params.id, req.body || {}, ctx(req)))
+);
+router.get(
+	'/returns',
+	view,
+	handle(async (req: any) => listReturns(await storeOf(), req.query || {}))
+);
+router.get(
+	'/returns/:id',
+	view,
+	handle(async (req: any) => returnDetail(await storeOf(), req.params.id))
+);
+router.post(
+	'/returns/:id/status',
+	edit,
+	handle(async (req: any) => moveReturn(await storeOf(), req.params.id, String(req.body?.to || ''), actorName(req), req.body?.note))
 );
 router.post(
 	'/shifts',
