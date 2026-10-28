@@ -273,3 +273,12 @@
 - mint-tenant: POS category bar from the new endpoint; slug kind hint. mint-docs: `/store#store-categories`, the slug
   rule on `/models`. Live Fresh: categories sorted by Order on website.
 
+## 2026-10-28 — EC-21b Category form in sections
+
+- The user: the form should have POS configuration and Website configuration sections, smaller fields side by side,
+  as every store's default.
+- Blueprint Categories gets `form` + `view` sections: Category (name | parent), POS configuration (status | order),
+  Website configuration (status | order, web address), Images. Fields people add land under Images on new stores.
+- `upgradeStore` lays out a built store's page the same when it lacks those sections (published straight to
+  RouteConfig with a RouteVersion; the person's own fields under More details) and renews MINT's old description.
+

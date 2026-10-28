@@ -30,7 +30,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-16a | First storefront pieces: Store → Guest checkout on your website, `GET /public/api/store`, a variant's image | backend + mint-tenant + mint-docs | S | done 2026-10-28 |
 | EC-17 | Loyalty points | | M | later |
 | EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
-| EC-21 | Categories (EC21): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
+| EC-21 | Categories (EC21), form in sections (POS / Website configuration): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
 
 ## Handoff
 

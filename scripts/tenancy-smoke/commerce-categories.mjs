@@ -64,12 +64,31 @@ else {
 	const mc = await new MongoClient(uri).connect();
 	const db = mc.db();
 	const defs = db.collection('modeldefinitions');
+	const configs = db.collection('routeconfigs');
+	let page = await configs.findOne({ route: cat.route, project: new ObjectId(shopId) });
+	ok(
+		'a new store’s form: Category, POS configuration, Website configuration, Images — short fields side by side',
+		JSON.stringify(page?.data?.form?.map(x => x.sectionTitle)) === JSON.stringify(['Category', 'POS configuration', 'Website configuration', 'Images']) &&
+			JSON.stringify(page.data.form[1].fields) === JSON.stringify([['posStatus', 'sortOrder']]) &&
+			JSON.stringify(page.data.form[2].fields) === JSON.stringify([['webStatus', 'webOrder'], 'slug']),
+		JSON.stringify(page?.data?.form)
+	);
+	ok('…and its detail page the same', JSON.stringify(page?.data?.view?.map(x => x.title)) === JSON.stringify(['Category', 'POS configuration', 'Website configuration', 'Images']), JSON.stringify(page?.data?.view?.map(x => x.title)));
 	const def = await defs.findOne({ _id: new ObjectId(cat.id) });
 	const OLD = ['name', 'parent', 'image', 'sortOrder'];
 	await defs.updateOne(
 		{ _id: def._id },
-		{ $set: { fields: def.fields.filter(f => OLD.includes(f.key)).map(({ helper, ...f }) => (f.key === 'sortOrder' ? { ...f, label: 'Order on the POS' } : f)), systemFields: OLD, version: (def.version || 1) + 1 } }
+		{
+			$set: {
+				fields: [...def.fields.filter(f => OLD.includes(f.key)).map(({ helper, ...f }) => (f.key === 'sortOrder' ? { ...f, label: 'Order on the POS' } : f)), { key: 'description', label: 'Description', kind: 'textarea' }],
+				systemFields: OLD,
+				description: 'How products are grouped — on the POS too',
+				version: (def.version || 1) + 1,
+			},
+		}
 	);
+	// Its page as the generator made it then: one Details section.
+	await configs.updateOne({ _id: page._id }, { $set: { 'data.form': [{ sectionTitle: 'Details', fields: ['name', ['parent', 'image'], 'sortOrder', 'description'] }], 'data.view': [{ title: 'Details', columns: 2, fields: ['name', 'parent', 'image', 'sortOrder', 'description'] }] } });
 	const col = db.collection(def.collectionName);
 	await col.updateMany({ _model: def.name }, { $unset: { slug: '', posStatus: '', webStatus: '', webOrder: '', images: '' } });
 	for (const [id, n] of [[a._id, 1], [b._id, 3], [c._id, 2], [d._id, 0]]) await col.updateOne({ _id: new ObjectId(id) }, { $set: { sortOrder: n } });
@@ -83,9 +102,17 @@ else {
 	ok('applied', /Meat shop:/.test(out) && !/FAILED/.test(out), out.split('\n').filter(l => /Meat shop|FAILED|Categories/.test(l)).join(' | '));
 	const after = await defs.findOne({ _id: def._id });
 	const keys = after.fields.map(f => f.key);
-	ok('the fields in the blueprint’s order, label renewed, locked', JSON.stringify(keys) === JSON.stringify(['name', 'slug', 'parent', 'posStatus', 'webStatus', 'sortOrder', 'webOrder', 'image', 'images']) && after.fields.find(f => f.key === 'sortOrder').label === 'Order on POS' && after.systemFields.includes('webStatus'), JSON.stringify(keys));
+	ok('the fields in the blueprint’s order, label renewed, locked', JSON.stringify(keys) === JSON.stringify(['name', 'slug', 'parent', 'posStatus', 'webStatus', 'sortOrder', 'webOrder', 'image', 'images', 'description']) && after.fields.find(f => f.key === 'sortOrder').label === 'Order on POS' && after.systemFields.includes('webStatus') && /POS and your website/.test(after.description), JSON.stringify(keys));
 	const rows = await col.find({ _model: def.name }).sort({ sortOrder: -1 }).toArray();
 	ok('records filled: addresses, shown, order kept (highest first now)', rows.every(x => x.slug && x.posStatus === 'active' && x.webStatus === 'active') && JSON.stringify(rows.map(x => x.name)) === JSON.stringify(['Mutton', 'Local Chicken', 'Beef', 'Local chicken']), JSON.stringify(rows.map(x => [x.name, x.sortOrder, x.webOrder, x.slug])));
+	page = await configs.findOne({ _id: page._id });
+	ok(
+		'its page in sections, the field it added under More details',
+		JSON.stringify(page.data.form.map(x => x.sectionTitle)) === JSON.stringify(['Category', 'POS configuration', 'Website configuration', 'Images', 'More details']) &&
+			JSON.stringify(page.data.form[4].fields) === JSON.stringify(['description']) &&
+			page.data.view.some(x => x.title === 'More details'),
+		JSON.stringify(page.data.form)
+	);
 	const ep2 = await db.collection('apiendpoints').findOne({ model: cat.route, action: 'list' });
 	ok('the list endpoint gets the website rule', ep2.list.sort === '-webOrder,name' && ep2.list.filters.some(f => f.field === 'webStatus'), JSON.stringify(ep2.list));
 	out = run('--apply');

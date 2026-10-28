@@ -1,9 +1,12 @@
 import ApiEndpoint from '../../models/tenancy/apiEndpoint.model.js';
+import RouteConfig from '../../models/builder/routeConfig.model.js';
+import RouteVersion from '../../models/builder/routeVersion.model.js';
 import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 import { updateModelCore } from '../../controllers/builder/models.controller.js';
 import { listDefaultsOf } from '../apiEndpoints.function.js';
 import { compiledModel, freeUid, inProjectCollection, uidOf } from '../dynamicModels.function.js';
 import { MODEL_KEY } from '../projectIndexes.function.js';
+import { invalidateRoute } from '../resolveRoute.function.js';
 import { engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { storeOf } from './store.js';
@@ -20,6 +23,11 @@ import { storeOf } from './store.js';
 /** Labels the blueprint used to give a field — renewed to today's when the store still has them. */
 const OLD_LABELS: Partial<Record<ModelKey, Record<string, string[]>>> = {
 	category: { sortOrder: ['Order on the POS'], image: ['Image'] },
+};
+
+/** Descriptions the blueprint used to give a model — renewed to today's when the store still has them. */
+const OLD_DESCRIPTIONS: Partial<Record<ModelKey, string[]>> = {
+	category: ['How products are grouped — on the POS too'],
 };
 
 type Change = { model: string; added: string[]; renewed: string[]; filled: string[] };
@@ -92,6 +100,44 @@ const fillEndpoints = async (def: any, apply: boolean) => {
 	return [`${ep.method} ${ep.path}: ${[missing.length && 'hides what’s inactive on the website', set['list.sort'] && `sorted ${set['list.sort']}`].filter(Boolean).join(', ')}`];
 };
 
+/**
+ * The page laid out in the blueprint's sections (EC21: Category, POS
+ * configuration, Website configuration, Images — short inputs side by side),
+ * when it doesn't have them all yet. Fields the person added go in a More
+ * details section. Published straight away, the version before kept.
+ */
+const layoutPage = async (req: any, def: any, step: any, fields: any[], apply: boolean) => {
+	if (!Array.isArray(step.form)) return [];
+	const doc: any = await RouteConfig.findOne({ route: def.route });
+	if (!doc?.data) return [];
+	const titles = new Set((doc.data.form || []).map((x: any) => x?.sectionTitle));
+	if (step.form.every((x: any) => titles.has(x.sectionTitle))) return [];
+	const own = fields.map(f => f.key);
+	const has = (k: string) => own.includes(k);
+	const placed = new Set<string>(step.form.flatMap((x: any) => x.fields.flat()));
+	const rest = own.filter(k => !placed.has(k));
+	const form = [
+		...step.form.map((x: any) => ({
+			...x,
+			fields: x.fields.map((row: any) => (Array.isArray(row) ? row.filter(has) : has(row) ? row : null)).filter((row: any) => row && (!Array.isArray(row) || row.length)),
+		})),
+		...(rest.length ? [{ sectionTitle: 'More details', description: 'Fields you added', fields: rest }] : []),
+	].filter((x: any) => x.fields.length);
+	const view = [
+		...(step.view || []).map((x: any) => ({ ...x, fields: x.fields.filter((k: string) => has(k) || k === 'createdAt') })),
+		...(rest.length ? [{ title: 'More details', columns: 2, fields: rest }] : []),
+	].filter((x: any) => x.fields.length);
+	if (apply) {
+		const version = (doc.version || 0) + 1;
+		const data = { ...doc.data, form, view };
+		const draft = doc.draft ? { ...doc.draft, form, view } : doc.draft;
+		await RouteConfig.updateOne({ _id: doc._id }, { $set: { data, draft, version, publishedAt: new Date(), publishedBy: req.user?._id } });
+		await RouteVersion.create({ route: def.route, kind: 'config', version, data, note: 'The store’s upgrade: the page in sections', publishedBy: req.user?._id });
+		invalidateRoute(def.route);
+	}
+	return [`form and detail page in sections (${form.map(x => x.sectionTitle).join(', ')})`];
+};
+
 export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Change[]> => {
 	const store = await storeOf();
 	const changes: Change[] = [];
@@ -121,13 +167,16 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				if (!renewed.includes(f.key)) renewed.push(f.key);
 			}
 		}
+		const description = OLD_DESCRIPTIONS[spec.key]?.includes(def.description) ? spec.step.description : def.description;
+		if (description !== def.description) renewed.push('description');
 		const core = [...new Set([...(def.systemFields || []), ...coreFieldsOf(spec.step)])];
 		const change: Change = { model: def.title, added, renewed, filled: [] };
 		if (apply && (added.length || renewed.length)) {
-			await updateModelCore(req, def._id, { ...def, fields }, { note: 'Before the store’s upgrade' });
+			await updateModelCore(req, def._id, { ...def, description, fields }, { note: 'Before the store’s upgrade' });
 			await engineFieldsReadOnly(def.route, spec.engine);
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
+		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}

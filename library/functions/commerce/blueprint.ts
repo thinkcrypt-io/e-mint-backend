@@ -111,6 +111,19 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['name', 'slug', 'parent', 'posStatus', 'webStatus', 'sortOrder', 'webOrder'],
 			filters: ['posStatus', 'webStatus', 'parent'],
+			// The form in sections, short inputs side by side (EC21); fields people add go under Images.
+			form: [
+				{ sectionTitle: 'Category', description: 'Its name, and the category it sits under', fields: [['name', 'parent']] },
+				{ sectionTitle: 'POS configuration', description: 'Whether and where it shows on the POS', fields: [['posStatus', 'sortOrder']] },
+				{ sectionTitle: 'Website configuration', description: 'Whether and where it shows on your website, and its address there', fields: [['webStatus', 'webOrder'], 'slug'] },
+				{ sectionTitle: 'Images', fields: ['image', 'images'] },
+			],
+			view: [
+				{ title: 'Category', columns: 2, fields: ['name', 'parent'] },
+				{ title: 'POS configuration', columns: 2, fields: ['posStatus', 'sortOrder'] },
+				{ title: 'Website configuration', columns: 3, fields: ['webStatus', 'webOrder', 'slug'] },
+				{ title: 'Images', columns: 2, fields: ['image', 'images', 'createdAt'] },
+			],
 		},
 	},
 	{
