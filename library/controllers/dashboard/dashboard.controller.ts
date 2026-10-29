@@ -12,7 +12,8 @@ import { currentScope } from '../../functions/tenantScope.function.js';
 
 const MAX_WIDGETS = 40;
 /** `templates`: Template Studio's overview (docs/templates T-11) — the super admin's dashboard only. */
-const TYPES = ['stat', 'chart', 'recent', 'templates'];
+/** `actions`: quick-action buttons that open the project's own pages (no model to read). */
+const TYPES = ['stat', 'chart', 'recent', 'templates', 'actions'];
 const SIZES = ['sm', 'md', 'lg', 'xl', 'full'];
 const METRICS = ['count', 'sum', 'avg'];
 const RANGES = ['all', 'today', '7d', '30d', '90d', 'month', '12m', 'year'];
@@ -52,6 +53,14 @@ export const normalizeWidget = (w: any, i: number) => {
 		// Inside a tenant project (or a template being checked) there are no templates to show.
 		if (currentScope()) return { error: `Widget ${i + 1}: the Templates overview is only for the super admin’s dashboard` };
 		return { widget: { id: str(w.id, 40) || `w${Date.now().toString(36)}${i}`, type, route: 'templates', title: str(w.title, 80), size: oneOf(w.size, SIZES, 'full'), filters: [] } };
+	}
+	if (type === 'actions') {
+		const items = (Array.isArray(w.items) ? w.items : [])
+			.slice(0, 8)
+			.map((x: any) => ({ label: str(x?.label, 40), href: str(x?.href, 120), icon: str(x?.icon, 30) }))
+			.filter((x: any) => x.label && /^\/[\w\-/?=&.#]*$/.test(x.href));
+		if (!items.length) return { error: `Widget ${i + 1}: add at least one action with a name and a page` };
+		return { widget: { id: str(w.id, 40) || `w${Date.now().toString(36)}${i}`, type, route: 'actions', title: str(w.title, 80), size: oneOf(w.size, SIZES, 'full'), filters: [], items } };
 	}
 	const route = typeof w?.route === 'string' && ROUTE.test(w.route) ? w.route.replace(/\/+$/, '') : null;
 	if (!type || !route) return { error: `Widget ${i + 1}: pick what it shows and the model it reads` };

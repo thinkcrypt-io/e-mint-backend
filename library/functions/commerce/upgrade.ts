@@ -11,6 +11,7 @@ import { engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
+import { seedStoreDashboard } from './dashboard.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -268,6 +269,8 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}
+	const home = await seedStoreDashboard(store.installed as any, { apply });
+	if (home.length) changes.push({ model: 'Dashboard', added: [], renewed: [], filled: home });
 	const kit = await ensureStoreSiteKit(req, { apply });
 	if (kit.length) changes.push({ model: 'Website', added: [], renewed: [], filled: kit });
 	return changes;

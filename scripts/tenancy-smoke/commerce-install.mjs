@@ -103,6 +103,11 @@ ok('outlets in settings are left to the Outlets page once built', r.status === 2
 r = await call('POST', `${P}/commerce/setup`, {}, t);
 ok('setting up again is refused', r.status === 409);
 
+r = await call('GET', `${P}/dashboard`, null, t);
+const kinds = (r.body?.widgets || []).map(w => w.type);
+ok('the store has a home dashboard: quick actions, numbers, charts and the latest orders', kinds[0] === 'actions' && kinds.filter(k => k === 'stat').length >= 5 && kinds.includes('chart') && kinds.includes('recent'), JSON.stringify(kinds));
+ok('…its quick actions open the POS, add a product and the orders', ['/store/pos', '/store/orders'].every(h => r.body?.widgets?.[0]?.items?.some(i => i.href === h)));
+
 r = await call('DELETE', `/tenant/api/projects/${shopId}?force=1`, null, t);
 ok('the store project deletes', r.status === 200, r.body?.message);
 done();

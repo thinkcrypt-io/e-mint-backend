@@ -14,6 +14,7 @@ import { runInScope } from '../tenantScope.function.js';
 import { TenancyError } from '../tenancy.function.js';
 import { Answers, checkAll, commerceView, loadCommerce, offeredFor } from './settings.js';
 import { ModelKey, coreFieldsOf, modelSpecs, storePlan } from './blueprint.js';
+import { seedStoreDashboard } from './dashboard.js';
 
 /**
  * Setting up a store (docs/ecommerce EC3): the blueprint's models built as one
@@ -140,6 +141,7 @@ export const install = async (req: any, project: any, a: Answers): Promise<{ ins
 
 		await applySidebar(a, installed);
 		await seed(a, installed);
+		await seedStoreDashboard(installed);
 		return { installed, features: featuresOf(a) };
 	} catch (e: any) {
 		for (const u of undo.reverse()) await u().catch((err: any) => console.error('Undoing the store:', err?.message));

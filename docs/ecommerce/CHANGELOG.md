@@ -359,3 +359,10 @@
 
 ## 2026-10-30 — Product type
 - Product gets `productType` (Simple / With variations; default Simple). The product form is laid out in sections; **Variations** (the options) shows only when the type is With variations. A Simple product is one item whatever options it still carries (`syncVariants`). `upgradeStores.js` adds the field, lays the page out in sections, and gives existing products a type (With variations when they have options). Smoke: commerce-stock.
+
+## 2026-10-30 — EC-27 The store's home dashboard
+- New widget type `actions` (quick-action buttons to the project's own pages; dashboard.controller + tenant `ActionsWidget`).
+  A new store gets a dashboard when it's built: Quick actions (New sale, Add a product, Website orders, Orders, Stock,
+  Customers), Sales today / 30 days and Orders / Average order against the period before, New website orders, Unpaid, Returns,
+  a Sales bar chart, Orders by origin and by stage, the latest orders. `upgradeStores.js` gives it to a built store that has
+  no dashboard of its own; one someone built is left alone. `library/functions/commerce/dashboard.ts`.
