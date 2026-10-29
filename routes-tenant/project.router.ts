@@ -151,7 +151,7 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const [home, ...own] = project;
 		const store = req.project.type === 'ecommerce' ? await CommerceSettings.findOne({}, { status: 1 }).lean() : null;
 		const lead = tenantLead(req.permissions || [], req.project.type, store as any);
-		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
+		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ route: 'web-contents', active: { $ne: false } })) || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
 		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);

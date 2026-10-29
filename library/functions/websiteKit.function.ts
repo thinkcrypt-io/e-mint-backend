@@ -1,4 +1,5 @@
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
+import SidebarCategory from '../models/sidebarcategories/model.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { runInScope } from './tenantScope.function.js';
@@ -174,15 +175,40 @@ const installKit = async (req: any, plan: any) => {
 	await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
 };
 
+/** The sidebar category the kit's pages sit in ("Website"); made when the project (a store's is "Pages") hasn't one. */
+const websiteCategory = async () => {
+	const have: any = await SidebarCategory.findOne({ name: 'Website' }).lean();
+	if (have) return have;
+	return SidebarCategory.create({ name: 'Website', priority: 90, icon: 'globe', isActive: true });
+};
+
+/** Puts the kit's models in that category when they have none (a store built them before it had one). */
+const placeStoreKit = async (apply: boolean) => {
+	const loose = await ModelDefinition.countDocuments({ route: { $in: KIT_ROUTES }, active: { $ne: false }, $or: [{ 'sidebar.category': null }, { 'sidebar.category': '' }, { 'sidebar.category': { $exists: false } }] });
+	if (!loose) return [];
+	if (apply) {
+		const cat: any = await websiteCategory();
+		await ModelDefinition.updateMany(
+			{ route: { $in: KIT_ROUTES }, active: { $ne: false }, $or: [{ 'sidebar.category': null }, { 'sidebar.category': '' }, { 'sidebar.category': { $exists: false } }] },
+			{ $set: { 'sidebar.category': String(cat._id) }, $inc: { version: 1 } }
+		);
+	}
+	return [`Pages, SEO and Contents in the sidebar under Website`];
+};
+
 /**
  * A store's site kit when it hasn't one (Pages, SEO, Contents), in the
  * project's scope. A project that already has any of those routes is left
- * alone — its own models. Returns what it did (or would do, when not applying).
+ * alone — its own models — apart from putting them in the sidebar. Returns
+ * what it did (or would do, when not applying).
  */
 export const ensureStoreSiteKit = async (req: any, { apply = true } = {}): Promise<string[]> => {
 	const have = await ModelDefinition.countDocuments({ route: { $in: KIT_ROUTES }, active: { $ne: false } });
-	if (have) return [];
-	if (apply) await installKit(req, STORE_SITE_KIT('Website'));
+	if (have) return placeStoreKit(apply);
+	if (apply) {
+		await websiteCategory();
+		await installKit(req, STORE_SITE_KIT('Website'));
+	}
 	return ['website kit: Pages, SEO and Contents'];
 };
 
@@ -190,6 +216,7 @@ export const ensureStoreSiteKit = async (req: any, { apply = true } = {}): Promi
 export const seedWebsiteKit = async (req: any, project: any) => {
 	if (project.type !== 'website' && project.type !== 'ecommerce') return;
 	await runInScope({ organization: project.organization, project: project._id }, async () => {
+		if (project.type === 'ecommerce') await websiteCategory();
 		await installKit(req, project.type === 'website' ? WEBSITE_KIT('Website') : STORE_SITE_KIT('Website'));
 	});
 };
