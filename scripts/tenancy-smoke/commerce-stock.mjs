@@ -30,11 +30,15 @@ const waitVariants = async (pid, test) => {
 };
 
 // Variants from options.
-r = await call('POST', `${P}/products`, { name: 'Runner', price: 4000, status: 'active', options: [{ name: 'Size', values: '40, 41' }, { name: 'Colour', values: 'Red,Blue' }] }, t);
+r = await call('POST', `${P}/products`, { name: 'Runner', price: 4000, status: 'active', productType: 'variation', options: [{ name: 'Size', values: '40, 41' }, { name: 'Colour', values: 'Red,Blue' }] }, t);
 const runner = r.body?.doc?._id;
 ok('a product with options is made', !!runner, r.body?.message);
 let vs = await waitVariants(runner, v => v.filter(x => x.active).length === 4);
 ok('its four variants are made from the options', vs.filter(v => v.active).length === 4 && vs.some(v => v.title === '41 / Blue'), JSON.stringify(vs.map(v => `${v.title}:${v.active}`)));
+r = await call('POST', `${P}/products`, { name: 'Plain tee', price: 500, status: 'active', productType: 'simple', options: [{ name: 'Size', values: 'S,M' }] }, t);
+const plain = r.body?.doc?._id;
+const pv = await waitVariants(plain, v => v.length >= 1);
+ok('a Simple product is one item whatever options it carries', pv.filter(v => v.active).length === 1 && pv[0]?.isDefault, JSON.stringify(pv.map(v => `${v.title}:${v.active}`)));
 // A plain product: one hidden default variant mirroring it.
 r = await call('POST', `${P}/products`, { name: 'Socks', price: 300, status: 'active', sku: 'SOCK-1', barcode: '8901' }, t);
 const socks = r.body?.doc?._id;
@@ -123,10 +127,10 @@ r = await call('GET', `${P}/commerce/catalogue?q=RUN-40`, null, t);
 ok('…and the runner by a variant’s SKU', r.body?.doc?.length === 1 && r.body.doc[0].name === 'Runner' && r.body.doc[0].variants.length === 4);
 
 // Options changed.
-await call('PUT', `${P}/products/${runner}`, { name: 'Runner', price: 4000, options: [{ name: 'Size', values: '40,41' }, { name: 'Colour', values: 'Red' }] }, t);
+await call('PUT', `${P}/products/${runner}`, { name: 'Runner', price: 4000, productType: 'variation', options: [{ name: 'Size', values: '40,41' }, { name: 'Colour', values: 'Red' }] }, t);
 vs = await waitVariants(runner, v => v.filter(x => x.active).length === 2);
 ok('a colour dropped: its variants stop selling, none deleted', vs.length === 4 && vs.filter(v => v.active).length === 2 && vs.filter(v => v.active).every(v => v.title.endsWith('Red')));
-r = await call('PUT', `${P}/products/${runner}`, { name: 'Runner', price: 4000, options: [{ name: 'Size', values: Array.from({ length: 11 }, (_, i) => i).join(',') }, { name: 'Colour', values: Array.from({ length: 10 }, (_, i) => `c${i}`).join(',') }] }, t);
+r = await call('PUT', `${P}/products/${runner}`, { name: 'Runner', price: 4000, productType: 'variation', options: [{ name: 'Size', values: Array.from({ length: 11 }, (_, i) => i).join(',') }, { name: 'Colour', values: Array.from({ length: 10 }, (_, i) => `c${i}`).join(',') }] }, t);
 r = await call('POST', `${P}/commerce/products/${runner}/variants`, {}, t);
 ok('more than 100 combinations is refused with a reason', r.status === 400 && /more than 100 variants/.test(r.body?.message), r.body?.message);
 r = await call('PUT', `${P}/commerce/settings`, { answers: { products: { variations: false } } }, t);

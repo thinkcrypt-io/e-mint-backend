@@ -107,6 +107,23 @@ const fillCoupons = async (def: any, apply: boolean) => {
 	return [`${old.length} coupon(s) moved to the new percentage / amount and status fields`];
 };
 
+/** Products from before product types: With variations when they have options, Simple otherwise. */
+const fillProducts = async (def: any, apply: boolean) => {
+	const Product: any = compiledModel(def.name);
+	if (!Product) return [];
+	const own = inProjectCollection(def) ? { [MODEL_KEY]: def.name } : {};
+	const col = Product.collection;
+	const blank = { $in: [null, ''] };
+	const todo: any[] = await col.find({ ...own, productType: blank }, { projection: { options: 1 } }).toArray();
+	if (!todo.length) return [];
+	const varied = todo.filter(p => Array.isArray(p.options) && p.options.some((o: any) => String(o?.name || '').trim() && String(o?.values || '').trim()));
+	if (apply) {
+		if (varied.length) await col.updateMany({ _id: { $in: varied.map(p => p._id) } }, { $set: { productType: 'variation' } });
+		await col.updateMany({ ...own, productType: blank }, { $set: { productType: 'simple' } });
+	}
+	return [`${todo.length} product(s) given a type — ${varied.length} with variations`];
+};
+
 /** The website's rules on the store's own standard list endpoints (a Status on website, an Order on website). */
 const fillEndpoints = async (def: any, apply: boolean) => {
 	const want = listDefaultsOf(def);
@@ -233,17 +250,20 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		}
 		const description = OLD_DESCRIPTIONS[spec.key]?.includes(def.description) ? spec.step.description : def.description;
 		if (description !== def.description) renewed.push('description');
-		const core = [...new Set([...(def.systemFields || []), ...coreFieldsOf(spec.step)])];
+		const core = [...new Set([...(def.systemFields || []), ...coreFieldsOf(spec.step)])].filter(k => !dropped.includes(k));
 		if (renamed) renewed.push('updatedAt → lastUpdate');
 		if (dropped.length) renewed.push(`removes ${dropped.join(', ')}`);
 		const change: Change = { model: def.title, added, renewed, filled: [] };
 		if (apply && (added.length || renewed.length || dropped.length)) {
+			// The store's own fields can't be removed; the ones the blueprint dropped are let go first.
+			if (dropped.length) await ModelDefinition.updateOne({ _id: def._id }, { $pull: { systemFields: { $in: dropped } } });
 			await updateModelCore(req, def._id, { ...def, description, fields }, { note: 'Before the store’s upgrade' });
 			await engineFieldsReadOnly(def.route, spec.engine);
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
 		if (spec.key === 'coupon') change.filled.push(...(await fillCoupons(def, apply)));
+		if (spec.key === 'product') change.filled.push(...(await fillProducts(def, apply)));
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);

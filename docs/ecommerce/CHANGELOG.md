@@ -356,3 +356,6 @@
 - `upgradeStores.js`: adds the new fields, renews labels, drops value/active/appliesTo/categories/products after moving
   each coupon's value into percentOff/amountOff and active into status. Smokes: commerce-orders (cap, inactive, minimum),
   commerce-website-orders (per-customer limit).
+
+## 2026-10-30 — Product type
+- Product gets `productType` (Simple / With variations; default Simple). The product form is laid out in sections; **Variations** (the options) shows only when the type is With variations. A Simple product is one item whatever options it still carries (`syncVariants`). `upgradeStores.js` adds the field, lays the page out in sections, and gives existing products a type (With variations when they have options). Smoke: commerce-stock.

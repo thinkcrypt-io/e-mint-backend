@@ -180,6 +180,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			fields: [
 				{ key: 'name', label: 'Name', kind: 'text', required: true, searchable: true },
 				{ key: 'status', label: 'Status', kind: 'select', options: opts('active', 'draft', 'archived'), default: 'active', required: true },
+				{ key: 'productType', label: 'Product type', kind: 'select', options: [{ value: 'simple', label: 'Simple' }, { value: 'variation', label: 'With variations' }], default: 'simple', required: true, helper: 'With variations: it comes in sizes, colours… — each combination is its own item with its own stock' },
 				{ key: 'category', label: 'Category', kind: 'reference', ref: 'Category' },
 				{ key: 'brand', label: 'Brand', kind: 'reference', ref: 'Brand' },
 				money('price', 'Price', { required: true, helper: 'Each variant’s price unless it has its own' }),
@@ -205,8 +206,17 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
 				{ key: 'seo', label: 'SEO', kind: 'seo', helper: 'Its title, description and share image in search results and links — for its page on your website' },
 			],
+			form: [
+				{ sectionTitle: 'Product', description: 'What it is and where it sits', fields: [['name', 'status'], ['category', 'brand'], 'description'] },
+				{ sectionTitle: 'Type', fields: ['productType'] },
+				{ sectionTitle: 'Variations', description: 'What it varies by — each combination becomes a variation with its own price, image and stock', fields: ['options'], showIf: { field: 'productType', operator: 'eq', value: 'variation' } },
+				{ sectionTitle: 'Pricing', fields: [['price', 'compareAtPrice'], ['cost', 'taxRate']] },
+				{ sectionTitle: 'Inventory', fields: [['sku', 'barcode'], 'trackStock'] },
+				{ sectionTitle: 'Images', fields: ['images'] },
+				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
+			],
 			table: ['name', 'category', 'price', 'totalStock', 'status'],
-			filters: ['status', 'category'],
+			filters: ['status', 'category', 'productType'],
 		},
 	},
 	{

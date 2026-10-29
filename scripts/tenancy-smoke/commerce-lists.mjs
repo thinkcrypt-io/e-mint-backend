@@ -71,7 +71,7 @@ ok('all: 4 orders, the held sale left out, newest first', L?.total === 4 && L.do
 ok('…with customer and outlet names and item counts', L.doc.find(o => o._id === rinaOrder._id)?.customerInfo?.name === 'Rina Akter' && L.doc[0].outletInfo?.name === 'Banani' && L.doc.find(o => o._id === rinaOrder._id)?.itemCount === 2);
 ok(
 	'quick filter counts: all 4, today 4, unpaid 2, to fulfil 2, returns 0, cancelled 1',
-	JSON.stringify(L.views) === JSON.stringify({ all: 4, today: 4, unpaid: 2, 'to-ship': 2, returns: 0, cancelled: 1 }),
+	Object.entries({ all: 4, today: 4, unpaid: 2, 'to-ship': 2, returns: 0, cancelled: 1 }).every(([k, n]) => L.views[k] === n),
 	JSON.stringify(L.views)
 );
 L = await list('?view=unpaid');

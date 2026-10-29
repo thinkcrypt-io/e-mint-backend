@@ -50,7 +50,8 @@ export const syncVariants = async (store: Store, productId: any) => {
 	const product: any = await Product.findById(productId).lean();
 	if (!product) return [];
 	const sold = product.status !== 'archived' && product.status !== 'draft';
-	const combos = store.answers.products.variations ? combinations(optionsOf(product)) : [];
+	// A product set to Simple is one item whatever options it still carries.
+	const combos = store.answers.products.variations && product.productType !== 'simple' ? combinations(optionsOf(product)) : [];
 	const existing: any[] = await Variant.find({ product: product._id }).lean();
 
 	if (!combos.length) {
