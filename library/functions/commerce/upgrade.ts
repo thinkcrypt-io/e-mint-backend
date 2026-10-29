@@ -157,7 +157,14 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		const def: any = await ModelDefinition.findById(m.id).lean();
 		if (!def) continue;
 		const want: any[] = spec.step.fields || [];
-		const { fields, added } = merged(def.fields || [], want);
+		// A section field once keyed updatedAt (now reserved) is renamed, or the model no longer saves.
+		const have = (def.fields || []).map((f: any) =>
+			f.kind === 'section' && f.fields?.some((x: any) => x.key === 'updatedAt')
+				? { ...f, fields: f.fields.map((x: any) => (x.key === 'updatedAt' ? { ...x, key: 'lastUpdate' } : x)) }
+				: f,
+		);
+		const renamed = JSON.stringify(have) !== JSON.stringify(def.fields || []);
+		const { fields, added } = merged(have, want);
 		const renewed: string[] = [];
 		for (const f of fields) {
 			const w = want.find(x => x.key === f.key);
@@ -201,6 +208,7 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		const description = OLD_DESCRIPTIONS[spec.key]?.includes(def.description) ? spec.step.description : def.description;
 		if (description !== def.description) renewed.push('description');
 		const core = [...new Set([...(def.systemFields || []), ...coreFieldsOf(spec.step)])];
+		if (renamed) renewed.push('updatedAt → lastUpdate');
 		const change: Change = { model: def.title, added, renewed, filled: [] };
 		if (apply && (added.length || renewed.length)) {
 			await updateModelCore(req, def._id, { ...def, description, fields }, { note: 'Before the store’s upgrade' });

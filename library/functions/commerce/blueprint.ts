@@ -574,7 +574,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 						{ key: 'status', label: 'Status', kind: 'text' },
 						{ key: 'cod', label: 'Cash to collect', kind: 'number' },
 						{ key: 'bookedAt', label: 'Booked', kind: 'date' },
-						{ key: 'updatedAt', label: 'Last update', kind: 'date' },
+						{ key: 'lastUpdate', label: 'Last update', kind: 'date' },
 					],
 				},
 				{ key: 'register', label: 'Register', kind: 'reference', ref: 'Register' },
