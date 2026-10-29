@@ -31,6 +31,10 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-17 | Loyalty points | | M | later |
 | EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
 | EC-21 | Categories (EC21), form in sections (POS / Website configuration): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
+| EC-22 | A store's site kit (Pages, SEO, Contents), SEO on Products / Categories, Site menu, site setup for stores | backend + mint-tenant | M | done 2026-10-29 |
+| EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | planned — waits on the user's answers (see EC-23) |
+| EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | mint-tenant | L | planned |
+| EC-25 | Cut over Verte / Live Fresh: copy Online orders into Orders (`channel: website`), storefront checkout, track and my-orders read Orders; Online orders model retired | backend + live-fresh | M | planned |
 
 ## Handoff
 
@@ -222,3 +226,40 @@ wizard step and dialog) and the marketing website as it lands.
 
 - mint-docs "E-commerce" section (wizard, POS, returns, refunds, stock, shifts, roles); marketing website
   section; MCP `describe_store`, product + stock tools (no sales or refunds over MCP).
+
+## EC-23 — Website orders on the Order model (L)
+
+- The user (2026-10-29): website orders and POS orders on **one** order model, with an origin (POS or website),
+  shown in two separate tables, the website one a refined page with the address and everything needed.
+- **Origin = `channel`** (already on Order): options become POS · Phone / by hand · **Website**. Label "Origin". Locked
+  core field, so `upgradeStore` adds the option to built stores.
+- New fields (website orders, all optional): `email`, `slot` (delivery time), `paymentMethod` (cod / sslcommerz / bkash…),
+  `placedFrom` (storefront). `delivery` section gains `email`, `landmark`, `city`.
+- **Placing**: `POST /public/api/store/orders` (project key, rate-limited; guest or signed-in customer, honouring
+  Store → Guest checkout). Body = items (product, variant, qty), customer, delivery, slot, payment, coupon code. The store
+  prices it (`quote`), checks stock and limits, creates the Order (`channel: website`, `status: open`,
+  `fulfilment: unfulfilled`) and the stock movements through the engine — nothing from the browser is trusted.
+  Reuses `createManual`'s delivery checks; the outlet is Store → **Website outlet** (a new setting).
+- Order numbers: the same sequence (code prefix) — or `WEB-` when the user wants them apart (open question).
+- Customer access: `/my/orders` and `/my/orders/:id` on `orders` (customer rule: email), `GET /store/orders/track`
+  (id + phone), both returning only the fields a customer should see.
+- Online payment (SSLCommerz) and coupons then plug into the same endpoint (EC-10).
+
+## EC-24 — Website orders page (L)
+
+- `/store/website-orders` (sidebar: Store → Website orders), same engine as the Orders page (EC-09) with `channel =
+  website` fixed; POS Orders hides website orders (`channel in pos, manual`). Quick views: New (unconfirmed) · To pack ·
+  Out for delivery · Delivered · Unpaid · Cancelled, each counted.
+- Table: order no., placed (relative + exact), customer + phone, area, items, total, payment, status, courier. Search
+  by number, name, phone, address. Filters: area, payment, status, date range.
+- Order view: customer card (call / WhatsApp / email), delivery card (full address, landmark, area, slot, notes, map link),
+  items, payment and timeline, courier (Send to courier), actions: Confirm, Pack, Out for delivery, Delivered, Take
+  payment, Cancel, Print delivery slip / invoice. Status flow adds **Confirmed** between New and Packed.
+
+## EC-25 — Cut over Verte and Live Fresh (M)
+
+- Script `scripts/webOrdersToOrders.js` (dry run, `--apply`): each Online order becomes an Order (`channel: website`,
+  items, address, area, slot from the note, totals, status mapped new → open/unfulfilled, confirmed, out_for_delivery →
+  shipped, delivered, cancelled), keeping its code (`WO-0001`) and date; stock is not touched for orders already handled.
+- Live Fresh: `/api/checkout` posts to `POST /public/api/store/orders`; track, order page and account read Orders.
+- The Online orders model and its "take as store order" step are hidden, then removed once nothing reads them.
