@@ -31,7 +31,7 @@ const customersMatching = async (store: Store, words: string) =>
 
 /* --------------------------------------------------------------- orders */
 
-export const ORDER_VIEWS = ['all', 'today', 'unpaid', 'to-ship', 'returns', 'cancelled'] as const;
+export const ORDER_VIEWS = ['all', 'today', 'unpaid', 'to-ship', 'returns', 'cancelled', 'new', 'confirmed', 'out', 'delivered'] as const;
 type OrderView = (typeof ORDER_VIEWS)[number];
 
 const startOfToday = () => {
@@ -53,12 +53,21 @@ const orderView = (view: OrderView): Record<string, any> => {
 			return { returnedItems: { $gt: 0 } };
 		case 'cancelled':
 			return { status: 'cancelled' };
+		// The website orders' flow (EC-24): new → confirmed → packed / out for delivery → delivered.
+		case 'new':
+			return { status: 'open', fulfilment: 'unfulfilled' };
+		case 'confirmed':
+			return { status: 'open', fulfilment: { $in: ['confirmed', 'fulfilled'] } };
+		case 'out':
+			return { status: 'open', fulfilment: 'shipped' };
+		case 'delivered':
+			return { fulfilment: 'delivered' };
 		default:
 			return {};
 	}
 };
 
-export type OrderListQuery = { view?: string; q?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
+export type OrderListQuery = { view?: string; q?: string; scope?: string; area?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
 
 /**
  * The Orders table: newest first, a page at a time, with how many orders each
@@ -69,9 +78,13 @@ export const listOrders = async (store: Store, q: OrderListQuery) => {
 	const base: Record<string, any> = { status: { $ne: 'held' } };
 	const and: Record<string, any>[] = [];
 	for (const k of ['channel', 'paymentStatus', 'fulfilment'] as const) if (q[k]) base[k] = String(q[k]);
+	// The two tables: POS orders (POS and phone) and website orders — one model, told apart by origin.
+	if (!q.channel && q.scope === 'website') base.channel = 'website';
+	if (!q.channel && q.scope === 'pos') base.channel = { $in: ['pos', 'manual'] };
+	if (q.area) base['delivery.area'] = String(q.area).slice(0, 120);
 	if (isId(q.outlet)) base.outlet = q.outlet;
 	const words = String(q.q || '').trim().slice(0, 100);
-	if (words) and.push({ $or: [{ code: { $regex: escapeRegex(words), $options: 'i' } }, { customer: { $in: await customersMatching(store, words) } }, { 'delivery.phone': { $regex: escapeRegex(words), $options: 'i' } }] });
+	if (words) and.push({ $or: [{ code: { $regex: escapeRegex(words), $options: 'i' } }, { customer: { $in: await customersMatching(store, words) } }, { 'delivery.phone': { $regex: escapeRegex(words), $options: 'i' } }, { 'delivery.name': { $regex: escapeRegex(words), $options: 'i' } }, { 'delivery.address': { $regex: escapeRegex(words), $options: 'i' } }, { email: { $regex: escapeRegex(words), $options: 'i' } }] });
 	// $and, so a view's own status ($ne cancelled, open…) can't undo the base's $ne held.
 	const filter = (v: OrderView) => ({ $and: [base, orderView(v), ...and] });
 

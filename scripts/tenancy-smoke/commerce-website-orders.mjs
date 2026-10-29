@@ -62,6 +62,16 @@ r = await call('GET', `${C}/orders?view=all`, null, t);
 const rows = r.body?.doc || r.body?.orders || [];
 ok('both are on the Orders model with origin website', rows.filter(x => x.channel === 'website').length === 2, JSON.stringify(rows.map(x => [x.code, x.channel])));
 
+// Two tables: website orders and POS orders are told apart by origin.
+r = await call('GET', `${C}/orders?scope=website`, null, t);
+ok('the website table has both, with its own quick filters', (r.body?.doc || []).length === 2 && r.body?.views?.new === 2, JSON.stringify([r.body?.doc?.length, r.body?.views]));
+r = await call('GET', `${C}/orders?scope=pos`, null, t);
+ok('the POS table has none of them', (r.body?.doc || []).length === 0, String(r.body?.doc?.length));
+r = await call('GET', `${C}/orders?scope=website&q=Road%203`, null, t);
+ok('search by address', (r.body?.doc || []).length === 2, String(r.body?.doc?.length));
+r = await call('POST', `${C}/orders/${o?._id}/fulfil`, { to: 'confirmed' }, t);
+ok('confirmed: new → confirmed', r.status === 200 && (r.body?.order?.fulfilment || r.body?.fulfilment) === 'confirmed', `${r.status} ${r.body?.message || ''}`);
+
 // Cancelling puts the stock back.
 r = await call('POST', `${C}/orders/${o?._id}/cancel`, { reason: 'Changed mind' }, t);
 ok('cancelled', r.status === 200, `${r.status} ${r.body?.message || ''}`);

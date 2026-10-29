@@ -52,7 +52,7 @@ const money = (key: string, label: string, extra: any = {}) => ({ key, label, ki
 export const MOVEMENT_REASONS = ['opening', 'sale', 'cancel', 'return', 'return-damaged', 'adjustment', 'count', 'transfer-out', 'transfer-in', 'receive'];
 export const ORDER_STATUSES = ['held', 'open', 'completed', 'cancelled'];
 export const PAYMENT_STATUSES = ['unpaid', 'partial', 'paid', 'partially-refunded', 'refunded'];
-export const FULFILMENT = ['unfulfilled', 'fulfilled', 'shipped', 'delivered', 'returned', 'cancelled'];
+export const FULFILMENT = ['unfulfilled', 'confirmed', 'fulfilled', 'shipped', 'delivered', 'returned', 'cancelled'];
 export const RETURN_STATUSES = ['requested', 'approved', 'received', 'refunded', 'rejected', 'closed'];
 
 /** The models, in the order their links need (targets first). */

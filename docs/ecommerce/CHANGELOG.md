@@ -308,3 +308,12 @@
 - `POST /public/api/store/orders` (project key, rate limited): the store prices the order, checks stock, takes it from
   the first active store outlet, numbers it WEB-00001; `GET /public/api/store/orders/:id?phone=` finds it again.
   Cancel already puts stock back (smoke-tested for website orders); returns restock arrives with EC-08.
+
+## 2026-10-29 — EC-24 Website orders page
+
+- `GET /commerce/orders?scope=website|pos`: two tables on one model — website orders, or POS and phone orders (the POS
+  Orders page now passes `pos`). Search also finds a name, address or email; filter by `area`. New quick views New ·
+  To pack · Out for delivery · Delivered. Fulfilment gains **Confirmed** (New → Confirmed → Packed → Out → Delivered).
+- mint-tenant `/store/website-orders` (sidebar: Store → Website orders): customer + phone + email, deliver-to address
+  with landmark, area and time slot, payment choice and status; the order page's Delivery card has call / email / Open in
+  Maps links, the slot and landmark; Origin on the details card; Confirm order action.

@@ -33,7 +33,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-21 | Categories (EC21), form in sections (POS / Website configuration): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
 | EC-22 | A store's site kit (Pages, SEO, Contents), SEO on Products / Categories, Site menu, site setup for stores | backend + mint-tenant | M | done 2026-10-29 |
 | EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | done 2026-10-29 |
-| EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | mint-tenant | L | planned |
+| EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | backend + mint-tenant | L | done 2026-10-29 |
 | EC-25 | Cut over Verte / Live Fresh: copy Online orders into Orders (`channel: website`), storefront checkout, track and my-orders read Orders; Online orders model retired | backend + live-fresh | M | planned |
 
 ## Handoff

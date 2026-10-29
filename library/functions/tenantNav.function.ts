@@ -54,6 +54,7 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 		return section('Store', 'store', [
 			...(can('records:create') ? [{ title: 'POS', href: '/store/pos', icon: 'scan-barcode' }] : []),
 			...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
+			...(can('records:view') ? [{ title: 'Website orders', href: '/store/website-orders', icon: 'globe' }] : []),
 			...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
 			...(can('manage-projects') ? [{ title: 'Store settings', href: '/store/settings', icon: 'settings-2' }] : []),
 		]);

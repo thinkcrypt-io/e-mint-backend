@@ -388,7 +388,8 @@ export const pay = async (store: Store, id: any, input: { payments: PaymentInput
 };
 
 const FULFIL_NEXT: Record<string, string[]> = {
-	unfulfilled: ['fulfilled', 'shipped', 'delivered'],
+	unfulfilled: ['confirmed', 'fulfilled', 'shipped', 'delivered'],
+	confirmed: ['fulfilled', 'shipped', 'delivered'],
 	fulfilled: ['shipped', 'delivered'],
 	shipped: ['delivered'],
 };
