@@ -104,6 +104,7 @@ const tellTeam = (req: any, { route, permission, title, message, path, record }:
  *   POST /auth/logout-everywhere  signs every device out
  *   POST /auth/forgot           { email, returnTo? }      → emails a link to choose a new password (W-25)
  *   POST /auth/reset            { token, password }        → { token, customer } — the link's token, signed in
+ *   POST /auth/change-password  { currentPassword, password } → { token, customer } — signed in; other devices signed out
  *   GET  /:route                list   ?page&limit(≤100)&sort=-a,b&search=&<field>=<value>&<field>[<op>]=<value>
  *   GET  /:route/:id            get
  *   POST /:route                create
@@ -448,6 +449,26 @@ router.post(
 	handle(async req => {
 		const body = check(Joi.object({ token: Joi.string().trim().max(2000).required(), password }), req.body);
 		const row = await resetPassword(req.app, req.project, body.token, body.password);
+		const now = (await currentAccount(req.app, req.project, row.toObject())) || row.toObject();
+		return { token: row.generateToken(), customer: await answerCustomer(req, now) };
+	})
+);
+
+/*
+ * Change password while signed in: the current password stands in for the
+ * emailed link. Every other device is signed out; this one gets a new token.
+ */
+router.post(
+	'/auth/change-password',
+	authLimit,
+	handle(async req => {
+		const customer = await signedIn(req);
+		const body = check(Joi.object({ currentPassword: Joi.string().max(200).required(), password }), req.body);
+		const row: any = await ProjectCustomer.findById(customer._id).select('+password');
+		if (!row || row.isActive === false || !(await row.checkPassword(body.currentPassword))) throw new TenancyError(400, 'Your current password isn’t right.');
+		row.password = body.password;
+		row.tokenVersion = (row.tokenVersion || 0) + 1;
+		await row.save();
 		const now = (await currentAccount(req.app, req.project, row.toObject())) || row.toObject();
 		return { token: row.generateToken(), customer: await answerCustomer(req, now) };
 	})
