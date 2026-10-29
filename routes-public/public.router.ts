@@ -59,7 +59,7 @@ import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { commerceView } from '../library/functions/commerce/settings.js';
 import { storeOf } from '../library/functions/commerce/store.js';
-import { createWebsite, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
+import { createWebsite, myWebsiteOrder, myWebsiteOrders, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
 import {
 	fieldKeys,
 	isId,
@@ -628,6 +628,22 @@ router.post(
 			{ project: req.project, by: customer ? `Website · ${customer.email}` : 'Website' }
 		);
 		return publicOrder(await store.M('order').findById(id).lean());
+	})
+);
+
+router.get(
+	'/store/my/orders',
+	handle(async (req: any) => {
+		if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+		return myWebsiteOrders(await storeOf(), (await signedIn(req)).email, req.query);
+	})
+);
+
+router.get(
+	'/store/my/orders/:id',
+	handle(async (req: any) => {
+		if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+		return myWebsiteOrder(await storeOf(), (await signedIn(req)).email, req.params.id);
 	})
 );
 

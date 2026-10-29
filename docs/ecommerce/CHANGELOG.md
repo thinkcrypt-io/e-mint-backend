@@ -331,3 +331,17 @@
 - mint-tenant: the order page's **Return items** dialog (quantity per line, why, damaged = don't restock, refund
   method, what goes back). Smoke `commerce-returns.mjs` (9).
 - Still to do: refunds through the payment gateway (Stripe / SSLCommerz / bKash), exchange, POS Return mode.
+
+## 2026-10-29 — EC-25 Verte and Live Fresh cut over to the store's Orders (built, not switched on)
+
+- Backend: `GET /public/api/store/my/orders[/:id]` (signed-in buyer's website orders, by their email; `done=1|0`),
+  `GET /store/orders/:id` answers by id alone (the order page's link), with `?phone=` it must match; public `status` is the
+  storefront's stage (new · confirmed · out_for_delivery · delivered · cancelled). `scripts/webOrdersToOrders.js`
+  (dry run / `--apply`) copies Online orders into Orders with their number, date, address, area, slot; items matched to
+  variants by SKU; stock untouched; delivered orders get the cash payment. Dry run on Verte: 31 orders.
+- Live Fresh: `NEXT_PUBLIC_STORE_ORDERS=1` makes `/api/checkout` post to `/store/orders`, and the order page, tracking,
+  account list and dashboard read the store's Orders (adapter `toWebOrder`). Off, nothing changes.
+- **Switching Verte over (needs the user — production writes):** 1) deploy the backend; 2) `node scripts/upgradeStores.js
+  --apply` (Order fields: email, slot, paymentMethod, Origin = Website, Confirmed); 3) Store settings → Delivery: turn on
+  and add the two areas (Inside Dhaka 60, Dhaka suburbs 100); 4) `node scripts/webOrdersToOrders.js --apply`; 5) Vercel env
+  `NEXT_PUBLIC_STORE_ORDERS=1`, redeploy; 6) hide the Online orders page once nothing reads it.

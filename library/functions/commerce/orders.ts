@@ -289,16 +289,28 @@ export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx)
 export const trackWebsite = async (store: Store, id: any, phone: any) => {
 	const tail = (v: any) => String(v ?? '').replace(/\D/g, '').slice(-10);
 	const o: any = isId(id) ? await store.M('order').findOne({ _id: id, channel: 'website' }).lean() : null;
-	// The same answer for a wrong id and a wrong phone.
-	if (!o || tail(phone).length < 7 || tail(o.delivery?.phone) !== tail(phone)) throw new TenancyError(404, 'We couldn’t find an order with those details.');
+	// With a phone it must be the one on the order (the same answer for a wrong id and a wrong phone); without, the id is the key — as the order page's link always was.
+	if (!o || (phone !== undefined && phone !== '' && (tail(phone).length < 7 || tail(o.delivery?.phone) !== tail(phone)))) throw new TenancyError(404, 'We couldn’t find an order with those details.');
 	return publicOrder(o);
 };
 
 /** The order as its buyer sees it: no staff notes, cashier or ids of other records. */
+/** Where a website order is, in words the storefront shows: new → confirmed → out_for_delivery → delivered (or cancelled). */
+export const stageOf = (o: any) =>
+	o.status === 'cancelled' || o.fulfilment === 'cancelled'
+		? 'cancelled'
+		: o.fulfilment === 'delivered' || o.status === 'completed'
+		? 'delivered'
+		: o.fulfilment === 'shipped'
+		? 'out_for_delivery'
+		: ['confirmed', 'fulfilled'].includes(o.fulfilment)
+		? 'confirmed'
+		: 'new';
+
 export const publicOrder = (o: any) => ({
 	_id: String(o._id),
 	code: o.code,
-	status: o.status,
+	status: stageOf(o),
 	fulfilment: o.fulfilment,
 	paymentStatus: o.paymentStatus,
 	paymentMethod: o.paymentMethod || 'cod',
@@ -498,4 +510,23 @@ export const posSetup = async (store: Store, project: any, register?: any) => {
 		delivery: a.delivery.enabled ? { rates: a.delivery.rates } : null,
 		negativeStock: a.store.negativeStock,
 	};
+};
+
+/** A signed-in buyer's own website orders (found by the email on them), newest first; `done` 1 / 0 = delivered or cancelled / still on its way. */
+export const myWebsiteOrders = async (store: Store, email: string, q: { done?: any; page?: any; limit?: any } = {}) => {
+	const Order = store.M('order');
+	const mine: Record<string, any> = { channel: 'website', email: String(email || '').toLowerCase() };
+	const finished = { $or: [{ status: { $in: ['cancelled', 'completed'] } }, { fulfilment: { $in: ['delivered', 'cancelled'] } }] };
+	const filter = String(q.done) === '1' ? { $and: [mine, finished] } : String(q.done) === '0' ? { $and: [mine, { $nor: [finished] }] } : mine;
+	const limit = Math.min(50, Math.max(1, Number(q.limit) || 10));
+	const page = Math.max(1, Number(q.page) || 1);
+	const [docs, total] = await Promise.all([Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(), Order.countDocuments(filter)]);
+	return { doc: docs.map(publicOrder), total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+};
+
+/** One of a signed-in buyer's orders. */
+export const myWebsiteOrder = async (store: Store, email: string, id: any) => {
+	const o: any = isId(id) ? await store.M('order').findOne({ _id: id, channel: 'website', email: String(email || '').toLowerCase() }).lean() : null;
+	if (!o) throw new TenancyError(404, 'We couldn’t find that order.');
+	return publicOrder(o);
 };
