@@ -48,7 +48,7 @@ import { runInScope } from '../library/functions/tenantScope.function.js';
 const router = express.Router();
 
 const websiteOnly = (req: any) => {
-	if (req.project.type !== 'website') throw new TenancyError(404, 'Only website projects have a site setup');
+	if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Only website and store projects have a site setup');
 };
 const mayBuild = (req: any) => {
 	if (!grants(req.permissions, ['build'])) throw new TenancyError(403, 'Your role can’t change the site setup (it needs Build)');

@@ -514,7 +514,7 @@ router.post(
 	express.text({ type: 'text/plain', limit: '64kb' }),
 	handle(async (req, res) => {
 		res.status(202);
-		if (req.project.type !== 'website') return { ok: false };
+		if (!['website', 'ecommerce'].includes(req.project.type)) return { ok: false };
 		// Sent on by the mint-edge Worker (SC-10), whose own address is what reaches us: the visitor's. No more
 		// trusted than the rest of a page view (anyone with the public key can send one); used only for analytics.
 		const viaEdge = String(req.headers['x-mint-visitor-ip'] || '').trim();
@@ -664,7 +664,7 @@ router.post(
 router.get(
 	'/site',
 	handle(async req => {
-		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Not found');
 		const doc = await loadSite(req.project, { req, cached: true });
 		return {
 			settings: publicSettings(doc),
@@ -675,7 +675,7 @@ router.get(
 );
 
 const websiteOnly = (req: any) => {
-	if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+	if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Not found');
 };
 
 router.get(
@@ -755,7 +755,7 @@ router.get(
 router.get(
 	'/pages/by-path',
 	handle(async req => {
-		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Not found');
 		const path = String(req.query.path || '/').trim() || '/';
 		const [pages, seo, contents] = await Promise.all([kitModel(req, 'pages'), kitModel(req, 'seo'), kitModel(req, 'web-contents')]);
 		if (!pages?.Model) throw new TenancyError(404, 'Not found');
@@ -779,7 +779,7 @@ router.get(
 router.get(
 	'/web-contents/by-slug/:slug',
 	handle(async req => {
-		if (req.project.type !== 'website') throw new TenancyError(404, 'Not found');
+		if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Not found');
 		const contents = await kitModel(req, 'web-contents');
 		if (!contents?.Model) throw new TenancyError(404, 'Not found');
 		const slug = String(req.params.slug || '').trim().toLowerCase();

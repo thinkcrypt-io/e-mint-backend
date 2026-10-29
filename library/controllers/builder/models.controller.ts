@@ -665,7 +665,7 @@ const syncIndexes = async (def: ModelDef): Promise<string[]> => {
 	}
 };
 
-const upsertSidebar = async (def: any, category: string | null | undefined) => {
+export const upsertSidebar = async (def: any, category: string | null | undefined) => {
 	if (category === undefined) return def.sidebarItem || null;
 	if (!category) {
 		if (def.sidebarItem) await SidebarItem.deleteOne({ _id: def.sidebarItem });

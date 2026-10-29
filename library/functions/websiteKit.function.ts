@@ -1,5 +1,7 @@
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import SidebarCategory from '../models/sidebarcategories/model.js';
+import SidebarItem from '../models/sidebaritems/model.js';
+import { upsertSidebar } from '../controllers/builder/models.controller.js';
 import { buildFeature } from '../controllers/builder/features.service.js';
 import { planFromAi } from '../controllers/builder/features.schema.js';
 import { runInScope } from './tenantScope.function.js';
@@ -182,16 +184,18 @@ const websiteCategory = async () => {
 	return SidebarCategory.create({ name: 'Website', priority: 90, icon: 'globe', isActive: true });
 };
 
-/** Puts the kit's models in that category when they have none (a store built them before it had one). */
+/** Puts the kit's models in the sidebar (under Website) when they have no entry there — a store built them before it had a category. */
 const placeStoreKit = async (apply: boolean) => {
-	const loose = await ModelDefinition.countDocuments({ route: { $in: KIT_ROUTES }, active: { $ne: false }, $or: [{ 'sidebar.category': null }, { 'sidebar.category': '' }, { 'sidebar.category': { $exists: false } }] });
-	if (!loose) return [];
+	const defs: any[] = await ModelDefinition.find({ route: { $in: KIT_ROUTES }, active: { $ne: false } }).lean();
+	const loose: any[] = [];
+	for (const d of defs) if (!d.sidebarItem || !(await SidebarItem.exists({ _id: d.sidebarItem }))) loose.push(d);
+	if (!loose.length) return [];
 	if (apply) {
 		const cat: any = await websiteCategory();
-		await ModelDefinition.updateMany(
-			{ route: { $in: KIT_ROUTES }, active: { $ne: false }, $or: [{ 'sidebar.category': null }, { 'sidebar.category': '' }, { 'sidebar.category': { $exists: false } }] },
-			{ $set: { 'sidebar.category': String(cat._id) }, $inc: { version: 1 } }
-		);
+		for (const d of loose) {
+			const item = await upsertSidebar({ ...d, sidebarItem: undefined }, String(cat._id));
+			if (item) await ModelDefinition.updateOne({ _id: d._id }, { $set: { sidebarItem: item, 'sidebar.category': String(cat._id) }, $inc: { version: 1 } });
+		}
 	}
 	return [`Pages, SEO and Contents in the sidebar under Website`];
 };

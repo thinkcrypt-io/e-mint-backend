@@ -276,7 +276,7 @@ router.get('/access-users/:id', async (req: any, res: any) => {
 // per server; parallel first requests wait on the same upgrade.
 const seoUpgrades = new Map<string, Promise<void>>();
 router.use((req: any, res: any, next: any) => {
-	if (req.project?.type !== 'website' || !/^\/seo(\/|$)/.test(req.path)) return next();
+	if (!['website', 'ecommerce'].includes(req.project?.type) || !/^\/seo(\/|$)/.test(req.path)) return next();
 	const key = String(req.project._id);
 	if (!seoUpgrades.has(key))
 		seoUpgrades.set(
