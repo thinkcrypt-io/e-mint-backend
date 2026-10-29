@@ -17,7 +17,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-05 | Catalogue + stock engine: default variants, option matrix, barcode lookup, stock per outlet, adjustments, counts, transfers | backend + mint-tenant | L | done 2026-10-28 |
 | EC-06 | Orders engine: pricing (discounts, coupons, tax), sale, manual order, hold / resume, cancel, payments ledger, split tenders, store credit, order numbers | backend | L | done |
 | EC-07 | POS page: outlet / register / shift, grid, search, barcode, variants, cart, customer, discounts, hold, pay, receipt print | mint-tenant | L | done |
-| EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend | L | next |
+| EC-08 | Returns & refunds engine: per-line partial returns, window, restock, refund split, refund by method incl. gateway refunds (Stripe / SSLCommerz / bKash), exchange | backend + mint-tenant | L | engine + Return items dialog done 2026-10-29 — gateway refunds, exchange and the POS Return mode still to do |
 | EC-09 | Custom Orders table + detailed order page (EC19); returns in the panel: order actions, Returns page, POS Return mode, credit note | backend + mint-tenant | L | done 2026-10-28 — Return items, refunds, POS Return mode and credit note wait for EC-08 |
 | EC-10 | Pay-by-link for orders through the project's gateways | backend + mint-tenant | M | |
 | EC-11 | Shifts (open / cash in-out / close / Z-report) + reports + dashboard widgets | backend + mint-tenant | M | |

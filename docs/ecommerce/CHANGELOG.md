@@ -317,3 +317,17 @@
 - mint-tenant `/store/website-orders` (sidebar: Store → Website orders): customer + phone + email, deliver-to address
   with landmark, area and time slot, payment choice and status; the order page's Delivery card has call / email / Open in
   Maps links, the slot and landmark; Origin on the details card; Confirm order action.
+
+## 2026-10-29 — EC-08 Returns: restock and refund
+
+- The user: when an order is cancelled the item stock should adjust, and when items are returned.
+- `commerce/returns.ts` `returnItems` + `POST /commerce/orders/:id/return { lines: [{ line, quantity, reason, condition,
+  restock }], refundMethod, note }`: whole numbers up to what's left (claimed atomically per line), return window and
+  "whole orders only" honoured, sellable items go back to the order's outlet (movement reason `return`; damaged ones
+  don't), refund = the lines' worth (shipping stays) but never more than was paid and not yet refunded — split over the
+  ways it was paid, cash, or store credit — as refund payment rows; a Return record (RET-00001, status refunded); the
+  order's returned counts and balance settle; all items back → fulfilment `returned`. An unpaid order just owes less.
+  Cancelling already puts stock back (smoke-tested for website orders too).
+- mint-tenant: the order page's **Return items** dialog (quantity per line, why, damaged = don't restock, refund
+  method, what goes back). Smoke `commerce-returns.mjs` (9).
+- Still to do: refunds through the payment gateway (Stripe / SSLCommerz / bKash), exchange, POS Return mode.

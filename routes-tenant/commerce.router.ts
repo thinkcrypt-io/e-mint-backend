@@ -11,6 +11,7 @@ import { quote } from '../library/functions/commerce/pricing.js';
 import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail, pay, posSetup, sale } from '../library/functions/commerce/orders.js';
 import { cashMove, closeShift, currentShift, openShift, summary } from '../library/functions/commerce/shifts.js';
 import { listOrders, listReturns, moveReturn, returnDetail } from '../library/functions/commerce/lists.js';
+import { returnItems } from '../library/functions/commerce/returns.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -214,6 +215,11 @@ router.post(
 	'/orders/:id/cancel',
 	edit,
 	handle(async (req: any) => cancel(await storeOf(), req.params.id, req.body || {}, ctx(req)))
+);
+router.post(
+	'/orders/:id/return',
+	edit,
+	handle(async (req: any) => returnItems(await storeOf(), req.params.id, req.body || {}, { by: ctx(req).by }))
 );
 router.get(
 	'/returns',
