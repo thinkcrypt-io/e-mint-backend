@@ -67,7 +67,7 @@ const orderView = (view: OrderView): Record<string, any> => {
 	}
 };
 
-export type OrderListQuery = { view?: string; q?: string; scope?: string; area?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
+export type OrderListQuery = { view?: string; status?: string; q?: string; scope?: string; area?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
 
 /**
  * The Orders table: newest first, a page at a time, with how many orders each
@@ -77,12 +77,19 @@ export const listOrders = async (store: Store, q: OrderListQuery) => {
 	const view: OrderView = (ORDER_VIEWS as readonly string[]).includes(String(q.view)) ? (q.view as OrderView) : 'all';
 	const base: Record<string, any> = { status: { $ne: 'held' } };
 	const and: Record<string, any>[] = [];
-	for (const k of ['channel', 'paymentStatus', 'fulfilment'] as const) if (q[k]) base[k] = String(q[k]);
-	// The two tables: POS orders (POS and phone) and website orders — one model, told apart by origin.
-	if (!q.channel && q.scope === 'website') base.channel = 'website';
-	if (!q.channel && q.scope === 'pos') base.channel = { $in: ['pos', 'manual'] };
+	// The builder's Order filters (status, paymentStatus, fulfilment, channel, outlet): one value, or several joined by commas.
+	const many = (v: any) => String(v ?? '').split(',').map(x => x.trim()).filter(Boolean);
+	for (const k of ['paymentStatus', 'fulfilment'] as const) if (many(q[k]).length) base[k] = { $in: many(q[k]) };
+	const statuses = many(q.status);
+	if (statuses.length) base.status = { $in: statuses.filter(x => x !== 'held') };
+	// The two tables: POS orders (POS and phone) and website orders — one model, told apart by origin; a channel filter narrows within the table's own.
+	const own = q.scope === 'website' ? ['website'] : q.scope === 'pos' ? ['pos', 'manual'] : null;
+	const picked = many(q.channel);
+	const channels = own ? (picked.length ? picked.filter(c => own.includes(c)) : own) : picked;
+	if (own || picked.length) base.channel = { $in: channels };
 	if (q.area) base['delivery.area'] = String(q.area).slice(0, 120);
-	if (isId(q.outlet)) base.outlet = q.outlet;
+	const outletIds = many(q.outlet).filter(isId);
+	if (outletIds.length) base.outlet = { $in: outletIds };
 	const words = String(q.q || '').trim().slice(0, 100);
 	if (words) and.push({ $or: [{ code: { $regex: escapeRegex(words), $options: 'i' } }, { customer: { $in: await customersMatching(store, words) } }, { 'delivery.phone': { $regex: escapeRegex(words), $options: 'i' } }, { 'delivery.name': { $regex: escapeRegex(words), $options: 'i' } }, { 'delivery.address': { $regex: escapeRegex(words), $options: 'i' } }, { email: { $regex: escapeRegex(words), $options: 'i' } }] });
 	// $and, so a view's own status ($ne cancelled, open…) can't undo the base's $ne held.
