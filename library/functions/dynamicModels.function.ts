@@ -891,7 +891,8 @@ export const buildSchema = (input: ModelDef) => {
 	if (def.code?.enabled)
 		schema.pre('save', async function (this: any) {
 			// Always for a new record, so a copied record never keeps its source's code.
-			if (this.isNew) this.code = await nextCode(def);
+			// A code set on the document's $locals before save (a store's website orders: WEB-00001) wins over the model's own sequence.
+			if (this.isNew) this.code = this.$locals?.code || (await nextCode(def));
 		});
 
 	return schema;

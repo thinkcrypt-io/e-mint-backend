@@ -167,6 +167,27 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				f.label = w.label;
 				renewed.push(f.key);
 			}
+			// A select that has gained options (Origin: Website) and a section that has gained fields (the delivery's city, landmark, email).
+			if (w.kind === 'select' && f.kind === 'select' && Array.isArray(w.options)) {
+				const have = new Set((f.options || []).map((o: any) => o.value));
+				const more = w.options.filter((o: any) => !have.has(o.value));
+				if (more.length) {
+					f.options = [...(f.options || []), ...more];
+					renewed.push(f.key);
+				}
+				if (spec.key === 'order' && f.key === 'channel' && f.label === 'Channel') {
+					f.label = w.label;
+					if (!renewed.includes(f.key)) renewed.push(f.key);
+				}
+			}
+			if (w.kind === 'section' && f.kind === 'section' && Array.isArray(w.fields)) {
+				const have = new Set((f.fields || []).map((x: any) => x.key));
+				const more = w.fields.filter((x: any) => !have.has(x.key));
+				if (more.length) {
+					f.fields = [...(f.fields || []), ...more];
+					if (!renewed.includes(f.key)) renewed.push(f.key);
+				}
+			}
 			// A web address typed by hand only, from before it was made from the name.
 			if (w.kind === 'uid' && f.kind === 'uid' && w.from && !f.from) {
 				f.from = w.from;

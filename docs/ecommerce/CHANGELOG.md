@@ -298,3 +298,13 @@
   website setup page open for stores (`siteContents.router`, `content.router`, mint-tenant `t/[slug]`, `website-setup`).
 - Not done: the Site builder and the builder-only MCP tools stay website-only; SEO health and the SEO record page
   are still website-only (a store's SEO opens as the ordinary page).
+
+## 2026-10-29 — EC-23 Website orders on the Order model
+
+- The user: website and POS orders on one order model with an origin, in two tables; cancelled and returned items must
+  put stock back; website numbers WEB-00001; existing online orders copied across; stock out when placed.
+- Order's `channel` is now "Origin" with POS · Phone / by hand · **Website**; new `email`, `slot`, `paymentMethod`;
+  delivery gains `city`, `landmark`, `email`. `upgradeStore` adds them to built stores.
+- `POST /public/api/store/orders` (project key, rate limited): the store prices the order, checks stock, takes it from
+  the first active store outlet, numbers it WEB-00001; `GET /public/api/store/orders/:id?phone=` finds it again.
+  Cancel already puts stock back (smoke-tested for website orders); returns restock arrives with EC-08.

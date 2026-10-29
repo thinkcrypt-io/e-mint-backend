@@ -6,6 +6,7 @@ import { Quote, QuoteInput, quote } from './pricing.js';
 import { PaymentInput, checkPayments, moveCredit, recordPayment, settleOrder, tendersOf } from './payments.js';
 import { currentShift, shiftForSale } from './shifts.js';
 import { extraFields } from './lists.js';
+import { nextCode } from '../dynamicModels.function.js';
 
 /**
  * Orders (docs/ecommerce EC6, EC9, EC17): a POS sale, an order taken by phone
@@ -204,6 +205,115 @@ export const createManual = async (store: Store, input: ManualInput, ctx: Ctx) =
 	await countCustomer(store, customer, q.total, 1);
 	return orderDetail(store, order._id);
 };
+
+/* -------------------------------------------------------------- website */
+
+export type WebsiteInput = {
+	lines: { product?: any; variant?: any; quantity: any }[];
+	customerName?: string;
+	phone?: string;
+	email?: string;
+	address?: string;
+	area?: string;
+	city?: string;
+	landmark?: string;
+	slot?: string;
+	note?: string;
+	paymentMethod?: string;
+	couponCode?: string;
+};
+
+const clip = (v: any, n: number) => String(v ?? '').trim().slice(0, n);
+
+/**
+ * An order placed on the store's website (docs/ecommerce EC-23): priced and
+ * checked by the store (never by the browser), stock out of the first active
+ * store outlet now — it goes back if the order is cancelled — numbered WEB-00001,
+ * paid later (cash on delivery) unless the buyer pays online.
+ */
+export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx) => {
+	const outlet: any = await store.M('outlet').findOne({ kind: 'store', active: { $ne: false } }).sort({ createdAt: 1 }).lean();
+	if (!outlet) throw new TenancyError(409, 'The store has no outlet to sell from yet');
+	const name = clip(input.customerName, 120);
+	const phone = clip(input.phone, 40);
+	const address = clip(input.address, 500);
+	if (!name || !phone || !address) throw new TenancyError(400, 'Name, phone and delivery address are needed');
+	const email = clip(input.email, 160).toLowerCase();
+
+	// Product ids without a variant sell their default variant.
+	const raw = (Array.isArray(input.lines) ? input.lines : []).slice(0, 50);
+	const lines: { variant: any; quantity: any }[] = [];
+	for (const l of raw) {
+		let variant = l?.variant;
+		if (!isId(variant) && isId(l?.product)) variant = (await store.M('variant').findOne({ product: l.product, isDefault: true }, { _id: 1 }).lean() as any)?._id;
+		if (!isId(variant)) throw new TenancyError(400, 'An item in your cart is no longer sold — please remove it');
+		lines.push({ variant, quantity: l.quantity });
+	}
+
+	// The delivery charge is the store's rate for the area chosen.
+	const rates = store.answers.delivery.enabled ? store.answers.delivery.rates : [];
+	const rate = rates.find(r => r.name === input.area);
+	if (rates.length && !rate) throw new TenancyError(400, 'Please choose your delivery area');
+
+	const q = await quote(store, { lines, couponCode: input.couponCode, outlet: outlet._id, shipping: rate?.amount ?? 0 }, { forSale: true });
+	if (q.problems.length) throw problemsError(q.problems);
+
+	const Order = store.M('order');
+	const code = await nextCode({ name: 'StoreWebsiteOrders', code: { prefix: 'WEB', padding: 5 } } as any);
+	const order = new Order({
+		channel: 'website',
+		status: 'open',
+		outlet: outlet._id,
+		...totalsOf(q),
+		...(email && { email }),
+		slot: clip(input.slot, 80),
+		paymentMethod: clip(input.paymentMethod, 40) || 'cod',
+		cashier: ctx.by,
+		fulfilment: 'unfulfilled',
+		delivery: { name, phone, address, area: clip(rate?.name || input.area, 120), city: clip(input.city, 80), landmark: clip(input.landmark, 160), email, rate: rate?.name || '' },
+		...(input.note && { note: clip(input.note, 1000) }),
+	});
+	order.$locals.code = code;
+	await order.save();
+	try {
+		await commit(store, order, q, [], { outlet, shift: null, customer: null, by: ctx.by });
+	} catch (e) {
+		await Order.deleteOne({ _id: order._id }).catch(() => null);
+		throw e;
+	}
+	await settleOrder(store, order._id);
+	return order._id;
+};
+
+/** What a buyer may see of their own website order (found by its id and the phone on it). */
+export const trackWebsite = async (store: Store, id: any, phone: any) => {
+	const tail = (v: any) => String(v ?? '').replace(/\D/g, '').slice(-10);
+	const o: any = isId(id) ? await store.M('order').findOne({ _id: id, channel: 'website' }).lean() : null;
+	// The same answer for a wrong id and a wrong phone.
+	if (!o || tail(phone).length < 7 || tail(o.delivery?.phone) !== tail(phone)) throw new TenancyError(404, 'We couldn’t find an order with those details.');
+	return publicOrder(o);
+};
+
+/** The order as its buyer sees it: no staff notes, cashier or ids of other records. */
+export const publicOrder = (o: any) => ({
+	_id: String(o._id),
+	code: o.code,
+	status: o.status,
+	fulfilment: o.fulfilment,
+	paymentStatus: o.paymentStatus,
+	paymentMethod: o.paymentMethod || 'cod',
+	createdAt: o.createdAt,
+	slot: o.slot || '',
+	items: (o.items || []).map((i: any) => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+	subtotal: o.subtotal,
+	shipping: o.shipping,
+	discount: (Number(o.discount) || 0) + (Number(o.orderDiscount) || 0),
+	total: o.total,
+	balance: o.balance,
+	delivery: { name: o.delivery?.name || '', phone: o.delivery?.phone || '', address: o.delivery?.address || '', area: o.delivery?.area || '', city: o.delivery?.city || '', landmark: o.delivery?.landmark || '' },
+	email: o.email || '',
+	note: o.note || '',
+});
 
 /* ----------------------------------------------------------------- held */
 

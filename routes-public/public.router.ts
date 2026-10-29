@@ -58,6 +58,8 @@ import { siteEdge } from '../library/functions/siteEdge.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { commerceView } from '../library/functions/commerce/settings.js';
+import { storeOf } from '../library/functions/commerce/store.js';
+import { createWebsite, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
 import {
 	fieldKeys,
 	isId,
@@ -596,6 +598,45 @@ router.get(
 			variations: !!a.products.variations,
 			delivery: { enabled: !!a.delivery.enabled, rates: a.delivery.enabled ? a.delivery.rates.map(r => ({ name: r.name, amount: r.amount })) : [] },
 		};
+	})
+);
+
+/**
+ * Orders placed on a store's website (docs/ecommerce EC-23). The browser sends what was picked and who it's for —
+ * never prices: the store prices the order, takes the stock and numbers it (WEB-00001). A buyer finds their order
+ * again by its id and the phone on it.
+ *
+ *   POST /store/orders        { lines: [{ product | variant, quantity }], customerName, phone, email?, address, area, city?,
+ *                               landmark?, slot?, note?, paymentMethod?, couponCode? } → the order, as its buyer sees it
+ *   GET  /store/orders/:id    ?phone=…  the order (the same 404 for a wrong id or phone)
+ */
+const storeOrderLimit = rateLimit({ name: 'public-store-orders', windowMs: 10 * 60 * 1000, max: 30 });
+const storeTrackLimit = rateLimit({ name: 'public-store-track', windowMs: 10 * 60 * 1000, max: 40 });
+
+router.post(
+	'/store/orders',
+	storeOrderLimit,
+	handle(async (req: any) => {
+		if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+		const store = await storeOf();
+		const customer = await customerOf(req);
+		if (!customer && store.answers.store.guestCheckout === false) throw new TenancyError(401, 'Please sign in to place your order.', 'customer_required');
+		const b = req.body || {};
+		const id = await createWebsite(
+			store,
+			{ ...b, email: customer?.email || b.email, paymentMethod: b.paymentMethod === 'cod' || !b.paymentMethod ? 'cod' : String(b.paymentMethod) },
+			{ project: req.project, by: customer ? `Website · ${customer.email}` : 'Website' }
+		);
+		return publicOrder(await store.M('order').findById(id).lean());
+	})
+);
+
+router.get(
+	'/store/orders/:id',
+	storeTrackLimit,
+	handle(async (req: any) => {
+		if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+		return trackWebsite(await storeOf(), req.params.id, req.query.phone);
 	})
 );
 

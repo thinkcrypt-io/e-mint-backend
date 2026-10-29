@@ -32,7 +32,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
 | EC-21 | Categories (EC21), form in sections (POS / Website configuration): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
 | EC-22 | A store's site kit (Pages, SEO, Contents), SEO on Products / Categories, Site menu, site setup for stores | backend + mint-tenant | M | done 2026-10-29 |
-| EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | planned — waits on the user's answers (see EC-23) |
+| EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | done 2026-10-29 |
 | EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | mint-tenant | L | planned |
 | EC-25 | Cut over Verte / Live Fresh: copy Online orders into Orders (`channel: website`), storefront checkout, track and my-orders read Orders; Online orders model retired | backend + live-fresh | M | planned |
 
@@ -263,3 +263,11 @@ wizard step and dialog) and the marketing website as it lands.
   shipped, delivered, cancelled), keeping its code (`WO-0001`) and date; stock is not touched for orders already handled.
 - Live Fresh: `/api/checkout` posts to `POST /public/api/store/orders`; track, order page and account read Orders.
 - The Online orders model and its "take as store order" step are hidden, then removed once nothing reads them.
+
+**EC-23 decisions (the user, 2026-10-29):** stock comes out when the website order is placed (and goes back when it's
+cancelled — and when items are returned: EC-08 must restock, the user asked for it twice); Verte's existing Online orders
+are copied into Orders (EC-25); website orders are numbered WEB-00001 apart from POS orders. Built: `createWebsite`,
+`trackWebsite`, `publicOrder` in `commerce/orders.ts`; `POST /public/api/store/orders`, `GET /public/api/store/orders/:id?phone=`;
+the website outlet is the store's first active outlet of kind store (a setting later); `$locals.code` on a document wins
+over the model's own sequence (dynamicModels); `upgradeStore` adds select options and section fields. Smoke
+`commerce-website-orders.mjs` (14).
