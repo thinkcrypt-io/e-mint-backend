@@ -35,6 +35,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | done 2026-10-29 |
 | EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | backend + mint-tenant | L | done 2026-10-29 |
 | EC-25 | Cut over Verte / Live Fresh: copy Online orders into Orders (`channel: website`), storefront checkout, track and my-orders read Orders; Online orders model retired | backend + live-fresh | M | built 2026-10-29, behind `NEXT_PUBLIC_STORE_ORDERS=1` — the prod steps wait on the user (see CHANGELOG) |
+| EC-26 | The generic Coupon model: Code, Status, Discount type with Percentage (+ Maximum discount) or Amount off, Valid from/till, Max uses, Max uses per customer, Minimum order value, Used (locked, counted by the store); no applies-to | backend | S | built 2026-10-30; Verte via `upgradeStores.js --apply` |
 
 ## Handoff
 

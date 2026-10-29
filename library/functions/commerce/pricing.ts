@@ -22,6 +22,8 @@ export type QuoteInput = {
 	lines: { variant: any; quantity: any; discount?: Discount }[];
 	orderDiscount?: Discount;
 	couponCode?: string;
+	/** Who is buying when there's no customer record (a website guest): for a coupon's per-customer limit. */
+	who?: { phone?: string; email?: string };
 	shipping?: any;
 };
 
@@ -169,9 +171,12 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 			const c: any = await store.M('coupon').findOne({ couponCode: rx }).lean();
 			const now = new Date();
 			const afterLines = lines.reduce((s, l) => s + l.gross - l.lineDiscount, 0);
+			// Uses this buyer has already had of it (the per-customer limit): orders not cancelled, by customer, phone or email.
+			const mine = [input.customer && isId(input.customer) && { customer: input.customer }, input.who?.phone && { 'delivery.phone': String(input.who.phone) }, input.who?.email && { email: String(input.who.email).toLowerCase() }].filter(Boolean) as any[];
+			const usedByBuyer = c?.perCustomerLimit && mine.length ? await store.M('order').countDocuments({ coupon: c._id, status: { $nin: ['cancelled', 'held'] }, $or: mine }) : 0;
 			const why = !c
 				? `There’s no coupon ${code}`
-				: c.active === false
+				: c.active === false || c.status === 'inactive'
 				? `The coupon ${c.couponCode} is switched off`
 				: c.startsAt && new Date(c.startsAt) > now
 				? `The coupon ${c.couponCode} starts on ${new Date(c.startsAt).toDateString()}`
@@ -179,6 +184,8 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 				? `The coupon ${c.couponCode} has ended`
 				: c.usageLimit && Number(c.used || 0) >= Number(c.usageLimit)
 				? `The coupon ${c.couponCode} has been used up`
+				: c.perCustomerLimit && usedByBuyer >= Number(c.perCustomerLimit)
+				? `You’ve already used the coupon ${c.couponCode} the most it allows`
 				: c.minOrder && afterLines < Number(c.minOrder)
 				? `The coupon ${c.couponCode} needs an order of ${c.minOrder} or more`
 				: null;
@@ -194,9 +201,14 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 				const base = bases.reduce((x, y) => x + y, 0);
 				if (!base) problems.push(`The coupon ${c.couponCode} doesn’t cover anything in this order`);
 				else {
-					const amount = round(c.type === 'percent' ? (base * Math.min(Number(c.value) || 0, 100)) / 100 : Math.min(Number(c.value) || 0, base));
+					// percentOff / amountOff; `value` is what coupons made before they had their own fields carry.
+					const pct = Number(c.percentOff ?? c.value) || 0;
+					const off = Number(c.amountOff ?? c.value) || 0;
+					const cap = Number(c.maxDiscount) || 0;
+					const raw = c.type === 'percent' ? (base * Math.min(pct, 100)) / 100 : Math.min(off, base);
+					const amount = round(c.type === 'percent' && cap ? Math.min(raw, cap) : raw);
 					share(amount, bases, round).forEach((x, i) => (lines[i].couponDiscount = x));
-					coupon = { _id: String(c._id), code: c.couponCode, type: c.type, value: Number(c.value) || 0 };
+					coupon = { _id: String(c._id), code: c.couponCode, type: c.type, value: c.type === 'percent' ? pct : off };
 				}
 			}
 		}

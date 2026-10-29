@@ -345,3 +345,14 @@
   --apply` (Order fields: email, slot, paymentMethod, Origin = Website, Confirmed); 3) Store settings → Delivery: turn on
   and add the two areas (Inside Dhaka 60, Dhaka suburbs 100); 4) `node scripts/webOrdersToOrders.js --apply`; 5) Vercel env
   `NEXT_PUBLIC_STORE_ORDERS=1`, redeploy; 6) hide the Online orders page once nothing reads it.
+
+## 2026-10-30 — EC-26 Coupons
+- Coupon model: `couponCode`, `status` (active/inactive), `type` (percent / fixed), `percentOff` + `maxDiscount` (shown when
+  Percentage), `amountOff` (shown when Amount off), `startsAt`/`endsAt` (Valid from / till), `usageLimit` (Max uses),
+  `perCustomerLimit`, `minOrder`, `used` (locked; the engine counts it). Form sections `Percentage` / `Amount off` carry
+  `showIf` on the type. Applies-to (categories, products) is gone.
+- Engine: `pricing.ts` reads percentOff/amountOff (falls back to the old `value`), caps a percentage at maxDiscount, refuses
+  an inactive coupon, and enforces the per-customer limit by customer, phone or email (`QuoteInput.who` from website orders).
+- `upgradeStores.js`: adds the new fields, renews labels, drops value/active/appliesTo/categories/products after moving
+  each coupon's value into percentOff/amountOff and active into status. Smokes: commerce-orders (cap, inactive, minimum),
+  commerce-website-orders (per-customer limit).

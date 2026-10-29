@@ -47,7 +47,7 @@ const cap = await variantOf((await call('POST', `${P}/products`, { name: 'Cap', 
 await call('POST', `${C}/stock/set`, { variant: tee, outlet: GUL, onHand: 10, reason: 'opening' }, t);
 await call('POST', `${C}/stock/set`, { variant: cap, outlet: GUL, onHand: 5, reason: 'opening' }, t);
 const onHand = async v => (await call('GET', `${C}/lookup?code=${v === tee ? 'TEE' : 'CAP'}&outlet=${GUL}`, null, t)).body?.onHand;
-await call('POST', `${P}/coupons`, { couponCode: 'SAVE100', type: 'fixed', value: 100, usageLimit: 1 }, t);
+await call('POST', `${P}/coupons`, { couponCode: 'SAVE100', type: 'fixed', amountOff: 100, usageLimit: 1 }, t);
 const cust = (await call('POST', `${P}/store-customers`, { name: 'Rina', phone: '01700000000', address: 'Road 5, Banani' }, t)).body?.doc?._id;
 ok('two products with stock, a coupon and a customer', tee && cap && cust);
 
@@ -56,6 +56,16 @@ const basket = { lines: [{ variant: tee, quantity: 2, discount: { type: 'percent
 r = await call('POST', `${C}/quote`, { ...basket, outlet: GUL }, t);
 ok('quote: 2300 less 10% on the tees and 100 off, VAT 5% added → 2310', r.body?.subtotal === 2500 && r.body?.discount === 300 && r.body?.tax === 110 && r.body?.total === 2310 && r.body?.coupon?.code === 'SAVE100', JSON.stringify([r.body?.subtotal, r.body?.discount, r.body?.tax, r.body?.total, r.body?.problems]));
 ok('…the coupon shared over the lines it covers', r.body?.lines?.[0]?.couponDiscount + r.body?.lines?.[1]?.couponDiscount === 100);
+// A percentage with a cap, a coupon not yet valid, one that is inactive, one with a per-customer limit.
+await call('POST', `${P}/coupons`, { couponCode: 'TEN', type: 'percent', percentOff: 10, maxDiscount: 50 }, t);
+await call('POST', `${P}/coupons`, { couponCode: 'OFF', type: 'percent', percentOff: 10, status: 'inactive' }, t);
+await call('POST', `${P}/coupons`, { couponCode: 'BIG', type: 'fixed', amountOff: 100, minOrder: 5000 }, t);
+r = await call('POST', `${C}/quote`, { lines: [{ variant: tee, quantity: 2 }, { variant: cap, quantity: 1 }], couponCode: 'ten' }, t);
+ok('a percentage coupon takes its percent, capped at the maximum (10% of 2300 = 230 → 50)', r.body?.discount === 50 && r.body?.coupon?.type === 'percent', JSON.stringify([r.body?.discount, r.body?.problems]));
+r = await call('POST', `${C}/quote`, { lines: [{ variant: tee, quantity: 1 }], couponCode: 'OFF' }, t);
+ok('an inactive coupon is refused', !!r.body?.problems?.some(x => /switched off/.test(x)), JSON.stringify(r.body?.problems));
+r = await call('POST', `${C}/quote`, { lines: [{ variant: tee, quantity: 1 }], couponCode: 'BIG' }, t);
+ok('a coupon under its minimum order is refused', !!r.body?.problems?.some(x => /needs an order/.test(x)), JSON.stringify(r.body?.problems));
 
 // A sale needs an open shift.
 const sale = body => call('POST', `${C}/sales`, { register: REG, ...body }, t);

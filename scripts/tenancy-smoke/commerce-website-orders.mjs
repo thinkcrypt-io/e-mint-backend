@@ -76,4 +76,12 @@ ok('confirmed: new → confirmed', r.status === 200 && (r.body?.order?.fulfilmen
 r = await call('POST', `${C}/orders/${o?._id}/cancel`, { reason: 'Changed mind' }, t);
 ok('cancelled', r.status === 200, `${r.status} ${r.body?.message || ''}`);
 ok('stock is back: 10 − 1 = 9', (await onHand()) === 9, String(await onHand()));
+// A coupon with a per-customer limit: the same phone can't use it a second time; another phone can.
+await call('POST', `${P}/coupons`, { couponCode: 'ONCE', type: 'fixed', amountOff: 20, perCustomerLimit: 1 }, t);
+r = await call('POST', PUB('/store/orders'), { ...body, lines: [{ product: pid, quantity: 1 }], couponCode: 'ONCE' });
+ok('a coupon takes its amount off a website order (400 + 60 − 20)', (r.body?.doc || r.body)?.total === 440, JSON.stringify((r.body?.doc || r.body)?.total ?? r.body?.message));
+r = await call('POST', PUB('/store/orders'), { ...body, lines: [{ product: pid, quantity: 1 }], couponCode: 'ONCE' });
+ok('the same buyer can’t use it again', r.status >= 400, `${r.status} ${r.body?.message}`);
+r = await call('POST', PUB('/store/orders'), { ...body, phone: '01911111111', email: 'other@example.com', lines: [{ product: pid, quantity: 1 }], couponCode: 'ONCE' });
+ok('another buyer can', r.status === 200, `${r.status} ${r.body?.message}`);
 done();

@@ -24,7 +24,11 @@ import { ensureStoreSiteKit } from '../websiteKit.function.js';
 /** Labels the blueprint used to give a field — renewed to today's when the store still has them. */
 const OLD_LABELS: Partial<Record<ModelKey, Record<string, string[]>>> = {
 	category: { sortOrder: ['Order on the POS'], image: ['Image'] },
+	coupon: { type: ['Type'], minOrder: ['Minimum order'], startsAt: ['Starts'], endsAt: ['Ends'], usageLimit: ['Can be used (times)'], used: ['Used'] },
 };
+
+/** Fields the blueprint no longer has: taken off a store's model once their values are carried over (the coupon's one value, Active, and what it applies to). */
+const DROPPED: Partial<Record<ModelKey, string[]>> = { coupon: ['value', 'active', 'appliesTo', 'categories', 'products'] };
 
 /** Descriptions the blueprint used to give a model — renewed to today's when the store still has them. */
 const OLD_DESCRIPTIONS: Partial<Record<ModelKey, string[]>> = {
@@ -85,6 +89,24 @@ const fillCategories = async (def: any, apply: boolean, firstTime: boolean) => {
 	return filled;
 };
 
+/** Coupons from before they had their own fields: the percentage or the amount from their one value, Status from Active. */
+const fillCoupons = async (def: any, apply: boolean) => {
+	const Coupon: any = compiledModel(def.name);
+	if (!Coupon) return [];
+	const own = inProjectCollection(def) ? { [MODEL_KEY]: def.name } : {};
+	const col = Coupon.collection;
+	const old: any[] = await col.find({ ...own, $or: [{ status: { $in: [null, ''] } }, { percentOff: null, amountOff: null, value: { $ne: null } }] }).toArray();
+	if (!old.length) return [];
+	if (apply)
+		for (const c of old) {
+			const set: any = {};
+			if (!c.status) set.status = c.active === false ? 'inactive' : 'active';
+			if (c.percentOff == null && c.amountOff == null && c.value != null) set[c.type === 'fixed' ? 'amountOff' : 'percentOff'] = Number(c.value) || 0;
+			if (Object.keys(set).length) await col.updateOne({ _id: c._id }, { $set: set });
+		}
+	return [`${old.length} coupon(s) moved to the new percentage / amount and status fields`];
+};
+
 /** The website's rules on the store's own standard list endpoints (a Status on website, an Order on website). */
 const fillEndpoints = async (def: any, apply: boolean) => {
 	const want = listDefaultsOf(def);
@@ -125,7 +147,9 @@ const layoutPage = async (req: any, def: any, step: any, fields: any[], apply: b
 	const own = fields.map(f => f.key);
 	const has = (k: string) => own.includes(k);
 	const placed = new Set<string>(step.form.flatMap((x: any) => x.fields.flat()));
-	const rest = own.filter(k => !placed.has(k));
+	// Fields the blueprint shows only on the detail page (an engine count like Used) aren't "added by the person" for the form.
+	const viewed = new Set<string>((step.view || []).flatMap((x: any) => x.fields));
+	const rest = own.filter(k => !placed.has(k) && !viewed.has(k));
 	const form = [
 		...step.form.map((x: any) => ({
 			...x,
@@ -164,7 +188,9 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				: f,
 		);
 		const renamed = JSON.stringify(have) !== JSON.stringify(def.fields || []);
-		const { fields, added } = merged(have, want);
+		const dropped = (DROPPED[spec.key] || []).filter(k => have.some((f: any) => f.key === k));
+		const { fields: all, added } = merged(have, want);
+		const fields = all.filter((f: any) => !dropped.includes(f.key));
 		const renewed: string[] = [];
 		for (const f of fields) {
 			const w = want.find(x => x.key === f.key);
@@ -209,13 +235,15 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (description !== def.description) renewed.push('description');
 		const core = [...new Set([...(def.systemFields || []), ...coreFieldsOf(spec.step)])];
 		if (renamed) renewed.push('updatedAt → lastUpdate');
+		if (dropped.length) renewed.push(`removes ${dropped.join(', ')}`);
 		const change: Change = { model: def.title, added, renewed, filled: [] };
-		if (apply && (added.length || renewed.length)) {
+		if (apply && (added.length || renewed.length || dropped.length)) {
 			await updateModelCore(req, def._id, { ...def, description, fields }, { note: 'Before the store’s upgrade' });
 			await engineFieldsReadOnly(def.route, spec.engine);
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
+		if (spec.key === 'coupon') change.filled.push(...(await fillCoupons(def, apply)));
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);

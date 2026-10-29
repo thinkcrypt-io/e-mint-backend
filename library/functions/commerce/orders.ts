@@ -255,7 +255,7 @@ export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx)
 	const rate = rates.find(r => r.name === input.area);
 	if (rates.length && !rate) throw new TenancyError(400, 'Please choose your delivery area');
 
-	const q = await quote(store, { lines, couponCode: input.couponCode, outlet: outlet._id, shipping: rate?.amount ?? 0 }, { forSale: true });
+	const q = await quote(store, { lines, couponCode: input.couponCode, who: { phone, email }, outlet: outlet._id, shipping: rate?.amount ?? 0 }, { forSale: true });
 	if (q.problems.length) throw problemsError(q.problems);
 
 	const Order = store.M('order');
