@@ -149,19 +149,48 @@ export const WEBSITE_KIT = (category: string) => ({
 /** The kit's models start with a read-only public API (the site reads them). */
 const KIT_ROUTES = ['pages', 'seo', 'web-contents'];
 
-/** Seeds the website kit into a new website project (projectHooks.created). */
+/**
+ * What a store (e-commerce project) gets of the website kit: the pages, their
+ * SEO and the content blocks — the site's words and search details in the
+ * panel. Not the Site design: that's the site builder's, and a store's site
+ * is its own Next app. The store's site settings (name, logo, tags, SEO
+ * defaults) are the project's own, as for any site.
+ */
+export const STORE_SITE_KIT = (category: string) => {
+	const kit = WEBSITE_KIT(category);
+	return { ...kit, title: 'Website content', summary: 'Pages, per-page SEO and content blocks for your store’s website.', steps: kit.steps.filter((s: any) => s.route !== 'site-design') };
+};
+
+/** Builds a kit plan in the project's scope: the kit's models get a read-only public API (the site reads them). */
+const installKit = async (req: any, plan: any) => {
+	await buildFeature(req, planFromAi(plan), { source: 'wizard' });
+	await ModelDefinition.updateMany(
+		{ route: { $in: KIT_ROUTES } },
+		{ $set: { publicApi: { enabled: true, actions: ['list', 'get'], auth: 'none', ownerOnly: false } }, $inc: { version: 1 } }
+	);
+	await syncDynamicModels({ app: req.app, force: true });
+	// Contents hold typed records — a Hero, Cards, a List… (docs/cms D1, CMS-06).
+	// A problem here leaves the old Contents form; the Contents screen tries again when it opens.
+	await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
+};
+
+/**
+ * A store's site kit when it hasn't one (Pages, SEO, Contents), in the
+ * project's scope. A project that already has any of those routes is left
+ * alone — its own models. Returns what it did (or would do, when not applying).
+ */
+export const ensureStoreSiteKit = async (req: any, { apply = true } = {}): Promise<string[]> => {
+	const have = await ModelDefinition.countDocuments({ route: { $in: KIT_ROUTES }, active: { $ne: false } });
+	if (have) return [];
+	if (apply) await installKit(req, STORE_SITE_KIT('Website'));
+	return ['website kit: Pages, SEO and Contents'];
+};
+
+/** Seeds the website kit into a new website project (projectHooks.created); a store gets the kit without the design. */
 export const seedWebsiteKit = async (req: any, project: any) => {
-	if (project.type !== 'website') return;
+	if (project.type !== 'website' && project.type !== 'ecommerce') return;
 	await runInScope({ organization: project.organization, project: project._id }, async () => {
-		await buildFeature(req, planFromAi(WEBSITE_KIT('Website')), { source: 'wizard' });
-		await ModelDefinition.updateMany(
-			{ route: { $in: KIT_ROUTES } },
-			{ $set: { publicApi: { enabled: true, actions: ['list', 'get'], auth: 'none', ownerOnly: false } }, $inc: { version: 1 } }
-		);
-		await syncDynamicModels({ app: req.app, force: true });
-		// Contents hold typed records — a Hero, Cards, a List… (docs/cms D1, CMS-06).
-		// A problem here leaves the old Contents form; the Contents screen tries again when it opens.
-		await ensureTypedContents(req).catch((e: any) => console.error('typed contents:', e?.message));
+		await installKit(req, project.type === 'website' ? WEBSITE_KIT('Website') : STORE_SITE_KIT('Website'));
 	});
 };
 

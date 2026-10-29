@@ -10,6 +10,7 @@ import { invalidateRoute } from '../resolveRoute.function.js';
 import { engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { storeOf } from './store.js';
+import { ensureStoreSiteKit } from '../websiteKit.function.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -100,6 +101,15 @@ const fillEndpoints = async (def: any, apply: boolean) => {
 	return [`${ep.method} ${ep.path}: ${[missing.length && 'hides what’s inactive on the website', set['list.sort'] && `sorted ${set['list.sort']}`].filter(Boolean).join(', ')}`];
 };
 
+/** The public Products and Categories lists send back each one's SEO (the website shows it on its page). */
+const fillSeoOut = async (def: any, apply: boolean) => {
+	const ep: any = await ApiEndpoint.findOne({ model: def.route, standard: true, action: { $in: ['list', 'get'] } }).lean();
+	const out = ep?.fields?.out;
+	if (!Array.isArray(out) || out.includes('seo')) return [];
+	if (apply) await ApiEndpoint.updateMany({ model: def.route, standard: true, action: { $in: ['list', 'get'] }, 'fields.out': { $type: 'array' } }, { $addToSet: { 'fields.out': 'seo' } });
+	return [`public ${def.title} list and page send back their SEO`];
+};
+
 /**
  * The page laid out in the blueprint's sections (EC21: Category, POS
  * configuration, Website configuration, Images — short inputs side by side),
@@ -177,8 +187,11 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
+		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}
+	const kit = await ensureStoreSiteKit(req, { apply });
+	if (kit.length) changes.push({ model: 'Website', added: [], renewed: [], filled: kit });
 	return changes;
 };

@@ -128,7 +128,7 @@ type ToolDef = {
 	description: string;
 	scope: Scope;
 	/** Only offered inside a tenant project, a website project, or a store (e-commerce project). */
-	only?: 'project' | 'website' | 'ecommerce';
+	only?: 'project' | 'website' | 'ecommerce' | 'site';
 	/** A publish-scope tool that checks the person's own right itself (publish_entry: Publish on the model), not Build. */
 	ownRight?: boolean;
 	inputSchema: any;
@@ -797,7 +797,7 @@ const TOOLS: ToolDef[] = [
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, a website project or a store. */
-const available = (t: ToolDef, caller: Caller) => !t.only || (t.only === 'project' ? !!caller.project : caller.project?.type === t.only);
+const available = (t: ToolDef, caller: Caller) => !t.only || (t.only === 'project' ? !!caller.project : t.only === 'site' ? ['website', 'ecommerce'].includes(caller.project?.type as string) : caller.project?.type === t.only);
 
 /* ------------------------------------------------------------ JSON-RPC */
 

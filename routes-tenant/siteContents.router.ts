@@ -38,7 +38,7 @@ const may = (req: any, action: 'view' | 'create' | 'edit' | 'delete' | 'publish'
 };
 
 router.use((req: any, res: any, next: any) => {
-	if (req.project?.type !== 'website') return res.status(404).json({ message: 'Only website projects have site contents' });
+	if (!['website', 'ecommerce'].includes(req.project?.type)) return res.status(404).json({ message: 'Only website and store projects have site contents' });
 	next();
 });
 

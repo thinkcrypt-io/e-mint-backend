@@ -87,6 +87,13 @@ export const tenantNav = (
 					...widgetsItem(can),
 					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 			  ])
+			: // A store's website is its own app: its setup (tags, code, SEO defaults, domains), how to connect it and its analytics.
+			inProject && projectType === 'ecommerce'
+			? section('Site', 'globe', [
+					...(can('build') ? [{ title: 'Site setup', href: '/site-setup', icon: 'settings-2' }] : []),
+					...(can('build') ? [{ title: 'Website setup', href: '/website-setup', icon: 'code-xml' }] : []),
+					...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
+			  ])
 			: [];
 	// An API project has these at the top instead (tenantLead).
 	const audience = inProject && projectType !== 'api' ? section('API', 'plug-zap', apiItems(can, projectType !== 'website')) : [];

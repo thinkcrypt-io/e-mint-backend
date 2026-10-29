@@ -84,7 +84,7 @@ const findEntry = async (def: any, Model: mongoose.Model<any>, args: any, extra 
 const listContentTypes = async (req: any, _args: any, caller: Caller): Promise<Out> => {
 	const defs: any[] = await ModelDefinition.find({ active: { $ne: false } }).sort({ title: 1 }).lean();
 	// A website's own kit (Pages, SEO, Contents, Site design) has page tools of its own below.
-	const kit = new Set<string>(caller.project?.type === 'website' ? Object.values(KIT_ROUTES) : []);
+	const kit = new Set<string>(['website', 'ecommerce'].includes(caller.project?.type as string) ? Object.values(KIT_ROUTES) : []);
 	const content = defs.filter(d => (d.draftAndPublish || d.kind === 'single') && !kit.has(d.route));
 	const lines: string[] = [];
 	const data: any = { models: [], pages: [] };
@@ -105,7 +105,7 @@ const listContentTypes = async (req: any, _args: any, caller: Caller): Promise<O
 			`- ${d.title} /${d.route} — ${d.kind === 'single' ? 'single (one record)' : `${total} record(s)`}${d.draftAndPublish ? `, drafts: ${draft} never published, ${modified} with changes not published${canPublish ? '' : ' (the key’s owner can’t publish here)'}` : ', no drafts (saves go live)'}\n  fields: ${d.fields.map(fieldLine).join(', ')}`
 		);
 	}
-	if (caller.project?.type === 'website') {
+	if (['website', 'ecommerce'].includes(caller.project?.type as string)) {
 		const contents = await kitModel(KIT_ROUTES.contents);
 		if (contents) {
 			// The site builder's pages; their contents hang on each one's Pages record (made when first needed).

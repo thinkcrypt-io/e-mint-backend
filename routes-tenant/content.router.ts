@@ -50,7 +50,7 @@ router.get(
 			}
 			const c = await counts(Model);
 			const item = { ...base, ...c, last: last ? { _id: String(last._id), name: String(last[display] ?? ''), updatedAt: last.updatedAt, status: statusOf(last) } : null };
-			if (req.project?.type === 'website' && d.route === KIT_ROUTES.contents) out.website = item;
+			if (['website', 'ecommerce'].includes(req.project?.type) && d.route === KIT_ROUTES.contents) out.website = item;
 			else out.collections.push(item);
 		}
 		// Coming up: the waiting publishes and take-offs on the models they may see, soonest first.

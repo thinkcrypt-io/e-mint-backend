@@ -282,3 +282,19 @@
 - `upgradeStore` lays out a built store's page the same when it lacks those sections (published straight to
   RouteConfig with a RouteVersion; the person's own fields under More details) and renews MINT's old description.
 
+
+## 2026-10-29 — EC-22 A store's site kit and SEO on products and categories
+
+- The user: the site configurations, contents and SEO websites have were missing on a store; every new store should
+  start with them, and Categories and Products should have an SEO section their pages use.
+- New stores get the website kit without the Site design (`STORE_SITE_KIT`, `websiteKit.function.ts`): Pages /pages,
+  SEO /seo, Contents /web-contents, each with a read-only public API; `projectHooks.onCreated` seeds it for `ecommerce`
+  as for `website`. A project that already has any of those routes is left alone.
+- Blueprint Category and Product gain an `seo` field (the SEO editor); Category's form and detail get an SEO section.
+- `upgradeStore` adds the `seo` fields and the sections to built stores, puts `seo` on the public Products and
+  Categories lists/pages, and adds the kit when missing (`ensureStoreSiteKit`) — run `scripts/upgradeStores.js`
+  (dry run, then `--apply`) after deploying.
+- Tenant: a store's menu has a Site section (Site setup, Website setup, Analytics); its Contents screen and the
+  website setup page open for stores (`siteContents.router`, `content.router`, mint-tenant `t/[slug]`, `website-setup`).
+- Not done: the Site builder and the builder-only MCP tools stay website-only; SEO health and the SEO record page
+  are still website-only (a store's SEO opens as the ordinary page).
