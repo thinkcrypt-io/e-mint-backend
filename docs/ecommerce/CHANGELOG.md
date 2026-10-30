@@ -369,3 +369,10 @@
   Customers), Sales today / 30 days and Orders / Average order against the period before, New website orders, Unpaid, Returns,
   a Sales bar chart, Orders by origin and by stage, the latest orders. `upgradeStores.js` gives it to a built store that has
   no dashboard of its own; one someone built is left alone. `library/functions/commerce/dashboard.ts`.
+
+## 2026-10-30 — Couriers get their own plan
+
+- The user asked for the full courier plan (Steadfast, Pathao, RedX and more;
+  Store settings → connect, test; send from orders; a Delivery model linked to
+  the order; webhooks). EC-18 / EC20 move to `backend/docs/couriers/`
+  (CR-01…CR-17).

@@ -29,7 +29,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-16 | Connect a website project's shop / checkout to this store's products, stock and orders | | L | later |
 | EC-16a | First storefront pieces: Store → Guest checkout on your website, `GET /public/api/store`, a variant's image | backend + mint-tenant + mint-docs | S | done 2026-10-28 |
 | EC-17 | Loyalty points | | M | later |
-| EC-18 | Couriers (EC20): Delivery step + settings, Send to courier on the order page, tracking sync, COD payment; Steadfast, then Pathao, RedX | backend + mint-tenant | L | after EC-09 |
+| EC-18 | Couriers (EC20) — **moved to docs/couriers (CR-02…CR-17)** | backend + mint-tenant | L | planned 2026-10-30 |
 | EC-21 | Categories (EC21), form in sections (POS / Website configuration): web address (slug, made from the name, -2 when taken), status and order on the POS and the website, more images; POS category bar; website rule on the list endpoint; `upgradeStores.js` for stores built before | backend + mint-tenant + mint-docs + live-fresh | M | done 2026-10-28 |
 | EC-22 | A store's site kit (Pages, SEO, Contents), SEO on Products / Categories, Site menu, site setup for stores | backend + mint-tenant | M | done 2026-10-29 |
 | EC-23 | Website orders on the Order model: `channel` gains `website`; `POST /public/api/store/orders` places them through the engine (priced and stocked by the store); website fields (email, slot, payment method) | backend | L | done 2026-10-29 |
@@ -199,6 +199,9 @@ wizard step and dialog) and the marketing website as it lands.
   POS Return mode and exchange; credit note print.
 
 ## EC-18 — Couriers (L)
+
+- **Moved to `backend/docs/couriers/`** (2026-10-30): Delivery model, courier connections, webhooks. The notes below
+  are the first sketch, kept for history.
 
 - The user (2026-10-28): "option to send it to courier if courier is integrated". `CommerceSettings.delivery`
   (shipping on manual orders, rates, couriers[]); credentials sealed (`select: false`, as gateways).
