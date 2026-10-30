@@ -39,8 +39,7 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 ## Handoff
 
 - **2026-10-31 — APIs checked** → `CONNECTING.md` (start every adapter WO there). RedX = official; Steadfast = its Postman
-  collection + packages for webhooks; Pathao = packages only — read its signed-in developer page or capture sandbox
-  webhooks before CR-08. Steadfast has no sandbox (smoke against the stub; one live consignment with the user).
+  collection + packages for webhooks; Pathao = official (signed-in Developer API page, 2026-10-31). Steadfast has no sandbox (smoke against the stub; one live consignment with the user).
 - **2026-10-30 — CR-01 done.** Plan only, no code. Context a new session needs: EC-18 in docs/ecommerce is replaced by
   this folder. Today the store has `CommerceSettings.delivery.couriers` (ids the wizard turned on; `COURIERS` in
   `commerce/settings.ts`, all `ready: false`) and an Order `courier` section (provider, consignment, tracking, status,
@@ -131,9 +130,10 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 
 ## CR-08 — Pathao (M)
 
-- `CONNECTING.md` § Pathao is from packages only. First: read the official page signed in (merchant.pathao.com/courier/developer-api)
-  or capture sandbox webhooks — event names, whether city / zone are required, who makes the webhook secret — and correct it.
-  No find-by-invoice: a timed-out booking offers **Link existing parcel** (type the consignment id).
+- `CONNECTING.md` § Pathao is from the official Developer API page (read 2026-10-31): token, stores, cities / zones / areas,
+  price plan, orders, bulk, info, the webhook (Mint's secret in `X-PATHAO-Signature`, reply 202 + integration header within
+  10 s) and all 24 events. City / zone / area are optional when booking (Pathao reads the address) — pickers only for the
+  price quote. A timed-out booking waits for `order.created` (matched by `merchant_order_id`), then **Link existing parcel**.
 - `couriers/pathao.ts`: credentials client id / secret / username / password; token issue + refresh (sealed on the
   connection, refreshed 1 h before expiry, one refresh at a time); sandbox / live; stores (settings: pickup store,
   delivery type normal / on-demand, item type parcel); cities → zones → areas (options); `quote` (price plan); `book`,

@@ -10,9 +10,9 @@ Checked 2026-10-31. **Confidence** says where each fact came from:
 |---|---|---|
 | RedX | Yes, read in full | Merchant panel → **Developer APIs** (`redx.com.bd/developer-api/`). You must be signed in. |
 | Steadfast | Partly: Postman collection; no webhook spec | [Postman collection](https://documenter.getpostman.com/view/26211192/2sAYJ1mhpk). `steadfast.com.bd/api-docs` returns 404, and the panel needs sign-in. |
-| Pathao | Not reachable | `merchant.pathao.com/courier/developer-api` needs merchant sign-in; `developer.pathao.com` doesn't resolve. |
+| Pathao | Yes (read signed in) | `merchant.pathao.com/courier/developer-api` — API Documentation + Webhook Integration tabs |
 
-**To close the gaps:** sign in to the Steadfast and Pathao merchant panels in the browser pane, then read their API / webhook pages the same way the RedX page was read. Or capture the first real webhook calls (CR-06 stores the raw body and headers).
+**Still open:** Steadfast's webhook spec (sign in to its panel and read the Webhook page, or capture the first real calls — CR-06 keeps the raw body and headers).
 
 ---
 
@@ -69,28 +69,47 @@ Checked 2026-10-31. **Confidence** says where each fact came from:
 
 ---
 
-## Pathao (packages only — CR-08 must confirm)
+## Pathao (official — merchant panel's Developer API page, read signed in 2026-10-31)
+
+Source: `merchant.pathao.com/courier/developer-api`, which has two tabs, **API Documentation** and **Webhook Integration**.
+The Webhook Integration tab only appears once the merchant has pressed **Generate Credentials**. Pathao's own
+WooCommerce plugin ([pathao-eng/courier-woocommerce-plugin](https://github.com/pathao-eng/courier-woocommerce-plugin))
+agrees with the page and fills in how the handshake reply works.
 
 **What the store owner does in Pathao**
-1. Sign in to the Pathao merchant panel. Under **Developer API → Merchant API Credentials**, copy the client id and client secret (packages). Mint also needs the account's email and password, because the token is issued with a password grant.
-2. Webhook: register the callback URL in the merchant panel's developer / webhook settings (the exact menu is unconfirmed). Packages mention a "secret token" given with the credentials; it is compared with `X-PATHAO-Signature`.
+1. Sign in to the Pathao merchant panel → **Developer API** → **Merchant API Credentials**. If no keys are there yet,
+   press **Generate Credentials**. Copy the **Client ID** and **Client Secret** into Mint, together with the email and
+   password the owner uses to sign in to Pathao (the token is issued with a password grant).
+2. Pick the store id: Mint lists the owner's Pathao stores (`GET /stores`) and they choose one. Mint suggests the one
+   marked `is_default_store`.
+3. **Developer API → Webhook Integration**:
+   - Paste the **Callback URL** Mint shows.
+   - Paste the **Webhook secret** Mint shows. The doc calls it "Given By Merchant", so Mint generates it.
+   - Choose **All Events**.
+   - Press **Add Webhook**, then use Pathao's **test** button there.
 
-**What Mint stores:** client id, client secret, username, password (all sealed); access and refresh token with expiry (sealed); store id; webhook secret.
+**What Mint stores:** client id, client secret, email, password, access and refresh token with expiry (all sealed),
+mode, store id, delivery type, item type, the webhook secret (sealed), and the integration reply header (see below).
 
 | | |
 |---|---|
 | Base URL | live `https://api-hermes.pathao.com`, sandbox `https://courier-api-sandbox.pathao.com` |
-| Sandbox | One package publishes public sandbox credentials (client id `7N1aMJQbWm`, user `test@pathao.com`). Use them in smoke tests and stubs, never for real stores. |
-| Token | `POST /aladdin/api/v1/issue-token` `{ client_id, client_secret, username, password, grant_type: "password" }` → `{ access_token, refresh_token, expires_in }`. Refresh: the same path with `grant_type: "refresh_token"` and `refresh_token`. Lifetime: 5 days documented, 90 days seen in sandbox, so refresh by `expires_in`. Calls use `Authorization: Bearer <token>`. |
-| Test connection | Issue a token, then `GET /aladdin/api/v1/stores`. |
-| Options | `GET /aladdin/api/v1/city-list` → `cities/:city_id/zone-list` → `zones/:zone_id/area-list`; stores `GET /stores`, `GET /stores/:id`, `POST /stores` (name, contact_name, contact_number, address, city_id, zone_id, area_id; a new store takes about 1 h to be approved) |
-| Charge | `POST /aladdin/api/v1/merchant/price-plan` `{ store_id, item_type, delivery_type, item_weight, recipient_city, recipient_zone }` → `{ price, discount, cod_enabled, cod_percentage, final_price }` |
-| Book | `POST /aladdin/api/v1/orders`. Fields: `store_id`, `merchant_order_id`, `recipient_name` (3–100), `recipient_phone` (01…, 11 digits), `recipient_address` (10–220), `delivery_type` (48 normal / 12 on-demand), `item_type` (1 document / 2 parcel), `item_quantity`, `item_weight` (0.5–10 kg, sent as a string), `amount_to_collect`. Optional: `recipient_city` / `recipient_zone` / `recipient_area` (packages disagree on whether they're required; one says Pathao reads them from the address), `special_instruction`, `item_description`, `recipient_secondary_phone`. Returns `data: { consignment_id, merchant_order_id, order_status, delivery_fee }`. Bulk `POST /orders/bulk { orders: [...] }` → 202 with no ids. |
-| Status | `GET /aladdin/api/v1/orders/:consignment_id/info` → `order_status`, `order_status_slug`, `updated_at`, `invoice_id` |
-| Find by invoice | Not found in any source. So if a booking times out: no automatic retry; the delivery is marked "Check the Pathao panel before sending again". |
-| Webhook auth | Header `X-PATHAO-Signature`. One package compares it with the secret as plain text (not HMAC). Mint compares in constant time. |
-| Handshake | The first call has `event: "webhook_integration"` and a header `X-Pathao-Merchant-Webhook-Integration-Secret: <uuid>`. Reply **202** and send the same header and value back. |
-| Webhook body | `event`, `consignment_id`, `merchant_order_id`, `order_status`, … The **event names are not in any source**. The plan's list (`order.created`, `order.picked`, `order.delivered`, `order.returned`, `order.paid`, …) is a guess until the sandbox shows the real ones. CR-08 maps by `order_status` / `event` after capturing them. |
+| Sandbox | Published on the page for everyone: client id `7N1aMJQbWm`, client secret `wRcaibZkUdSNz2EI9ZyuXLlNrnAv0TdPUPXMnD39`, `test@pathao.com` / `lovePathao`. Use them for smoke tests and the "Test" mode. |
+| Token | `POST /aladdin/api/v1/issue-token` with body `{ client_id, client_secret, grant_type: "password", username, password }`, which returns `{ token_type: "Bearer", expires_in: 432000, access_token, refresh_token }`. Refresh uses the same path with `grant_type: "refresh_token"` and `refresh_token`. Calls send `Authorization: Bearer …`. **Plan:** keep the token sealed and refresh it a day before it expires. If the refresh fails, issue a new one with the password. (Pathao's plugin instead calls `POST /aladdin/api/v1/external/login` with only `{ client_id, client_secret }`. The doc doesn't list that path, so it's a fallback to try in CR-08, not the main route.) |
+| Test connection | Issue a token, then `GET /aladdin/api/v1/stores`. The reply is `data.data[]` with `{ store_id, store_name, store_address, is_active, city_id, zone_id, hub_id, is_default_store, is_default_return_store }`. |
+| Options | `GET /aladdin/api/v1/city-list` returns `{ city_id, city_name }`. Then `cities/:id/zone-list` returns `{ zone_id, zone_name }`. Then `zones/:id/area-list` returns `{ area_id, area_name, home_delivery_available, pickup_available }`. Each list is wrapped as `data.data[]`. (The plugin also uses `/countries/1/city-list`, `/zones/list` and `/areas/list`.) |
+| Create store | `POST /stores` with `{ name (3–50), contact_name (3–50), contact_number (11), secondary_contact?, otp_number?, address (15–120), city_id, zone_id, area_id }`. The reply says "please wait one hour for approval". |
+| Charge | `POST /aladdin/api/v1/merchant/price-plan` with `{ store_id, item_type, delivery_type, item_weight, recipient_city, recipient_zone }`. City and zone are **required here**. The reply is `{ price, discount, promo_discount, plan_id, cod_enabled, cod_percentage, additional_charge, final_price }`. |
+| Book | `POST /aladdin/api/v1/orders`. **Required:** `store_id`, `recipient_name` (3–100), `recipient_phone` (11), `recipient_address` (10–220), `delivery_type` (48 normal / 12 on demand), `item_type` (1 document / 2 parcel), `item_quantity`, `item_weight` (0.5–10 kg), `amount_to_collect` (whole number, 0 when not cash on delivery). **Optional:** `merchant_order_id`, `recipient_secondary_phone`, `recipient_city` / `recipient_zone` / `recipient_area` (if left out, Pathao works them out from the address; never send null), `special_instruction`, `item_description`. Returns `{ consignment_id, merchant_order_id, order_status: "Pending", delivery_fee }`. |
+| Bulk | `POST /orders/bulk` with `{ orders: [...] }`. It answers 202 with `data: true` and no consignment ids; those arrive later through the `order.created` webhooks, matched by `merchant_order_id`. |
+| Status | `GET /aladdin/api/v1/orders/:consignment_id/info` returns `{ consignment_id, merchant_order_id, order_status, order_status_slug, updated_at, invoice_id }` |
+| Find by invoice | No endpoint for it. But `order.created` carries `merchant_order_id`, so a booking that timed out is matched up when that webhook arrives. Until it does, the delivery shows "Waiting for Pathao to confirm"; after 10 minutes with nothing, it falls back to **Link existing parcel**. |
+| Cancel | No API for it. |
+| Webhook request | `POST` to the callback URL, with headers `X-PATHAO-Signature: <webhook_secret>` (the secret itself, not a hash; Pathao's plugin checks it with plain equality) and `Content-Type: application/json`. |
+| Webhook reply | Answer within **10 seconds**, in at most 3 redirects, over valid HTTPS. Reply with the header the Webhook Integration tab names. It is per merchant (`webhook_header_key` / `webhook_header_value`) and only optional while the merchant isn't "strict". Pathao's plugin always sends `X-Pathao-Merchant-Webhook-Integration-Secret: f3992ecc-59da-4cbe-a049-a13da2018d51` with status **202**. Mint does the same, and the owner can change the value in Store settings if their tab shows another. The first call has `event: "webhook_integration"`. |
+| Webhook body | `{ consignment_id, merchant_order_id, updated_at, timestamp, store_id, event, … }`, plus per event: `delivery_fee` (created / updated / pickup-requested), `collected_amount` (delivered, partial-delivery, paid-return, exchanged), `reason` (sometimes), `invoice_id` (paid), `return_collected_amount` + `return_type` (return-id-created, return-in-transit, returned-to-merchant). |
+| Events → CR6 | `order.created` → booked · `order.updated` → keep (refresh) · `order.pickup-requested`, `order.assigned-for-pickup` → pickup-pending · `order.picked` → picked-up · `order.pickup-failed` → on-hold · `order.pickup-cancelled` → cancelled · `order.at-the-sorting-hub`, `order.in-transit`, `order.received-at-last-mile-hub` → in-transit · `order.assigned-for-delivery` → out-for-delivery · `order.delivered` → delivered · `order.partial-delivery` → partly-delivered · `order.delivery-failed` → failed-attempt · `order.on-hold` → on-hold · `order.returned`, `order.return-id-created`, `order.return-in-transit` → returning · `order.returned-to-merchant` → returned · `order.paid-return` → returned (with return charge collected) · `order.exchanged` → delivered (exchange; note) · `order.paid` → settle (CR11, `invoice_id`) · `store.created` / `store.updated` → refresh the store list |
+| Tracking link | Not in the doc. |
 
 ---
 
@@ -99,10 +118,10 @@ Checked 2026-10-31. **Confidence** says where each fact came from:
 - **The webhook secret's origin depends on the courier** (CR3 / CR9):
   - Steadfast: generates it; the owner pastes it into Mint.
   - RedX: has none; Mint makes a token and puts it in the URL query.
-  - Pathao: compares a secret in `X-PATHAO-Signature`. Its origin is unconfirmed: the owner pastes it, or Mint generates one if Pathao's panel lets you type it.
+  - Pathao: the merchant types the secret into its panel, so Mint generates it, shows it and checks `X-PATHAO-Signature`; Mint's reply must also carry Pathao's integration header.
 
   So the adapter declares `webhook.secret: 'theirs' | 'ours'`, and the Store settings card asks for it or shows it to match.
-- **Look up by invoice (CR13) works on Steadfast only.** On RedX and Pathao, a booking that times out becomes `error` with "Check the <courier> panel before sending again", plus a **Link existing parcel** action where staff type the tracking id in. That action calls `status`, then attaches the parcel to the delivery.
+- **Look up by invoice (CR13) works on Steadfast only.** Pathao's `order.created` webhook carries our order number, so a Pathao booking that timed out is matched when that arrives. On RedX (and Pathao after 10 minutes), the delivery becomes `error` with "Check the <courier> panel before sending again", plus a **Link existing parcel** action where staff type the tracking id in. That action calls `status`, then attaches the parcel to the delivery.
 - **RedX areas are flat** (one area id, searchable by district or post code), so CR-10's pickers are city → zone → area for Pathao and one search box for RedX.
 - **RedX's `ready-for-delivery` means "received from the merchant"** → `picked-up`, not out-for-delivery. `paid` → settle (CR11).
 - **Steadfast `in_review` → `booked`, `pending` → `in-transit`**; the `*_approval_pending` states map like their finals (delivered, partly-delivered, cancelled), and the delivery stays open until the final state arrives.

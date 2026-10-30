@@ -137,20 +137,20 @@ Public: `POST /public/couriers/:provider/:connection` (webhooks, CR9).
 ## 5. The three couriers
 
 **`CONNECTING.md` is the reference** (checked 2026-10-31): for each courier, where the owner gets the keys, what Mint
-stores, every endpoint, the webhook check, the statuses and how sure each fact is. RedX is from its official page;
-Steadfast from its Postman collection (webhook from packages); Pathao from packages only. CR-04 / CR-08 / CR-09 confirm
+stores, every endpoint, the webhook check, the statuses and how sure each fact is. RedX and Pathao are from their official
+(signed-in) pages; Steadfast from its Postman collection (webhook from packages). CR-04 / CR-08 / CR-09 confirm
 it against the live API or the sandbox first. In short:
 
 | | Steadfast | Pathao | RedX |
 |---|---|---|---|
-| Keys the owner pastes | API key, secret key, webhook auth token (Steadfast generates it) | client id, client secret, email, password (+ webhook secret) | access token; pickup store |
+| Keys the owner pastes | API key, secret key, webhook auth token (Steadfast generates it) | client id, client secret, email, password; store | access token; pickup store |
 | Test | `GET /get_balance` | issue token + `GET /stores` | `GET /pickup/stores` |
 | Sandbox | none | yes | yes |
 | Areas | free text | city → zone → area ids | one flat area id (search by district / post code) |
-| Find by invoice (CR13) | yes | no → "Link existing parcel" | no → "Link existing parcel" |
+| Find by invoice (CR13) | yes | `order.created` webhook carries our order no.; else "Link existing parcel" | no → "Link existing parcel" |
 | Cancel by API | no | no | yes (async) |
-| Webhook check | Bearer token and / or `X-Signature` HMAC-SHA256 of the body (accept either, log which) | `X-PATHAO-Signature` = secret; `webhook_integration` handshake → 202 + echo header | none — token in the URL query (Mint's own) |
-| Statuses → CR6 | in_review → booked; pending → in-transit; hold → on-hold; delivered(_approval_pending) → delivered; partial_delivered(_approval_pending) → partly-delivered; cancelled(_approval_pending) → cancelled; unknown → keep | names unconfirmed — mapped in CR-08 from captured events | pickup-pending → pickup-pending; ready-for-delivery → picked-up; delivery-in-progress → out-for-delivery; delivered → delivered; agent-hold → on-hold; agent-returning → returning; returned → returned; agent-area-change → keep; paid → settle |
+| Webhook check | Bearer token and / or `X-Signature` HMAC-SHA256 of the body (accept either, log which) | `X-PATHAO-Signature` = the secret Mint shows; reply 202 + Pathao's integration header within 10 s | none — token in the URL query (Mint's own) |
+| Statuses → CR6 | in_review → booked; pending → in-transit; hold → on-hold; delivered(_approval_pending) → delivered; partial_delivered(_approval_pending) → partly-delivered; cancelled(_approval_pending) → cancelled; unknown → keep | `order.*` events (24, official) — table in CONNECTING.md | pickup-pending → pickup-pending; ready-for-delivery → picked-up; delivery-in-progress → out-for-delivery; delivered → delivered; agent-hold → on-hold; agent-returning → returning; returned → returned; agent-area-change → keep; paid → settle |
 
 Phones: BD numbers are sent as `01XXXXXXXXX` (strip `+88` / `88`, spaces,
 dashes; refuse anything that isn't 11 digits starting 01 before calling the

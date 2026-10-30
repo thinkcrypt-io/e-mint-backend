@@ -27,3 +27,13 @@
   webhook secret is the courier's (Steadfast) or Mint's (RedX); find-by-invoice
   only on Steadfast, else "Link existing parcel"; RedX areas are flat;
   `ready-for-delivery` = picked up; new CR-18 delivery risk (Steadfast fraud check).
+
+## 2026-10-31 — Pathao from its own docs
+
+- The user signed in to the Pathao merchant panel in the browser pane; read the
+  Developer API page (API Documentation + Webhook Integration tabs) and Pathao's
+  own WooCommerce plugin. CONNECTING.md § Pathao is now official: password-grant
+  token (5 days), city / zone / area optional when booking, 24 webhook events with
+  payloads, the secret is typed by the merchant (so Mint makes it), the reply needs
+  202 + Pathao's integration header within 10 s. Only Steadfast's webhook spec is
+  still from third parties.
