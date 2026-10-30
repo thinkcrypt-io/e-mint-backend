@@ -244,6 +244,13 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				f.from = w.from;
 				if (!renewed.includes(f.key)) renewed.push(f.key);
 			}
+			// A picker's own rules (the variants' product: only the ones with variations; SKU under each name).
+			if (f.kind === 'reference' && (w.optionFilters || w.pickerDetails) && !f.optionFilters && !f.pickerDetails) {
+				if (w.optionFilters) f.optionFilters = w.optionFilters;
+				if (w.pickerDetails) f.pickerDetails = w.pickerDetails;
+				if (w.helper && !f.helper) f.helper = w.helper;
+				if (!renewed.includes(f.key)) renewed.push(f.key);
+			}
 			if (w.helper && !f.helper && (old.includes(f.label) || f.label === w.label)) {
 				f.helper = w.helper;
 				if (!renewed.includes(f.key)) renewed.push(f.key);

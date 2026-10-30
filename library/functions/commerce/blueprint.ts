@@ -231,7 +231,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			rationale: 'Every sale, stock level and return names a variant.',
 			displayField: 'title',
 			fields: [
-				{ key: 'product', label: 'Product', kind: 'reference', ref: 'Product', required: true },
+				{ key: 'product', label: 'Product', kind: 'reference', ref: 'Product', required: true, helper: 'Only products set to “With variations”', optionFilters: [{ field: 'productType', value: 'variation' }], pickerDetails: ['sku', 'barcode'] },
 				{ key: 'title', label: 'Variant', kind: 'text', required: true, searchable: true, helper: 'M / Red' },
 				{ key: 'optionValues', label: 'Option values', kind: 'sectionlist', fields: [{ key: 'name', label: 'Option', kind: 'text' }, { key: 'value', label: 'Value', kind: 'text' }] },
 				{ key: 'sku', label: 'SKU', kind: 'text', searchable: true },
