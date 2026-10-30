@@ -33,10 +33,14 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
+| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/:phone` (parcels / delivered / cancelled for the buyer's phone) | backend + mint-tenant | S | later |
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's Steadfast) | all | S | |
 
 ## Handoff
 
+- **2026-10-31 — APIs checked** → `CONNECTING.md` (start every adapter WO there). RedX = official; Steadfast = its Postman
+  collection + packages for webhooks; Pathao = packages only — read its signed-in developer page or capture sandbox
+  webhooks before CR-08. Steadfast has no sandbox (smoke against the stub; one live consignment with the user).
 - **2026-10-30 — CR-01 done.** Plan only, no code. Context a new session needs: EC-18 in docs/ecommerce is replaced by
   this folder. Today the store has `CommerceSettings.delivery.couriers` (ids the wizard turned on; `COURIERS` in
   `commerce/settings.ts`, all `ready: false`) and an Order `courier` section (provider, consignment, tracking, status,
@@ -74,7 +78,8 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 
 ## CR-04 — Steadfast (M)
 
-- Check README §5 against Steadfast's current API doc and webhook page first; correct the table.
+- `CONNECTING.md` § Steadfast is the reference. First, with a real account: the bulk body form, the phone form, `delivery_type` values,
+  and which webhook check Steadfast actually sends (log both) — correct CONNECTING.md.
 - `couriers/steadfast.ts`: credentials apiKey + secretKey; `test` (balance), `book` (`create_order`), bulk
   (`create_order/bulk-order`), `find` (`status_by_invoice`), `status` (`status_by_cid`), `webhook` (Bearer secret;
   `delivery_status` + `tracking_update`), `normalise`; COD whole taka; phone check.
@@ -126,7 +131,9 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 
 ## CR-08 — Pathao (M)
 
-- Check README §5 against Pathao's current merchant API doc; correct it.
+- `CONNECTING.md` § Pathao is from packages only. First: read the official page signed in (merchant.pathao.com/courier/developer-api)
+  or capture sandbox webhooks — event names, whether city / zone are required, who makes the webhook secret — and correct it.
+  No find-by-invoice: a timed-out booking offers **Link existing parcel** (type the consignment id).
 - `couriers/pathao.ts`: credentials client id / secret / username / password; token issue + refresh (sealed on the
   connection, refreshed 1 h before expiry, one refresh at a time); sandbox / live; stores (settings: pickup store,
   delivery type normal / on-demand, item type parcel); cities → zones → areas (options); `quote` (price plan); `book`,
@@ -138,10 +145,9 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 
 ## CR-09 — RedX (M)
 
-- Check README §5 against RedX's current open API doc; correct it.
+- `CONNECTING.md` § RedX is from the official page. No find-by-invoice: a timed-out booking offers **Link existing parcel**.
 - `couriers/redx.ts`: access token; sandbox / live; pickup stores (setting); areas (options, searchable by district /
-  post code); `quote` (charge calculator); `book` (`POST /parcel`, weight in grams, value = order total); `find` by
-  invoice where offered; `status` (`parcel/info`); `cancel` (`PATCH /parcels`); webhook with `?token=` (CR9 table).
+  post code); `quote` (charge calculator); `book` (`POST /parcel`, weight in grams, value = order total); `status` (`parcel/info`); `cancel` (`PATCH /parcels`); webhook with `?token=` (CR9 table).
 - Smoke against the stub and RedX's sandbox.
 
 ## CR-10 — Area matching (M)

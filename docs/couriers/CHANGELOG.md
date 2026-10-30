@@ -14,3 +14,16 @@
 - The couriers' field names, statuses and webhook headers in README §5 come from
   their merchant API docs as known when planning; each adapter WO checks them
   against the current doc first.
+
+## 2026-10-31 — Couriers' APIs checked
+
+- The user: "Check the courier api docs and find how to connect them." Wrote
+  `CONNECTING.md`: per courier, what the owner does in the courier's panel, what
+  Mint stores, every endpoint, the webhook check, statuses, and where each fact
+  came from. RedX: its official Developer APIs page. Steadfast: its Postman
+  collection, webhook from packages. Pathao: packages only (official docs need a
+  merchant sign-in).
+- Plan changes: README §5 is now a summary pointing to CONNECTING.md; the
+  webhook secret is the courier's (Steadfast) or Mint's (RedX); find-by-invoice
+  only on Steadfast, else "Link existing parcel"; RedX areas are flat;
+  `ready-for-delivery` = picked up; new CR-18 delivery risk (Steadfast fraud check).

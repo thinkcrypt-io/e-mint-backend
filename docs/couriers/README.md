@@ -136,25 +136,21 @@ Public: `POST /public/couriers/:provider/:connection` (webhooks, CR9).
 
 ## 5. The three couriers
 
-Field names and statuses below are from the couriers' merchant API docs as
-known when planning; **each adapter WO starts by checking them against the
-courier's current doc** (and the merchant panel's webhook page) and corrects
-this table.
+**`CONNECTING.md` is the reference** (checked 2026-10-31): for each courier, where the owner gets the keys, what Mint
+stores, every endpoint, the webhook check, the statuses and how sure each fact is. RedX is from its official page;
+Steadfast from its Postman collection (webhook from packages); Pathao from packages only. CR-04 / CR-08 / CR-09 confirm
+it against the live API or the sandbox first. In short:
 
 | | Steadfast | Pathao | RedX |
 |---|---|---|---|
-| Base URL | `https://portal.packzy.com/api/v1` (no sandbox) | live `https://api-hermes.pathao.com`, sandbox `https://courier-api-sandbox.pathao.com` | live `https://openapi.redx.com.bd/v1.0.0-beta`, sandbox `https://sandbox.redx.com.bd/v1.0.0-beta` |
-| Keys | `Api-Key`, `Secret-Key` headers | client id, client secret, username (email), password → `POST /aladdin/api/v1/issue-token` (access + refresh token, kept sealed on the connection, refreshed before expiry) | one access token → `API-ACCESS-TOKEN: Bearer …` |
-| Test | `GET /get_balance` | issue token + `GET /aladdin/api/v1/stores` | `GET /pickup/stores` |
-| Options | — | stores; `city-list` → `cities/:id/zone-list` → `zones/:id/area-list` | pickup stores; `GET /areas` (by post code / district) |
-| Quote | — | `POST /aladdin/api/v1/merchant/price-plan` | `GET /charge/charge_calculator` |
-| Book | `POST /create_order` (invoice, recipient_name / phone / address, cod_amount, note); bulk `POST /create_order/bulk-order` (≤ 500) | `POST /aladdin/api/v1/orders` (store_id, merchant_order_id, recipient_*, city / zone / area, delivery_type 48 / 12, item_type 2, item_quantity, item_weight, amount_to_collect, special_instruction) | `POST /parcel` (customer_name / phone / address, delivery_area + id, merchant_invoice_id, cash_collection_amount, parcel_weight in grams, value, instruction, pickup_store_id) |
-| Status | `GET /status_by_cid/:id`, `/status_by_invoice/:inv` | `GET /aladdin/api/v1/orders/:consignment/info` | `GET /parcel/info/:tracking_id` |
-| Cancel | — (cancel in the panel / return request) | — (panel) | `PATCH /parcels` status `cancelled` |
-| Webhook auth | `Authorization: Bearer <secret>` — the secret we generate, pasted in the Steadfast panel with the callback URL | `X-PATHAO-Signature: <secret>` — the secret we generate, pasted in Pathao's webhook settings; the integration call must be answered **202** with the `X-Pathao-Merchant-Webhook-Integration-Secret` header Pathao publishes | callback URL only → the secret travels as `?token=` in the URL we show (RedX can't send a header) |
-| Statuses → CR6 | pending → booked; in_review / hold → on-hold; delivered_approval_pending, delivered → delivered; partial_delivered(_approval_pending) → partly-delivered; cancelled(_approval_pending) → cancelled / returning; unknown → keep | order.created → booked; pickup-requested / assigned-for-pickup → pickup-pending; picked → picked-up; at-the-sorting-hub / in-transit / received-at-last-mile-hub → in-transit; assigned-for-delivery → out-for-delivery; delivered → delivered; partial-delivery → partly-delivered; delivery-failed → failed-attempt; on-hold → on-hold; returned → returned; pickup-cancelled → cancelled; paid → settle (CR11) | pickup-pending → pickup-pending; ready-for-delivery / delivery-in-progress → out-for-delivery; delivered → delivered; agent-hold → on-hold; agent-returning → returning; returned → returned; agent-area-change → keep; cancelled → cancelled |
-| Payload keys | notification_type (delivery_status / tracking_update), consignment_id, invoice, status, cod_amount, delivery_charge, tracking_message, updated_at | event, consignment_id, merchant_order_id, collected_amount, delivery_fee, reason, timestamp | tracking_number, invoice_number, status, message_en, timestamp |
-| Tracking link | `https://steadfast.com.bd/t/<tracking_code>` | `https://merchant.pathao.com/tracking?consignment_id=<id>&phone=<phone>` | `https://redx.com.bd/track-parcel/?trackingId=<id>` |
+| Keys the owner pastes | API key, secret key, webhook auth token (Steadfast generates it) | client id, client secret, email, password (+ webhook secret) | access token; pickup store |
+| Test | `GET /get_balance` | issue token + `GET /stores` | `GET /pickup/stores` |
+| Sandbox | none | yes | yes |
+| Areas | free text | city → zone → area ids | one flat area id (search by district / post code) |
+| Find by invoice (CR13) | yes | no → "Link existing parcel" | no → "Link existing parcel" |
+| Cancel by API | no | no | yes (async) |
+| Webhook check | Bearer token and / or `X-Signature` HMAC-SHA256 of the body (accept either, log which) | `X-PATHAO-Signature` = secret; `webhook_integration` handshake → 202 + echo header | none — token in the URL query (Mint's own) |
+| Statuses → CR6 | in_review → booked; pending → in-transit; hold → on-hold; delivered(_approval_pending) → delivered; partial_delivered(_approval_pending) → partly-delivered; cancelled(_approval_pending) → cancelled; unknown → keep | names unconfirmed — mapped in CR-08 from captured events | pickup-pending → pickup-pending; ready-for-delivery → picked-up; delivery-in-progress → out-for-delivery; delivered → delivered; agent-hold → on-hold; agent-returning → returning; returned → returned; agent-area-change → keep; paid → settle |
 
 Phones: BD numbers are sent as `01XXXXXXXXX` (strip `+88` / `88`, spaces,
 dashes; refuse anything that isn't 11 digits starting 01 before calling the
