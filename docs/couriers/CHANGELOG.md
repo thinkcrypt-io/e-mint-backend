@@ -37,3 +37,15 @@
   payloads, the secret is typed by the merchant (so Mint makes it), the reply needs
   202 + Pathao's integration header within 10 s. Only Steadfast's webhook spec is
   still from third parties.
+
+## 2026-10-31 — Steadfast from its own docs
+
+- The user signed in to Steadfast; read the dashboard's API guide and Webhook
+  page. CONNECTING.md § Steadfast is now official: ping + balance test, named
+  keys per integration, 401 lockout rule, booking limits (truncates, strips
+  characters), `bulk-order/extended`, `tracking_link` on booking, return request
+  as cancel, the `fraud_check/score` endpoint, and the webhook — HMAC-SHA256
+  `X-Signature`, `Idempotency-Key`, 5 s reply, 3 attempts, 9 event types with
+  payloads. All three couriers are now from their own pages.
+- The user's Steadfast profile already has a callback URL to another backend;
+  one URL per profile, so connecting Mint will replace it.

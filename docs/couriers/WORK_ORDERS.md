@@ -33,13 +33,14 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
-| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/:phone` (parcels / delivered / cancelled for the buyer's phone) | backend + mint-tenant | S | later |
+| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` (parcels / delivered / cancelled for the buyer's phone) | backend + mint-tenant | S | later |
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's Steadfast) | all | S | |
 
 ## Handoff
 
-- **2026-10-31 — APIs checked** → `CONNECTING.md` (start every adapter WO there). RedX = official; Steadfast = its Postman
-  collection + packages for webhooks; Pathao = official (signed-in Developer API page, 2026-10-31). Steadfast has no sandbox (smoke against the stub; one live consignment with the user).
+- **2026-10-31 — APIs checked** → `CONNECTING.md` (start every adapter WO there). all three couriers are from their own (signed-in) pages
+  as of 2026-10-31. Steadfast has no sandbox (smoke against the stub; one live consignment with the user). The user's Steadfast
+  profile already sends its webhook elsewhere — connecting Mint replaces it (ask first).
 - **2026-10-30 — CR-01 done.** Plan only, no code. Context a new session needs: EC-18 in docs/ecommerce is replaced by
   this folder. Today the store has `CommerceSettings.delivery.couriers` (ids the wizard turned on; `COURIERS` in
   `commerce/settings.ts`, all `ready: false`) and an Order `courier` section (provider, consignment, tracking, status,
@@ -77,8 +78,9 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 
 ## CR-04 — Steadfast (M)
 
-- `CONNECTING.md` § Steadfast is the reference. First, with a real account: the bulk body form, the phone form, `delivery_type` values,
-  and which webhook check Steadfast actually sends (log both) — correct CONNECTING.md.
+- `CONNECTING.md` § Steadfast is from the dashboard's API guide + Webhook page (2026-10-31). No sandbox: build against the stub,
+  then one real parcel with the user. Never retry a 401 (10 in 5 min locks the key out for an hour). Cancel = return request.
+  Webhook: `X-Signature` HMAC of the raw body, `Idempotency-Key` dedupe, answer within 5 s. Bulk = `/bulk-order/extended`.
 - `couriers/steadfast.ts`: credentials apiKey + secretKey; `test` (balance), `book` (`create_order`), bulk
   (`create_order/bulk-order`), `find` (`status_by_invoice`), `status` (`status_by_cid`), `webhook` (Bearer secret;
   `delivery_status` + `tracking_update`), `normalise`; COD whole taka; phone check.

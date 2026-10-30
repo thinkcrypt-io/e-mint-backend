@@ -9,10 +9,10 @@ Checked 2026-10-31. **Confidence** says where each fact came from:
 | Courier | Official docs | Where they are |
 |---|---|---|
 | RedX | Yes, read in full | Merchant panel → **Developer APIs** (`redx.com.bd/developer-api/`). You must be signed in. |
-| Steadfast | Partly: Postman collection; no webhook spec | [Postman collection](https://documenter.getpostman.com/view/26211192/2sAYJ1mhpk). `steadfast.com.bd/api-docs` returns 404, and the panel needs sign-in. |
+| Steadfast | Yes (read signed in) | Merchant dashboard → **API guide** (`/user/api/guide`) and **Webhook** (`/user/webhook/add`) |
 | Pathao | Yes (read signed in) | `merchant.pathao.com/courier/developer-api` — API Documentation + Webhook Integration tabs |
 
-**Still open:** Steadfast's webhook spec (sign in to its panel and read the Webhook page, or capture the first real calls — CR-06 keeps the raw body and headers).
+All three are now from the couriers' own pages. A few things are only stated there, not tried: CR-04 / CR-08 / CR-09 confirm them on the first real or sandbox call (CR-06 keeps each webhook's raw body and headers).
 
 ---
 
@@ -43,29 +43,38 @@ Checked 2026-10-31. **Confidence** says where each fact came from:
 
 ---
 
-## Steadfast (Postman collection; webhook from packages)
+## Steadfast (official — the merchant dashboard's API guide and Webhook pages, read signed in 2026-10-31)
+
+Sources: `steadfast.com.bd/user/api/guide`, `/user/api` (keys) and `/user/webhook/add`. All three need the merchant to be signed in.
+The public [Postman collection](https://documenter.getpostman.com/view/26211192/2sAYJ1mhpk) is older. Where the two disagree, the guide wins.
 
 **What the store owner does in Steadfast**
-1. Get the **API key** and **Secret key** from the merchant dashboard. If they aren't shown there, ask Steadfast support (packages and the WordPress plugin say both).
-2. Open **Webhook** settings: paste the **Callback URL** Mint shows, click **Generate** next to **Auth token**, copy the token **into Mint**, then **Save webhook**. This comes from packages. Here Steadfast makes the secret, not Mint, so Mint's Steadfast card asks for the token rather than showing one.
+1. Dashboard → **API** (`/user/api`, "Your API keys"): issue a key named "Mint" and copy the **API key** and **Secret key** into Mint. A profile can hold several named keys, so Mint gets its own and doesn't share one with an old plugin. Each business under an account has its own keys and only sees its own parcels.
+2. Dashboard → **Webhook** (`/user/webhook/add`):
+   - **Callback URL**: paste the one Mint shows.
+   - **Auth token**: paste the token Mint shows. It's optional in Steadfast's form, but Mint requires it. Allowed characters are letters, digits and `- _ . =`. Steadfast also has a **Generate** button; if the owner uses that, they paste the generated token into Mint instead.
+   - Then **Save webhook**.
 
-**What Mint stores:** API key and secret key (sealed), and the webhook auth token (sealed).
+   There is **one callback URL per profile**. If the profile already sends to another system, connecting Mint replaces it, so Mint's card warns about this.
+
+**What Mint stores:** API key and secret key, and the webhook auth token (all sealed).
 
 | | |
 |---|---|
-| Base URL | `https://portal.packzy.com/api/v1` (Postman). One old package uses `portal.steadfast.com.bd`; don't use it. **No sandbox**, so tests run against the live API with real consignments. |
-| Auth | Headers `api-key`, `secret-key`, `Content-Type: application/json`. No token step. Responses carry `X-RateLimit-Limit: 2000`. |
-| Test connection | `GET /get_balance` → `{ status: 200, current_balance }`. The balance can be negative. |
-| Book | `POST /create_order`: `invoice` (unique; letters, digits, `-`, `_`), `recipient_name` (≤ 100), `recipient_phone` (11 digits; Postman sends `+880…`, so check which form works), `recipient_address` (≤ 250), `cod_amount`, `note`. Optional: `recipient_email`, `alternative_phone`, `item_description`, `delivery_type` (home / point; exact values unconfirmed), `total_lot`. Returns `{ status: 200, consignment: { consignment_id, invoice, tracking_code, status: "in_review", … } }`. |
-| Bulk | `POST /create_order/bulk-order`, at most 500 orders. The Postman body is a raw array; packages wrap it as `{ "data": "<JSON string>" }`. Try both and keep the one that works. Results are per item: on failure `consignment_id: null` and `error` set (for example `THIS_INVOICE_ALREADY_EXISTS`). |
-| Status | `GET /status_by_cid/:id`, `/status_by_invoice/:invoice`, `/status_by_trackingcode/:code` → `{ status: 200, delivery_status }`. The Postman collection shows `status_by_cid` plus `trackings_by_invoice/:invoice` (the full tracking log); the other two come from packages. |
-| Find by invoice | `status_by_invoice` / `trackings_by_invoice`. CR13 works: a re-send also fails with `THIS_INVOICE_ALREADY_EXISTS`, so a parcel is never booked twice. |
-| Cancel | No API. Cancel in the panel; the webhook or a sync then brings the change in. |
-| Other | `POST /create_return_request` (`consignment_id` \| `invoice` \| `tracking_code`, `reason`), `GET /get_return_request(s)`, `POST /create_pickup_request`, `GET /payments`, `GET /payments/:payment_id` (payout with its consignments, for CR11), `GET /police_stations`, `GET /fraud_check/:phone` → `{ total_parcels, total_delivered, total_cancelled }`. The last one is Steadfast's "Delivery Risk Check", worth showing on website orders (CR-18). |
-| Webhook auth | Packages disagree. One says Steadfast sends `Authorization: Bearer <token>`; another says `X-Signature` = HMAC-SHA256 of the raw body, keyed with the same token (hex). Mint accepts either when it matches the saved token. The raw body is kept, and the check that passed is logged, so the real method can be confirmed and the other check removed later. |
-| Webhook body | `{ notification_type: "delivery_status", consignment_id, invoice, cod_amount, status, delivery_charge, tracking_message, updated_at }`. `tracking_update` carries `consignment_id`, `tracking_code` and `tracking_message`. Other types listed in packages: consignment_update, cancel_request, return_request, payment_request, pickup_request, return_list_accepted, user_update. Mint logs these and ignores them for now. |
-| Retries (packages) | Header `Idempotency-Key`, which is the same on retries. Any 2xx = accepted; 4xx is not retried; 5xx / unreachable → retried after about 30 s and about 2 min (3 attempts in all). So use `Idempotency-Key` as the dedupe key when present. |
-| Statuses | `in_review` (just placed) · `pending` (on the way) · `hold` · `delivered_approval_pending` · `partial_delivered_approval_pending` · `cancelled_approval_pending` · `unknown_approval_pending` · `delivered` · `partial_delivered` · `cancelled` · `unknown` |
+| Base URL | `https://portal.packzy.com/api/v1`. **No sandbox**: every booking is real, so smoke tests run against the stub. |
+| Auth | Send `Api-Key`, `Secret-Key` and `Content-Type: application/json` on every call. There's no token to fetch. A wrong key gets **401**. Ten failures in five minutes means **429 for 60 minutes**, even with the right keys afterwards, so Mint never retries a 401: it marks the connection "keys rejected". Rate limits are 1,000 calls a minute, and 6,000 for booking. |
+| Test connection | First `GET /ping` (no keys; checks the address and network), then `GET /get_balance` → `{ status: 200, current_balance }`. The balance is "delivered COD, less delivery charges, less our 1% collection charge". |
+| Book | `POST /create_order`. **Required:** `invoice` (letters, digits, `-`, `_`; never reused, which is what makes a retry safe; up to 100 characters), `recipient_name` (100), `recipient_phone` (11 digits starting 01), `recipient_address` (490), `cod_amount` (BDT, 0 if prepaid, at most 1,000,000). **Optional:** `note` (480), `alternative_phone`, `recipient_email` (the domain is checked), `item_description` (255), `total_lot` (default 1), `delivery_type` (0 home, the default; 1 point). Returns `{ status: 200, consignment: { consignment_id, invoice, tracking_code, tracking_link, …, status: "in_review" } }`. A rejected field comes back as `{ status: 400, errors: {…} }`. Steadfast **swaps** `{ } ; < > $` for spaces and **cuts** over-long values short instead of refusing them, so Mint trims to the limits itself and shows the result. |
+| Bulk | `POST /create_order/bulk-order/extended` with body `{ data: [ …up to 500 orders… ] }`. Answers 200 even when some orders failed. Each entry comes back in the order sent, with `status: "success"` and a `consignment_id`, or `status: "error"` with `error: [sentences]`. (The older `/bulk-order` returns error codes instead.) |
+| Status | `GET /status_by_cid/:id`, `/status_by_invoice/:invoice`, `/status_by_trackingcode/:code` → `{ delivery_status }`. `GET /status_with_return_status_by_cid/:id` also shows how far a returning parcel has got. `GET /trackings_by_invoice/:invoice` → `tracking[] { consignment_id, tracking_type, text, created_at }` (the timeline). Answers are cached for 60 seconds, so Mint never polls faster than that. |
+| Find by invoice | `status_by_invoice`. A retried booking with the same invoice is refused, so a parcel can't be booked twice (CR13 works). |
+| Cancel | No cancel endpoint. `POST /create_return_request { consignment_id \| invoice \| tracking_code, reason }` asks for an undelivered parcel to come back (201; 422 if it's already delivered or already returning). Mint's **Cancel** uses this for Steadfast. |
+| Other | `POST /create_pickup_request` (address_id, police_station_id, address, contact_number, note, estim_qty; 201, or 409 when one is already pending) · `GET /payments` and `/payments/:id` (a payout and every parcel it settled, with our `invoice`, for CR11) · `GET /police_stations` · `GET /fraud_check/score/:phone` → `{ delivery_ratio, cancellation_ratio, volume_band, volume_range, delivered_count, cancelled_count, total_reports, fraud_categories }`. Nulls mean "unknown", not 0. The older `/fraud_check/:phone` counts stopped on 27 Sept 2026. Calls are limited to about 4 per parcel booked on the busiest day of the last week, plus 10 (CR-18). |
+| Tracking link | `consignment.tracking_link` (`https://steadfast.com.bd/tl/…`), returned when booking. Mint stores it on the delivery. |
+| Webhook request | `POST` JSON with headers `Authorization: Bearer <auth token>`, `X-Signature` (HMAC-SHA256 of the raw body, hex, keyed with the auth token), `Idempotency-Key` (the same on retries), and `User-Agent: Steadfast-Webhook/1.0`. **Mint checks `X-Signature`** in constant time over the raw body, and uses `Idempotency-Key` as the dedupe key. |
+| Webhook reply | Any 2xx within **5 seconds**. A 5xx or no answer is retried after 30 s and after 2 min (3 attempts in all). A 4xx is not retried. So Mint answers 200 as soon as the event is stored (CR9), and only refuses with 401 for a bad signature. |
+| Webhook events | `delivery_status` `{ consignment_id, invoice, cod_amount, status, delivery_charge, tracking_message, updated_at }`. Here `status` is one of pending, delivered, partial_delivered, cancelled or unknown. · `tracking_update` `{ consignment_id, invoice, tracking_message, updated_at }` (goes on the timeline) · `consignment_update` `{ event_id, consignment_id, invoice, tracking_id, changed[], values{} }` (copy address / COD changes onto the delivery) · `cancel_request`, `return_request` (the parcel's keys plus the request) · `payment_request`, `return_list_accepted`, `pickup_request`, `user_update` (logged, nothing else for now). |
+| Statuses → CR6 | in_review → booked · pending → in-transit · hold → on-hold · delivered_approval_pending / partial_delivered_approval_pending / cancelled_approval_pending / unknown_approval_pending → shown as "Rider says delivered…" (the delivery stays open; **no COD payment until confirmed**) · delivered → delivered · partial_delivered → partly-delivered · cancelled → returning (the parcel is coming back; `*_return_received` → returned) · exceptional → lost · unknown → keep |
 
 ---
 
@@ -116,7 +125,7 @@ mode, store id, delivery type, item type, the webhook secret (sealed), and the i
 ## What this changes in the plan
 
 - **The webhook secret's origin depends on the courier** (CR3 / CR9):
-  - Steadfast: generates it; the owner pastes it into Mint.
+  - Steadfast: the owner types an auth token into Steadfast's Webhook page, so Mint generates it (as for Pathao) and checks `X-Signature`, the HMAC of the body.
   - RedX: has none; Mint makes a token and puts it in the URL query.
   - Pathao: the merchant types the secret into its panel, so Mint generates it, shows it and checks `X-PATHAO-Signature`; Mint's reply must also carry Pathao's integration header.
 
@@ -124,6 +133,6 @@ mode, store id, delivery type, item type, the webhook secret (sealed), and the i
 - **Look up by invoice (CR13) works on Steadfast only.** Pathao's `order.created` webhook carries our order number, so a Pathao booking that timed out is matched when that arrives. On RedX (and Pathao after 10 minutes), the delivery becomes `error` with "Check the <courier> panel before sending again", plus a **Link existing parcel** action where staff type the tracking id in. That action calls `status`, then attaches the parcel to the delivery.
 - **RedX areas are flat** (one area id, searchable by district or post code), so CR-10's pickers are city → zone → area for Pathao and one search box for RedX.
 - **RedX's `ready-for-delivery` means "received from the merchant"** → `picked-up`, not out-for-delivery. `paid` → settle (CR11).
-- **Steadfast `in_review` → `booked`, `pending` → `in-transit`**; the `*_approval_pending` states map like their finals (delivered, partly-delivered, cancelled), and the delivery stays open until the final state arrives.
-- **New idea, CR-18:** Steadfast's `fraud_check/:phone` as a "Delivery risk" badge on website orders (parcels, delivered, cancelled for the buyer's phone).
-- **Tracking links** for customers are not in any API doc. CR-04 / 08 / 09 read them from each courier's public track page; until then the order shows the tracking code without a link.
+- **Steadfast `in_review` → `booked`, `pending` → `in-transit`.** The `*_approval_pending` states are only the rider's word: Mint shows them, but takes no COD payment until `delivered` / `partial_delivered` is confirmed.
+- **New idea, CR-18:** Steadfast's `fraud_check/score/:phone` as a "Delivery risk" badge on website orders (parcels, delivered, cancelled for the buyer's phone).
+- **Tracking links:** Steadfast returns `tracking_link` when booking. RedX and Pathao don't document one, so CR-08 / 09 work them out from their public track pages; until then the order shows the tracking code without a link.
