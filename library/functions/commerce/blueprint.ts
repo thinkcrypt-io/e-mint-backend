@@ -23,6 +23,7 @@ export type ModelKey =
 	| 'stock'
 	| 'movement'
 	| 'adjustment'
+	| 'stockin'
 	| 'transfer'
 	| 'customer'
 	| 'coupon'
@@ -374,6 +375,42 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['code', 'outlet', 'reason', 'status', 'appliedAt'],
 			filters: ['status', 'outlet', 'reason'],
+		},
+	},
+	{
+		key: 'stockin',
+		shownWhen: null,
+		engineOnly: true,
+		engine: ['outlet', 'receivedAt', 'lines', 'totalQuantity', 'by'],
+		step: {
+			name: 'StockIn',
+			title: 'Stock in',
+			route: 'stock-in',
+			description: 'Stock received at an outlet — what came in, how many, and the day it did',
+			rationale: 'Made by the Add stock page; each entry puts its items into the outlet’s stock as movements.',
+			displayField: 'code',
+			code: { enabled: true, prefix: 'SIN', padding: 4 },
+			fields: [
+				{ key: 'outlet', label: 'Outlet', kind: 'reference', ref: 'Outlet', required: true },
+				{ key: 'receivedAt', label: 'Stock-in date', kind: 'date', required: true },
+				{
+					key: 'lines',
+					label: 'Items',
+					kind: 'sectionlist',
+					fields: [
+						{ key: 'variant', label: 'Variant id', kind: 'text' },
+						{ key: 'product', label: 'Product id', kind: 'text' },
+						{ key: 'label', label: 'Item', kind: 'text' },
+						{ key: 'sku', label: 'SKU', kind: 'text' },
+						{ key: 'quantity', label: 'Quantity', kind: 'number' },
+					],
+				},
+				{ key: 'totalQuantity', label: 'Units in', kind: 'number', default: 0 },
+				{ key: 'by', label: 'Added by', kind: 'text' },
+				{ key: 'note', label: 'Note', kind: 'textarea', helper: 'Supplier, invoice number…' },
+			],
+			table: ['code', 'outlet', 'receivedAt', 'totalQuantity', 'by'],
+			filters: ['outlet'],
 		},
 	},
 	{

@@ -22,6 +22,8 @@ export type Move = {
 	by?: string;
 	/** Selling below zero is allowed for this move (the store's setting, or a count). */
 	allowNegative?: boolean;
+	/** When it happened, if not now (stock received on an earlier day). */
+	at?: Date;
 };
 
 export class NotEnoughStock extends TenancyError {
@@ -79,6 +81,7 @@ export const move = async (store: Store, m: Move): Promise<{ after: number | nul
 		reference: m.reference || '',
 		by: m.by || '',
 		...(m.note && { note: m.note }),
+		...(m.at && { createdAt: m.at }),
 	});
 	return { after: level.onHand, movement };
 };
@@ -212,4 +215,57 @@ export const transferAction = async (store: Store, id: any, action: 'send' | 're
 		throw e;
 	}
 	return { status: next };
+};
+
+/**
+ * Stock received (the Add stock page): several items into one outlet on a
+ * day. Each line is a variant — or a product without variations, whose only
+ * variant is used — and a whole number of units. Recorded as a Stock in entry,
+ * then put in as movements; all or none.
+ */
+export const receiveStock = async (store: Store, body: any, by: string) => {
+	if (!store.installed.stockin) throw new TenancyError(400, 'Stock in isn’t set up for this store yet');
+	const outlet: any = isId(body?.outlet) ? await store.M('outlet').findById(body.outlet).lean() : null;
+	if (!outlet) throw new TenancyError(400, 'Choose the outlet the stock is going into');
+	const at = body?.date ? new Date(body.date) : new Date();
+	if (Number.isNaN(at.getTime())) throw new TenancyError(400, 'That stock-in date isn’t a date');
+	if (at.getTime() > Date.now() + 24 * 3600 * 1000) throw new TenancyError(400, 'The stock-in date can’t be in the future');
+	const raw: any[] = Array.isArray(body?.lines) ? body.lines : [];
+	if (!raw.length) throw new TenancyError(400, 'Add at least one item');
+	if (raw.length > 200) throw new TenancyError(400, 'At most 200 items in one go');
+
+	const Variant = store.M('variant');
+	const Product = store.M('product');
+	const merged = new Map<string, { variant: any; product: any; quantity: number }>();
+	for (const [i, l] of raw.entries()) {
+		const n = i + 1;
+		const quantity = Number(l?.quantity);
+		if (!Number.isInteger(quantity) || quantity <= 0) throw new TenancyError(400, `Item ${n}: the quantity is a whole number above 0`);
+		let variant: any = isId(l?.variant) ? await Variant.findById(l.variant).lean() : null;
+		let product: any = variant ? await Product.findById(variant.product).lean() : isId(l?.product) ? await Product.findById(l.product).lean() : null;
+		if (!product) throw new TenancyError(400, `Item ${n}: choose a product`);
+		if (!variant) {
+			// A product without variations has just the one.
+			if (product.productType === 'variation') throw new TenancyError(400, `Item ${n}: choose which variant of ${product.name}`);
+			variant = await Variant.findOne({ product: product._id, isDefault: true }).lean();
+			if (!variant) throw new TenancyError(400, `Item ${n}: ${product.name} has no item to put stock into — save the product first`);
+		} else if (product.productType !== 'variation' && !variant.isDefault) throw new TenancyError(400, `Item ${n}: ${product.name} has no variants`);
+		const k = String(variant._id);
+		const had = merged.get(k);
+		merged.set(k, had ? { ...had, quantity: had.quantity + quantity } : { variant, product, quantity });
+	}
+
+	const lines = [...merged.values()].map(m => ({ variant: String(m.variant._id), product: String(m.product._id), label: itemName(m.product, m.variant), sku: m.variant.sku || m.product.sku || '', quantity: m.quantity }));
+	const total = lines.reduce((s, l) => s + l.quantity, 0);
+	const entry: any = await store.M('stockin').create({ outlet: outlet._id, receivedAt: at, lines, totalQuantity: total, by, ...(body?.note && { note: String(body.note).slice(0, 500) }) });
+	try {
+		await moveAll(
+			store,
+			lines.map(l => ({ variant: l.variant, outlet: outlet._id, change: l.quantity, reason: 'receive', reference: entry.code, by, at, allowNegative: true })),
+		);
+	} catch (e) {
+		await store.M('stockin').deleteOne({ _id: entry._id }).catch(() => null);
+		throw e;
+	}
+	return { code: entry.code, id: String(entry._id), units: total, items: lines.length };
 };

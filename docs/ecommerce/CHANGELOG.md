@@ -1,6 +1,10 @@
 # E-commerce projects — changelog
 
 
+## 2026-10-31 — Add stock
+- New **Add stock** page (`/store/stock/add`, Store sidebar) for every e-commerce store: outlet, stock-in date, then as many items as needed — pick a product, then (only if it has variations) one of *its own* variants, then the quantity. A simple product needs no variant. `POST /commerce/stock/receive` records one **Stock in** entry (new engine-only model `stockin`, route `stock-in`, code SIN) and puts every item in as `receive` movements dated the stock-in day (not in the future), all or none; the same variant twice adds up.
+- `upgradeStores.js` adds the Stock in model to built stores.
+
 ## 2026-10-31 — Customer purchases
 - New engine-only model **Customer purchases** (`purchase`, route `customer-purchases`): one row per customer and item with times bought (orders it was on), units (less returned), spent, first and last bought and the last order. `purchases.ts` works the affected rows out again from the customer's orders after a sale or website/phone order is placed, cancelled, or has items returned — so they never drift; items bought only on cancelled orders lose their row.
 - It references the customer, so the customer's page gets a **Customer purchases** tab automatically (linked-record tabs).

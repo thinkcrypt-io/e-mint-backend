@@ -67,6 +67,7 @@ const ICONS: Record<ModelKey, string> = {
 	return: 'undo-2',
 	credit: 'piggy-bank',
 	purchase: 'shopping-bag',
+	stockin: 'package-plus',
 	delivery: 'package-check',
 };
 

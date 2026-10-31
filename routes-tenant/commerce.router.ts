@@ -5,7 +5,7 @@ import { commerceView, saveCommerce } from '../library/functions/commerce/settin
 import { afterSettingsSaved, settingsGuard, startSetup } from '../library/functions/commerce/install.js';
 import { actorName, storeOf } from '../library/functions/commerce/store.js';
 import { catalogue, lookup, posCategories, syncVariants } from '../library/functions/commerce/catalogue.js';
-import { applyAdjustment, productStock, setStock, transferAction } from '../library/functions/commerce/stock.js';
+import { applyAdjustment, productStock, receiveStock, setStock, transferAction } from '../library/functions/commerce/stock.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { quote } from '../library/functions/commerce/pricing.js';
 import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail, pay, posSetup, sale } from '../library/functions/commerce/orders.js';
@@ -33,6 +33,7 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   POST /products/:id/variants                         brings its variants in step with its options   records:edit
  *   GET  /products/:id/stock                            each variant at each outlet   records:view
  *   POST /stock/set     { variant, outlet, onHand | change, reason?, note? }   a count or a correction   records:edit
+ *   POST /stock/receive { outlet, date?, note?, lines: [{ product?, variant?, quantity }] }   stock in, several items on a day   records:edit
  *   POST /adjustments/:id/apply                         a draft adjustment's lines as movements   records:edit
  *   POST /transfers/:id/(send|receive|cancel)           a transfer's stock out of / into its outlets   records:edit
  *
@@ -157,6 +158,11 @@ router.post(
 	'/stock/set',
 	edit,
 	handle(async (req: any) => setStock(await storeOf(), req.body, actorName(req)))
+);
+router.post(
+	'/stock/receive',
+	edit,
+	handle(async (req: any) => receiveStock(await storeOf(), req.body, actorName(req)))
 );
 router.post(
 	'/adjustments/:id/apply',

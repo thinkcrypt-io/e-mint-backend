@@ -57,6 +57,7 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
 				...(can('records:view') ? [{ title: 'Website orders', href: '/store/website-orders', icon: 'globe' }] : []),
 				...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
+				...(can('records:edit') ? [{ title: 'Add stock', href: '/store/stock/add', icon: 'package-plus' }] : []),
 				// Parcels sent to couriers (docs/couriers CR-07), while the store delivers.
 				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Deliveries', href: '/store/deliveries', icon: 'package-check' }] : []),
 			]),
