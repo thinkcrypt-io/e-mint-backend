@@ -16,8 +16,7 @@ because campaigns need them. **Phase 2 (pixels + feeds) depends on nothing
 here and can run in parallel with phase 1.** Phase 3 is segments and
 campaigns. Phase 4 is alerts, plus small add-ons to the wishlist that docs/ecommerce
 CARTS_AND_WISHLISTS (EC-31 / EC-32) builds. It needs phase 1's channels,
-phase 2's product slug and EC-31. The README's open questions (§8) should be answered
-before MK-02 (gateways), MK-08 (purchase timing) and MK-12 (consent).
+phase 2's product slug and EC-31. The user answered the README's open questions on 2026-10-31 (§8).
 
 ## Status
 
@@ -25,7 +24,7 @@ before MK-02 (gateways), MK-08 (purchase timing) and MK-12 (consent).
 |---|---|---|---|---|
 | MK-01 | Plan & docs | backend | S | done 2026-10-31 |
 | **Phase 1 — SMS, WhatsApp and order messages** | | | | |
-| MK-02 | SMS channel: `MessagingConnection`, adapters (first two gateways + Twilio), sealing, Test + balance, `ChannelMessage` log, `phone.ts`, parts counter, delivery reports; Project → Messaging SMS card | backend + mint-tenant | L | open |
+| MK-02 | SMS channel: `MessagingConnection`, BulkSMSBD adapter, sealing, Test + balance, `ChannelMessage` log, `phone.ts`, parts counter, delivery reports; Project → Messaging SMS card | backend + mint-tenant | L | open |
 | MK-03 | `sms` / `whatsapp` automation actions + **Send after** (`ScheduledAction` queue, leased tick, conditions re-checked); editor support | backend + both panels | M | open |
 | MK-04 | Order message pack (confirmed, on its way, out for delivery, delivered, cancelled, rate your order), installed off; Store settings → Messages; `upgradeStore` | backend + mint-tenant | M | open |
 | MK-05 | Rate your order: `ShortLink`, Mint-hosted rating page, Order rating model, order card, Ratings table, dashboard average, low-rating notice | backend + mint-tenant | M | open |
@@ -52,7 +51,7 @@ before MK-02 (gateways), MK-08 (purchase timing) and MK-12 (consent).
 
 ## Handoff
 
-Nothing built yet. Start with the README §8 answers, then MK-02 (or MK-07 /
+Nothing built yet. The open questions are answered (README §8). Start with MK-02 (or MK-07 /
 MK-10 if phase 2 goes first).
 
 ---
@@ -64,8 +63,7 @@ MK-10 if phase 2 goes first).
   (sender id), isDefault, lastTest {ok, message, at}. API under `/tenant/api/p/:project/messaging/connections`:
   list (keys shown as set / not set), create / update (runs Test), test `{to}`, balance, delete (refused while an
   automation or a scheduled campaign uses it, naming them).
-- Adapters for the two gateways the user picks plus Twilio. Each has a stub in `marketing-stub.mjs`. BulkSMSBD
-  starts from `sendSms.controller.ts`'s request, with keys from the connection, not env.
+- The BulkSMSBD adapter (the user's pick, README §8), with a stub in `marketing-stub.mjs`. It starts from `sendSms.controller.ts`'s request, with keys from the connection, not env.
 - `send.ts` `sendSms(project, {to, body, source})` → `ChannelMessage` (MK6). `smsLength.ts` (MK5) with unit tests
   for GSM-7, extension characters and Bangla.
 - Delivery reports: the gateway's webhook route or a poll on the scheduler tick for `sent` messages under 24 h old.
@@ -98,7 +96,7 @@ MK-10 if phase 2 goes first).
 
 ## MK-05 — Rate your order (M)
 
-- `ShortLink` model + `links.ts` (rating, click, unsubscribe kinds); the short-link host (README §8.4).
+- `ShortLink` model + `links.ts` (rating, click, unsubscribe kinds); served under `mintapp.shop/l/…` (README §8).
 - Order rating builder model (blueprint, locked) + `upgradeStore`. The public rating page: the store's name, logo and
   colours from the site design, stars, comment, thank you. One per order, changeable for 7 days.
 - `{{ratingLink}}` placeholder on orders. Order page rating card. Ratings table (stars, comment, order, customer).
@@ -126,11 +124,11 @@ MK-10 if phase 2 goes first).
 ## MK-08 — Server-side purchase (M)
 
 - `POST /store/orders` takes `ads` (README §5). The checkout widget fills it from cookies.
-- `adEvents.purchase(order)` from `createWebsite` (and from the payment-confirmed hook when "counted when paid"):
+- `adEvents.purchase(order)` from `createWebsite` (or from the payment-confirmed hook when "counted when paid", or the delivery engine's `delivered` when "counted when delivered"; matching data and cookies are kept on the order for that, and an order older than 7 days is sent at placement time instead):
   Meta CAPI (`serverTracking.sendMeta` with user_data hashed), GA4 MP (`purchase` with transaction_id, client_id
   from `_ga`), TikTok Events API (`CompletePayment`, new key `secrets.tiktokAccessToken` + `serverSide.tiktok`).
   In the background (`later`). Failures logged in `AdEvent`, never thrown.
-- The `purchaseWhen` setting. Test event code passes through.
+- The `purchaseWhen` setting: placed (default) / paid / delivered. Test event code passes through.
 - Smoke `marketing-ads.mjs`: hashes match the providers' normalisation (lower-case trimmed email; phone as digits
   with country code), event id = order id, nothing sent for POS sales.
 
@@ -166,7 +164,7 @@ MK-10 if phase 2 goes first).
 
 - StoreCustomer's new engine fields (README §4), kept by the order engine on every order. `upgradeStore` backfills
   them from orders.
-- `consent.ts`: `canMarket(customer, channel)` per MK8 and the store's consent mode. Consent boxes on checkout
+- `consent.ts`: `canMarket(customer, channel)` per MK8 and the store's consent mode (Store settings → Marketing: soft opt-in by default, or opt-in only). Consent boxes on checkout
   (mint.js checkout and `POST /store/orders` `marketing`) and on sign-up. Customer page consent card (staff can
   unsubscribe, not subscribe).
 

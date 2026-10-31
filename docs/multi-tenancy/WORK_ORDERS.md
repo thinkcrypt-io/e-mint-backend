@@ -10,8 +10,8 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 **2026-10-31 — Store marketing planned (docs/marketing MK-01).** Segments + campaigns (email / SMS / WhatsApp), SMS and
 WhatsApp order messages + rate your order, store pixel events + server-side purchase (Meta / GA4 / TikTok), product
-feeds, wishlist + back-in-stock / price-drop alerts. Plan only: MK-02…MK-21 open, with five open questions in its
-README §8 for the user. Builds the store side of docs/messaging M-07 / M-08 / M-10.
+feeds, wishlist + back-in-stock / price-drop alerts. Plan only: MK-02…MK-21 open. The user answered its questions (README §8:
+BulkSMSBD first, consent chosen per store, purchase counted when placed by default, links on mintapp.shop/l). Builds the store side of docs/messaging M-07 / M-08 / M-10.
 
 **2026-10-28 — Store over MCP + storefront basics (docs/ecommerce EC-13a, EC-16a).** MCP `store_stock` / `sync_variants` /
 `set_stock` in e-commerce projects; `create_records` keeps to the store's guard (`commerceWriter`) and makes products'

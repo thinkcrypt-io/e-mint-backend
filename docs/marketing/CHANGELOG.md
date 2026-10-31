@@ -1,5 +1,13 @@
 # Store marketing — changelog
 
+## 2026-10-31 — The user's answers
+
+- SMS: BulkSMSBD first; the rest later (MK3, MK-02).
+- Consent: each store chooses, soft opt-in by default (MK8, MK-12).
+- Purchase event: when placed by default; when paid or when delivered optional (MK23, MK-08).
+- Short links under `mintapp.shop/l/…` (MK15); the rating page is Mint-hosted (MK18).
+- README §8 now lists the answers instead of the questions.
+
 ## 2026-10-31 — MK-01 Plan & docs
 
 - The user picked five features for e-commerce stores' marketing: segments + campaigns, SMS / WhatsApp order
