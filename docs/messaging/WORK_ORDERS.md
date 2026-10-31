@@ -37,10 +37,10 @@ M-10 SMS/WhatsApp and M-11 inbox. Commit and push each WO when it's done.
 | M-04 | Customer auth emails: password reset, email verification, magic link; login widget upgrade | both | M | open |
 | M-05 | Send one email from any record; logged on its history; attachments | both | M | open |
 | M-06 | Own domain (DKIM/SPF/DMARC shown and checked); bring-your-own SMTP or provider key | both | M | open |
-| M-07 | Contacts & consent; newsletter signup widget (double opt-in); preferences and one-click unsubscribe | both | M | open |
-| M-08 | Campaigns: audiences, compose, schedule, batched send, reports | both | L | open |
+| M-07 | Contacts & consent; newsletter signup widget (double opt-in); preferences and one-click unsubscribe | both | M | open — stores: docs/marketing MK-12, MK-14 |
+| M-08 | Campaigns: audiences, compose, schedule, batched send, reports | both | L | open — stores: docs/marketing MK-13, MK-15, MK-16 |
 | M-09 | Automations: triggers, waits, conditions, actions; recipes — planned and tracked in `docs/automations` (AU-01…05) | both | L | in progress |
-| M-10 | SMS (Bangladeshi gateway, Twilio) and WhatsApp Cloud API channels | both | L | open |
+| M-10 | SMS (Bangladeshi gateway, Twilio) and WhatsApp Cloud API channels | both | L | planned in docs/marketing MK-02, MK-03, MK-06 |
 | M-11 | Inbox: replies, live chat, WhatsApp threads | both | L | later |
 | M-12 | Templates + MCP: blueprint `messages` part; MCP tools to draft templates and campaigns | both | M | after M-09 |
 | M-13 | Guides (`/user-docs/email`) + marketing site | admin + website | M | with each WO |
