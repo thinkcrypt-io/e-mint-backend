@@ -61,3 +61,17 @@
   3 everyday use (CR-12, 14, 15, 18, 13). CR-16 later. Connect-your-account
   cards (sign-up link, key and webhook steps) added to CR-07, CR-08, CR-09;
   `accountKey` duplicate check added to CR-03.
+
+## 2026-10-31 — CR-02 Delivery model
+
+- Blueprint: Deliveries (`StoreDelivery`, route `deliveries`, `DLV-000001`) with
+  every README §3 field, made only by the store; the order's courier summary
+  gains `delivery` (code) and `trackingUrl`. Sidebar icon `package-check`,
+  shown while Delivery is on.
+- `upgradeStore` builds the blueprint models a store doesn't have yet, so
+  `scripts/upgradeStores.js --apply` gives built stores Deliveries.
+- Fix: model definitions now keep a reference's `optionFilters` and
+  `pickerDetails` (the Variants product picker's rule was dropped on save).
+- Smoke `courier-model.mjs`: a new store's 19 models, the links, locks and
+  statuses, plain writes refused, an older store upgraded (dry run, apply,
+  again = up to date). commerce-install / orders / website-orders pass.

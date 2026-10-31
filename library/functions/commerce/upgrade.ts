@@ -2,14 +2,18 @@ import ApiEndpoint from '../../models/tenancy/apiEndpoint.model.js';
 import RouteConfig from '../../models/builder/routeConfig.model.js';
 import RouteVersion from '../../models/builder/routeVersion.model.js';
 import ModelDefinition from '../../models/builder/modelDefinition.model.js';
-import { updateModelCore } from '../../controllers/builder/models.controller.js';
+import CommerceSettings from '../../models/tenancy/commerceSettings.model.js';
+import SidebarItem from '../../models/sidebaritems/model.js';
+import { BuildError, updateModelCore } from '../../controllers/builder/models.controller.js';
+import { TEMPLATE_MAX_STEPS, buildFeature } from '../../controllers/builder/features.service.js';
+import { planFromAi } from '../../controllers/builder/features.schema.js';
 import { listDefaultsOf } from '../apiEndpoints.function.js';
 import { compiledModel, freeUid, inProjectCollection, uidOf } from '../dynamicModels.function.js';
 import { MODEL_KEY } from '../projectIndexes.function.js';
 import { invalidateRoute } from '../resolveRoute.function.js';
-import { engineFieldsReadOnly } from './install.js';
+import { Installed, applySidebar, engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
-import { storeOf } from './store.js';
+import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
 import { seedStoreDashboard } from './dashboard.js';
 
@@ -190,9 +194,43 @@ const layoutPage = async (req: any, def: any, step: any, fields: any[], apply: b
 	return [`form and detail page in sections (${form.map(x => x.sectionTitle).join(', ')})`];
 };
 
+/**
+ * Models the blueprint gained after the store was built (Deliveries, docs/couriers CR-02): built as one feature in
+ * the store's sidebar category, marked as the store's (EC4), their engine fields read-only (EC5), recorded on the
+ * store's settings and the sidebar redone. The links they make to the store's models (a delivery's order) give
+ * those pages their tab.
+ */
+const addModels = async (req: any, store: Store, apply: boolean): Promise<Change[]> => {
+	const missing = modelSpecs(store.answers).filter(s => !store.installed[s.key]);
+	if (!missing.length) return [];
+	const changes = missing.map(s => ({ model: s.step.title, added: [], renewed: [], filled: ['built for this store'] }));
+	if (!apply) return changes;
+	const first: any = store.installed.order || Object.values(store.installed)[0];
+	const def: any = first && (await ModelDefinition.findById(first.id, { sidebarItem: 1 }).lean());
+	const item: any = def?.sidebarItem && (await SidebarItem.findById(def.sidebarItem, { category: 1 }).lean());
+	const plan = {
+		title: `Store: ${missing.map(s => s.step.title).join(', ')}`,
+		summary: 'Added to the store by its upgrade.',
+		sidebarCategory: item?.category ? String(item.category) : '',
+		steps: missing.map(s => ({ action: 'create', ...s.step })),
+	};
+	const built = await buildFeature(req, planFromAi(plan), { source: 'template', maxSteps: TEMPLATE_MAX_STEPS });
+	const installed: Installed = { ...store.installed };
+	for (const s of missing) {
+		const m = built.created.find(c => c.title === s.step.title);
+		if (!m) throw new BuildError(500, `${s.step.title} wasn’t built`);
+		installed[s.key] = { name: m.name, route: m.route, id: m.id };
+		await ModelDefinition.updateOne({ _id: m.id }, { $set: { system: 'commerce', systemFields: coreFieldsOf(s.step) } });
+		await engineFieldsReadOnly(m.route, s.engine);
+	}
+	await CommerceSettings.updateOne({}, { $set: { installed } });
+	await applySidebar(store.answers, installed);
+	return changes;
+};
+
 export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Change[]> => {
 	const store = await storeOf();
-	const changes: Change[] = [];
+	const changes: Change[] = await addModels(req, store, apply);
 	for (const spec of modelSpecs(store.answers)) {
 		const m = store.installed[spec.key];
 		if (!m) continue;

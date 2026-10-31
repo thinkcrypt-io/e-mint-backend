@@ -1,4 +1,4 @@
-import type { Answers } from './settings.js';
+import { COURIERS, type Answers } from './settings.js';
 
 /**
  * The store's pre-built models (docs/ecommerce README §3, EC3): one feature
@@ -31,7 +31,8 @@ export type ModelKey =
 	| 'order'
 	| 'payment'
 	| 'return'
-	| 'credit';
+	| 'credit'
+	| 'delivery';
 
 export type ModelSpec = {
 	key: ModelKey;
@@ -54,6 +55,13 @@ export const ORDER_STATUSES = ['held', 'open', 'completed', 'cancelled'];
 export const PAYMENT_STATUSES = ['unpaid', 'partial', 'paid', 'partially-refunded', 'refunded'];
 export const FULFILMENT = ['unfulfilled', 'confirmed', 'fulfilled', 'shipped', 'delivered', 'returned', 'cancelled'];
 export const RETURN_STATUSES = ['requested', 'approved', 'received', 'refunded', 'rejected', 'closed'];
+/** A delivery's status, the same for every courier (docs/couriers CR6): the way there, then the side states. */
+export const DELIVERY_STATUSES = [
+	'draft', 'booking', 'booked', 'pickup-pending', 'picked-up', 'in-transit', 'out-for-delivery', 'delivered', 'partly-delivered',
+	'on-hold', 'failed-attempt', 'returning', 'returned', 'cancelled', 'lost', 'error',
+];
+/** Who can carry a delivery: the couriers with an API, then one typed by hand (CR16). */
+export const DELIVERY_COURIERS = [...Object.entries(COURIERS).map(([value, c]) => ({ value, label: c.name })), { value: 'manual', label: 'Manual courier' }];
 
 /** The models, in the order their links need (targets first). */
 export const modelSpecs = (a: Answers): ModelSpec[] => [
@@ -600,6 +608,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 						{ key: 'cod', label: 'Cash to collect', kind: 'number' },
 						{ key: 'bookedAt', label: 'Booked', kind: 'date' },
 						{ key: 'lastUpdate', label: 'Last update', kind: 'date' },
+						{ key: 'delivery', label: 'Delivery', kind: 'text', helper: 'The current delivery’s code (DLV-…)' },
+						{ key: 'trackingUrl', label: 'Tracking link', kind: 'url' },
 					],
 				},
 				{ key: 'register', label: 'Register', kind: 'reference', ref: 'Register' },
@@ -719,12 +729,99 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			filters: ['reason'],
 		},
 	},
+	{
+		key: 'delivery',
+		shownWhen: x => x.delivery.enabled,
+		engineOnly: true,
+		engine: [
+			'order', 'courier', 'courierName', 'status', 'courierStatus', 'courierMessage', 'invoice', 'consignment', 'trackingCode', 'trackingUrl',
+			'cod', 'collected', 'charge', 'recipient', 'options', 'outlet', 'events', 'bookedAt', 'pickedAt', 'deliveredAt', 'lastEventAt', 'lastSyncedAt',
+			'payment', 'settled', 'payoutRef', 'error',
+		],
+		step: {
+			name: 'StoreDelivery',
+			title: 'Deliveries',
+			route: 'deliveries',
+			description: 'Parcels sent to a courier — where each one is, and the cash it collected',
+			rationale: 'Made by Send to courier on an order; the courier’s updates move it (docs/couriers CR1).',
+			displayField: 'code',
+			code: { enabled: true, prefix: 'DLV', padding: 6 },
+			fields: [
+				{ key: 'order', label: 'Order', kind: 'reference', ref: 'Order', required: true },
+				{ key: 'courier', label: 'Courier', kind: 'select', options: DELIVERY_COURIERS },
+				{ key: 'courierName', label: 'Courier name', kind: 'text', helper: 'Steadfast, or the manual courier’s name' },
+				{ key: 'status', label: 'Status', kind: 'select', options: opts(...DELIVERY_STATUSES), default: 'draft' },
+				{ key: 'courierStatus', label: 'Courier’s status', kind: 'text', helper: 'As the courier said it' },
+				{ key: 'courierMessage', label: 'Courier’s message', kind: 'text' },
+				{ key: 'invoice', label: 'Invoice sent', kind: 'text', searchable: true, helper: 'The order number the courier was given (-2 on a resend)' },
+				{ key: 'consignment', label: 'Consignment', kind: 'text', searchable: true, helper: 'The courier’s own id for the parcel' },
+				{ key: 'trackingCode', label: 'Tracking code', kind: 'text', searchable: true },
+				{ key: 'trackingUrl', label: 'Tracking link', kind: 'url' },
+				money('cod', 'Cash to collect'),
+				money('collected', 'Collected'),
+				money('charge', 'Delivery charge'),
+				{
+					key: 'recipient',
+					label: 'Recipient',
+					kind: 'section',
+					fields: [
+						{ key: 'name', label: 'Name', kind: 'text' },
+						{ key: 'phone', label: 'Phone', kind: 'text' },
+						{ key: 'address', label: 'Address', kind: 'textarea' },
+						{ key: 'area', label: 'Area', kind: 'text' },
+						{ key: 'city', label: 'City', kind: 'text' },
+					],
+				},
+				{ key: 'weight', label: 'Weight (kg)', kind: 'number', min: 0 },
+				{ key: 'items', label: 'Items', kind: 'number', min: 0, helper: 'How many pieces are in the parcel' },
+				{ key: 'note', label: 'Note to the courier', kind: 'textarea' },
+				{
+					key: 'options',
+					label: 'Courier’s choices',
+					kind: 'section',
+					fields: [
+						{ key: 'store', label: 'Pickup store', kind: 'text' },
+						{ key: 'city', label: 'City id', kind: 'text' },
+						{ key: 'zone', label: 'Zone id', kind: 'text' },
+						{ key: 'area', label: 'Area id', kind: 'text' },
+						{ key: 'deliveryType', label: 'Delivery type', kind: 'text' },
+						{ key: 'itemType', label: 'Item type', kind: 'text' },
+					],
+				},
+				{ key: 'outlet', label: 'Sent from', kind: 'reference', ref: 'Outlet' },
+				{
+					key: 'events',
+					label: 'Timeline',
+					kind: 'sectionlist',
+					fields: [
+						{ key: 'at', label: 'At', kind: 'date' },
+						{ key: 'status', label: 'Status', kind: 'text' },
+						{ key: 'courierStatus', label: 'Courier’s status', kind: 'text' },
+						{ key: 'message', label: 'Message', kind: 'text' },
+						{ key: 'source', label: 'From', kind: 'select', options: opts('webhook', 'sync', 'staff') },
+						{ key: 'by', label: 'By', kind: 'text' },
+					],
+				},
+				{ key: 'bookedAt', label: 'Booked', kind: 'date' },
+				{ key: 'pickedAt', label: 'Picked up', kind: 'date' },
+				{ key: 'deliveredAt', label: 'Delivered', kind: 'date' },
+				{ key: 'lastEventAt', label: 'Last update', kind: 'date' },
+				{ key: 'lastSyncedAt', label: 'Last checked', kind: 'date' },
+				{ key: 'payment', label: 'COD payment', kind: 'reference', ref: 'OrderPayment' },
+				{ key: 'settled', label: 'Paid out by the courier', kind: 'boolean', default: false },
+				{ key: 'payoutRef', label: 'Payout reference', kind: 'text' },
+				{ key: 'error', label: 'Problem', kind: 'text', helper: 'The last booking or update problem, in plain words' },
+			],
+			table: ['code', 'order', 'courierName', 'status', 'trackingCode', 'cod', 'collected', 'bookedAt', 'lastEventAt'],
+			filters: ['courier', 'status', 'settled', 'bookedAt'],
+		},
+	},
 ];
 
 /** The feature plan the installer builds: every model, in the E-commerce sidebar category. */
 export const storePlan = (a: Answers, sidebarCategory: string) => ({
 	title: 'Store',
-	summary: 'Products, variants, stock per outlet, orders, payments, returns and store credit — set up by the store wizard.',
+	summary: 'Products, variants, stock per outlet, orders, payments, returns, store credit and deliveries — set up by the store wizard.',
 	sidebarCategory,
 	steps: modelSpecs(a).map(s => ({ action: 'create', ...s.step })),
 });

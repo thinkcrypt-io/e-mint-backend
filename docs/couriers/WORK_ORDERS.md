@@ -21,7 +21,7 @@ build order.
 |---|---|---|---|---|
 | CR-01 | Plan & docs | backend | S | done 2026-10-30 |
 | **Phase 1 — Steadfast end to end** | | | | |
-| CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | |
+| CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | done 2026-10-31 |
 | CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | |
 | CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | |
@@ -44,6 +44,20 @@ build order.
 
 ## Handoff
 
+- **2026-10-31 — CR-02 done.** Every store has **Deliveries** (blueprint key `delivery`, model `StoreDelivery` like
+  `StoreCustomer`, route `deliveries`, code `DLV-000001`, `engineOnly`, all README §3 fields; shown in the sidebar
+  while Delivery is on). Statuses = `DELIVERY_STATUSES`, couriers = `DELIVERY_COURIERS` (registry + `manual`) in
+  `blueprint.ts`. The order's `courier` section gained `delivery` (the current delivery's **code**, text — sections
+  can't hold links) and `trackingUrl`; the link the other way is `delivery.order`, which also gives the order page its
+  Deliveries tab. `upgradeStore` now **builds blueprint models a store doesn't have** (`addModels`: one feature in the
+  store's sidebar category, marked `system: commerce`, engine fields read-only, recorded in `installed`, sidebar
+  redone), so `scripts/upgradeStores.js --apply` gives older stores Deliveries. `commerceGuard` needed no change (it
+  works from the spec). Also fixed: the model definition schema dropped a reference's `optionFilters` /
+  `pickerDetails`, so the Variants product picker rule never saved (and the upgrade offered it on every run).
+  Smoke `courier-model.mjs` (in run-all). Not touched, already failing before: commerce-categories (4 checks written
+  before Categories had SEO) and commerce-mcp (a product given options over MCP isn't "With variations", so no
+  variants). Not deployed. Next: CR-03.
+
 - **2026-10-31 — Scope: Steadfast, Pathao, RedX, own accounts.** The user: "pathao and steadfast, users will connect
   their own accounts", then "pathao steadfast and redex". Mint has no courier account of its own (CR18): each store
   pastes its own merchant keys, the courier bills and pays out the merchant directly, Mint never holds COD money.
@@ -64,7 +78,8 @@ build order.
 ## CR-02 — Delivery model (M)
 
 - Blueprint step `delivery` (README §3): `engineOnly`, core / engine fields, code `DLV`, table, filters; sidebar
-  Store → Deliveries after Website orders. Order's `courier` section gains `delivery` (reference) and `trackingUrl`.
+  E-commerce → Deliveries while Delivery is on (CR-07 gives it the Store page). Order's `courier` section gains
+  `delivery` (the current delivery's code — a section can't hold a link) and `trackingUrl`.
 - `upgradeStore` adds the Delivery model to built stores and the two Order fields; `scripts/upgradeStores.js` dry run
   shows it for Verte.
 - `commerceGuard` refuses generic writes to its engine fields (403 `commerce_field`), as Orders.

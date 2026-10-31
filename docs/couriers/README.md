@@ -81,8 +81,10 @@ Table: code, order, courier, status, tracking code, COD, collected, booked,
 last update. Filters: courier, status, settled, booked date. Sidebar: Store →
 **Deliveries** (after Website orders).
 
-Order changes: the `courier` section gains `delivery` (reference to the current
-delivery) and `trackingUrl`; all of it stays engine-owned. The order page gets
+Order changes: the `courier` section gains `delivery` (the current delivery's
+code — a section's fields can't be links; the link is `delivery.order`) and
+`trackingUrl`; all of it stays engine-owned. The model is named `StoreDelivery`
+(as `StoreCustomer`), so a project's own "Delivery" model never clashes. The order page gets
 a Delivery card (current delivery + its timeline) and lists earlier ones.
 
 ## 4. The engine

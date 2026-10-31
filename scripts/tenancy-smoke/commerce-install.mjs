@@ -31,13 +31,13 @@ for (;;) {
 }
 ok(`the store is ready (${Math.round((Date.now() - t0) / 1000)} s)`, v?.status === 'ready', JSON.stringify({ s: v?.status, e: v?.error, p: v?.problems }));
 const inst = v?.installed || {};
-ok('18 models recorded by key', Object.keys(inst).length === 18 && inst.order?.route === 'orders' && inst.customer?.route === 'store-customers' && inst.payment?.route === 'order-payments', JSON.stringify(Object.fromEntries(Object.entries(inst).map(([k, m]) => [k, m.route]))));
+ok('19 models recorded by key', Object.keys(inst).length === 19 && inst.delivery?.route === 'deliveries' && inst.order?.route === 'orders' && inst.customer?.route === 'store-customers' && inst.payment?.route === 'order-payments', JSON.stringify(Object.fromEntries(Object.entries(inst).map(([k, m]) => [k, m.route]))));
 ok('features follow the answers', ['variations', 'tax', 'shifts', 'returns', 'store-credit'].every(f => v.features.includes(f)) && !v.features.includes('coupons'), v.features.join());
 
 r = await call('GET', `${P}/builder/models`, null, t);
 const models = r.body?.doc || r.body || [];
 const store = models.filter(m => m.system === 'commerce');
-ok('every store model is marked as the store’s', store.length === 18, `${store.length} of ${models.length}`);
+ok('every store model is marked as the store’s', store.length === 19, `${store.length} of ${models.length}`);
 
 r = await call('GET', `${P}/sidebar/admin/server`, null, t);
 const side = JSON.stringify(r.body || []);
