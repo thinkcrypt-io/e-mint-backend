@@ -2,13 +2,14 @@ import { CourierAdapter } from './types.js';
 import { steadfast } from './steadfast.js';
 import { pathao } from './pathao.js';
 import { redx } from './redx.js';
+import { manual } from './manual.js';
 
 /**
  * The courier registry (docs/couriers CR5): one adapter per courier. Adding a
  * courier = its adapter file and a line here. Each store connects its own
  * account with each (CR18).
  */
-export const ADAPTERS: Record<string, CourierAdapter> = { steadfast, pathao, redx };
+export const ADAPTERS: Record<string, CourierAdapter> = { steadfast, pathao, redx, manual };
 
 export const adapterOf = (id: string): CourierAdapter | null => ADAPTERS[id] || null;
 

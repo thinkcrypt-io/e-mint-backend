@@ -160,3 +160,12 @@
   courier and the cash always stated) and refresh one over MCP.
 - Invoices sent to couriers end in a short store tag, so two stores (or
   another system) on one courier account never clash.
+
+## 2026-10-31 — CR-15 Manual courier, CR-18 Delivery risk (backend)
+
+- Any store, in any country, can track parcels with couriers that have no
+  API: it names them (with a tracking-link pattern), types the tracking code
+  when sending, and moves the parcel on by hand — the order follows as with
+  any courier.
+- A buyer's phone can be checked with Steadfast (the store's own key): how
+  often their parcels are delivered, in plain words, kept a day.

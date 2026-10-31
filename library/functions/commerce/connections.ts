@@ -196,7 +196,7 @@ const cleanSettings = (adapter: CourierAdapter, given: any, was: any) => {
 			if (!Number.isFinite(n) || n < 0) throw new TenancyError(400, `${f.label}: a number, 0 or more`);
 			out[f.key] = n;
 		} else if (f.kind === 'select' && f.options && !f.options.some(o => o.value === String(v))) throw new TenancyError(400, `${f.label}: pick one of the choices`);
-		else out[f.key] = String(v ?? '').trim().slice(0, 200);
+		else out[f.key] = String(v ?? '').trim().slice(0, f.key === 'names' ? 2000 : 200);
 	}
 	return out;
 };

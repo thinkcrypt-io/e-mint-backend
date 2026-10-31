@@ -243,6 +243,7 @@ const finish = async (store: Store, ctx: Prepared, booked: Booked, by: string) =
 				trackingUrl: booked.trackingUrl || '',
 				courierStatus: booked.courierStatus,
 				courierMessage: '',
+				...(booked.courierName && { courierName: booked.courierName }),
 				...(booked.charge !== undefined && { charge: booked.charge }),
 				bookedAt: now,
 				lastEventAt: now,
@@ -562,6 +563,58 @@ export const cancelDelivery = async (store: Store, project: any, id: any, reason
 	return deliveryDetail(store, d._id);
 };
 
+/**
+ * GET orders/:id/risk (CR-18): how the buyer's phone has done with couriers — Steadfast's fraud check with the
+ * store's own key, kept a day per phone (Steadfast limits checks by the parcels you book). A plain-words level too.
+ */
+export const deliveryRisk = async (store: Store, project: any, orderId: any, fresh = false) => {
+	const o = await orderFor(store, orderId);
+	const phone = bdPhone(o.delivery?.phone);
+	if (!phone) throw new TenancyError(400, 'This order has no Bangladeshi mobile number to check');
+	const usable = await usableConnection(project, 'steadfast');
+	if (!usable || !usable.adapter.risk) throw new TenancyError(409, 'Connect Steadfast in Store settings → Delivery to check buyers', 'courier_not_connected');
+	const key = `risk:${phone}`;
+	const kept = usable.doc.cache?.[key];
+	let risk = !fresh && kept?.at && Date.now() - new Date(kept.at).getTime() < 24 * 3600 * 1000 ? kept.risk : null;
+	if (!risk) {
+		try {
+			risk = await usable.adapter.risk(usable.conn, phone);
+		} catch (e: any) {
+			if (e instanceof CourierRefusal || e instanceof CourierError) throw new TenancyError(e instanceof CourierRefusal ? 409 : 502, e.message, 'courier_error');
+			throw e;
+		}
+		await CourierConnection.updateOne({ _id: usable.doc._id }, { $set: { [`cache.${key}`]: { at: new Date(), risk } } });
+	}
+	const ratio = risk.deliveryRatio;
+	const known = (risk.delivered ?? 0) + (risk.cancelled ?? 0);
+	const level = ratio === null || known < 3 ? 'unknown' : ratio >= 80 ? 'low' : ratio >= 50 ? 'medium' : 'high';
+	const words: Record<string, string> = {
+		unknown: 'Not enough parcels to this number yet to tell',
+		low: `Usually takes their parcels (${ratio}% delivered)`,
+		medium: `Takes some parcels, refuses some (${ratio}% delivered)`,
+		high: `Often refuses parcels (${ratio}% delivered) — consider asking for payment first`,
+	};
+	return { phone, risk, level, summary: words[level], checkedAt: kept?.at && !fresh && kept.risk === risk ? kept.at : new Date() };
+};
+
+/** Where a manual courier's parcel can be moved by hand (CR-15). */
+const MANUAL_TO: NormalStatus[] = ['picked-up', 'in-transit', 'out-for-delivery', 'delivered', 'partly-delivered', 'on-hold', 'failed-attempt', 'returning', 'returned', 'cancelled', 'lost'];
+
+/** POST deliveries/:id/status { to, collected?, note? } — a manual courier's parcel moved on by hand; the order follows as with any courier. */
+export const moveManual = async (store: Store, id: any, input: { to?: string; collected?: any; note?: string }, by: string) => {
+	const d: any = isId(id) ? await deliveryOn(store).findById(id).lean() : null;
+	if (!d) throw new TenancyError(404, 'Delivery not found');
+	if (d.courier !== 'manual') throw new TenancyError(409, `${d.courierName}’s updates come from ${d.courierName} — press Refresh`);
+	const to = String(input.to || '') as NormalStatus;
+	if (!MANUAL_TO.includes(to)) throw new TenancyError(400, 'Choose where it is now');
+	if (FINAL.includes(d.status) && !(d.status === 'delivered' && ['returning', 'returned'].includes(to))) throw new TenancyError(409, `It’s ${STATUS_LABEL[d.status].toLowerCase()} already`);
+	const collected = input.collected === undefined || input.collected === '' ? undefined : Number(input.collected);
+	if (collected !== undefined && (!Number.isFinite(collected) || collected < 0)) throw new TenancyError(400, 'Collected: a number, 0 or more');
+	const r = await applyEvent(store, d._id, { courierStatus: to, status: to, message: String(input.note || '').trim().slice(0, 300) || STATUS_LABEL[to], at: new Date(), kind: 'status', key: `manual:${d._id}:${to}:${Date.now()}`, ...(collected !== undefined && { collected }) }, 'staff', by);
+	if (!r.applied || r.status !== to) throw new TenancyError(409, `It can’t go from ${STATUS_LABEL[d.status].toLowerCase()} to ${STATUS_LABEL[to].toLowerCase()}`);
+	return deliveryDetail(store, d._id);
+};
+
 /** A delivery with its order's number, as the Delivery card shows it. */
 export const deliveryDetail = async (store: Store, id: any) => {
 	const d: any = isId(id) ? await deliveryOn(store).findById(id).lean() : null;
@@ -575,6 +628,7 @@ export const deliveryDetail = async (store: Store, id: any) => {
 			refresh: !!(d.consignment && a?.status),
 			cancel: !FINAL.includes(d.status) && d.status !== 'returning' && (!d.consignment || !!a?.cancel),
 			sendAgain: ENDED.includes(d.status) || d.status === 'error',
+			move: d.courier === 'manual' && !['returned', 'cancelled', 'lost'].includes(d.status),
 		},
 	};
 };

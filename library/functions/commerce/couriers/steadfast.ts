@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { fingerprint } from '../../../../lib/crypto/secret.js';
-import { Booked, CourierAdapter, CourierEvent, Conn, NormalStatus, Parcel, TestResult, WebhookIn } from './types.js';
+import { Booked, CourierAdapter, CourierEvent, Conn, NormalStatus, Parcel, Risk, TestResult, WebhookIn } from './types.js';
 import { CourierError, CourierRefusal, Answer, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress } from './http.js';
 
 /**
@@ -205,6 +205,26 @@ const webhook = {
 	},
 };
 
+/** Steadfast's fraud check for a phone: delivery and cancellation ratios across Steadfast (CR-18). */
+const risk = async (conn: Conn, phone: string): Promise<Risk> => {
+	const p = bdPhone(phone);
+	if (!p) throw new CourierRefusal('A Bangladeshi mobile number is needed to check it.');
+	const r = await courierFetch('Steadfast', `${base(conn)}/fraud_check/score/${p}`, { headers: headers(conn) });
+	if (r.status === 429) throw new CourierRefusal('Steadfast’s daily limit for checks is used up — it grows with the parcels you book.');
+	if (r.status !== 200 || !r.body) throw refused(r);
+	const b = r.body.data || r.body;
+	const num = (v: any) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+	return {
+		deliveryRatio: num(b.delivery_ratio),
+		cancellationRatio: num(b.cancellation_ratio),
+		delivered: num(b.delivered_count),
+		cancelled: num(b.cancelled_count),
+		reports: num(b.total_reports),
+		volume: b.volume_band ?? b.volume_range ?? null,
+		categories: Array.isArray(b.fraud_categories) ? b.fraud_categories.map(String).slice(0, 10) : [],
+	};
+};
+
 export const steadfast: CourierAdapter = {
 	id: 'steadfast',
 	name: 'Steadfast',
@@ -241,4 +261,5 @@ export const steadfast: CourierAdapter = {
 	cancel,
 	webhook,
 	normalise,
+	risk,
 };

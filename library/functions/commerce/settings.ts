@@ -88,7 +88,7 @@ export const offeredFor = async (project: any) => {
 			.map(([id, t]) => ({ id, label: t.label })),
 		gateways: providersFor(code).map(id => ({ id, name: PROVIDERS[id]?.name || id })),
 		couriers: Object.entries(COURIERS)
-			.filter(([, c]) => c.countries.includes(code))
+			.filter(([, c]) => c.countries.includes(code) || c.countries.includes('*'))
 			.map(([id, c]) => ({ id, name: c.name, ready: c.ready })),
 		refundMethods: Object.entries(REFUND_METHODS).map(([id, label]) => ({ id, label })),
 	};

@@ -79,6 +79,8 @@ export type Booked = {
 	charge?: number;
 	/** Pathao's bulk / RedX: the booking was taken but the parcel's id comes later. */
 	pending?: boolean;
+	/** The manual courier's own name (Sundarban). */
+	courierName?: string;
 };
 
 /** One thing the courier told us — from a webhook, a status check or a person. */
@@ -139,4 +141,16 @@ export interface CourierAdapter {
 		reply?(settings: Record<string, any>): { status: number; headers?: Record<string, string> };
 	};
 	normalise(courierStatus: string): NormalStatus | null;
+	/** How a buyer's phone has done with couriers (Steadfast's fraud check, CR-18). Nulls are "not known", never 0. */
+	risk?(conn: Conn, phone: string): Promise<Risk>;
 }
+
+export type Risk = {
+	deliveryRatio: number | null;
+	cancellationRatio: number | null;
+	delivered: number | null;
+	cancelled: number | null;
+	reports: number | null;
+	volume: string | null;
+	categories: string[];
+};

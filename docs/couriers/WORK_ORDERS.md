@@ -36,13 +36,23 @@ build order.
 | **Phase 3 — everyday use** | | | | |
 | CR-12 | Bulk send from the order tables | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | backend done 2026-10-31 (Live Fresh's page not changed) |
-| CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
-| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | |
+| CR-15 | Manual courier (any country) | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
+| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | after EC-08 |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-15 + CR-18 backend done.** `couriers/manual.ts`: countries `['*']` (offered everywhere;
+  `offeredFor` takes `*`), no keys, setting `names` (one per line, `Name | https://…/{tracking}`), test = "Ready —
+  …", book = the typed `options.tracking` under `options.name`, its link from the pattern; the delivery's
+  `courierName` becomes that courier's name (`Booked.courierName`). `moveManual` (`POST deliveries/:id/status` { to,
+  collected?, note? }) goes through `applyEvent` (same order effects, COD, no moving back); other couriers' parcels
+  refuse it. CR-18: `steadfast.risk` (`fraud_check/score/:phone`; nulls kept as unknown), `deliveryRisk`
+  (`GET orders/:id/risk?fresh=1`, the store's own Steadfast connection, kept a day per phone in the connection's
+  cache, level low ≥ 80 % / medium ≥ 50 % / high, unknown under 3 known parcels, a plain summary). Smokes
+  `courier-manual-risk.mjs`; commerce-settings' US check now expects the manual courier only.
 
 - **2026-10-31 — CR-14 backend done.** `publicOrder` (website order view, My orders, order tracking) now has
   `tracking: { courier, status (label), trackingCode, trackingUrl, updatedAt } | null` from the order's courier

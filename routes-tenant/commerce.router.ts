@@ -14,7 +14,7 @@ import { listOrders, listReturns, moveReturn, returnDetail } from '../library/fu
 import { returnItems } from '../library/functions/commerce/returns.js';
 import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
-import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
+import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, moveManual, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 
 /**
@@ -74,6 +74,8 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   GET  /deliveries/:id                  one delivery with its timeline   records:view
  *   POST /deliveries/:id/refresh          asks the courier where it is   records:edit
  *   POST /deliveries/:id/cancel  { reason? }   stops it (Steadfast: a return request)   records:edit
+ *   POST /deliveries/:id/status  { to, collected?, note? }   a manual courier's parcel moved by hand (CR-15)   records:edit
+ *   GET  /orders/:id/risk?fresh=1          the buyer's phone with couriers (Steadfast's check, kept a day) (CR-18)   records:view
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  */
 const router = express.Router({ mergeParams: true });
@@ -365,6 +367,16 @@ router.get(
 	'/deliveries/:id/webhooks',
 	manage,
 	handle(async (req: any) => ({ doc: await webhooksOf(req.params.id) }))
+);
+router.post(
+	'/deliveries/:id/status',
+	edit,
+	handle(async (req: any) => moveManual(await storeOf(), req.params.id, req.body || {}, actorName(req)))
+);
+router.get(
+	'/orders/:id/risk',
+	view,
+	handle(async (req: any) => deliveryRisk(await storeOf(), req.project, req.params.id, req.query.fresh === '1'))
 );
 router.post(
 	'/deliveries/:id/refresh',

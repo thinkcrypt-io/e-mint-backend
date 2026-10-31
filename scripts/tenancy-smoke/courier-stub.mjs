@@ -62,6 +62,11 @@ const steadfast = async (req, res, path, body) => {
 		});
 		return json(res, 200, { status: 200, data });
 	}
+	const fc = path.match(/^\/fraud_check\/score\/(\d+)$/);
+	if (fc) {
+		const known = { '01711000000': { delivery_ratio: 90, cancellation_ratio: 10, delivered_count: 18, cancelled_count: 2, total_reports: 0, volume_band: 'medium' }, '01800000000': { delivery_ratio: 30, cancellation_ratio: 70, delivered_count: 3, cancelled_count: 7, total_reports: 2, volume_band: 'low', fraud_categories: ['fake-order'] } };
+		return json(res, 200, { status: 200, ...(known[fc[1]] || { delivery_ratio: null, cancellation_ratio: null, delivered_count: null, cancelled_count: null, total_reports: null, volume_band: null }) });
+	}
 	let m = path.match(/^\/status_by_cid\/(\d+)$/);
 	if (m) return sfParcels.has(m[1]) ? json(res, 200, { status: 200, delivery_status: sfParcels.get(m[1]).status }) : json(res, 404, { status: 404, message: 'Consignment not found' });
 	m = path.match(/^\/trackings_by_invoice\/(.+)$/);

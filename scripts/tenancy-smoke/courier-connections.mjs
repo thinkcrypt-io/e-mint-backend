@@ -47,7 +47,7 @@ const { t, C } = A;
 
 let r = await call('GET', `${C}/couriers`, null, t);
 const byId = id => r.body?.couriers?.find(c => c.id === id);
-ok('the country’s three couriers, Steadfast and Pathao on, RedX off, none connected', r.status === 200 && r.body.couriers.length === 3 && byId('steadfast')?.on && byId('pathao')?.on && !byId('redx')?.on && r.body.couriers.every(c => !c.connection), JSON.stringify(r.body?.couriers?.map(c => [c.id, c.on, !!c.connection]) || r.body));
+ok('the country’s couriers (and the manual one), Steadfast and Pathao on, RedX off, none connected', r.status === 200 && r.body.couriers.map(c => c.id).join() === 'steadfast,pathao,redx,manual' && byId('steadfast')?.on && byId('pathao')?.on && !byId('redx')?.on && r.body.couriers.every(c => !c.connection), JSON.stringify(r.body?.couriers?.map(c => [c.id, c.on, !!c.connection]) || r.body));
 ok('each says what to paste and where the owner signs up', byId('steadfast')?.fields?.credentials?.map(f => f.key).join() === 'apiKey,secretKey' && /steadfast\.com\.bd/.test(byId('steadfast')?.links?.signUp) && byId('pathao')?.sandbox === true && byId('steadfast')?.sandbox === false, '');
 
 r = await call('PUT', `${C}/couriers/redx`, { keys: { token: 'rx-token' } }, t);

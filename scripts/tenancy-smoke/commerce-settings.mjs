@@ -74,7 +74,7 @@ ok("another organization can't read it", r.status === 404);
 
 r = await call('POST', '/tenant/api/projects', { name: 'US shop', type: 'ecommerce' }, uma);
 r = await call('GET', `/tenant/api/p/${r.body?._id}/commerce/settings`, null, uma);
-ok('US: USD, Stripe only, a generic wallet, no couriers', r.body?.answers?.store?.currency === 'USD' && r.body.offered.gateways.map(g => g.id).join() === 'stripe' && r.body.offered.tenders.some(t => t.id === 'wallet') && r.body.offered.couriers.length === 0, JSON.stringify(r.body?.offered));
+ok('US: USD, Stripe only, a generic wallet, only the manual courier', r.body?.answers?.store?.currency === 'USD' && r.body.offered.gateways.map(g => g.id).join() === 'stripe' && r.body.offered.tenders.some(t => t.id === 'wallet') && r.body.offered.couriers.map(c => c.id).join() === 'manual', JSON.stringify(r.body?.offered));
 
 r = await call('POST', '/tenant/api/projects', { name: 'Payments', type: 'app' }, sam);
 r = await call('POST', `/tenant/api/p/${app}/builder/models/preview`, { name: 'Payment', route: 'payments', title: 'Payments', fields: [{ key: 'amount', kind: 'number' }] }, sam);
