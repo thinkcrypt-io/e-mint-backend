@@ -1,5 +1,11 @@
 # E-commerce projects — changelog
 
+
+## 2026-10-31 — Tax / VAT on categories and products
+- The user: "there should be a tax/VAT model… on products and categories… if a category has a tax, picking it on a product fills the tax, which can be changed; only active taxes show up; a price after tax formula."
+- Tax rates (the existing `TaxRate` model) gain a Status (active / inactive), are always in the sidebar, and are built before categories. Categories get a **Tax / VAT** picker; Products' tax picker offers only active taxes (a tax with no status counts as active) and is filled from the category when one is picked (`fillFrom` category → taxRate; also filled by the server on create). Products get **Price after tax** — `round(price * (1 + taxRate.rate / 100), 2)`, a formula, empty tax = price.
+- Builder field defs now accept `fillFrom { from, formula }` (dynamicModels + Joi). `upgradeStores.js` adds the fields and the picker rules to built stores.
+
 ## 2026-10-28 — EC-01 Plan & docs
 
 - The user asked for an E-commerce project category with a setup wizard

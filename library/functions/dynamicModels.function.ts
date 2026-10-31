@@ -290,6 +290,8 @@ export type ModelFieldDef = {
 	/** A reference's picker: which records it offers (`{ field, value }` conditions on the linked model) and which of their fields show under each name. */
 	optionFilters?: { field: string; value?: any; op?: string }[];
 	pickerDetails?: string[];
+	/** A reference's value filled from another picked link: `{ from: 'category', formula: 'taxRate' }` copies the category's tax into a product when the category is picked (linkedFill.function.ts). */
+	fillFrom?: { from: string; formula: string };
 	/** A formula kind's calculation, e.g. `total - paid` (formula.function.ts). */
 	formula?: string;
 	/** A date formula's timing: every save (default), or `once` — worked out while it's empty, then kept. */
@@ -969,6 +971,7 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 		if (f.helper) s.schema.helperText = f.helper;
 		if (f.optionFilters?.length) s.schema.optionFilters = f.optionFilters;
 		if (f.pickerDetails?.length) s.schema.pickerDetails = f.pickerDetails;
+		if (f.fillFrom?.from && f.fillFrom?.formula) s.schema.fillFrom = f.fillFrom;
 		const allowed = enumOf(f);
 		const options = allowed?.map((v, i) => ({ value: v, label: f.options![i].label || humanize(String(v)) }));
 		const listFilter = () => ({

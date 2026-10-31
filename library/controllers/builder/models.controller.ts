@@ -121,6 +121,7 @@ const subFieldBase = {
 	helper: Joi.string().allow('').max(200),
 	// A reference's picker: which records it offers and what shows under their names.
 	optionFilters: Joi.array().items(Joi.object({ field: Joi.string().max(60).required(), value: Joi.any(), op: Joi.string().max(10) }).unknown(true)).max(10),
+	fillFrom: Joi.object({ from: Joi.string().max(60).required(), formula: Joi.string().max(300).required() }),
 	pickerDetails: Joi.array().items(Joi.string().max(60)).max(5),
 	formula: Joi.string().allow('').max(500),
 	// A date formula's timing: worked out once (while empty), not on every save.

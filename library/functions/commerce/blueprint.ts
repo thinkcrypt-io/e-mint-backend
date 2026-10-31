@@ -50,6 +50,9 @@ export type ModelSpec = {
 const opts = (...values: string[]) => values.map(v => ({ value: v, label: v[0].toUpperCase() + v.slice(1).replace(/-/g, ' ') }));
 const money = (key: string, label: string, extra: any = {}) => ({ key, label, kind: 'number', min: 0, default: 0, ...extra });
 
+/** A tax picker offers only the active ones (a tax from before it had a status counts as active). */
+const TAX_PICKER = [{ field: 'status', value: 'inactive', op: 'ne' }];
+
 export const MOVEMENT_REASONS = ['opening', 'sale', 'cancel', 'return', 'return-damaged', 'adjustment', 'count', 'transfer-out', 'transfer-in', 'receive'];
 export const ORDER_STATUSES = ['held', 'open', 'completed', 'cancelled'];
 export const PAYMENT_STATUSES = ['unpaid', 'partial', 'paid', 'partially-refunded', 'refunded'];
@@ -90,6 +93,27 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 		},
 	},
 	{
+		key: 'taxRate',
+		shownWhen: null,
+		engine: [],
+		step: {
+			name: 'TaxRate',
+			title: 'Tax rates',
+			route: 'tax-rates',
+			description: 'The taxes and VAT products and categories are sold with',
+			rationale: 'A category or a product carries a tax; a product with none uses the default.',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', required: true, searchable: true, helper: 'VAT, Sales tax, Supplementary duty…' },
+				{ key: 'rate', label: 'Rate (%)', kind: 'number', min: 0, max: 100, required: true },
+				{ key: 'status', label: 'Status', kind: 'select', options: opts('active', 'inactive'), default: 'active', required: true, helper: 'Inactive: it can’t be picked on a category or a product any more' },
+				{ key: 'isDefault', label: 'Default', kind: 'boolean', default: false, helper: 'Used for a product with no tax of its own' },
+			],
+			table: ['name', 'rate', 'status', 'isDefault'],
+			filters: ['status'],
+		},
+	},
+	{
 		key: 'category',
 		shownWhen: null,
 		engine: [],
@@ -110,6 +134,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					helper: 'Left empty, it’s made from the name: Local Chicken → local-chicken. One that’s taken gets -2, so each stays unique',
 				},
 				{ key: 'parent', label: 'Parent category', kind: 'reference', ref: 'Category' },
+				{ key: 'taxRate', label: 'Tax / VAT', kind: 'reference', ref: 'TaxRate', helper: 'Products in this category start with this tax — each can still change it', optionFilters: TAX_PICKER, pickerDetails: ['rate'] },
 				{ key: 'posStatus', label: 'Status on POS', kind: 'select', options: opts('active', 'inactive'), default: 'active', required: true, helper: 'Inactive: the category isn’t shown on the POS' },
 				{ key: 'webStatus', label: 'Status on website', kind: 'select', options: opts('active', 'inactive'), default: 'active', required: true, helper: 'Inactive: the category isn’t shown on your website' },
 				{ key: 'sortOrder', label: 'Order on POS', kind: 'number', default: 0, helper: 'The higher the number, the earlier it shows on the POS' },
@@ -123,6 +148,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			// The form in sections, short inputs side by side (EC21); fields people add go under Images.
 			form: [
 				{ sectionTitle: 'Category', description: 'Its name, and the category it sits under', fields: [['name', 'parent']] },
+				{ sectionTitle: 'Tax / VAT', description: 'The tax its products start with', fields: ['taxRate'] },
 				{ sectionTitle: 'POS configuration', description: 'Whether and where it shows on the POS', fields: [['posStatus', 'sortOrder']] },
 				{ sectionTitle: 'Website configuration', description: 'Whether and where it shows on your website, and its address there', fields: [['webStatus', 'webOrder'], 'slug'] },
 				{ sectionTitle: 'Images', fields: ['image', 'images'] },
@@ -130,6 +156,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			view: [
 				{ title: 'Category', columns: 2, fields: ['name', 'parent'] },
+				{ title: 'Tax / VAT', columns: 1, fields: ['taxRate'] },
 				{ title: 'POS configuration', columns: 2, fields: ['posStatus', 'sortOrder'] },
 				{ title: 'Website configuration', columns: 3, fields: ['webStatus', 'webOrder', 'slug'] },
 				{ title: 'Images', columns: 2, fields: ['image', 'images'] },
@@ -156,25 +183,6 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 		},
 	},
 	{
-		key: 'taxRate',
-		shownWhen: x => x.pos.tax.mode !== 'none',
-		engine: [],
-		step: {
-			name: 'TaxRate',
-			title: 'Tax rates',
-			route: 'tax-rates',
-			description: 'The taxes products are sold with',
-			rationale: 'A product may carry its own rate; otherwise the default applies.',
-			displayField: 'name',
-			fields: [
-				{ key: 'name', label: 'Name', kind: 'text', required: true },
-				{ key: 'rate', label: 'Rate (%)', kind: 'number', min: 0, max: 100, required: true },
-				{ key: 'isDefault', label: 'Default', kind: 'boolean', default: false },
-			],
-			table: ['name', 'rate', 'isDefault'],
-		},
-	},
-	{
 		key: 'product',
 		shownWhen: null,
 		engine: ['totalStock'],
@@ -196,7 +204,17 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				money('cost', 'Cost', { default: undefined, helper: 'What it costs you — for profit reports' }),
 				{ key: 'sku', label: 'SKU', kind: 'text', searchable: true, helper: 'Without variations: the product’s own' },
 				{ key: 'barcode', label: 'Barcode', kind: 'text', searchable: true, helper: 'Without variations: scanned at the POS' },
-				{ key: 'taxRate', label: 'Tax rate', kind: 'reference', ref: 'TaxRate', helper: 'Empty: the default rate' },
+				{
+					key: 'taxRate',
+					label: 'Tax / VAT',
+					kind: 'reference',
+					ref: 'TaxRate',
+					helper: 'Filled from its category’s tax when you pick one — change it here if this product differs. Empty: the default rate',
+					optionFilters: TAX_PICKER,
+					pickerDetails: ['rate'],
+					fillFrom: { from: 'category', formula: 'taxRate' },
+				},
+				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxRate.rate / 100), 2)', helper: 'Worked out from the price and the tax — never typed' },
 				{ key: 'trackStock', label: 'Track stock', kind: 'boolean', default: a.products.trackStock },
 				{
 					key: 'options',
@@ -218,12 +236,12 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ sectionTitle: 'Product', description: 'What it is and where it sits', fields: [['name', 'status'], ['category', 'brand'], 'description'] },
 				{ sectionTitle: 'Type', fields: ['productType'] },
 				{ sectionTitle: 'Variations', description: 'What it varies by — each combination becomes a variation with its own price, image and stock', fields: ['options'], showIf: { field: 'productType', operator: 'eq', value: 'variation' } },
-				{ sectionTitle: 'Pricing', fields: [['price', 'compareAtPrice'], ['cost', 'taxRate']] },
+				{ sectionTitle: 'Pricing', fields: [['price', 'taxRate'], 'priceAfterTax', ['compareAtPrice', 'cost']] },
 				{ sectionTitle: 'Inventory', fields: [['sku', 'barcode'], 'trackStock'] },
 				{ sectionTitle: 'Images', fields: ['images'] },
 				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
 			],
-			table: ['name', 'category', 'price', 'totalStock', 'status'],
+			table: ['name', 'category', 'price', 'priceAfterTax', 'totalStock', 'status'],
 			filters: ['status', 'category', 'productType'],
 		},
 	},

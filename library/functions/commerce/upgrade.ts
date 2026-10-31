@@ -30,6 +30,7 @@ import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 /** Labels the blueprint used to give a field — renewed to today's when the store still has them. */
 const OLD_LABELS: Partial<Record<ModelKey, Record<string, string[]>>> = {
 	category: { sortOrder: ['Order on the POS'], image: ['Image'] },
+	product: { taxRate: ['Tax rate'] },
 	coupon: { type: ['Type'], minOrder: ['Minimum order'], startsAt: ['Starts'], endsAt: ['Ends'], usageLimit: ['Can be used (times)'], used: ['Used'] },
 };
 
@@ -284,9 +285,10 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				if (!renewed.includes(f.key)) renewed.push(f.key);
 			}
 			// A picker's own rules (the variants' product: only the ones with variations; SKU under each name).
-			if (f.kind === 'reference' && (w.optionFilters || w.pickerDetails) && !f.optionFilters && !f.pickerDetails) {
+			if (f.kind === 'reference' && (w.optionFilters || w.pickerDetails || w.fillFrom) && !f.optionFilters && !f.pickerDetails && !f.fillFrom) {
 				if (w.optionFilters) f.optionFilters = w.optionFilters;
 				if (w.pickerDetails) f.pickerDetails = w.pickerDetails;
+				if (w.fillFrom) f.fillFrom = w.fillFrom;
 				if (w.helper && !f.helper) f.helper = w.helper;
 				if (!renewed.includes(f.key)) renewed.push(f.key);
 			}
