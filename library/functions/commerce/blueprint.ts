@@ -32,6 +32,7 @@ export type ModelKey =
 	| 'payment'
 	| 'return'
 	| 'credit'
+	| 'purchase'
 	| 'delivery';
 
 export type ModelSpec = {
@@ -756,6 +757,34 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['code', 'customer', 'amount', 'balance', 'reason', 'reference', 'createdAt'],
 			filters: ['reason'],
+		},
+	},
+	{
+		key: 'purchase',
+		shownWhen: null,
+		engineOnly: true,
+		engine: ['customer', 'product', 'variant', 'name', 'timesBought', 'quantity', 'spent', 'firstPurchasedAt', 'lastPurchasedAt', 'lastOrder'],
+		step: {
+			name: 'StorePurchase',
+			title: 'Customer purchases',
+			route: 'customer-purchases',
+			description: 'What each customer has bought — how many times, how many units and when last',
+			rationale: 'Kept by the store after every order, so a customer’s page lists the items they bought.',
+			displayField: 'name',
+			fields: [
+				{ key: 'customer', label: 'Customer', kind: 'reference', ref: 'StoreCustomer', required: true },
+				{ key: 'product', label: 'Product', kind: 'reference', ref: 'Product' },
+				{ key: 'variant', label: 'Item', kind: 'reference', ref: 'Variant' },
+				{ key: 'name', label: 'Item name', kind: 'text', searchable: true },
+				{ key: 'timesBought', label: 'Times bought', kind: 'number', default: 0, helper: 'Orders it was on' },
+				{ key: 'quantity', label: 'Units', kind: 'number', default: 0, helper: 'Bought in all, less what was returned' },
+				{ key: 'spent', label: 'Spent', kind: 'number', default: 0 },
+				{ key: 'firstPurchasedAt', label: 'First bought', kind: 'date' },
+				{ key: 'lastPurchasedAt', label: 'Last bought', kind: 'date' },
+				{ key: 'lastOrder', label: 'Last order', kind: 'text' },
+			],
+			table: ['customer', 'name', 'timesBought', 'quantity', 'spent', 'lastPurchasedAt'],
+			filters: ['customer', 'product'],
 		},
 	},
 	{

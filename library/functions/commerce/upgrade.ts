@@ -15,6 +15,7 @@ import { Installed, applySidebar, engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
+import { rebuildPurchases } from './purchases.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 
@@ -232,6 +233,7 @@ const addModels = async (req: any, store: Store, apply: boolean): Promise<Change
 
 export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Change[]> => {
 	const store = await storeOf();
+	const hadPurchases = !!store.installed.purchase;
 	const changes: Change[] = await addModels(req, store, apply);
 	for (const spec of modelSpecs(store.answers)) {
 		const m = store.installed[spec.key];
@@ -316,6 +318,11 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
+	}
+	// What customers bought, worked out from the orders already there.
+	if (!hadPurchases && apply) {
+		const n = await rebuildPurchases(await storeOf());
+		changes.push({ model: 'Customer purchases', added: [], renewed: [], filled: [`worked out for ${n} customer${n === 1 ? '' : 's'} from their orders`] });
 	}
 	// Deliveries' two emails, off until the owner turns them on (docs/couriers CR-14).
 	const installedNow: any = ((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed;

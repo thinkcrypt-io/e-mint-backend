@@ -7,6 +7,7 @@ import { PaymentInput, checkPayments, moveCredit, recordPayment, settleOrder, te
 import { currentShift, shiftForSale } from './shifts.js';
 import { extraFields } from './lists.js';
 import { deliveriesOf } from './deliveries.js';
+import { trackPurchases } from './purchases.js';
 import { nextCode } from '../dynamicModels.function.js';
 
 /**
@@ -158,6 +159,7 @@ export const sale = async (store: Store, input: SaleInput, ctx: Ctx) => {
 	await Order.updateOne({ _id: order._id }, { $set: { status: 'completed', fulfilment: 'fulfilled', completedAt: new Date() } });
 	await settleOrder(store, order._id);
 	await countCustomer(store, customer, q.total, 1);
+	await trackPurchases(store, customer, q.lines);
 	if (isId(input.heldId)) await Order.deleteOne({ _id: input.heldId, status: 'held' }).catch(() => null);
 	return orderDetail(store, order._id);
 };
@@ -204,6 +206,7 @@ export const createManual = async (store: Store, input: ManualInput, ctx: Ctx) =
 	}
 	await settleOrder(store, order._id);
 	await countCustomer(store, customer, q.total, 1);
+	await trackPurchases(store, customer, q.lines);
 	return orderDetail(store, order._id);
 };
 
@@ -478,6 +481,7 @@ export const cancel = async (store: Store, id: any, input: { reason?: string; re
 	}
 	if (order.coupon) await store.M('coupon').updateOne({ _id: order.coupon, used: { $gt: 0 } }, { $inc: { used: -1 } });
 	await countCustomer(store, order.customer, Number(order.total) || 0, -1);
+	await trackPurchases(store, order.customer, order.items);
 	await settleOrder(store, order._id);
 	return orderDetail(store, order._id);
 };

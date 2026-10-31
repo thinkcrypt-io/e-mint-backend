@@ -3,6 +3,7 @@ import { Store, roundFor } from './store.js';
 import { isId } from './catalogue.js';
 import { Move, moveAll } from './stock.js';
 import { moveCredit, recordPayment, settleOrder } from './payments.js';
+import { trackPurchases } from './purchases.js';
 import { orderDetail } from './orders.js';
 
 /**
@@ -143,5 +144,6 @@ export const returnItems = async (store: Store, orderId: any, input: ReturnInput
 	if ((after.items || []).every((it: any) => (Number(it.returned) || 0) >= (Number(it.quantity) || 0)))
 		await Order.updateOne({ _id: order._id }, { $set: { fulfilment: 'returned' } });
 	await settleOrder(store, order._id);
+	await trackPurchases(store, order.customer, [...asked.keys()].map(i => items[i]));
 	return { return: { _id: ret._id, code: ret.code, refundDue, refunded }, order: await orderDetail(store, order._id) };
 };
