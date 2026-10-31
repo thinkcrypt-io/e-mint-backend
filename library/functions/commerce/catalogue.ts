@@ -108,7 +108,7 @@ export const itemView = (product: any, variant: any, onHand: number | null = nul
 	barcode: variant.barcode || '',
 	price: variant.price !== undefined && variant.price !== null ? Number(variant.price) : Number(product.price) || 0,
 	compareAtPrice: variant.compareAtPrice ?? product.compareAtPrice ?? null,
-	taxRate: product.taxRate ? String(product.taxRate) : null,
+	taxRate: variant.taxRate ? String(variant.taxRate) : product.taxRate ? String(product.taxRate) : null,
 	category: product.category ? String(product.category) : null,
 	trackStock: product.trackStock !== false,
 	image: (Array.isArray(product.images) && (product.images[0]?.url || product.images[0])) || null,

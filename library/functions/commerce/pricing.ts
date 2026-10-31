@@ -106,12 +106,13 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 	const pById = new Map(products.map(p => [String(p._id), p]));
 	const stock = isId(input.outlet) ? await stockAt(store, input.outlet, variants.map(v => v._id)) : new Map<string, number>();
 
-	// Tax rates: a product's own, else the default.
+	// Tax rates: the variant's own, else its product's, else the default.
 	const taxMode = a.pos.tax.mode;
 	const rates: any[] = taxMode === 'none' ? [] : await store.M('taxRate').find({}).lean();
-	const rateOf = (p: any) => {
+	const rateOf = (p: any, v?: any) => {
 		if (taxMode === 'none') return 0;
-		const own = p?.taxRate && rates.find(r => String(r._id) === String(p.taxRate));
+		const find = (id: any) => (id ? rates.find(r => String(r._id) === String(id)) : null);
+		const own = find(v?.taxRate) || find(p?.taxRate);
 		return Number((own || rates.find(r => r.isDefault) || { rate: 0 }).rate) || 0;
 	};
 
@@ -152,7 +153,7 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 			orderDiscount: 0,
 			discount: 0,
 			net: 0,
-			taxRate: rateOf(p),
+			taxRate: rateOf(p, v),
 			tax: 0,
 			total: 0,
 			trackStock: view.trackStock,
