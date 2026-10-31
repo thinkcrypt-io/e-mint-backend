@@ -40,6 +40,7 @@ import SiteWidgets from '../models/tenancy/siteWidgets.model.js';
 import SiteCart from '../models/tenancy/siteCart.model.js';
 import SitePayment from '../models/tenancy/sitePayment.model.js';
 import SitePaymentSettings from '../models/tenancy/sitePaymentSettings.model.js';
+import CourierConnection from '../models/tenancy/courierConnection.model.js';
 import MailAccount from '../models/tenancy/mailAccount.model.js';
 import MailDesign from '../models/tenancy/mailDesign.model.js';
 import DeletedRecord from '../models/deleted-record/model.js';
@@ -97,6 +98,8 @@ const SCOPED = [
 	ContentSchedule,
 	// An e-commerce project's store settings (docs/ecommerce EC2).
 	CommerceSettings,
+	// Its couriers' sealed keys and webhook secrets (docs/couriers CR3).
+	CourierConnection,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */

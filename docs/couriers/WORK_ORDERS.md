@@ -22,7 +22,7 @@ build order.
 | CR-01 | Plan & docs | backend | S | done 2026-10-30 |
 | **Phase 1 — Steadfast end to end** | | | | |
 | CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | done 2026-10-31 |
-| CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | |
+| CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | done 2026-10-31 |
 | CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | |
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | |
@@ -43,6 +43,27 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-03 done.** `CourierConnection` (`library/models/tenancy/courierConnection.model.ts`): secret keys
+  in `credentials` (Map, sealed, `select: false`), non-secret ones in `public` (Pathao's client id + email shown back),
+  `settings`, `token` (Pathao, sealed), `webhookSecret` (sealed; Mint's, or Steadfast's own pasted —
+  `webhookSecretPasted`), `test` { ok, message, at, keysHash, rejected }, `accountKey`, `cache` (lists for a day),
+  `lastWebhookAt`, `refusedCalls`. In `projectLifecycle` SCOPED. Registry `commerce/couriers/` (`types.ts`, `http.ts`
+  with `courierFetch` + `baseUrl` — `COURIER_STUB_URL` sends every courier to the stub outside production —,
+  `steadfast.ts`, `pathao.ts`, `redx.ts`, `index.ts`; `COURIERS` now comes from there, re-exported by `settings.ts`).
+  Each adapter has keys, settings, links (sign-up, keys page, webhook page) and **`test()`**; Pathao and RedX also
+  `options()`; Pathao's token issue / refresh (a day before expiry, one fresh sign-in on a 401) is in. `ready` stays
+  false until each adapter books (CR-04/08/09). `commerce/connections.ts`: `listConnections`, `saveConnection` (blank
+  key = kept, keys changed → test runs, Pathao `sandbox: true` = its published account), `testConnection`,
+  `renewWebhookSecret`, `disconnect` (409 `courier_in_use` with open deliveries), `optionsFor` (day cache, `fresh=1`),
+  and **`usableConnection(project, id)`** for CR-05 (on + test passed with the keys as they are now). Webhook address
+  = `<api>/public/couriers/<courier>/<connection id>` (RedX `?token=<secret>`); the route itself is CR-06. Same
+  account in two projects: `accountKey` = hash of Steadfast's API key / Pathao's mode + client id / RedX's mode +
+  token — note a second **named** Steadfast key on the same profile hashes differently, so that case isn't caught.
+  Routes in `routes-tenant/commerce.router.ts` (manage-projects; options = records:edit). Smoke
+  `courier-connections.mjs` + `courier-stub.mjs` (in run-all; backend needs `COURIER_STUB_URL`). commerce-settings'
+  last check (plain delete of a store project) fails already — new store projects have website-kit models. No panel
+  yet (CR-07). Not deployed. Next: CR-04.
 
 - **2026-10-31 — CR-02 done.** Every store has **Deliveries** (blueprint key `delivery`, model `StoreDelivery` like
   `StoreCustomer`, route `deliveries`, code `DLV-000001`, `engineOnly`, all README §3 fields; shown in the sidebar

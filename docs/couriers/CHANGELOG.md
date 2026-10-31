@@ -75,3 +75,17 @@
 - Smoke `courier-model.mjs`: a new store's 19 models, the links, locks and
   statuses, plain writes refused, an older store upgraded (dry run, apply,
   again = up to date). commerce-install / orders / website-orders pass.
+
+## 2026-10-31 — CR-03 Courier connections
+
+- Each store connects its own Steadfast, Pathao and RedX accounts:
+  `CourierConnection` with sealed keys, the courier registry with one adapter
+  each (keys, settings, links, `test`, and Pathao's / RedX's lists), and
+  `/commerce/couriers` routes to list, save + test, test, renew the webhook
+  secret, disconnect and load stores / cities / zones / areas (kept a day).
+- Tests: Steadfast `ping` + `get_balance` (a refused key is never retried),
+  Pathao a password-grant token then its active stores (the default one
+  picked), RedX its pickup stores. Pathao's published sandbox account is one
+  switch. The same account in two stores is flagged on both.
+- `courier-stub.mjs` (one local stand-in for all three) and
+  `courier-connections.mjs` (44 checks, all pass).

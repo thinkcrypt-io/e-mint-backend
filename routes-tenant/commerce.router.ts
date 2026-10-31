@@ -12,6 +12,8 @@ import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail,
 import { cashMove, closeShift, currentShift, openShift, summary } from '../library/functions/commerce/shifts.js';
 import { listOrders, listReturns, moveReturn, returnDetail } from '../library/functions/commerce/lists.js';
 import { returnItems } from '../library/functions/commerce/returns.js';
+import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
+import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -51,6 +53,15 @@ import { returnItems } from '../library/functions/commerce/returns.js';
  *   GET  /returns?view=&q=&outlet=&page=&limit=   the Returns page   records:view
  *   GET  /returns/:id                             the return with its order, refunds, stock moves   records:view
  *   POST /returns/:id/status  { to, note? }       requested → approved | rejected → received …   records:edit
+ *
+ * Couriers (docs/couriers CR-03) — each store connects its own courier accounts; keys are never sent back:
+ *   GET    /couriers                        the couriers the country offers: on / off, keys set, last test,
+ *                                           webhook address + secret, warnings   manage-projects
+ *   PUT    /couriers/:id   { mode?, keys?, settings?, webhookSecret?, sandbox? }   saves (blank key = keep) and tests   manage-projects
+ *   POST   /couriers/:id/test               tests again   manage-projects
+ *   POST   /couriers/:id/webhook-secret     a new webhook secret (the old address stops working)   manage-projects
+ *   DELETE /couriers/:id                    forgets the keys; 409 courier_in_use while deliveries are on their way   manage-projects
+ *   GET    /couriers/:id/options/:what?parent=&fresh=1   stores, cities, zones, areas from the courier (kept a day)   records:edit
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -267,6 +278,45 @@ router.post(
 	'/shifts/:id/close',
 	create,
 	handle(async (req: any) => closeShift(await storeOf(), req.params.id, req.body || {}, actorName(req)))
+);
+
+router.get(
+	'/couriers',
+	manage,
+	handle(async (req: any) => listConnections(req.project, apiOrigin(req)))
+);
+router.put(
+	'/couriers/:id',
+	manage,
+	handle(async (req: any) => {
+		const out = await saveConnection(req.project, req.params.id, req.body || {}, actorName(req), apiOrigin(req));
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `connected ${out.name}${out.connection?.tested ? '' : ' (not tested)'}` });
+		return out;
+	})
+);
+router.post(
+	'/couriers/:id/test',
+	manage,
+	handle(async (req: any) => testConnection(req.project, req.params.id, apiOrigin(req)))
+);
+router.post(
+	'/couriers/:id/webhook-secret',
+	manage,
+	handle(async (req: any) => renewWebhookSecret(req.project, req.params.id, apiOrigin(req)))
+);
+router.delete(
+	'/couriers/:id',
+	manage,
+	handle(async (req: any) => {
+		const out = await disconnect(req.params.id);
+		if (out.removed) recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `disconnected ${req.params.id}` });
+		return out;
+	})
+);
+router.get(
+	'/couriers/:id/options/:what',
+	edit,
+	handle(async (req: any) => optionsFor(req.params.id, req.params.what, req.query.parent, req.query.fresh === '1'))
 );
 
 export default router;

@@ -4,6 +4,7 @@ import { countryByCode, listCountries, providersFor } from '../countries.functio
 import { PROVIDERS } from '../payments.function.js';
 import { runInScope } from '../tenantScope.function.js';
 import { TenancyError } from '../tenancy.function.js';
+import { COURIERS } from './couriers/index.js';
 
 /**
  * The store's settings (docs/ecommerce EC2): the setup wizard's answers, what
@@ -56,12 +57,8 @@ const TENDERS: Record<string, { label: string; countries?: string[] }> = {
 	wallet: { label: 'Mobile wallet (by reference)' },
 };
 
-/** Couriers an order can be sent to (EC20), by country. */
-export const COURIERS: Record<string, { name: string; countries: string[]; ready: boolean }> = {
-	steadfast: { name: 'Steadfast', countries: ['BD'], ready: false },
-	pathao: { name: 'Pathao Courier', countries: ['BD'], ready: false },
-	redx: { name: 'RedX', countries: ['BD'], ready: false },
-};
+/** Couriers an order can be sent to, by country — from the courier registry (docs/couriers CR5). */
+export { COURIERS };
 
 export const REFUND_METHODS: Record<string, string> = {
 	original: 'The way they paid (online payments are refunded through the gateway)',
