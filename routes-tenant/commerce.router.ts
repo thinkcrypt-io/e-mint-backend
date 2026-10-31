@@ -14,7 +14,7 @@ import { listOrders, listReturns, moveReturn, returnDetail } from '../library/fu
 import { returnItems } from '../library/functions/commerce/returns.js';
 import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
-import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, moveManual, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
+import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, markSettled, moveManual, receiveReturn, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 
 /**
@@ -76,6 +76,8 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   POST /deliveries/:id/cancel  { reason? }   stops it (Steadfast: a return request)   records:edit
  *   POST /deliveries/:id/status  { to, collected?, note? }   a manual courier's parcel moved by hand (CR-15)   records:edit
  *   GET  /orders/:id/risk?fresh=1          the buyer's phone with couriers (Steadfast's check, kept a day) (CR-18)   records:view
+ *   POST /deliveries/:id/receive  { lines: [{ line, quantity, condition?, restock? }], note? }   a returned parcel back in (CR-13)   records:edit
+ *   POST /deliveries/settle  { deliveries: [ids], ref? }   marked paid out by the courier (RedX, manual)   records:edit
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  */
 const router = express.Router({ mergeParams: true });
@@ -367,6 +369,16 @@ router.get(
 	'/deliveries/:id/webhooks',
 	manage,
 	handle(async (req: any) => ({ doc: await webhooksOf(req.params.id) }))
+);
+router.post(
+	'/deliveries/settle',
+	edit,
+	handle(async (req: any) => markSettled(await storeOf(), req.body || {}, actorName(req)))
+);
+router.post(
+	'/deliveries/:id/receive',
+	edit,
+	handle(async (req: any) => receiveReturn(await storeOf(), req.params.id, req.body || {}, actorName(req)))
 );
 router.post(
 	'/deliveries/:id/status',

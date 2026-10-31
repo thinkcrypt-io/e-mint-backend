@@ -62,6 +62,9 @@ const steadfast = async (req, res, path, body) => {
 		});
 		return json(res, 200, { status: 200, data });
 	}
+	// One payout a day: every parcel delivered so far.
+	if (path === '/payments') return json(res, 200, { status: 200, data: [{ id: 501, amount: 0, created_at: new Date().toISOString() }] });
+	if (path === '/payments/501') return json(res, 200, { status: 200, data: { id: 501, consignments: [...sfParcels.values()].filter(p => p.status === 'delivered').map(p => ({ consignment_id: p.consignment_id, invoice: p.invoice, cod_amount: p.cod_amount })) } });
 	const fc = path.match(/^\/fraud_check\/score\/(\d+)$/);
 	if (fc) {
 		const known = { '01711000000': { delivery_ratio: 90, cancellation_ratio: 10, delivered_count: 18, cancelled_count: 2, total_reports: 0, volume_band: 'medium' }, '01800000000': { delivery_ratio: 30, cancellation_ratio: 70, delivered_count: 3, cancelled_count: 7, total_reports: 2, volume_band: 'low', fraud_categories: ['fake-order'] } };

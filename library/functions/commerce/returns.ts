@@ -18,12 +18,15 @@ export type ReturnInput = {
 	refundMethod?: string;
 	note?: string;
 	register?: any;
+	/** A parcel a courier brought back (docs/couriers CR10): taken whatever the return rules, refunded only when `refund` (it was paid before it went). */
+	courier?: { refund: boolean; reference: string };
 };
 
 const REASONS = ['changed-mind', 'wrong-size', 'damaged', 'not-as-described', 'other'];
 
 export const returnItems = async (store: Store, orderId: any, input: ReturnInput, ctx: { by: string }) => {
-	const rules = store.answers.returns;
+	const fromCourier = input?.courier;
+	const rules = fromCourier ? { ...store.answers.returns, allowed: true, windowDays: 0, partial: true } : store.answers.returns;
 	if (!store.installed.return || !rules?.allowed) throw new TenancyError(404, 'Returns are switched off for this store — turn them on in Store settings → Returns', 'returns_off');
 	const round = roundFor(store.answers.store.currency);
 	const Order = store.M('order');
@@ -92,7 +95,8 @@ export const returnItems = async (store: Store, orderId: any, input: ReturnInput
 	}
 	const paidNet = round([...net.values()].reduce((s, t) => s + Math.max(0, t.amount), 0));
 	const worth = round(lines.reduce((s, l) => s + l.total, 0));
-	const refundDue = Math.min(worth, paidNet);
+	// A cash-on-delivery parcel that came back was never paid for: nothing to give back.
+	const refundDue = fromCourier && !fromCourier.refund ? 0 : Math.min(worth, paidNet);
 	const method = String(input.refundMethod || 'original');
 	let refunded = 0;
 	const give = async (m: string, label: string, amount: number) => {
@@ -131,7 +135,7 @@ export const returnItems = async (store: Store, orderId: any, input: ReturnInput
 		restocked: moves.length > 0,
 		status: 'refunded',
 		by: ctx.by,
-		...(input.note && { note: String(input.note).slice(0, 1000) }),
+		...((input.note || fromCourier) && { note: [fromCourier && `Came back with ${fromCourier.reference}`, input.note].filter(Boolean).join(' — ').slice(0, 1000) }),
 	});
 
 	// All of it back: the order is returned.

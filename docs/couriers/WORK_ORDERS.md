@@ -38,11 +38,22 @@ build order.
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | backend done 2026-10-31 (Live Fresh's page not changed) |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
-| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | after EC-08 |
+| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-13 backend done.** `returnItems` takes `courier: { refund, reference }`: return rules
+  (allowed / window / partial) don't apply, refund only when the order was paid before it went (`refund = !cod`), the
+  return's note names the delivery. `receiveReturn` (`POST deliveries/:id/receive` { lines, note? }; returning /
+  returned / partly-delivered; once — event `received-back`): returning → returned; **a fully returned order that was
+  never paid is closed** (status cancelled, fulfilment returned, "never delivered" note) so it owes nothing, not even
+  the delivery charge. Payouts: Pathao `order.paid` / RedX `paid` webhooks (CR-08/09), Steadfast `payouts`
+  (`/payments` + `/payments/:id`, shapes read loosely — **confirm on a real account**) pulled by the regular check
+  once a day per connection (`cache.payoutsAt` claim, `COURIER_PAYOUT_MS`) → `settleFromPayout`; RedX / manual by hand:
+  `POST deliveries/settle` { deliveries, ref } (delivered ones only). Cash with couriers = delivered, not settled.
+  The dashboard widget for it is left to the panel work. Smoke `courier-returns-payouts.mjs`.
 
 - **2026-10-31 — CR-15 + CR-18 backend done.** `couriers/manual.ts`: countries `['*']` (offered everywhere;
   `offeredFor` takes `*`), no keys, setting `names` (one per line, `Name | https://…/{tracking}`), test = "Ready —

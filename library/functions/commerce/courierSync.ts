@@ -2,7 +2,9 @@ import CourierConnection from '../../models/tenancy/courierConnection.model.js';
 import TenantProject from '../../models/tenancy/tenantProject.model.js';
 import { runInScope, runUnscoped } from '../tenantScope.function.js';
 import { storeOf } from './store.js';
-import { FINAL, refresh } from './deliveries.js';
+import { FINAL, refresh, settleFromPayout } from './deliveries.js';
+import { adapterOf } from './couriers/index.js';
+import { usableConnection } from './connections.js';
 
 /**
  * The regular check (docs/couriers CR12, CR-11): webhooks get lost, so every
@@ -47,6 +49,23 @@ const syncStore = async (project: any, courier: string) => {
 	return n;
 };
 
+/** Once a day per connection: the courier's payouts mark its delivered parcels paid out (CR11). */
+const PAYOUT_MS = () => Number(process.env.COURIER_PAYOUT_MS) || DAY;
+const syncPayouts = async (project: any, courier: string) => {
+	const adapter = adapterOf(courier);
+	if (!adapter?.payouts) return 0;
+	const u = await usableConnection(project, courier);
+	if (!u) return 0;
+	const last = u.doc.cache?.payoutsAt ? new Date(u.doc.cache.payoutsAt) : null;
+	if (last && Date.now() - last.getTime() < PAYOUT_MS()) return 0;
+	const claim = await CourierConnection.updateOne({ _id: u.doc._id, 'cache.payoutsAt': u.doc.cache?.payoutsAt ?? null }, { $set: { 'cache.payoutsAt': new Date() } });
+	if (!claim.modifiedCount) return 0;
+	const store = await storeOf();
+	let n = 0;
+	for (const p of await adapter.payouts(u.conn, last || new Date(Date.now() - 30 * DAY))) n += await settleFromPayout(store, courier, p.ref, p.parcels);
+	return n;
+};
+
 /** Every connected courier in every store, once. */
 export const runCourierSync = async () => {
 	const conns: any[] = await runUnscoped(() => CourierConnection.find({ 'test.ok': true }, { courier: 1, organization: 1, project: 1 }).lean());
@@ -56,6 +75,7 @@ export const runCourierSync = async () => {
 			const project: any = await runUnscoped(() => TenantProject.findById(c.project).lean());
 			if (!project || project.type !== 'ecommerce' || project.isActive === false) continue;
 			asked += await runInScope({ organization: c.organization, project: c.project }, () => syncStore(project, c.courier));
+			await runInScope({ organization: c.organization, project: c.project }, () => syncPayouts(project, c.courier)).catch((e: any) => console.error('courier payouts:', e?.message));
 		} catch (e: any) {
 			console.error('courier sync:', e?.message);
 		}

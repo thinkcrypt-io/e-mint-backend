@@ -225,6 +225,24 @@ const risk = async (conn: Conn, phone: string): Promise<Risk> => {
 	};
 };
 
+/** Steadfast's payouts since a day: each with the parcels it settled (CR11). Shapes read loosely — confirm on a real account. */
+const payouts = async (conn: Conn, since: Date) => {
+	const r = await courierFetch('Steadfast', `${base(conn)}/payments`, { headers: headers(conn) });
+	if (r.status !== 200) throw refused(r);
+	const list: any[] = Array.isArray(r.body?.data) ? r.body.data : Array.isArray(r.body) ? r.body : [];
+	const out: { ref: string; parcels: { consignment?: string; invoice?: string }[] }[] = [];
+	for (const p of list.slice(0, 20)) {
+		const at = new Date(p.created_at || p.updated_at || p.date || 0);
+		if (!Number.isNaN(at.getTime()) && at < since) continue;
+		const id = p.id ?? p.payment_id;
+		if (id === undefined) continue;
+		const one = await courierFetch('Steadfast', `${base(conn)}/payments/${encodeURIComponent(id)}`, { headers: headers(conn) });
+		const rows: any[] = Array.isArray(one.body?.data?.consignments) ? one.body.data.consignments : Array.isArray(one.body?.consignments) ? one.body.consignments : Array.isArray(one.body?.data) ? one.body.data : [];
+		out.push({ ref: `Steadfast payment ${id}`, parcels: rows.map(x => ({ consignment: x.consignment_id !== undefined ? String(x.consignment_id) : undefined, invoice: x.invoice ? String(x.invoice) : undefined })) });
+	}
+	return out;
+};
+
 export const steadfast: CourierAdapter = {
 	id: 'steadfast',
 	name: 'Steadfast',
@@ -262,4 +280,5 @@ export const steadfast: CourierAdapter = {
 	webhook,
 	normalise,
 	risk,
+	payouts,
 };

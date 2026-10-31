@@ -169,3 +169,12 @@
   any courier.
 - A buyer's phone can be checked with Steadfast (the store's own key): how
   often their parcels are delivered, in plain words, kept a day.
+
+## 2026-10-31 — CR-13 Returned parcels, payouts (backend)
+
+- A parcel the courier brings back is received in through the returns engine:
+  restocked to its outlet, refunded only if it was paid before it went; a
+  whole order back and never paid closes and owes nothing.
+- Couriers' payouts mark delivered parcels paid out — Pathao and RedX by
+  webhook, Steadfast from its payments list once a day, others by hand — so
+  "cash with couriers" shows what they still hold.

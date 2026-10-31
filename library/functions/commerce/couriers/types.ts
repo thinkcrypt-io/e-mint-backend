@@ -143,6 +143,8 @@ export interface CourierAdapter {
 	normalise(courierStatus: string): NormalStatus | null;
 	/** How a buyer's phone has done with couriers (Steadfast's fraud check, CR-18). Nulls are "not known", never 0. */
 	risk?(conn: Conn, phone: string): Promise<Risk>;
+	/** The courier's payouts since a date, each with the parcels it settled (Steadfast's payments list, CR11). */
+	payouts?(conn: Conn, since: Date): Promise<{ ref: string; parcels: { consignment?: string; invoice?: string }[] }[]>;
 }
 
 export type Risk = {

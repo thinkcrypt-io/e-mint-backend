@@ -3,6 +3,7 @@ import { TenancyError } from '../tenancy.function.js';
 import { Store, roundFor } from './store.js';
 import { isId } from './catalogue.js';
 import { recordPayment, settleOrder } from './payments.js';
+import { returnItems } from './returns.js';
 import { adapterOf } from './couriers/index.js';
 import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
 import { usableConnection } from './connections.js';
@@ -597,6 +598,62 @@ export const deliveryRisk = async (store: Store, project: any, orderId: any, fre
 	return { phone, risk, level, summary: words[level], checkedAt: kept?.at && !fresh && kept.risk === risk ? kept.at : new Date() };
 };
 
+const RECEIVED = 'received-back';
+
+/**
+ * POST deliveries/:id/receive (CR10, CR-13) — { lines: [{ line, quantity, condition?, restock? }], note? }: what a
+ * courier brought back, through the returns engine — restocked to the outlet it left from (sellable, by default),
+ * the order's returned counts and balance; refunded only when the order was paid before it went (no COD). Once.
+ */
+export const receiveReturn = async (store: Store, id: any, input: { lines?: any[]; note?: string }, by: string) => {
+	const D = deliveryOn(store);
+	const d: any = isId(id) ? await D.findById(id).lean() : null;
+	if (!d) throw new TenancyError(404, 'Delivery not found');
+	if (!['returning', 'returned', 'partly-delivered'].includes(d.status)) throw new TenancyError(409, 'Only a parcel coming back can be received');
+	if ((d.events || []).some((e: any) => e.courierStatus === RECEIVED)) throw new TenancyError(409, 'It’s been received already');
+	const out: any = await returnItems(store, d.order, { lines: Array.isArray(input.lines) ? input.lines : [], note: input.note, courier: { refund: !(Number(d.cod) > 0), reference: `${d.courierName} ${d.code}` } }, { by });
+	const n = (input.lines || []).reduce((s: number, l: any) => s + (Number(l?.quantity) || 0), 0);
+	await D.updateOne(
+		{ _id: d._id },
+		{
+			$set: { ...(d.status === 'returning' && { status: 'returned' }) },
+			$push: { events: event(d.status === 'returning' ? 'returned' : d.status, RECEIVED, `Received back: ${n} item${n === 1 ? '' : 's'} (${out.return.code})`, 'staff', by) },
+		}
+	);
+	if (d.status === 'returning') await orderEffects(store, d, 'returned');
+	// All of it back and nothing ever paid: the sale never happened — the order closes and owes nothing (not even the delivery charge).
+	const o: any = await store.M('order').findById(d.order).lean();
+	if (o && o.status !== 'cancelled' && !(Number(o.paid) > 0) && (o.items || []).every((it: any) => (Number(it.returned) || 0) >= (Number(it.quantity) || 0))) {
+		await store.M('order').updateOne({ _id: o._id }, { $set: { status: 'cancelled', fulfilment: 'returned', note: [o.note, `Came back with ${d.courierName} (${d.code}) — never delivered`].filter(Boolean).join('\n') } });
+		await settleOrder(store, o._id);
+	}
+	await summarise(store, d.order);
+	return { ...(await deliveryDetail(store, d._id)), return: out.return };
+};
+
+/** POST deliveries/settle { deliveries: [ids], ref? } (CR11) — couriers that don't say when they paid out (RedX, manual): marked by hand. */
+export const markSettled = async (store: Store, input: { deliveries?: any[]; ref?: string }, by: string) => {
+	const ids = (Array.isArray(input.deliveries) ? input.deliveries : []).map(String).filter(isId).slice(0, 200);
+	if (!ids.length) throw new TenancyError(400, 'Pick the deliveries the courier paid out');
+	const ref = String(input.ref || '').trim().slice(0, 100);
+	const r = await deliveryOn(store).updateMany(
+		{ _id: { $in: ids }, status: { $in: ['delivered', 'partly-delivered'] }, settled: { $ne: true } },
+		{ $set: { settled: true, ...(ref && { payoutRef: ref }) }, $push: { events: event('delivered', 'paid-out', `Paid out by the courier${ref ? ` — ${ref}` : ''}`, 'staff', by) } }
+	);
+	return { settled: r.modifiedCount, skipped: ids.length - r.modifiedCount };
+};
+
+/** A courier's payout (Steadfast's payments list): the parcels it names marked paid out with its reference. */
+export const settleFromPayout = async (store: Store, courier: string, ref: string, parcels: { consignment?: string; invoice?: string }[]) => {
+	const or = parcels.flatMap(p => [p.consignment ? { consignment: String(p.consignment) } : null, p.invoice ? { invoice: String(p.invoice) } : null]).filter(Boolean) as any[];
+	if (!or.length) return 0;
+	const r = await deliveryOn(store).updateMany(
+		{ courier, settled: { $ne: true }, status: { $in: ['delivered', 'partly-delivered'] }, $or: or },
+		{ $set: { settled: true, payoutRef: ref }, $push: { events: event('delivered', 'paid-out', `${adapterOf(courier)?.name || courier} paid it out — ${ref}`, 'sync', `${adapterOf(courier)?.name || courier} (check)`) } }
+	);
+	return r.modifiedCount;
+};
+
 /** Where a manual courier's parcel can be moved by hand (CR-15). */
 const MANUAL_TO: NormalStatus[] = ['picked-up', 'in-transit', 'out-for-delivery', 'delivered', 'partly-delivered', 'on-hold', 'failed-attempt', 'returning', 'returned', 'cancelled', 'lost'];
 
@@ -629,6 +686,8 @@ export const deliveryDetail = async (store: Store, id: any) => {
 			cancel: !FINAL.includes(d.status) && d.status !== 'returning' && (!d.consignment || !!a?.cancel),
 			sendAgain: ENDED.includes(d.status) || d.status === 'error',
 			move: d.courier === 'manual' && !['returned', 'cancelled', 'lost'].includes(d.status),
+			receive: ['returning', 'returned', 'partly-delivered'].includes(d.status) && !(d.events || []).some((e: any) => e.courierStatus === RECEIVED),
+			settle: ['delivered', 'partly-delivered'].includes(d.status) && !d.settled,
 		},
 	};
 };
