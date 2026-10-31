@@ -7,6 +7,7 @@ import { adapterOf } from './couriers/index.js';
 import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
 import { usableConnection } from './connections.js';
 import { applyUnmatched } from './courierWebhooks.js';
+import { rememberAreas, suggestAreas } from './courierAreas.js';
 import type { CourierEvent, NormalStatus, Parcel } from './couriers/types.js';
 
 /**
@@ -72,6 +73,9 @@ export const sendPrefill = async (store: Store, project: any, orderId: any) => {
 	const o = await orderFor(store, orderId);
 	const couriers = await couriersFor(store, project);
 	const active: any = await activeFor(store, o._id);
+	const to = { name: o.delivery?.name || '', area: o.delivery?.area || '', city: o.delivery?.city || '', address: o.delivery?.address || '' };
+	// Each courier's area picks for this address: remembered, or matched from its lists (CR14).
+	for (const c of couriers) c.areas = await suggestAreas(c.id, to);
 	return {
 		order: { _id: o._id, code: o.code, total: o.total, balance: o.balance, fulfilment: o.fulfilment, status: o.status },
 		couriers,
@@ -255,6 +259,8 @@ export const send = async (store: Store, project: any, orderId: any, input: Send
 			$push: { events: event(booked.pending ? 'booking' : 'booked', booked.courierStatus, `Booked with ${adapter.name}${booked.trackingCode ? ` — ${booked.trackingCode}` : ''}`, 'staff', by, now) },
 		}
 	);
+	// The area picked for this address, for the next order from there (CR14).
+	if (input.options?.area) await rememberAreas(id, recipient, input.options).catch(() => undefined);
 	// What the courier said about it before the booking answered (Pathao's order.created).
 	await applyUnmatched(id, d._id, booked.consignment, d.invoice).catch((e: any) => console.error('courier unmatched:', e?.message));
 	await summarise(store, o._id);

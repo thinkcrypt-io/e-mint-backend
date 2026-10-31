@@ -18,6 +18,7 @@ import { seedCountries } from './library/functions/countries.function.js';
 import { schedulePreviewPurge } from './library/functions/templateSandbox.function.js';
 import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
 import { scheduleContentTick } from './library/functions/contentSchedule.function.js';
+import { scheduleCourierSync } from './library/functions/commerce/courierSync.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
@@ -72,6 +73,8 @@ connectDb().then(() => {
 	schedulePreviewPurge();
 	// Scheduled publishes and take-offs, every minute (docs/cms CMS-11).
 	scheduleContentTick();
+	// Couriers' quiet parcels asked about, every 15 minutes (docs/couriers CR-11).
+	scheduleCourierSync();
 });
 
 // Swagger UI setup

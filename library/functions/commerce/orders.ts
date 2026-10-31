@@ -22,7 +22,7 @@ export type SaleInput = QuoteInput & { register?: any; payments?: PaymentInput[]
 export type ManualInput = QuoteInput & {
 	payments?: PaymentInput[];
 	note?: string;
-	delivery?: { name?: string; phone?: string; address?: string; area?: string; rate?: string };
+	delivery?: { name?: string; phone?: string; address?: string; area?: string; city?: string; landmark?: string; rate?: string };
 };
 
 const problemsError = (problems: string[]) => {
@@ -176,7 +176,7 @@ export const createManual = async (store: Store, input: ManualInput, ctx: Ctx) =
 		const rate = d.rate ? store.answers.delivery.rates.find(r => r.name === d.rate) : null;
 		if (d.rate && !rate) throw new TenancyError(400, `There’s no shipping rate “${d.rate}”`);
 		if (rate && (input.shipping === undefined || input.shipping === null || input.shipping === '')) shipping = rate.amount;
-		delivery = { name: String(d.name || customer?.name || '').slice(0, 120), phone: String(d.phone || customer?.phone || '').slice(0, 40), address: String(d.address || customer?.address || '').slice(0, 500), area: String(d.area || '').slice(0, 120), rate: rate?.name || '' };
+		delivery = { name: String(d.name || customer?.name || '').slice(0, 120), phone: String(d.phone || customer?.phone || '').slice(0, 40), address: String(d.address || customer?.address || '').slice(0, 500), area: String(d.area || '').slice(0, 120), city: String(d.city || '').slice(0, 80), landmark: String(d.landmark || '').slice(0, 160), rate: rate?.name || '' };
 		if (!delivery.address) throw new TenancyError(400, 'Where should it go? Add the delivery address');
 	}
 

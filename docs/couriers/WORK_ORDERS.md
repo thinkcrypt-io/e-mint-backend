@@ -30,8 +30,8 @@ build order.
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
 | CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
 | CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
-| CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | |
-| CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | |
+| CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
+| CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
 | **Phase 3 — everyday use** | | | | |
 | CR-12 | Bulk send from the order tables | backend + mint-tenant | M | |
@@ -43,6 +43,19 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-10 + CR-11 backend done.** `CourierAreaMap` (`courierareamaps`, tenantScoped, unique project +
+  courier + key; in projectLifecycle) and `commerce/courierAreas.ts`: `keyOf` (order area | city, plain words),
+  `matchChoice` (same → starts-with → contains, never a tie), `suggestAreas` (remembered first; else Pathao city →
+  zone → area and RedX's areas narrowed by the city, from the day-cached lists; `match: false` = remembered only, for
+  bulk), `rememberAreas` (after a send with `options.area`; names travel as `cityName / zoneName / areaName`).
+  `sendPrefill` returns `couriers[].areas { picks, from }`. Phone orders now keep `delivery.city` and `landmark`.
+  `commerce/courierSync.ts` `scheduleCourierSync()` at boot (server.ts): every 15 min (`COURIER_SYNC_MS`), parcels
+  with an id, not finished, booked within 30 days, quiet for 2 h (`COURIER_QUIET_MS`) on both `lastEventAt` and
+  `lastSyncedAt`; 10 per connection a run; claimed by a conditional `lastSyncedAt` update (no lease field needed).
+  Store settings warns when a courier with parcels out hasn't sent a webhook for 2 days. "Refresh on open" is the
+  panel's (CR-07). Smoke `courier-areas-sync.mjs` (needs the backend with `COURIER_SYNC_MS=3000
+  COURIER_QUIET_MS=1500`).
 
 - **2026-10-31 — CR-09 backend done.** `redx.ts` complete, `ready: true`: book (`POST /parcel`; needs
   `options.area` = RedX area id + `areaName`; grams; cash as a string; `value` = order total; pickup store;

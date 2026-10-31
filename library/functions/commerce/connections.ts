@@ -104,7 +104,7 @@ const sharedWith = async (doc: any) => {
 };
 
 /** One courier as Store settings shows it: no secret key, only whether each is set. */
-const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: string) => {
+const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: string, openParcels = 0) => {
 	const keys = doc ? keysOf(adapter, doc) : {};
 	const tested = !!doc?.test?.ok && doc.test.keysHash === hashOf(connOf(adapter, doc).mode, keys);
 	const shared = doc ? await sharedWith(doc) : 0;
@@ -114,6 +114,10 @@ const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: st
 			`This ${adapter.name} account is also connected to another Mint store. ${adapter.name} sends its updates to one address, so only one of the two gets them straight away — the other gets them from the regular check.`
 		);
 	if (doc?.test?.ok && !tested) warnings.push('The keys changed since the last test — press Test.');
+	// Parcels out and the courier quiet for two days: its webhook address is probably not set (CR12).
+	const quietSince = doc?.lastWebhookAt || doc?.createdAt;
+	if (openParcels && adapter.webhook && quietSince && Date.now() - new Date(quietSince).getTime() > 2 * DAY)
+		warnings.push(`${adapter.name} hasn’t sent an update for 2 days while ${openParcels} parcel${openParcels === 1 ? ' is' : 's are'} out — check the webhook address in your ${adapter.name} panel. Mint checks them every 15 minutes meanwhile.`);
 	return {
 		id: adapter.id,
 		name: adapter.name,
@@ -146,11 +150,14 @@ const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: st
 
 /** GET couriers — the couriers the store's country offers, each with its connection. */
 export const listConnections = async (project: any, origin: string) => {
-	await storeOf();
+	const store = await storeOf();
 	const { ids, on } = await offered(project);
 	const docs: any[] = await CourierConnection.find({ courier: { $in: ids } }).select(SECRETS).lean();
+	const D: any = store.installed.delivery ? store.M('delivery') : null;
+	const out = async (id: string) =>
+		D ? D.countDocuments({ courier: id, consignment: { $nin: [null, ''] }, status: { $nin: ['delivered', 'partly-delivered', 'returned', 'cancelled', 'lost', 'error', 'draft'] } }) : 0;
 	return {
-		couriers: await Promise.all(ids.map(id => viewOf(adapterFor(id), docs.find(d => d.courier === id), on.has(id), origin))),
+		couriers: await Promise.all(ids.map(async id => viewOf(adapterFor(id), docs.find(d => d.courier === id), on.has(id), origin, await out(id)))),
 	};
 };
 

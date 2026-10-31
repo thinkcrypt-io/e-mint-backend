@@ -134,3 +134,12 @@
   cancels on request (RedX confirms later), and its webhooks are checked by the
   token in Mint's address and applied, including payouts. 16 stub checks pass.
   RedX's real sandbox wasn't tried: it needs the owner's own sandbox token.
+
+## 2026-10-31 — CR-10 Area matching, CR-11 Regular check (backend)
+
+- The Send dialog's prefill now carries each courier's area picks: matched
+  from Pathao's cities / zones / areas and RedX's areas, or remembered from an
+  earlier send to the same place. Phone orders keep the city.
+- Every 15 minutes Mint asks the couriers about parcels that have been quiet
+  for 2 hours; Store settings warns when a courier has sent nothing for 2 days
+  while parcels are out.
