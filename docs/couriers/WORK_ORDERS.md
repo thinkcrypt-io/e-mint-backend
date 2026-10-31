@@ -26,23 +26,45 @@ build order.
 | CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | done 2026-10-31 |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | done 2026-10-31 |
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | done 2026-10-31 |
-| CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
+| CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | done 2026-10-31 |
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
-| CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
-| CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
-| CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
-| CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
-| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
+| CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | done 2026-10-31 |
+| CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | done 2026-10-31 |
+| CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | done 2026-10-31 |
+| CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | done 2026-10-31 |
+| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | docs + website done 2026-10-31; rollout waits for the backend deploy |
 | **Phase 3 — everyday use** | | | | |
-| CR-12 | Bulk send from the order tables | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
-| CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | backend done 2026-10-31 (Live Fresh's page not changed) |
-| CR-15 | Manual courier (any country) | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
-| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
-| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
+| CR-12 | Bulk send from the order tables | backend + mint-tenant | M | done 2026-10-31 |
+| CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | done 2026-10-31 (Live Fresh's page not changed) |
+| CR-15 | Manual courier (any country) | backend + mint-tenant | S | done 2026-10-31 |
+| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | done 2026-10-31 |
+| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | done 2026-10-31 |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-07 done (+ the panels of CR-08…15, 18), CR-17 docs and website done.** mint-tenant `26dac5c`:
+  `store/services/courierApi.ts` (all courier / delivery endpoints, names checked unique), `commerce/couriers/`
+  `CourierCards` (Delivery settings: a card per courier with its panel's steps and links, Mode, keys shown only as
+  saved, settings with the courier's stores, Save & test / Test again / Disconnect, Try Pathao's sandbox, webhook
+  address + secret to copy, Steadfast's own token, New secret, warnings), `SendToCourier` (prefill, Pathao city /
+  zone / area and RedX area pickers pre-picked, manual courier name + tracking, Check the buyer, "I checked" for
+  may-have-been-booked), `DeliveryCard` (title "Courier" on the order page: status, tracking, cash, Refresh — also on
+  open once a minute —, Label, Cancel, Update status (manual), Receive returned parcel, Mark paid out, timeline,
+  earlier parcels), `DeliveriesPage` (`/store/deliveries`: views, search, courier filter, cash with couriers, tick →
+  mark paid out), `BulkSend` (Orders / Website orders get a tick column for orders that can go). `common.tsx`:
+  `DeliveryBadge`, `labelHtml` (A6 / 80 mm, Code 128 barcode drawn in SVG, printed through a hidden frame). Backend
+  `9d144887`: Store → Deliveries in the sidebar while the store delivers (the plain table hidden, `ownPage`).
+  Browser-checked against the private backend + stub: Delivery settings cards, an order's Courier card, Send with
+  Pathao's matched areas and the buyer check, the Deliveries page, bulk send. mint-docs `10ba910` (store guide:
+  every `store-courier*` / `store-send-to-courier` / `store-delivery-card` / `store-deliveries` /
+  `store-delivery-risk` anchor) and mint-webpage `297f882` (changelog). **Not done:** CR-16 (Paperfly, eCourier,
+  CarryBee — "later"); the dashboard tile for cash with couriers; Live Fresh's track page. **Rollout (CR-17):** the
+  user deploys the backend (Heroku, manual), then `node scripts/upgradeStores.js` (dry run) → `--apply` with the
+  user's go-ahead so built stores get Deliveries + the two delivery emails; then connect a store's own couriers in
+  Delivery settings. Pathao's sandbox was down all day (522) — run `PATHAO_SANDBOX=1 node courier-pathao.mjs` when
+  it's back. No real Steadfast parcel was sent (no sandbox; the owner's live keys must be entered by the owner).
 
 - **2026-10-31 — CR-13 backend done.** `returnItems` takes `courier: { refund, reference }`: return rules
   (allowed / window / partial) don't apply, refund only when the order was paid before it went (`refund = !cod`), the

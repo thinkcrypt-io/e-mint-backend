@@ -178,3 +178,13 @@
 - Couriers' payouts mark delivered parcels paid out — Pathao and RedX by
   webhook, Steadfast from its payments list once a day, others by hand — so
   "cash with couriers" shows what they still hold.
+
+## 2026-10-31 — CR-07 The panel, CR-17 docs and website
+
+- mint-tenant: courier cards in Delivery settings, Send to courier (with area
+  pickers and the buyer check), the order's Courier card (refresh, label,
+  cancel, update by hand, receive returned parcel, mark paid out), a Deliveries
+  page with cash held by couriers, and bulk send from the order tables. The
+  sidebar gets Store → Deliveries while the store delivers.
+- mint-docs: the store guide's courier sections; mint-webpage: changelog.
+- Rollout waits for the backend deploy and the store upgrade.
