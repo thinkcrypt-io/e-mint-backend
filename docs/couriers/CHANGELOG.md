@@ -89,3 +89,11 @@
   switch. The same account in two stores is flagged on both.
 - `courier-stub.mjs` (one local stand-in for all three) and
   `courier-connections.mjs` (44 checks, all pass).
+
+## 2026-10-31 — CR-04 Steadfast
+
+- The Steadfast adapter books, books in bulk, finds a parcel by our invoice,
+  reads its status, asks for it back (Steadfast's cancel) and checks and reads
+  its webhooks; statuses mapped to Mint's. `courier-steadfast.mjs`: 19 checks
+  against the stub, all pass. No real Steadfast parcel was booked (no sandbox,
+  and the user's live keys aren't Mint's to type in).

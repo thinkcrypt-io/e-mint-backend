@@ -139,4 +139,6 @@ export const pathao: CourierAdapter = {
 	],
 	test,
 	options,
+	// Booking and statuses come with CR-08 / CR-09.
+	normalise: () => null,
 };

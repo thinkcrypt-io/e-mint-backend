@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import { fingerprint } from '../../../../lib/crypto/secret.js';
-import { CourierAdapter, Conn, TestResult } from './types.js';
-import { CourierError, baseUrl, courierFetch, courierWords } from './http.js';
+import { Booked, CourierAdapter, CourierEvent, Conn, NormalStatus, Parcel, TestResult, WebhookIn } from './types.js';
+import { CourierError, CourierRefusal, Answer, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress } from './http.js';
 
 /**
  * Steadfast (docs/couriers CONNECTING.md § Steadfast): API key + secret key on
@@ -36,12 +37,179 @@ const test = async (conn: Conn): Promise<TestResult> => {
 	}
 };
 
+/** Steadfast's statuses → Mint's (CONNECTING.md, CR6). `*_approval_pending`: the rider says so, Steadfast hasn't confirmed. */
+const STATUSES: Record<string, NormalStatus | null> = {
+	in_review: 'booked',
+	pending: 'in-transit',
+	hold: 'on-hold',
+	delivered: 'delivered',
+	partial_delivered: 'partly-delivered',
+	cancelled: 'returning',
+	cancelled_return_received: 'returned',
+	partial_delivered_return_received: 'returned',
+	exceptional: 'lost',
+	unknown: null,
+};
+const normalise = (s: string): NormalStatus | null => {
+	const k = String(s || '').toLowerCase().trim();
+	if (k in STATUSES) return STATUSES[k];
+	if (k.endsWith('_approval_pending')) return null;
+	return null;
+};
+
+/** A 401 is never retried (ten lock the key out); other refusals come back in Steadfast's words. */
+const refused = (r: Answer) => {
+	if (r.status === 401 || r.status === 403) return new CourierRefusal('Steadfast refused the keys — test the connection in Store settings → Delivery.', true);
+	if (r.status === 429) return new CourierRefusal('Steadfast has paused this key for a while — try again later.');
+	return new CourierRefusal(`Steadfast refused it: ${courierWords(r.body) || `error ${r.status}`}`);
+};
+
+const orderOf = (conn: Conn, p: Parcel) => {
+	const phone = bdPhone(p.recipient.phone);
+	if (!phone) throw new CourierRefusal('The phone number needs to be a Bangladeshi mobile (01XXXXXXXXX).');
+	return {
+		invoice: fit(p.invoice, 100, /[^A-Za-z0-9_-]/g).replace(/\s/g, ''),
+		recipient_name: fit(p.recipient.name, 100),
+		recipient_phone: phone,
+		recipient_address: fit(fullAddress(p.recipient), 490),
+		cod_amount: Math.max(0, Math.round(Number(p.cod) || 0)),
+		...(p.note && { note: fit(p.note, 480) }),
+		...(p.recipient.email && /@/.test(p.recipient.email) && { recipient_email: fit(p.recipient.email, 100) }),
+		...(p.description && { item_description: fit(p.description, 255) }),
+		total_lot: Math.max(1, Math.round(Number(p.items) || 1)),
+		delivery_type: Number(p.options?.deliveryType ?? conn.settings.deliveryType ?? 0) === 1 ? 1 : 0,
+	};
+};
+
+const bookedOf = (c: any): Booked => ({
+	consignment: String(c.consignment_id),
+	trackingCode: String(c.tracking_code || ''),
+	trackingUrl: c.tracking_link || (c.tracking_code ? `https://steadfast.com.bd/t/${c.tracking_code}` : undefined),
+	courierStatus: c.status || 'in_review',
+});
+
+const book = async (conn: Conn, p: Parcel): Promise<Booked> => {
+	const r = await courierFetch('Steadfast', `${base(conn)}/create_order`, { method: 'POST', headers: headers(conn), body: orderOf(conn, p) });
+	if (r.status !== 200 || r.body?.status !== 200 || !r.body?.consignment?.consignment_id) throw refused(r);
+	return bookedOf(r.body.consignment);
+};
+
+const bookMany = async (conn: Conn, parcels: Parcel[]) => {
+	const out: ({ ok: true; booked: Booked } | { ok: false; error: string })[] = [];
+	for (let i = 0; i < parcels.length; i += 500) {
+		const chunk = parcels.slice(i, i + 500);
+		const data: any[] = [];
+		const bad = new Map<number, string>();
+		chunk.forEach((p, j) => {
+			try {
+				data.push(orderOf(conn, p));
+			} catch (e: any) {
+				bad.set(j, e.message);
+			}
+		});
+		const r = data.length ? await courierFetch('Steadfast', `${base(conn)}/create_order/bulk-order/extended`, { method: 'POST', headers: headers(conn), body: { data }, timeout: 60000 }) : null;
+		if (r && r.status !== 200) throw refused(r);
+		const answers: any[] = Array.isArray(r?.body?.data) ? r!.body.data : Array.isArray(r?.body) ? r!.body : [];
+		let k = 0;
+		chunk.forEach((_, j) => {
+			if (bad.has(j)) return out.push({ ok: false, error: bad.get(j)! });
+			const a = answers[k++];
+			if (a?.status === 'success' && a.consignment_id) out.push({ ok: true, booked: bookedOf(a) });
+			else out.push({ ok: false, error: `Steadfast refused it: ${[].concat(a?.error || a?.errors || []).join(' ') || 'no answer for this one'}` });
+		});
+	}
+	return out;
+};
+
+/** CR13: after a timeout — the timeline Steadfast keeps for our invoice names the parcel, if it was booked. */
+const find = async (conn: Conn, invoice: string): Promise<Booked | null> => {
+	const r = await courierFetch('Steadfast', `${base(conn)}/trackings_by_invoice/${encodeURIComponent(invoice)}`, { headers: headers(conn) });
+	if (r.status === 404) return null;
+	if (r.status !== 200) throw refused(r);
+	const t = (Array.isArray(r.body?.tracking) ? r.body.tracking : []).find((x: any) => x?.consignment_id);
+	if (!t) return null;
+	const s = await courierFetch('Steadfast', `${base(conn)}/status_by_cid/${t.consignment_id}`, { headers: headers(conn) });
+	return { consignment: String(t.consignment_id), trackingCode: String(t.tracking_code || ''), courierStatus: s.body?.delivery_status || 'in_review' };
+};
+
+const eventOf = (courierStatus: string, extra: Partial<CourierEvent> & { consignment?: string; at?: Date }): CourierEvent => {
+	const s = String(courierStatus || '').toLowerCase();
+	const at = extra.at || new Date();
+	return {
+		courierStatus: s,
+		status: normalise(s),
+		awaitingApproval: s.endsWith('_approval_pending'),
+		kind: 'status',
+		key: `steadfast:${extra.consignment}:${s}:${at.toISOString()}`,
+		...extra,
+		at,
+	};
+};
+
+const status = async (conn: Conn, d: { consignment: string; invoice: string }) => {
+	const r = await courierFetch('Steadfast', `${base(conn)}/status_by_cid/${encodeURIComponent(d.consignment)}`, { headers: headers(conn) });
+	if (r.status !== 200 || !r.body?.delivery_status) throw refused(r);
+	// Steadfast answers from a minute's cache: the same status within a minute is one event.
+	const minute = new Date(Math.floor(Date.now() / 60000) * 60000);
+	return eventOf(r.body.delivery_status, { consignment: d.consignment, at: minute, key: `steadfast:${d.consignment}:${r.body.delivery_status}:sync` });
+};
+
+/** No cancel in Steadfast's API: a return request brings an undelivered parcel back. */
+const cancel = async (conn: Conn, d: { consignment: string; invoice: string }, reason: string) => {
+	const r = await courierFetch('Steadfast', `${base(conn)}/create_return_request`, {
+		method: 'POST',
+		headers: headers(conn),
+		body: { consignment_id: Number(d.consignment) || d.consignment, reason: fit(reason || 'Cancelled by the shop', 255) },
+	});
+	if (r.status === 422) throw new CourierRefusal(`Steadfast can’t take it back: ${courierWords(r.body) || 'it’s already delivered or on its way back'}`);
+	if (r.status !== 200 && r.status !== 201) throw refused(r);
+	return { async: true, message: 'Steadfast is asked to bring it back — the status moves when Steadfast confirms.' };
+};
+
+const safeEqual = (a: string, b: string) => {
+	const x = Buffer.from(String(a || ''));
+	const y = Buffer.from(String(b || ''));
+	return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
+};
+
+const webhook = {
+	/** X-Signature: HMAC-SHA256 of the raw body, keyed with the auth token, hex. Without one, the Bearer token itself. */
+	verify(req: WebhookIn, secret: string) {
+		if (!secret) return false;
+		const sig = String(req.headers['x-signature'] || '').toLowerCase();
+		if (sig) return safeEqual(sig, crypto.createHmac('sha256', secret).update(req.raw).digest('hex'));
+		return safeEqual(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''), secret);
+	},
+	parse(req: WebhookIn): CourierEvent[] {
+		const b = req.body || {};
+		const type = String(b.notification_type || b.type || b.event || '').toLowerCase();
+		const consignment = b.consignment_id !== undefined ? String(b.consignment_id) : undefined;
+		const at = b.updated_at ? new Date(String(b.updated_at).replace(' ', 'T')) : new Date();
+		const when = Number.isNaN(at.getTime()) ? new Date() : at;
+		const idem = String(req.headers['idempotency-key'] || '');
+		const base = { consignment, invoice: b.invoice ? String(b.invoice) : undefined, at: when, message: b.tracking_message || undefined };
+		const key = (k: string) => (idem ? `steadfast:${idem}` : `steadfast:${consignment}:${k}:${when.toISOString()}`);
+		if (type === 'delivery_status' || (!type && b.status))
+			return [
+				{
+					...eventOf(b.status, base),
+					...(b.cod_amount !== undefined && { collected: Number(b.cod_amount) || 0 }),
+					...(b.delivery_charge !== undefined && { charge: Number(b.delivery_charge) || 0 }),
+					key: key(String(b.status)),
+				},
+			];
+		if (type === 'tracking_update') return [{ ...base, courierStatus: 'tracking_update', status: null, kind: 'tracking', key: key('tracking') }];
+		if (type === 'consignment_update') return [{ ...base, courierStatus: 'consignment_update', status: null, kind: 'update', changed: b.values || {}, key: key(`update:${b.event_id || ''}`) }];
+		return [{ ...base, courierStatus: type || 'unknown', status: null, kind: 'other', message: base.message || type.replace(/_/g, ' '), key: key(type) }];
+	},
+};
+
 export const steadfast: CourierAdapter = {
 	id: 'steadfast',
 	name: 'Steadfast',
 	countries: ['BD'],
 	sandbox: false,
-	ready: false,
+	ready: true,
 	links: {
 		signUp: 'https://steadfast.com.bd/register',
 		keys: 'https://steadfast.com.bd/user/api',
@@ -65,4 +233,11 @@ export const steadfast: CourierAdapter = {
 	],
 	ownWebhookSecret: true,
 	test,
+	book,
+	bookMany,
+	find,
+	status,
+	cancel,
+	webhook,
+	normalise,
 };

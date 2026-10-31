@@ -49,6 +49,63 @@ export type TestResult = {
 	details?: Record<string, any>;
 };
 
+/** The statuses every courier is mapped to (CR6) — the same list as the Delivery model's (blueprint DELIVERY_STATUSES). */
+export type NormalStatus =
+	| 'draft' | 'booking' | 'booked' | 'pickup-pending' | 'picked-up' | 'in-transit' | 'out-for-delivery' | 'delivered' | 'partly-delivered'
+	| 'on-hold' | 'failed-attempt' | 'returning' | 'returned' | 'cancelled' | 'lost' | 'error';
+
+/** What is sent: Mint's words, each adapter turns it into the courier's fields. */
+export type Parcel = {
+	/** Our invoice: the order code, -2 / -3 on a resend. Never reused, so a retry can't book twice. */
+	invoice: string;
+	recipient: { name: string; phone: string; address: string; area?: string; city?: string; email?: string };
+	/** Cash to collect, whole taka. */
+	cod: number;
+	/** The goods' value (RedX asks for it). */
+	value: number;
+	/** kg */
+	weight: number;
+	items: number;
+	note?: string;
+	description?: string;
+	options: Record<string, any>;
+};
+
+export type Booked = {
+	consignment: string;
+	trackingCode: string;
+	trackingUrl?: string;
+	courierStatus: string;
+	charge?: number;
+	/** Pathao's bulk / RedX: the booking was taken but the parcel's id comes later. */
+	pending?: boolean;
+};
+
+/** One thing the courier told us — from a webhook, a status check or a person. */
+export type CourierEvent = {
+	consignment?: string;
+	invoice?: string;
+	courierStatus: string;
+	/** null: nothing to move (a tracking note, an unknown status). */
+	status: NormalStatus | null;
+	message?: string;
+	at: Date;
+	/** Cash the courier says it collected (delivered / partly delivered). */
+	collected?: number;
+	charge?: number;
+	/** The courier paid the merchant out for it (Pathao order.paid, RedX paid). */
+	settled?: { ref?: string };
+	/** "Rider says delivered" — shown, but no COD payment until confirmed (Steadfast *_approval_pending). */
+	awaitingApproval?: boolean;
+	/** Changed recipient fields (Steadfast consignment_update). */
+	changed?: Record<string, any>;
+	/** Same courier, same parcel, same thing → applied once (CR9). */
+	key: string;
+	kind: 'status' | 'tracking' | 'update' | 'payout' | 'handshake' | 'other';
+};
+
+export type WebhookIn = { headers: Record<string, any>; raw: string; body: any; query: Record<string, any> };
+
 export interface CourierAdapter {
 	id: string;
 	name: string;
@@ -65,4 +122,21 @@ export interface CourierAdapter {
 	ownWebhookSecret?: boolean;
 	test(conn: Conn): Promise<TestResult>;
 	options?(conn: Conn, what: OptionKind, parent?: string): Promise<Choice[]>;
+	quote?(conn: Conn, parcel: Parcel): Promise<{ charge: number }>;
+	book?(conn: Conn, parcel: Parcel): Promise<Booked>;
+	/** Several at once; each result in the order sent (Steadfast's bulk API). */
+	bookMany?(conn: Conn, parcels: Parcel[]): Promise<({ ok: true; booked: Booked } | { ok: false; error: string })[]>;
+	/** CR13: after a timeout, the parcel booked under this invoice, if any. */
+	find?(conn: Conn, invoice: string): Promise<Booked | null>;
+	status?(conn: Conn, delivery: { consignment: string; invoice: string }): Promise<CourierEvent>;
+	/** Asks the courier to stop the parcel. `async: true` — the courier confirms later by webhook / status. */
+	cancel?(conn: Conn, delivery: { consignment: string; invoice: string }, reason: string): Promise<{ async: boolean; message: string }>;
+	webhook?: {
+		/** The call is the courier's: its signature / secret matches the connection's. */
+		verify(req: WebhookIn, secret: string): boolean;
+		parse(req: WebhookIn): CourierEvent[];
+		/** The status and headers to answer with (Pathao: 202 + its integration header). */
+		reply?(settings: Record<string, any>): { status: number; headers?: Record<string, string> };
+	};
+	normalise(courierStatus: string): NormalStatus | null;
 }

@@ -57,3 +57,28 @@ export const courierWords = (body: any): string => {
 	const errs = body.errors && typeof body.errors === 'object' ? Object.values(body.errors).flat() : [];
 	return errs.filter(x => typeof x === 'string').join(' ');
 };
+
+/** A refusal in the courier's words that the person can fix (a bad phone, a field too long) — not worth a retry. */
+export class CourierRefusal extends Error {
+	constructor(message: string, public rejected = false) {
+		super(message);
+	}
+}
+
+/** A Bangladeshi mobile as the couriers take it: 01XXXXXXXXX (+88 / 88, spaces and dashes dropped), or null. */
+export const bdPhone = (v: any): string | null => {
+	let d = String(v ?? '').replace(/[^\d]/g, '');
+	if (d.startsWith('880')) d = d.slice(2);
+	else if (d.startsWith('88') && d.length === 13) d = d.slice(2);
+	return /^01[3-9]\d{8}$/.test(d) ? d : null;
+};
+
+/** Text as a courier takes it: characters it swaps for spaces gone, cut to its limit. */
+export const fit = (v: any, max: number, strip = /[{};<>$]/g) => String(v ?? '').replace(strip, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+
+/** The address with the area and city added when it doesn't name them already. */
+export const fullAddress = (r: { address: string; area?: string; city?: string }) => {
+	const a = String(r.address || '').trim();
+	const more = [r.area, r.city].filter(x => x && !a.toLowerCase().includes(String(x).toLowerCase()));
+	return [a, ...more].filter(Boolean).join(', ');
+};

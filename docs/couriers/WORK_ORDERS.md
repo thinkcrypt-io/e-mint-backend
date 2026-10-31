@@ -23,7 +23,7 @@ build order.
 | **Phase 1 — Steadfast end to end** | | | | |
 | CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | done 2026-10-31 |
 | CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | done 2026-10-31 |
-| CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | |
+| CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | done 2026-10-31 |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | |
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | |
 | CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
@@ -43,6 +43,19 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-04 done.** `couriers/types.ts` now has `Parcel`, `Booked`, `CourierEvent`, `NormalStatus`,
+  `WebhookIn` and the adapter's optional `book / bookMany / find / status / cancel / webhook {verify, parse, reply}` +
+  required `normalise`. `http.ts`: `CourierRefusal` (fixable, never retried; `rejected` = the keys), `bdPhone`, `fit`,
+  `fullAddress`. `steadfast.ts` is complete and `ready: true`: book (`create_order`, fields trimmed to Steadfast's
+  limits), `bookMany` (`bulk-order/extended`, 500 a call, per-parcel results), `find` (`trackings_by_invoice` →
+  consignment), `status` (`status_by_cid`, one event a minute — Steadfast's cache), `cancel` (= `create_return_request`,
+  async), webhook verify (`X-Signature` HMAC of the raw body, else the Bearer token, constant time) and parse
+  (`delivery_status` / `tracking_update` / `consignment_update` / others logged; the event type is read from
+  `notification_type`, `type` or `event` — **confirm the field on the first real call**; dedupe = `Idempotency-Key`).
+  Pathao / RedX have `normalise: () => null` until CR-08 / 09. Stub: Steadfast booking, bulk, status, invoice
+  look-up, return requests, `SLOW` invoices answering after 16 s, `/__status` and `/__parcel` controls. Smoke
+  `courier-steadfast.mjs` (adapter alone, 19 checks).
 
 - **2026-10-31 — CR-03 done.** `CourierConnection` (`library/models/tenancy/courierConnection.model.ts`): secret keys
   in `credentials` (Map, sealed, `select: false`), non-secret ones in `public` (Pathao's client id + email shown back),

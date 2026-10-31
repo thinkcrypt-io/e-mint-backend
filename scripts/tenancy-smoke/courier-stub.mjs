@@ -25,11 +25,54 @@ const PATHAO = [
 ];
 const tokens = new Set();
 
-const steadfast = (req, res, path) => {
+/** Steadfast's parcels: consignment id → { invoice, status, tracking_code, cod_amount }. */
+const sfParcels = new Map();
+let sfNext = 9000001;
+const sfBook = o => {
+	const errors = {};
+	if (!o.invoice) errors.invoice = ['The invoice field is required.'];
+	if (!/^01\d{9}$/.test(o.recipient_phone || '')) errors.recipient_phone = ['The recipient phone must be 11 digits.'];
+	if (!o.recipient_address) errors.recipient_address = ['The recipient address field is required.'];
+	if ([...sfParcels.values()].some(p => p.invoice === o.invoice)) errors.invoice = ['The invoice has already been taken.'];
+	if (Object.keys(errors).length) return { errors };
+	const id = sfNext++;
+	const p = { consignment_id: id, invoice: o.invoice, tracking_code: `SF${id}`, status: 'in_review', cod_amount: o.cod_amount, recipient_name: o.recipient_name, recipient_phone: o.recipient_phone, recipient_address: o.recipient_address, note: o.note, delivery_type: o.delivery_type };
+	sfParcels.set(String(id), p);
+	return { consignment: { ...p, tracking_link: `https://steadfast.com.bd/tl/${p.tracking_code}` } };
+};
+
+const steadfast = async (req, res, path, body) => {
 	if (path === '/ping') return json(res, 200, { message: 'pong' });
 	const ok = STEADFAST_KEYS[req.headers['api-key']] && STEADFAST_KEYS[req.headers['api-key']] === req.headers['secret-key'];
 	if (!ok) return json(res, 401, { message: 'Unauthorized' });
 	if (path === '/get_balance') return json(res, 200, { status: 200, current_balance: 1240 });
+	if (path === '/create_order' && req.method === 'POST') {
+		// An invoice with SLOW in it: booked, but the answer comes too late (Mint's 15 s limit).
+		if (/SLOW/.test(body.invoice || '')) await new Promise(r => setTimeout(r, 16000));
+		const r = sfBook(body);
+		return r.errors ? json(res, 400, { status: 400, errors: r.errors }) : json(res, 200, { status: 200, message: 'Consignment has been created successfully.', consignment: r.consignment });
+	}
+	if (path === '/create_order/bulk-order/extended' && req.method === 'POST') {
+		const data = (body.data || []).map(o => {
+			const r = sfBook(o);
+			return r.errors ? { invoice: o.invoice, status: 'error', error: Object.values(r.errors).flat() } : { ...r.consignment, status: 'success' };
+		});
+		return json(res, 200, { status: 200, data });
+	}
+	let m = path.match(/^\/status_by_cid\/(\d+)$/);
+	if (m) return sfParcels.has(m[1]) ? json(res, 200, { status: 200, delivery_status: sfParcels.get(m[1]).status }) : json(res, 404, { status: 404, message: 'Consignment not found' });
+	m = path.match(/^\/trackings_by_invoice\/(.+)$/);
+	if (m) {
+		const p = [...sfParcels.values()].find(x => x.invoice === decodeURIComponent(m[1]));
+		return p ? json(res, 200, { status: 200, tracking: [{ consignment_id: p.consignment_id, tracking_code: p.tracking_code, tracking_type: 'created', text: 'Parcel created', created_at: new Date().toISOString() }] }) : json(res, 404, { status: 404, message: 'Not found' });
+	}
+	if (path === '/create_return_request' && req.method === 'POST') {
+		const p = sfParcels.get(String(body.consignment_id));
+		if (!p) return json(res, 404, { message: 'Consignment not found' });
+		if (['delivered', 'partial_delivered', 'cancelled'].includes(p.status)) return json(res, 422, { message: 'Return request is not allowed for this consignment.' });
+		p.returnRequested = body.reason || true;
+		return json(res, 201, { status: 201, message: 'Return request created' });
+	}
 	json(res, 404, { message: 'Not found' });
 };
 
@@ -86,6 +129,20 @@ http
 				calls = [];
 				return json(res, 200, { ok: true });
 			}
+			let ctl = {};
+			try {
+				ctl = raw ? JSON.parse(raw) : {};
+			} catch {}
+			// Moves a parcel on, as the courier would: POST /__status { courier, consignment, status }.
+			if (req.url === '/__status') {
+				const p = ctl.courier === 'steadfast' ? sfParcels.get(String(ctl.consignment)) : null;
+				if (!p) return json(res, 404, { message: 'No such parcel' });
+				p.status = ctl.status;
+				return json(res, 200, p);
+			}
+			// A parcel as the courier keeps it: GET /__parcel/<courier>/<consignment>.
+			const pm = req.url.match(/^\/__parcel\/steadfast\/(\d+)$/);
+			if (pm) return sfParcels.has(pm[1]) ? json(res, 200, sfParcels.get(pm[1])) : json(res, 404, {});
 			const m = req.url.match(/^\/(steadfast|pathao|redx)\/(test|live)(\/.*)$/);
 			if (!m) return json(res, 404, { message: 'Not a courier' });
 			const [, courier, mode, path] = m;
@@ -94,7 +151,7 @@ http
 			try {
 				body = raw ? JSON.parse(raw) : {};
 			} catch {}
-			if (courier === 'steadfast') return steadfast(req, res, path);
+			if (courier === 'steadfast') return steadfast(req, res, path, body);
 			if (courier === 'pathao') return pathao(req, res, path, body);
 			return redx(req, res, path);
 		});
