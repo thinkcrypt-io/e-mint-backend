@@ -10,34 +10,44 @@ local courier stub (`scripts/tenancy-smoke/courier-stub.mjs`, one fake server
 that speaks all three APIs and sends webhooks), plus Pathao's and RedX's
 sandboxes when keys are in `backend/.env`.
 
-Order: **CR-02 → CR-07 is Steadfast end to end** (the user's stores are BD,
-Steadfast is the simplest API); Pathao and RedX follow on the same engine.
+**Scope (the user, 2026-10-31): Steadfast, Pathao and RedX, each store connecting its own merchant account** (CR18).
+Paperfly and the rest wait. Order: **phase 1 (CR-02 → CR-07) is Steadfast end to end**, phase 2 adds Pathao and RedX
+on the same engine and ships all three, phase 3 is everyday use. WO numbers stay as first planned, so the table is in
+build order.
 
 ## Status
 
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
 | CR-01 | Plan & docs | backend | S | done 2026-10-30 |
+| **Phase 1 — Steadfast end to end** | | | | |
 | CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | |
-| CR-03 | Courier connections: model, sealing, adapter interface + registry, settings API, Test | backend | M | |
-| CR-04 | Steadfast adapter (test, book, bulk, find by invoice, status, webhook) | backend | M | |
+| CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | |
+| CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | |
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | |
-| CR-07 | Panel: Store settings → Delivery couriers, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
-| CR-08 | Pathao adapter (tokens, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | |
-| CR-09 | RedX adapter (areas, pickup stores, charge, parcel, info, cancel, webhook) | backend + mint-tenant | M | |
-| CR-10 | Area matching: courier area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | |
+| CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
+| **Phase 2 — Pathao and RedX, then ship** | | | | |
+| CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | |
+| CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | |
+| CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | |
 | CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | |
+| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
+| **Phase 3 — everyday use** | | | | |
 | CR-12 | Bulk send from the order tables | backend + mint-tenant | M | |
-| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts (settled, Cash with couriers) | backend + mint-tenant | M | after EC-08 |
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
+| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | |
+| CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | after EC-08 |
+| **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
-| CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` (parcels / delivered / cancelled for the buyer's phone) | backend + mint-tenant | S | later |
-| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's Steadfast) | all | S | |
 
 ## Handoff
 
+- **2026-10-31 — Scope: Steadfast, Pathao, RedX, own accounts.** The user: "pathao and steadfast, users will connect
+  their own accounts", then "pathao steadfast and redex". Mint has no courier account of its own (CR18): each store
+  pastes its own merchant keys, the courier bills and pays out the merchant directly, Mint never holds COD money.
+  Phase 1 = Steadfast; phase 2 = Pathao (CR-08) + RedX (CR-09) + area pickers (CR-10) + sync; CR-17 ships all three.
 - **2026-10-31 — APIs checked** → `CONNECTING.md` (start every adapter WO there). all three couriers are from their own (signed-in) pages
   as of 2026-10-31. Steadfast has no sandbox (smoke against the stub; one live consignment with the user). The user's Steadfast
   profile already sends its webhook elsewhere — connecting Mint replaces it (ask first).
@@ -74,7 +84,14 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
   only to managers), `disconnect` (refused with open deliveries), `optionsFor` with the one-day cache.
 - Routes `GET|PUT|DELETE couriers[/:id]`, `POST couriers/:id/test`, `GET couriers/:id/options/:what`.
 - Turning a courier off in Delivery keeps its connection (keys stay) but hides it from Send.
-- Smoke `courier-connections.mjs` against the stub: save, keys never returned, test ok / bad keys, key change → untested.
+- **Own account only (CR18):** no courier keys in Mint's env, no shared account; a store without a tested connection
+  can't send to that courier. The test keeps an `accountKey` (hash of the Steadfast API key / Pathao client id / RedX
+  token, never the key) so the **same courier account connected in two projects** is spotted: both connections show
+  "This account is also connected to another Mint store — the courier sends updates to one address, so the other
+  store gets them from the scheduled check" (no other project's name is shown across organisations). The connection
+  whose webhook address the courier last called is marked `webhookOwner`.
+- Smoke `courier-connections.mjs` against the stub: save, keys never returned, test ok / bad keys, key change → untested,
+  same account in two projects → both warned.
 
 ## CR-04 — Steadfast (M)
 
@@ -126,6 +143,10 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
   Cancel, Send again, Print label); `label.ts` (80 mm / A6, tracking barcode, printed through a hidden frame like
   `receipt.ts`). Deliveries page = the builder table with the quick views (README §6). Hooks in `commerceApi.ts`
   (grep RTK endpoint names first — they're global).
+- **Connect your Steadfast account** card: "No Steadfast account yet? Open one" (link to Steadfast's merchant sign-up,
+  new tab); steps — in Steadfast's **API** page make a key named "Mint", paste the API key and secret key, Save & test;
+  then in its **Webhook** page paste Mint's callback address and auth token (copy buttons) — "this replaces any address
+  there now". Shows which account is connected (balance from the test) and **Disconnect**.
 - mint-docs `/store#store-delivery`, `#store-couriers`, `#store-courier-steadfast`, `#store-send-to-courier`,
   `#store-deliveries`; every card and dialog links there.
 - Browser-checked end to end against a private backend and the stub (connect, test, send, webhook moves the badge).
@@ -143,6 +164,12 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
   `X-PATHAO-Signature` = our secret, integration call answered 202 with the published header; events → CR6;
   `order.paid` → settle (CR11, until CR-13 just recorded on the timeline).
 - Send dialog: city / zone / area pickers (CR-10 does the pre-pick), price shown before Send.
+- **Connect your Pathao account** card: "No Pathao merchant account yet? Open one"; steps — Pathao merchant panel →
+  Developer API → **Generate Credentials**, paste client id + secret, the panel's email + password, Save & test, pick the
+  pickup store; then its **Webhook Integration** tab: paste Mint's address and secret. The password is only for issuing
+  the token: sealed, used again only when the refresh token stops working ("Reconnect Pathao" if that fails too).
+  **Try Pathao's sandbox** mode fills Pathao's published test credentials so an owner can try sending before connecting.
+- mint-docs `#store-courier-pathao`.
 - Smoke against the stub and Pathao's sandbox.
 
 ## CR-09 — RedX (M)
@@ -150,6 +177,11 @@ Steadfast is the simplest API); Pathao and RedX follow on the same engine.
 - `CONNECTING.md` § RedX is from the official page. No find-by-invoice: a timed-out booking offers **Link existing parcel**.
 - `couriers/redx.ts`: access token; sandbox / live; pickup stores (setting); areas (options, searchable by district /
   post code); `quote` (charge calculator); `book` (`POST /parcel`, weight in grams, value = order total); `status` (`parcel/info`); `cancel` (`PATCH /parcels`); webhook with `?token=` (CR9 table).
+- **Connect your RedX account** card: "No RedX merchant account yet? Open one"; steps — RedX merchant panel → Developer
+  API → copy the access token, paste, Save & test, pick the pickup store; then paste Mint's webhook address (the token
+  is already in it — RedX sends no signature, so the address itself is the secret; Renew makes a new one).
+  Sandbox / Live switch.
+- mint-docs `#store-courier-redx`.
 - Smoke against the stub and RedX's sandbox.
 
 ## CR-10 — Area matching (M)

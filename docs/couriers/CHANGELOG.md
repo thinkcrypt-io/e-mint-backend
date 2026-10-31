@@ -49,3 +49,15 @@
   payloads. All three couriers are now from their own pages.
 - The user's Steadfast profile already has a callback URL to another backend;
   one URL per profile, so connecting Mint will replace it.
+
+## 2026-10-31 — Scope: Steadfast, Pathao, RedX on the store's own account
+
+- The user: "pathao and steadfast, users will connect their own accounts", then
+  "pathao steadfast and redex". New decision CR18: every store connects its own
+  merchant account; Mint has no courier account or keys and never holds COD
+  money; one account in two projects is flagged (one webhook address per account).
+- WORK_ORDERS.md regrouped into phases: 1 Steadfast end to end (CR-02…07);
+  2 Pathao + RedX + area pickers + sync, then ship (CR-08, 09, 10, 11, 17);
+  3 everyday use (CR-12, 14, 15, 18, 13). CR-16 later. Connect-your-account
+  cards (sign-up link, key and webhook steps) added to CR-07, CR-08, CR-09;
+  `accountKey` duplicate check added to CR-03.
