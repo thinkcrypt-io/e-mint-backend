@@ -14,7 +14,7 @@ import { listOrders, listReturns, moveReturn, returnDetail } from '../library/fu
 import { returnItems } from '../library/functions/commerce/returns.js';
 import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
-import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendPrefill } from '../library/functions/commerce/deliveries.js';
+import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 
 /**
@@ -69,6 +69,7 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   GET  /orders/:id/send                 the Send to courier dialog: connected couriers, the parcel prefilled, an open delivery   records:view
  *   POST /orders/:id/deliveries   { courier, recipient?, cod?, weight?, items?, note?, options?, confirmNotBooked? }
  *                                         books it (400 delivery_input / courier_refused, 409 delivery_open, 502 courier_no_answer)   records:edit
+ *   POST /deliveries/bulk  { orders: [≤ 100 ids], courier, weight?, note? }   each order's result (CR-12)   records:edit
  *   GET  /deliveries?view=&courier=&settled=&q=&page=&limit=   the Deliveries page: views' counts, cash with couriers   records:view
  *   GET  /deliveries/:id                  one delivery with its timeline   records:view
  *   POST /deliveries/:id/refresh          asks the courier where it is   records:edit
@@ -344,6 +345,11 @@ router.post(
 		res.status(201);
 		return out;
 	})
+);
+router.post(
+	'/deliveries/bulk',
+	edit,
+	handle(async (req: any) => sendMany(await storeOf(), req.project, req.body || {}, actorName(req)))
 );
 router.get(
 	'/deliveries',

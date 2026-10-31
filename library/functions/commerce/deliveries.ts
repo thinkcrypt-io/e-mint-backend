@@ -7,8 +7,8 @@ import { adapterOf } from './couriers/index.js';
 import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
 import { usableConnection } from './connections.js';
 import { applyUnmatched } from './courierWebhooks.js';
-import { rememberAreas, suggestAreas } from './courierAreas.js';
-import type { CourierEvent, NormalStatus, Parcel } from './couriers/types.js';
+import { NEEDS_AREA, rememberAreas, suggestAreas } from './courierAreas.js';
+import type { Booked, CourierEvent, NormalStatus, Parcel } from './couriers/types.js';
 
 /**
  * Deliveries (docs/couriers CR-05): an order sent to a courier becomes a
@@ -120,8 +120,8 @@ const keysRefused = (courier: string, message: string) =>
 
 type SendInput = { courier?: string; recipient?: any; cod?: any; weight?: any; items?: any; note?: any; options?: any; confirmNotBooked?: boolean };
 
-/** POST orders/:id/deliveries — sends the order to a courier (CR13). */
-export const send = async (store: Store, project: any, orderId: any, input: SendInput, by: string) => {
+/** Checks an order and makes (or reopens) its delivery in `booking`, ready for the courier — the first half of a send. */
+const prepare = async (store: Store, project: any, orderId: any, input: SendInput, by: string) => {
 	const D = deliveryOn(store);
 	const o = await orderFor(store, orderId);
 	if (o.status === 'cancelled' || o.fulfilment === 'cancelled') throw new TenancyError(409, 'This order is cancelled');
@@ -211,7 +211,45 @@ export const send = async (store: Store, project: any, orderId: any, input: Send
 		await D.updateOne({ _id: d._id }, { $set: { status: 'error', error: message }, $push: { events: event('error', courierStatus, message, 'staff', by) } });
 		await summarise(store, o._id);
 	};
-	let booked;
+	return { D, o, d, id, adapter, usable, parcel, recipient, input, fail };
+};
+type Prepared = Awaited<ReturnType<typeof prepare>>;
+
+/** A booking the courier answered: the delivery booked, the order's summary, the area remembered — the second half. */
+const finish = async (store: Store, ctx: Prepared, booked: Booked, by: string) => {
+	const { D, d, o, id, adapter, recipient, input } = ctx;
+	const now = new Date();
+	await D.updateOne(
+		{ _id: d._id },
+		{
+			$set: {
+				status: booked.pending ? 'booking' : 'booked',
+				consignment: booked.consignment,
+				trackingCode: booked.trackingCode,
+				trackingUrl: booked.trackingUrl || '',
+				courierStatus: booked.courierStatus,
+				courierMessage: '',
+				...(booked.charge !== undefined && { charge: booked.charge }),
+				bookedAt: now,
+				lastEventAt: now,
+				error: '',
+			},
+			$push: { events: event(booked.pending ? 'booking' : 'booked', booked.courierStatus, `Booked with ${adapter.name}${booked.trackingCode ? ` — ${booked.trackingCode}` : ''}`, 'staff', by, now) },
+		}
+	);
+	// The area picked for this address, for the next order from there (CR14).
+	if (input.options?.area) await rememberAreas(id, recipient, input.options).catch(() => undefined);
+	// What the courier said about it before the booking answered (Pathao's order.created).
+	if (booked.consignment || d.invoice) await applyUnmatched(id, d._id, booked.consignment, d.invoice).catch((e: any) => console.error('courier unmatched:', e?.message));
+	await summarise(store, o._id);
+};
+
+/** POST orders/:id/deliveries — sends the order to a courier (CR13). */
+export const send = async (store: Store, project: any, orderId: any, input: SendInput, by: string) => {
+	const ctx = await prepare(store, project, orderId, input, by);
+	const { d, id, adapter, usable, parcel, fail } = ctx;
+	if (!adapter.book) throw new TenancyError(400, 'Choose a courier');
+	let booked: Booked | null = null;
 	try {
 		booked = await adapter.book(usable.conn, parcel);
 	} catch (e: any) {
@@ -239,32 +277,86 @@ export const send = async (store: Store, project: any, orderId: any, input: Send
 			throw new TenancyError(502, msg, 'courier_no_answer');
 		}
 	}
-
-	const now = new Date();
-	await D.updateOne(
-		{ _id: d._id },
-		{
-			$set: {
-				status: booked.pending ? 'booking' : 'booked',
-				consignment: booked.consignment,
-				trackingCode: booked.trackingCode,
-				trackingUrl: booked.trackingUrl || '',
-				courierStatus: booked.courierStatus,
-				courierMessage: '',
-				...(booked.charge !== undefined && { charge: booked.charge }),
-				bookedAt: now,
-				lastEventAt: now,
-				error: '',
-			},
-			$push: { events: event(booked.pending ? 'booking' : 'booked', booked.courierStatus, `Booked with ${adapter.name}${booked.trackingCode ? ` — ${booked.trackingCode}` : ''}`, 'staff', by, now) },
-		}
-	);
-	// The area picked for this address, for the next order from there (CR14).
-	if (input.options?.area) await rememberAreas(id, recipient, input.options).catch(() => undefined);
-	// What the courier said about it before the booking answered (Pathao's order.created).
-	await applyUnmatched(id, d._id, booked.consignment, d.invoice).catch((e: any) => console.error('courier unmatched:', e?.message));
-	await summarise(store, o._id);
+	await finish(store, ctx, booked!, by);
 	return deliveryDetail(store, d._id);
+};
+
+/**
+ * POST deliveries/bulk — { orders: [ids, ≤ 100], courier, weight?, note? } (CR-12): each order through the same
+ * checks as one send; Steadfast's bulk API books them in one call, the others 3 at a time. Areas only from earlier
+ * picks (never a guess). Answers each order's result.
+ */
+export const sendMany = async (store: Store, project: any, input: { orders?: any[]; courier?: string; weight?: any; note?: any }, by: string) => {
+	const ids = [...new Set((Array.isArray(input.orders) ? input.orders : []).map(String))].filter(isId);
+	if (!ids.length) throw new TenancyError(400, 'Pick the orders to send');
+	if (ids.length > 100) throw new TenancyError(400, 'Up to 100 orders at a time');
+	const courier = String(input.courier || '');
+	const adapter = adapterOf(courier);
+	if (!adapter?.ready || !adapter.book) throw new TenancyError(400, 'Choose a courier');
+	if (!(await usableConnection(project, courier))) throw new TenancyError(409, `Connect and test ${adapter.name} in Store settings → Delivery first`, 'courier_not_connected');
+	const results: Record<string, { ok: boolean; code?: string; delivery?: string; error?: string }> = {};
+	const optsFor = async (orderId: string) => {
+		const o: any = await store.M('order').findById(orderId, { delivery: 1, code: 1 }).lean();
+		if (!o) return null;
+		const { picks } = await suggestAreas(courier, { ...(o.delivery || {}) }, { match: false });
+		if (NEEDS_AREA.has(courier) && !picks.area) return { error: `Choose the ${adapter.name} area once for “${o.delivery?.area || o.delivery?.city || 'this address'}” — send this one on its own` };
+		return { options: picks };
+	};
+	const base = { courier, ...(input.weight !== undefined && input.weight !== '' && { weight: input.weight }), ...(input.note && { note: input.note }) };
+
+	if (adapter.bookMany && courier === 'steadfast') {
+		const ready: Prepared[] = [];
+		for (const id of ids) {
+			try {
+				ready.push(await prepare(store, project, id, { ...base }, by));
+			} catch (e: any) {
+				results[id] = { ok: false, error: e.message };
+			}
+		}
+		if (ready.length) {
+			const usable = ready[0].usable;
+			let answers: Awaited<ReturnType<NonNullable<typeof adapter.bookMany>>> = [];
+			try {
+				answers = await adapter.bookMany(usable.conn, ready.map(r => r.parcel));
+			} catch (e: any) {
+				// The whole call failed: none was taken (Steadfast refuses a reused invoice, so sending again is safe).
+				for (const r of ready) {
+					await r.fail(e.message || `${adapter.name} couldn’t be reached`);
+					results[String(r.o._id)] = { ok: false, code: r.o.code, delivery: r.d.code, error: e.message };
+				}
+				answers = [];
+			}
+			for (const [i, a] of answers.entries()) {
+				const r = ready[i];
+				const key = String(r.o._id);
+				if (a.ok) {
+					await finish(store, r, a.booked, by);
+					results[key] = { ok: true, code: r.o.code, delivery: r.d.code };
+				} else {
+					await r.fail(a.error);
+					results[key] = { ok: false, code: r.o.code, delivery: r.d.code, error: a.error };
+				}
+			}
+		}
+	} else {
+		const queue = [...ids];
+		const worker = async () => {
+			for (let id = queue.shift(); id; id = queue.shift()) {
+				try {
+					const o = await optsFor(id);
+					if (!o) throw new TenancyError(404, 'Order not found');
+					if ('error' in o) throw new TenancyError(400, o.error as string);
+					const out = await send(store, project, id, { ...base, options: o.options }, by);
+					results[id] = { ok: true, code: (out.order as any)?.code, delivery: out.delivery.code };
+				} catch (e: any) {
+					results[id] = { ok: false, error: e.message };
+				}
+			}
+		};
+		await Promise.all([worker(), worker(), worker()]);
+	}
+	const list = ids.map(id => ({ order: id, ...results[id] }));
+	return { results: list, sent: list.filter(x => x.ok).length, failed: list.filter(x => !x.ok).length };
 };
 
 /** The order follows its delivery (CR7). Never a plain save: from the store's own rules. */

@@ -34,7 +34,7 @@ build order.
 | CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | backend done 2026-10-31 (panel with CR-07) |
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
 | **Phase 3 — everyday use** | | | | |
-| CR-12 | Bulk send from the order tables | backend + mint-tenant | M | |
+| CR-12 | Bulk send from the order tables | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | |
@@ -43,6 +43,13 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-12 backend done.** `send` is now `prepare` (checks + the delivery in `booking`) + the courier
+  call + `finish` (booked, summary, areas remembered, unmatched events). `sendMany` (`POST deliveries/bulk`
+  { orders ≤ 100, courier, weight?, note? }): Steadfast = every order prepared, one `bookMany` call (500 a call),
+  each finished or failed with its reason; Pathao / RedX = `send` 3 at a time with areas **only from remembered
+  picks** ("Choose the <courier> area once…" otherwise). Answers `{ results[{ order, ok, code, delivery, error }],
+  sent, failed }`. Smoke `courier-bulk.mjs`.
 
 - **2026-10-31 — CR-10 + CR-11 backend done.** `CourierAreaMap` (`courierareamaps`, tenantScoped, unique project +
   courier + key; in projectLifecycle) and `commerce/courierAreas.ts`: `keyOf` (order area | city, plain words),

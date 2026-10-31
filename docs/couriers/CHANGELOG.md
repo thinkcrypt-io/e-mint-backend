@@ -143,3 +143,9 @@
 - Every 15 minutes Mint asks the couriers about parcels that have been quiet
   for 2 hours; Store settings warns when a courier has sent nothing for 2 days
   while parcels are out.
+
+## 2026-10-31 — CR-12 Bulk send (backend)
+
+- Up to 100 orders can be sent at once, each through the same checks as one
+  send: Steadfast in one bulk call, the others three at a time using the areas
+  picked before. Each order's result comes back.
