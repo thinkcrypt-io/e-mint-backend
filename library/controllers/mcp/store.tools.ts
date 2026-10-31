@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { storeOf, itemName, Store } from '../../functions/commerce/store.js';
 import { syncVariants } from '../../functions/commerce/catalogue.js';
 import { productStock, setStock } from '../../functions/commerce/stock.js';
+import { listDeliveries, refresh, send, STATUS_LABEL } from '../../functions/commerce/deliveries.js';
+import { adapterOf } from '../../functions/commerce/couriers/index.js';
 import { mayWrite } from './website.tools.js';
 import { routePermission } from '../builder/builder.controller.js';
 import type { Caller, ToolDef } from './mcp.router.js';
@@ -151,11 +153,67 @@ const setStockTool = async (req: any, args: any, caller: Caller): Promise<Out> =
 	return { text: `Stock set (each change is a stock movement):\n${lines.join('\n')}`, data: { changed: plan.length } };
 };
 
+/* ----------------------------------------------------------- deliveries */
+
+const deliveryLine = (d: any) =>
+	`- ${d.code} — order ${d.orderCode || '?'}: ${d.courierName}, ${STATUS_LABEL[d.status] || d.status}${d.trackingCode ? `, tracking ${d.trackingCode}` : ''}${d.cod ? `, cash to collect ${d.cod}` : ''}${d.error ? ` — ${d.error}` : ''} (id ${d._id})`;
+
+/** The Deliveries page's list, read-only (CR-14). */
+const listDeliveriesTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
+	const store = await theStore();
+	if (isOut(store)) return store;
+	const route = store.installed.delivery?.route;
+	if (!route) return refuse('This store has no Deliveries yet.');
+	if (!caller.allows(`view-${routePermission(req.app, route) || route}`)) return refuse(`${caller.user?.name || 'The key’s owner'} can’t see /${route}.`);
+	const r = await listDeliveries(store, { view: args?.view, courier: args?.courier, q: args?.q, limit: Math.min(50, Number(args?.limit) || 20) });
+	const cash = r.cashWithCouriers.total ? `\nCash with couriers (delivered, not paid out yet): ${r.cashWithCouriers.total}` : '';
+	return { text: `${r.total} deliver${r.total === 1 ? 'y' : 'ies'}${args?.view && args.view !== 'all' ? ` (${args.view})` : ''}:\n${r.doc.map(deliveryLine).join('\n') || '- none'}${cash}`, data: { views: r.views, cashWithCouriers: r.cashWithCouriers } };
+};
+
+/** An order sent to a courier — the same send as the panel's, as "<owner> (AI)"; the courier and the cash are always stated. */
+const sendToCourierTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
+	const store = await theStore();
+	if (isOut(store)) return store;
+	const route = store.installed.order.route;
+	if (!caller.allows(`edit-${routePermission(req.app, route) || route}`)) return refuse(`${caller.user?.name || 'The key’s owner'} can’t change /${route}.`);
+	if (!adapterOf(clean(args?.courier))) return refuse('Name the courier: steadfast, pathao or redx.');
+	if (args?.cod === undefined || args.cod === null || args.cod === '') return refuse('Say how much cash the courier collects (cod) — 0 when it’s paid.');
+	const Order = store.M('order');
+	const q = clean(args?.order);
+	const o: any = isId(q) ? await Order.findById(q).lean() : await Order.findOne({ code: q }).lean();
+	if (!o) return refuse(`No order “${q}” — give its number (code) or id.`);
+	try {
+		const out: any = await send(store, caller.project, o._id, { courier: clean(args.courier), cod: Number(args.cod), ...(args.weight && { weight: args.weight }), ...(args.note && { note: args.note }), ...(args.options && { options: args.options }) }, by(caller));
+		const d = out.delivery;
+		return { text: `Sent ${o.code} to ${d.courierName}: ${d.code}, ${STATUS_LABEL[d.status] || d.status}${d.trackingCode ? `, tracking ${d.trackingCode}` : ''}.`, data: { delivery: d._id, code: d.code } };
+	} catch (e: any) {
+		return refuse(e?.message || 'Not sent.');
+	}
+};
+
+const refreshDeliveryTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
+	const store = await theStore();
+	if (isOut(store)) return store;
+	const route = store.installed.delivery?.route;
+	if (!route) return refuse('This store has no Deliveries yet.');
+	if (!caller.allows(`view-${routePermission(req.app, route) || route}`)) return refuse(`${caller.user?.name || 'The key’s owner'} can’t see /${route}.`);
+	const q = clean(args?.delivery);
+	const d: any = isId(q) ? await store.M('delivery').findById(q).lean() : await store.M('delivery').findOne({ code: q }).lean();
+	if (!d) return refuse(`No delivery “${q}” — give its code (DLV-…) or id.`);
+	try {
+		const out: any = await refresh(store, caller.project, d._id);
+		const x = out.delivery;
+		return { text: `${x.code}: ${STATUS_LABEL[x.status] || x.status}${x.courierMessage ? ` — ${x.courierMessage}` : ''}.`, data: { status: x.status } };
+	} catch (e: any) {
+		return refuse(e?.message || 'The courier couldn’t be asked.');
+	}
+};
+
 /* ---------------------------------------------------------------- tools */
 
 export const STORE_INSTRUCTIONS = `
 
-This project is a STORE. Products are sold through their variants, made from each product's options by the store (sync_variants). Stock is per variant per outlet and changes only through the store — use set_stock (never create_records) and read it with store_stock. Orders, payments and returns are made in the panel or at the POS, not over MCP.`;
+This project is a STORE. Products are sold through their variants, made from each product's options by the store (sync_variants). Stock is per variant per outlet and changes only through the store — use set_stock (never create_records) and read it with store_stock. Orders, payments and returns are made in the panel or at the POS, not over MCP. Orders are sent to the store's connected couriers with send_to_courier (always name the courier and the cash to collect, and say so to the user first); list_deliveries and refresh_delivery show where parcels are. Courier keys are never available over MCP.`;
 
 export const STORE_TOOLS: ToolDef[] = [
 	{
@@ -210,5 +268,40 @@ export const STORE_TOOLS: ToolDef[] = [
 		},
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
 		run: setStockTool,
+	},
+	{
+		name: 'list_deliveries',
+		title: 'List deliveries',
+		description: 'The store’s parcels sent to couriers: code, order, courier, status, tracking, cash to collect, and the cash couriers hold. `view`: all, problems, pickup, moving, delivered, returning, returned, cancelled; `courier`; `q` searches codes, tracking and phone.',
+		scope: 'data',
+		only: 'ecommerce',
+		inputSchema: { type: 'object', properties: { view: { type: 'string' }, courier: { type: 'string' }, q: { type: 'string' }, limit: { type: 'number' } } },
+		annotations: { readOnlyHint: true, openWorldHint: false },
+		run: listDeliveriesTool,
+	},
+	{
+		name: 'send_to_courier',
+		title: 'Send an order to a courier',
+		description:
+			'Books a parcel with one of the store’s connected couriers — the same send as the order page’s, with the same checks (one parcel per order at a time). `order`: its number or id; `courier`: steadfast, pathao or redx (must be connected and tested); `cod`: cash to collect, a whole number from 0 to what the order owes — required; `weight` (kg), `note`; `options.area` (+ areaName) for RedX, `options.city / zone / area` for Pathao. This calls the courier for real: confirm with the user first.',
+		scope: 'build',
+		only: 'ecommerce',
+		inputSchema: {
+			type: 'object',
+			required: ['order', 'courier', 'cod'],
+			properties: { order: { type: 'string' }, courier: { type: 'string', enum: ['steadfast', 'pathao', 'redx'] }, cod: { type: 'number', minimum: 0 }, weight: { type: 'number' }, note: { type: 'string' }, options: { type: 'object' } },
+		},
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+		run: sendToCourierTool,
+	},
+	{
+		name: 'refresh_delivery',
+		title: 'Ask the courier where a parcel is',
+		description: 'Asks the courier for a delivery’s status now and applies it (the order follows). `delivery`: its code (DLV-…) or id.',
+		scope: 'data',
+		only: 'ecommerce',
+		inputSchema: { type: 'object', required: ['delivery'], properties: { delivery: { type: 'string' } } },
+		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+		run: refreshDeliveryTool,
 	},
 ];

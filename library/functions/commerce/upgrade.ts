@@ -16,6 +16,7 @@ import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
 import { seedStoreDashboard } from './dashboard.js';
+import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -314,6 +315,10 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}
+	// Deliveries' two emails, off until the owner turns them on (docs/couriers CR-14).
+	const installedNow: any = ((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed;
+	const mails = await ensureDeliveryAutomations(installedNow, { apply });
+	if (mails.length) changes.push({ model: 'Automations', added: [], renewed: [], filled: mails.map(m => `“${m}” (off)`) });
 	const home = await seedStoreDashboard(store.installed as any, { apply });
 	if (home.length) changes.push({ model: 'Dashboard', added: [], renewed: [], filled: home });
 	const kit = await ensureStoreSiteKit(req, { apply });

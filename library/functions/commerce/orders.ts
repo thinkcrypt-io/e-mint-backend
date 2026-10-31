@@ -326,6 +326,10 @@ export const publicOrder = (o: any) => ({
 	delivery: { name: o.delivery?.name || '', phone: o.delivery?.phone || '', address: o.delivery?.address || '', area: o.delivery?.area || '', city: o.delivery?.city || '', landmark: o.delivery?.landmark || '' },
 	email: o.email || '',
 	note: o.note || '',
+	// The parcel's way to the buyer (docs/couriers CR17): never the consignment or the cash details.
+	tracking: o.courier?.delivery
+		? { courier: o.courier.provider || '', status: o.courier.status || '', trackingCode: o.courier.tracking || '', trackingUrl: o.courier.trackingUrl || '', updatedAt: o.courier.lastUpdate || null }
+		: null,
 });
 
 /* ----------------------------------------------------------------- held */

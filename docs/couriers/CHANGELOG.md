@@ -149,3 +149,14 @@
 - Up to 100 orders can be sent at once, each through the same checks as one
   send: Steadfast in one bulk call, the others three at a time using the areas
   picked before. Each order's result comes back.
+
+## 2026-10-31 — CR-14 Customers, automations, MCP (backend)
+
+- The website's order view shows the parcel's courier, status and tracking.
+- Every store gets two delivery emails (on the way, delivered) as
+  automations, switched off; deliveries now start automations whenever their
+  status changes.
+- The store's own AI can list deliveries, send an order to a courier (the
+  courier and the cash always stated) and refresh one over MCP.
+- Invoices sent to couriers end in a short store tag, so two stores (or
+  another system) on one courier account never clash.

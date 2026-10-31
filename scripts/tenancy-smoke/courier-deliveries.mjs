@@ -64,7 +64,7 @@ ok('a courier that isn’t connected: refused', r.status === 409 || r.status ===
 
 r = await sendIt(o1._id, { note: 'Call first' });
 const d1 = r.body?.delivery;
-ok('sent: booked, DLV-, the order number as invoice, tracking', r.status === 201 && d1?.status === 'booked' && /^DLV-\d+/.test(d1.code) && d1.invoice === o1.code && d1.trackingCode && /steadfast\.com\.bd/.test(d1.trackingUrl) && d1.cod === 1260, `${r.status} ${JSON.stringify(d1 || r.body).slice(0, 300)}`);
+ok('sent: booked, DLV-, the order number + the store’s tag as invoice, tracking', r.status === 201 && d1?.status === 'booked' && /^DLV-\d+/.test(d1.code) && d1.invoice === `${o1.code}_${shopId.slice(-4).toUpperCase()}` && d1.trackingCode && /steadfast\.com\.bd/.test(d1.trackingUrl) && d1.cod === 1260, `${r.status} ${JSON.stringify(d1 || r.body).slice(0, 300)}`);
 let od = await orderOf(o1._id);
 ok('the order’s courier summary, fulfilment left as it was', od.order?.courier?.delivery === d1?.code && od.order.courier.tracking === d1.trackingCode && od.order.courier.status === 'Booked' && od.order.fulfilment === 'unfulfilled' && od.deliveries?.length === 1, JSON.stringify(od.order?.courier));
 r = await sendIt(o1._id);
@@ -112,7 +112,7 @@ ok('back at the shop → returned; the order returned; no payment', r.body?.deli
 
 // Refused by Steadfast, cancelled here, sent again as -2.
 const o3 = (await addOrder())?.order;
-await fetch(`${STUB}/steadfast/live/create_order`, { method: 'POST', headers: { 'api-key': 'sf-api', 'secret-key': 'sf-secret' }, body: JSON.stringify({ invoice: o3.code, recipient_phone: '01700000000', recipient_address: 'Somewhere far', recipient_name: 'X' }) });
+await fetch(`${STUB}/steadfast/live/create_order`, { method: 'POST', headers: { 'api-key': 'sf-api', 'secret-key': 'sf-secret' }, body: JSON.stringify({ invoice: `${o3.code}_${shopId.slice(-4).toUpperCase()}`, recipient_phone: '01700000000', recipient_address: 'Somewhere far', recipient_name: 'X' }) });
 r = await sendIt(o3._id);
 ok('Steadfast refuses: in its words, the delivery “not sent”', r.status === 400 && /already been taken/.test(r.body?.message), `${r.status} ${r.body?.message}`);
 let d3 = (await orderOf(o3._id)).deliveries?.[0];
@@ -120,7 +120,7 @@ ok('…kept with the reason', d3?.status === 'error' && /already been taken/.tes
 r = await call('POST', `${C}/deliveries/${d3._id}/cancel`, {}, t);
 ok('a parcel never booked: cancelled here, nothing asked of Steadfast', r.body?.delivery?.status === 'cancelled', `${r.status} ${r.body?.delivery?.status}`);
 r = await sendIt(o3._id);
-ok('sent again: a new delivery, invoice -2', r.status === 201 && r.body?.delivery?.invoice === `${o3.code}-2` && r.body.delivery.status === 'booked', `${r.status} ${r.body?.delivery?.invoice} ${r.body?.message}`);
+ok('sent again: a new delivery, invoice -2', r.status === 201 && r.body?.delivery?.invoice === `${o3.code}-2_${shopId.slice(-4).toUpperCase()}` && r.body.delivery.status === 'booked', `${r.status} ${r.body?.delivery?.invoice} ${r.body?.message}`);
 
 // No answer within 15 s: looked up by invoice, booked once.
 const o4 = (await addOrder())?.order;
@@ -139,7 +139,7 @@ ok('two sends at once: one delivery, the other refused', made.length === 1 && bo
 r = await call('GET', `${C}/deliveries?view=all`, null, t);
 ok('the Deliveries page: every one, with its order number', r.body?.total === 6 && r.body.doc.every(d => d.orderCode), `${r.body?.total}`);
 ok('…counts by view and cash with couriers (1,260 delivered, not paid out)', r.body?.views?.delivered === 1 && r.body.views.returned === 1 && r.body.views.cancelled === 1 && r.body.cashWithCouriers.total === 1260, JSON.stringify({ v: r.body?.views, c: r.body?.cashWithCouriers }));
-r = await call('GET', `${C}/deliveries?q=${o3.code}-2`, null, t);
+r = await call('GET', `${C}/deliveries?q=${o3.code}-2_`, null, t);
 ok('search by invoice', r.body?.total === 1, `${r.body?.total}`);
 r = await call('PUT', `${P}/deliveries/${d1._id}`, { status: 'cancelled' }, t);
 ok('a plain edit of a delivery’s status: refused', r.status === 403, `${r.status} ${r.body?.message}`);

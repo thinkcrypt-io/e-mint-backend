@@ -35,7 +35,7 @@ build order.
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
 | **Phase 3 — everyday use** | | | | |
 | CR-12 | Bulk send from the order tables | backend + mint-tenant | M | backend done 2026-10-31 (panel with CR-07) |
-| CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | |
+| CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | backend done 2026-10-31 (Live Fresh's page not changed) |
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | |
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | |
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | after EC-08 |
@@ -43,6 +43,20 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-14 backend done.** `publicOrder` (website order view, My orders, order tracking) now has
+  `tracking: { courier, status (label), trackingCode, trackingUrl, updatedAt } | null` from the order's courier
+  summary — never the consignment or COD. `commerce/deliveryAutomations.ts` `ensureDeliveryAutomations(installed)`
+  installs, switched off, "Tell the customer it’s on the way" (status is picked-up) and "…it’s delivered" (status is
+  delivered), emails to `order.email` (`{{order}}` = the order number; `{{courierName}}`, `{{trackingCode}}`,
+  `{{trackingUrl}}`); called by `install` and `upgradeStore`. Deliveries now **fire automations** (`update`,
+  changed `status`) after booking and on every status change — engine writes don't go through the generic save.
+  MCP (`store.tools.ts`): `list_deliveries` (data), `send_to_courier` (build; `courier` and `cod` required; the same
+  `send`, as "<owner> (AI)"), `refresh_delivery` (data). **Invoices now carry a store tag**: `WEB-00001_7F3A`
+  (`invoiceFor`, last 4 of the project id) — every store's website orders are WEB-…, and a courier account refuses an
+  invoice it has seen (two stores on one account, or an account that books elsewhere too). Live Fresh's track page
+  (live-fresh repo, main = live deploy) wasn't changed: it can read `tracking` when the user wants it. Smoke
+  `courier-customers-mcp.mjs`.
 
 - **2026-10-31 — CR-12 backend done.** `send` is now `prepare` (checks + the delivery in `booking`) + the courier
   call + `finish` (booked, summary, areas remembered, unmatched events). `sendMany` (`POST deliveries/bulk`

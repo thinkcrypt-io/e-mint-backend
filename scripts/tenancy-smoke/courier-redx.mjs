@@ -59,7 +59,7 @@ r = await call('POST', `${C}/orders/${o1._id}/deliveries`, { courier: 'redx', we
 const d1 = r.body?.delivery;
 ok('sent: RedX’s tracking id, waiting for pickup', r.status === 201 && d1?.consignment && d1.status === 'booked' && d1.courierStatus === 'pickup-pending', `${r.status} ${r.body?.message || d1?.status}`);
 const sent = (await (await fetch(`${STUB}/__parcel/redx/${d1.consignment}`)).json()).sent;
-ok('sent as RedX takes it: grams, the cash as a string, the area id, the pickup store, our invoice', sent.parcel_weight === 1500 && sent.cash_collection_amount === '1260' && sent.delivery_area_id === 1 && sent.pickup_store_id === 7001 && sent.merchant_invoice_id === o1.code && sent.value === 1260, JSON.stringify(sent));
+ok('sent as RedX takes it: grams, the cash as a string, the area id, the pickup store, our invoice', sent.parcel_weight === 1500 && sent.cash_collection_amount === '1260' && sent.delivery_area_id === 1 && sent.pickup_store_id === 7001 && sent.merchant_invoice_id === `${o1.code}_${shopId.slice(-4).toUpperCase()}` && sent.value === 1260, JSON.stringify(sent));
 
 await setStatus(d1.consignment, 'ready-for-delivery');
 r = await call('POST', `${C}/deliveries/${d1._id}/refresh`, {}, t);

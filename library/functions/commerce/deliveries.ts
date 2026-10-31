@@ -8,6 +8,13 @@ import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
 import { usableConnection } from './connections.js';
 import { applyUnmatched } from './courierWebhooks.js';
 import { NEEDS_AREA, rememberAreas, suggestAreas } from './courierAreas.js';
+import { fireAutomations } from '../automations.function.js';
+
+/** A delivery's status changed: the project's automations on Deliveries run (CR17 — the store's two emails among them). */
+const statusChanged = async (store: Store, id: any, actor: string) => {
+	const doc: any = await store.M('delivery').findById(id).lean();
+	if (doc) fireAutomations({ route: store.installed.delivery.route, event: 'update', doc, changes: [{ field: 'status' }], actor: { name: actor } });
+};
 import type { Booked, CourierEvent, NormalStatus, Parcel } from './couriers/types.js';
 
 /**
@@ -64,6 +71,13 @@ const couriersFor = async (store: Store, project: any) => {
 	}
 	return out;
 };
+
+/**
+ * Our invoice for a parcel (CR13): the order number, -2 / -3 on a resend, and a tag for the store — a courier account
+ * refuses an invoice it has seen, and every store numbers its website orders WEB-00001…, so two stores on one account
+ * (or an account that books from elsewhere too) would otherwise clash. WEB-00001_7F3A.
+ */
+export const invoiceFor = (project: any, code: string, earlier: number) => `${earlier ? `${code}-${earlier + 1}` : code}_${String(project?._id || '').slice(-4).toUpperCase()}`;
 
 const itemsOf = (o: any) => Math.max(1, (o.items || []).reduce((s: number, i: any) => s + Math.max(0, (Number(i.quantity) || 0) - (Number(i.returned) || 0)), 0));
 const wholeDue = (o: any) => Math.max(0, Math.ceil(Number(o.balance) || 0));
@@ -177,7 +191,7 @@ const prepare = async (store: Store, project: any, orderId: any, input: SendInpu
 			courier: id,
 			courierName: adapter.name,
 			status: 'booking',
-			invoice: n ? `${o.code}-${n + 1}` : o.code,
+			invoice: invoiceFor(project, o.code, n),
 			cod,
 			recipient,
 			weight,
@@ -242,6 +256,7 @@ const finish = async (store: Store, ctx: Prepared, booked: Booked, by: string) =
 	// What the courier said about it before the booking answered (Pathao's order.created).
 	if (booked.consignment || d.invoice) await applyUnmatched(id, d._id, booked.consignment, d.invoice).catch((e: any) => console.error('courier unmatched:', e?.message));
 	await summarise(store, o._id);
+	await statusChanged(store, d._id, by);
 };
 
 /** POST orders/:id/deliveries — sends the order to a courier (CR13). */
@@ -481,6 +496,7 @@ export const applyEvent = async (store: Store, deliveryId: any, ev: CourierEvent
 		}
 	}
 	await summarise(store, d.order);
+	if (to) await statusChanged(store, d._id, who);
 	return { applied: true, status: to || d.status };
 };
 
