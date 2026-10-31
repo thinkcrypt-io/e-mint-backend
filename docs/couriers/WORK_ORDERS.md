@@ -25,7 +25,7 @@ build order.
 | CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | done 2026-10-31 |
 | CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | done 2026-10-31 |
 | CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | done 2026-10-31 |
-| CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | |
+| CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | done 2026-10-31 |
 | CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
 | CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | |
@@ -43,6 +43,17 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-06 done.** `POST /public/couriers/:provider/:connection` (routes-public/index.ts →
+  `commerce/courierWebhooks.ts` `courierWebhook`): connection found unscoped by id + courier, its project must be an
+  active e-commerce one; raw body kept by server.ts for `/public/couriers/` too; 100 kb cap (413), 300 calls a minute
+  per connection (429); `adapter.webhook.verify` against the connection's opened secret (wrong → 401 and
+  `refusedCalls` +1); each parsed event stored once in `CourierWebhookEvent` (`courierevents`, unique project + key,
+  raw body + safe headers, 60-day TTL, in projectLifecycle); answered at once (`adapter.webhook.reply` or 200);
+  applied in `setImmediate` in time order — found by consignment, else invoice — or kept `unmatched`;
+  `applyUnmatched` runs after each booking. `applyEvent`'s "older" now compares with the courier's own last event
+  (never our booking time). Steadfast's zone-less times are read as Dhaka (+06:00). `GET deliveries/:id/webhooks`
+  (managers) shows the raw calls. Smoke `courier-webhooks.mjs` (19 checks).
 
 - **2026-10-31 — CR-05 done.** `commerce/deliveries.ts`: `sendPrefill`, `send` (checks; delivery made in `booking`
   first, invoice = order code / `-2`…; two sends at once → the later one gives way; a refusal → `error` with the

@@ -6,6 +6,7 @@ import { recordPayment, settleOrder } from './payments.js';
 import { adapterOf } from './couriers/index.js';
 import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
 import { usableConnection } from './connections.js';
+import { applyUnmatched } from './courierWebhooks.js';
 import type { CourierEvent, NormalStatus, Parcel } from './couriers/types.js';
 
 /**
@@ -254,6 +255,8 @@ export const send = async (store: Store, project: any, orderId: any, input: Send
 			$push: { events: event(booked.pending ? 'booking' : 'booked', booked.courierStatus, `Booked with ${adapter.name}${booked.trackingCode ? ` — ${booked.trackingCode}` : ''}`, 'staff', by, now) },
 		}
 	);
+	// What the courier said about it before the booking answered (Pathao's order.created).
+	await applyUnmatched(id, d._id, booked.consignment, d.invoice).catch((e: any) => console.error('courier unmatched:', e?.message));
 	await summarise(store, o._id);
 	return deliveryDetail(store, d._id);
 };
@@ -327,7 +330,9 @@ export const applyEvent = async (store: Store, deliveryId: any, ev: CourierEvent
 		return { applied: false, reason: 'duplicate' };
 
 	let to: NormalStatus | null = ev.kind === 'status' ? ev.status : null;
-	const older = d.lastEventAt && at.getTime() < new Date(d.lastEventAt).getTime();
+	// Older than the last thing the courier itself said (never our own booking time: its clock may be behind ours).
+	const lastCourier = Math.max(0, ...(d.events || []).filter((x: any) => x.source !== 'staff').map((x: any) => new Date(x.at).getTime() || 0));
+	const older = lastCourier > 0 && at.getTime() < lastCourier;
 	if (to) {
 		const cur = d.status as NormalStatus;
 		const backwards = (RANK[to] ?? 99) < (RANK[cur] ?? -1) && !SIDE.includes(to);

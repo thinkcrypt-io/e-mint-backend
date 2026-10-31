@@ -14,6 +14,7 @@ import { countryByCode, countryPicture, listCountries } from '../library/functio
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { bkashReturn, sslcommerzIpn, sslcommerzReturn, stripeWebhook } from '../library/functions/payments.function.js';
+import { courierWebhook } from '../library/functions/commerce/courierWebhooks.js';
 import { resolveHost } from '../library/siteBuilder/render.js';
 import { projectByKey } from '../library/functions/projectKey.function.js';
 import { resetPage } from './resetPage.js';
@@ -151,6 +152,23 @@ router.post('/payments/stripe/:project', async (req: any, res) => {
 		if (status === 500) console.error('stripe webhook:', e);
 		// A 5xx makes Stripe try again later; a 400 (bad signature) doesn't.
 		res.status(status).json({ message: status === 500 ? 'Something went wrong' : e.message });
+	}
+});
+
+/*
+ * Couriers' webhooks (docs/couriers CR-06): a store's own courier account
+ * telling it about its parcels — checked the courier's way against that
+ * connection's secret, stored once, answered at once, applied after.
+ */
+router.post('/couriers/:provider/:connection', async (req: any, res) => {
+	try {
+		const out = await courierWebhook(String(req.params.provider), String(req.params.connection), req);
+		for (const [k, v] of Object.entries(out.headers || {})) res.setHeader(k, v);
+		res.status(out.status).json(out.body);
+	} catch (e: any) {
+		console.error('courier webhook:', e?.message);
+		// Nothing stored: a 5xx so the courier tries again.
+		res.status(500).json({ message: 'Something went wrong' });
 	}
 });
 

@@ -183,7 +183,9 @@ const webhook = {
 		const b = req.body || {};
 		const type = String(b.notification_type || b.type || b.event || '').toLowerCase();
 		const consignment = b.consignment_id !== undefined ? String(b.consignment_id) : undefined;
-		const at = b.updated_at ? new Date(String(b.updated_at).replace(' ', 'T')) : new Date();
+		// Steadfast's times carry no zone: Dhaka's.
+		const stamp = String(b.updated_at || '').trim();
+		const at = stamp ? new Date(/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(:\d\d)?$/.test(stamp) ? `${stamp.replace(' ', 'T')}+06:00` : stamp) : new Date();
 		const when = Number.isNaN(at.getTime()) ? new Date() : at;
 		const idem = String(req.headers['idempotency-key'] || '');
 		const base = { consignment, invoice: b.invoice ? String(b.invoice) : undefined, at: when, message: b.tracking_message || undefined };

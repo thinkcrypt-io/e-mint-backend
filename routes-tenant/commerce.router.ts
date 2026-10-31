@@ -15,6 +15,7 @@ import { returnItems } from '../library/functions/commerce/returns.js';
 import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendPrefill } from '../library/functions/commerce/deliveries.js';
+import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -72,6 +73,7 @@ import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendPref
  *   GET  /deliveries/:id                  one delivery with its timeline   records:view
  *   POST /deliveries/:id/refresh          asks the courier where it is   records:edit
  *   POST /deliveries/:id/cancel  { reason? }   stops it (Steadfast: a return request)   records:edit
+ *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -352,6 +354,11 @@ router.get(
 	'/deliveries/:id',
 	view,
 	handle(async (req: any) => deliveryDetail(await storeOf(), req.params.id))
+);
+router.get(
+	'/deliveries/:id/webhooks',
+	manage,
+	handle(async (req: any) => ({ doc: await webhooksOf(req.params.id) }))
 );
 router.post(
 	'/deliveries/:id/refresh',

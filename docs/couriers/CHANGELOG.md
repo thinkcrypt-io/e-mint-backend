@@ -108,3 +108,13 @@
   with cash held by couriers. An order with a parcel out can't be cancelled.
 - `courier-deliveries.mjs`: 36 checks against the stub, all pass; the order
   and website-order smokes still pass.
+
+## 2026-10-31 — CR-06 Webhooks
+
+- Couriers can now tell a store about its parcels: one address per
+  connection, the courier's own check against that connection's secret, each
+  call stored once (retries land once), answered at once and applied after in
+  the order things happened; calls about parcels not booked yet wait for the
+  booking. Refused calls are counted in Store settings; the raw calls are kept
+  60 days and shown per delivery.
+- `courier-webhooks.mjs`: 19 checks, all pass.
