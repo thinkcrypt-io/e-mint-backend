@@ -24,6 +24,9 @@ const PATHAO = [
 	{ client_id: 'pa-client', client_secret: 'pa-secret', username: 'owner@example.com', password: 'pa-pass' },
 ];
 const tokens = new Set();
+/** Pathao's parcels: consignment id → { merchant_order_id, order_status_slug, sent }. */
+const paParcels = new Map();
+let paNext = 270001;
 
 /** Steadfast's parcels: consignment id → { invoice, status, tracking_code, cod_amount }. */
 const sfParcels = new Map();
@@ -76,7 +79,7 @@ const steadfast = async (req, res, path, body) => {
 	json(res, 404, { message: 'Not found' });
 };
 
-const pathao = (req, res, path, body) => {
+const pathao = async (req, res, path, body) => {
 	if (path === '/aladdin/api/v1/issue-token' && req.method === 'POST') {
 		const good =
 			body.grant_type === 'refresh_token'
@@ -97,6 +100,33 @@ const pathao = (req, res, path, body) => {
 			{ store_id: 102, store_name: 'Warehouse', store_address: 'Tejgaon', is_active: 1, city_id: 1, zone_id: 11, is_default_store: true },
 			{ store_id: 103, store_name: 'Closed', store_address: 'Old', is_active: 0, city_id: 1, zone_id: 11, is_default_store: false },
 		]);
+	if (path === '/aladdin/api/v1/orders' && req.method === 'POST') {
+		const errors = {};
+		if (!body.store_id) errors.store_id = ['The store id field is required.'];
+		if (!/^01\d{9}$/.test(body.recipient_phone || '')) errors.recipient_phone = ['The recipient phone format is invalid.'];
+		if (String(body.recipient_address || '').length < 10) errors.recipient_address = ['The recipient address must be at least 10 characters.'];
+		if (!(body.item_weight >= 0.5 && body.item_weight <= 10)) errors.item_weight = ['The item weight must be between 0.5 and 10.'];
+		for (const k of ['recipient_city', 'recipient_zone', 'recipient_area']) if (k in body && !body[k]) errors[k] = [`The ${k} must not be empty.`];
+		if (Object.keys(errors).length) return json(res, 422, { message: 'Please fix the given errors', type: 'error', code: 422, errors });
+		const id = `DT${String(paNext++)}`;
+		paParcels.set(id, { consignment_id: id, merchant_order_id: body.merchant_order_id, order_status: 'Pending', order_status_slug: 'Pending', sent: body });
+		// SLOW in the instructions: booked, but the answer comes too late (Mint's 15 s limit).
+		if (/SLOW/.test(body.special_instruction || '')) await new Promise(r => setTimeout(r, 16000));
+		return json(res, 200, { message: 'Order Created Successfully', type: 'success', code: 200, data: { consignment_id: id, merchant_order_id: body.merchant_order_id, order_status: 'Pending', delivery_fee: 80 } });
+	}
+	if (path === '/aladdin/api/v1/orders/bulk' && req.method === 'POST') {
+		for (const o of body.orders || []) {
+			const id = `DT${String(paNext++)}`;
+			paParcels.set(id, { consignment_id: id, merchant_order_id: o.merchant_order_id, order_status: 'Pending', order_status_slug: 'Pending', sent: o });
+		}
+		return json(res, 202, { message: 'Your bulk order creation request is accepted, please wait some time to complete order creation.', type: 'success', code: 202, data: true });
+	}
+	let pm = path.match(/^\/aladdin\/api\/v1\/orders\/(\w+)\/info$/);
+	if (pm) return paParcels.has(pm[1]) ? json(res, 200, { type: 'success', code: 200, data: { ...paParcels.get(pm[1]), sent: undefined, updated_at: new Date().toISOString() } }) : json(res, 404, { message: 'Order not found' });
+	if (path === '/aladdin/api/v1/merchant/price-plan' && req.method === 'POST') {
+		if (!body.recipient_city || !body.recipient_zone) return json(res, 422, { message: 'Please fix the given errors', errors: { recipient_zone: ['The recipient zone field is required.'] } });
+		return json(res, 200, { type: 'success', code: 200, data: { price: 80, discount: 0, promo_discount: 0, plan_id: 69, cod_enabled: 1, cod_percentage: 0.01, additional_charge: 0, final_price: body.item_weight > 1 ? 95 : 80 } });
+	}
 	if (path === '/aladdin/api/v1/city-list') return list([{ city_id: 1, city_name: 'Dhaka' }, { city_id: 2, city_name: 'Chattogram' }]);
 	if (path === '/aladdin/api/v1/cities/1/zone-list') return list([{ zone_id: 10, zone_name: 'Gulshan' }, { zone_id: 11, zone_name: 'Mirpur' }]);
 	if (path === '/aladdin/api/v1/zones/11/area-list') return list([{ area_id: 1101, area_name: 'Mirpur 10', home_delivery_available: true, pickup_available: true }]);
@@ -135,14 +165,24 @@ http
 			} catch {}
 			// Moves a parcel on, as the courier would: POST /__status { courier, consignment, status }.
 			if (req.url === '/__status') {
-				const p = ctl.courier === 'steadfast' ? sfParcels.get(String(ctl.consignment)) : null;
+				const p = ctl.courier === 'steadfast' ? sfParcels.get(String(ctl.consignment)) : ctl.courier === 'pathao' ? paParcels.get(String(ctl.consignment)) : null;
 				if (!p) return json(res, 404, { message: 'No such parcel' });
-				p.status = ctl.status;
+				if (ctl.courier === 'pathao') p.order_status = p.order_status_slug = ctl.status;
+				else p.status = ctl.status;
 				return json(res, 200, p);
 			}
 			// A parcel as the courier keeps it: GET /__parcel/<courier>/<consignment>.
-			const pm = req.url.match(/^\/__parcel\/steadfast\/(\d+)$/);
-			if (pm) return sfParcels.has(pm[1]) ? json(res, 200, sfParcels.get(pm[1])) : json(res, 404, {});
+			const pm = req.url.match(/^\/__parcel\/(steadfast|pathao)\/(\w+)$/);
+			if (pm) {
+				const m = pm[1] === 'steadfast' ? sfParcels : paParcels;
+				return m.has(pm[2]) ? json(res, 200, m.get(pm[2])) : json(res, 404, {});
+			}
+			// Pathao's bulk ids, by our invoice: GET /__pathao/by-invoice/<invoice>.
+			const bi = req.url.match(/^\/__pathao\/by-invoice\/(.+)$/);
+			if (bi) {
+				const p = [...paParcels.values()].find(x => x.merchant_order_id === decodeURIComponent(bi[1]));
+				return p ? json(res, 200, p) : json(res, 404, {});
+			}
 			const m = req.url.match(/^\/(steadfast|pathao|redx)\/(test|live)(\/.*)$/);
 			if (!m) return json(res, 404, { message: 'Not a courier' });
 			const [, courier, mode, path] = m;

@@ -332,7 +332,8 @@ export const applyEvent = async (store: Store, deliveryId: any, ev: CourierEvent
 	let to: NormalStatus | null = ev.kind === 'status' ? ev.status : null;
 	// Older than the last thing the courier itself said (never our own booking time: its clock may be behind ours).
 	const lastCourier = Math.max(0, ...(d.events || []).filter((x: any) => x.source !== 'staff').map((x: any) => new Date(x.at).getTime() || 0));
-	const older = lastCourier > 0 && at.getTime() < lastCourier;
+	// A check is the courier's word now, whatever the clocks say; it still never moves a parcel back (RANK).
+	const older = source !== 'sync' && lastCourier > 0 && at.getTime() < lastCourier;
 	if (to) {
 		const cur = d.status as NormalStatus;
 		const backwards = (RANK[to] ?? 99) < (RANK[cur] ?? -1) && !SIDE.includes(to);
@@ -350,6 +351,11 @@ export const applyEvent = async (store: Store, deliveryId: any, ev: CourierEvent
 	}
 	if (!older) set.lastEventAt = at;
 	if (ev.charge !== undefined) set.charge = ev.charge;
+	// The courier names the parcel we sent without an answer: it was booked after all.
+	if (!d.consignment && ev.consignment) {
+		Object.assign(set, { consignment: String(ev.consignment), trackingCode: d.trackingCode || String(ev.consignment), error: '', bookedAt: d.bookedAt || at });
+		if (!to || (RANK[to] ?? 0) < 2) to = 'booked';
+	}
 	if (ev.collected !== undefined && (to === 'delivered' || to === 'partly-delivered' || d.status === 'delivered' || d.status === 'partly-delivered')) set.collected = ev.collected;
 	// Delivered with no amount said: the cash it was sent to collect.
 	else if (to === 'delivered') set.collected = Number(d.cod) || 0;
@@ -381,11 +387,12 @@ export const applyEvent = async (store: Store, deliveryId: any, ev: CourierEvent
 };
 
 /** Finds the delivery an event is about: by the courier's id, else by our invoice — in this store only. */
-export const deliveryForEvent = (store: Store, courier: string, ev: CourierEvent) => {
+export const deliveryForEvent = async (store: Store, courier: string, ev: CourierEvent) => {
 	const D = deliveryOn(store);
-	if (ev.consignment) return D.findOne({ courier, consignment: String(ev.consignment) }).lean();
-	if (ev.invoice) return D.findOne({ courier, invoice: String(ev.invoice) }).lean();
-	return Promise.resolve(null);
+	const byId = ev.consignment ? await D.findOne({ courier, consignment: String(ev.consignment) }).lean() : null;
+	if (byId) return byId;
+	// A parcel we haven't an id for yet (Pathao's bulk, a booking that timed out): our invoice names it.
+	return ev.invoice ? D.findOne({ courier, invoice: String(ev.invoice), consignment: { $in: [null, ''] } }).lean() : null;
 };
 
 /** POST deliveries/:id/refresh — asks the courier where it is. */

@@ -118,3 +118,12 @@
   booking. Refused calls are counted in Store settings; the raw calls are kept
   60 days and shown per delivery.
 - `courier-webhooks.mjs`: 19 checks, all pass.
+
+## 2026-10-31 — CR-08 Pathao (backend)
+
+- Pathao books, books in bulk (ids by webhook), gives its price for a city
+  and zone, reports a parcel's status, and its webhooks are checked, answered
+  202 with its header, and applied — including a payout. A timed-out booking
+  stays "may have been booked" until Pathao's own order.created names it.
+- Stub tests pass; Pathao's real sandbox was unreachable today, so the
+  sandbox booking check is still to run.

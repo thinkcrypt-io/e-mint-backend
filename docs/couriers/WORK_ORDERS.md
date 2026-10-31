@@ -28,7 +28,7 @@ build order.
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | done 2026-10-31 |
 | CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
-| CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | |
+| CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
 | CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | |
 | CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | |
 | CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | |
@@ -43,6 +43,18 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-08 backend done.** `pathao.ts` complete, `ready: true`: book (`/orders`; city / zone / area sent
+  only when picked, as numbers; weight 0.5–10; `merchant_order_id` = our invoice), `bookMany` (`/orders/bulk` in 100s,
+  202 with no ids → `pending`, ids arrive by `order.created`), `quote` (price-plan, needs city + zone), `status`
+  (`orders/:id/info`, slug normalised), webhook (`X-PATHAO-Signature` = secret, constant time; `webhook_integration`
+  = handshake; `order.paid` = payout with `invoice_id`; reply 202 + `X-Pathao-Merchant-Webhook-Integration-Secret`,
+  value overridable by the connection setting `hookReply`), all 22 order events mapped. No tracking link (not in
+  Pathao's doc). Engine: an event naming a parcel we have no id for is matched by invoice and fills the id in
+  (timed-out / bulk bookings); a status **check** is never "older" (clocks), only never backwards. **Pathao's real
+  sandbox was down when tried (Cloudflare 522 on courier-api-sandbox.pathao.com, the old p-stageenv host didn't
+  answer)** — run `PATHAO_SANDBOX=1 node courier-pathao.mjs` when it's back. Smokes `courier-pathao.mjs` (adapter,
+  19 + 4 sandbox checks) and `courier-pathao-flow.mjs` (through Mint, 14 checks).
 
 - **2026-10-31 — CR-06 done.** `POST /public/couriers/:provider/:connection` (routes-public/index.ts →
   `commerce/courierWebhooks.ts` `courierWebhook`): connection found unscoped by id + courier, its project must be an
