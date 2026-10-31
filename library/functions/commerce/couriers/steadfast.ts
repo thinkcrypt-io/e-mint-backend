@@ -149,9 +149,8 @@ const eventOf = (courierStatus: string, extra: Partial<CourierEvent> & { consign
 const status = async (conn: Conn, d: { consignment: string; invoice: string }) => {
 	const r = await courierFetch('Steadfast', `${base(conn)}/status_by_cid/${encodeURIComponent(d.consignment)}`, { headers: headers(conn) });
 	if (r.status !== 200 || !r.body?.delivery_status) throw refused(r);
-	// Steadfast answers from a minute's cache: the same status within a minute is one event.
-	const minute = new Date(Math.floor(Date.now() / 60000) * 60000);
-	return eventOf(r.body.delivery_status, { consignment: d.consignment, at: minute, key: `steadfast:${d.consignment}:${r.body.delivery_status}:sync` });
+	// Seen now; the same status asked again changes nothing (applyEvent), and Steadfast's answers are a minute old at most.
+	return eventOf(r.body.delivery_status, { consignment: d.consignment, at: new Date(), key: `steadfast:${d.consignment}:${r.body.delivery_status}:sync` });
 };
 
 /** No cancel in Steadfast's API: a return request brings an undelivered parcel back. */

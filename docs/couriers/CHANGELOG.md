@@ -97,3 +97,14 @@
   its webhooks; statuses mapped to Mint's. `courier-steadfast.mjs`: 19 checks
   against the stub, all pass. No real Steadfast parcel was booked (no sandbox,
   and the user's live keys aren't Mint's to type in).
+
+## 2026-10-31 — CR-05 Delivery engine
+
+- Orders can be sent to a connected courier from the API: the Send dialog's
+  prefill, the checks, one parcel per order at a time, safe retries (a timeout
+  is looked up by invoice before it's called a failure), status checks moving
+  the delivery and the order (shipped, delivered and completed, returned), a
+  cash-on-delivery payment when it's delivered, cancel, the Deliveries list
+  with cash held by couriers. An order with a parcel out can't be cancelled.
+- `courier-deliveries.mjs`: 36 checks against the stub, all pass; the order
+  and website-order smokes still pass.

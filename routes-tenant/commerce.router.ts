@@ -14,6 +14,7 @@ import { listOrders, listReturns, moveReturn, returnDetail } from '../library/fu
 import { returnItems } from '../library/functions/commerce/returns.js';
 import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
+import { cancelDelivery, deliveryDetail, listDeliveries, refresh, send, sendPrefill } from '../library/functions/commerce/deliveries.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -62,6 +63,15 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
  *   POST   /couriers/:id/webhook-secret     a new webhook secret (the old address stops working)   manage-projects
  *   DELETE /couriers/:id                    forgets the keys; 409 courier_in_use while deliveries are on their way   manage-projects
  *   GET    /couriers/:id/options/:what?parent=&fresh=1   stores, cities, zones, areas from the courier (kept a day)   records:edit
+ *
+ * Deliveries (CR-05) — made only here; the courier's updates move them and their order:
+ *   GET  /orders/:id/send                 the Send to courier dialog: connected couriers, the parcel prefilled, an open delivery   records:view
+ *   POST /orders/:id/deliveries   { courier, recipient?, cod?, weight?, items?, note?, options?, confirmNotBooked? }
+ *                                         books it (400 delivery_input / courier_refused, 409 delivery_open, 502 courier_no_answer)   records:edit
+ *   GET  /deliveries?view=&courier=&settled=&q=&page=&limit=   the Deliveries page: views' counts, cash with couriers   records:view
+ *   GET  /deliveries/:id                  one delivery with its timeline   records:view
+ *   POST /deliveries/:id/refresh          asks the courier where it is   records:edit
+ *   POST /deliveries/:id/cancel  { reason? }   stops it (Steadfast: a return request)   records:edit
  */
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -317,6 +327,41 @@ router.get(
 	'/couriers/:id/options/:what',
 	edit,
 	handle(async (req: any) => optionsFor(req.params.id, req.params.what, req.query.parent, req.query.fresh === '1'))
+);
+
+router.get(
+	'/orders/:id/send',
+	view,
+	handle(async (req: any) => sendPrefill(await storeOf(), req.project, req.params.id))
+);
+router.post(
+	'/orders/:id/deliveries',
+	edit,
+	handle(async (req: any, res: any) => {
+		const out = await send(await storeOf(), req.project, req.params.id, req.body || {}, actorName(req));
+		res.status(201);
+		return out;
+	})
+);
+router.get(
+	'/deliveries',
+	view,
+	handle(async (req: any) => listDeliveries(await storeOf(), req.query || {}))
+);
+router.get(
+	'/deliveries/:id',
+	view,
+	handle(async (req: any) => deliveryDetail(await storeOf(), req.params.id))
+);
+router.post(
+	'/deliveries/:id/refresh',
+	edit,
+	handle(async (req: any) => refresh(await storeOf(), req.project, req.params.id))
+);
+router.post(
+	'/deliveries/:id/cancel',
+	edit,
+	handle(async (req: any) => cancelDelivery(await storeOf(), req.project, req.params.id, req.body?.reason, actorName(req)))
 );
 
 export default router;

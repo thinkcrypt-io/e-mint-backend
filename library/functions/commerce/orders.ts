@@ -6,6 +6,7 @@ import { Quote, QuoteInput, quote } from './pricing.js';
 import { PaymentInput, checkPayments, moveCredit, recordPayment, settleOrder, tendersOf } from './payments.js';
 import { currentShift, shiftForSale } from './shifts.js';
 import { extraFields } from './lists.js';
+import { deliveriesOf } from './deliveries.js';
 import { nextCode } from '../dynamicModels.function.js';
 
 /**
@@ -430,6 +431,8 @@ export const cancel = async (store: Store, id: any, input: { reason?: string; re
 	if (order.status === 'cancelled') throw new TenancyError(409, 'This order is cancelled already');
 	if (['shipped', 'delivered'].includes(order.fulfilment)) throw new TenancyError(409, 'It has gone out already — take it back as a return');
 	if ((Number(order.returnedItems) || 0) > 0) throw new TenancyError(409, 'Some of it came back already — return the rest instead');
+	const parcel: any = (await deliveriesOf(store, order._id)).find((d: any) => !['cancelled', 'returned', 'lost', 'error'].includes(d.status));
+	if (parcel) throw new TenancyError(409, `It’s with ${parcel.courierName} (${parcel.code}) — cancel the delivery first`, 'delivery_open');
 	const Order = store.M('order');
 	// The claim: only one cancel gets past this.
 	const r = await Order.updateOne(
@@ -488,7 +491,8 @@ export const orderDetail = async (store: Store, id: any) => {
 		order.customer ? store.M('customer').findById(order.customer).lean() : null,
 		order.outlet ? store.M('outlet').findById(order.outlet, { name: 1, outletCode: 1, address: 1, phone: 1, receiptHeader: 1 }).lean() : null,
 	]);
-	return { order, payments, movements, returns, credit, customer, outlet, extra: await extraFields(store, 'order', order) };
+	const deliveries = await deliveriesOf(store, order._id);
+	return { order, payments, movements, returns, credit, customer, outlet, deliveries, extra: await extraFields(store, 'order', order) };
 };
 
 /** What the POS needs to start: outlets that sell, their registers, the ways to pay, the switches. */

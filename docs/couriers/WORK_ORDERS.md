@@ -24,7 +24,7 @@ build order.
 | CR-02 | Delivery model (blueprint, locks, order summary fields) + `upgradeStore` for built stores | backend | M | done 2026-10-31 |
 | CR-03 | Courier connections (the store's own account): model, sealing, adapter interface + registry, settings API, Test, account checks | backend | M | done 2026-10-31 |
 | CR-04 | Steadfast adapter (ping + balance test, book, bulk, find by invoice, status, return request, webhook) | backend | M | done 2026-10-31 |
-| CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | |
+| CR-05 | Delivery engine: send, applyEvent, refresh, cancel, order effects, COD payment | backend | L | done 2026-10-31 |
 | CR-06 | Webhooks: public route, per-courier checks, inbox, idempotency, ordering | backend | M | |
 | CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
@@ -43,6 +43,21 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-05 done.** `commerce/deliveries.ts`: `sendPrefill`, `send` (checks; delivery made in `booking`
+  first, invoice = order code / `-2`…; two sends at once → the later one gives way; a refusal → `error` with the
+  courier's words and the same delivery is retried on the next send; no answer → `find(invoice)` after 3 s and 5 s;
+  couriers without `find` mark the delivery `booking-uncertain` and a resend needs `confirmNotBooked`; a key refusal
+  marks the connection untested), `applyEvent(store, id, event, source, by)` (timeline always; status never back,
+  older events only into side states, final statuses stay — delivered may still go returning / returned; same
+  status on a check = only `lastSyncedAt`), order effects (picked-up / in-transit / out-for-delivery → shipped;
+  delivered / partly → delivered + completed; returned → returned), COD = one `courier-cod` payment per delivery
+  through `recordPayment` + `settleOrder` (capped at the balance; partly-delivered only what was collected; a
+  delivered parcel without an amount counts its COD as collected), `deliveryForEvent` (for CR-06), `refresh`,
+  `cancelDelivery` (never-booked → cancelled here; Steadfast → return request, waits), `deliveryDetail`,
+  `deliveriesOf`, `listDeliveries` (views, search, cash with couriers). The order's `courier` section is written by
+  `summarise`. `orderDetail` returns `deliveries`; an order can't be cancelled while a parcel is out (409
+  `delivery_open`). Routes in commerce.router.ts. Smoke `courier-deliveries.mjs` (36 checks).
 
 - **2026-10-31 — CR-04 done.** `couriers/types.ts` now has `Parcel`, `Booked`, `CourierEvent`, `NormalStatus`,
   `WebhookIn` and the adapter's optional `book / bookMany / find / status / cancel / webhook {verify, parse, reply}` +

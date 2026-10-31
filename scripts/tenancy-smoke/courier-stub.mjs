@@ -48,7 +48,7 @@ const steadfast = async (req, res, path, body) => {
 	if (path === '/get_balance') return json(res, 200, { status: 200, current_balance: 1240 });
 	if (path === '/create_order' && req.method === 'POST') {
 		// An invoice with SLOW in it: booked, but the answer comes too late (Mint's 15 s limit).
-		if (/SLOW/.test(body.invoice || '')) await new Promise(r => setTimeout(r, 16000));
+		if (/SLOW/.test(`${body.invoice} ${body.note}`)) await new Promise(r => setTimeout(r, 16000));
 		const r = sfBook(body);
 		return r.errors ? json(res, 400, { status: 400, errors: r.errors }) : json(res, 200, { status: 200, message: 'Consignment has been created successfully.', consignment: r.consignment });
 	}
