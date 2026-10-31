@@ -167,7 +167,10 @@ const runTest = async (adapter: CourierAdapter, doc: any) => {
 	if (r.ok && Array.isArray(stores)) {
 		set['cache.stores'] = { at: new Date(), choices: stores };
 		const store = doc.settings?.store;
-		if (!store || !stores.some((s: any) => s.value === String(store))) set['settings.store'] = (stores.find((s: any) => s.default) || stores[0])?.value || '';
+		const chosen = stores.find((s: any) => s.value === String(store)) || stores.find((s: any) => s.default) || stores[0];
+		if (!store || !stores.some((s: any) => s.value === String(store))) set['settings.store'] = chosen?.value || '';
+		// RedX's charge needs the pickup store's area.
+		if (chosen?.details?.areaId) set['settings.pickupArea'] = String(chosen.details.areaId);
 	}
 	await CourierConnection.updateOne({ _id: doc._id }, { $set: set });
 	return r;
@@ -221,6 +224,9 @@ export const saveConnection = async (project: any, id: string, body: any, by: st
 	}
 
 	const set: any = { mode, credentials, public: shown, settings: cleanSettings(adapter, body?.settings, was?.settings) };
+	// A pickup store chosen from the courier's list: its area too (RedX's charge needs it).
+	const picked = (was?.cache?.stores?.choices || []).find((c: any) => c.value === String(set.settings.store || ''));
+	if (picked?.details?.areaId) set.settings.pickupArea = String(picked.details.areaId);
 	if (keysChanged || mode !== (was?.mode || 'live')) set.token = null;
 	if (!was?.webhookSecret) set.webhookSecret = sealed(newSecret());
 	if (body?.webhookSecret !== undefined) {

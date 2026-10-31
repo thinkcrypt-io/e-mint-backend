@@ -29,7 +29,7 @@ build order.
 | CR-07 | Panel: Store settings → Delivery → Connect your Steadfast account, Send to courier, Delivery card, label, Deliveries page | mint-tenant + mint-docs | L | |
 | **Phase 2 — Pathao and RedX, then ship** | | | | |
 | CR-08 | Pathao adapter + Connect your Pathao account (password-grant token, stores, cities / zones / areas, price plan, book, info, webhook + 202 handshake) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
-| CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | |
+| CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | backend done 2026-10-31 (panel card with CR-07) |
 | CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | |
 | CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | |
 | CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | |
@@ -43,6 +43,15 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-10-31 — CR-09 backend done.** `redx.ts` complete, `ready: true`: book (`POST /parcel`; needs
+  `options.area` = RedX area id + `areaName`; grams; cash as a string; `value` = order total; pickup store;
+  `merchant_invoice_id` = our invoice), `quote` (charge calculator; needs the pickup store's area — the connection's
+  `settings.pickupArea`, set from the store list on test and when the store changes), `status` (`parcel/info`),
+  `cancel` (`PATCH /parcels`, async), webhook (`?token=` = secret, constant time; `paid` = payout). No find by invoice
+  (timeouts → "may have been booked"); no tracking link (not in RedX's doc). Statuses mapped as CONNECTING.md. RedX's
+  real sandbox needs the owner's own sandbox token (on their RedX page) — not tried. Smoke `courier-redx.mjs`
+  (16 checks).
 
 - **2026-10-31 — CR-08 backend done.** `pathao.ts` complete, `ready: true`: book (`/orders`; city / zone / area sent
   only when picked, as numbers; weight 0.5–10; `merchant_order_id` = our invoice), `bookMany` (`/orders/bulk` in 100s,

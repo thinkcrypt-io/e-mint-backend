@@ -133,8 +133,35 @@ const pathao = async (req, res, path, body) => {
 	json(res, 404, { message: 'Not found' });
 };
 
-const redx = (req, res, path) => {
+/** RedX's parcels: tracking id → { merchant_invoice_id, status, sent, cancelRequested }. */
+const rxParcels = new Map();
+let rxNext = 26100001;
+const redx = (req, res, path, body) => {
 	if (req.headers['api-access-token'] !== 'Bearer rx-token') return json(res, 401, { message: 'Unauthorized' });
+	if (path === '/parcel' && req.method === 'POST') {
+		const errs = [];
+		if (!body.delivery_area_id) errs.push({ message: 'delivery_area_id is required' });
+		if (!/^01\d{9}$/.test(body.customer_phone || '')) errs.push({ message: 'customer_phone is invalid' });
+		if (typeof body.cash_collection_amount !== 'string') errs.push({ message: 'cash_collection_amount must be a string' });
+		if (errs.length) return json(res, 400, { message: 'Validation failed', validation_errors: errs });
+		const id = `${rxNext++}A1B2C`;
+		rxParcels.set(id, { tracking_id: id, merchant_invoice_id: body.merchant_invoice_id, status: 'pickup-pending', charge: 60, cash_collection_amount: body.cash_collection_amount, sent: body });
+		return json(res, 200, { tracking_id: id });
+	}
+	let m = path.match(/^\/parcel\/info\/(\w+)$/);
+	if (m) return rxParcels.has(m[1]) ? json(res, 200, { parcel: { ...rxParcels.get(m[1]), sent: undefined } }) : json(res, 404, { message: 'Parcel not found' });
+	if (path === '/parcels' && req.method === 'PATCH') {
+		const p = rxParcels.get(String(body.entity_id));
+		if (!p) return json(res, 404, { success: false, message: 'Parcel not found' });
+		if (['delivered', 'returned'].includes(p.status)) return json(res, 400, { success: false, message: 'Parcel can not be cancelled now' });
+		p.cancelRequested = body.update_details?.reason || true;
+		return json(res, 200, { success: true, message: 'Request Accepted' });
+	}
+	if (path.startsWith('/charge/charge_calculator')) {
+		const q = new URL(`http://x${path}`).searchParams;
+		if (!q.get('delivery_area_id') || !q.get('pickup_area_id')) return json(res, 400, { message: 'area ids are required' });
+		return json(res, 200, { deliveryCharge: Number(q.get('weight')) > 1000 ? 80 : 60, codCharge: Math.round(Number(q.get('cash_collection_amount') || 0) * 0.01) });
+	}
 	if (path === '/pickup/stores') return json(res, 200, { pickup_stores: [{ id: 7001, name: 'Banani pickup', address: 'Road 5', area_name: 'Banani', area_id: 3, phone: '8801700000000' }] });
 	if (path.startsWith('/areas')) {
 		const q = new URL(`http://x${path}`).searchParams;
@@ -165,16 +192,16 @@ http
 			} catch {}
 			// Moves a parcel on, as the courier would: POST /__status { courier, consignment, status }.
 			if (req.url === '/__status') {
-				const p = ctl.courier === 'steadfast' ? sfParcels.get(String(ctl.consignment)) : ctl.courier === 'pathao' ? paParcels.get(String(ctl.consignment)) : null;
+				const p = ctl.courier === 'steadfast' ? sfParcels.get(String(ctl.consignment)) : ctl.courier === 'pathao' ? paParcels.get(String(ctl.consignment)) : ctl.courier === 'redx' ? rxParcels.get(String(ctl.consignment)) : null;
 				if (!p) return json(res, 404, { message: 'No such parcel' });
 				if (ctl.courier === 'pathao') p.order_status = p.order_status_slug = ctl.status;
 				else p.status = ctl.status;
 				return json(res, 200, p);
 			}
 			// A parcel as the courier keeps it: GET /__parcel/<courier>/<consignment>.
-			const pm = req.url.match(/^\/__parcel\/(steadfast|pathao)\/(\w+)$/);
+			const pm = req.url.match(/^\/__parcel\/(steadfast|pathao|redx)\/(\w+)$/);
 			if (pm) {
-				const m = pm[1] === 'steadfast' ? sfParcels : paParcels;
+				const m = pm[1] === 'steadfast' ? sfParcels : pm[1] === 'pathao' ? paParcels : rxParcels;
 				return m.has(pm[2]) ? json(res, 200, m.get(pm[2])) : json(res, 404, {});
 			}
 			// Pathao's bulk ids, by our invoice: GET /__pathao/by-invoice/<invoice>.
@@ -193,7 +220,7 @@ http
 			} catch {}
 			if (courier === 'steadfast') return steadfast(req, res, path, body);
 			if (courier === 'pathao') return pathao(req, res, path, body);
-			return redx(req, res, path);
+			return redx(req, res, path, body);
 		});
 	})
 	.listen(port, '127.0.0.1', () => console.log(`courier stub on :${port}`));

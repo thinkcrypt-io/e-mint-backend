@@ -127,3 +127,10 @@
   stays "may have been booked" until Pathao's own order.created names it.
 - Stub tests pass; Pathao's real sandbox was unreachable today, so the
   sandbox booking check is still to run.
+
+## 2026-10-31 — CR-09 RedX (backend)
+
+- RedX books (with a delivery area), gives its charge, reports status,
+  cancels on request (RedX confirms later), and its webhooks are checked by the
+  token in Mint's address and applied, including payouts. 16 stub checks pass.
+  RedX's real sandbox wasn't tried: it needs the owner's own sandbox token.
