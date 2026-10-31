@@ -149,7 +149,7 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));
 		// An API project leads with its API, straight after the dashboard (T-09).
 		const [home, ...own] = project;
-		const store = req.project.type === 'ecommerce' ? await CommerceSettings.findOne({}, { status: 1 }).lean() : null;
+		const store = req.project.type === 'ecommerce' ? await CommerceSettings.findOne({}, { status: 1, features: 1 }).lean() : null;
 		const lead = tenantLead(req.permissions || [], req.project.type, store as any);
 		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ route: 'web-contents', active: { $ne: false } })) || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
 		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);

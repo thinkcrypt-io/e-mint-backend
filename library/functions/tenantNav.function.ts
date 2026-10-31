@@ -44,7 +44,7 @@ const apiItems = (can: (key: string) => boolean, withWidgets = true) => [
  * What goes straight after the Dashboard, before the project's own sections:
  * an API project's API (docs/templates T-09, TD2) — it's what the project is.
  */
-export const tenantLead = (permissions: string[], projectType?: string, store?: { status?: string } | null): SidebarItemType[] => {
+export const tenantLead = (permissions: string[], projectType?: string, store?: { status?: string; features?: string[] } | null): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
 	if (projectType === 'api') return section('API', 'plug-zap', apiItems(can));
 	// An e-commerce project's store (docs/ecommerce): its setup until it's built, then the till and its orders.
@@ -57,6 +57,8 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
 				...(can('records:view') ? [{ title: 'Website orders', href: '/store/website-orders', icon: 'globe' }] : []),
 				...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
+				// Parcels sent to couriers (docs/couriers CR-07), while the store delivers.
+				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Deliveries', href: '/store/deliveries', icon: 'package-check' }] : []),
 			]),
 			// Each kind of setting is an item of its own (the wizard's answers, a page each).
 			...(can('manage-projects')

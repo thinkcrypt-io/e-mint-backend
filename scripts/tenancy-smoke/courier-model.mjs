@@ -41,7 +41,7 @@ const courier = (order?.fields || []).find(f => f.key === 'courier');
 ok('the order’s courier summary names its delivery and tracking link', courier?.fields?.some(f => f.key === 'delivery') && courier.fields.some(f => f.key === 'trackingUrl' && f.kind === 'url'), JSON.stringify(courier?.fields?.map(f => f.key)));
 
 r = await call('GET', `${P}/sidebar/admin/server`, null, t);
-ok('sidebar: Deliveries shown while delivery is on', JSON.stringify(r.body || []).includes('"/t/deliveries"'), '');
+ok('sidebar: the Store’s Deliveries page while delivery is on, not the plain table', JSON.stringify(r.body || []).includes('"/store/deliveries"') && !JSON.stringify(r.body || []).includes('"/t/deliveries"'), '');
 
 r = await call('POST', `${P}/deliveries`, { status: 'delivered' }, t);
 ok('a delivery can’t be made from the plain table', r.status === 403 && r.body?.code === 'commerce_field', `${r.status} ${r.body?.message}`);
@@ -89,7 +89,7 @@ else {
 	ok('the order’s courier summary has delivery and tracking link again', no.fields.find(f => f.key === 'courier')?.fields?.some(f => f.key === 'delivery'), '');
 	const sb = nd?.sidebarItem && (await db.collection('sidebaritems').findOne({ _id: nd.sidebarItem }));
 	const orderItem = o.sidebarItem && (await db.collection('sidebaritems').findOne({ _id: o.sidebarItem }));
-	ok('in the store’s sidebar category, shown', sb?.isActive === true && String(sb.category) === String(orderItem?.category), JSON.stringify({ sb: sb && [sb.isActive, String(sb.category)], cat: String(orderItem?.category) }));
+	ok('in the store’s sidebar category, its plain table hidden (the Store page has it)', sb?.isActive === false && String(sb.category) === String(orderItem?.category), JSON.stringify({ sb: sb && [sb.isActive, String(sb.category)], cat: String(orderItem?.category) }));
 	out = run('--apply');
 	ok('again: up to date', /Parcel shop: up to date/.test(out), mine(out));
 	await mc.close();

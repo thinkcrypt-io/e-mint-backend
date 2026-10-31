@@ -733,6 +733,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 		key: 'delivery',
 		shownWhen: x => x.delivery.enabled,
 		engineOnly: true,
+		ownPage: '/store/deliveries',
 		engine: [
 			'order', 'courier', 'courierName', 'status', 'courierStatus', 'courierMessage', 'invoice', 'consignment', 'trackingCode', 'trackingUrl',
 			'cod', 'collected', 'charge', 'recipient', 'options', 'outlet', 'events', 'bookedAt', 'pickedAt', 'deliveredAt', 'lastEventAt', 'lastSyncedAt',
