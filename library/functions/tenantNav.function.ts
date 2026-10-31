@@ -51,13 +51,25 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 	if (projectType === 'ecommerce') {
 		if (store?.status !== 'ready')
 			return can('manage-projects') ? section('Store', 'store', [{ title: 'Set up your store', href: '/store/setup', icon: 'wand-sparkles' }]) : [];
-		return section('Store', 'store', [
-			...(can('records:create') ? [{ title: 'POS', href: '/store/pos', icon: 'scan-barcode' }] : []),
-			...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
-			...(can('records:view') ? [{ title: 'Website orders', href: '/store/website-orders', icon: 'globe' }] : []),
-			...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
-			...(can('manage-projects') ? [{ title: 'Store settings', href: '/store/settings', icon: 'settings-2' }] : []),
-		]);
+		return [
+			...section('Store', 'store', [
+				...(can('records:create') ? [{ title: 'POS', href: '/store/pos', icon: 'scan-barcode' }] : []),
+				...(can('records:view') ? [{ title: 'Orders', href: '/store/orders', icon: 'receipt' }] : []),
+				...(can('records:view') ? [{ title: 'Website orders', href: '/store/website-orders', icon: 'globe' }] : []),
+				...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
+			]),
+			// Each kind of setting is an item of its own (the wizard's answers, a page each).
+			...(can('manage-projects')
+				? section('Store settings', 'settings-2', [
+						{ title: 'Store settings', href: '/store/settings', icon: 'store' },
+						{ title: 'Product settings', href: '/store/settings/products', icon: 'package' },
+						{ title: 'Delivery settings', href: '/store/settings/delivery', icon: 'truck' },
+						{ title: 'POS settings', href: '/store/settings/pos', icon: 'scan-barcode' },
+						{ title: 'Printer settings', href: '/store/settings/printer', icon: 'printer' },
+						{ title: 'Payment settings', href: '/store/settings/payments', icon: 'credit-card' },
+				  ])
+				: []),
+		];
 	}
 	return [];
 };
