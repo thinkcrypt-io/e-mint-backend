@@ -77,9 +77,15 @@ const STATUSES: Record<string, NormalStatus | null> = {
 	returned: 'returned',
 	'agent-area-change': null,
 	cancelled: 'cancelled',
+	// A parcel deleted in RedX's own panel is a cancelled one.
+	deleted: 'cancelled',
 	paid: null,
 };
-const normalise = (s: string): NormalStatus | null => STATUSES[String(s || '').toLowerCase().trim()] ?? null;
+const normalise = (s: string): NormalStatus | null => {
+	const k = String(s || '').toLowerCase().trim();
+	// Any "deleted…" or "cancel…" wording RedX uses means the parcel is gone.
+	return STATUSES[k] ?? (/^(delet|cancel)/.test(k) ? 'cancelled' : null);
+};
 
 const parcelOf = (conn: Conn, p: Parcel) => {
 	const phone = bdPhone(p.recipient.phone);
