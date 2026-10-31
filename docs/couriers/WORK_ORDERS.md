@@ -32,7 +32,7 @@ build order.
 | CR-09 | RedX adapter + Connect your RedX account (access token, pickup stores, areas, charge, parcel, info, cancel, webhook with Mint's URL token) | backend + mint-tenant | M | done 2026-10-31 |
 | CR-10 | Area matching for Pathao and RedX: area pickers, `CourierAreaMap` remembered picks | backend + mint-tenant | M | done 2026-10-31 |
 | CR-11 | Fallback sync scheduler, Refresh on open, silent-webhook warning | backend + mint-tenant | S | done 2026-10-31 |
-| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | docs + website done 2026-10-31; rollout waits for the backend deploy |
+| CR-17 | Docs, website, prod rollout (`upgradeStores.js --apply`, connect Verte's own accounts) | all | S | docs + website done 2026-10-31; backend deployed + `upgradeStores.js --apply` run on prod 2026-10-31 (Verte: the two delivery emails, off); left: connect Verte's own accounts |
 | **Phase 3 — everyday use** | | | | |
 | CR-12 | Bulk send from the order tables | backend + mint-tenant | M | done 2026-10-31 |
 | CR-14 | Customers + automations + MCP: tracking on the website endpoints, installed automations, MCP delivery tools | backend + live-fresh | M | done 2026-10-31 (Live Fresh's page not changed) |
@@ -60,10 +60,10 @@ build order.
   Pathao's matched areas and the buyer check, the Deliveries page, bulk send. mint-docs `10ba910` (store guide:
   every `store-courier*` / `store-send-to-courier` / `store-delivery-card` / `store-deliveries` /
   `store-delivery-risk` anchor) and mint-webpage `297f882` (changelog). **Not done:** CR-16 (Paperfly, eCourier,
-  CarryBee — "later"); the dashboard tile for cash with couriers; Live Fresh's track page. **Rollout (CR-17):** the
-  user deploys the backend (Heroku, manual), then `node scripts/upgradeStores.js` (dry run) → `--apply` with the
-  user's go-ahead so built stores get Deliveries + the two delivery emails; then connect a store's own couriers in
-  Delivery settings. Pathao's sandbox was down all day (522) — run `PATHAO_SANDBOX=1 node courier-pathao.mjs` when
+  CarryBee — "later"); the dashboard tile for cash with couriers; Live Fresh's track page. **Rollout (CR-17):** backend
+  deployed and `upgradeStores.js --apply` run on prod 2026-10-31 — Verte (the only built store) got the two delivery
+  emails (off); its Deliveries model and order courier fields were already there. Left: the owner connects the
+  store's own couriers in Delivery settings. Pathao's sandbox was down all day (522) — run `PATHAO_SANDBOX=1 node courier-pathao.mjs` when
   it's back. No real Steadfast parcel was sent (no sandbox; the owner's live keys must be entered by the owner).
 
 - **2026-10-31 — CR-13 backend done.** `returnItems` takes `courier: { refund, reference }`: return rules
