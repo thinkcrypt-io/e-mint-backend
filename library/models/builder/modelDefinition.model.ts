@@ -51,6 +51,10 @@ const fieldSchema = new Schema<any>(
 		components: { type: [String], default: undefined },
 		/** For image kinds: the API sends each picture with its library details, not just its address (docs/cms D12). */
 		details: { type: Boolean },
+		/** For reference kinds: the picker offers only records matching these (a variant's product: With variations). */
+		optionFilters: { type: [Schema.Types.Mixed], default: undefined },
+		/** For reference kinds: fields shown under each name in the picker (SKU, barcode). */
+		pickerDetails: { type: [String], default: undefined },
 	},
 	{ _id: false, minimize: false }
 );
