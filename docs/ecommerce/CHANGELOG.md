@@ -399,3 +399,7 @@
 - `commerce/categoryTax.ts`: `applyCategoryTax` — when a category's tax changes (panel save or MCP), its products take it (saved one by one so Price after tax is worked out again); a variant that carried the product's old tax moves too, one with its own is left. An inactive tax isn't handed down.
 - Upgrade: a one-time catch-up (`doneOnce: 'category-tax'`) hands every existing category's tax to its products. Dry run on Verte: 15 products.
 - Not run against a database yet; not deployed.
+
+## 2026-11-01 — Tax automations planned
+- The user: a category's tax fills the product form, a category's tax goes to all its products with their price after tax, a tax rate's edit adjusts products — as automations, in the wizard and on existing stores.
+- `TAX_AUTOMATIONS.md`: what is built, gaps G1–G6 (G1: the hand-down doesn't work out Price after tax again), decisions TX1–TX9, EC-35…EC-40, tests, questions Q1–Q3.

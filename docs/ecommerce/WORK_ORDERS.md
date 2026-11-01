@@ -36,8 +36,18 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-24 | Website orders page (`/store/website-orders`): own table + order view with address, area, slot, contact, payment, courier; POS Orders shows POS and phone orders only | backend + mint-tenant | L | done 2026-10-29 |
 | EC-25 | Cut over Verte / Live Fresh: copy Online orders into Orders (`channel: website`), storefront checkout, track and my-orders read Orders; Online orders model retired | backend + live-fresh | M | built 2026-10-29, behind `NEXT_PUBLIC_STORE_ORDERS=1` — the prod steps wait on the user (see CHANGELOG) |
 | EC-26 | The generic Coupon model: Code, Status, Discount type with Percentage (+ Maximum discount) or Amount off, Valid from/till, Max uses, Max uses per customer, Minimum order value, Used (locked, counted by the store); no applies-to | backend | S | built 2026-10-30; Verte via `upgradeStores.js --apply` |
+| EC-35 | Tax hand-down bug: category tax → products also works out Price after tax again + record history (docs/ecommerce/TAX_AUTOMATIONS.md) | backend | S | planned 2026-11-01 |
+| EC-36 | Automations: “Update the records that pick this one” action + system (store) automations, locked, on/off | backend + mint-tenant + admin + mint-docs | L | planned 2026-11-01 |
+| EC-37 | Store tax automations A1–A3 (category → products, product category → tax, tax rate → prices) in the wizard; category form note | backend + mint-tenant | M | planned 2026-11-01 |
+| EC-38 | Price after tax by the till’s rule (mode-aware, default rate, engine-owned) | backend + mint-tenant | M | planned 2026-11-01 |
+| EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | planned 2026-11-01 |
+| EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | planned 2026-11-01 |
 
 ## Handoff
+
+- **2026-11-01 — Tax automations planned** (`TAX_AUTOMATIONS.md`, EC-35…EC-40; Q1–Q3 wait on the user). Found while
+  planning: `applyCategoryTax` saves with `p.save()`, and formulas only run in the request path, so the hand-down leaves
+  Price after tax stale (EC-35 fixes it first). Rate edits already reprice through `recalculateDependents`.
 
 - **2026-10-28 — EC-21 done** (CHANGELOG). The user: the wizard's Category model must be advanced, and existing stores
   updated. Blueprint Categories: name, ★slug (`uid` from name, "Web address"), parent, ★posStatus / ★webStatus
