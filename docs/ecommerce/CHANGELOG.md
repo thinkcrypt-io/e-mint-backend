@@ -449,3 +449,7 @@
 - mint-tenant: the table's Delete catches `tax_in_use` and opens **Replace with…** (`ReplaceTax.tsx`). Admin has no store pages, so no copy there.
 - The “inactive notice” is gone with the new rule: switching a tax off removes it from everything, so an inactive tax holds nothing.
 - Smoke `commerce-tax.mjs`: usage counts, delete + bulk delete refused, replace to an inactive tax refused, replace moves, delete then works.
+
+## 2026-11-02 — Discount answers
+- The user: Sale price beside Price (Price never changed); the bigger discount wins, never combined; a start date as well as the end date; a discount whose end date has passed can't be turned on; collections on the website only (no POS fields or chips); coupons work out from the discounted price by default, or the original price — a Store setting (*Coupons apply to*, DS15).
+- `DISCOUNTS.md` updated: DS3, DS7, DS8, DS15, DS16, EC-41, EC-45, tests, §7 answers. Ready to build from EC-41 / EC-42.
