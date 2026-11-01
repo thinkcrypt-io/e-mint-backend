@@ -1,3 +1,4 @@
+import { effectiveRate } from './taxRates.js';
 import { TenancyError } from '../tenancy.function.js';
 import { Store, roundFor } from './store.js';
 import { isId, itemView, stockAt } from './catalogue.js';
@@ -109,12 +110,7 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 	// Tax rates: the variant's own, else its product's, else the default.
 	const taxMode = a.pos.tax.mode;
 	const rates: any[] = taxMode === 'none' ? [] : await store.M('taxRate').find({}).lean();
-	const rateOf = (p: any, v?: any) => {
-		if (taxMode === 'none') return 0;
-		const find = (id: any) => (id ? rates.find(r => String(r._id) === String(id)) : null);
-		const own = find(v?.taxRate) || find(p?.taxRate);
-		return Number((own || rates.find(r => r.isDefault) || { rate: 0 }).rate) || 0;
-	};
+	const rateOf = (p: any, v?: any) => effectiveRate(taxMode, rates, p, v);
 
 	// Same variant twice adds up (a scanner adds lines one at a time).
 	const merged = new Map<string, { variant: string; quantity: number; discount?: Discount }>();

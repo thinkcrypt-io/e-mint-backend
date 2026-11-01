@@ -17,6 +17,8 @@ import { ModelKey, coreFieldsOf, modelSpecs, storePlan } from './blueprint.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 import { ensureTaxAutomations } from './taxAutomations.js';
+import { refreshTaxAdded } from './taxRates.js';
+import { storeOf } from './store.js';
 
 /**
  * Setting up a store (docs/ecommerce EC3): the blueprint's models built as one
@@ -239,4 +241,6 @@ export const afterSettingsSaved = async (project: any) =>
 		const view = await commerceView(project);
 		await applySidebar(view.answers, doc.installed || {});
 		await CommerceSettings.updateOne({ _id: doc._id }, { $set: { features: featuresOf(view.answers) } });
+		// The tax mode may have changed: every item's Price after tax follows it.
+		await refreshTaxAdded(await storeOf());
 	});

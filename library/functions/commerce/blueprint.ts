@@ -187,7 +187,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'product',
 		shownWhen: null,
-		engine: ['totalStock'],
+		engine: ['totalStock', 'taxAdded'],
 		step: {
 			name: 'Product',
 			title: 'Products',
@@ -216,7 +216,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					pickerDetails: ['rate'],
 					fillFrom: { from: 'category', formula: 'taxRate' },
 				},
-				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxRate.rate / 100), 2)', helper: 'Worked out from the price and the tax — never typed' },
+				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Set by the store: the item’s rate (its own, else the default) when tax is added on top; 0 when the price already includes it' },
+				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
 				{ key: 'trackStock', label: 'Track stock', kind: 'boolean', default: a.products.trackStock },
 				{
 					key: 'options',
@@ -250,7 +251,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'variant',
 		shownWhen: x => x.products.variations,
-		engine: ['isDefault', 'totalStock', 'taxRate'],
+		engine: ['isDefault', 'totalStock', 'taxRate', 'taxAdded'],
 		step: {
 			name: 'Variant',
 			title: 'Variants',
@@ -277,7 +278,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					pickerDetails: ['rate'],
 					fillFrom: { from: 'product', formula: 'taxRate' },
 				},
-				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxRate.rate / 100), 2)', helper: 'Worked out from the variant’s own price and its tax — never typed' },
+				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Set by the store, like the product’s' },
+				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
 				{ key: 'image', label: 'Image', kind: 'image', helper: 'Shown instead of the product’s pictures when this variant is picked' },
 				{ key: 'active', label: 'Sold', kind: 'boolean', default: true },
 				{ key: 'isDefault', label: 'The product’s only variant', kind: 'boolean', default: false },

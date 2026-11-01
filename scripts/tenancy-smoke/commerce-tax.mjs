@@ -9,7 +9,7 @@ const t = r.body?.token;
 r = await call('POST', '/tenant/api/projects', { name: 'Tax shop', type: 'ecommerce' }, t);
 const P = `/tenant/api/p/${r.body?._id}`;
 const C = `${P}/commerce`;
-r = await call('PUT', `${C}/settings`, { answers: { store: { currency: 'BDT', orderPrefix: 'TX' }, outlets: [{ name: 'Gulshan', code: 'GUL' }], payments: { tenders: ['cash'] } } }, t);
+r = await call('PUT', `${C}/settings`, { answers: { store: { currency: 'BDT', orderPrefix: 'TX' }, outlets: [{ name: 'Gulshan', code: 'GUL' }], payments: { tenders: ['cash'] }, pos: { tax: { mode: 'added', rates: [{ name: 'Base', rate: 0, default: true }] } } } }, t);
 ok('settings saved', r.status === 200, JSON.stringify(r.body?.problems || r.body?.message));
 await call('POST', `${C}/setup`, {}, t);
 for (let i = 0; i < 180; i++) {
@@ -110,6 +110,22 @@ await sleep(3500);
 const hc3 = await get('category', hcat._id);
 const hp3 = await get('product', hp._id);
 ok('active again: both have it back, price 110', idOf(hc3.taxRate) === idOf(hold._id) && idOf(hp3.taxRate) === idOf(hold._id) && hp3.priceAfterTax === 110, `${idOf(hc3.taxRate)} ${idOf(hp3.taxRate)} ${hp3.priceAfterTax}`);
+
+// The till's rule: no tax → the default rate; the default rate edited → those items follow; inclusive → the price already holds it.
+const base = (await call('GET', `${P}/${inst.taxRate.route}`, null, t)).body?.doc?.find(x => x.name === 'Base');
+if (base) {
+	await edit('taxRate', base._id, { rate: 20 });
+	await sleep(3500);
+	const nt = await add('product', { name: 'Plain', category: other._id, price: 100 });
+	await edit('category', other._id, { taxRate: '' });
+	await edit('product', nt._id, { taxRate: '' });
+	await sleep(3000);
+	const np = await get('product', nt._id);
+	ok('no tax of its own: the default rate (100 → 120)', np.priceAfterTax === 120, `${idOf(np.taxRate)} ${np.priceAfterTax}`);
+	await call('PUT', `${C}/settings`, { answers: { pos: { tax: { mode: 'inclusive', rates: [{ name: 'Base', rate: 20, default: true }] } } } }, t);
+	await sleep(3500);
+	ok('inclusive store: the price already holds the tax (100)', (await get('product', nt._id)).priceAfterTax === 100, String((await get('product', nt._id)).priceAfterTax));
+}
 
 // A1 switched off → changing a category's tax touches no product.
 r = await call('PATCH', `${P}/automations/${a1._id}`, { enabled: false }, t);
