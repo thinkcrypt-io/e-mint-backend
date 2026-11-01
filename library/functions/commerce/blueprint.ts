@@ -70,6 +70,9 @@ export const DELIVERY_STATUSES = [
 export const DELIVERY_COURIERS = [...Object.entries(COURIERS).map(([value, c]) => ({ value, label: c.name })), { value: 'manual', label: 'Manual courier' }];
 
 /** The models, in the order their links need (targets first). */
+/** Tax added to the price takes the picked tax's rate in the form — only where the store adds tax on top. */
+export const TAX_ADDED_FILL = { from: 'taxRate', formula: 'rate' };
+
 export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'outlet',
@@ -261,7 +264,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					pickerDetails: ['rate'],
 					fillFrom: { from: 'category', formula: 'taxRate' },
 				},
-				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Set by the store: the item’s rate (its own, else the default) when tax is added on top; 0 when the price already includes it' },
+				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Not typed: the rate of the Tax / VAT above (its own, else the category’s) when tax is added on top; 0 when the price already includes it', ...(a.pos.tax.mode === 'added' && { fillFrom: TAX_ADDED_FILL }) },
 				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
 				{ key: 'trackStock', label: 'Track stock', kind: 'boolean', default: a.products.trackStock },
 				{
@@ -323,7 +326,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					pickerDetails: ['rate'],
 					fillFrom: { from: 'product', formula: 'taxRate' },
 				},
-				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Set by the store, like the product’s' },
+				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Not typed: the rate of the Tax / VAT above, like the product’s', ...(a.pos.tax.mode === 'added' && { fillFrom: TAX_ADDED_FILL }) },
 				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
 				{ key: 'image', label: 'Image', kind: 'image', helper: 'Shown instead of the product’s pictures when this variant is picked' },
 				{ key: 'active', label: 'Sold', kind: 'boolean', default: true },

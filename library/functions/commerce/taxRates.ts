@@ -2,6 +2,7 @@ import ModelDefinition from '../../models/builder/modelDefinition.model.js';
 import { Store } from './store.js';
 import { formulasOfPage } from '../automations.function.js';
 import { recalculateFormulas } from '../formula.function.js';
+import { TAX_ADDED_FILL } from './blueprint.js';
 
 /**
  * The tax an item carries, by the till's own rule (docs/ecommerce/TAX_AUTOMATIONS.md TX4): the variant's tax,
@@ -73,18 +74,31 @@ const PRICE_LABELS: Record<string, string> = { added: 'Price after tax', inclusi
  * renewed — one the owner renamed stays. Called after Store settings are saved, and by the upgrade.
  */
 export const relabelPriceColumns = async (req: any, store: Store, { apply = true } = {}) => {
-	const want = PRICE_LABELS[store.answers?.pos?.tax?.mode || 'none'];
+	const mode = store.answers?.pos?.tax?.mode || 'none';
+	const want = PRICE_LABELS[mode];
 	const known = Object.values(PRICE_LABELS);
 	const done: string[] = [];
 	for (const key of ['product', 'variant'] as const) {
 		const id = store.installed[key]?.id;
 		const def: any = id && (await ModelDefinition.findById(id).lean());
 		const f = def?.fields?.find((x: any) => x.key === 'priceAfterTax');
-		if (!f || f.label === want || !known.includes(f.label)) continue;
-		done.push(`${def.title}: “${f.label}” → “${want}”`);
+		const relabel = !!f && f.label !== want && known.includes(f.label);
+		// The form fills "Tax added" from the picked tax only where tax is added on top.
+		const tax = def?.fields?.find((x: any) => x.key === 'taxAdded');
+		const refill = !!tax && !!tax.fillFrom?.from !== (mode === 'added');
+		if (!relabel && !refill) continue;
+		if (relabel) done.push(`${def.title}: “${f.label}” → “${want}”`);
+		if (refill) done.push(`${def.title}: Tax added ${mode === 'added' ? 'fills from' : 'no longer fills from'} the picked tax`);
 		if (!apply) continue;
 		const { updateModelCore } = await import('../../controllers/builder/models.controller.js');
-		const fields = def.fields.map((x: any) => (x.key === 'priceAfterTax' ? { ...x, label: want } : x));
+		const fields = def.fields.map((x: any) => {
+			if (relabel && x.key === 'priceAfterTax') return { ...x, label: want };
+			if (refill && x.key === 'taxAdded') {
+				const { fillFrom: _gone, ...rest } = x;
+				return mode === 'added' ? { ...rest, fillFrom: TAX_ADDED_FILL } : rest;
+			}
+			return x;
+		});
 		await updateModelCore(req, def._id, { ...def, fields }, { note: 'The price column follows the tax mode' });
 	}
 	return done;
