@@ -453,3 +453,8 @@
 ## 2026-11-02 — Discount answers
 - The user: Sale price beside Price (Price never changed); the bigger discount wins, never combined; a start date as well as the end date; a discount whose end date has passed can't be turned on; collections on the website only (no POS fields or chips); coupons work out from the discounted price by default, or the original price — a Store setting (*Coupons apply to*, DS15).
 - `DISCOUNTS.md` updated: DS3, DS7, DS8, DS15, DS16, EC-41, EC-45, tests, §7 answers. Ready to build from EC-41 / EC-42.
+
+## 2026-11-02 — EC-40 Built stores + docs
+- `upgradeStores.js --apply` run on production with the user's go-ahead: Verte got `taxAdded`, the new Price after tax formula, the four tax system automations and the one-time reprice (`tax-prices`); a second dry run says up to date. The Heroku backend is not deployed yet, so the live store does not react to tax changes until it is.
+- mint-docs store guide: new “Tax and prices” section, Category's Tax / VAT row, variants and POS tax rows. Website changelog entry. Admin /docs has no store pages.
+- Not built: the category form note “Saving gives this tax to N products”, and the Price after tax column label per tax mode.

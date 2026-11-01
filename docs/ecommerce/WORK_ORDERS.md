@@ -41,7 +41,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-37 | Store tax automations A1–A3 (category → products, product category → tax, tax rate → prices) in the wizard; category form note | backend + mint-tenant | M | **done 2026-11-02** except the category form note (TX6) — see CHANGELOG (not deployed) |
 | EC-38 | Price after tax by the till’s rule (mode-aware, default rate, engine-owned) | backend + mint-tenant | M | **backend done 2026-11-02** (not deployed); panel column label per mode not done |
 | EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | **done 2026-11-02** (not deployed); inactive notice dropped — an inactive tax now holds nothing |
-| EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | planned 2026-11-01 |
+| EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | **done 2026-11-02**: Verte upgraded on prod (backend not deployed); store guide “Tax and prices”, website changelog; admin /docs has no store pages |
 | EC-41 | Collections: model, product ★Collections (many), collection page Products tab, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + mint-docs | M | planned 2026-11-02 |
 | EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | planned 2026-11-02 |
 | EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | planned 2026-11-02 |
