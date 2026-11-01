@@ -81,6 +81,7 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   POST /deliveries/settle  { deliveries: [ids], ref? }   marked paid out by the courier (RedX, manual)   records:edit
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  */
+import { replaceTax, taxUsage, usageText } from '../library/functions/commerce/taxUse.js';
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
 
@@ -303,6 +304,26 @@ router.post(
 	handle(async (req: any) => closeShift(await storeOf(), req.params.id, req.body || {}, actorName(req)))
 );
 
+/** A tax in use (TX5): who holds it, and moving them all to another tax. */
+router.get(
+	'/taxes/:id/usage',
+	view,
+	handle(async (req: any) => {
+		const store = await storeOf();
+		const usage = await taxUsage(store, req.params.id);
+		const tax: any = await store.M('taxRate').findById(req.params.id, { name: 1, status: 1 }).lean();
+		return { usage, text: usage.total ? usageText(usage) : '', inactive: tax?.status === 'inactive' };
+	})
+);
+router.post(
+	'/taxes/:id/replace',
+	edit,
+	handle(async (req: any) => {
+		const moved = await replaceTax(await storeOf(), req.params.id, req.body?.to);
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Tax rates', text: `moved ${moved} record${moved === 1 ? '' : 's'} to another tax` });
+		return { moved };
+	})
+);
 router.get(
 	'/couriers',
 	manage,

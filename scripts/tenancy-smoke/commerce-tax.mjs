@@ -127,6 +127,27 @@ if (base) {
 	ok('inclusive store: the price already holds the tax (100)', (await get('product', nt._id)).priceAfterTax === 100, String((await get('product', nt._id)).priceAfterTax));
 }
 
+// A tax in use can't be deleted; Replace with… moves everything and prices follow.
+const use = await add('taxRate', { name: 'Use', rate: 8, status: 'active' });
+const uc = await add('category', { name: 'Used', taxRate: use._id });
+const up = await add('product', { name: 'Used thing', category: uc._id, price: 100 });
+await sleep(2500);
+r = await call('GET', `${C}/taxes/${use._id}/usage`, null, t);
+ok('usage counts: 1 category, 1 product, its 1 variant', r.body?.usage?.categories === 1 && r.body?.usage?.products === 1 && r.body?.usage?.variants === 1 && /Used by 1 product, 1 category and 1 variant/.test(r.body?.text), JSON.stringify(r.body));
+r = await call('DELETE', `${P}/${inst.taxRate.route}/${use._id}`, null, t);
+ok('delete refused (409 tax_in_use) with counts', r.status === 409 && r.body?.code === 'tax_in_use' && /Used by/.test(r.body?.message), `${r.status} ${r.body?.message}`);
+r = await call('POST', `${P}/${inst.taxRate.route}/bulk/delete`, { ids: [use._id] }, t);
+ok('bulk delete refused too', r.status === 409, String(r.status));
+r = await call('POST', `${C}/taxes/${use._id}/replace`, { to: off._id }, t);
+ok('can’t move to an inactive tax', r.status === 400, `${r.status} ${r.body?.message}`);
+r = await call('POST', `${C}/taxes/${use._id}/replace`, { to: vat5._id }, t);
+ok('replace moves them', r.status === 200 && r.body?.moved >= 2, JSON.stringify(r.body));
+await sleep(2500);
+const upx = await get('product', up._id);
+ok('…they hold the new tax (the store is inclusive by now: price 100)', idOf(upx.taxRate) === idOf(vat5._id) && upx.priceAfterTax === 100, `${idOf(upx.taxRate)} ${upx.priceAfterTax}`);
+r = await call('DELETE', `${P}/${inst.taxRate.route}/${use._id}`, null, t);
+ok('now it can be deleted', r.status === 200, `${r.status} ${r.body?.message}`);
+
 // A1 switched off → changing a category's tax touches no product.
 r = await call('PATCH', `${P}/automations/${a1._id}`, { enabled: false }, t);
 ok('A1 switched off', r.status === 200 && r.body?.enabled === false);

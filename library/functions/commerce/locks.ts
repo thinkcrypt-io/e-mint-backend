@@ -5,6 +5,7 @@ import { ModelKey, modelSpecs, ModelSpec } from './blueprint.js';
 import { commerceView } from './settings.js';
 import { storeOf } from './store.js';
 import { codeTaken } from './catalogue.js';
+import { taxUsage, usageText } from './taxUse.js';
 
 /**
  * Plain record saves on a store's models (docs/ecommerce EC5): money and stock
@@ -99,6 +100,20 @@ export const commerceGuard = async (req: any, res: any, next: any) => {
 		// Variants are made from a product's options while variations are on; off, each product has its own.
 		if (key === 'variant' && req.method === 'POST' && (sub === '/' || sub === '') && !view.answers.products.variations)
 			return res.status(403).json({ message: 'Variations are off — each product is sold as itself. Switch them on in Store settings.', code: 'commerce_field' });
+
+		// A tax that categories, products or variants hold can't be deleted — they would fall to the default rate.
+		if (key === 'taxRate' && ((req.method === 'DELETE' && ID.test(rest[0] || '')) || (req.method === 'POST' && sub === '/bulk/delete'))) {
+			const ids: string[] = req.method === 'DELETE' ? [rest[0]] : (Array.isArray(body.ids) ? body.ids : []).map(String).filter((x: string) => ID.test(x));
+			const store = await storeOf();
+			for (const taxId of ids) {
+				const usage = await taxUsage(store, taxId);
+				if (usage.total) {
+					const name = (await store.M('taxRate').findById(taxId, { name: 1 }).lean())?.name || 'This tax';
+					return res.status(409).json({ message: `${name} can’t be deleted. ${usageText(usage)} — move them to another tax first.`, code: 'tax_in_use', usage, tax: taxId });
+				}
+			}
+			return next();
+		}
 
 		// SKUs and barcodes name one item each: the POS finds an item by them.
 		if (saving && (key === 'product' || key === 'variant')) {

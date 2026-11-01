@@ -15,7 +15,7 @@ const KEYS = ['category', 'product', 'variant'] as const;
 const same = (a: any, b: any) => String(a?._id ?? a ?? '') === String(b?._id ?? b ?? '');
 
 /** Sets `taxRate` on records (only those still holding `from`), works their formulas out, logs it. Returns the ids changed. */
-const move = async (store: Store, key: (typeof KEYS)[number], ids: any[], from: any, to: any, actor: string) => {
+export const move = async (store: Store, key: (typeof KEYS)[number], ids: any[], from: any, to: any, actor: string) => {
 	if (!store.installed[key] || !ids.length) return [];
 	const Model = store.M(key);
 	const docs: any[] = await Model.find({ _id: { $in: ids } });
