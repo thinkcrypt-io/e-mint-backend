@@ -8,7 +8,7 @@ import TenantProject from '../models/tenancy/tenantProject.model.js';
 import MailMessage from '../models/tenancy/mailMessage.model.js';
 import { currentScope, runInScope } from './tenantScope.function.js';
 import { scopedModel, displayModelName } from './routeRegistry.function.js';
-import { REFERENCE_KINDS, displayFieldOf } from './dynamicModels.function.js';
+import { REFERENCE_KINDS, displayFieldOf, generateSettings, makeTargetLookup } from './dynamicModels.function.js';
 import { LOCK_OPS, meets } from './fieldLocks.function.js';
 import { TenancyError, projectPeople } from './tenancy.function.js';
 import { notifyTenant, projectHrefFor } from './tenantNotify.function.js';
@@ -21,6 +21,9 @@ import { printRecords } from '../controllers/pdfTemplates/exportTemplate.control
 import { resources, resolveOther } from '../controllers/builder/viewDocument.controller.js';
 import { signWebhook, webhookUrlProblem, webhookRecord } from './webhooks.function.js';
 import { recordHistory } from './recordHistory.function.js';
+import { getActiveSettings } from './resolveRoute.function.js';
+import { dataToSettings } from './routeRegistry.function.js';
+import { applyFormulasLinked, formulasOf } from './formula.function.js';
 
 /**
  * Automations (docs/automations): after a record of a page is created,
@@ -45,6 +48,9 @@ const MAX_TYPED_EMAILS = 10;
 /** PDFs an email can attach — each printed for the record. */
 const MAX_ATTACHMENTS = 3;
 const MAX_TARGETS = 20;
+/** Records one "update the records that pick this one" action may change in a run, written in batches. */
+const MAX_LINKED = 5000;
+const LINKED_BATCH = 200;
 const TIMEOUT_MS = 10_000;
 
 const tenantUrl = () => String(process.env.TENANT_FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
@@ -78,6 +84,7 @@ const actionLabel: Record<string, string> = {
 	email: 'Send an email',
 	webhook: 'Call a webhook',
 	update: 'Update a record',
+	updateLinked: 'Update the records that pick this one',
 	create: 'Create a record',
 };
 
@@ -345,6 +352,27 @@ const checkSet = (source: Def, target: Def, set: any, on: string, label: string,
 	});
 };
 
+/** Conditions on a page's fields (`when`): each a field of the page and a way to compare. */
+const checkWhen = (def: Def, input: any, on: string, word: string) => {
+	const when = (Array.isArray(input) ? input : []).map((c: any, i: number) => {
+		if (!c?.field || (!def.fields.some((f: any) => f.key === c.field) && !['createdAt', 'updatedAt', 'code'].includes(c.field)))
+			throw invalid(`${word} ${i + 1}: choose a field of ${nounOf(def)}`, `${on}.${i}.field`);
+		if (!(LOCK_OPS as readonly string[]).includes(c.op)) throw invalid(`${word} ${i + 1}: choose how to compare`, `${on}.${i}.op`);
+		return { field: String(c.field), op: c.op, ...(c.value !== undefined && { value: c.value }) };
+	});
+	if (when.length > 20) throw invalid('At most 20 conditions', on);
+	return when;
+};
+
+/** The formula fields of a page, from its published settings — a bare doc.save() runs none. */
+export const formulasOfPage = async (def: Def) => {
+	const published: any = await getActiveSettings(def.route);
+	if (published?.data) return formulasOf(dataToSettings(published.data));
+	// Never published from the builder: its settings as the model generates them (a project's models link only within it).
+	const defs: any[] = await ModelDefinition.find({}).lean();
+	return formulasOf(generateSettings(def as any, makeTargetLookup(null, defs)));
+};
+
 const checkPeople = async (ids: any, on: string, label: string) => {
 	if (ids === undefined) return [];
 	if (!Array.isArray(ids)) throw invalid(`${label}: choose people from the project`, on);
@@ -397,13 +425,7 @@ export const checkAutomation = async (body: any) => {
 	const changed = [...new Set<string>((Array.isArray(body.changed) ? body.changed : []).map(String))];
 	for (const c of changed) if (!def.fields.some((f: any) => f.key === c)) throw invalid(`“${c}” isn’t a field of ${nounOf(def)}`, 'changed');
 
-	const when = (Array.isArray(body.when) ? body.when : []).map((c: any, i: number) => {
-		if (!c?.field || !def.fields.some((f: any) => f.key === c.field) && !['createdAt', 'updatedAt', 'code'].includes(c.field))
-			throw invalid(`Condition ${i + 1}: choose a field of ${nounOf(def)}`, `when.${i}.field`);
-		if (!(LOCK_OPS as readonly string[]).includes(c.op)) throw invalid(`Condition ${i + 1}: choose how to compare`, `when.${i}.op`);
-		return { field: String(c.field), op: c.op, ...(c.value !== undefined && { value: c.value }) };
-	});
-	if (when.length > 20) throw invalid('At most 20 conditions', 'when');
+	const when = checkWhen(def, body.when, 'when', 'Condition');
 
 	const actionsIn = Array.isArray(body.actions) ? body.actions : [];
 	if (!actionsIn.length) throw invalid('Add at least one action', 'actions');
@@ -475,6 +497,22 @@ export const checkAutomation = async (body: any) => {
 				targetDef = refDef;
 			} else if (on.length === 1 && on[0] === 'delete') throw invalid(`${label}: a deleted record can’t be updated — choose a linked record`, `${at}.target`);
 			actions.push({ type: 'update', target, set: checkSet(def, targetDef, a.set, `${at}.set`, label, links) });
+		} else if (a.type === 'updateLinked') {
+			if (on.length === 1 && on[0] === 'delete') throw invalid(`${label}: a deleted record has nothing to hand down`, `${at}.route`);
+			const r = String(a.route || '').toLowerCase();
+			const p = r ? await pageOf(r) : null;
+			if (!p) throw invalid(`${label}: choose the page whose records pick this one`, `${at}.route`);
+			const via = p.def.fields.find((x: any) => x.key === a.via && REFERENCE_KINDS.includes(x.kind) && x.ref);
+			if (!via || displayModelName(String(via.ref)) !== displayModelName(def.name))
+				throw invalid(`${label}: choose the field of ${nounOf(p.def)} that picks ${nounOf(def)}`, `${at}.via`);
+			actions.push({
+				type: 'updateLinked',
+				route: r,
+				via: via.key,
+				set: checkSet(def, p.def, a.set, `${at}.set`, label, links),
+				when: checkWhen(p.def, a.when, `${at}.when`, 'Condition'),
+				match: a.match === 'any' ? 'any' : 'all',
+			});
 		} else if (a.type === 'create') {
 			const r = String(a.route || '').toLowerCase();
 			const p = r ? await pageOf(r) : null;
@@ -698,17 +736,63 @@ const doUpdate = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	const what = values.map((v: any) => `${targetDef.fields.find((f: any) => f.key === v.field)?.label || v.field} → ${v.clear ? '(empty)' : show({ ...ctx, def: targetDef }, v.field, v.value) || '(empty)'}`).join(', ');
 	if (args.dry) return { type: 'update', ok: true, detail: `Would update ${ids.length} ${nounOf(targetDef)}: ${what}` };
 	let done = 0;
+	const formulas = await formulasOfPage(targetDef);
 	for (const id of ids) {
 		const doc: any = await Target.findById(id);
 		if (!doc) continue;
 		const before = doc.toObject();
 		for (const v of values) doc.set(v.field, v.clear ? undefined : v.value);
+		await applyFormulasLinked(doc, formulas);
 		await doc.save();
 		done++;
 		const changes = changesOf(targetDef, before, doc.toObject(), values.map((v: any) => v.field));
 		recordHistory({ req: actingReq(args.automation), action: 'update', model: Target.modelName, doc, changes, modelPath: targetDef.route });
 	}
 	return { type: 'update', ok: true, detail: `Updated ${done} ${nounOf(targetDef)}: ${what}` };
+};
+
+/** Writes `values` to a record the way "update a record" does: formulas worked out, saved, History by the automation. Returns whether anything changed. */
+const writeRecord = async (Target: mongoose.Model<any>, targetDef: Def, doc: any, values: any[], formulas: any[], automation: any) => {
+	const before = doc.toObject();
+	for (const v of values) doc.set(v.field, v.clear ? undefined : v.value);
+	const fields = [...values.map((v: any) => v.field), ...formulas.filter((f: any) => !f.sub).map((f: any) => f.key)];
+	await applyFormulasLinked(doc, formulas);
+	const changes = changesOf(targetDef, before, doc.toObject(), fields);
+	if (!changes.length) return false;
+	await doc.save();
+	recordHistory({ req: actingReq(automation), action: 'update', model: Target.modelName, doc, changes, modelPath: targetDef.route });
+	return true;
+};
+
+/** "Update the records that pick this one": every record of a page whose `via` field picks this record, in batches. */
+const doUpdateLinked = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
+	if (args.event === 'delete') throw new Error('The record was deleted — there’s nothing to hand down');
+	const page = await pageOf(a.route);
+	if (!page) throw new Error('The page whose records pick this one is gone');
+	const values = a.set.map((s: any) => ({ field: s.field, value: valueOf(ctx, s), clear: !!s.clear }));
+	const what = values.map((v: any) => `${page.def.fields.find((f: any) => f.key === v.field)?.label || v.field} → ${v.clear ? '(empty)' : show({ ...ctx, def: page.def }, v.field, v.value) || '(empty)'}`).join(', ');
+	const noun = nounOf(page.def);
+	const filter = { [a.via]: ctx.doc._id };
+	const matches = (d: any) => !a.when?.length || meets(d, a.when, a.match || 'all');
+	if (args.dry) {
+		let n = 0;
+		for await (const d of page.Model.find(filter).limit(MAX_LINKED).lean().cursor()) if (matches(d)) n++;
+		return { type: 'updateLinked', ok: true, detail: `Would update ${n} ${noun}${n === 1 ? '' : 's'} that pick this one: ${what}` };
+	}
+	const formulas = await formulasOfPage(page.def);
+	let seen = 0;
+	let changed = 0;
+	let after: any = null;
+	while (seen < MAX_LINKED) {
+		const batch: any[] = await page.Model.find(after ? { ...filter, _id: { $gt: after } } : filter).sort({ _id: 1 }).limit(LINKED_BATCH);
+		if (!batch.length) break;
+		for (const doc of batch) {
+			seen++;
+			if (matches(doc.toObject()) && (await writeRecord(page.Model, page.def, doc, values, formulas, args.automation))) changed++;
+		}
+		after = batch[batch.length - 1]._id;
+	}
+	return { type: 'updateLinked', ok: true, detail: `Updated ${changed} ${noun}${changed === 1 ? '' : 's'} that pick this one: ${what}${seen >= MAX_LINKED ? ` (stopped at ${MAX_LINKED})` : ''}` };
 };
 
 const doCreate = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
@@ -729,6 +813,7 @@ const RUNNERS: Record<string, (ctx: Ctx, a: any, args: RunArgs) => Promise<Step>
 	email: doEmail,
 	webhook: doWebhook,
 	update: doUpdate,
+	updateLinked: doUpdateLinked,
 	create: doCreate,
 };
 
@@ -876,3 +961,23 @@ export const dryRun = async (automation: any, recordId: string, event = 'update'
 };
 
 export const newAutomationSecret = () => `whsec_${crypto.randomBytes(24).toString('hex')}`;
+
+/**
+ * Puts a system automation in (docs/ecommerce/TAX_AUTOMATIONS.md TX1) — checked like any other, then marked so
+ * people can switch it on and off but never edit or delete it. Found by `key`: an existing one is renewed (its
+ * on/off switch kept), so an upgrade can improve it. Returns 'added', 'renewed' or 'same'.
+ */
+export const saveSystemAutomation = async (system: string, key: string, body: any, { apply = true } = {}) => {
+	const checked = await checkAutomation(body);
+	const current: any = await Automation.findOne({ key }).lean();
+	if (current && JSON.stringify({ n: current.name, d: current.description, r: current.route, o: current.on, c: current.changed, w: current.when, m: current.match, a: current.actions }) ===
+		JSON.stringify({ n: checked.name, d: checked.description, r: checked.route, o: checked.on, c: checked.changed, w: checked.when, m: checked.match, a: checked.actions })) return 'same';
+	if (!apply) return current ? 'renewed' : 'added';
+	if (current) {
+		const { enabled, ...rest } = checked;
+		await Automation.updateOne({ _id: current._id }, { $set: { ...rest, system, key } });
+		return 'renewed';
+	}
+	await Automation.create({ ...checked, system, key, secret: newAutomationSecret() });
+	return 'added';
+};

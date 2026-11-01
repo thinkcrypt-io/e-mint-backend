@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { Store } from './store.js';
 import { isId } from './catalogue.js';
-import { getActiveSettings } from '../resolveRoute.function.js';
-import { dataToSettings } from '../routeRegistry.function.js';
-import { formulasOf, recalculateFormulas } from '../formula.function.js';
+import ModelDefinition from '../../models/builder/modelDefinition.model.js';
+import { formulasOfPage } from '../automations.function.js';
+import { recalculateFormulas } from '../formula.function.js';
 import { diffFields, recordHistory } from '../recordHistory.function.js';
 
 /**
@@ -18,9 +18,8 @@ const same = (a: any, b: any) => String(a?._id ?? a ?? '') === String(b?._id ?? 
 
 /** The formula fields of a store model, from its published settings (what its form and API apply). */
 const formulasFor = async (store: Store, key: 'product' | 'variant') => {
-	const route = store.installed[key]?.route;
-	const published: any = route && (await getActiveSettings(route));
-	return published?.data ? formulasOf(dataToSettings(published.data)) : [];
+	const def: any = await ModelDefinition.findOne({ route: store.installed[key]?.route }).lean();
+	return def ? formulasOfPage(def) : [];
 };
 
 const ACTOR = { user: { name: 'Store: category tax' } };

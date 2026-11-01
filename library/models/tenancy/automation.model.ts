@@ -8,13 +8,17 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  * library/functions/automations.function.ts. Scoped to the project.
  */
 export const AUTOMATION_EVENTS = ['create', 'update', 'delete'] as const;
-export const ACTION_TYPES = ['notify', 'email', 'webhook', 'update', 'create'] as const;
+export const ACTION_TYPES = ['notify', 'email', 'webhook', 'update', 'updateLinked', 'create'] as const;
 
 const schema = new Schema<any>(
 	{
 		name: { type: String, required: true, trim: true, maxlength: 80 },
 		description: { type: String, trim: true, maxlength: 300 },
 		enabled: { type: Boolean, default: true },
+		/** Installed by the platform (docs/ecommerce/TAX_AUTOMATIONS.md TX1): 'commerce' for a store's. Can be switched on and off, never edited or deleted by people. */
+		system: { type: String, trim: true },
+		/** A system automation's name for itself ('tax.category-to-products'), so an upgrade finds it. */
+		key: { type: String, trim: true },
 		/** The page whose records start it. */
 		route: { type: String, required: true, trim: true, lowercase: true },
 		on: { type: [{ type: String, enum: AUTOMATION_EVENTS }], default: ['create'] },
@@ -41,6 +45,7 @@ const schema = new Schema<any>(
 );
 
 schema.index({ route: 1, enabled: 1 });
+schema.index({ key: 1 }, { sparse: true });
 schema.plugin(tenantScoped);
 
 export default mongoose.model<any>('Automation', schema, 'automations');

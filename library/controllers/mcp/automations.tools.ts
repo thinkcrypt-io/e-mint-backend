@@ -42,6 +42,8 @@ const actionText = (a: any, people: Map<string, string>) => {
 			return `Call ${a.url}`;
 		case 'update':
 			return `Update ${a.target === 'this' ? 'this record' : `the linked ${a.target}`}: ${(a.set || []).map((s: any) => s.field).join(', ')}`;
+		case 'updateLinked':
+			return `Update the ${a.route} records whose ${a.via} picks this one: ${(a.set || []).map((s: any) => s.field).join(', ')}`;
 		case 'create':
 			return `Create a record in ${a.route}: ${(a.set || []).map((s: any) => s.field).join(', ')}`;
 		default:
@@ -53,7 +55,7 @@ const line = (a: any, titles: Map<string, string>, people: Map<string, string>) 
 	const when = (a.on || []).map((e: string) => (e === 'update' && a.changed?.length ? `changed (${a.changed.join(', ')})` : EVENT_WORD[e])).join(' or ');
 	const conds = a.when?.length ? `; only if ${a.when.map(condText).join(a.match === 'any' ? ' or ' : ' and ')}` : '';
 	const stats = a.stats ? `; ${a.stats.runs || 0} runs, ${a.stats.failures || 0} failed` : '';
-	return `- ${a.enabled === false ? '(off) ' : ''}“${a.name}” — when a ${titles.get(a.route) || a.route} record is ${when}${conds} → ${(a.actions || []).map((x: any) => actionText(x, people)).join('; ')}${stats} [id ${a._id}]`;
+	return `- ${a.enabled === false ? '(off) ' : ''}${a.system ? '(system — on/off only) ' : ''}“${a.name}” — when a ${titles.get(a.route) || a.route} record is ${when}${conds} → ${(a.actions || []).map((x: any) => actionText(x, people)).join('; ')}${stats} [id ${a._id}]`;
 };
 
 const view = (a: any) => ({
@@ -61,6 +63,7 @@ const view = (a: any) => ({
 	name: a.name,
 	description: a.description || '',
 	enabled: a.enabled !== false,
+	...(a.system && { system: a.system, key: a.key }),
 	route: a.route,
 	on: a.on || [],
 	changed: a.changed || [],
@@ -111,6 +114,9 @@ const saveAutomation = async (req: any, args: any, caller: Caller): Promise<Out>
 	if (args?.id) {
 		current = isId(args.id) ? await Automation.findById(String(args.id)).lean() : null;
 		if (!current) return refuse(`No automation ${args.id} — list_automations shows them.`);
+		// A system automation (installed by the platform) can only be switched on or off.
+		if (current.system && Object.keys(args).some(k => !['id', 'enabled'].includes(k) && args[k] !== undefined))
+			return refuse(`“${current.name}” is a system automation — only its on/off switch can be changed (save_automation with { id, enabled }).`);
 	}
 	// Changing one: what's left out is kept, so { id, enabled: false } just turns it off.
 	const keys = ['name', 'description', 'route', 'on', 'changed', 'when', 'match', 'actions', 'enabled'];
@@ -197,6 +203,7 @@ const automationRuns = async (_req: any, args: any, _caller: Caller): Promise<Ou
 const deleteAutomation = async (req: any, args: any, _caller: Caller): Promise<Out> => {
 	const a: any = isId(args?.id) ? await Automation.findById(String(args.id)).lean() : null;
 	if (!a) return refuse(`No automation ${args?.id ?? ''} — list_automations shows them.`);
+	if (a.system) return refuse(`“${a.name}” is a system automation — it can be switched off, not deleted.`);
 	await Automation.deleteOne({ _id: a._id });
 	await AutomationRun.deleteMany({ automation: a._id });
 	recordProjectEvent({ req, action: 'delete', model: 'Automation', modelPath: 'automations', document: a._id, name: a.name, text: `deleted the automation “${a.name}” through the AI` });
@@ -255,8 +262,11 @@ const ACTION = {
 		attach: { type: 'array', items: { type: 'string' }, description: 'email: up to 3 published PDF template ids of the page, printed for the record and attached' },
 		url: { type: 'string', description: 'webhook: the https:// address it posts the record to (signed with the automation’s secret)' },
 		target: { type: 'string', description: 'update: "this" (the record), or a reference field’s key (the record it links to)' },
-		route: { type: 'string', description: 'create: the route of the page to add a record to' },
-		set: { ...SET, description: 'update / create: the fields it sets' },
+		route: { type: 'string', description: 'create: the route of the page to add a record to; updateLinked: the route of the page whose records pick this one' },
+		via: { type: 'string', description: 'updateLinked: the reference field on that page that points at this record' },
+		when: { type: 'array', items: CONDITION, description: 'updateLinked: only the records that meet these conditions' },
+		match: { type: 'string', enum: ['all', 'any'], description: 'updateLinked: how its conditions combine' },
+		set: { ...SET, description: 'update / updateLinked / create: the fields it sets' },
 	},
 };
 

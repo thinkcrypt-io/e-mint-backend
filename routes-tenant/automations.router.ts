@@ -25,6 +25,8 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   POST   /:id/test            { record, event }   a dry run on a record — nothing sent or written
  *   DELETE /:id
  *
+ * System automations (`system`, `key` — a store's tax automations) answer 403 to PUT and DELETE: PATCH {enabled} is all people can do.
+ *
  * Runs carry `emails`: what each run's email actions sent (to, status,
  * error, resent), newest attempt kept on the failed one.
  *
@@ -41,6 +43,8 @@ const view = (a: any, withSecret = false) => ({
 	name: a.name,
 	description: a.description || '',
 	enabled: a.enabled !== false,
+	system: a.system || '',
+	key: a.key || '',
 	route: a.route,
 	on: a.on || [],
 	changed: a.changed || [],
@@ -81,6 +85,11 @@ const load = async (id: any, secret = false) => {
 	const a: any = await (secret ? q.select('+secret') : q).lean();
 	if (!a) throw new TenancyError(404, 'Automation not found');
 	return a;
+};
+
+/** A system automation (installed by the platform) can only be switched on and off. */
+const notSystem = (a: any, what: string) => {
+	if (a.system) throw new TenancyError(403, `“${a.name}” is a system automation — you can switch it on or off, but not ${what}`, 'system_automation');
 };
 
 const limitOf = (v: any, d = 50) => Math.min(Math.max(parseInt(String(v), 10) || d, 1), 200);
@@ -148,6 +157,7 @@ router.put(
 	'/:id',
 	handle(async req => {
 		const a: any = await load(req.params.id);
+		notSystem(a, 'change it');
 		const body = await checkAutomation(req.body);
 		await Automation.updateOne({ _id: a._id }, { $set: { ...body, updatedBy: req.user._id } });
 		recordProjectEvent({ req, model: 'Automation', modelPath: 'automations', document: a._id, name: body.name, text: `changed the automation “${body.name}”` });
@@ -178,6 +188,7 @@ router.delete(
 	'/:id',
 	handle(async req => {
 		const a: any = await load(req.params.id);
+		notSystem(a, 'delete it');
 		await Automation.deleteOne({ _id: a._id });
 		await AutomationRun.deleteMany({ automation: a._id });
 		recordProjectEvent({ req, action: 'delete', model: 'Automation', modelPath: 'automations', document: a._id, name: a.name, text: `deleted the automation “${a.name}”` });
