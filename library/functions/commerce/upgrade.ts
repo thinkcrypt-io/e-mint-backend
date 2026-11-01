@@ -19,6 +19,7 @@ import { applyAllCategoryTaxes } from './categoryTax.js';
 import { rebuildPurchases } from './purchases.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
+import { ensureTaxAutomations } from './taxAutomations.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -336,6 +337,9 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (apply) await CommerceSettings.updateOne({}, { $addToSet: { doneOnce: 'category-tax' } });
 		if (n) changes.push({ model: 'Products', added: [], renewed: [], filled: [`${n} product${n === 1 ? '' : 's'} ${apply ? 'took' : 'would take'} their category’s tax`] });
 	}
+	// The tax automations (EC-37): a category's tax to its products, a product's category to its tax, a product's tax to its variants.
+	const taxMade = await ensureTaxAutomations(((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed, { apply });
+	if (taxMade.length) changes.push({ model: 'Automations', added: [], renewed: [], filled: taxMade });
 	// Deliveries' two emails, off until the owner turns them on (docs/couriers CR-14).
 	const installedNow: any = ((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed;
 	const mails = await ensureDeliveryAutomations(installedNow, { apply });

@@ -40,6 +40,14 @@ const p2 = await add('product', { name: 'Mutton', category: cat._id, price: 200,
 const p3 = await add('product', { name: 'Soap', category: other._id, price: 50 });
 ok('no tax on the category: products have none, Price after tax = price', !p1?.taxRate && (await get('product', p1._id)).priceAfterTax === 100, JSON.stringify(await get('product', p1._id)).slice(0, 200));
 
+// The store's tax automations are there, on, and locked.
+r = await call('GET', `${P}/automations`, null, t);
+const sys = (r.body?.doc || []).filter(a => a.system === 'commerce');
+ok('three system automations, all on', sys.length === 3 && sys.every(a => a.enabled), JSON.stringify(sys.map(a => a.key)));
+r = await call('PUT', `${P}/automations/${sys[0]?._id}`, sys[0], t);
+ok('…and locked (403)', r.status === 403, String(r.status));
+const a1 = sys.find(a => a.key === 'tax.category-to-products');
+
 // Category tax set → its products take it, Price after tax follows.
 r = await edit('category', cat._id, { taxRate: vat15._id });
 ok('category tax saved', r.status === 200, JSON.stringify(r.body).slice(0, 160));
@@ -55,7 +63,7 @@ ok('a product in another category is untouched', !c.taxRate && c.priceAfterTax =
 // History names the store as the actor.
 r = await call('GET', `${P}/history?search=Beef`, null, t);
 const lines = (r.body?.doc || r.body?.docs || []).map(h => `${h.userName}: ${h.text}`);
-ok('History: “Store: category tax” changed the product', lines.some(l => l.startsWith('Store: category tax') && /Beef/.test(l)), JSON.stringify(lines).slice(0, 300));
+ok('History: the automation changed the product', lines.some(l => l.startsWith('Automation “Category tax → its products”') && /Beef/.test(l)), JSON.stringify(lines).slice(0, 300));
 
 // Changed to a lower tax: products follow again.
 r = await edit('category', cat._id, { taxRate: vat5._id });
@@ -64,16 +72,33 @@ a = await get('product', p1._id);
 b = await get('product', p2._id);
 ok('tax 15% → 5%: 105 and 210', a.priceAfterTax === 105 && b.priceAfterTax === 210, `${a.priceAfterTax} ${b.priceAfterTax}`);
 
-// An inactive tax is not handed down.
-r = await edit('category', cat._id, { taxRate: off._id });
+// A variant follows its product's tax (A4); a product moved to a category with a tax takes it (A2).
+await edit('product', p2._id, { taxRate: vat15._id });
+await sleep(2500);
+r = await call('GET', `${P}/${inst.variant.route}?product=${p2._id}`, null, t);
+const vs = (r.body?.doc || []).filter(v => idOf(v.product) === idOf(p2._id));
+ok('product tax → its variants (A4)', vs.length > 0 && vs.every(v => idOf(v.taxRate) === idOf(vat15._id)), JSON.stringify([idOf(vat15._id), idOf(vat5._id), vs.map(v => [idOf(v.taxRate), v.price, v.priceAfterTax])]));
+r = await edit('category', other._id, { taxRate: vat15._id });
 await sleep(2000);
-a = await get('product', p1._id);
-ok('an inactive tax is not handed down', idOf(a.taxRate) === idOf(vat5._id) && a.priceAfterTax === 105, `${idOf(a.taxRate)} ${a.priceAfterTax}`);
+c = await get('product', p3._id);
+ok('a category given a tax hands it to its product too', idOf(c.taxRate) === idOf(vat15._id) && c.priceAfterTax === 57.5, `${idOf(c.taxRate)} ${c.priceAfterTax}`);
+r = await edit('product', p3._id, { category: cat._id });
+await sleep(2000);
+c = await get('product', p3._id);
+ok('moved to a category: takes its tax (A2)', idOf(c.taxRate) === idOf(off._id) || idOf(c.taxRate) === idOf(vat5._id), idOf(c.taxRate));
 
 // A tax rate edit reprices what uses it (works already).
-r = await edit('taxRate', vat5._id, { rate: 7.5 });
+r = await edit('taxRate', vat15._id, { rate: 12 });
 await sleep(1500);
-a = await get('product', p1._id);
-ok('VAT 5 → 7.5: Price after tax follows (107.5)', a.priceAfterTax === 107.5, a.priceAfterTax);
+b = await get('product', p2._id);
+ok('VAT 15 → 12: Price after tax follows (200 → 224)', b.priceAfterTax === 224, b.priceAfterTax);
+
+// A1 switched off → changing a category's tax touches no product.
+r = await call('PATCH', `${P}/automations/${a1._id}`, { enabled: false }, t);
+ok('A1 switched off', r.status === 200 && r.body?.enabled === false);
+await edit('category', other._id, { taxRate: vat5._id });
+await sleep(2000);
+c = await get('product', p3._id);
+ok('…then a category’s tax change touches no product', idOf(c.taxRate) !== idOf(vat5._id) || idOf(cat._id) === idOf(c.category?._id ?? c.category), idOf(c.taxRate));
 
 done();

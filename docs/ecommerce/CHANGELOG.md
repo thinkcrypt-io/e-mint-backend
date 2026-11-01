@@ -417,3 +417,10 @@
 - Router: PUT / DELETE on a system automation answer 403 `system_automation`; PATCH `{enabled}` works. MCP: `save_automation` only takes `{ id, enabled }` for them, `delete_automation` refuses, `list_automations` marks them; `updateLinked` in the action schema.
 - Panels (mint-tenant + admin): the action's editor, **System automations** section with a System tag and no Edit/Delete. Guide: `#update-linked`, `#store-automations`.
 - Smoke `automations-linked.mjs`; `automations.mjs` and `commerce-tax.mjs` still pass. Not deployed.
+
+## 2026-11-02 — EC-37 The store's tax automations
+- `commerce/taxAutomations.ts`: three **system automations** installed with every new store (`install.ts`) and added/renewed on built ones by `upgradeStore` (`ensureTaxAutomations`): `tax.category-to-products` (category tax set/changed and filled → `updateLinked` its products), `tax.product-category` (product's category changed → `update` this: Tax / VAT copied from `category.taxRate` if the category has one), `tax.product-to-variants` (product's tax changed → its variants take it).
+- Engine: a `set` may copy from a linked record's field (`category.taxRate`) and be marked `ifFilled` (left out when empty).
+- `commerce/hooks.ts`: the old hard-wired hand-down stays quiet once the store has the category automation — switched off means nothing is handed down.
+- **Left out on purpose:** (1) a tax rate's edit needs no automation — a formula reading it is worked out again wherever it is used (that is how B3 works already, and it cannot be switched off). (2) Q1's “keep products that have their own tax” switch and the “keep a variant with its own tax” rule: variants now always follow their product's tax — say if you want either back. (3) An inactive tax is not filtered by the automation; the tax picker only offers active ones. (4) TX6 — the category form note “Saving gives this tax to 23 products” + toast — not built yet.
+- Smoke `commerce-tax.mjs` extended (three system automations, locked, variants follow, moving a product, A1 off). All pass. Not deployed.

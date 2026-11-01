@@ -343,9 +343,14 @@ const checkSet = (source: Def, target: Def, set: any, on: string, label: string,
 		seen.add(f.key);
 		if (s.clear) return { field: f.key, clear: true };
 		if (s.from !== undefined && s.from !== null && s.from !== '') {
-			// `_id`: the record itself — a new Task linked back to the Deal that made it.
-			if (s.from !== '_id' && !source.fields.some((x: any) => x.key === s.from)) throw invalid(`${label}: copy from a field of ${nounOf(source)}`, `${at}.from`);
-			return { field: f.key, from: String(s.from) };
+			// `_id`: the record itself — a new Task linked back to the Deal that made it. `category.taxRate`: a field of the record a link picks.
+			const [head, sub, ...rest] = String(s.from).split('.');
+			const linked = sub ? links?.get(head) : null;
+			const okFrom = sub
+				? !rest.length && !!linked && source.fields.some((x: any) => x.key === head && REFERENCE_KINDS.includes(x.kind)) && linked.fields.some((x: any) => x.key === sub)
+				: s.from === '_id' || source.fields.some((x: any) => x.key === s.from);
+			if (!okFrom) throw invalid(`${label}: copy from a field of ${nounOf(source)}, or of a record it links to`, `${at}.from`);
+			return { field: f.key, from: String(s.from), ...(s.ifFilled && { ifFilled: true }) };
 		}
 		if (typeof s.value === 'string') checkText(source, s.value, `${at}.value`, label, links);
 		return { field: f.key, value: s.value ?? '' };
@@ -560,7 +565,20 @@ type Step = { type: string; ok: boolean; detail: string };
 /** A write by an action: what History and the next automations see as the person. */
 const actingReq = (automation: any) => ({ user: { _id: undefined, name: `Automation “${automation.name}”` } });
 
-const valueOf = (ctx: Ctx, s: any) => (s.clear ? undefined : s.from ? ctx.doc?.[s.from] : typeof s.value === 'string' ? fill(ctx, s.value) : s.value);
+const valueOf = (ctx: Ctx, s: any) => {
+	if (s.clear) return undefined;
+	if (s.from) {
+		const [head, sub] = String(s.from).split('.');
+		return sub ? ctx.linked?.get(head)?.docs[0]?.[sub] : ctx.doc?.[s.from];
+	}
+	return typeof s.value === 'string' ? fill(ctx, s.value) : s.value;
+};
+
+const isBlank = (v: any) => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
+
+/** What an action's `set` writes on this run: a copy marked ifFilled is left out when what it copies is empty. */
+const valuesOf = (ctx: Ctx, set: any[]) =>
+	set.map((s: any) => ({ field: s.field, value: valueOf(ctx, s), clear: !!s.clear, skip: !!s.ifFilled && isBlank(valueOf(ctx, s)) })).filter((v: any) => !v.skip);
 
 const recipientsOf = async (ctx: Ctx, to: any, actor: any, withEmails: boolean) => {
 	const people = to?.people?.length ? await projectPeople() : [];
@@ -732,7 +750,8 @@ const doUpdate = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 		ids = (Array.isArray(raw) ? raw : [raw]).map(v => String(v?._id || v || '')).filter(isId).slice(0, MAX_TARGETS);
 		if (!ids.length) return { type: 'update', ok: true, detail: `No ${nounOf(refDef)} picked — nothing to update` };
 	}
-	const values = a.set.map((s: any) => ({ field: s.field, value: valueOf(ctx, s), clear: !!s.clear }));
+	const values = valuesOf(ctx, a.set);
+	if (!values.length) return { type: 'update', ok: true, detail: 'Nothing to copy — left as it is' };
 	const what = values.map((v: any) => `${targetDef.fields.find((f: any) => f.key === v.field)?.label || v.field} → ${v.clear ? '(empty)' : show({ ...ctx, def: targetDef }, v.field, v.value) || '(empty)'}`).join(', ');
 	if (args.dry) return { type: 'update', ok: true, detail: `Would update ${ids.length} ${nounOf(targetDef)}: ${what}` };
 	let done = 0;
@@ -769,7 +788,8 @@ const doUpdateLinked = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> =>
 	if (args.event === 'delete') throw new Error('The record was deleted — there’s nothing to hand down');
 	const page = await pageOf(a.route);
 	if (!page) throw new Error('The page whose records pick this one is gone');
-	const values = a.set.map((s: any) => ({ field: s.field, value: valueOf(ctx, s), clear: !!s.clear }));
+	const values = valuesOf(ctx, a.set);
+	if (!values.length) return { type: 'updateLinked', ok: true, detail: 'Nothing to copy — left as it is' };
 	const what = values.map((v: any) => `${page.def.fields.find((f: any) => f.key === v.field)?.label || v.field} → ${v.clear ? '(empty)' : show({ ...ctx, def: page.def }, v.field, v.value) || '(empty)'}`).join(', ');
 	const noun = nounOf(page.def);
 	const filter = { [a.via]: ctx.doc._id };
@@ -829,7 +849,7 @@ const runOne = async (args: RunArgs): Promise<{ status: 'success' | 'failed'; st
 		link: args.event === 'delete' || !project ? '' : `${tenantUrl()}/${project.publicSlug}/${args.def.route}/${args.doc._id}`,
 		refNames: new Map(),
 	};
-	const texts = args.automation.actions.flatMap((a: any) => [a.title, a.message, a.subject, a.body, ...(a.set || []).map((s: any) => s.value)]).filter((t: any) => typeof t === 'string');
+	const texts = args.automation.actions.flatMap((a: any) => [a.title, a.message, a.subject, a.body, ...(a.set || []).map((s: any) => s.value), ...(a.set || []).map((s: any) => (String(s.from || '').includes('.') ? `{{${s.from}}}` : null))]).filter((t: any) => typeof t === 'string');
 	await loadRefNames(ctx, texts);
 	const steps: Step[] = [];
 	for (const a of args.automation.actions) {
