@@ -40,10 +40,22 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-36 | Automations: “Update the records that pick this one” action + system (store) automations, locked, on/off | backend + mint-tenant + admin + mint-docs | L | **done 2026-11-02** (not deployed) |
 | EC-37 | Store tax automations A1–A3 (category → products, product category → tax, tax rate → prices) in the wizard; category form note | backend + mint-tenant | M | **done 2026-11-02** except the category form note (TX6) — see CHANGELOG (not deployed) |
 | EC-38 | Price after tax by the till’s rule (mode-aware, default rate, engine-owned) | backend + mint-tenant | M | **backend done 2026-11-02** (not deployed); panel column label per mode not done |
-| EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | planned 2026-11-01 |
+| EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | **done 2026-11-02** (not deployed); inactive notice dropped — an inactive tax now holds nothing |
 | EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | planned 2026-11-01 |
+| EC-41 | Collections: model, product ★Collections (many), collection page Products tab, website filter, POS chips (DISCOUNTS.md) | backend + mint-tenant + mint-docs | M | planned 2026-11-02 |
+| EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | planned 2026-11-02 |
+| EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | planned 2026-11-02 |
+| EC-44 | Store discount automations D1–D6 (saved, deleted, product moved, category moved, ends, starts) + form note | backend + mint-tenant | M | planned 2026-11-02 |
+| EC-45 | The till charges the sale price: order lines, POS, receipts, website orders, returns | backend + mint-tenant | M | planned 2026-11-02 |
+| EC-46 | Discounts on the website API + Live Fresh strike-through + MCP | backend + live-fresh | S | planned 2026-11-02 |
+| EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | planned 2026-11-02 |
 
 ## Handoff
+
+- **2026-11-02 — Discounts and collections planned** (`DISCOUNTS.md`, EC-41…EC-47; Q1–Q6 wait on the user). Key
+  points: Price is never overwritten (engine Sale price; Price after tax reads it), a product's discount is *worked out*
+  (biggest active one reaching it wins) so switching off / on reverses exactly; automations have no time trigger today,
+  so EC-42 adds a generic “When a date is reached” trigger; no time zone exists anywhere yet (Store settings gains one).
 
 - **2026-11-01 — Tax automations planned** (`TAX_AUTOMATIONS.md`, EC-35…EC-40; Q1–Q3 wait on the user). Found while
   planning: `applyCategoryTax` saves with `p.save()`, and formulas only run in the request path, so the hand-down leaves

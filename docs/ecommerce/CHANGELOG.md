@@ -438,3 +438,14 @@
 - `commerce/taxRates.ts`: `effectiveRate` (now also used by `pricing.ts`, one rule) and `refreshTaxAdded` / `refreshProductTax` (batches of 500, then the formula). Fired from `hooks.ts` when a product or variant is saved, a tax is saved or deleted (so editing the default rate moves every item with no tax of its own), and from `afterSettingsSaved` (tax mode changed). The page shows the new value a moment after saving.
 - Upgrade: `priceAfterTax`'s old formula (`taxRate.rate`) is renewed, `taxAdded` added, one-time `doneOnce: 'tax-prices'` works every item out. Not run on Verte yet (EC-40).
 - Smoke: no tax → default rate (100 → 120); default edited; mode switched to inclusive → 100. `commerce-categories.mjs` (5) and `commerce-install.mjs` (4) fail on checks that predate this work (Category's Tax / VAT + SEO sections, model counts, the price-removal message) — not touched here.
+
+## 2026-11-02 — Discounts and collections planned
+- The user: a percentage Discount for products, categories and collections, active / inactive reversing it, an end date that switches it off; a Collection model (a product in many) — as automations.
+- `DISCOUNTS.md`: what is there, decisions DS1–DS14 (Sale price beside Price, biggest discount wins, worked out not remembered, D1–D6 system automations, a generic date trigger, store time zone), EC-41…EC-47, tests, questions Q1–Q6.
+
+## 2026-11-02 — EC-39 A tax in use can't be deleted
+- `commerceGuard` (locks.ts): deleting a tax (one, or bulk) that categories, products or variants hold answers 409 `tax_in_use` with the counts: “Used by 42 products, 3 categories and 5 variants — move them to another tax first.”
+- `GET /commerce/taxes/:id/usage` and `POST /commerce/taxes/:id/replace { to }` (`commerce/taxUse.ts`): everything holding the tax moves to another **active** tax, History “Store: tax replaced”, prices follow.
+- mint-tenant: the table's Delete catches `tax_in_use` and opens **Replace with…** (`ReplaceTax.tsx`). Admin has no store pages, so no copy there.
+- The “inactive notice” is gone with the new rule: switching a tax off removes it from everything, so an inactive tax holds nothing.
+- Smoke `commerce-tax.mjs`: usage counts, delete + bulk delete refused, replace to an inactive tax refused, replace moves, delete then works.
