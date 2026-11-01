@@ -222,7 +222,7 @@ const bodySchema = Joi.object({
 const UID_SOURCES = ['text', 'email', 'url', 'select', 'textarea'];
 
 /** Joi-valid body -> definition fields, plus the checks Joi can't express. */
-const check = async (req: any, body: any, selfName: string, extraTargets: string[] = []) => {
+const check = async (req: any, body: any, selfName: string, extraTargets: string[] = [], extraDefs: Pick<ModelDef, 'name' | 'fields'>[] = []) => {
 	const { value, error } = bodySchema.validate(body, { abortEarly: false });
 	if (error) return { problems: error.details.map(d => d.message.replace(/"/g, '')) };
 
@@ -232,7 +232,9 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 	const targets = new Set([...targetList.map(t => t.name), ...extraTargets]);
 	// What a formula may read through a link: the linked model's numbers (this model's own, for a link to itself).
 	const numbersOf = (ref?: string) =>
-		ref === selfName ? numbersOfDef({ fields: (value.fields || []) as any }) : targetList.find(t => t.name === ref)?.numbers;
+		ref === selfName
+			? numbersOfDef({ fields: (value.fields || []) as any })
+			: targetList.find(t => t.name === ref)?.numbers ?? (extraDefs.find(d => d.name === ref) && numbersOfDef(extraDefs.find(d => d.name === ref)!));
 
 	/** The checks every field gets — a model's, or a section's own (`scope`: the fields its formulas may use). */
 	const checkField = (f: any, name: string, scope: any[]) => {
@@ -791,7 +793,8 @@ export const buildPreview = async (
 		req,
 		body,
 		availability.name,
-		extraDefs.map(d => d.name)
+		extraDefs.map(d => d.name),
+		extraDefs
 	);
 	if (problems?.length) return { message: 'The model isn’t valid', problems };
 

@@ -403,3 +403,8 @@
 ## 2026-11-01 — Tax automations planned
 - The user: a category's tax fills the product form, a category's tax goes to all its products with their price after tax, a tax rate's edit adjusts products — as automations, in the wizard and on existing stores.
 - `TAX_AUTOMATIONS.md`: what is built, gaps G1–G6 (G1: the hand-down doesn't work out Price after tax again), decisions TX1–TX9, EC-35…EC-40, tests, questions Q1–Q3.
+
+## 2026-11-02 — EC-35 The hand-down works Price after tax out again
+- `commerce/categoryTax.ts`: after the products (and the variants that carried the old tax) are saved, their formulas are recalculated (`recalculateFormulas`, formulas from the route's published settings — a bare `doc.save()` runs none) and each gets a History entry by **Store: category tax** (Tax / VAT and Price after tax, from → to).
+- **Also fixed — a new store could not be built at all:** the feature planner's model check knew a planned model's name but not its fields, so Product's `taxRate.rate` formula failed with “There's no field taxRate.rate” when TaxRate was planned in the same build. `check()` in `models.controller.ts` now takes the planned definitions and reads their numbers.
+- Smoke `scripts/tenancy-smoke/commerce-tax.mjs` (scratch :5021 / :27997): tax set 15% → 115, changed to 5% → 105, product with another tax overwritten, other category untouched, inactive tax not handed down, rate edit 5 → 7.5 reprices, History reads “Store: category tax”. All pass. Not deployed.
