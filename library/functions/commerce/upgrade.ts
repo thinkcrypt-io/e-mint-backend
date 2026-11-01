@@ -287,12 +287,16 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 				if (!renewed.includes(f.key)) renewed.push(f.key);
 			}
 			// A picker's own rules (the variants' product: only the ones with variations; SKU under each name).
-			if (f.kind === 'reference' && (w.optionFilters || w.pickerDetails || w.fillFrom) && !f.optionFilters && !f.pickerDetails && !f.fillFrom) {
-				if (w.optionFilters) f.optionFilters = w.optionFilters;
-				if (w.pickerDetails) f.pickerDetails = w.pickerDetails;
-				if (w.fillFrom) f.fillFrom = w.fillFrom;
-				if (w.helper && !f.helper) f.helper = w.helper;
-				if (!renewed.includes(f.key)) renewed.push(f.key);
+			// Each rule on its own: a picker that already had a filter still gets the fill it was missing.
+			if (f.kind === 'reference' && (w.optionFilters || w.pickerDetails || w.fillFrom)) {
+				let gave = false;
+				if (w.optionFilters && !f.optionFilters) (f.optionFilters = w.optionFilters), (gave = true);
+				if (w.pickerDetails && !f.pickerDetails) (f.pickerDetails = w.pickerDetails), (gave = true);
+				if (w.fillFrom && !f.fillFrom) (f.fillFrom = w.fillFrom), (gave = true);
+				if (gave) {
+					if (w.helper && !f.helper) f.helper = w.helper;
+					if (!renewed.includes(f.key)) renewed.push(f.key);
+				}
 			}
 			if (w.helper && !f.helper && (old.includes(f.label) || f.label === w.label)) {
 				f.helper = w.helper;
