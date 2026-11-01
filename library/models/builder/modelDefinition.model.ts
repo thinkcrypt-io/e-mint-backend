@@ -55,6 +55,8 @@ const fieldSchema = new Schema<any>(
 		optionFilters: { type: [Schema.Types.Mixed], default: undefined },
 		/** For reference kinds: fields shown under each name in the picker (SKU, barcode). */
 		pickerDetails: { type: [String], default: undefined },
+		/** For reference kinds: filled from another picked link — a product's tax from its category (functions/linkedFill). */
+		fillFrom: { type: new Schema({ from: String, formula: String }, { _id: false }), default: undefined },
 	},
 	{ _id: false, minimize: false }
 );

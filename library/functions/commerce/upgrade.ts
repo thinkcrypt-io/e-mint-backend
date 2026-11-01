@@ -15,6 +15,7 @@ import { Installed, applySidebar, engineFieldsReadOnly } from './install.js';
 import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
 import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
+import { applyAllCategoryTaxes } from './categoryTax.js';
 import { rebuildPurchases } from './purchases.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
@@ -327,6 +328,13 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 	if (!hadPurchases && apply) {
 		const n = await rebuildPurchases(await storeOf());
 		changes.push({ model: 'Customer purchases', added: [], renewed: [], filled: [`worked out for ${n} customer${n === 1 ? '' : 's'} from their orders`] });
+	}
+	// Categories that already had a tax hand it to their products — once; after that it follows each save.
+	const done: any = ((await CommerceSettings.findOne({}, { doneOnce: 1 }).lean()) as any)?.doneOnce || [];
+	if (!done.includes('category-tax')) {
+		const n = await applyAllCategoryTaxes(await storeOf(), { apply });
+		if (apply) await CommerceSettings.updateOne({}, { $addToSet: { doneOnce: 'category-tax' } });
+		if (n) changes.push({ model: 'Products', added: [], renewed: [], filled: [`${n} product${n === 1 ? '' : 's'} ${apply ? 'took' : 'would take'} their category’s tax`] });
 	}
 	// Deliveries' two emails, off until the owner turns them on (docs/couriers CR-14).
 	const installedNow: any = ((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed;

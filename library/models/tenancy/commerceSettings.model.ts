@@ -19,6 +19,8 @@ const schema = new Schema<any>(
 		installed: { type: Schema.Types.Mixed, default: {} },
 		/** The features built so far (variations, coupons, shifts…), so a change builds only what's new. */
 		features: { type: [String], default: [] },
+		/** One-time catch-ups a store's upgrade has run (e.g. 'category-tax'), so they never run twice. */
+		doneOnce: { type: [String], default: [] },
 		startedAt: Date,
 		finishedAt: Date,
 		error: String,

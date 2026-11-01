@@ -392,3 +392,10 @@
   Store settings → connect, test; send from orders; a Delivery model linked to
   the order; webhooks). EC-18 / EC20 move to `backend/docs/couriers/`
   (CR-01…CR-17).
+
+## 2026-11-01 — Category tax flows to its products
+- The user: a tax set on a category is applied to all its products, for existing categories too; and the product's Tax / VAT wasn't filling from the category.
+- Cause of the second: the model definition's field schema had no `fillFrom`, so a field's "fill from category" rule was dropped on every save (new stores too). Added it; the store upgrade now gives a picker each missing rule on its own.
+- `commerce/categoryTax.ts`: `applyCategoryTax` — when a category's tax changes (panel save or MCP), its products take it (saved one by one so Price after tax is worked out again); a variant that carried the product's old tax moves too, one with its own is left. An inactive tax isn't handed down.
+- Upgrade: a one-time catch-up (`doneOnce: 'category-tax'`) hands every existing category's tax to its products. Dry run on Verte: 15 products.
+- Not run against a database yet; not deployed.
