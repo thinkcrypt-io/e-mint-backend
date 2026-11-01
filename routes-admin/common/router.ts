@@ -44,6 +44,7 @@ import {
 	bulkDelete,
 	bulkDuplicate,
 	bulkRestore,
+	bulkLink,
 	bulkStatus,
 	mergePreview,
 	mergeRecords,
@@ -477,6 +478,7 @@ const defineRoutes = ({
 	router.post('/bulk/duplicate', ...bulk(permissions.create), bulkDuplicate(bulkOpts));
 	router.post('/bulk/archive', ...bulk(permissions.update), bulkArchive(bulkOpts));
 	router.post('/bulk/status', ...bulk(permissions.update), bulkStatus(bulkOpts));
+	router.post('/bulk/link', ...bulk(permissions.update), bulkLink(bulkOpts));
 	router.post('/bulk/merge/preview', ...bulk(permissions.delete), mergePreview(bulkOpts));
 	router.post('/bulk/merge', ...bulk(permissions.delete), mergeRecords(bulkOpts));
 

@@ -42,7 +42,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-38 | Price after tax by the till’s rule (mode-aware, default rate, engine-owned) | backend + mint-tenant | M | **backend done 2026-11-02** (not deployed); panel column label per mode not done |
 | EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | **done 2026-11-02** (not deployed); inactive notice dropped — an inactive tax now holds nothing |
 | EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | **done 2026-11-02**: Verte upgraded on prod (backend not deployed); store guide “Tax and prices”, website changelog; admin /docs has no store pages |
-| EC-41 | Collections: model, product ★Collections (many), collection page Products tab, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + mint-docs | M | planned 2026-11-02 |
+| EC-41 | Collections: model, product ★Collections (many), collection page Products tab with Add existing / Remove, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + admin + mint-docs | M | **done 2026-11-02** (not deployed; built stores get it from `upgradeStores.js`) |
 | EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | planned 2026-11-02 |
 | EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | planned 2026-11-02 |
 | EC-44 | Store discount automations D1–D6 (saved, deleted, product moved, category moved, ends, starts) + form note | backend + mint-tenant | M | planned 2026-11-02 |
@@ -51,6 +51,11 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | planned 2026-11-02 |
 
 ## Handoff
+
+- **2026-11-02 — EC-41 Collections done** (CHANGELOG). Generic piece: `POST /<route>/bulk/link { ids, field, to, remove? }`
+  (bulkActions.controller `bulkLink`) puts one record into / out of a many-link field, History + automations per row; a
+  many-link view tab's `add.link.allowed` (edit permission) shows **Add existing** + row **Remove** in both panels'
+  ViewTabTable. Next: EC-42 (date trigger) or EC-43 (discount model).
 
 - **2026-11-02 — Discounts and collections planned** (`DISCOUNTS.md`, EC-41…EC-47; Q1–Q6 answered the same day — see CHANGELOG). Key
   points: Price is never overwritten (engine Sale price; Price after tax reads it), a product's discount is *worked out*
