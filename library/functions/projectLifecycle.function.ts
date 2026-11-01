@@ -19,6 +19,7 @@ import History from '../models/history/model.js';
 import RecordComment from '../models/tenancy/recordComment.model.js';
 import Automation from '../models/tenancy/automation.model.js';
 import AutomationRun from '../models/tenancy/automationRun.model.js';
+import AutomationDue from '../models/tenancy/automationDue.model.js';
 import ApiEndpoint from '../models/tenancy/apiEndpoint.model.js';
 import ServerKey from '../models/tenancy/serverKey.model.js';
 import AdminFile from '../models/admin-file/model.js';
@@ -84,6 +85,8 @@ const SCOPED = [
 	// Its automations and their runs (docs/automations).
 	Automation,
 	AutomationRun,
+	// Its automations' waiting “date reached” runs (docs/ecommerce DISCOUNTS.md DS6).
+	AutomationDue,
 	ProjectWebhook,
 	WebhookDelivery,
 	ApiCall,

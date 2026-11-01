@@ -19,7 +19,8 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   GET    /:id/runs            its recent runs
  *   GET    /emails/:id          one email a run sent, as sent: to, subject, body (HTML and text), files, error (AU-03c)
  *   POST   /emails/:id/resend   send a failed one again → the new attempt (502 with the reason when it fails too)
- *   POST   /                    { name, route, on, changed, when, match, actions, enabled }
+ *   POST   /                    { name, route, on, date?, changed, when, match, actions, enabled }
+ *                                on ['date'] + date { field, amount, unit, when }: when the record's date is reached (EC-42)
  *   PUT    /:id                 the same, whole
  *   PATCH  /:id                 { enabled }   the on/off switch
  *   POST   /:id/test            { record, event }   a dry run on a record — nothing sent or written
@@ -47,6 +48,7 @@ const view = (a: any, withSecret = false) => ({
 	key: a.key || '',
 	route: a.route,
 	on: a.on || [],
+	date: a.on?.includes('date') ? a.date : undefined,
 	changed: a.changed || [],
 	when: a.when || [],
 	match: a.match || 'all',

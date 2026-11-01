@@ -25,7 +25,7 @@ type Out = { text: string; data?: any; isError?: boolean };
 const refuse = (text: string, data?: any): Out => ({ text, isError: true, ...(data && { data }) });
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
 
-const EVENT_WORD: Record<string, string> = { create: 'created', update: 'changed', delete: 'deleted' };
+const EVENT_WORD: Record<string, string> = { create: 'created', update: 'changed', delete: 'deleted', date: 'reaching its date' };
 const ACTION_WORD: Record<string, string> = { notify: 'Notify people', email: 'Send an email', webhook: 'Call a webhook', update: 'Update a record', create: 'Create a record' };
 
 const condText = (c: any) => (c.op === 'empty' || c.op === 'filled' ? `${c.field} ${c.op}` : `${c.field} ${c.op} ${JSON.stringify(c.value ?? '')}`);
@@ -52,10 +52,11 @@ const actionText = (a: any, people: Map<string, string>) => {
 };
 
 const line = (a: any, titles: Map<string, string>, people: Map<string, string>) => {
-	const when = (a.on || []).map((e: string) => (e === 'update' && a.changed?.length ? `changed (${a.changed.join(', ')})` : EVENT_WORD[e])).join(' or ');
+	const at = (d: any) => `${d?.amount ? `${d.amount} ${d.unit} ${d.when} ` : ''}its ${d?.field} is reached`;
+	const when = (a.on || []).map((e: string) => (e === 'update' && a.changed?.length ? `changed (${a.changed.join(', ')})` : e === 'date' ? at(a.date) : EVENT_WORD[e])).join(' or ');
 	const conds = a.when?.length ? `; only if ${a.when.map(condText).join(a.match === 'any' ? ' or ' : ' and ')}` : '';
 	const stats = a.stats ? `; ${a.stats.runs || 0} runs, ${a.stats.failures || 0} failed` : '';
-	return `- ${a.enabled === false ? '(off) ' : ''}${a.system ? '(system — on/off only) ' : ''}“${a.name}” — when a ${titles.get(a.route) || a.route} record is ${when}${conds} → ${(a.actions || []).map((x: any) => actionText(x, people)).join('; ')}${stats} [id ${a._id}]`;
+	return `- ${a.enabled === false ? '(off) ' : ''}${a.system ? '(system — on/off only) ' : ''}“${a.name}” — when a ${titles.get(a.route) || a.route} record ${a.on?.includes('date') ? '' : 'is '}${when}${conds} → ${(a.actions || []).map((x: any) => actionText(x, people)).join('; ')}${stats} [id ${a._id}]`;
 };
 
 const view = (a: any) => ({
@@ -66,6 +67,7 @@ const view = (a: any) => ({
 	...(a.system && { system: a.system, key: a.key }),
 	route: a.route,
 	on: a.on || [],
+	...(a.on?.includes('date') && { date: a.date }),
 	changed: a.changed || [],
 	when: a.when || [],
 	match: a.match || 'all',
@@ -119,7 +121,7 @@ const saveAutomation = async (req: any, args: any, caller: Caller): Promise<Out>
 			return refuse(`“${current.name}” is a system automation — only its on/off switch can be changed (save_automation with { id, enabled }).`);
 	}
 	// Changing one: what's left out is kept, so { id, enabled: false } just turns it off.
-	const keys = ['name', 'description', 'route', 'on', 'changed', 'when', 'match', 'actions', 'enabled'];
+	const keys = ['name', 'description', 'route', 'on', 'date', 'changed', 'when', 'match', 'actions', 'enabled'];
 	const input: any = Object.fromEntries(keys.map(k => [k, args?.[k] !== undefined ? args[k] : current?.[k]]));
 	let body: any;
 	try {
@@ -285,7 +287,7 @@ export const AUTOMATION_TOOLS: ToolDef[] = [
 	{
 		name: 'save_automation',
 		title: 'Make or change an automation',
-		description: `One automation: with \`id\`, changes it (what’s left out is kept — { id, enabled: false } turns it off); without it, makes one. It runs after a record of the page \`route\` is saved: \`on\` lists the events (${AUTOMATION_EVENTS.join(', ')}); \`changed\` narrows "update" to some fields changing; \`when\` conditions (all, or any with match "any") on the record. \`actions\` (1–10) run in order. Texts (titles, subjects, messages, set values) take {{field}} placeholders — the record’s fields, {{ref.field}} for a linked record’s field, and {{link}} {{page}} {{project}} {{actor}} {{event}} {{today}}. Emails go through the project’s email account (Project → Email). Describe the automation to the user in plain words and get their go-ahead before saving; try it with test_automation after.`,
+		description: `One automation: with \`id\`, changes it (what’s left out is kept — { id, enabled: false } turns it off); without it, makes one. It runs after a record of the page \`route\` is saved: \`on\` lists the events (${AUTOMATION_EVENTS.join(', ')} — "date" on its own, with \`date\`: when a date of the record is reached); \`changed\` narrows "update" to some fields changing; \`when\` conditions (all, or any with match "any") on the record. \`actions\` (1–10) run in order. Texts (titles, subjects, messages, set values) take {{field}} placeholders — the record’s fields, {{ref.field}} for a linked record’s field, and {{link}} {{page}} {{project}} {{actor}} {{event}} {{today}}. Emails go through the project’s email account (Project → Email). Describe the automation to the user in plain words and get their go-ahead before saving; try it with test_automation after.`,
 		scope: 'build',
 		only: 'project',
 		inputSchema: {
@@ -296,6 +298,16 @@ export const AUTOMATION_TOOLS: ToolDef[] = [
 				description: { type: 'string' },
 				route: { type: 'string', description: 'The route of the page whose records start it (list_models shows them)' },
 				on: { type: 'array', items: { type: 'string', enum: [...AUTOMATION_EVENTS] } },
+				date: {
+					type: 'object',
+					description: 'With on ["date"] (on its own): run when the record’s date field is reached — or `amount` `unit` before / after it. Saving a record moves its run; a date already passed when saved doesn’t run. Conditions are checked when it runs.',
+					properties: {
+						field: { type: 'string', description: 'A date field of the page' },
+						amount: { type: 'number', description: '0 (on the date) to 1000' },
+						unit: { type: 'string', enum: ['minutes', 'hours', 'days'] },
+						when: { type: 'string', enum: ['before', 'after'] },
+					},
+				},
 				changed: { type: 'array', items: { type: 'string' }, description: 'With "update": run only when one of these fields changes' },
 				when: { type: 'array', items: CONDITION, description: 'Conditions on the record; [] for none' },
 				match: { type: 'string', enum: ['all', 'any'] },

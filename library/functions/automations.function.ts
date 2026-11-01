@@ -1,14 +1,15 @@
 import { AsyncLocalStorage } from 'async_hooks';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
-import Automation, { ACTION_TYPES, AUTOMATION_EVENTS } from '../models/tenancy/automation.model.js';
+import Automation, { ACTION_TYPES, AUTOMATION_EVENTS, DATE_UNITS } from '../models/tenancy/automation.model.js';
+import { queueDates } from './automationDue.function.js';
 import AutomationRun from '../models/tenancy/automationRun.model.js';
 import ModelDefinition from '../models/builder/modelDefinition.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import MailMessage from '../models/tenancy/mailMessage.model.js';
 import { currentScope, runInScope } from './tenantScope.function.js';
 import { scopedModel, displayModelName } from './routeRegistry.function.js';
-import { REFERENCE_KINDS, displayFieldOf, generateSettings, makeTargetLookup } from './dynamicModels.function.js';
+import { DATE_KINDS, REFERENCE_KINDS, displayFieldOf, generateSettings, makeTargetLookup } from './dynamicModels.function.js';
 import { LOCK_OPS, meets } from './fieldLocks.function.js';
 import { TenancyError, projectPeople } from './tenancy.function.js';
 import { notifyTenant, projectHrefFor } from './tenantNotify.function.js';
@@ -210,7 +211,7 @@ export const fill = (ctx: Ctx, text: any): string =>
 			case 'actor':
 				return ctx.actorName;
 			case 'event':
-				return ctx.event === 'create' ? 'created' : ctx.event === 'update' ? 'changed' : 'deleted';
+				return ctx.event === 'create' ? 'created' : ctx.event === 'update' ? 'changed' : ctx.event === 'date' ? 'reached its date' : 'deleted';
 			case 'today':
 				return new Date().toISOString().slice(0, 10);
 			default:
@@ -414,6 +415,18 @@ const checkAddressField = async (def: Def, path: string, on: string, label: stri
  * An automation as the API saves it: the page, events, fields, conditions and
  * every action checked against the project — or a 400 that names the input.
  */
+/** "When a date is reached": a date field of the page, and how long before or after it (0: on it). */
+const checkDate = (def: Def, input: any) => {
+	const field = String(input?.field || '');
+	const f = def.fields.find((x: any) => x.key === field);
+	if (!f || !DATE_KINDS.includes(f.kind)) throw invalid(`Choose a date field of ${nounOf(def)}`, 'date.field');
+	const amount = Number(input?.amount ?? 0);
+	if (!Number.isInteger(amount) || amount < 0 || amount > 1000) throw invalid('How long before or after: a whole number from 0 to 1000', 'date.amount');
+	const unit = DATE_UNITS.includes(input?.unit) ? input.unit : 'days';
+	const when = input?.when === 'before' ? 'before' : 'after';
+	return { field, amount, unit, when };
+};
+
 export const checkAutomation = async (body: any) => {
 	const name = String(body?.name || '').trim();
 	if (!name) throw invalid('Name the automation', 'name');
@@ -425,7 +438,9 @@ export const checkAutomation = async (body: any) => {
 	const links = await linksOf(def);
 
 	const on = [...new Set<string>((Array.isArray(body.on) ? body.on : []).map(String))].filter(e => (AUTOMATION_EVENTS as readonly string[]).includes(e));
-	if (!on.length) throw invalid('Choose when it runs: created, changed or deleted', 'on');
+	if (!on.length) throw invalid('Choose when it runs: created, changed, deleted, or when a date is reached', 'on');
+	if (on.includes('date') && on.length > 1) throw invalid('“When a date is reached” runs on its own — make another automation for created, changed or deleted', 'on');
+	const date = on.includes('date') ? checkDate(def, body.date) : undefined;
 
 	const changed = [...new Set<string>((Array.isArray(body.changed) ? body.changed : []).map(String))];
 	for (const c of changed) if (!def.fields.some((f: any) => f.key === c)) throw invalid(`“${c}” isn’t a field of ${nounOf(def)}`, 'changed');
@@ -535,6 +550,7 @@ export const checkAutomation = async (body: any) => {
 		enabled: body.enabled !== false,
 		route,
 		on,
+		...(date && { date }),
 		changed: on.includes('update') ? changed : [],
 		when,
 		match: body.match === 'any' ? 'any' : 'all',
@@ -888,6 +904,65 @@ const finishRun = async (automation: any, run: any) => {
 };
 
 /**
+ * One automation on one record: its conditions, the chain and hourly limits, then its actions — kept as a run.
+ * Started by a save (fireAutomations) or by the date tick (event `date`, automationDue.function.ts).
+ */
+export const runFor = async ({
+	automation,
+	def,
+	Model,
+	snapshot,
+	event,
+	changes,
+	actor,
+	from,
+}: {
+	automation: any;
+	def: any;
+	Model: mongoose.Model<any>;
+	snapshot: any;
+	event: string;
+	changes?: { field: string }[];
+	actor?: any;
+	from?: Chain;
+}) => {
+	const depth = (from?.depth || 0) + 1;
+	const key = `${automation._id}:${snapshot._id}`;
+	if (from?.seen.has(key)) return;
+	const base = {
+		automation: automation._id,
+		name: automation.name,
+		route: def.route,
+		record: snapshot._id,
+		recordName: recordName(def, snapshot),
+		event,
+		depth,
+		actorName: actor?.name || '',
+	};
+	// One automation going wrong — anywhere, not only in an action — is its own failed run; the rest still run.
+	try {
+		if (!startsOn(automation, event, snapshot, changes)) return;
+		if (depth > MAX_DEPTH) {
+			await finishRun(automation, { ...base, status: 'skipped', error: `Stopped: started by a chain of ${MAX_DEPTH} automations — more could loop forever` });
+			return;
+		}
+		const hour = await AutomationRun.countDocuments({ createdAt: { $gte: new Date(Date.now() - 3600 * 1000) }, status: { $ne: 'skipped' } });
+		if (hour >= RUNS_PER_HOUR()) {
+			await Automation.updateOne({ _id: automation._id }, { $set: { 'stats.lastStatus': 'skipped', 'stats.lastError': `Skipped: the project ran ${RUNS_PER_HOUR()} automations in the last hour` } });
+			return;
+		}
+		const seen = new Set(from?.seen || []);
+		seen.add(key);
+		const runId = new mongoose.Types.ObjectId();
+		const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor, runId }));
+		await finishRun(automation, { _id: runId, ...base, ...result });
+	} catch (e: any) {
+		const error = `Couldn’t run: ${e?.message || 'something went wrong'}`;
+		await finishRun(automation, { ...base, status: 'failed', steps: [], error }).catch((e2: any) => console.error('automations:', error, e2?.message));
+	}
+};
+
+/**
  * After a record of a page was created, changed or deleted: its project's
  * automations on that page run — after the response, never failing the save.
  * Name the page by `route`, or the model by the name it was compiled under.
@@ -923,46 +998,13 @@ export const fireAutomations = ({
 			const name = model ? displayModelName(String(model)) : undefined;
 			const def: any = await ModelDefinition.findOne(route ? { route } : { name }).lean();
 			if (!def) return;
+			// The record's dates: its "when a date is reached" runs moved, added or dropped.
+			await queueDates(def, snapshot, event).catch((e: any) => console.error('automation dates:', e?.message));
 			const list: any[] = await Automation.find({ route: def.route, enabled: true, on: event }).select('+secret').lean();
 			if (!list.length) return;
 			const Model = scopedModel(def.name);
 			if (!Model) return;
-			const depth = (from?.depth || 0) + 1;
-			for (const automation of list) {
-				const key = `${automation._id}:${snapshot._id}`;
-				if (from?.seen.has(key)) continue;
-				const base = {
-					automation: automation._id,
-					name: automation.name,
-					route: def.route,
-					record: snapshot._id,
-					recordName: recordName(def, snapshot),
-					event,
-					depth,
-					actorName: actor?.name || '',
-				};
-				// One automation going wrong — anywhere, not only in an action — is its own failed run; the rest still run.
-				try {
-					if (!startsOn(automation, event, snapshot, changes)) continue;
-					if (depth > MAX_DEPTH) {
-						await finishRun(automation, { ...base, status: 'skipped', error: `Stopped: started by a chain of ${MAX_DEPTH} automations — more could loop forever` });
-						continue;
-					}
-					const hour = await AutomationRun.countDocuments({ createdAt: { $gte: new Date(Date.now() - 3600 * 1000) }, status: { $ne: 'skipped' } });
-					if (hour >= RUNS_PER_HOUR()) {
-						await Automation.updateOne({ _id: automation._id }, { $set: { 'stats.lastStatus': 'skipped', 'stats.lastError': `Skipped: the project ran ${RUNS_PER_HOUR()} automations in the last hour` } });
-						continue;
-					}
-					const seen = new Set(from?.seen || []);
-					seen.add(key);
-					const runId = new mongoose.Types.ObjectId();
-					const result = await chain.run({ depth, seen }, () => runOne({ automation, def, Model, doc: snapshot, event, actor, runId }));
-					await finishRun(automation, { _id: runId, ...base, ...result });
-				} catch (e: any) {
-					const error = `Couldn’t run: ${e?.message || 'something went wrong'}`;
-					await finishRun(automation, { ...base, status: 'failed', steps: [], error }).catch((e2: any) => console.error('automations:', error, e2?.message));
-				}
-			}
+			for (const automation of list) await runFor({ automation, def, Model, snapshot, event, changes, actor, from });
 		}).catch((e: any) => console.error('automations:', e?.message))
 	);
 };
@@ -990,8 +1032,8 @@ export const newAutomationSecret = () => `whsec_${crypto.randomBytes(24).toStrin
 export const saveSystemAutomation = async (system: string, key: string, body: any, { apply = true } = {}) => {
 	const checked = await checkAutomation(body);
 	const current: any = await Automation.findOne({ key }).lean();
-	if (current && JSON.stringify({ n: current.name, d: current.description, r: current.route, o: current.on, c: current.changed, w: current.when, m: current.match, a: current.actions }) ===
-		JSON.stringify({ n: checked.name, d: checked.description, r: checked.route, o: checked.on, c: checked.changed, w: checked.when, m: checked.match, a: checked.actions })) return 'same';
+	if (current && JSON.stringify({ n: current.name, d: current.description, r: current.route, o: current.on, t: current.on?.includes('date') ? current.date : undefined, c: current.changed, w: current.when, m: current.match, a: current.actions }) ===
+		JSON.stringify({ n: checked.name, d: checked.description, r: checked.route, o: checked.on, t: checked.date, c: checked.changed, w: checked.when, m: checked.match, a: checked.actions })) return 'same';
 	if (!apply) return current ? 'renewed' : 'added';
 	if (current) {
 		const { enabled, ...rest } = checked;
