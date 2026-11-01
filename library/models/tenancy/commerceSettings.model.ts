@@ -21,6 +21,8 @@ const schema = new Schema<any>(
 		features: { type: [String], default: [] },
 		/** One-time catch-ups a store's upgrade has run (e.g. 'category-tax'), so they never run twice. */
 		doneOnce: { type: [String], default: [] },
+		/** Who had a tax when it was switched to inactive, so switching it back on gives it to them again: taxId → { categories, products }. */
+		taxHeld: { type: Schema.Types.Mixed, default: {} },
 		startedAt: Date,
 		finishedAt: Date,
 		error: String,

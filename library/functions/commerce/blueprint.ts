@@ -250,7 +250,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'variant',
 		shownWhen: x => x.products.variations,
-		engine: ['isDefault', 'totalStock'],
+		engine: ['isDefault', 'totalStock', 'taxRate'],
 		step: {
 			name: 'Variant',
 			title: 'Variants',
@@ -272,7 +272,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					label: 'Tax / VAT',
 					kind: 'reference',
 					ref: 'TaxRate',
-					helper: 'Filled from the product’s tax when you pick it — change it here if this variant differs',
+					helper: 'Always the product’s tax — it follows when the product’s tax changes',
 					optionFilters: TAX_PICKER,
 					pickerDetails: ['rate'],
 					fillFrom: { from: 'product', formula: 'taxRate' },

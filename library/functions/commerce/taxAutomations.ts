@@ -7,12 +7,13 @@ import { saveSystemAutomation } from '../automations.function.js';
  * them on and off and read their Runs; nothing else.
  *
  *   tax.category-to-products   a category's tax is given to every product in it (Price after tax follows)
+ *   tax.product-new            a new product with no tax takes its category's
  *   tax.product-category       a product moved to another category takes that category's tax (if it has one)
  *   tax.product-to-variants    a product's tax is given to its variants
  *
  * A tax rate's own edit needs none: a formula reading it is worked out again wherever it is used.
  */
-export const TAX_KEYS = ['tax.category-to-products', 'tax.product-category', 'tax.product-to-variants'];
+export const TAX_KEYS = ['tax.category-to-products', 'tax.product-new', 'tax.product-category', 'tax.product-to-variants'];
 
 const READY = (installed: Record<string, any>) => {
 	const category = installed.category?.route;
@@ -31,6 +32,17 @@ const READY = (installed: Record<string, any>) => {
 				changed: ['taxRate'],
 				when: [{ field: 'taxRate', op: 'filled' }],
 				actions: [{ type: 'updateLinked', route: product, via: 'category', set: [{ field: 'taxRate', from: 'taxRate' }] }],
+			},
+		},
+		{
+			key: 'tax.product-new',
+			body: {
+				name: 'New product → its category’s tax',
+				description: 'When a product is added without a Tax / VAT, it takes its category’s tax. Installed by the store: switch it on or off, it can’t be changed.',
+				route: product,
+				on: ['create'],
+				when: [{ field: 'taxRate', op: 'empty' }],
+				actions: [{ type: 'update', target: 'this', set: [{ field: 'taxRate', from: 'category.taxRate', ifFilled: true }] }],
 			},
 		},
 		{

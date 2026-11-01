@@ -424,3 +424,11 @@
 - `commerce/hooks.ts`: the old hard-wired hand-down stays quiet once the store has the category automation — switched off means nothing is handed down.
 - **Left out on purpose:** (1) a tax rate's edit needs no automation — a formula reading it is worked out again wherever it is used (that is how B3 works already, and it cannot be switched off). (2) Q1's “keep products that have their own tax” switch and the “keep a variant with its own tax” rule: variants now always follow their product's tax — say if you want either back. (3) An inactive tax is not filtered by the automation; the tax picker only offers active ones. (4) TX6 — the category form note “Saving gives this tax to 23 products” + toast — not built yet.
 - Smoke `commerce-tax.mjs` extended (three system automations, locked, variants follow, moving a product, A1 off). All pass. Not deployed.
+
+## 2026-11-02 — Tax answers: variants, rates, inactive/active
+- The user: variants never have a tax of their own (always the product's); a rate edit adjusts all prices; a tax made inactive means 0 tax on every product and category that had it, and active again gives it back.
+- Variant **Tax / VAT** is now an engine field (read-only in forms); the product → variants automation overwrites it whenever the product's tax changes.
+- New system automation `tax.product-new`: a product added without a tax takes its category's (the API path did not fill it before). Four tax automations now.
+- `commerce/taxStatus.ts`: a tax switched to inactive is cleared from its categories, products and variants (Price after tax = price, History “Store: tax switched off”); the ids are kept on the store (`taxHeld`); switched to active, it goes back to exactly those that are still without a tax (“Store: tax switched on”). Rate edits already reprice everything (checked: 15% → 12% moves product and variant prices).
+- **Open:** a product with no tax is charged the store's *default* rate at the till (`pricing.ts`) — so “0 tax” on a deactivated tax is only 0 if the store has no default rate. EC-38 decides this.
+- Smoke `commerce-tax.mjs` covers all of it. Not deployed.

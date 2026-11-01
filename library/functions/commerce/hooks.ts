@@ -4,6 +4,7 @@ import { storeOf } from './store.js';
 import { syncVariants } from './catalogue.js';
 import { applyCategoryTax } from './categoryTax.js';
 import { hasCategoryTaxAutomation } from './taxAutomations.js';
+import { syncTaxStatus } from './taxStatus.js';
 
 /**
  * After a record of a store's model is saved from a page (recordHistory, beside
@@ -19,6 +20,7 @@ export const fireCommerce = ({ model, event, doc, changes }: { model: string; ev
 			const s: any = await CommerceSettings.findOne({}, { status: 1 }).lean();
 			if (s?.status !== 'ready') return;
 			const store = await storeOf();
+			if (store.is('taxRate', model) && (!changes || changes.some(c => c.field === 'status'))) await syncTaxStatus(store, doc._id);
 			if (store.is('product', model)) await syncVariants(store, doc._id);
 			// A store with the tax automation hands the tax down through it (its switch is the owner's); an older one still does it here.
 			if (store.is('category', model) && (!changes || changes.some(c => c.field === 'taxRate')) && !(await hasCategoryTaxAutomation())) await applyCategoryTax(store, doc._id);

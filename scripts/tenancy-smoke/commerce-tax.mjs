@@ -43,7 +43,7 @@ ok('no tax on the category: products have none, Price after tax = price', !p1?.t
 // The store's tax automations are there, on, and locked.
 r = await call('GET', `${P}/automations`, null, t);
 const sys = (r.body?.doc || []).filter(a => a.system === 'commerce');
-ok('three system automations, all on', sys.length === 3 && sys.every(a => a.enabled), JSON.stringify(sys.map(a => a.key)));
+ok('four system automations, all on', sys.length === 4 && sys.every(a => a.enabled), JSON.stringify(sys.map(a => a.key)));
 r = await call('PUT', `${P}/automations/${sys[0]?._id}`, sys[0], t);
 ok('…and locked (403)', r.status === 403, String(r.status));
 const a1 = sys.find(a => a.key === 'tax.category-to-products');
@@ -92,6 +92,24 @@ r = await edit('taxRate', vat15._id, { rate: 12 });
 await sleep(1500);
 b = await get('product', p2._id);
 ok('VAT 15 → 12: Price after tax follows (200 → 224)', b.priceAfterTax === 224, b.priceAfterTax);
+
+// A tax made inactive comes off everything that has it; active again, it goes back.
+const hold = await add('taxRate', { name: 'Hold', rate: 10, status: 'active' });
+const hcat = await add('category', { name: 'Held', taxRate: hold._id });
+const hp = await add('product', { name: 'Held thing', category: hcat._id, price: 100 });
+await sleep(2000);
+const hpx = await get('product', hp._id);
+ok('product has the tax (110)', hpx.priceAfterTax === 110, `${idOf(hpx.taxRate)} ${hpx.priceAfterTax}`);
+await edit('taxRate', hold._id, { status: 'inactive' });
+await sleep(3000);
+const hc2 = await get('category', hcat._id);
+const hp2 = await get('product', hp._id);
+ok('inactive: category and product have no tax, price = 100', !hc2.taxRate && !hp2.taxRate && hp2.priceAfterTax === 100, `${idOf(hc2.taxRate)} ${idOf(hp2.taxRate)} ${hp2.priceAfterTax}`);
+await edit('taxRate', hold._id, { status: 'active' });
+await sleep(3500);
+const hc3 = await get('category', hcat._id);
+const hp3 = await get('product', hp._id);
+ok('active again: both have it back, price 110', idOf(hc3.taxRate) === idOf(hold._id) && idOf(hp3.taxRate) === idOf(hold._id) && hp3.priceAfterTax === 110, `${idOf(hc3.taxRate)} ${idOf(hp3.taxRate)} ${hp3.priceAfterTax}`);
 
 // A1 switched off → changing a category's tax touches no product.
 r = await call('PATCH', `${P}/automations/${a1._id}`, { enabled: false }, t);
