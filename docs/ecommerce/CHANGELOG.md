@@ -474,3 +474,11 @@
 - Smoke `commerce-collections.mjs`: 29 checks, all pass (private server :5081 on the scratch DB). `commerce-tax.mjs` still passes. **Stale, not from this WO:** `commerce-categories.mjs` (expects the category page without Tax / VAT and SEO) and `commerce-install.mjs` (19 models; deleting Price is now stopped by the Price after tax formula first) fail on expectations older than EC-22/EC-37.
 - Note: most of this WO's backend code was committed by another session inside a4a268c5 (“Tax preview note endpoint…”); the route line, smoke and docs are in the EC-41 commit. Not deployed.
 
+## 2026-11-02 — EC-42 Automations “when a date is reached”
+- Any project: an automation can run when a record's date is reached, or so long before / after it (`on: ['date']` on its own + `date { field, amount 0–1000, unit minutes|hours|days, when before|after }`; the field must be a Date or Date formula). `{{event}}` reads “reached its date”.
+- `AutomationDue` (one waiting job per automation and record) + `automationDue.function.ts`: every save moves the record's jobs (queued from `fireAutomations`), clearing the date or deleting the record drops them, a date already passed isn't queued. A minute tick (lock in `locks`, each job claimed alone, stale claims retried, catch-up after a restart) first re-queues every date automation whose `dueSig` (on/off, page, date settings) changed — so the panel, MCP and system installs need no hooks — and drops a deleted one's jobs; then runs the due jobs through `runFor` (split out of `fireAutomations`) on the record as it is then: conditions checked at run time, a moved date left to the newer job. Runs and History as for any run. Project delete clears the jobs.
+- MCP `save_automation` takes `date`; `list_automations` words it (“1 days before its renews is reached”). Panel API returns `date`.
+- Panels (mint-tenant + admin): When → **reaches a date** (exclusive of the others) with how long / unit / before–after / the date field, the sentence (“1 day after a Membership’s Renews on: …”), guide link `automation-date`. Checked in headless Chrome.
+- Guide: mint-docs Automations → When a date is reached.
+- Smoke `automations-date.mjs` (27 checks, server with `AUTOMATION_TICK_MS=2000`) all pass; `automations.mjs`, `automations-linked.mjs`, `automations-mcp.mjs`, `commerce-tax.mjs` still pass. Not deployed.
+

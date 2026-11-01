@@ -43,7 +43,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | **done 2026-11-02** (not deployed); inactive notice dropped — an inactive tax now holds nothing |
 | EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | **done 2026-11-02**: Verte upgraded on prod (backend not deployed); store guide “Tax and prices”, website changelog; admin /docs has no store pages |
 | EC-41 | Collections: model, product ★Collections (many), collection page Products tab with Add existing / Remove, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + admin + mint-docs | M | **done 2026-11-02** (not deployed; built stores get it from `upgradeStores.js`) |
-| EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | planned 2026-11-02 |
+| EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | **done 2026-11-02** (not deployed) |
 | EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | planned 2026-11-02 |
 | EC-44 | Store discount automations D1–D6 (saved, deleted, product moved, category moved, ends, starts) + form note | backend + mint-tenant | M | planned 2026-11-02 |
 | EC-45 | The till charges the sale price: order lines, POS, receipts, website orders, returns; Store setting *Coupons apply to* (discounted price by default / original price) | backend + mint-tenant | M | planned 2026-11-02 |
@@ -51,6 +51,11 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | planned 2026-11-02 |
 
 ## Handoff
+
+- **2026-11-02 — EC-42 date trigger done** (CHANGELOG). `on: ['date']` + `date { field, amount, unit, when }`; jobs in
+  `automationdues` (automationDue.function.ts): queued from fireAutomations on every save, re-queued by the tick when an
+  automation's `dueSig` changes (so panel, MCP and system installs need no hooks), run through `runFor` (event `date`).
+  Tests: `AUTOMATION_TICK_MS=2000` + `automations-date.mjs`. Next: EC-43 (discount model) — D5/D6 use this trigger.
 
 - **2026-11-02 — EC-41 Collections done** (CHANGELOG). Generic piece: `POST /<route>/bulk/link { ids, field, to, remove? }`
   (bulkActions.controller `bulkLink`) puts one record into / out of a many-link field, History + automations per row; a
