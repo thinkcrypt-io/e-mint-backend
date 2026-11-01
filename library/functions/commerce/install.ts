@@ -54,6 +54,7 @@ const ICONS: Record<ModelKey, string> = {
 	outlet: 'store',
 	category: 'folder-tree',
 	brand: 'badge',
+	collection: 'library',
 	taxRate: 'percent',
 	product: 'package',
 	variant: 'layers',

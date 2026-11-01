@@ -148,6 +148,15 @@ ok('…they hold the new tax (the store is inclusive by now: price 100)', idOf(u
 r = await call('DELETE', `${P}/${inst.taxRate.route}/${use._id}`, null, t);
 ok('now it can be deleted', r.status === 200, `${r.status} ${r.body?.message}`);
 
+// The category form's note counts what saving would change (A1 is on here); the price column's name follows the mode.
+const pc = await add('category', { name: 'Preview' });
+const pp = await add('product', { name: 'Pv', category: pc._id, price: 10 });
+r = await call('GET', `${C}/tax-preview?category=${pc._id}&tax=${vat5._id}`, null, t);
+ok('tax preview: 1 product would change', r.body?.on === true && r.body?.products === 1, JSON.stringify(r.body));
+r = await call('GET', `${P}/builder/models/${inst.product.id}`, null, t);
+const label = x => (x.body?.doc?.fields || x.body?.fields || []).find(f => f.key === 'priceAfterTax')?.label;
+ok('inclusive store: the column reads “Price incl. tax”', label(r) === 'Price incl. tax', label(r));
+
 // A1 switched off → changing a category's tax touches no product.
 r = await call('PATCH', `${P}/automations/${a1._id}`, { enabled: false }, t);
 ok('A1 switched off', r.status === 200 && r.body?.enabled === false);

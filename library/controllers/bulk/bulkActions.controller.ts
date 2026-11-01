@@ -7,6 +7,7 @@ import { ownRecordsOf } from '../../functions/projectIndexes.function.js';
 import { lockedChanges } from '../../functions/fieldLocks.function.js';
 import { hasLinkedRules, LinkedError, linkedFor, linkedMany } from '../../functions/linkedRelationships.function.js';
 import { recalculateDependents } from '../../functions/formulaDependents.function.js';
+import { refModelOf } from '../builder/viewDocument.controller.js';
 
 /**
  * Bulk actions on the rows ticked in a table (admin selection bar):
@@ -16,6 +17,7 @@ import { recalculateDependents } from '../../functions/formulaDependents.functio
  *   POST /bulk/duplicate   { ids, overrides? }       → a copy of each, unique fields made unique
  *   POST /bulk/archive     { ids, archived }         → sets / clears `archivedAt` (route.archive on)
  *   POST /bulk/status      { ids, to, reason? }      → moves route.status.field, where allowed
+ *   POST /bulk/link        { ids, field, to, remove? } → one record into / out of a many-link field
  *   POST /bulk/merge/preview { keep, merge }         → how many linked records would move
  *   POST /bulk/merge       { keep, merge, values }   → keep one, repoint every link, remove the rest
  *
@@ -252,6 +254,63 @@ export const bulkArchive = ({ Model }: Opts) => async (req: any, res: Response) 
 		return res.status(200).json({ changed: targets.length, skipped: ids.length - targets.length });
 	} catch (e: any) {
 		return fail(res, 500, e?.message || 'Could not archive these records');
+	}
+};
+
+/* -------------------------------------------------------------------- link */
+
+/**
+ * POST /bulk/link { ids, field, to, remove? } — puts one record into (or, with
+ * `remove`, takes it out of) the rows' many-link field: products added to the
+ * Sale collection from its page. Only a field that picks several records and
+ * that the form may edit; locked rows are skipped. Each row changed is saved
+ * the way an edit is — History, webhooks, automations — and its formulas'
+ * dependents follow.
+ */
+export const bulkLink = ({ Model }: Opts) => async (req: any, res: Response) => {
+	try {
+		const ids = validIds(req.body?.ids);
+		if (!ids.length) return fail(res, 400, 'Pick at least one record');
+		if (ids.length > MAX_IDS) return fail(res, 400, `At most ${MAX_IDS} records at a time`);
+		const field = String(req.body?.field || '');
+		const path: any = field && Model.schema.path(field);
+		if (!path || path.instance !== 'Array' || !(path.caster?.options?.ref || path.options?.ref))
+			return fail(res, 400, `“${field || '(none)'}” isn’t a field that picks several records`);
+		if (settingsOf(req)[field]?.edit === false) return fail(res, 403, `${labelOf(req, field)} can’t be changed here`);
+		const to = String(req.body?.to || '');
+		if (!mongoose.isValidObjectId(to)) return fail(res, 400, 'Pick the record to link');
+		const remove = req.body?.remove === true;
+
+		const docs = (await Model.find(scopeOf(req, ids)).lean()) as any[];
+		const has = (d: any) => (Array.isArray(d[field]) ? d[field] : []).some((v: any) => String(v?._id ?? v) === to);
+		const skipped: { id: string; name: string; from: string; why: string }[] = [];
+		const targets: any[] = [];
+		for (const d of docs) {
+			if (remove ? !has(d) : has(d)) skipped.push({ id: String(d._id), name: nameOf(d), from: '', why: remove ? 'not linked' : 'already linked' });
+			else if (lockedChanges(settingsOf(req), d, { [field]: remove ? [] : [...(d[field] || []), to] }).length)
+				skipped.push({ id: String(d._id), name: nameOf(d), from: '', why: `${labelOf(req, field)} is locked on it` });
+			else targets.push(d);
+		}
+		ids.filter(id => !docs.some(d => String(d._id) === id)).forEach(id => skipped.push({ id, name: id, from: '', why: 'not found or not yours to edit' }));
+		if (targets.length)
+			await Model.updateMany({ _id: { $in: targets.map(d => d._id) } }, remove ? { $pull: { [field]: oid(to) } } : { $addToSet: { [field]: oid(to) } });
+		await recalculateDependents(req.app, Model, targets.map(d => d._id), [field]);
+
+		// History names the linked records, before and after.
+		const Ref = refModelOf(Model, field);
+		const after = targets.length ? ((await Model.find({ _id: { $in: targets.map(d => d._id) } }).lean()) as any[]) : [];
+		const all = [...new Set([...targets, ...after].flatMap(d => (d[field] || []).map((v: any) => String(v?._id ?? v))))];
+		const names = new Map<string, string>();
+		if (Ref && all.length) for (const r of (await Ref.find({ _id: { $in: all } }).select('name title code').lean()) as any[]) names.set(String(r._id), nameOf(r));
+		const list = (d: any) => (d?.[field] || []).map((v: any) => names.get(String(v?._id ?? v)) || String(v?._id ?? v)).join(', ');
+		const label = labelOf(req, field);
+		for (const doc of after) {
+			const before = targets.find(d => String(d._id) === String(doc._id));
+			recordHistory({ req, action: 'update', model: Model.modelName, doc, changes: [{ field, label, from: text(list(before)), to: text(list(doc)) }] });
+		}
+		return res.status(200).json({ changed: targets.length, skipped });
+	} catch (e: any) {
+		return fail(res, 500, e?.message || 'Could not change the links');
 	}
 };
 

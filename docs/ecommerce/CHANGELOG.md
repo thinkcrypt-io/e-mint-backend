@@ -458,3 +458,7 @@
 - `upgradeStores.js --apply` run on production with the user's go-ahead: Verte got `taxAdded`, the new Price after tax formula, the four tax system automations and the one-time reprice (`tax-prices`); a second dry run says up to date. The Heroku backend is not deployed yet, so the live store does not react to tax changes until it is.
 - mint-docs store guide: new “Tax and prices” section, Category's Tax / VAT row, variants and POS tax rows. Website changelog entry. Admin /docs has no store pages.
 - Not built: the category form note “Saving gives this tax to N products”, and the Price after tax column label per tax mode.
+
+## 2026-11-02 — EC-37 / EC-38 leftovers: category form note, price column label
+- `GET /commerce/tax-preview?category=&tax=` (count of the category's products saving would change; `on` = the category automation is on). mint-tenant `TaxNote.tsx` under the category form: once Tax / VAT is changed on a saved category, “Saving gives this tax to N products in this category, and their price after tax follows.” The after-save toast was not built.
+- `relabelPriceColumns` (taxRates.ts): the Price after tax column is named for the store's tax mode — “Price after tax” (added), “Price incl. tax” (inclusive), “Price (no tax)” (none); only labels the store itself gave are renewed. Runs after Store settings are saved and in the upgrade (Verte: dry run shows it; not applied).

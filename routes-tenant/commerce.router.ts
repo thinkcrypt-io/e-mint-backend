@@ -1,4 +1,6 @@
 import express from 'express';
+import Automation from '../library/models/tenancy/automation.model.js';
+import mongoose from 'mongoose';
 import { handle } from '../library/functions/tenancy.function.js';
 import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
 import { commerceView, saveCommerce } from '../library/functions/commerce/settings.js';
@@ -81,6 +83,7 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   POST /deliveries/settle  { deliveries: [ids], ref? }   marked paid out by the courier (RedX, manual)   records:edit
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  */
+import { relabelPriceColumns } from '../library/functions/commerce/taxRates.js';
 import { replaceTax, taxUsage, usageText } from '../library/functions/commerce/taxUse.js';
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
@@ -100,6 +103,12 @@ router.put(
 	handle(async (req: any) => {
 		await saveCommerce(req.project, req.body || {}, settingsGuard);
 		await afterSettingsSaved(req.project);
+		// A built store's price column names what it holds for the tax mode (a store not built yet has none).
+		try {
+			await relabelPriceColumns(req, await storeOf(), {});
+		} catch (e: any) {
+			if (e?.code !== 'store_not_ready') console.error('price label:', e?.message);
+		}
 		const view = await commerceView(req.project);
 		const sections = Object.keys(req.body?.answers || {});
 		if (sections.length)
@@ -305,6 +314,19 @@ router.post(
 );
 
 /** A tax in use (TX5): who holds it, and moving them all to another tax. */
+/** A category form's note: how many of its products saving a tax would change (when the store's automation hands it down). */
+router.get(
+	'/tax-preview',
+	view,
+	handle(async (req: any) => {
+		const store = await storeOf();
+		const { category, tax } = req.query;
+		const on = !!(await Automation.exists({ key: 'tax.category-to-products', enabled: true }));
+		if (!on || !mongoose.isValidObjectId(category) || !mongoose.isValidObjectId(tax)) return { products: 0, on };
+		const products = await store.M('product').countDocuments({ category, taxRate: { $ne: new mongoose.Types.ObjectId(String(tax)) } });
+		return { products, on };
+	})
+);
 router.get(
 	'/taxes/:id/usage',
 	view,

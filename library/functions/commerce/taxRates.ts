@@ -64,3 +64,28 @@ export const refreshProductTax = async (store: Store, productId: any) => {
 	const ids = (await store.M('variant').find({ product: productId }, { _id: 1 }).lean()).map((d: any) => d._id);
 	await refreshTaxAdded(store, { product: [productId], variant: ids });
 };
+
+const PRICE_LABELS: Record<string, string> = { added: 'Price after tax', inclusive: 'Price incl. tax', none: 'Price (no tax)' };
+
+/**
+ * The Price after tax column says what it holds for the store's tax mode: “Price after tax” (tax added),
+ * “Price incl. tax” (the price already holds it), “Price (no tax)”. Only a label the store itself gave is
+ * renewed — one the owner renamed stays. Called after Store settings are saved, and by the upgrade.
+ */
+export const relabelPriceColumns = async (req: any, store: Store, { apply = true } = {}) => {
+	const want = PRICE_LABELS[store.answers?.pos?.tax?.mode || 'none'];
+	const known = Object.values(PRICE_LABELS);
+	const done: string[] = [];
+	for (const key of ['product', 'variant'] as const) {
+		const id = store.installed[key]?.id;
+		const def: any = id && (await ModelDefinition.findById(id).lean());
+		const f = def?.fields?.find((x: any) => x.key === 'priceAfterTax');
+		if (!f || f.label === want || !known.includes(f.label)) continue;
+		done.push(`${def.title}: “${f.label}” → “${want}”`);
+		if (!apply) continue;
+		const { updateModelCore } = await import('../../controllers/builder/models.controller.js');
+		const fields = def.fields.map((x: any) => (x.key === 'priceAfterTax' ? { ...x, label: want } : x));
+		await updateModelCore(req, def._id, { ...def, fields }, { note: 'The price column follows the tax mode' });
+	}
+	return done;
+};

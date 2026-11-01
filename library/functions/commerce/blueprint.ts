@@ -17,6 +17,7 @@ export type ModelKey =
 	| 'outlet'
 	| 'category'
 	| 'brand'
+	| 'collection'
 	| 'taxRate'
 	| 'product'
 	| 'variant'
@@ -185,6 +186,49 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 		},
 	},
 	{
+		key: 'collection',
+		shownWhen: null,
+		engine: [],
+		step: {
+			name: 'Collection',
+			title: 'Collections',
+			route: 'collections',
+			description: 'Groups of products on your website — Sale, Featured, New in. A product can be in several',
+			rationale: 'Unlike its one category, a product can be in any number of collections; a collection’s page lists its products.',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', required: true, searchable: true },
+				{
+					key: 'slug',
+					label: 'Web address',
+					kind: 'uid',
+					from: 'name',
+					helper: 'Left empty, it’s made from the name: Summer Sale → summer-sale. One that’s taken gets -2, so each stays unique',
+				},
+				{ key: 'webStatus', label: 'Status on website', kind: 'select', options: opts('active', 'inactive'), default: 'active', required: true, helper: 'Inactive: the collection isn’t shown on your website' },
+				{ key: 'webOrder', label: 'Order on website', kind: 'number', default: 0, helper: 'The higher the number, the earlier it shows on your website' },
+				{ key: 'description', label: 'Description', kind: 'textarea' },
+				{ key: 'image', label: 'Image', kind: 'image', helper: 'Its banner or main picture' },
+				{ key: 'seo', label: 'SEO', kind: 'seo', helper: 'Its title, description and share image in search results and links — for its page on your website' },
+			],
+			table: ['name', 'slug', 'webStatus', 'webOrder'],
+			filters: ['webStatus'],
+			form: [
+				{ sectionTitle: 'Collection', description: 'Its name and what it’s about', fields: ['name', 'description'] },
+				{ sectionTitle: 'Website configuration', description: 'Whether and where it shows on your website, and its address there', fields: [['webStatus', 'webOrder'], 'slug'] },
+				{ sectionTitle: 'Image', fields: ['image'] },
+				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
+			],
+			view: [
+				{ title: 'Collection', columns: 1, fields: ['name', 'description'] },
+				{ title: 'Website configuration', columns: 3, fields: ['webStatus', 'webOrder', 'slug'] },
+				{ title: 'Image', columns: 1, fields: ['image'] },
+				{ title: 'SEO', columns: 1, fields: ['seo'] },
+				{ title: 'Details', columns: 2, fields: ['createdAt'] },
+			],
+		},
+	},
+	{
 		key: 'product',
 		shownWhen: null,
 		engine: ['totalStock', 'taxAdded'],
@@ -201,6 +245,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ key: 'productType', label: 'Product type', kind: 'select', options: [{ value: 'simple', label: 'Simple' }, { value: 'variation', label: 'With variations' }], default: 'simple', required: true, helper: 'With variations: it comes in sizes, colours… — each combination is its own item with its own stock' },
 				{ key: 'category', label: 'Category', kind: 'reference', ref: 'Category' },
 				{ key: 'brand', label: 'Brand', kind: 'reference', ref: 'Brand' },
+				{ key: 'collections', label: 'Collections', kind: 'references', ref: 'Collection', helper: 'The groups it shows in on your website — Sale, Featured… Pick as many as you like', showInTable: false },
 				money('price', 'Price', { required: true, helper: 'Each variant’s price unless it has its own' }),
 				money('compareAtPrice', 'Compare-at price', { default: undefined, helper: 'The old price, shown struck out' }),
 				money('cost', 'Cost', { default: undefined, helper: 'What it costs you — for profit reports' }),
@@ -236,7 +281,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ key: 'seo', label: 'SEO', kind: 'seo', helper: 'Its title, description and share image in search results and links — for its page on your website' },
 			],
 			form: [
-				{ sectionTitle: 'Product', description: 'What it is and where it sits', fields: [['name', 'status'], ['category', 'brand'], 'description'] },
+				{ sectionTitle: 'Product', description: 'What it is and where it sits', fields: [['name', 'status'], ['category', 'brand'], 'collections', 'description'] },
 				{ sectionTitle: 'Type', fields: ['productType'] },
 				{ sectionTitle: 'Variations', description: 'What it varies by — each combination becomes a variation with its own price, image and stock', fields: ['options'], showIf: { field: 'productType', operator: 'eq', value: 'variation' } },
 				{ sectionTitle: 'Pricing', fields: [['price', 'taxRate'], 'priceAfterTax', ['compareAtPrice', 'cost']] },
@@ -245,7 +290,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
 			],
 			table: ['name', 'category', 'price', 'priceAfterTax', 'totalStock', 'status'],
-			filters: ['status', 'category', 'productType'],
+			filters: ['status', 'category', 'collections', 'productType'],
 		},
 	},
 	{

@@ -20,7 +20,8 @@ import { rebuildPurchases } from './purchases.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 import { ensureTaxAutomations } from './taxAutomations.js';
-import { refreshTaxAdded } from './taxRates.js';
+import { refreshTaxAdded, relabelPriceColumns } from './taxRates.js';
+import { publishConfigPatch } from '../../controllers/builder/builder.controller.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -234,6 +235,34 @@ const addModels = async (req: any, store: Store, apply: boolean): Promise<Change
 	return changes;
 };
 
+/**
+ * A collection's page lists its products (docs/ecommerce DISCOUNTS.md DS7): the Products tab a new store gets from
+ * the product's Collections link, given to a store whose Collections came by this upgrade (built on their own, before
+ * Products had the link, so the build made no tab).
+ */
+const ensureCollectionTab = async (req: any, store: Store, apply: boolean): Promise<Change[]> => {
+	const coll = store.installed.collection;
+	const prod = store.installed.product;
+	if (!coll || !prod) return [];
+	const doc: any = await RouteConfig.findOne({ route: coll.route }, { data: 1 }).lean();
+	const tabs: any[] = Array.isArray(doc?.data?.viewTabs) ? doc.data.viewTabs : [];
+	if (tabs.some(t => t?.related === prod.route && t?.foreignField === 'collections')) return [];
+	if (apply) {
+		const pc: any = await RouteConfig.findOne({ route: prod.route }, { data: 1 }).lean();
+		const cols = (Array.isArray(pc?.data?.table) ? pc.data.table : ['name', 'category', 'price', 'totalStock', 'status'])
+			.map((c: any) => (typeof c === 'string' ? c : c?.key || c?.dataKey))
+			.filter((c: any) => typeof c === 'string' && c && c !== 'collections' && !c.includes('.'))
+			.slice(0, 5);
+		await publishConfigPatch(
+			req,
+			coll.route,
+			data => ({ ...data, viewTabs: [...(Array.isArray(data.viewTabs) ? data.viewTabs : []), { related: prod.route, foreignField: 'collections', title: 'Products', display: 'table', columns: cols, pageSize: 10 }] }),
+			'The store’s upgrade: a Products tab'
+		);
+	}
+	return [{ model: 'Collections', added: [], renewed: [], filled: ['a Products tab on each collection’s page'] }];
+};
+
 export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Change[]> => {
 	const store = await storeOf();
 	const hadPurchases = !!store.installed.purchase;
@@ -332,6 +361,7 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}
+	changes.push(...(await ensureCollectionTab(req, await storeOf(), apply)));
 	// What customers bought, worked out from the orders already there.
 	if (!hadPurchases && apply) {
 		const n = await rebuildPurchases(await storeOf());
@@ -347,6 +377,9 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 	// The tax automations (EC-37): a category's tax to its products, a product's category to its tax, a product's tax to its variants.
 	const taxMade = await ensureTaxAutomations(((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed, { apply });
 	if (taxMade.length) changes.push({ model: 'Automations', added: [], renewed: [], filled: taxMade });
+	// The price column's name follows the tax mode.
+	const relabelled = await relabelPriceColumns(req, await storeOf(), { apply });
+	if (relabelled.length) changes.push({ model: 'Products', added: [], renewed: relabelled, filled: [] });
 	// Every item's tax by the till's rule, once, now that Price after tax reads it (EC-38).
 	const doneTax: any = ((await CommerceSettings.findOne({}, { doneOnce: 1 }).lean()) as any)?.doneOnce || [];
 	if (!doneTax.includes('tax-prices')) {

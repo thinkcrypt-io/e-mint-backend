@@ -355,11 +355,11 @@ export const permissionsOf = async (req: any) => {
 	// every project endpoint checks them. Looking them up as an admin Role found
 	// nothing, so even the owner was told they couldn't see linked records.
 	if (currentScope())
-		return (entry: ResourceRouteEntry, verb: 'view' | 'create' = 'view') =>
+		return (entry: ResourceRouteEntry, verb: 'view' | 'create' | 'edit' = 'view') =>
 			grants(req.permissions || [], [`${verb}-${entry.source.permission}`]);
 	const role: any = await Role.findById(req.user?.role).select('permissions').lean();
 	const permissions: string[] = role?.permissions || [];
-	return (entry: ResourceRouteEntry, verb: 'view' | 'create' = 'view') =>
+	return (entry: ResourceRouteEntry, verb: 'view' | 'create' | 'edit' = 'view') =>
 		permissions.includes('*') || permissions.includes(`${verb}-${entry.source.permission}`);
 };
 
@@ -368,12 +368,14 @@ export const permissionsOf = async (req: any) => {
  * one. Only when their field points here (`foreignField`) — the new record
  * carries the link itself. A `localField` tab would also have to edit this
  * record, so it has none. `allowed` is the caller's create permission on
- * that route; the button still shows without it, disabled.
+ * that route; the button still shows without it, disabled. A many-link tab
+ * also says whether the caller may link existing records (`link`, the edit
+ * permission there) — POST /<related>/bulk/link.
  */
 const addButtonOf = async (
 	req: any,
 	item: RelatedItem,
-	can: (e: ResourceRouteEntry, verb?: 'view' | 'create') => boolean
+	can: (e: ResourceRouteEntry, verb?: 'view' | 'create' | 'edit') => boolean
 ) => {
 	if (!item.foreignField || item.allowAdd === false) return null;
 	const entry = resources(req.app).get(item.related);
@@ -406,6 +408,8 @@ const addButtonOf = async (
 		field: item.foreignField,
 		many: path.instance === 'Array',
 		allowed: can(entry, 'create'),
+		// A many-link (a product's collections): records already there can be put in or taken out of this one.
+		...(path.instance === 'Array' && { link: { allowed: can(entry, 'edit') } }),
 		...(Object.keys(defaults).length && { defaults }),
 	};
 };
