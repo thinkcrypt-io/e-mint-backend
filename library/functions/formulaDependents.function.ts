@@ -3,6 +3,7 @@ import { collectResourceRoutes, getDynamicVersion } from './routeRegistry.functi
 import { resolveRoute } from './resolveRoute.function.js';
 import { scopeKey } from './tenantScope.function.js';
 import { Formula, formulasOf, linkedModelOf, linksRead, recalculateFormulas } from './formula.function.js';
+import { followReadonly } from './linkedFill.function.js';
 
 /**
  * Formulas reading through a link (`total = price * qty + tax.amount`) are
@@ -48,6 +49,12 @@ const candidatesFor = (app: any, model: mongoose.Model<any>): Candidate[] => {
 			.filter(([k, p]) => p.instance === 'ObjectId' && typeof p.options?.ref === 'string' && !k.startsWith('_'))
 			.filter(([k]) => linkedModelOf(Dep, k)?.modelName === model.modelName)
 			.map(([k]) => k);
+		// Links inside a list's rows (`items.product`): for the autofill fields copying from them (docs/autofill D8).
+		for (const [k, p] of Object.entries<any>(Dep.schema.paths))
+			if (p.$isMongooseDocumentArray)
+				for (const [sub, sp] of Object.entries<any>(p.schema.paths))
+					if (sp.instance === 'ObjectId' && typeof sp.options?.ref === 'string' && !sub.startsWith('_') && (mongoose.models[sp.options.ref] as any)?.modelName === model.modelName)
+						heads.push(`${k}.${sub}`);
 		if (heads.length) out.push({ route: e.route, source: e.source, heads });
 	}
 	entry.byModel.set(model.modelName, out);
@@ -102,6 +109,18 @@ export const recalculateDependents = async (
 	const path = new Set(seen).add(model.modelName);
 	let total = 0;
 	try {
+		// Read-only autofill fields copying from these records follow them (docs/autofill AF-06);
+		// their own formulas and dependents are worked out from the new values in turn.
+		for (const c of candidatesFor(app, model)) {
+			const { settings } = await resolveRoute(c.route, { ...c.source, built: null });
+			const followed = await followReadonly(c.source.Model, settings, model, c.heads, changedIds, changed);
+			if (!followed.ids.length) continue;
+			const own = formulasOf(settings);
+			if (own.length) total += await recalculateFormulas(c.source.Model, { _id: { $in: followed.ids } }, own);
+			if (!path.has(c.source.Model.modelName))
+				total += await recalculateDependents(app, c.source.Model, followed.ids, [...followed.keys, ...own.filter(f => !f.sub).map(f => f.key)], path, depth + 1);
+			total += followed.ids.length;
+		}
 		for (const d of await dependentsOf(app, model)) {
 			const heads = [...d.reads].filter(([, paths]) => !changed || paths.some(p => touches(p, changed))).map(([h]) => h);
 			if (!heads.length) continue;

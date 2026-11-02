@@ -4,6 +4,7 @@ import { scopedModel } from '../../functions/routeRegistry.function.js';
 import ExcelJS from 'exceljs';
 import recordHistory from '../../functions/recordHistory.function.js';
 import { hasLinkedRules, LinkedError, linkedMany } from '../../functions/linkedRelationships.function.js';
+import { syncReadonly } from '../../functions/linkedFill.function.js';
 import { applyFormulas, applyFormulasLinked, formulasOf, stripFormulaKeys } from '../../functions/formula.function.js';
 import { hiddenFields, rulesOf } from '../../functions/formRules.function.js';
 
@@ -624,6 +625,8 @@ export const importRows = (Model: mongoose.Model<any>) => async (req: any, res: 
 				stage: 'save',
 			});
 		}
+	// Read-only autofill fields, from the records the rows pick (docs/autofill).
+	await syncReadonly(Model, req.resolvedRoute?.settings, { _id: { $in: created.map(d => d._id) } }).catch(() => undefined);
 	created.forEach(doc => recordHistory({ req, action: 'create', model: Model.modelName, doc }));
 	return res.status(201).json({ ...summary, created: created.length, ...(also.length > 0 && { linked: also.length }) });
 };

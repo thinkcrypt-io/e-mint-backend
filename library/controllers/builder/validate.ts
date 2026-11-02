@@ -2,7 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ACCESS_KEYS, isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { settingsToData } from '../../functions/routeRegistry.function.js';
-import { FieldInfo, checkFormula, format, isDateFormulaSchema, isFormulaType, linkedModelOf, parse, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
+import { FieldInfo, checkFormula, format, isDateFormulaSchema, isFormulaType, linkedModelOf, parse, refsOf, sectionFieldInfo, subFieldsOf } from '../../functions/formula.function.js';
 import { ruleSchema, rulesSchema } from '../../functions/formRules.function.js';
 import { linkedRulesSchema } from '../../functions/linkedRelationships.function.js';
 
@@ -279,6 +279,20 @@ export const withFormulaFields = (data: any) => {
 	};
 };
 
+const isAutofill = (f: any) => f?.schema?.type === 'autofill' || f?.schema?.type === 'autofillreadonly';
+const SENSITIVE_SOURCE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|hash/i;
+
+/** Autofill (read-only) (docs/autofill) is set by the server: never changeable, never required. */
+export const withAutofillFields = (data: any) => {
+	if (!Array.isArray(data?.fields) || !data.fields.some((f: any) => f?.schema?.type === 'autofillreadonly')) return data;
+	return {
+		...data,
+		fields: data.fields.map((f: any) =>
+			f?.schema?.type === 'autofillreadonly' ? { ...f, edit: false, required: false, schema: { ...f.schema, isRequired: false } } : f
+		),
+	};
+};
+
 /** What a formula may use: the other fields, and whether each holds a number. */
 export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): FieldInfo[] =>
 	fields.flatMap((f: any) => {
@@ -306,7 +320,7 @@ export const formulaFieldInfo = (fields: any[], model?: mongoose.Model<any>): Fi
 
 /** A settings draft with its system fields exactly as generated — changed ones restored, missing ones added back. */
 export const withSystemFields = (dataIn: any, model: mongoose.Model<any> | undefined, codeSettings: Record<string, any>) => {
-	const data = withFormulaFields(dataIn);
+	const data = withAutofillFields(withFormulaFields(dataIn));
 	const keys = lockedKeys(model, codeSettings);
 	if (!keys.length || !Array.isArray(data?.fields)) return data;
 	const generated = new Map(settingsToData(codeSettings).fields.map((f: any) => [f.key, f]));
@@ -388,6 +402,29 @@ export const checkSettings = ({
 			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be a formula.`);
 			const checked = checkFormula(field.schema?.formula || '', formulaFieldInfo(data.fields, model), key, date ? 'date' : 'number');
 			if (!checked.ok) problems.push(`'${key}' formula: ${checked.errors.map(e => e.message).join('; ')}`);
+		}
+
+		// Autofill (docs/autofill): copies a field of the record picked in another field of this page.
+		if (isAutofill(field)) {
+			const ff = field.schema.fillFrom;
+			const link = ff?.from && data.fields.find((x: any) => x?.key === ff.from);
+			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be an autofill.`);
+			if (!ff?.from || !String(ff?.formula || '').trim()) problems.push(`'${key}' autofill: pick the link it copies from and what to take.`);
+			else if (!link || !link.schema?.model) problems.push(`'${key}' autofill: '${ff.from}' isn't a link field of this page.`);
+			else {
+				try {
+					const refs = [...refsOf(parse(ff.formula))];
+					if (!refs.length) problems.push(`'${key}' autofill: say what to take from '${ff.from}'.`);
+					const bad = refs.find(r => SENSITIVE_SOURCE.test(r));
+					if (bad) problems.push(`'${key}' autofill: '${bad}' is a hidden field and can't be copied.`);
+				} catch (e: any) {
+					problems.push(`'${key}' autofill: ${e?.message || 'what it copies isn’t a field or a formula'}`);
+				}
+			}
+			if (field.schema.type === 'autofillreadonly' && (field.edit || field.required)) problems.push(`'${key}' is set by the server, so it can't be changeable or required.`);
+			const path: any = model?.schema?.path(key);
+			const kind = { text: 'String', number: 'Number', date: 'Date', boolean: 'Boolean' }[field.schema.fills as string];
+			if (path && kind && path.instance !== kind) problems.push(`'${key}' autofill: the model stores it as ${String(path.instance).toLowerCase()}, not ${field.schema.fills}.`);
 		}
 
 		// A section's own fields: each must be a path the model stores under it

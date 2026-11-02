@@ -967,7 +967,7 @@ export const isRowList = (f: any) => f?.schema?.type === 'section-data-array';
 export const sectionFieldInfo = (key: string, f: any): FieldInfo[] => {
 	const subs = subFieldsOf(f);
 	if (!subs.length) return [];
-	const numeric = (x: any) => x.type === 'number' || x.type === 'formula';
+	const numeric = (x: any) => x.type === 'number' || x.type === 'formula' || x.fills === 'number';
 	if (isRowList(f))
 		return [
 			{ key, label: f?.title, numeric: false, list: true },

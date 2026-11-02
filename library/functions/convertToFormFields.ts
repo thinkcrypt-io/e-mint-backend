@@ -11,10 +11,15 @@ type CreateType = {
 	type?: 'post' | 'update';
 };
 
-const createType = ({ type, isReadOnly, fieldType }: any) => {
+/** The input an Autofill field (docs/autofill) is typed into: the kind of value it copies. */
+const AUTOFILL_INPUT: Record<string, string> = { text: 'string', number: 'number', date: 'date', boolean: 'checkbox' };
+
+const createType = ({ type, isReadOnly, fieldType, fills }: any) => {
 	if (type == 'update' && isReadOnly) {
 		return 'read-only';
 	}
+	// Autofill is filled when its link is picked and typed over like the value it holds; Autofill (read-only) has its own muted input.
+	if (fieldType === 'autofill') return AUTOFILL_INPUT[fills] || 'string';
 	return fieldType;
 };
 
@@ -37,6 +42,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						type: type,
 						isReadOnly: fieldConfig?.readOnlyOnUpdate || false,
 						fieldType: fieldConfig?.type,
+						fills: fieldConfig?.fills,
 					});
 					if (fieldConfig) {
 						dataFields.push({
@@ -82,6 +88,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
+							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
@@ -96,6 +103,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 					type: type,
 					isReadOnly: fieldConfig?.readOnlyOnUpdate || false,
 					fieldType: fieldConfig?.type,
+					fills: fieldConfig?.fills,
 				});
 				if (fieldConfig) {
 					dataFields.push({
@@ -137,6 +145,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						// Which linked records a picker offers (the route builder's Settings).
 						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
+							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),

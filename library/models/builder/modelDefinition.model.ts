@@ -57,6 +57,8 @@ const fieldSchema = new Schema<any>(
 		pickerDetails: { type: [String], default: undefined },
 		/** For reference kinds: filled from another picked link — a product's tax from its category (functions/linkedFill). */
 		fillFrom: { type: new Schema({ from: String, formula: String }, { _id: false }), default: undefined },
+		/** For the autofill kinds: the kind of value it copies — text, number, date, yes/no (docs/autofill D3). */
+		fills: { type: String, enum: ['text', 'number', 'date', 'boolean'] },
 	},
 	{ _id: false, minimize: false }
 );

@@ -50,6 +50,9 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			if (locked.length) return res.status(400).json({ message: lockedMessage(locked), locked });
 
 			updates.forEach((update: any) => (data[update] = req.body[update]));
+			// Read-only autofill fields, set from the records picked (docs/autofill).
+			const autofilled = Object.keys(req.autofilled || {});
+			autofilled.forEach(key => (data[key] = req.autofilled[key]));
 			// Formula fields, from the record as it now stands.
 			await applyFormulasLinked(data, req.formulas, model);
 			// Fields hidden by the form's conditions aren't required (formRules.function.ts).
@@ -74,7 +77,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 				}
 
 			// Records whose formulas read this one through a link (`tax.amount`).
-			await recalculateDependents(req.app, model, [saved._id], [...updates, ...(req.formulas || []).map((f: any) => f.key)]);
+			await recalculateDependents(req.app, model, [saved._id], [...updates, ...autofilled, ...(req.formulas || []).map((f: any) => f.key)]);
 
 			recordHistory({
 				req,
@@ -86,7 +89,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 					after: saved.toObject(),
 					// Only what this request actually submitted: comparing every path
 					// would report timestamps and defaults as user edits.
-					fields: [...updates, ...(req.formulas || []).map((f: any) => f.key)],
+					fields: [...updates, ...autofilled, ...(req.formulas || []).map((f: any) => f.key)],
 					settings,
 					secret: secretPaths(model.schema),
 				}),

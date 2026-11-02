@@ -58,7 +58,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-Use update_page for later changes to a page's columns, row menu (the ⋯ buttons on each row, e.g. Download invoice / Download receipt shown by status), form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
+To copy a field of a picked record into this one (an order's customer phone and email), use the autofill kinds in plan_feature / build_feature: "autofill" (filled when the link is picked, can be typed over) or "autofillreadonly" (server-owned, follows the source record's later changes), each with "fillFrom: { from: <link field key>, formula: <field of the linked model> }" and "fills" (text / number / date / boolean). Use update_page for later changes to a page's columns, row menu (the ⋯ buttons on each row, e.g. Download invoice / Download receipt shown by status), form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -137,7 +137,7 @@ type ToolDef = {
 };
 
 const kindLine = (f: any) =>
-	`| ${f.label || f.key} | \`${f.key}\` | ${f.kind}${f.ref ? ` → ${f.ref}` : ''}${f.options?.length ? ` (${f.options.map((o: any) => o.value).join(', ')})` : ''}${f.formula ? ` = ${f.formula}` : ''} | ${f.required ? 'yes' : ''} |`;
+	`| ${f.label || f.key} | \`${f.key}\` | ${f.kind}${f.ref ? ` → ${f.ref}` : ''}${f.options?.length ? ` (${f.options.map((o: any) => o.value).join(', ')})` : ''}${f.formula ? ` = ${f.formula}` : ''}${f.fillFrom?.from ? ` ← ${f.fillFrom.from} › ${f.fillFrom.formula}` : ''} | ${f.required ? 'yes' : ''} |`;
 
 /** A plan as Markdown the AI can show step by step. */
 const planText = (plan: FeaturePlan) => {

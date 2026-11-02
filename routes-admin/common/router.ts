@@ -55,7 +55,7 @@ import exportRecordsPdf from '../../library/controllers/export/exportRecordsPdf.
 import { exportRichText } from '../../library/controllers/export/exportDocx.controller.js';
 import exportTemplate from '../../library/controllers/pdfTemplates/exportTemplate.controller.js';
 import { formulasOf, stripFormulaKeys } from '../../library/functions/formula.function.js';
-import { fillLinked } from '../../library/functions/linkedFill.function.js';
+import { autofill } from '../../library/functions/linkedFill.function.js';
 import { hiddenFields, rulesOf } from '../../library/functions/formRules.function.js';
 import { previewLinked } from '../../library/functions/linkedRelationships.function.js';
 import { CANDIDATES, literalPattern, rankHits, runChain, searchOptionsOf, subRequest, toHits } from '../../library/functions/navSearch.function.js';
@@ -220,11 +220,15 @@ const defineRoutes = ({
 			next(e);
 		}
 	};
-	// Fields filled from a linked record (settings schema.fillFrom), left empty on
-	// create: filled from the picked record, before validation checks them.
+	// Autofill fields (settings schema.fillFrom, docs/autofill): filled from the
+	// picked record before validation checks them. Editable ones when left empty
+	// (on update: when their link changes in this save); read-only ones are
+	// never taken from the body — `req.autofilled` carries what the controller sets.
 	const linkedFills = async (req: any, _res: any, next: any) => {
 		try {
-			await fillLinked(req, req.resolvedRoute?.settings, req.body);
+			const id = req.params?.id;
+			const current = id && mongoose.isValidObjectId(id) ? await Model.findById(id).lean() : null;
+			req.autofilled = await autofill(req, req.resolvedRoute?.settings, req.body, current);
 			next();
 		} catch (e) {
 			next(e);
@@ -268,6 +272,7 @@ const defineRoutes = ({
 			formulas,
 			yesNoBlanks,
 			formRules,
+			linkedFills,
 			R(c => validate(c.VALIDATORS.UPDATE)),
 			hasPermission([permissions.update]),
 			...(injectMiddleware?.update || []),

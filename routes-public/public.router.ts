@@ -18,6 +18,7 @@ import {
 import { getActiveSettings } from '../library/functions/resolveRoute.function.js';
 import { dataToSettings } from '../library/functions/routeRegistry.function.js';
 import { applyFormulasLinked, formulasOf, stripFormulaKeys } from '../library/functions/formula.function.js';
+import { fillDoc } from '../library/functions/linkedFill.function.js';
 import { recalculateDependents } from '../library/functions/formulaDependents.function.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
@@ -1160,6 +1161,8 @@ const create = async (req: any, res: any, ctx: Ctx) => {
 		...(ctx.customer && { _customer: ctx.customer._id }),
 		...(ctx.def.access?.enabled && { privacy: 'public' }),
 	});
+	// Autofill fields, from the records picked — only with a server key: a visitor can't read other records through a link.
+	if (ctx.key) await fillDoc(ctx.Model, ctx.settings, doc, true);
 	await applyFormulasLinked(doc, ctx.formulas, ctx.Model);
 	// The endpoint's conditions, on the new record (an owner condition makes the customer its owner).
 	checkCreate(ctx.ep, doc, ctx.customer);
@@ -1199,6 +1202,7 @@ const update = async (req: any, ctx: Ctx) => {
 	const before = doc.toObject();
 	const raw = (await hasApiRules(req, ctx)) ? await ctx.Model.collection.findOne({ _id: doc._id }) : null;
 	doc.set(body);
+	if (ctx.key) await fillDoc(ctx.Model, ctx.settings, doc, false);
 	await applyFormulasLinked(doc, ctx.formulas, ctx.Model);
 	const changed = doc.isModified();
 	let plan: any = null;

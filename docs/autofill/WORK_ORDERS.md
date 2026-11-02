@@ -1,0 +1,14 @@
+# Autofill fields — work orders
+
+Read `README.md` first. Commit and push each WO when it's done. Admin and mint-tenant change together.
+
+| WO | What | Where | Size | Status |
+|---|---|---|---|---|
+| AF-01 | Engine: `autofill` / `autofillreadonly` settings types; `schema.fills` from the source field's kind (mongoose type, filters, sort); read-only set from the link on create + every update (body value dropped, cleared with the link, not required in the validator); editable filled on update when the link changes and the field wasn't sent, a typed value kept otherwise; `isFormulaType` covers read-only; history/out-of-history same as formulas | backend (`linkedFill.function.ts`, `routes-admin/common/router.ts`, `convertToFormFields.ts`, validators) | M | planned |
+| AF-02 | Form: both types render as their `fills` kind; read-only shown locked with "from Customer"; LinkedFiller fills both on pick (create and edit), clears read-only when the link is cleared, re-pick replaces; detail page + table show them like their kind | admin + mint-tenant (`LinkedFiller.tsx`, `linkedFill.ts`, `FormMain.tsx`, field registry) | M | planned |
+| AF-03 | Page builder (settings): the two types in `inputTypes.ts` (group Values); picking one opens FillFromEditor as the type's own editor (link + field or formula, no switch); `fills` worked out on save; the old switch on other kinds stays; PagePreview + FormRulesPanel know them; component library inputs page lists them | admin + mint-tenant `app/builder` | M | planned |
+| AF-04 | Model builder: two kinds in `modelKinds.ts` (+ KindIcon, FormPreview, FieldsEditor); source picker lists the model's links and their fields; checks: link exists, source field exists and isn't sensitive, formula parses; `dynamicModels.function.ts` + Joi build them | admin + mint-tenant `model-builder`, backend builder | M | planned |
+| AF-05 | MCP: plan_feature / build_feature / update_page accept both kinds with `from` + `formula`; describe_platform explains them; re-add connector note | backend MCP tools | S | planned |
+| AF-06 | (D5) Read-only follows the source: when a customer is saved, every record whose `autofillreadonly` copies from it is updated (reuse DF-02's linked-record recalculation; also on bulk upload/merge, only fields whose source changed); editable fields are never touched | backend | M | planned |
+| AF-07 | (D8) Autofill inside a list's rows: Product picked in an invoice item fills Rate, Unit; both types per row (read-only rows also follow the product, AF-06); row editor in both builders; server fills/enforces per row | backend + panels + builders | M | planned |
+| AF-08 | Order → Customer phone/email checked end to end (create, edit, re-pick replaces a typed phone, clear, customer's email changed → orders follow, typed phone stays, API without the form, invoice rows); guides (mint-docs), website, docs links on the builder panels, CHANGELOG | all | S | planned |

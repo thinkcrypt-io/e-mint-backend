@@ -9,7 +9,7 @@ import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/function
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
 		try {
-			const document = new model({ ...req.body, addedBy: req.user._id });
+			const document = new model({ ...req.body, ...(req.autofilled || {}), addedBy: req.user._id });
 			// Formula fields, from the values just set (and the model's defaults).
 			await applyFormulasLinked(document, req.formulas, model);
 			// Fields hidden by the form's conditions aren't required (formRules.function.ts).

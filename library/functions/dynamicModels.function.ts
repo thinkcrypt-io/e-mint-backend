@@ -60,6 +60,10 @@ export const FIELD_KINDS = [
 	// A date worked out by a formula (`formula`): addDays(start, 30) — never typed (docs/date-formulas).
 	// `calc: 'once'` works it out while it's empty, then keeps it.
 	'dateformula',
+	// A copy of a field of a record picked in this one (`fillFrom`: Customer › Phone) — docs/autofill.
+	// `autofill` is filled when picked and can be typed over; `autofillreadonly` is set by the server and follows its source.
+	'autofill',
+	'autofillreadonly',
 	'boolean',
 	'date',
 	'select',
@@ -138,9 +142,13 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password', 'seo'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'autofill', 'autofillreadonly', 'section', 'sectionlist', 'password', 'seo'];
 /** Kinds worked out by a formula, never typed: a number and a date. */
 export const FORMULA_KINDS: FieldKind[] = ['formula', 'dateformula'];
+/** Kinds copying a field of a picked record (docs/autofill), and the kinds of value they can hold. */
+export const AUTOFILL_KINDS: FieldKind[] = ['autofill', 'autofillreadonly'];
+export const FILLS_KINDS = ['text', 'number', 'date', 'boolean'] as const;
+export type FillsKind = (typeof FILLS_KINDS)[number];
 /** Kinds holding a date — what a date formula reads. */
 export const DATE_KINDS: FieldKind[] = ['date', 'dateformula'];
 /** Kinds whose key may say what they hold (password, pin, token): they're encrypted and hidden. */
@@ -161,7 +169,8 @@ export const tidyFormula = (src: any) => {
  */
 export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: string) => LinkedValueInfo[] | undefined) =>
 	fields.flatMap(x => {
-		const numeric = (k: FieldKind) => k === 'number' || k === 'formula';
+		// A number a formula can use: a number, a formula, or an autofill that copies a number.
+		const numeric = (y: { kind: FieldKind; fills?: string }) => y.kind === 'number' || y.kind === 'formula' || (AUTOFILL_KINDS.includes(y.kind) && y.fills === 'number');
 		// A link: itself (not a number), and the linked record's numbers and dates as `tax.amount`, `member.expiresAt`.
 		if (x.kind === 'reference')
 			return [
@@ -177,16 +186,16 @@ export const formulaInfoOf = (fields: ModelFieldDef[] = [], numbersOf?: (ref?: s
 		if (x.kind === 'sectionlist')
 			return [
 				{ key: x.key, label: x.label, numeric: false, list: true },
-				...(x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y.kind), inList: x.key })),
+				...(x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y), inList: x.key })),
 			];
 		if (x.kind === 'section')
-			return (x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y.kind) }));
+			return (x.fields || []).map(y => ({ key: `${x.key}.${y.key}`, label: y.label, numeric: numeric(y) }));
 		return [
 			{
 				key: x.key,
 				label: x.label,
-				numeric: numeric(x.kind),
-				...(DATE_KINDS.includes(x.kind) && { date: true }),
+				numeric: numeric(x),
+				...((DATE_KINDS.includes(x.kind) || (AUTOFILL_KINDS.includes(x.kind) && x.fills === 'date')) && { date: true }),
 				...(FORMULA_KINDS.includes(x.kind) && { formula: x.formula }),
 			},
 		];
@@ -292,6 +301,8 @@ export type ModelFieldDef = {
 	pickerDetails?: string[];
 	/** A reference's value filled from another picked link: `{ from: 'category', formula: 'taxRate' }` copies the category's tax into a product when the category is picked (linkedFill.function.ts). */
 	fillFrom?: { from: string; formula: string };
+	/** An autofill kind's value kind, from its source field (docs/autofill D3). */
+	fills?: FillsKind;
 	/** A formula kind's calculation, e.g. `total - paid` (formula.function.ts). */
 	formula?: string;
 	/** A date formula's timing: every save (default), or `once` — worked out while it's empty, then kept. */
@@ -560,6 +571,11 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 				break;
 			case 'dateformula':
 				p = { type: Date, default: null };
+				break;
+			case 'autofill':
+			case 'autofillreadonly':
+				// Holds what it copies: text, a number, a date or a yes/no — never required, set from the link.
+				p = f.fills === 'number' ? { type: Number, default: null } : f.fills === 'date' ? { type: Date, default: null } : f.fills === 'boolean' ? { type: Boolean } : { type: String, trim: true };
 				break;
 			case 'number':
 				p = { type: Number, set: blankToUndefined };
@@ -1087,6 +1103,26 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				sortable(true);
 				s.filter = { name: f.key, type: 'date', label: title, title: `Filter by ${title}` };
 				break;
+			case 'autofill':
+			case 'autofillreadonly': {
+				// A copy of a field of the record picked in `fillFrom.from`: shown, sorted and filtered as the kind it copies.
+				const fills = FILLS_KINDS.includes(f.fills as FillsKind) ? (f.fills as FillsKind) : 'text';
+				const ro = f.kind === 'autofillreadonly';
+				const as = { text: 'string', number: 'number', date: 'date', boolean: 'boolean' }[fills];
+				Object.assign(s, { type: as, edit: !ro });
+				if (fills === 'text') Object.assign(s, { trim: true, search: f.searchable ?? true });
+				if (ro) {
+					delete s.required;
+					delete s.schema.isRequired;
+				}
+				s.schema.type = f.kind;
+				s.schema.fills = fills;
+				s.schema.tableType = fills === 'boolean' ? 'checkbox' : as;
+				s.schema.viewType = s.schema.tableType;
+				sortable(true);
+				if (fills === 'date' || fills === 'boolean') s.filter = { name: f.key, type: as, label: title, title: `Filter by ${title}` };
+				break;
+			}
 			case 'boolean':
 				s.type = 'boolean';
 				s.schema.type = 'checkbox';
@@ -1333,6 +1369,19 @@ export const dataModelOf = (fields: ModelFieldDef[] = [], target?: (ref?: string
 				menuKey: display,
 				labelKey: display,
 				...(x.required && { isRequired: true }),
+				...(x.helper && { helper: x.helper }),
+			};
+		}
+		// A row's autofill (docs/autofill D8): typed like what it copies; the read-only one has its own type.
+		if (AUTOFILL_KINDS.includes(x.kind)) {
+			const fills = FILLS_KINDS.includes(x.fills as FillsKind) ? (x.fills as FillsKind) : 'text';
+			return {
+				name: x.key,
+				label: x.label || humanize(x.key),
+				type: x.kind === 'autofillreadonly' ? 'autofillreadonly' : { text: 'text', number: 'number', date: 'date', boolean: 'checkbox' }[fills],
+				kind: x.kind,
+				fills,
+				...(x.fillFrom?.from && { fillFrom: x.fillFrom }),
 				...(x.helper && { helper: x.helper }),
 			};
 		}

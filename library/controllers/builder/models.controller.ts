@@ -14,7 +14,7 @@ import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
 import { fieldsOfRule } from '../../functions/formRules.function.js';
-import { checkFormula, formulaPipeline, formulasOf, recalculateFormulas, usesLinks } from '../../functions/formula.function.js';
+import { checkFormula, formulaPipeline, formulasOf, parse, recalculateFormulas, refsOf, usesLinks } from '../../functions/formula.function.js';
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
 import { currentScope } from '../../functions/tenantScope.function.js';
@@ -30,6 +30,8 @@ import {
 	COMPONENT_KINDS,
 	NESTING_KINDS,
 	formulaInfoOf,
+	AUTOFILL_KINDS,
+	FILLS_KINDS,
 	FORMULA_KINDS,
 	numbersOfDef,
 	REFERENCE_KINDS,
@@ -122,6 +124,8 @@ const subFieldBase = {
 	// A reference's picker: which records it offers and what shows under their names.
 	optionFilters: Joi.array().items(Joi.object({ field: Joi.string().max(60).required(), value: Joi.any(), op: Joi.string().max(10) }).unknown(true)).max(10),
 	fillFrom: Joi.object({ from: Joi.string().max(60).required(), formula: Joi.string().max(300).required() }),
+	// An autofill kind's value kind (docs/autofill D3).
+	fills: Joi.string().valid(...FILLS_KINDS),
 	pickerDetails: Joi.array().items(Joi.string().max(60)).max(5),
 	formula: Joi.string().allow('').max(500),
 	// A date formula's timing: worked out once (while empty), not on every save.
@@ -135,7 +139,9 @@ const subFieldBase = {
 };
 
 /** A section's own field: the same, minus links and nested sections. */
-const subFieldSchema = Joi.object({ ...subFieldBase, kind: Joi.string().valid(...SUB_KINDS).required() });
+/** A list's rows may also hold a link to another model's records and autofill from it (docs/autofill D8). */
+const ROW_KINDS = [...SUB_KINDS, 'reference', 'autofill', 'autofillreadonly'];
+const subFieldSchema = Joi.object({ ...subFieldBase, kind: Joi.string().valid(...ROW_KINDS).required() });
 
 const fieldSchema = Joi.object({
 	...subFieldBase,
@@ -170,7 +176,7 @@ export const readOnlyProblem = (fields: any[], keys: string[] = [], actions: str
 		const f = (fields || []).find((x: any) => x?.key === k);
 		if (!f) return `“${k}” isn’t a field of this model, so it can’t be read-only`;
 		const noDefault = f.default === undefined || f.default === null || f.default === '';
-		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula' && f.kind !== 'dateformula')
+		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula' && f.kind !== 'dateformula' && f.kind !== 'autofillreadonly')
 			return `${f.label || f.key} is required and has no default, and the public API can’t write it — every create would fail. Give it a default, or let the API write it.`;
 	}
 	return null;
@@ -259,6 +265,30 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
 		} else delete f.formula;
 		if (f.kind !== 'dateformula' || f.calc !== 'once') delete f.calc;
+		// Autofill (docs/autofill): copies a field of a record picked in this model — one hop, not a sensitive field.
+		if (AUTOFILL_KINDS.includes(f.kind)) {
+			if (f.kind === 'autofillreadonly') {
+				delete f.required;
+				delete f.unique;
+			}
+			delete f.default;
+			if (!f.fills) f.fills = 'text';
+			const from = f.fillFrom?.from;
+			const link = from && scope.find((x: any) => x.key === from);
+			if (!f.fillFrom) problems.push(`${name}: pick the link it copies from and what to take`);
+			else if (!link || link.kind !== 'reference') problems.push(`${name}: it copies from “${from}”, which isn't a link field of this model`);
+			else {
+				const formula = String(f.fillFrom.formula || '').trim();
+				f.fillFrom = { from, formula };
+				try {
+					const refs = refsOf(parse(formula));
+					if (!formula || !refs.size) problems.push(`${name}: say what to take from ${link.label || from} (a field, or a formula over its numbers)`);
+					else if ([...refs].some(r => SENSITIVE.test(r))) problems.push(`${name}: it can’t copy ${[...refs].find(r => SENSITIVE.test(r))} — hidden fields can’t be copied`);
+				} catch (e: any) {
+					problems.push(`${name}: ${e?.message || 'what it copies isn’t a field or a formula'}`);
+				}
+			}
+		} else delete f.fills;
 		if (f.kind === 'number' && f.options?.some((o: any) => !Number.isFinite(Number(o.value))))
 			problems.push(`${name}: the allowed values of a number must be numbers`);
 		// The default as the field stores it; one outside the allowed values would fail every create.
@@ -322,6 +352,14 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		if (SECTION_KINDS.includes(f.kind)) {
 			if (!f.fields?.length) problems.push(`${name}: add at least one field to the section`);
 			for (const x of f.fields || []) {
+				if (x.kind === 'reference' || AUTOFILL_KINDS.includes(x.kind)) {
+					if (f.kind !== 'sectionlist') problems.push(`${name} › ${x.label || x.key}: only the rows of a list can link to records or autofill`);
+				}
+				if (x.kind === 'reference') {
+					if (x.ref === SELF) x.ref = selfName;
+					if (!x.ref) problems.push(`${name} › ${x.label || x.key}: pick the model it links to`);
+					else if (x.ref !== selfName && !targets.has(x.ref)) problems.push(`${name} › ${x.label || x.key}: ${x.ref} isn't a model with an admin route`);
+				} else delete x.ref;
 				// A row's formula uses the other values of the same row.
 				checkField(x, `${name} › ${x.label || x.key}`, f.fields);
 				delete x.unique;

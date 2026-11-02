@@ -1,6 +1,7 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 import { applyFormulasLinked, recalculateFormulas } from '../../library/functions/formula.function.js';
+import { syncReadonly } from '../../library/functions/linkedFill.function.js';
 import { recalculateDependents } from '../../library/functions/formulaDependents.function.js';
 import { hasLinkedRules, linkedFailure, linkedMany } from '../../library/functions/linkedRelationships.function.js';
 import recordHistory, { diffFields } from '../../library/functions/recordHistory.function.js';
@@ -94,6 +95,9 @@ const updateManyDocuments = ({ model, allowEdits, settings }: EndwareType) => {
 					{ multi: true }
 				);
 			}
+
+			// Read-only autofill fields of records whose link was just changed (docs/autofill).
+			await syncReadonly(model, settings, { _id: { $in: ids }, store: req.store }, updateKeys);
 
 			// Formula fields of the records just changed, recalculated in the database.
 			if (req.formulas?.length) await recalculateFormulas(model, { _id: { $in: ids }, store: req.store }, req.formulas);
