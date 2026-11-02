@@ -1,8 +1,10 @@
-# Autofill fields — work orders
+# Autofill — work orders
 
 Read `README.md` first. Commit and push each WO when it's done. Admin and mint-tenant change together.
 
 All eight done 2026-11-02 (backend `9e1dc3d7` + follow-up, admin `4251e02`, mint-tenant `45f19f7`, mint-docs, website). **Not deployed**: the backend needs the manual Heroku deploy — until then the panels' new kinds are refused by production (`kind must be one of …`).
+
+**AF-01…08 are superseded by the rework below** (the user, 2026-11-02: autofill is a setting in a field's Advanced settings, not a type). Their behaviour stays; the two types go. Don't deploy the backend between AF-09 and AF-11 — the panels and the server must agree on where autofill lives.
 
 | WO | What | Where | Size | Status |
 |---|---|---|---|---|
@@ -14,3 +16,18 @@ All eight done 2026-11-02 (backend `9e1dc3d7` + follow-up, admin `4251e02`, mint
 | AF-06 | (D5) Read-only follows the source: when a customer is saved, every record whose `autofillreadonly` copies from it is updated (reuse DF-02's linked-record recalculation; also on bulk upload/merge, only fields whose source changed); editable fields are never touched | backend | M | done 2026-11-02 |
 | AF-07 | (D8) Autofill inside a list's rows: Product picked in an invoice item fills Rate, Unit; both types per row (read-only rows also follow the product, AF-06); row editor in both builders; server fills/enforces per row | backend + panels + builders | M | done 2026-11-02 |
 | AF-08 | Order → Customer phone/email checked end to end (create, edit, re-pick replaces a typed phone, clear, customer's email changed → orders follow, typed phone stays, API without the form, invoice rows); guides (mint-docs), website, docs links on the builder panels, CHANGELOG | all | S | done 2026-11-02 |
+
+## Rework: autofill as a field setting (AF-09…15 done 2026-11-02, not deployed)
+
+Backend `be465361`+; admin / mint-tenant / mint-docs / website pushed with it. Smoke `scripts/tenancy-smoke/autofill.mjs` (all pass), form + page builder checked in the browser; model builder Advanced block and the super-admin panel not checked in a browser. Deploy order: backend (Heroku, manual), then run `node scripts/migrateAutofill.js` (dry run first; prod had none on 2026-11-02).
+
+| WO | What | Where | Size | Status |
+|---|---|---|---|---|
+| AF-09 | Engine: `fillFrom` grows `readonly` and `when` + `match` (D12); `isLockedFill()` replaces every `autofillreadonly` check (≈15 files); conditions checked on create / update / bulk / import / public API and in `followReadonly`; read-only is always locked and is cleared while conditions don't hold (D12); the field keeps its own kind (no `fills`); source-fits-field check (D11); Joi + modelDefinition + dynamicModels + convertToFormFields; rows (`dataModel[].fillFrom`) the same | backend | M | done 2026-11-02 |
+| AF-10 | Remove the types + migrate (D10, D14): drop `autofill` / `autofillreadonly` from kinds, settings types, MCP enums, AI builder schema; script turns old fields into `fills` kind + `fillFrom` (+ `readonly`) in ModelDefinitions, draft + published settings, row fields, templates / blueprints; run on local DB, dry-run on prod | backend + scripts | S | done 2026-11-02 |
+| AF-11 | Page builder: Autofill block in the field's **Advanced** — switch, From (link) + Take (field / formula, FillFromEditor), When (ConditionsEditor: this record's fields + the picked record's), Read-only switch; Required / Can be changed locked while read-only; the old "Filled in from a linked record" group removed; the two input types out of `inputTypes.ts`, PagePreview, FormRulesPanel, component library inputs page | admin + mint-tenant `app/builder` | M | done 2026-11-02 |
+| AF-12 | Model builder: the same Autofill block in each field's Advanced (and in a list's row fields); kinds that can't autofill (D11) don't show it; checks: link exists, source fits, conditions name real fields; the two kinds out of `modelKinds.ts`, KindIcon, FormPreview, FieldsEditor | admin + mint-tenant `model-builder` | M | done 2026-11-02 |
+| AF-13 | Form: the field renders as its own kind; read-only always locked ("from Customer"); LinkedFiller checks `when` live (form values + the fetched record), fills when they start holding, clears when they stop; rows the same; detail page / table unchanged (own kind) | admin + mint-tenant (`LinkedFiller.tsx`, `linkedFill.ts`, `FormMain.tsx`) | M | done 2026-11-02 |
+| AF-14 | MCP: `fillFrom: { from, formula, readonly?, when?, match? }` on any field in plan_feature / build_feature / update_page; describe_platform + server instructions rewritten; the kinds refused with a hint; re-add connector note | backend MCP | S | done 2026-11-02 |
+| AF-15 | Checks + docs: `scripts/tenancy-smoke/autofill.mjs` moved to the setting + conditions (Delivery phone only when Delivery = Home, read-only cleared and still locked when they stop holding, a typed value for it refused, the follow clearing it when they don't hold); browser check of both builders' Advanced block and the order form; mint-docs Models "Autofill" + Pages guide, admin /docs/builder `#models-autofill` anchor on the block, website changelog, CHANGELOG | all | S | done 2026-11-02 |
+

@@ -8,6 +8,13 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-02)
 
+**2026-11-02 — Autofill reworked into a field setting (docs/autofill AF-09…15), not deployed.** No autofill types any
+more: `schema.fillFrom { from, formula, readonly?, when?, match? }` on any plain field (conditions on this record, or
+`@.field` of the picked one; read-only cleared and still locked while they fail). Backend engine + builders' checks +
+MCP/AI schema; `scripts/migrateAutofill.js` moves old kinds (prod dry run: none). Panels: one Autofill block in the page
+builder's Advanced and each model-builder field; form `LinkedFiller` checks conditions live. Deploy backend (manual), then
+the migration. Details below are the older AF-01…08 build.
+
 **2026-11-02 — Autofill fields built (docs/autofill AF-01…08).** Two field types, `autofill` (filled when its link is
 picked, typed over for the record) and `autofillreadonly` (server-owned, follows the source record), on top of
 `schema.fillFrom`; value kind in `schema.fills`; rows of a Section *list* can link and autofill (`dataModel[].fillFrom`).

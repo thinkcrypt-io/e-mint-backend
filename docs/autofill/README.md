@@ -1,4 +1,4 @@
-# Autofill fields
+# Autofill
 
 The user (2026-11-02): "Plan 2 more types, autofill (readonly), autofill, on form/settings. So what it will do is
 for example let's say there is a phone number and email field, so when another field like customer is selected
@@ -6,66 +6,70 @@ they will autofill those 2. in autofill readonly they inputs can't be edited but
 the phone number is taken then it can be updated later. So results would be dependant on another field, like a
 formula but taken from other elements in form."
 
-## What it is
+Then, after AF-01…08 were built as two types: "autofill should not be a type, it should be in advanced settings in
+a field, if autofill-editable then the field remains as it is, conditions are to be set for autofill, and if a
+switch if it is to be readonly … we do not need autofill type or autofill readonly type."
 
-Two new field types, in the model builder, the page builder (settings) and the form:
+## What it is (rework, AF-09…15)
 
-| Type | Settings `schema.type` | In the form | On save (server) |
-|---|---|---|---|
-| **Autofill** | `autofill` | Filled the moment the link is picked; can be typed over | Filled from the link when left empty; a typed value is kept |
-| **Autofill (read-only)** | `autofillreadonly` | Filled when the link is picked; shown locked ("from Customer") | Always set from the link — whatever the form sends is ignored |
+**Autofill is a setting on any field, not a type.** A Phone field stays a Phone field, a Number stays a Number.
+In the field's **Advanced** settings (page builder and model builder) it gets an **Autofill** block:
 
-Each one names **a link field on the same form** (`from`) and **what to take from the picked record** (`formula`):
-one of its fields (`phone`), or a formula over its numbers (`total - paid`), exactly like today's `fillFrom`.
+| Setting | Stored in `schema.fillFrom` | What it does |
+|---|---|---|
+| Autofill on/off | present or not | Off: a normal field. On: filled from a linked record picked on the same form |
+| From | `from` | The link field on this form — Customer |
+| Take | `formula` | One of the picked record's fields (`phone`) or a formula over its numbers (`total - paid`) |
+| When | `when` + `match` | Conditions: autofill only while they hold (see D12). None = always |
+| Read-only | `readonly: true` | Off (default): the field stays as it is — filled on pick, typed over freely. On: locked, the server sets it and keeps it in step with the source |
 
-**Order** — Customer (link), Phone (Autofill ← Customer › Phone), Email (Autofill (read-only) ← Customer › Email).
-Picking "Rahim" fills both. The phone can be changed for this order (a different number for delivery); the email
-cannot. Picking another customer fills both again from that customer.
+**Order** — Customer (link), Phone (text; Autofill from Customer › Phone), Email (email; Autofill from Customer ›
+Email, read-only), Delivery phone (text; Autofill from Customer › Phone **when** Delivery = Home). Picking "Rahim"
+fills them. Phone can be changed for this order; Email can't, and follows Rahim's email when it changes.
 
-## Already there (what this builds on)
+## What stays from AF-01…08 (built 2026-11-02)
 
-`schema.fillFrom = { from, formula }` — "Filled in from a linked record", a switch on any field in the page
-builder (`builder/_components/FillFromEditor.tsx`):
+The behaviour is kept; only where it's set and how it's stored change.
 
-- panels: `create-page/page/form-components/LinkedFiller.tsx` + `functions/linkedFill.ts` fill on pick, editable;
-- backend: `library/functions/linkedFill.function.ts` `fillLinked()` fills empty fields on create, only from a
-  record the person may read (`linkedFills` in `routes-admin/common/router.ts`);
-- model definitions store it (`modelDefinition.model.ts`, `models.controller.ts` Joi, `dynamicModels.function.ts`)
-  but the model builder has no UI for it, MCP doesn't know it, and nothing makes a filled field read-only.
+- D1 One engine — `schema.fillFrom`, `linkedFill.function.ts` (backend), `linkedFill.ts` + `LinkedFiller.tsx` (panels).
+- D4/D5 Read-only: set from the picked record on every save (sent values dropped), cleared with the link, left as it
+  was when the person can't read the record; follows the source record's later changes (`followReadonly` from
+  `recalculateDependents`), also bulk edit / import / server-key public API.
+- D6 Editable: filled when empty on create, filled on update when the link changes and the field wasn't sent; picking a
+  different record replaces a typed value; never follows the source afterwards.
+- D7 One hop. D8 List rows too (`dataModel[].fillFrom`). D9 sensitive fields are never a source.
 
-So **Autofill is today's fillFrom made a visible type**, and **Autofill (read-only)** is new: the server owns it.
+## Decisions for the rework (proposed)
 
-## Decisions (built 2026-11-02 as written, except where noted)
-
-- D1 **One engine.** Both types use `fillFrom` and the existing fill code (backend + both panels' copies). A field
-  that already has the fillFrom switch reads as an Autofill field; nothing to migrate.
-- D2 **Two types, not a switch.** They sit in the type lists beside Formula (number) / Formula (date), group
-  "Values". *Built differently:* `isFormulaType` is left alone (it also finds the formulas to calculate, so
-  `autofillreadonly` must not answer yes); the places that mean "worked out, not typed" name `autofillreadonly`
-  next to it instead (public-API writable fields, automations, MCP, templates, rules' set fields, builder checks).
-- D3 **The value keeps the source field's kind.** An autofill of Customer › Phone stores, shows, sorts and filters
-  as text; of Bill › Total as a number; of Plan › Starts as a date. Worked out from the source field when the
-  model/page is saved and stored as `schema.fills` (`text` | `number` | `date` | `boolean` | `select` …); a formula
-  over numbers is a number. If the source field changes kind, the builder warns.
-- D4 **Read-only on the server.** On create and on every update, `autofillreadonly` fields are set from the
-  picked record (body values dropped); link cleared → field cleared; a link the person can't read → left as it was.
-  Not required in the validator (the client never sends it).
-- D5 **Read-only follows the source record** (the user, 2026-11-02: "readonly means it only changes when it's
-  related value changes, the input can not be manually edited"). When the customer's email changes, every order
-  that copies it updates too — always, no option. Reuses DF-02's linked-record recalculation (AF-06).
-- D6 **Editable is a copy you own** (the user: "we get phone from customer, later we can manually edit the field
-  to give a new phone"). It doesn't follow later changes to the customer. Create: filled when empty (as today).
-  Update: filled when the link **changes** in this save and the field wasn't sent. Picking a different customer
-  replaces a typed value (the user: "yes should be replaced"); nothing else overwrites it.
-- D7 **One hop.** `customer.phone`, not `customer.company.phone`. A field of the picked record only — no fields
-  of the record being edited inside the formula (that's what Formula is for).
-- D8 **List rows too** (the user: yes). An invoice item's Product picked → its Rate, Unit fill, per row, both
-  types (AF-07).
-- D9 Sensitive fields can't be a source (same filter as FillFromEditor: password, token, secret, key …), and the
-  `password` kind is never offered.
+- D10 **No autofill types.** `autofill` / `autofillreadonly` leave FIELD_KINDS, `inputTypes.ts`, settings
+  `schema.type`, KindIcon, MCP enums, the AI builder schema. `schema.fills` goes too — the field's own kind says what
+  it holds. Every place that today names `autofillreadonly` (≈15 backend files: public-API writable fields,
+  automations, MCP, templates, rules' set fields, builder checks) asks one helper instead:
+  `isLockedFill(settingsField)` = `fillFrom.readonly === true`.
+- D11 **Which fields can autofill:** text-like (text, textarea, email, phone, url), number, date, boolean, choice
+  (select / tags — copied when the value is one of the field's options, else left), and a link to the same model
+  as the source's link. Not formula, date formula, rollup, password, file/image, section, editor. The builder checks
+  the source fits the field: a number from a number / formula, a date from a date / date formula, text from
+  anything that reads as text. Mismatch → refused with a hint (replaces D3's `fills`).
+- D12 **Conditions (`when`).** Same ops and editor as "Locked when" / tab "Show only" (`ConditionsEditor`, match
+  all / any). A condition can test **this record's fields** (Delivery is Home) or **the picked record's**
+  (Customer › Type is Wholesale). While they hold, autofill works as above. When they don't hold:
+  - editable — nothing is filled; the field is a plain field (keeps whatever it has);
+  - read-only — the field is **cleared and stays locked** (the user, 2026-11-02: "clear and lock"): nobody can type
+    in it; when the conditions hold again it's filled from the picked record. The server clears it on save and in
+    `followReadonly`; the form clears it live.
+  The server checks `when` on every save and in `followReadonly` (the record as saved, the source as it is now);
+  the form checks it live as values change.
+- D13 **Read-only switch** turns Required and "Can be changed" off and greys them (the server fills it), as the
+  read-only type did. Turning Autofill off drops `readonly` and `when` with it.
+- D14 **Migration.** Fields saved as the old kinds become their `fills` kind + `fillFrom` (+ `readonly: true` for
+  `autofillreadonly`): ModelDefinition docs, the route builder's draft and published settings copies, row fields
+  (`dataModel`), templates / blueprints. Records need nothing — the stored values don't change. The backend with the
+  types was never deployed, so prod should have none; the script runs dry-run on prod to prove it.
+- D15 The old "Filled in from a linked record" group above Advanced is the same thing — it moves into Advanced as
+  the Autofill block. One place to set it.
 
 ## Answered (the user, 2026-11-02)
 
-1. Read-only follows the source record's later changes (D5); editable doesn't, and can be typed over (D6).
-2. Autofill inside list rows: yes (D8, AF-07).
-3. Picking a different customer replaces a typed value (D6).
+1. A read-only autofill whose conditions don't hold is cleared and stays locked (D12).
+2. Conditions can test both this record's fields and the picked record's (Customer › Type is Wholesale) (D12).
