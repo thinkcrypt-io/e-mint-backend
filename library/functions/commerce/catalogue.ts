@@ -40,6 +40,9 @@ const keyOf = (optionValues: any[]) =>
 		.sort()
 		.join('|');
 
+/** A new variant carries its product's tax, as the form fills it (the product's Tax / VAT is filled from its category when it is added). */
+const taxOf = (product: any) => (product.taxRate ? { taxRate: product.taxRate } : {});
+
 /**
  * Brings a product's variants in step with it. Returns them (active first).
  * Called after every product save (hooks.ts) and from the product page.
@@ -59,7 +62,7 @@ export const syncVariants = async (store: Store, productId: any) => {
 		const own = existing.find(v => v.isDefault);
 		const set = { title: product.name, sku: clean(product.sku), barcode: clean(product.barcode), active: sold };
 		if (own) await Variant.updateOne({ _id: own._id }, { $set: set });
-		else await Variant.create({ product: product._id, ...set, isDefault: true, totalStock: 0, optionValues: [] });
+		else await Variant.create({ product: product._id, ...set, ...taxOf(product), isDefault: true, totalStock: 0, optionValues: [] });
 		await Variant.updateMany({ product: product._id, isDefault: { $ne: true }, active: true }, { $set: { active: false } });
 	} else {
 		const byKey = new Map(existing.filter(v => !v.isDefault).map(v => [keyOf(v.optionValues), v]));
@@ -68,7 +71,7 @@ export const syncVariants = async (store: Store, productId: any) => {
 			const k = keyOf(c.optionValues);
 			wanted.add(k);
 			const have = byKey.get(k);
-			if (!have) await Variant.create({ product: product._id, title: c.title, optionValues: c.optionValues, active: sold, isDefault: false, totalStock: 0 });
+			if (!have) await Variant.create({ product: product._id, title: c.title, optionValues: c.optionValues, active: sold, isDefault: false, totalStock: 0, ...taxOf(product) });
 			else if (have.title !== c.title || (!sold && have.active)) await Variant.updateOne({ _id: have._id }, { $set: { title: c.title, ...(!sold && { active: false }) } });
 		}
 		// Combinations no longer offered, and the default variant, stop selling.

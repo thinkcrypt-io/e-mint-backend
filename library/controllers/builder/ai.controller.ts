@@ -5,6 +5,7 @@ import {
 	ACCESS_FORM_SECTION,
 	ACCESS_VIEW_SECTION,
 	FIELD_KINDS,
+	AUTOFILL_ABLE_KINDS,
 	RESERVED_KEYS,
 	humanize,
 	linkTargets,
@@ -58,10 +59,6 @@ export const KIND_GUIDE: Record<string, string> = {
 		'a number CALCULATED from other number fields of the same record (e.g. due = total - paid); set `formula`. Over a sectionlist use sum(items.total), avg(items.total) or count(items); a section value is billing.fee; a number of a linked record is read through the link, tax.amount (tax a reference); a field can be used more than once; conditions: if(condition, then, otherwise) with = != < <= > >=, and / or / not() and text in quotes — e.g. subtotal - if(discountType = "percentage", subtotal * discount / 100, flatDiscount), where discountType is a choice field',
 	dateformula:
 		'a date CALCULATED by a formula (set `formula`): addDays(date, n), addWeeks, addMonths, addYears, add(date, n, unit) where unit is "days"/"weeks"/"months"/"years" or a field holding it, today(), latest(a, b) / earliest(a, b), if(condition, dateA, dateB); reads date and number fields, and a linked record’s through the link (plan.length, member.expiresAt) — e.g. dueDate = addDays(invoiceDate, 30), expiresAt = addMonths(joinedAt, plan.months). `calc: "once"` works it out when the record is added and keeps it (for formulas with today() or a linked record’s date — a renewal’s new expiry = add(latest(member.expiresAt, today()), plan.length, plan.unit))',
-	autofill:
-		'a COPY of a field of the record picked in a link field of the same model — an order’s customer phone. Set `fillFrom: { from: "<link field key>", formula: "<field of the linked model>" }` (or a formula over its numbers) and `fills` (text / number / date / boolean — the kind of what it copies). Filled the moment the link is picked, then it can be typed over for this record; a different pick replaces it',
-	autofillreadonly:
-		'like autofill but SERVER-OWNED: nobody types it — set from the picked record on every save, and it follows that record’s later changes (the customer’s email changes, every order shows the new one). Same `fillFrom` and `fills`',
 	section: 'a group of fields of its own filled in once — an address, a billing block; give its `fields`',
 	password:
 		'a value people must be able to read back but nobody should see by accident — a client portal login, a Wi-Fi key. Shown as dots in the panel, click to see. Not for the app’s own sign-in passwords',
@@ -104,11 +101,17 @@ export const fieldProps = {
 	},
 	fillFrom: {
 		type: 'object',
-		description: 'For kinds "autofill" / "autofillreadonly": from = key of a reference field of this model; formula = the field of the linked model to copy (phone) or a formula over its numbers (total - paid)',
-		properties: { from: { type: 'string' }, formula: { type: 'string' } },
+		description:
+			'AUTOFILL, on a text, number, date, yes/no, choice or link field: a COPY of a field of the record picked in a link field of the same model (an order’s customer phone). The field keeps its own kind. from = key of a reference field of this model; formula = the field of the linked model to copy (phone) or a formula over its numbers (total - paid). Filled the moment the link is picked, then it can be typed over; a different pick replaces it. `readonly: true` makes it SERVER-OWNED: nobody types it, it is set from the picked record on every save and follows that record’s later changes. `when` (+ `match` all/any): conditions — autofill only while they hold; a read-only one is cleared and stays locked when they do not. A condition’s field is a field of this model, or "@.field" for a field of the picked record: [{ "field": "deliveryType", "op": "is", "value": "Home" }, { "field": "@.type", "op": "is", "value": "Wholesale" }]; ops: is, not, in, gt, gte, lt, lte, contains, empty, filled',
+		properties: {
+			from: { type: 'string' },
+			formula: { type: 'string' },
+			readonly: { type: 'boolean' },
+			when: { type: 'array', items: { type: 'object', properties: { field: { type: 'string' }, op: { type: 'string' }, value: {} }, required: ['field', 'op'] } },
+			match: { type: 'string', enum: ['all', 'any'] },
+		},
 		required: ['from', 'formula'],
 	},
-	fills: { type: 'string', enum: ['text', 'number', 'date', 'boolean'], description: 'For kinds "autofill" / "autofillreadonly": the kind of value it copies (default text)' },
 	calc: { type: 'string', enum: ['once'], description: 'For kind "dateformula": "once" works it out when the record is added and keeps it; left out, it is worked out on every save' },
 	ref: { type: 'string', description: `For reference/references: a model name from the list given, or "${SELF}" for this model` },
 	min: { type: 'number', description: 'Number: minimum. Text: minimum length.' },
@@ -294,9 +297,13 @@ export const normalize = (input: any, targets: Set<string>) => {
 		if (f?.helper) out.helper = String(f.helper).slice(0, 200);
 		if (kind === 'formula' || kind === 'dateformula') out.formula = String(f?.formula || '').slice(0, 500);
 		if (kind === 'dateformula' && f?.calc === 'once') out.calc = 'once';
-		if (kind === 'autofill' || kind === 'autofillreadonly') {
-			out.fills = ['text', 'number', 'date', 'boolean'].includes(f?.fills) ? f.fills : 'text';
-			if (f?.fillFrom?.from) out.fillFrom = { from: String(f.fillFrom.from).slice(0, 60), formula: String(f.fillFrom.formula || '').slice(0, 300) };
+		if (AUTOFILL_ABLE_KINDS.includes(kind) && f?.fillFrom?.from) {
+			out.fillFrom = { from: String(f.fillFrom.from).slice(0, 60), formula: String(f.fillFrom.formula || '').slice(0, 300) };
+			if (f.fillFrom.readonly === true) out.fillFrom.readonly = true;
+			if (Array.isArray(f.fillFrom.when) && f.fillFrom.when.length) {
+				out.fillFrom.when = f.fillFrom.when.slice(0, 10).map((c: any) => ({ field: String(c?.field || '').slice(0, 80), op: String(c?.op || 'is').slice(0, 10), ...(c?.value !== undefined && { value: c.value }) }));
+				if (f.fillFrom.match === 'any') out.fillFrom.match = 'any';
+			}
 		}
 		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
 		if (kind === 'blocks') out.components = (Array.isArray(f?.components) ? f.components : []).map((c: any) => String(c).toLowerCase().slice(0, 81)).slice(0, 50);

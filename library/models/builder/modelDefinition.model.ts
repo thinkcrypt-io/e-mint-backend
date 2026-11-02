@@ -55,10 +55,11 @@ const fieldSchema = new Schema<any>(
 		optionFilters: { type: [Schema.Types.Mixed], default: undefined },
 		/** For reference kinds: fields shown under each name in the picker (SKU, barcode). */
 		pickerDetails: { type: [String], default: undefined },
-		/** For reference kinds: filled from another picked link — a product's tax from its category (functions/linkedFill). */
-		fillFrom: { type: new Schema({ from: String, formula: String }, { _id: false }), default: undefined },
-		/** For the autofill kinds: the kind of value it copies — text, number, date, yes/no (docs/autofill D3). */
-		fills: { type: String, enum: ['text', 'number', 'date', 'boolean'] },
+		/** Autofill, on any field that can hold what it copies: filled from another picked link — a product's tax from its category; `readonly`, `when`, `match` (docs/autofill AF-09). */
+		fillFrom: {
+			type: new Schema({ from: String, formula: String, readonly: Boolean, when: { type: [Schema.Types.Mixed], default: undefined }, match: { type: String, enum: ['all', 'any'] } }, { _id: false, minimize: false }),
+			default: undefined,
+		},
 	},
 	{ _id: false, minimize: false }
 );

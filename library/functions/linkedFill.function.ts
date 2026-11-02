@@ -3,6 +3,7 @@ import { accessRule, isAccessRestricted } from './recordAccess.function.js';
 import { ownRecordsOf } from './projectIndexes.function.js';
 import { evaluate, linkedModelOf, parse, refsOf } from './formula.function.js';
 import { permissionsOf, resources } from '../controllers/builder/viewDocument.controller.js';
+import { meets } from './fieldLocks.function.js';
 
 /**
  * Fields filled in from a linked record (settings `schema.fillFrom`): a
@@ -12,47 +13,80 @@ import { permissionsOf, resources } from '../controllers/builder/viewDocument.co
  * fills it too when it was left empty (a record added through the panel's
  * API without the form). Only from a record the person may read.
  *
- * Two field types are built on it (docs/autofill): `autofill` (this, as a
- * type of its own) and `autofillreadonly` — the server owns it: set from the
- * picked record on every save, whatever the form sends is dropped, and it
- * follows the record's later changes (formulaDependents.function).
+ * It is a setting on any field, not a type (docs/autofill, AF-09): the field keeps
+ * its own kind and `fillFrom` adds `readonly` (the server owns it: set from the
+ * picked record on every save, whatever the form sends is dropped, and it follows
+ * the record's later changes — formulaDependents.function) and `when` + `match`
+ * (conditions; D12). A condition's field is one of this record's, or of the picked
+ * record's with the `@.` prefix (`@.type`). While they hold, autofill works; when
+ * they don't, an editable field is left alone and a read-only one is cleared (and
+ * stays locked).
  *
  * `formula` is a single field of the linked record (copied as it is — text,
  * a date, a number) or an expression over its number fields (formula.function).
  */
 
-export type LinkedFill = { key: string; from: string; formula: string; readonly: boolean };
+export type FillWhen = { field: string; op: string; value?: any };
+export type LinkedFill = { key: string; from: string; formula: string; readonly: boolean; when?: FillWhen[]; match?: 'all' | 'any' };
 
-export const READONLY_TYPE = 'autofillreadonly';
+/** The prefix of a condition on the picked record's field rather than this record's. */
+export const SOURCE_PREFIX = '@.';
+
+/** Is this settings field a locked (server-owned) autofill? Every place that used to name the read-only kind asks this. */
+export const isLockedFill = (field: any): boolean => field?.schema?.fillFrom?.readonly === true || field?.fillFrom?.readonly === true;
+
+const specOf = (fillFrom: any) => ({
+	from: fillFrom?.from,
+	formula: fillFrom?.formula,
+	readonly: fillFrom?.readonly === true,
+	when: Array.isArray(fillFrom?.when) && fillFrom.when.length ? (fillFrom.when as FillWhen[]) : undefined,
+	match: (fillFrom?.match === 'any' ? 'any' : 'all') as 'all' | 'any',
+});
+
+const usable = (f: { from?: any; formula?: any }) => typeof f.from === 'string' && !!f.from && typeof f.formula === 'string' && !!f.formula.trim();
 
 export const fillsOf = (settings: Record<string, any> | undefined): LinkedFill[] =>
 	Object.entries(settings || {})
-		.map(([key, s]: [string, any]) => ({
-			key,
-			from: s?.schema?.fillFrom?.from,
-			formula: s?.schema?.fillFrom?.formula,
-			readonly: s?.schema?.type === READONLY_TYPE,
-		}))
-		.filter((f): f is LinkedFill => typeof f.from === 'string' && !!f.from && typeof f.formula === 'string' && !!f.formula.trim());
+		.map(([key, s]: [string, any]) => ({ key, ...specOf(s?.schema?.fillFrom) }))
+		.filter(usable) as LinkedFill[];
 
 /** An autofill field inside a list's rows (docs/autofill D8): `items.rate` copied from the product picked in the same row. */
-export type RowFill = { list: string; key: string; from: string; formula: string; readonly: boolean; route?: string };
+export type RowFill = LinkedFill & { list: string; route?: string };
 
 export const rowFillsOf = (settings: Record<string, any> | undefined): RowFill[] =>
 	Object.entries(settings || {}).flatMap(([list, s]: [string, any]) => {
 		if (s?.schema?.type !== 'section-data-array') return [];
 		const dm: any[] = s.schema.section?.dataModel ?? s.schema.dataModel ?? [];
 		return dm
-			.filter(x => x?.name && typeof x?.fillFrom?.from === 'string' && typeof x?.fillFrom?.formula === 'string' && x.fillFrom.formula.trim())
+			.filter(x => x?.name && usable({ from: x?.fillFrom?.from, formula: x?.fillFrom?.formula }))
 			.map(x => ({
 				list,
 				key: x.name,
-				from: x.fillFrom.from,
-				formula: x.fillFrom.formula,
-				readonly: x.type === READONLY_TYPE,
+				...specOf(x.fillFrom),
 				route: dm.find(y => y?.name === x.fillFrom.from)?.model,
 			}));
 	});
+
+/** Does a fill have conditions that read the picked record? */
+const usesSource = (f: { when?: FillWhen[] }) => !!f.when?.some(c => typeof c?.field === 'string' && c.field.startsWith(SOURCE_PREFIX));
+
+/** The keys of this record a fill's conditions read. */
+export const whenKeys = (f: { when?: FillWhen[] }): string[] =>
+	(f.when || []).map(c => String(c?.field || '')).filter(k => k && !k.startsWith(SOURCE_PREFIX)).map(k => k.split('.')[0]);
+
+/**
+ * Do a fill's conditions hold for `record`, with `linked` the picked record (null: none, or unreadable)?
+ * No conditions: always. A condition on the picked record never holds without one.
+ */
+export const fillHolds = (f: { when?: FillWhen[]; match?: 'all' | 'any' }, record: any, linked: any): boolean => {
+	if (!f.when?.length) return true;
+	const one = (c: FillWhen) => {
+		const src = typeof c?.field === 'string' && c.field.startsWith(SOURCE_PREFIX);
+		if (src && !linked) return false;
+		return meets(src ? linked : record, [src ? { ...c, field: c.field.slice(SOURCE_PREFIX.length) } : c], 'all', { this: record });
+	};
+	return f.match === 'any' ? f.when.some(one) : f.when.every(one);
+};
 
 const blank = (v: any) => v === undefined || v === null || v === '';
 const valueAt = (doc: any, path: string) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), doc);
@@ -60,12 +94,17 @@ const idOf = (v: any) => {
 	const id = v && typeof v === 'object' ? v._id ?? v.value : v;
 	return mongoose.isValidObjectId(id) ? String(id) : null;
 };
+/** An update setting `key` to `next`; empty is unset (a number's setter would turn a null `$set` into nothing). */
+const writeOf = (key: string, next: any) => (next === null || next === undefined ? { $unset: { [key]: '' } } : { $set: { [key]: next } });
 const has = (o: any, k: string) => !!o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
+
+/** A link copied from the picked record is its id as text, as the form sends it (the validator takes a string). */
+const plainId = (v: any) => (v && typeof v === 'object' && !(v instanceof Date) && typeof v.toHexString === 'function' ? v.toHexString() : v);
 
 /** The value a fill gives for this linked record: a field as it is, or a formula's result. */
 export const fillValue = (formula: string, linked: any): any => {
 	const tree = parse(formula);
-	if (tree.t === 'ref') return valueAt(linked, tree.key);
+	if (tree.t === 'ref') return plainId(valueAt(linked, tree.key));
 	return evaluate(tree, linked);
 };
 
@@ -79,15 +118,15 @@ const safeValue = (formula: string, linked: any) => {
 };
 
 /**
- * Fills a save from the records it picks (docs/autofill D4, D6).
+ * Fills a save from the records it picks (docs/autofill D4, D6, D12).
  *
- * Autofill (editable): on create, filled into `body` when left empty; on
- * update (`current`, the stored record), only when its link changes in this
- * save and the field wasn't sent — a typed value is kept otherwise.
- * Autofill (read-only): its value is never taken from `body`; it is set from
- * the picked record on every save, cleared with the link, and left as it was
- * when the person can't read the record. Those come back as `{ key: value }`
- * for the controller to write (`req.autofilled`).
+ * Editable: on create, filled into `body` when left empty; on update
+ * (`current`, the stored record), when its link changes in this save and the
+ * field wasn't sent — a typed value is kept otherwise — or when it has conditions
+ * and is empty. Read-only: its value is never taken from `body`; it is set from
+ * the picked record on every save, cleared with the link or when its conditions
+ * don't hold, and left as it was when the person can't read the record. Those
+ * come back as `{ key: value }` for the controller to write (`req.autofilled`).
  */
 export const autofill = async (req: any, settings: Record<string, any> | undefined, body: any, current: any = null): Promise<Record<string, any>> => {
 	const auto: Record<string, any> = {};
@@ -112,6 +151,8 @@ export const autofill = async (req: any, settings: Record<string, any> | undefin
 		return cache.get(cacheKey);
 	};
 	const load = (f: LinkedFill, id: string) => loadFrom(settings?.[f.from]?.schema?.model, id);
+	// The record as it will be saved, for the conditions.
+	const record = () => ({ ...(current || {}), ...body });
 	for (const f of fills) {
 		const sent = has(body, f.from);
 		const id = idOf(sent ? body[f.from] : current?.[f.from]);
@@ -120,15 +161,31 @@ export const autofill = async (req: any, settings: Record<string, any> | undefin
 				auto[f.key] = null;
 				continue;
 			}
-			if (!id) continue;
+			if (!id) {
+				// No link to read: conditions on this record alone can still clear it.
+				if (f.when && !usesSource(f) && !fillHolds(f, record(), null)) auto[f.key] = null;
+				continue;
+			}
 		} else {
 			if (!id) continue;
 			if (current) {
-				if (!sent || id === idOf(current[f.from]) || has(body, f.key)) continue;
+				// A field the page doesn't let anyone edit (the store's engine-owned ones) isn't taken from a save: the update validator would refuse it.
+				if (settings?.[f.key]?.edit === false) continue;
+				const linkChanged = sent && id !== idOf(current[f.from]);
+				// Conditions that start to hold fill an empty field (Delivery becomes Home).
+				const nowHolds = !!f.when && !sent && blank(current[f.key]);
+				if ((!linkChanged && !nowHolds) || has(body, f.key)) continue;
 			} else if (!blank(body[f.key])) continue;
 		}
 		const linked = await load(f, id);
-		if (!linked) continue;
+		if (!linked) {
+			if (f.readonly && f.when && !usesSource(f) && !fillHolds(f, record(), null)) auto[f.key] = null;
+			continue;
+		}
+		if (!fillHolds(f, record(), linked)) {
+			if (f.readonly) auto[f.key] = null;
+			continue;
+		}
 		const v = safeValue(f.formula, linked);
 		if (f.readonly) auto[f.key] = blank(v) ? null : v;
 		else if (!blank(v)) body[f.key] = v;
@@ -148,6 +205,10 @@ export const autofill = async (req: any, settings: Record<string, any> | undefin
 			if (!f.readonly && !blank(row[f.key])) continue;
 			const linked = await loadFrom(f.route, id);
 			if (!linked) continue;
+			if (!fillHolds(f, row, linked)) {
+				if (f.readonly) row[f.key] = null;
+				continue;
+			}
 			const v = safeValue(f.formula, linked);
 			if (f.readonly) row[f.key] = blank(v) ? null : v;
 			else if (!blank(v)) row[f.key] = v;
@@ -164,29 +225,35 @@ export const fillLinked = async (req: any, settings: Record<string, any> | undef
 /**
  * Sets the read-only autofill fields of the records matching `filter` from the
  * records they pick — bulk edit, import, merge. System-level: no person's read
- * permission is involved, the link is already on the record. Returns the keys written.
+ * permission is involved, the link is already on the record. `only` names the
+ * fields that changed (a link, or a field the conditions read). Returns the keys written.
  */
 export const syncReadonly = async (Model: mongoose.Model<any>, settings: Record<string, any> | undefined, filter: any, only?: string[]): Promise<string[]> => {
-	const fills = fillsOf(settings).filter(f => f.readonly && (!only || only.includes(f.from)));
+	const fills = fillsOf(settings).filter(f => f.readonly && (!only || only.includes(f.from) || whenKeys(f).some(k => only.includes(k))));
 	const rows = rowFillsOf(settings).filter(f => f.readonly && (!only || only.includes(f.list)));
 	if (!fills.length && !rows.length) return [];
-	const docs = await Model.find(filter).select(fills.map(f => f.from).join(' ')).lean();
 	const written: string[] = [];
-	for (const f of fills) {
-		const Linked = linkedModelOf(Model, f.from);
-		if (!Linked) continue;
-		const byLink = new Map<string, any[]>();
-		for (const d of docs as any[]) {
-			const id = idOf(d[f.from]);
-			if (id) byLink.set(id, [...(byLink.get(id) || []), d._id]);
+	if (fills.length) {
+		const docs = (await Model.find(filter).lean()) as any[];
+		const cache = new Map<string, any>();
+		for (const f of fills) {
+			const Linked = linkedModelOf(Model, f.from);
+			if (!Linked) continue;
+			for (const d of docs) {
+				const id = idOf(d[f.from]);
+				let linked: any = null;
+				if (id) {
+					const ck = `${f.from}:${id}`;
+					if (!cache.has(ck)) cache.set(ck, await Linked.findById(id).lean());
+					linked = cache.get(ck);
+				}
+				if (id && !linked) continue; // the picked record is gone: leave the copy
+				const v = linked && fillHolds(f, d, linked) ? safeValue(f.formula, linked) : undefined;
+				const next = blank(v) ? null : v;
+				if (JSON.stringify(d[f.key] ?? null) !== JSON.stringify(next)) await Model.updateOne({ _id: d._id }, writeOf(f.key, next));
+			}
+			written.push(f.key);
 		}
-		for (const [id, ids] of byLink) {
-			const linked = await Linked.findById(id).lean();
-			if (!linked) continue;
-			const v = safeValue(f.formula, linked);
-			await Model.updateMany({ _id: { $in: ids } }, { $set: { [f.key]: blank(v) ? null : v } });
-		}
-		written.push(f.key);
 	}
 	for (const f of rows) {
 		const Linked = rowLinkModel(Model, f);
@@ -198,7 +265,7 @@ export const syncReadonly = async (Model: mongoose.Model<any>, settings: Record<
 			for (const row of list) {
 				const id = idOf(row?.[f.from]);
 				const linked = id ? await Linked.findById(id).lean() : null;
-				const v = linked ? safeValue(f.formula, linked) : undefined;
+				const v = linked && fillHolds(f, row, linked) ? safeValue(f.formula, linked) : undefined;
 				const next = blank(v) ? null : v;
 				if (JSON.stringify(row[f.key] ?? null) !== JSON.stringify(next)) ((row[f.key] = next), (changed = true));
 			}
@@ -217,10 +284,13 @@ const rowLinkModel = (Model: mongoose.Model<any>, f: { list: string; from: strin
 };
 
 /** Does a fill read any of the changed fields of its source record? `changed` null = anything may have. */
-const reads = (formula: string, changed: Set<string> | null) => {
+const reads = (f: { formula: string; when?: FillWhen[] }, changed: Set<string> | null) => {
 	if (!changed) return true;
+	const hit = (r: string) => [...changed].some(c => r === c || r.startsWith(`${c}.`) || c.startsWith(`${r}.`));
+	// Conditions on the picked record's fields (`@.type`) are read from it too.
+	if ((f.when || []).some(c => typeof c?.field === 'string' && c.field.startsWith(SOURCE_PREFIX) && hit(c.field.slice(SOURCE_PREFIX.length)))) return true;
 	try {
-		for (const r of refsOf(parse(formula))) for (const c of changed) if (r === c || r.startsWith(`${c}.`) || c.startsWith(`${r}.`)) return true;
+		for (const r of refsOf(parse(f.formula))) if (hit(r)) return true;
 	} catch {
 		// Doesn't parse: reads nothing.
 	}
@@ -229,7 +299,8 @@ const reads = (formula: string, changed: Set<string> | null) => {
 
 /**
  * AF-06: `ids` of `Source` were saved — every record of `Dep` whose read-only
- * autofill copies from it takes the new value. Editable ones are never touched.
+ * autofill copies from it takes the new value (or is cleared when its conditions
+ * no longer hold, D12). Editable ones are never touched.
  * Returns the records changed and the fields written, for the caller to go on from.
  */
 export const followReadonly = async (
@@ -240,32 +311,41 @@ export const followReadonly = async (
 	ids: mongoose.Types.ObjectId[],
 	changed: Set<string> | null
 ): Promise<{ ids: any[]; keys: string[] }> => {
-	const fills = fillsOf(settings).filter(
-		f => f.readonly && heads.includes(f.from) && linkedModelOf(Dep, f.from)?.modelName === Source.modelName && reads(f.formula, changed)
-	);
+	const fills = fillsOf(settings).filter(f => f.readonly && heads.includes(f.from) && linkedModelOf(Dep, f.from)?.modelName === Source.modelName && reads(f, changed));
 	const out = { ids: [] as any[], keys: [] as string[] };
 	for (const id of fills.length ? ids : []) {
 		const linked = await Source.findById(id).lean();
 		if (!linked) continue; // a deleted source leaves the copies as they are
 		for (const f of fills) {
+			const docs = (await Dep.find({ [f.from]: id }).lean()) as any[];
+			if (!docs.length) continue;
 			const v = safeValue(f.formula, linked);
-			const hit = await Dep.find({ [f.from]: id }).distinct('_id');
-			if (!hit.length) continue;
-			await Dep.updateMany({ _id: { $in: hit } }, { $set: { [f.key]: blank(v) ? null : v } });
-			out.ids.push(...hit);
+			// Conditions on this record decide per record.
+			const groups = new Map<string, any[]>();
+			for (const d of docs) {
+				const next = fillHolds(f, d, linked) && !blank(v) ? v : null;
+				const k = JSON.stringify(next ?? null);
+				groups.set(k, [...(groups.get(k) || []), d._id]);
+			}
+			for (const [k, hit] of groups) await Dep.updateMany({ _id: { $in: hit } }, writeOf(f.key, JSON.parse(k)));
+			out.ids.push(...docs.map(d => d._id));
 			if (!out.keys.includes(f.key)) out.keys.push(f.key);
 		}
 	}
 	// Rows: `items.rate` copied from the product picked in its row.
-	for (const f of rowFillsOf(settings).filter(x => x.readonly && rowLinkModel(Dep, x)?.modelName === Source.modelName && reads(x.formula, changed))) {
+	for (const f of rowFillsOf(settings).filter(x => x.readonly && rowLinkModel(Dep, x)?.modelName === Source.modelName && reads(x, changed))) {
 		for (const id of ids) {
 			const linked = await Source.findById(id).lean();
 			if (!linked) continue;
 			const v = safeValue(f.formula, linked);
-			const hit = await Dep.find({ [`${f.list}.${f.from}`]: id }).distinct('_id');
-			if (!hit.length) continue;
-			await Dep.updateMany({ _id: { $in: hit } }, { $set: { [`${f.list}.$[r].${f.key}`]: blank(v) ? null : v } }, { arrayFilters: [{ [`r.${f.from}`]: id }] });
-			out.ids.push(...hit);
+			const docs = (await Dep.find({ [`${f.list}.${f.from}`]: id }).select(f.list).lean()) as any[];
+			if (!docs.length) continue;
+			for (const d of docs) {
+				const list: any[] = Array.isArray(d[f.list]) ? d[f.list] : [];
+				for (const row of list) if (idOf(row?.[f.from]) === String(id)) row[f.key] = fillHolds(f, row, linked) && !blank(v) ? v : null;
+				await Dep.updateOne({ _id: d._id }, { $set: { [f.list]: list } });
+			}
+			out.ids.push(...docs.map(d => d._id));
 			if (!out.keys.includes(f.list)) out.keys.push(f.list);
 		}
 	}
@@ -274,8 +354,9 @@ export const followReadonly = async (
 
 /**
  * Autofill on a document in hand, without a signed-in person — the public API
- * with a server key. Read-only fields are set from their link; editable ones
- * fill when left empty on create, or when their link changed and they didn't.
+ * with a server key. Read-only fields are set from their link (cleared when their
+ * conditions don't hold); editable ones fill when left empty on create, or when
+ * their link changed and they didn't.
  */
 export const fillDoc = async (Model: mongoose.Model<any>, settings: Record<string, any> | undefined, doc: any, created: boolean) => {
 	for (const f of fillsOf(settings)) {
@@ -293,6 +374,11 @@ export const fillDoc = async (Model: mongoose.Model<any>, settings: Record<strin
 		}
 		const linked = await Linked.findById(id).lean();
 		if (!linked) continue;
+		const rec = doc.toObject ? doc.toObject() : doc;
+		if (!fillHolds(f, rec, linked)) {
+			if (f.readonly) doc.set(f.key, null);
+			continue;
+		}
 		const v = safeValue(f.formula, linked);
 		if (f.readonly) doc.set(f.key, blank(v) ? null : v);
 		else if (!blank(v)) doc.set(f.key, v);

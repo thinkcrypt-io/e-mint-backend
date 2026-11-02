@@ -14,6 +14,7 @@ import { checkSettings, validateDraft, withSystemFields } from './validate.js';
 import { checkLinkedRelationships } from './linkedCheck.js';
 import { ACCESS_KEYS, PRIVACY_VALUES } from '../../functions/recordAccess.function.js';
 import { fieldsOfRule } from '../../functions/formRules.function.js';
+import { LOCK_OPS } from '../../functions/fieldLocks.function.js';
 import { checkFormula, formulaPipeline, formulasOf, parse, recalculateFormulas, refsOf, usesLinks } from '../../functions/formula.function.js';
 import { ACCESS_FORM_SECTION, ACCESS_VIEW_SECTION } from '../../functions/dynamicModels.function.js';
 import { invalidateRoute } from '../../functions/resolveRoute.function.js';
@@ -30,8 +31,8 @@ import {
 	COMPONENT_KINDS,
 	NESTING_KINDS,
 	formulaInfoOf,
-	AUTOFILL_KINDS,
-	FILLS_KINDS,
+	AUTOFILL_ABLE_KINDS,
+	fillShapeOf,
 	FORMULA_KINDS,
 	numbersOfDef,
 	REFERENCE_KINDS,
@@ -123,9 +124,14 @@ const subFieldBase = {
 	helper: Joi.string().allow('').max(200),
 	// A reference's picker: which records it offers and what shows under their names.
 	optionFilters: Joi.array().items(Joi.object({ field: Joi.string().max(60).required(), value: Joi.any(), op: Joi.string().max(10) }).unknown(true)).max(10),
-	fillFrom: Joi.object({ from: Joi.string().max(60).required(), formula: Joi.string().max(300).required() }),
-	// An autofill kind's value kind (docs/autofill D3).
-	fills: Joi.string().valid(...FILLS_KINDS),
+	// Autofill on any field that can hold what it copies (docs/autofill AF-09): read-only switch, conditions (a field here, or `@.field` of the picked record).
+	fillFrom: Joi.object({
+		from: Joi.string().max(60).required(),
+		formula: Joi.string().max(300).required(),
+		readonly: Joi.boolean(),
+		when: Joi.array().items(Joi.object({ field: Joi.string().max(80).required(), op: Joi.string().valid(...LOCK_OPS).required(), value: Joi.any() }).unknown(true)).max(10),
+		match: Joi.string().valid('all', 'any'),
+	}),
 	pickerDetails: Joi.array().items(Joi.string().max(60)).max(5),
 	formula: Joi.string().allow('').max(500),
 	// A date formula's timing: worked out once (while empty), not on every save.
@@ -140,7 +146,7 @@ const subFieldBase = {
 
 /** A section's own field: the same, minus links and nested sections. */
 /** A list's rows may also hold a link to another model's records and autofill from it (docs/autofill D8). */
-const ROW_KINDS = [...SUB_KINDS, 'reference', 'autofill', 'autofillreadonly'];
+const ROW_KINDS = [...SUB_KINDS, 'reference'];
 const subFieldSchema = Joi.object({ ...subFieldBase, kind: Joi.string().valid(...ROW_KINDS).required() });
 
 const fieldSchema = Joi.object({
@@ -176,7 +182,7 @@ export const readOnlyProblem = (fields: any[], keys: string[] = [], actions: str
 		const f = (fields || []).find((x: any) => x?.key === k);
 		if (!f) return `“${k}” isn’t a field of this model, so it can’t be read-only`;
 		const noDefault = f.default === undefined || f.default === null || f.default === '';
-		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula' && f.kind !== 'dateformula' && f.kind !== 'autofillreadonly')
+		if (actions.includes('create') && f.required && noDefault && f.kind !== 'formula' && f.kind !== 'dateformula' && !f.fillFrom?.readonly)
 			return `${f.label || f.key} is required and has no default, and the public API can’t write it — every create would fail. Give it a default, or let the API write it.`;
 	}
 	return null;
@@ -265,30 +271,54 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 			else if (!checked.ok) problems.push(`${name}: ${checked.errors.map(e => e.message).join('; ')}`);
 		} else delete f.formula;
 		if (f.kind !== 'dateformula' || f.calc !== 'once') delete f.calc;
-		// Autofill (docs/autofill): copies a field of a record picked in this model — one hop, not a sensitive field.
-		if (AUTOFILL_KINDS.includes(f.kind)) {
-			if (f.kind === 'autofillreadonly') {
+		// Autofill (docs/autofill): a setting on a field that can hold what it copies — a field of a record picked in this model, one hop, not a sensitive field.
+		if (f.fillFrom) {
+			const from = f.fillFrom.from;
+			const link = from && scope.find((x: any) => x.key === from);
+			if (!AUTOFILL_ABLE_KINDS.includes(f.kind)) problems.push(`${name}: a ${f.kind} field can’t autofill — use a text, number, date, yes/no, choice or link field`);
+			else if (!link || link.kind !== 'reference') problems.push(`${name}: it copies from “${from}”, which isn't a link field of this model`);
+			else {
+				const formula = String(f.fillFrom.formula || '').trim();
+				f.fillFrom = { ...f.fillFrom, from, formula };
+				if (!f.fillFrom.readonly) delete f.fillFrom.readonly;
+				if (!f.fillFrom.when?.length) (delete f.fillFrom.when, delete f.fillFrom.match);
+				const src = (targetList.find(t => t.name === link.ref)?.kinds ?? (extraDefs.find(d => d.name === link.ref) && Object.fromEntries(extraDefs.find(d => d.name === link.ref)!.fields.map((x: any) => [x.key, { kind: x.kind, ref: x.ref }])))) as Record<string, { kind: string; ref?: string }> | undefined;
+				try {
+					const tree = parse(formula);
+					const refs = refsOf(tree);
+					if (!formula || !refs.size) problems.push(`${name}: say what to take from ${link.label || from} (a field, or a formula over its numbers)`);
+					else if ([...refs].some(r => SENSITIVE.test(r))) problems.push(`${name}: it can’t copy ${[...refs].find(r => SENSITIVE.test(r))} — hidden fields can’t be copied`);
+					else if (src) {
+						const missing = [...refs].find(r => !src[r.split('.')[0]]);
+						if (missing) problems.push(`${name}: ${link.label || from} has no field “${missing}”`);
+						else if (tree.t === 'ref') {
+							// The source fits the field (D11): a number from a number, a date from a date, text from anything that reads as text.
+							const have = src[tree.key.split('.')[0]];
+							const to = fillShapeOf(f.kind);
+							const hv = fillShapeOf(have.kind);
+							const fits = !hv || !to || (to === 'text' ? hv !== 'link' && hv !== 'boolean' : to === 'choice' ? hv === 'text' || hv === 'choice' : to === 'link' ? hv === 'link' && (!have.ref || !f.ref || have.ref === f.ref) : to === hv);
+							if (!fits) problems.push(`${name}: it’s a ${f.kind} field, but ${link.label || from} › ${tree.key} is a ${have.kind} — pick a ${to === 'choice' ? 'text or choice' : to} field to copy`);
+						} else if (!['number', 'text'].includes(fillShapeOf(f.kind) || '')) problems.push(`${name}: a formula gives a number, so it can only fill a number or text field`);
+					}
+				} catch (e: any) {
+					problems.push(`${name}: ${e?.message || 'what it copies isn’t a field or a formula'}`);
+				}
+				// Conditions name real fields: this record's, or `@.field` of the picked record.
+				for (const c of f.fillFrom.when || []) {
+					const key = String(c.field || '');
+					const onSource = key.startsWith('@.');
+					if (onSource) {
+						if (src && !src[key.slice(2).split('.')[0]]) problems.push(`${name}: its condition names “${key.slice(2)}”, which ${link.label || from} doesn’t have`);
+					} else if (!scope.some((x: any) => x.key === key.split('.')[0])) problems.push(`${name}: its condition names “${key}”, which isn’t a field here`);
+				}
+			}
+			if (f.fillFrom?.readonly) {
+				// Set by the server: never typed, required, unique or defaulted.
 				delete f.required;
 				delete f.unique;
 			}
 			delete f.default;
-			if (!f.fills) f.fills = 'text';
-			const from = f.fillFrom?.from;
-			const link = from && scope.find((x: any) => x.key === from);
-			if (!f.fillFrom) problems.push(`${name}: pick the link it copies from and what to take`);
-			else if (!link || link.kind !== 'reference') problems.push(`${name}: it copies from “${from}”, which isn't a link field of this model`);
-			else {
-				const formula = String(f.fillFrom.formula || '').trim();
-				f.fillFrom = { from, formula };
-				try {
-					const refs = refsOf(parse(formula));
-					if (!formula || !refs.size) problems.push(`${name}: say what to take from ${link.label || from} (a field, or a formula over its numbers)`);
-					else if ([...refs].some(r => SENSITIVE.test(r))) problems.push(`${name}: it can’t copy ${[...refs].find(r => SENSITIVE.test(r))} — hidden fields can’t be copied`);
-				} catch (e: any) {
-					problems.push(`${name}: ${e?.message || 'what it copies isn’t a field or a formula'}`);
-				}
-			}
-		} else delete f.fills;
+		}
 		if (f.kind === 'number' && f.options?.some((o: any) => !Number.isFinite(Number(o.value))))
 			problems.push(`${name}: the allowed values of a number must be numbers`);
 		// The default as the field stores it; one outside the allowed values would fail every create.
@@ -352,7 +382,7 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 		if (SECTION_KINDS.includes(f.kind)) {
 			if (!f.fields?.length) problems.push(`${name}: add at least one field to the section`);
 			for (const x of f.fields || []) {
-				if (x.kind === 'reference' || AUTOFILL_KINDS.includes(x.kind)) {
+				if (x.kind === 'reference' || x.fillFrom) {
 					if (f.kind !== 'sectionlist') problems.push(`${name} › ${x.label || x.key}: only the rows of a list can link to records or autofill`);
 				}
 				if (x.kind === 'reference') {

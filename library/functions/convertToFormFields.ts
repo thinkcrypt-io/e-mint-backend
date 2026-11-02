@@ -11,15 +11,10 @@ type CreateType = {
 	type?: 'post' | 'update';
 };
 
-/** The input an Autofill field (docs/autofill) is typed into: the kind of value it copies. */
-const AUTOFILL_INPUT: Record<string, string> = { text: 'string', number: 'number', date: 'date', boolean: 'checkbox' };
-
-const createType = ({ type, isReadOnly, fieldType, fills }: any) => {
+const createType = ({ type, isReadOnly, fieldType }: any) => {
 	if (type == 'update' && isReadOnly) {
 		return 'read-only';
 	}
-	// Autofill is filled when its link is picked and typed over like the value it holds; Autofill (read-only) has its own muted input.
-	if (fieldType === 'autofill') return AUTOFILL_INPUT[fills] || 'string';
 	return fieldType;
 };
 
@@ -42,7 +37,6 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						type: type,
 						isReadOnly: fieldConfig?.readOnlyOnUpdate || false,
 						fieldType: fieldConfig?.type,
-						fills: fieldConfig?.fills,
 					});
 					if (fieldConfig) {
 						dataFields.push({
@@ -88,8 +82,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.addItem && { addItem: fieldConfig.addItem }),
 							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
-							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
-							// What an Autofill (read-only) field says it is copied from: the picker's label.
+							// What an autofill field says it is copied from: the picker's label (docs/autofill).
 							...(fieldConfig?.fillFrom?.from && schema?.[fieldConfig.fillFrom.from]?.label && { fromLabel: schema[fieldConfig.fillFrom.from].label }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),
@@ -105,7 +98,6 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 					type: type,
 					isReadOnly: fieldConfig?.readOnlyOnUpdate || false,
 					fieldType: fieldConfig?.type,
-					fills: fieldConfig?.fills,
 				});
 				if (fieldConfig) {
 					dataFields.push({
@@ -147,8 +139,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						// Which linked records a picker offers (the route builder's Settings).
 						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
-							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
-							// What an Autofill (read-only) field says it is copied from: the picker's label.
+							// What an autofill field says it is copied from: the picker's label (docs/autofill).
 							...(fieldConfig?.fillFrom?.from && schema?.[fieldConfig.fillFrom.from]?.label && { fromLabel: schema[fieldConfig.fillFrom.from].label }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),

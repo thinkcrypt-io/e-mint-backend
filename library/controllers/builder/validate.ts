@@ -279,18 +279,27 @@ export const withFormulaFields = (data: any) => {
 	};
 };
 
-const isAutofill = (f: any) => f?.schema?.type === 'autofill' || f?.schema?.type === 'autofillreadonly';
+/** Autofill (docs/autofill AF-09) is a setting on any field: `schema.fillFrom`. */
+const isAutofill = (f: any) => !!f?.schema?.fillFrom;
 const SENSITIVE_SOURCE = /pass(word)?|token|secret|api_?key|apikey|private|otp|salt|hash/i;
 
-/** Autofill (read-only) (docs/autofill) is set by the server: never changeable, never required. */
+/** A read-only autofill (docs/autofill) is set by the server: never changeable, never required. */
 export const withAutofillFields = (data: any) => {
-	if (!Array.isArray(data?.fields) || !data.fields.some((f: any) => f?.schema?.type === 'autofillreadonly')) return data;
+	if (!Array.isArray(data?.fields) || !data.fields.some((f: any) => f?.schema?.fillFrom?.readonly)) return data;
 	return {
 		...data,
 		fields: data.fields.map((f: any) =>
-			f?.schema?.type === 'autofillreadonly' ? { ...f, edit: false, required: false, schema: { ...f.schema, isRequired: false } } : f
+			f?.schema?.fillFrom?.readonly ? { ...f, edit: false, required: false, schema: { ...f.schema, isRequired: false } } : f
 		),
 	};
+};
+
+/** Can a field storing `to` hold a copy of one storing `from`? */
+const autofillFits = (to: any, from: any) => {
+	if (to.instance === 'Number' || to.instance === 'Date' || to.instance === 'Boolean') return to.instance === from.instance;
+	if (to.instance === 'ObjectId' || to.instance === 'ObjectID') return from.instance === 'ObjectId' || from.instance === 'ObjectID';
+	if (to.instance === 'Array') return from.instance === 'String' || from.instance === 'Array';
+	return from.instance !== 'ObjectId' && from.instance !== 'ObjectID' && from.instance !== 'Boolean' && from.instance !== 'Array';
 };
 
 /** What a formula may use: the other fields, and whether each holds a number. */
@@ -408,23 +417,39 @@ export const checkSettings = ({
 		if (isAutofill(field)) {
 			const ff = field.schema.fillFrom;
 			const link = ff?.from && data.fields.find((x: any) => x?.key === ff.from);
+			const Linked = ff?.from && model ? linkedModelOf(model, ff.from) : null;
 			if (locked.includes(key)) problems.push(`'${key}' is a system field and can't be an autofill.`);
+			if (['formula', 'dateformula', 'password', 'section-object', 'section-data-array', 'editor'].includes(field.schema?.type) || isFormula(field)) problems.push(`'${key}' can't autofill: pick a plain field (text, number, date, yes/no, choice or link).`);
 			if (!ff?.from || !String(ff?.formula || '').trim()) problems.push(`'${key}' autofill: pick the link it copies from and what to take.`);
 			else if (!link || !link.schema?.model) problems.push(`'${key}' autofill: '${ff.from}' isn't a link field of this page.`);
 			else {
 				try {
-					const refs = [...refsOf(parse(ff.formula))];
+					const tree = parse(ff.formula);
+					const refs = [...refsOf(tree)];
 					if (!refs.length) problems.push(`'${key}' autofill: say what to take from '${ff.from}'.`);
 					const bad = refs.find(r => SENSITIVE_SOURCE.test(r));
 					if (bad) problems.push(`'${key}' autofill: '${bad}' is a hidden field and can't be copied.`);
+					// The source fits the field (D11): a number from a number, a date from a date, text from anything that reads as text.
+					const to: any = model?.schema?.path(key);
+					if (!bad && Linked && to) {
+						if (tree.t === 'ref') {
+							const from: any = Linked.schema.path(tree.key.split('.')[0]);
+							if (!from) problems.push(`'${key}' autofill: the linked model has no '${tree.key}'.`);
+							else if (!autofillFits(to, from)) problems.push(`'${key}' autofill: it stores ${String(to.instance).toLowerCase()}, but '${tree.key}' is ${String(from.instance).toLowerCase()} — pick a matching field.`);
+						} else if (!['Number', 'String'].includes(to.instance)) problems.push(`'${key}' autofill: a formula gives a number, so it can only fill a number or text field.`);
+					}
 				} catch (e: any) {
 					problems.push(`'${key}' autofill: ${e?.message || 'what it copies isn’t a field or a formula'}`);
 				}
+				// Conditions name real fields: this page's, or `@.field` of the picked record.
+				for (const c of ff.when || []) {
+					const k = String(c?.field || '');
+					if (k.startsWith('@.')) {
+						if (Linked && !Linked.schema.path(k.slice(2).split('.')[0])) problems.push(`'${key}' autofill: its condition names '${k.slice(2)}', which the linked model doesn't have.`);
+					} else if (!data.fields.some((x: any) => x?.key === k.split('.')[0])) problems.push(`'${key}' autofill: its condition names '${k}', which isn't a field of this page.`);
+				}
 			}
-			if (field.schema.type === 'autofillreadonly' && (field.edit || field.required)) problems.push(`'${key}' is set by the server, so it can't be changeable or required.`);
-			const path: any = model?.schema?.path(key);
-			const kind = { text: 'String', number: 'Number', date: 'Date', boolean: 'Boolean' }[field.schema.fills as string];
-			if (path && kind && path.instance !== kind) problems.push(`'${key}' autofill: the model stores it as ${String(path.instance).toLowerCase()}, not ${field.schema.fills}.`);
+			if (ff?.readonly && (field.edit || field.required)) problems.push(`'${key}' is set by the server, so it can't be changeable or required.`);
 		}
 
 		// A section's own fields: each must be a path the model stores under it

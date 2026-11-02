@@ -78,7 +78,7 @@ const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELD_RX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /** Fields an action may never write: system ones and calculated ones. */
 const SYSTEM_FIELDS = new Set(['_id', 'id', 'createdAt', 'updatedAt', 'code', 'addedBy', 'access', 'privacy', 'organization', 'project', '_model', '__v']);
-const UNWRITABLE_KINDS = new Set(['formula', 'dateformula', 'autofillreadonly', 'section', 'sectionlist', 'component', 'blocks', 'password', 'seo']);
+const UNWRITABLE_KINDS = new Set(['formula', 'dateformula', 'section', 'sectionlist', 'component', 'blocks', 'password', 'seo']);
 
 const actionLabel: Record<string, string> = {
 	notify: 'Notify people',
@@ -328,7 +328,7 @@ const checkText = (def: Def, text: string, on: string, label: string, links: Lin
 
 const writableField = (def: Def, key: string) => {
 	const f = def.fields.find((x: any) => x.key === key);
-	return f && !SYSTEM_FIELDS.has(key) && !UNWRITABLE_KINDS.has(f.kind) ? f : null;
+	return f && !SYSTEM_FIELDS.has(key) && !UNWRITABLE_KINDS.has(f.kind) && !f.fillFrom?.readonly ? f : null;
 };
 
 /** One assignment list (`set`) of an update or create action, against the target page. */
@@ -538,7 +538,7 @@ export const checkAutomation = async (body: any) => {
 			const p = r ? await pageOf(r) : null;
 			if (!p) throw invalid(`${label}: choose the page to add a record to`, `${at}.route`);
 			const set = checkSet(def, p.def, a.set, `${at}.set`, label, links);
-			const missing = p.def.fields.filter((f: any) => f.required && !UNWRITABLE_KINDS.has(f.kind) && f.default === undefined && !set.some((s: any) => s.field === f.key));
+			const missing = p.def.fields.filter((f: any) => f.required && !UNWRITABLE_KINDS.has(f.kind) && !f.fillFrom?.readonly && f.default === undefined && !set.some((s: any) => s.field === f.key));
 			if (missing.length) throw invalid(`${label}: also set ${missing.map((f: any) => f.label || f.key).join(', ')} — ${nounOf(p.def)} needs ${missing.length === 1 ? 'it' : 'them'}`, `${at}.set`);
 			actions.push({ type: 'create', route: r, set });
 		}

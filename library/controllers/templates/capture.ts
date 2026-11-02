@@ -67,7 +67,7 @@ const usedComponents = async (defs: any[]) => {
 const sampleRow = async (doc: any, def: any, displayOf: Map<string, string>) => {
 	const row: any = {};
 	for (const f of def.fields) {
-		if (SKIP_RECORD_KEYS.has(f.key) || f.kind === 'formula' || f.kind === 'dateformula' || f.kind === 'autofillreadonly' || f.kind === 'password') continue;
+		if (SKIP_RECORD_KEYS.has(f.key) || f.kind === 'formula' || f.kind === 'dateformula' || f.fillFrom?.readonly || f.kind === 'password') continue;
 		const v = doc[f.key];
 		if (v === undefined || v === null || v === '') continue;
 		if ((f.kind === 'reference' || f.kind === 'references') && f.ref) {
