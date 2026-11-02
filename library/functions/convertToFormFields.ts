@@ -89,6 +89,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
 							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
+							// What an Autofill (read-only) field says it is copied from: the picker's label.
+							...(fieldConfig?.fillFrom?.from && schema?.[fieldConfig.fillFrom.from]?.label && { fromLabel: schema[fieldConfig.fillFrom.from].label }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),
@@ -146,6 +148,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig?.optionFilters && { optionFilters: fieldConfig.optionFilters }),
 							...(fieldConfig?.fillFrom && { fillFrom: fieldConfig.fillFrom }),
 							...(fieldConfig?.fills && { fills: fieldConfig.fills }),
+							// What an Autofill (read-only) field says it is copied from: the picker's label.
+							...(fieldConfig?.fillFrom?.from && schema?.[fieldConfig.fillFrom.from]?.label && { fromLabel: schema[fieldConfig.fillFrom.from].label }),
 							...(Array.isArray(fieldConfig?.pickerDetails) && fieldConfig.pickerDetails.length && { pickerDetails: fieldConfig.pickerDetails }),
 							...(fieldConfig?.pickerDetailsLayout && { pickerDetailsLayout: fieldConfig.pickerDetailsLayout }),
 							...(fieldConfig?.lockWhen && { lockWhen: fieldConfig.lockWhen }),

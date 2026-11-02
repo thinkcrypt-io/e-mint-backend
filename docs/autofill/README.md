@@ -35,13 +35,14 @@ builder (`builder/_components/FillFromEditor.tsx`):
 
 So **Autofill is today's fillFrom made a visible type**, and **Autofill (read-only)** is new: the server owns it.
 
-## Decisions (proposed — need the user's go-ahead)
+## Decisions (built 2026-11-02 as written, except where noted)
 
 - D1 **One engine.** Both types use `fillFrom` and the existing fill code (backend + both panels' copies). A field
   that already has the fillFrom switch reads as an Autofill field; nothing to migrate.
 - D2 **Two types, not a switch.** They sit in the type lists beside Formula (number) / Formula (date), group
-  "Values". Code that asks "is this worked out, not typed" (`isFormulaType`) also answers yes for
-  `autofillreadonly`; `autofill` stays a typed field.
+  "Values". *Built differently:* `isFormulaType` is left alone (it also finds the formulas to calculate, so
+  `autofillreadonly` must not answer yes); the places that mean "worked out, not typed" name `autofillreadonly`
+  next to it instead (public-API writable fields, automations, MCP, templates, rules' set fields, builder checks).
 - D3 **The value keeps the source field's kind.** An autofill of Customer › Phone stores, shows, sorts and filters
   as text; of Bill › Total as a number; of Plan › Starts as a date. Worked out from the source field when the
   model/page is saved and stored as `schema.fills` (`text` | `number` | `date` | `boolean` | `select` …); a formula

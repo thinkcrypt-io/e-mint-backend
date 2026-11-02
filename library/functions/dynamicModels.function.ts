@@ -1382,6 +1382,7 @@ export const dataModelOf = (fields: ModelFieldDef[] = [], target?: (ref?: string
 				kind: x.kind,
 				fills,
 				...(x.fillFrom?.from && { fillFrom: x.fillFrom }),
+				...(x.fillFrom?.from && fields.find(y => y.key === x.fillFrom!.from)?.label && { fromLabel: fields.find(y => y.key === x.fillFrom!.from)!.label }),
 				...(x.helper && { helper: x.helper }),
 			};
 		}

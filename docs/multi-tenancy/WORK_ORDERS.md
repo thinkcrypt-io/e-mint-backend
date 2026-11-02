@@ -6,7 +6,15 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-10-31)
+## Handoff — read this first (kept current; last updated 2026-11-02)
+
+**2026-11-02 — Autofill fields built (docs/autofill AF-01…08).** Two field types, `autofill` (filled when its link is
+picked, typed over for the record) and `autofillreadonly` (server-owned, follows the source record), on top of
+`schema.fillFrom`; value kind in `schema.fills`; rows of a Section *list* can link and autofill (`dataModel[].fillFrom`).
+Engine `library/functions/linkedFill.function.ts` (create / update `autofill()`, bulk + import `syncReadonly`, source
+changes `followReadonly` from `recalculateDependents`). Panels: form fill + muted read-only input, page builder and
+model builder editors (admin + mint-tenant, copies kept identical). Smoke `scripts/tenancy-smoke/autofill.mjs`.
+**Not deployed** — backend needs the manual Heroku deploy (until then production refuses the new kinds).
 
 **2026-10-31 — Store marketing planned (docs/marketing MK-01).** Segments + campaigns (email / SMS / WhatsApp), SMS and
 WhatsApp order messages + rate your order, store pixel events + server-side purchase (Meta / GA4 / TikTok), product
