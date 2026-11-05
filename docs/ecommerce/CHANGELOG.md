@@ -1,6 +1,16 @@
 # E-commerce projects — changelog
 
 
+## 2026-11-05 — EC-43…EC-47 Discounts
+- **Discounts** in every store (`discounts`, sidebar E-commerce): name, percentage off, status, starts / ends (days in the store's time zone), products / categories (+ sub-categories) / collections, ⚙ products reached, ⚙ ended. Refused: nothing picked, 0 or over 100%, ends before it starts, switching on one whose end has passed (DS8).
+- Products gain ⚙Discount, ⚙Discount % and Sale price (formula); variants ⚙Discount % and Sale price; **Price after tax reads Sale price**. The biggest active, started discount reaching a product wins — never added up — worked out again on every change (`commerce/discounts.ts`), History “Store: discounts”.
+- Six store automations (`discount.saved`, `.deleted`, `.product-moved`, `.category-moved`, `.ends`, `.starts`) with a new store-only action *Work out the store's discounts*; D5/D6 on the date trigger at the start / end of the day in the store's time zone.
+- Store settings: **Time zone** (from the organization's country), Products → **Collections** / **Discounts** switches, POS → **Coupons apply to** the discounted price (default) or the original price.
+- The till sells at the sale price; quote lines carry `listPrice` + `sale`; order items keep the store discount they sold at; POS cart, product grid, receipts and the order page show it. `POST /commerce/discount-preview` → the discount form's note.
+- Public API: products send `salePrice`, `discountPercent`, `discount` (name, endsAt); Live Fresh shows the sale price with the price struck out and the discount's last day, and charges it. MCP store instructions explain discounts.
+- `upgradeStore`: builds Discounts, adds the fields, renews Price after tax, places Sale price in the form, sets the time zone, one-time `sale-price` fill, D1–D6, the discount page's Products tab, public API out fields; row lists (order items) gain new sub-fields.
+- Smoke `commerce-discounts.mjs` (63 checks). Not deployed.
+
 ## 2026-10-31 — Add stock
 - New **Add stock** page (`/store/stock/add`, Store sidebar) for every e-commerce store: outlet, stock-in date, then as many items as needed — pick a product, then (only if it has variations) one of *its own* variants, then the quantity. A simple product needs no variant. `POST /commerce/stock/receive` records one **Stock in** entry (new engine-only model `stockin`, route `stock-in`, code SIN) and puts every item in as `receive` movements dated the stock-in day (not in the future), all or none; the same variant twice adds up.
 - `upgradeStores.js` adds the Stock in model to built stores.

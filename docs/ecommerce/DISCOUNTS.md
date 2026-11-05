@@ -78,14 +78,32 @@ Part of the E-commerce plan (`README.md`), built the way tax was (`TAX_AUTOMATIO
 |---|---|---|---|
 | EC-41 | **Collections** (DS7) — *done 2026-11-02*: blueprint model + Product ★Collections; collection page Products tab with Add / Remove products (engine, History); Discounts tab placeholder; website list endpoint + `?collections=` filter (website only, no POS); guide `#collections` | backend + mint-tenant + mint-docs | M |
 | EC-42 | **"When a date is reached" trigger** (DS6) — *done 2026-11-02*: `on: 'date'`, `dateField`, offset; `AutomationDue` jobs queued on save / re-queued / dropped; minute ticker with claim + catch-up; on/off queues/drops; editor in both panels (mint-tenant + admin); MCP `save_automation` takes it; guide `#date-trigger`. Smoke: due in 2 min fires once, moved date re-queues, cleared date drops, restart catches up, two tickers don't double-run | backend + mint-tenant + admin + mint-docs | L |
-| EC-43 | **Discount model + engine** (DS1–DS4, DS8, DS9): blueprint Discounts; product / variant ⚙Discount, Discount %, Sale price; Price after tax reads Sale price; `commerce/discounts.ts` (`reachOf`, `bestFor`, `applyDiscounts`); save checks; Store settings Time zone | backend + mint-tenant | L |
-| EC-44 | **The store's discount automations D1–D6** (DS5): store action *Work out discounts*; install in `install.ts`; form note + toast (DS11); Products tab on the discount; price badge on the product page | backend + mint-tenant | M |
-| EC-45 | **The till charges it** (DS10, DS12, DS15): `itemView` sale price, `sale` on order lines, Store settings *Coupons apply to* (discounted price by default / original price) used by `pricing.ts`, POS cart / receipt / order page show it, website orders priced the same, returns check | backend + mint-tenant | M |
-| EC-46 | **Website + MCP** (DS14): public API fields, `GET /public/api/store`, Live Fresh storefront strike-through + countdown (our own demo store), MCP notes in `describe_platform` | backend + live-fresh | S |
-| EC-47 | **Built stores + docs** (DS13): wizard step, `upgradeStore` (models, fields, `sale-price` fill, automations), `upgradeStores.js` dry run on Verte then `--apply` with the user's go-ahead; mint-docs guides (Discounts, Collections, Products, Automations → date trigger), admin `/docs`, marketing website | backend + mint-tenant + mint-docs + mint-webpage + prod | S |
+| EC-43 | **Discount model + engine** (DS1–DS4, DS8, DS9) — *done 2026-11-05*: blueprint Discounts; product / variant ⚙Discount, Discount %, Sale price; Price after tax reads Sale price; `commerce/discounts.ts` (`reachOf`, `bestFor`, `applyDiscounts`); save checks; Store settings Time zone | backend + mint-tenant | L |
+| EC-44 | **The store's discount automations D1–D6** (DS5) — *done 2026-11-05*: store action *Work out discounts*; install in `install.ts`; form note + toast (DS11); Products tab on the discount; price badge on the product page | backend + mint-tenant | M |
+| EC-45 | **The till charges it** (DS10, DS12, DS15) — *done 2026-11-05*: `itemView` sale price, `sale` on order lines, Store settings *Coupons apply to* (discounted price by default / original price) used by `pricing.ts`, POS cart / receipt / order page show it, website orders priced the same, returns check | backend + mint-tenant | M |
+| EC-46 | **Website + MCP** (DS14) — *done 2026-11-05*: public API fields, `GET /public/api/store`, Live Fresh storefront strike-through + countdown (our own demo store), MCP notes in `describe_platform` | backend + live-fresh | S |
+| EC-47 | **Built stores + docs** (DS13) — *done 2026-11-05, prod step waiting on the user*: wizard step, `upgradeStore` (models, fields, `sale-price` fill, automations), `upgradeStores.js` dry run on Verte then `--apply` with the user's go-ahead; mint-docs guides (Discounts, Collections, Products, Automations → date trigger), admin `/docs`, marketing website | backend + mint-tenant + mint-docs + mint-webpage + prod | S |
 
 Order: EC-41 and EC-42 first (independent of each other), then EC-43 → EC-44 → EC-45, EC-46 after EC-45, EC-47
 last. Commit and push each WO when it's done.
+
+### As built (2026-11-05) — where it differs from the decisions above
+
+- **Sale price is a formula** (`round(price * (1 − discountPercent / 100), 2)`), not a value the engine writes: the engine
+  writes Discount and Discount %, so a price edited mid-sale needs nothing else. Variants carry Discount % only (their
+  product names the discount).
+- **The till's `unitPrice` is what one sells for** (the sale price); the line keeps `listPrice` and `sale {discount, name,
+  percent, amount}` beside it — every reader of `unitPrice` (returns, receipts, totals) stays right as it was.
+- **Ended = status.** A discount reaches products while active and started; its end switches it off through D5. With D5
+  off it stays on past its end (as §4 says); DS8 refuses switching on one whose end has passed, on the form, inline edits
+  and MCP; bulk edits of discounts are refused (the store keeps some of their fields); an import isn't checked.
+- **Days and the time zone:** Starts / Ends are days (the date input stores 00:00 UTC). D5 runs `endsAt + 1440 − offset`
+  minutes, D6 `startsAt − offset` (Dhaka: 1080 after, 360 before), the offset taken from the store's zone when the
+  automations are saved — renewed on every Store settings save and upgrade. A zone with summer time is an hour out for
+  half the year until the next save. Date offsets can now go up to 10000.
+- **DS11:** the form's note is live as you fill it in; no toast after saving (the automation runs just after the save —
+  its Runs say what it did).
+- Store settings: **Products → Collections / Discounts** switches (sidebar only, every store has both models).
 
 ## 6. Tests (each WO's smoke, scratch server :5021 + mongod :27997)
 
