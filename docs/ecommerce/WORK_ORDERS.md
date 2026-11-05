@@ -42,16 +42,19 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-38 | Price after tax by the till’s rule (mode-aware, default rate, engine-owned) | backend + mint-tenant | M | **backend done 2026-11-02** (not deployed); panel column label per mode not done |
 | EC-39 | Tax in use: delete refused, Replace with…, inactive notice | backend + mint-tenant | S | **done 2026-11-02** (not deployed); inactive notice dropped — an inactive tax now holds nothing |
 | EC-40 | Built stores (`upgradeStore`, `upgradeStores.js` on prod with the user’s go-ahead) + guides + website | backend + mint-docs + mint-webpage | S | **done 2026-11-02**: Verte upgraded on prod (backend not deployed); store guide “Tax and prices”, website changelog; admin /docs has no store pages |
-| EC-41 | Collections: model, product ★Collections (many), collection page Products tab with Add existing / Remove, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + admin + mint-docs | M | **done 2026-11-02** (not deployed; built stores get it from `upgradeStores.js`) |
-| EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | **done 2026-11-02** (not deployed) |
-| EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | **done 2026-11-05** (not deployed) |
-| EC-44 | Store discount automations D1–D6 (saved, deleted, product moved, category moved, ends, starts) + form note | backend + mint-tenant + admin | M | **done 2026-11-05** (not deployed) |
-| EC-45 | The till charges the sale price: order lines, POS, receipts, website orders, returns; Store setting *Coupons apply to* (discounted price by default / original price) | backend + mint-tenant | M | **done 2026-11-05** (not deployed) |
-| EC-46 | Discounts on the website API + Live Fresh strike-through + MCP | backend + live-fresh | S | **done 2026-11-05** (storefront live; shows discounts once the backend is deployed and Verte upgraded) |
-| EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | **done 2026-11-05** except the prod step: deploy the backend, then `upgradeStores.js` dry run + `--apply` (the user's go-ahead) |
+| EC-41 | Collections: model, product ★Collections (many), collection page Products tab with Add existing / Remove, website filter — website only (DISCOUNTS.md) | backend + mint-tenant + admin + mint-docs | M | **done 2026-11-02** (deployed 2026-11-06) |
+| EC-42 | Automations: “When a date is reached” trigger (due-job queue + minute ticker) | backend + mint-tenant + admin + mint-docs | L | **done 2026-11-02** (deployed 2026-11-06) |
+| EC-43 | Discount model + engine: Sale price (Price never overwritten), biggest discount wins, store time zone | backend + mint-tenant | L | **done 2026-11-05** (deployed 2026-11-06) |
+| EC-44 | Store discount automations D1–D6 (saved, deleted, product moved, category moved, ends, starts) + form note | backend + mint-tenant + admin | M | **done 2026-11-05** (deployed 2026-11-06) |
+| EC-45 | The till charges the sale price: order lines, POS, receipts, website orders, returns; Store setting *Coupons apply to* (discounted price by default / original price) | backend + mint-tenant | M | **done 2026-11-05** (deployed 2026-11-06) |
+| EC-46 | Discounts on the website API + Live Fresh strike-through + MCP | backend + live-fresh | S | **done 2026-11-05** (deployed 2026-11-06; Verte upgraded) |
+| EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | **done 2026-11-05** — **deployed + Verte upgraded on prod 2026-11-06** |
 
 ## Handoff
 
+- **2026-11-06 — EC-41…EC-47 deployed.** The user deployed the backend; `upgradeStores.js --apply` ran on prod: Verte got
+  Discounts (with its Products tab), Sale price on 36 products + 40 variants (= Price, nothing on sale yet), Price after tax
+  from Sale price, time zone Asia/Dhaka and D1–D6. A second dry run says up to date. Verte has no discounts yet.
 - **2026-11-05 — EC-43…EC-47 discounts done** (CHANGELOG). Engine `commerce/discounts.ts` (reach, biggest wins, `applyDiscounts`
   in batches with History “Store: discounts”, `discountProblem` DS8, `previewDiscount` → `POST /commerce/discount-preview`);
   `commerce/discountAutomations.ts` D1–D6 with a store-only action `storeAction: workOutDiscounts`; `commerce/zones.ts` (store
