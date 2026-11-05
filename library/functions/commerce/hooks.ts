@@ -5,6 +5,7 @@ import { syncVariants } from './catalogue.js';
 import { applyCategoryTax } from './categoryTax.js';
 import { hasCategoryTaxAutomation } from './taxAutomations.js';
 import { syncTaxStatus } from './taxStatus.js';
+import { variantsFollow } from './discounts.js';
 import { refreshProductTax, refreshTaxAdded } from './taxRates.js';
 
 /**
@@ -29,6 +30,8 @@ export const fireCommerce = ({ model, event, doc, changes }: { model: string; ev
 			if (event === 'delete') return;
 			if (store.is('product', model)) {
 				await syncVariants(store, doc._id);
+				// Variants it just gained carry its discount (docs/ecommerce DISCOUNTS.md DS1).
+				await variantsFollow(store, doc._id);
 				await refreshProductTax(store, doc._id);
 			}
 			if (store.is('variant', model)) await refreshTaxAdded(store, { variant: [doc._id] });

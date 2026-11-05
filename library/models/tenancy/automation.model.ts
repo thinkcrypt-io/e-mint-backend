@@ -10,7 +10,8 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  */
 export const AUTOMATION_EVENTS = ['create', 'update', 'delete', 'date'] as const;
 export const DATE_UNITS = ['minutes', 'hours', 'days'] as const;
-export const ACTION_TYPES = ['notify', 'email', 'webhook', 'update', 'updateLinked', 'create'] as const;
+/** storeAction: only the store's own automations (system 'commerce') — the engine does it (docs/ecommerce DISCOUNTS.md DS5). */
+export const ACTION_TYPES = ['notify', 'email', 'webhook', 'update', 'updateLinked', 'create', 'storeAction'] as const;
 
 const schema = new Schema<any>(
 	{

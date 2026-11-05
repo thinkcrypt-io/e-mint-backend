@@ -33,7 +33,20 @@ const problemsError = (problems: string[]) => {
 };
 
 const itemsOf = (q: Quote) =>
-	q.lines.map(l => ({ variant: l.variant, product: l.product, name: l.name, sku: l.sku, quantity: l.quantity, unitPrice: l.unitPrice, discount: l.discount, tax: l.tax, total: l.total, returned: 0 }));
+	q.lines.map(l => ({
+		variant: l.variant,
+		product: l.product,
+		name: l.name,
+		sku: l.sku,
+		quantity: l.quantity,
+		unitPrice: l.unitPrice,
+		// The store discount it sold at (DISCOUNTS.md DS10) — kept on the order: nothing re-prices it later.
+		...(l.sale && { listPrice: l.listPrice, saleName: l.sale.name, salePercent: l.sale.percent, saleAmount: l.sale.amount }),
+		discount: l.discount,
+		tax: l.tax,
+		total: l.total,
+		returned: 0,
+	}));
 
 const totalsOf = (q: Quote) => ({
 	items: itemsOf(q),
@@ -320,7 +333,13 @@ export const publicOrder = (o: any) => ({
 	paymentMethod: o.paymentMethod || 'cod',
 	createdAt: o.createdAt,
 	slot: o.slot || '',
-	items: (o.items || []).map((i: any) => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total })),
+	items: (o.items || []).map((i: any) => ({
+		name: i.name,
+		quantity: i.quantity,
+		unitPrice: i.unitPrice,
+		...(i.saleName && { listPrice: i.listPrice, sale: { name: i.saleName, percent: i.salePercent, amount: i.saleAmount } }),
+		total: i.total,
+	})),
 	subtotal: o.subtotal,
 	shipping: o.shipping,
 	discount: (Number(o.discount) || 0) + (Number(o.orderDiscount) || 0),

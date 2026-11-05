@@ -87,7 +87,11 @@ const actionLabel: Record<string, string> = {
 	update: 'Update a record',
 	updateLinked: 'Update the records that pick this one',
 	create: 'Create a record',
+	storeAction: 'Work out the store’s discounts',
 };
+
+/** What a store action does — only the store's own automations have one (docs/ecommerce DISCOUNTS.md DS5). */
+export const STORE_ACTIONS = ['workOutDiscounts'] as const;
 
 type Def = { name: string; route: string; title?: string; fields: any[]; displayField?: string; code?: any };
 
@@ -421,13 +425,17 @@ const checkDate = (def: Def, input: any) => {
 	const f = def.fields.find((x: any) => x.key === field);
 	if (!f || !DATE_KINDS.includes(f.kind)) throw invalid(`Choose a date field of ${nounOf(def)}`, 'date.field');
 	const amount = Number(input?.amount ?? 0);
-	if (!Number.isInteger(amount) || amount < 0 || amount > 1000) throw invalid('How long before or after: a whole number from 0 to 1000', 'date.amount');
+	if (!Number.isInteger(amount) || amount < 0 || amount > MAX_DATE_AMOUNT) throw invalid(`How long before or after: a whole number from 0 to ${MAX_DATE_AMOUNT}`, 'date.amount');
 	const unit = DATE_UNITS.includes(input?.unit) ? input.unit : 'days';
 	const when = input?.when === 'before' ? 'before' : 'after';
 	return { field, amount, unit, when };
 };
 
-export const checkAutomation = async (body: any) => {
+/** A store's discount ends at midnight after its Ends day: 1,080 minutes after it in Dhaka (DISCOUNTS.md DS9). */
+const MAX_DATE_AMOUNT = 10000;
+
+/** `system`: the store's own automations (saveSystemAutomation) — only they may have a store action. */
+export const checkAutomation = async (body: any, { system = false }: { system?: boolean } = {}) => {
 	const name = String(body?.name || '').trim();
 	if (!name) throw invalid('Name the automation', 'name');
 	if (name.length > 80) throw invalid('A name is at most 80 characters', 'name');
@@ -541,6 +549,9 @@ export const checkAutomation = async (body: any) => {
 			const missing = p.def.fields.filter((f: any) => f.required && !UNWRITABLE_KINDS.has(f.kind) && !f.fillFrom?.readonly && f.default === undefined && !set.some((s: any) => s.field === f.key));
 			if (missing.length) throw invalid(`${label}: also set ${missing.map((f: any) => f.label || f.key).join(', ')} — ${nounOf(p.def)} needs ${missing.length === 1 ? 'it' : 'them'}`, `${at}.set`);
 			actions.push({ type: 'create', route: r, set });
+		} else if (a.type === 'storeAction') {
+			if (!system || !(STORE_ACTIONS as readonly string[]).includes(a.action)) throw invalid(`${label}: only the store’s own automations do this`, `${at}.type`);
+			actions.push({ type: 'storeAction', action: a.action });
 		}
 	}
 
@@ -844,6 +855,15 @@ const doCreate = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
 	return { type: 'create', ok: true, detail: `Added ${nounOf(page.def)} ${recordName(page.def, doc) || doc.code || doc._id}` };
 };
 
+/** A store action (the store's own automations): the engine does it, in the project's scope. Imported late — the store's engine imports this file. */
+const doStoreAction = async (ctx: Ctx, a: any, args: RunArgs): Promise<Step> => {
+	if (a.action === 'workOutDiscounts') {
+		const { workOutDiscounts } = await import('./commerce/discounts.js');
+		return { type: 'storeAction', ok: true, detail: await workOutDiscounts({ def: ctx.def, doc: ctx.doc, event: args.event, dry: args.dry }) };
+	}
+	throw new Error('The store doesn’t know this action');
+};
+
 const RUNNERS: Record<string, (ctx: Ctx, a: any, args: RunArgs) => Promise<Step>> = {
 	notify: doNotify,
 	email: doEmail,
@@ -851,6 +871,7 @@ const RUNNERS: Record<string, (ctx: Ctx, a: any, args: RunArgs) => Promise<Step>
 	update: doUpdate,
 	updateLinked: doUpdateLinked,
 	create: doCreate,
+	storeAction: doStoreAction,
 };
 
 /** One automation on one record: every action in order, stopping at the first failure (A5). */
@@ -1030,7 +1051,7 @@ export const newAutomationSecret = () => `whsec_${crypto.randomBytes(24).toStrin
  * on/off switch kept), so an upgrade can improve it. Returns 'added', 'renewed' or 'same'.
  */
 export const saveSystemAutomation = async (system: string, key: string, body: any, { apply = true } = {}) => {
-	const checked = await checkAutomation(body);
+	const checked = await checkAutomation(body, { system: true });
 	const current: any = await Automation.findOne({ key }).lean();
 	if (current && JSON.stringify({ n: current.name, d: current.description, r: current.route, o: current.on, t: current.on?.includes('date') ? current.date : undefined, c: current.changed, w: current.when, m: current.match, a: current.actions }) ===
 		JSON.stringify({ n: checked.name, d: checked.description, r: checked.route, o: checked.on, t: checked.date, c: checked.changed, w: checked.when, m: checked.match, a: checked.actions })) return 'same';

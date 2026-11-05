@@ -42,8 +42,8 @@ ok('no tax on the category: products have none, Price after tax = price', !p1?.t
 
 // The store's tax automations are there, on, and locked.
 r = await call('GET', `${P}/automations`, null, t);
-const sys = (r.body?.doc || []).filter(a => a.system === 'commerce');
-ok('four system automations, all on', sys.length === 4 && sys.every(a => a.enabled), JSON.stringify(sys.map(a => a.key)));
+const sys = (r.body?.doc || []).filter(a => a.system === 'commerce' && /^tax\./.test(a.key || ''));
+ok('four tax automations, all on', sys.length === 4 && sys.every(a => a.enabled), JSON.stringify(sys.map(a => a.key)));
 r = await call('PUT', `${P}/automations/${sys[0]?._id}`, sys[0], t);
 ok('…and locked (403)', r.status === 403, String(r.status));
 const a1 = sys.find(a => a.key === 'tax.category-to-products');

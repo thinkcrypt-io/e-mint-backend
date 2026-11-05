@@ -100,7 +100,16 @@ export const codeTaken = async (store: Store, field: 'sku' | 'barcode', value: a
 	return product ? product.name : null;
 };
 
-/** What the POS and pickers show for one variant. */
+/** The item's own price (the variant's, else the product's) — before any discount. */
+const listPriceOf = (product: any, variant: any) => (variant.price !== undefined && variant.price !== null ? Number(variant.price) : Number(product.price) || 0);
+
+/** Its store discount (docs/ecommerce DISCOUNTS.md DS10): the product carries the winning one; the price is that much less, to the cent. */
+const saleOf = (product: any) => {
+	const percent = Math.min(100, Number(product.discountPercent) || 0);
+	return percent > 0 ? { discount: product.discount ? String(product.discount?._id ?? product.discount) : null, percent } : null;
+};
+
+/** What the POS and pickers show for one variant: `price` is what it sells for (its sale price), `listPrice` before the discount. */
 export const itemView = (product: any, variant: any, onHand: number | null = null) => ({
 	variant: String(variant._id),
 	product: String(product._id),
@@ -109,7 +118,9 @@ export const itemView = (product: any, variant: any, onHand: number | null = nul
 	title: variant.isDefault ? '' : variant.title,
 	sku: variant.sku || '',
 	barcode: variant.barcode || '',
-	price: variant.price !== undefined && variant.price !== null ? Number(variant.price) : Number(product.price) || 0,
+	price: saleOf(product) ? Math.round(listPriceOf(product, variant) * (1 - saleOf(product)!.percent / 100) * 100 + Number.EPSILON) / 100 : listPriceOf(product, variant),
+	listPrice: listPriceOf(product, variant),
+	sale: saleOf(product),
 	compareAtPrice: variant.compareAtPrice ?? product.compareAtPrice ?? null,
 	taxRate: variant.taxRate ? String(variant.taxRate) : product.taxRate ? String(product.taxRate) : null,
 	category: product.category ? String(product.category) : null,

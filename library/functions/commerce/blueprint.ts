@@ -18,6 +18,7 @@ export type ModelKey =
 	| 'category'
 	| 'brand'
 	| 'collection'
+	| 'discount'
 	| 'taxRate'
 	| 'product'
 	| 'variant'
@@ -72,6 +73,21 @@ export const DELIVERY_COURIERS = [...Object.entries(COURIERS).map(([value, c]) =
 /** The models, in the order their links need (targets first). */
 /** Tax added to the price takes the picked tax's rate in the form — only where the store adds tax on top. */
 export const TAX_ADDED_FILL = { from: 'taxRate', formula: 'rate' };
+
+/** Price after tax, from the sale price (docs/ecommerce DISCOUNTS.md DS1) — and what it was before discounts. */
+export const PRICE_AFTER_TAX = 'round(salePrice * (1 + taxAdded / 100), 2)';
+export const OLD_PRICE_AFTER_TAX = 'round(price * (1 + taxAdded / 100), 2)';
+export const SALE_PRICE = 'round(price * (1 - discountPercent / 100), 2)';
+
+/**
+ * What a discount writes (DS1): Price is never changed — the biggest active discount reaching the item sets its
+ * Discount % (and, on a product, which Discount), and Sale price is worked out from them. No discount: Sale price = Price.
+ */
+const SALE_FIELDS = (product: boolean) => [
+	...(product ? [{ key: 'discount', label: 'Discount', kind: 'reference', ref: 'Discount', helper: 'Not typed: the biggest active discount that reaches it — named, by its category or a collection', showInTable: false }] : []),
+	{ key: 'discountPercent', label: 'Discount %', kind: 'number', default: 0, helper: product ? 'Not typed: the percentage of that discount; 0 when none' : 'Not typed: its product’s discount' },
+	{ key: 'salePrice', label: 'Sale price', kind: 'formula', formula: SALE_PRICE, helper: 'What it sells for: the price less its discount — the price itself when there’s none' },
+];
 
 export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
@@ -190,7 +206,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	},
 	{
 		key: 'collection',
-		shownWhen: null,
+		shownWhen: x => x.products.collections !== false,
 		engine: [],
 		step: {
 			name: 'Collection',
@@ -234,7 +250,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'product',
 		shownWhen: null,
-		engine: ['totalStock', 'taxAdded'],
+		engine: ['totalStock', 'taxAdded', 'discount', 'discountPercent'],
 		step: {
 			name: 'Product',
 			title: 'Products',
@@ -265,7 +281,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					fillFrom: { from: 'category', formula: 'taxRate' },
 				},
 				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Not typed: the rate of the Tax / VAT above (its own, else the category’s) when tax is added on top; 0 when the price already includes it', ...(a.pos.tax.mode === 'added' && { fillFrom: TAX_ADDED_FILL }) },
-				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
+				...SALE_FIELDS(true),
+				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: PRICE_AFTER_TAX, helper: 'The price the customer pays, tax included — from the sale price, worked out, never typed' },
 				{ key: 'trackStock', label: 'Track stock', kind: 'boolean', default: a.products.trackStock },
 				{
 					key: 'options',
@@ -327,14 +344,54 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 					fillFrom: { from: 'product', formula: 'taxRate' },
 				},
 				{ key: 'taxAdded', label: 'Tax added to the price (%)', kind: 'number', default: 0, helper: 'Not typed: the rate of the Tax / VAT above, like the product’s', ...(a.pos.tax.mode === 'added' && { fillFrom: TAX_ADDED_FILL }) },
-				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: 'round(price * (1 + taxAdded / 100), 2)', helper: 'The price the customer pays, tax included — worked out, never typed' },
+				...SALE_FIELDS(false),
+				{ key: 'priceAfterTax', label: 'Price after tax', kind: 'formula', formula: PRICE_AFTER_TAX, helper: 'The price the customer pays, tax included — from the sale price, worked out, never typed' },
 				{ key: 'image', label: 'Image', kind: 'image', helper: 'Shown instead of the product’s pictures when this variant is picked' },
 				{ key: 'active', label: 'Sold', kind: 'boolean', default: true },
 				{ key: 'isDefault', label: 'The product’s only variant', kind: 'boolean', default: false },
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
 			],
-			table: ['title', 'product', 'sku', 'price', 'priceAfterTax', 'totalStock', 'active'],
+			table: ['title', 'product', 'sku', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'active'],
 			filters: ['product', 'active'],
+		},
+	},
+	{
+		key: 'discount',
+		shownWhen: x => x.products.discounts !== false,
+		engine: ['reached', 'endedAt'],
+		step: {
+			name: 'Discount',
+			title: 'Discounts',
+			route: 'discounts',
+			description: 'A percentage off products, categories and collections — the biggest one reaching a product wins',
+			rationale: 'Each product sells at the biggest active discount that names it, its category or a collection it’s in; switched off or ended, prices go back.',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', required: true, searchable: true, helper: 'Eid sale, Weekend offer…' },
+				{ key: 'percent', label: 'Percentage off', kind: 'number', min: 0, max: 100, required: true, helper: 'From 0 to 100 — 10 takes 10% off the price' },
+				{ key: 'status', label: 'Status', kind: 'select', options: opts('active', 'inactive'), default: 'active', required: true, helper: 'Inactive: its products go back to their price (or to a smaller discount that reaches them)' },
+				{ key: 'startsAt', label: 'Starts', kind: 'date', helper: 'Empty: straight away. From the start of that day, in the store’s time zone' },
+				{ key: 'endsAt', label: 'Ends', kind: 'date', helper: 'Empty: until you switch it off. At the end of that day it switches itself off' },
+				{ key: 'products', label: 'Products', kind: 'references', ref: 'Product', helper: 'Products it applies to by name' },
+				{ key: 'categories', label: 'Categories', kind: 'references', ref: 'Category', helper: 'Every product in these categories' },
+				{ key: 'subCategories', label: 'Include sub-categories', kind: 'boolean', default: true, helper: 'On: products in the categories under these get it too' },
+				{ key: 'collections', label: 'Collections', kind: 'references', ref: 'Collection', helper: 'Every product in these collections' },
+				{ key: 'reached', label: 'Products reached', kind: 'number', default: 0, helper: 'Not typed: products selling at this discount now' },
+				{ key: 'endedAt', label: 'Ended', kind: 'date', helper: 'Not typed: when its end date switched it off' },
+			],
+			table: ['name', 'percent', 'status', 'startsAt', 'endsAt', 'reached'],
+			filters: ['status', 'startsAt', 'endsAt'],
+			form: [
+				{ sectionTitle: 'Discount', description: 'Its name, how much it takes off, and whether it’s on', fields: [['name', 'percent'], 'status'] },
+				{ sectionTitle: 'Dates', description: 'Both optional — it ends by itself at the end of its last day', fields: [['startsAt', 'endsAt']] },
+				{ sectionTitle: 'Applies to', description: 'Any mix — pick at least one. A product reached by several discounts gets the biggest, never two added up', fields: ['products', 'categories', 'subCategories', 'collections'] },
+			],
+			view: [
+				{ title: 'Discount', columns: 3, fields: ['name', 'percent', 'status'] },
+				{ title: 'Dates', columns: 3, fields: ['startsAt', 'endsAt', 'endedAt'] },
+				{ title: 'Applies to', columns: 2, fields: ['products', 'categories', 'subCategories', 'collections'] },
+				{ title: 'Details', columns: 2, fields: ['reached', 'createdAt'] },
+			],
 		},
 	},
 	{
@@ -682,6 +739,10 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 						{ key: 'tax', label: 'Tax', kind: 'number' },
 						{ key: 'total', label: 'Total', kind: 'number' },
 						{ key: 'returned', label: 'Returned', kind: 'number' },
+						{ key: 'listPrice', label: 'Price before discount', kind: 'number' },
+						{ key: 'saleName', label: 'Store discount', kind: 'text' },
+						{ key: 'salePercent', label: 'Store discount %', kind: 'number' },
+						{ key: 'saleAmount', label: 'Store discount amount', kind: 'number' },
 					],
 				},
 				money('subtotal', 'Subtotal'),

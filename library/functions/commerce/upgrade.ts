@@ -12,7 +12,14 @@ import { compiledModel, freeUid, inProjectCollection, uidOf } from '../dynamicMo
 import { MODEL_KEY } from '../projectIndexes.function.js';
 import { invalidateRoute } from '../resolveRoute.function.js';
 import { Installed, applySidebar, engineFieldsReadOnly } from './install.js';
-import { ModelKey, coreFieldsOf, modelSpecs } from './blueprint.js';
+import { ModelKey, OLD_PRICE_AFTER_TAX, coreFieldsOf, modelSpecs } from './blueprint.js';
+import { ensureDiscountAutomations } from './discountAutomations.js';
+import { zoneOf } from './discounts.js';
+import { zoneForCountry } from './zones.js';
+import Organization from '../../models/tenancy/organization.model.js';
+import { formulasOfPage } from '../automations.function.js';
+import { recalculateFormulas } from '../formula.function.js';
+import { currentScope } from '../tenantScope.function.js';
 import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
 import { applyAllCategoryTaxes } from './categoryTax.js';
@@ -152,14 +159,20 @@ const fillEndpoints = async (def: any, apply: boolean) => {
 	return [`${ep.method} ${ep.path}: ${[missing.length && 'hides what’s inactive on the website', set['list.sort'] && `sorted ${set['list.sort']}`].filter(Boolean).join(', ')}`];
 };
 
-/** The public Products and Categories lists send back each one's SEO (the website shows it on its page). */
-const fillSeoOut = async (def: any, apply: boolean) => {
+/**
+ * The public lists and pages send back these fields when they name what they send: Products and Categories their
+ * SEO (the website shows it on its page), Products and Variants their sale price and discount (DISCOUNTS.md DS14).
+ */
+const fillOut = async (def: any, keys: string[], what: string, apply: boolean) => {
 	const ep: any = await ApiEndpoint.findOne({ model: def.route, standard: true, action: { $in: ['list', 'get'] } }).lean();
 	const out = ep?.fields?.out;
-	if (!Array.isArray(out) || out.includes('seo')) return [];
-	if (apply) await ApiEndpoint.updateMany({ model: def.route, standard: true, action: { $in: ['list', 'get'] }, 'fields.out': { $type: 'array' } }, { $addToSet: { 'fields.out': 'seo' } });
-	return [`public ${def.title} list and page send back their SEO`];
+	const have = new Set((def.fields || []).map((f: any) => f.key));
+	const missing = keys.filter(k => have.has(k));
+	if (!Array.isArray(out) || missing.every(k => out.includes(k))) return [];
+	if (apply) await ApiEndpoint.updateMany({ model: def.route, standard: true, action: { $in: ['list', 'get'] }, 'fields.out': { $type: 'array' } }, { $addToSet: { 'fields.out': { $each: missing } } });
+	return [`public ${def.title} list and page send back their ${what}`];
 };
+const fillSeoOut = (def: any, apply: boolean) => fillOut(def, ['seo'], 'SEO', apply);
 
 /**
  * The page laid out in the blueprint's sections (EC21: Category, POS
@@ -236,31 +249,105 @@ const addModels = async (req: any, store: Store, apply: boolean): Promise<Change
 };
 
 /**
- * A collection's page lists its products (docs/ecommerce DISCOUNTS.md DS7): the Products tab a new store gets from
- * the product's Collections link, given to a store whose Collections came by this upgrade (built on their own, before
- * Products had the link, so the build made no tab).
+ * A page that lists the products picking it (docs/ecommerce DISCOUNTS.md DS7, DS11): the Products tab a new store gets
+ * from the product's link, given to a store whose model came by this upgrade — built on its own, before Products had
+ * the link, so the build made no tab. A collection's products (Collections), a discount's (Discount).
  */
-const ensureCollectionTab = async (req: any, store: Store, apply: boolean): Promise<Change[]> => {
-	const coll = store.installed.collection;
+const ensureProductsTab = async (req: any, store: Store, key: 'collection' | 'discount', foreignField: string, apply: boolean): Promise<Change[]> => {
+	const target = store.installed[key];
 	const prod = store.installed.product;
-	if (!coll || !prod) return [];
-	const doc: any = await RouteConfig.findOne({ route: coll.route }, { data: 1 }).lean();
+	if (!target || !prod) return [];
+	const doc: any = await RouteConfig.findOne({ route: target.route }, { data: 1 }).lean();
 	const tabs: any[] = Array.isArray(doc?.data?.viewTabs) ? doc.data.viewTabs : [];
-	if (tabs.some(t => t?.related === prod.route && t?.foreignField === 'collections')) return [];
+	if (tabs.some(t => t?.related === prod.route && t?.foreignField === foreignField)) return [];
+	const pdef: any = await ModelDefinition.findById(prod.id, { fields: 1 }).lean();
+	if (!pdef?.fields?.some((f: any) => f.key === foreignField)) return [];
 	if (apply) {
 		const pc: any = await RouteConfig.findOne({ route: prod.route }, { data: 1 }).lean();
 		const cols = (Array.isArray(pc?.data?.table) ? pc.data.table : ['name', 'category', 'price', 'totalStock', 'status'])
 			.map((c: any) => (typeof c === 'string' ? c : c?.key || c?.dataKey))
-			.filter((c: any) => typeof c === 'string' && c && c !== 'collections' && !c.includes('.'))
+			.filter((c: any) => typeof c === 'string' && c && c !== foreignField && !c.includes('.'))
 			.slice(0, 5);
 		await publishConfigPatch(
 			req,
-			coll.route,
-			data => ({ ...data, viewTabs: [...(Array.isArray(data.viewTabs) ? data.viewTabs : []), { related: prod.route, foreignField: 'collections', title: 'Products', display: 'table', columns: cols, pageSize: 10 }] }),
+			target.route,
+			data => ({ ...data, viewTabs: [...(Array.isArray(data.viewTabs) ? data.viewTabs : []), { related: prod.route, foreignField, title: 'Products', display: 'table', columns: cols, pageSize: 10 }] }),
 			'The store’s upgrade: a Products tab'
 		);
 	}
-	return [{ model: 'Collections', added: [], renewed: [], filled: ['a Products tab on each collection’s page'] }];
+	return [{ model: key === 'collection' ? 'Collections' : 'Discounts', added: [], renewed: [], filled: [`a Products tab on each ${key}’s page`] }];
+};
+
+/**
+ * Sale price beside Price after tax in the form's Pricing section, and the discount's fields beside them on the
+ * detail page (DS1) — an upgrade adds new fields to the first section, out of the way. Done once per page.
+ */
+const placeSaleFields = async (req: any, def: any, product: boolean, apply: boolean) => {
+	const doc: any = await RouteConfig.findOne({ route: def.route }, { data: 1 }).lean();
+	const form: any[] = Array.isArray(doc?.data?.form) ? doc.data.form : [];
+	const flat = (sec: any) => (sec?.fields || []).flat();
+	const pricing = form.find(x => flat(x).includes('priceAfterTax')) || form.find(x => flat(x).includes('price'));
+	if (!pricing || flat(pricing).includes('salePrice')) return [];
+	if (apply) {
+		const ours = product ? ['discount', 'discountPercent', 'salePrice'] : ['discountPercent', 'salePrice'];
+		await publishConfigPatch(
+			req,
+			def.route,
+			data => {
+				const strip = (rows: any[]) => rows.map((r: any) => (Array.isArray(r) ? r.filter(k => !ours.includes(k)) : ours.includes(r) ? null : r)).filter((r: any) => r && (!Array.isArray(r) || r.length));
+				const out = { ...data };
+				if (Array.isArray(out.form)) {
+					const at = out.form.findIndex((x: any) => flat(x).includes('priceAfterTax'));
+					const pi = at >= 0 ? at : out.form.findIndex((x: any) => flat(x).includes('price'));
+					out.form = out.form.map((x: any, i: number) => {
+						const fields = strip(x.fields || []);
+						if (i !== pi) return { ...x, fields };
+						const key = at >= 0 ? 'priceAfterTax' : 'price';
+						return {
+							...x,
+							fields: fields.map((r: any) => (r === key ? (key === 'price' ? ['price', 'salePrice'] : ['salePrice', 'priceAfterTax']) : Array.isArray(r) && r.includes(key) ? (key === 'price' ? [...r, 'salePrice'] : r.flatMap((k: string) => (k === key ? ['salePrice', key] : [k]))) : r)),
+						};
+					});
+				}
+				if (Array.isArray(out.view) && out.view.length) {
+					const views = out.view.map((x: any) => ({ ...x, fields: (x.fields || []).filter((k: any) => !ours.includes(typeof k === 'string' ? k : k?.field)) }));
+					const vi = views.findIndex((x: any) => x.fields.some((k: any) => k === 'priceAfterTax' || k === 'price'));
+					const show = product ? ours : ours;
+					if (vi >= 0) views[vi] = { ...views[vi], fields: views[vi].fields.flatMap((k: any) => (k === (views[vi].fields.includes('priceAfterTax') ? 'priceAfterTax' : 'price') ? [k, ...show] : [k])) };
+					else views[0] = { ...views[0], fields: [...views[0].fields, ...show] };
+					out.view = views;
+				}
+				return out;
+			},
+			'The store’s upgrade: Sale price beside the price'
+		);
+	}
+	return ['Sale price beside the price on the form and the detail page'];
+};
+
+/**
+ * The sale-price fill (DS13), once: every product and variant without a Discount % gets 0, and their formulas are
+ * worked out again — Sale price = Price, Price after tax unchanged (it now reads Sale price).
+ */
+const fillSalePrices = async (store: Store, apply: boolean) => {
+	const out: string[] = [];
+	for (const key of ['product', 'variant'] as const) {
+		const m = store.installed[key];
+		if (!m) continue;
+		const def: any = await ModelDefinition.findById(m.id).lean();
+		const Model: any = def && compiledModel(def.name);
+		if (!Model) continue;
+		const own = inProjectCollection(def) ? { [MODEL_KEY]: def.name } : {};
+		const n = await Model.collection.countDocuments(own);
+		if (!n) continue;
+		if (apply) {
+			await Model.collection.updateMany({ ...own, discountPercent: null }, { $set: { discountPercent: 0 } });
+			const formulas = await formulasOfPage(def);
+			if (formulas.length) await recalculateFormulas(Model, {}, formulas);
+		}
+		out.push(`${n} ${key === 'product' ? 'product' : 'variant'}${n === 1 ? '' : 's'}: Sale price = Price, Price after tax ${apply ? 'worked out' : 'would be worked out'} from it`);
+	}
+	return out;
 };
 
 export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Change[]> => {
@@ -305,7 +392,8 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 					if (!renewed.includes(f.key)) renewed.push(f.key);
 				}
 			}
-			if (w.kind === 'section' && f.kind === 'section' && Array.isArray(w.fields)) {
+			// …and a row list too (an order's items gained the store discount they sold at, DISCOUNTS.md DS10).
+			if ((w.kind === 'section' || w.kind === 'sectionlist') && f.kind === w.kind && Array.isArray(w.fields)) {
 				const have = new Set((f.fields || []).map((x: any) => x.key));
 				const more = w.fields.filter((x: any) => !have.has(x.key));
 				if (more.length) {
@@ -330,8 +418,9 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 					if (!renewed.includes(f.key)) renewed.push(f.key);
 				}
 			}
-			// Price after tax is worked out from the tax the till charges (taxAdded), not from the picked tax alone.
-			if (w.kind === 'formula' && f.kind === 'formula' && f.key === 'priceAfterTax' && f.formula !== w.formula && /taxRate\.rate/.test(f.formula || '')) {
+			// Price after tax is worked out from the tax the till charges (taxAdded), not from the picked tax alone —
+			// and from the sale price, now that discounts don't change Price (DISCOUNTS.md DS1).
+			if (w.kind === 'formula' && f.kind === 'formula' && f.key === 'priceAfterTax' && f.formula !== w.formula && (/taxRate\.rate/.test(f.formula || '') || f.formula === OLD_PRICE_AFTER_TAX)) {
 				f.formula = w.formula;
 				f.helper = w.helper;
 				if (!renewed.includes(f.key)) renewed.push(f.key);
@@ -355,13 +444,17 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
+		if ((spec.key === 'product' || spec.key === 'variant') && fields.some((f: any) => f.key === 'salePrice'))
+			change.filled.push(...(apply || !added.includes('salePrice') ? await placeSaleFields(req, def, spec.key === 'product', apply) : ['Sale price beside the price on the form and the detail page']));
 		if (spec.key === 'coupon') change.filled.push(...(await fillCoupons(def, apply)));
 		if (spec.key === 'product') change.filled.push(...(await fillProducts(def, apply)));
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
+		if (spec.key === 'product' || spec.key === 'variant') change.filled.push(...(await fillOut({ ...def, fields }, ['salePrice', 'discountPercent', 'discount'], 'sale price and discount', apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}
-	changes.push(...(await ensureCollectionTab(req, await storeOf(), apply)));
+	changes.push(...(await ensureProductsTab(req, await storeOf(), 'collection', 'collections', apply)));
+	changes.push(...(await ensureProductsTab(req, await storeOf(), 'discount', 'discount', apply)));
 	// What customers bought, worked out from the orders already there.
 	if (!hadPurchases && apply) {
 		const n = await rebuildPurchases(await storeOf());
@@ -389,6 +482,25 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		}
 		changes.push({ model: 'Products', added: [], renewed: [], filled: [`Price after tax ${apply ? 'worked out' : 'would be worked out'} by the till’s tax rule`] });
 	}
+	// The store's time zone (DS9), for a store set up before it had one: its organization's country's.
+	const zoned: any = await CommerceSettings.findOne({}, { 'answers.store.timeZone': 1 }).lean();
+	if (!zoned?.answers?.store?.timeZone) {
+		const org: any = await Organization.findById(currentScope()?.organization, { country: 1 }).lean();
+		const tz = zoneForCountry(org?.country);
+		if (apply) await CommerceSettings.updateOne({}, { $set: { 'answers.store.timeZone': tz } });
+		changes.push({ model: 'Store settings', added: ['time zone'], renewed: [], filled: [tz] });
+	}
+	// Sale price on every product and variant, once (DISCOUNTS.md DS13).
+	const doneSale: any = ((await CommerceSettings.findOne({}, { doneOnce: 1 }).lean()) as any)?.doneOnce || [];
+	if (!doneSale.includes('sale-price')) {
+		const filled = await fillSalePrices(await storeOf().catch(() => store), apply);
+		if (apply) await CommerceSettings.updateOne({}, { $addToSet: { doneOnce: 'sale-price' } });
+		if (filled.length) changes.push({ model: 'Products', added: [], renewed: [], filled });
+	}
+	// The discount automations D1–D6 (DS5), their start and end in the store's time zone.
+	const fresh = await storeOf();
+	const discountMade = await ensureDiscountAutomations((fresh.installed as any) || {}, await zoneOf(fresh), { apply });
+	if (discountMade.length) changes.push({ model: 'Automations', added: [], renewed: [], filled: discountMade });
 	// Deliveries' two emails, off until the owner turns them on (docs/couriers CR-14).
 	const installedNow: any = ((await CommerceSettings.findOne({}, { installed: 1 }).lean()) as any)?.installed || store.installed;
 	const mails = await ensureDeliveryAutomations(installedNow, { apply });

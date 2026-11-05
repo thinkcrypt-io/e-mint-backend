@@ -17,6 +17,8 @@ import { ModelKey, coreFieldsOf, modelSpecs, storePlan } from './blueprint.js';
 import { seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 import { ensureTaxAutomations } from './taxAutomations.js';
+import { ensureDiscountAutomations } from './discountAutomations.js';
+import { zoneOf } from './discounts.js';
 import { refreshTaxAdded } from './taxRates.js';
 import { storeOf } from './store.js';
 
@@ -55,6 +57,7 @@ const ICONS: Record<ModelKey, string> = {
 	category: 'folder-tree',
 	brand: 'badge',
 	collection: 'library',
+	discount: 'badge-percent',
 	taxRate: 'percent',
 	product: 'package',
 	variant: 'layers',
@@ -152,6 +155,7 @@ export const install = async (req: any, project: any, a: Answers): Promise<{ ins
 		await seedStoreDashboard(installed);
 		await ensureDeliveryAutomations(installed);
 		await ensureTaxAutomations(installed);
+		await ensureDiscountAutomations(installed, a.store.timeZone || 'UTC');
 		return { installed, features: featuresOf(a) };
 	} catch (e: any) {
 		for (const u of undo.reverse()) await u().catch((err: any) => console.error('Undoing the store:', err?.message));
@@ -243,5 +247,8 @@ export const afterSettingsSaved = async (project: any) =>
 		await applySidebar(view.answers, doc.installed || {});
 		await CommerceSettings.updateOne({ _id: doc._id }, { $set: { features: featuresOf(view.answers) } });
 		// The tax mode may have changed: every item's Price after tax follows it.
-		await refreshTaxAdded(await storeOf());
+		const store = await storeOf();
+		await refreshTaxAdded(store);
+		// The time zone may have changed: a discount's start and end follow it (DISCOUNTS.md DS9).
+		await ensureDiscountAutomations(doc.installed || {}, await zoneOf(store));
 	});

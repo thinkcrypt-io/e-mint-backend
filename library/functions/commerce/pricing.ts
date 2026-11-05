@@ -34,7 +34,12 @@ export type QuoteLine = {
 	name: string;
 	sku: string;
 	quantity: number;
+	/** What one sells for: its sale price when a store discount reaches it (DISCOUNTS.md DS10). */
 	unitPrice: number;
+	/** Before the store discount. */
+	listPrice: number;
+	/** The store discount on it (not the cashier's line discount): which, and how much it took off the line. */
+	sale: { discount: string | null; name: string; percent: number; amount: number } | null;
 	gross: number;
 	lineDiscount: number;
 	couponDiscount: number;
@@ -122,6 +127,12 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 		merged.set(k, had ? { ...had, quantity: had.quantity + q } : { variant: k, quantity: q, discount: l.discount });
 	}
 
+	// The store discounts' names, for the lines and the receipt.
+	const saleIds = [...new Set(products.map(p => String(p.discount?._id ?? p.discount ?? '')).filter(isId))];
+	const saleNames = new Map<string, string>(
+		saleIds.length && store.installed.discount ? (await store.M('discount').find({ _id: { $in: saleIds } }, { name: 1 }).lean()).map((d: any) => [String(d._id), d.name]) : []
+	);
+
 	const lines: QuoteLine[] = [];
 	for (const l of merged.values()) {
 		const v = vById.get(l.variant);
@@ -143,6 +154,10 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 			sku: view.sku,
 			quantity: l.quantity,
 			unitPrice: view.price,
+			listPrice: view.listPrice,
+			sale: view.sale
+				? { discount: view.sale.discount, name: saleNames.get(String(view.sale.discount)) || 'Discount', percent: view.sale.percent, amount: round((view.listPrice - view.price) * l.quantity) }
+				: null,
 			gross,
 			lineDiscount,
 			couponDiscount: 0,
@@ -167,7 +182,10 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 			const rx = new RegExp(`^${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 			const c: any = await store.M('coupon').findOne({ couponCode: rx }).lean();
 			const now = new Date();
-			const afterLines = lines.reduce((s, l) => s + l.gross - l.lineDiscount, 0);
+			// Worked out from the sale price (default) or from the price before the store discount (DS15) — a line never below 0.
+			const fromOriginal = (a.pos as any).couponBase === 'original';
+			const baseOf = (l: QuoteLine) => l.gross - l.lineDiscount + (fromOriginal ? l.sale?.amount || 0 : 0);
+			const afterLines = lines.reduce((s, l) => s + baseOf(l), 0);
 			// Uses this buyer has already had of it (the per-customer limit): orders not cancelled, by customer, phone or email.
 			const mine = [input.customer && isId(input.customer) && { customer: input.customer }, input.who?.phone && { 'delivery.phone': String(input.who.phone) }, input.who?.email && { email: String(input.who.email).toLowerCase() }].filter(Boolean) as any[];
 			const usedByBuyer = c?.perCustomerLimit && mine.length ? await store.M('order').countDocuments({ coupon: c._id, status: { $nin: ['cancelled', 'held'] }, $or: mine }) : 0;
@@ -194,7 +212,7 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 				const eligible = lines.map(l =>
 					c.appliesTo === 'categories' ? !!l.category && cats.has(l.category) : c.appliesTo === 'products' ? prods.has(l.product) : true
 				);
-				const bases = lines.map((l, i) => (eligible[i] ? l.gross - l.lineDiscount : 0));
+				const bases = lines.map((l, i) => (eligible[i] ? baseOf(l) : 0));
 				const base = bases.reduce((x, y) => x + y, 0);
 				if (!base) problems.push(`The coupon ${c.couponCode} doesn’t cover anything in this order`);
 				else {
@@ -204,7 +222,7 @@ export const quote = async (store: Store, input: QuoteInput, opts: { forSale?: b
 					const cap = Number(c.maxDiscount) || 0;
 					const raw = c.type === 'percent' ? (base * Math.min(pct, 100)) / 100 : Math.min(off, base);
 					const amount = round(c.type === 'percent' && cap ? Math.min(raw, cap) : raw);
-					share(amount, bases, round).forEach((x, i) => (lines[i].couponDiscount = x));
+					share(amount, bases, round).forEach((x, i) => (lines[i].couponDiscount = Math.min(x, round(lines[i].gross - lines[i].lineDiscount))));
 					coupon = { _id: String(c._id), code: c.couponCode, type: c.type, value: c.type === 'percent' ? pct : off };
 				}
 			}

@@ -6,6 +6,7 @@ import { commerceView } from './settings.js';
 import { storeOf } from './store.js';
 import { codeTaken } from './catalogue.js';
 import { taxUsage, usageText } from './taxUse.js';
+import { discountProblem } from './discounts.js';
 
 /**
  * Plain record saves on a store's models (docs/ecommerce EC5): money and stock
@@ -67,6 +68,10 @@ export const commerceWriter = async (project: any, route: string) => {
 				if (who) return `${who} already has the ${field === 'sku' ? 'SKU' : 'barcode'} ${String(body[field]).trim()}`;
 			}
 		}
+		if (key === 'discount') {
+			const problem = await discountProblem(await storeOf(), id ? before : null, body);
+			if (problem) return problem;
+		}
 		const kept = id
 			? Object.keys(body).filter(k => (spec.engine.includes(k) || (spec.engineOnly && core.has(k))) && !same(plain(before?.[k]), plain(body[k])))
 			: spec.engine.filter(k => !blank(body[k]));
@@ -124,6 +129,14 @@ export const commerceGuard = async (req: any, res: any, next: any) => {
 				const who = await codeTaken(store, field, body[field], self);
 				if (who) return res.status(409).json({ message: `${who} already has the ${field === 'sku' ? 'SKU' : 'barcode'} ${String(body[field]).trim()}`, code: 'code_taken' });
 			}
+		}
+
+		// A discount: a percentage, what it applies to, dates that agree — and one already over can't be switched on (DISCOUNTS.md DS8).
+		if (saving && key === 'discount') {
+			const Model: any = compiledModel(doc.installed[key].name);
+			const before: any = id && Model ? await Model.findById(id).lean() : null;
+			const problem = await discountProblem(await storeOf(), before, body);
+			if (problem) return res.status(400).json({ message: problem, code: 'discount_invalid' });
 		}
 
 		// One record changed: the engine's fields must come back as they are.

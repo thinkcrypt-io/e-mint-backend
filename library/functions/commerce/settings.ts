@@ -5,6 +5,7 @@ import { PROVIDERS } from '../payments.function.js';
 import { runInScope } from '../tenantScope.function.js';
 import { TenancyError } from '../tenancy.function.js';
 import { COURIERS } from './couriers/index.js';
+import { validZone, zoneForCountry } from './zones.js';
 
 /**
  * The store's settings (docs/ecommerce EC2): the setup wizard's answers, what
@@ -21,10 +22,12 @@ export type ShippingRate = { name: string; amount: number };
 
 export type Answers = {
 	/** guestCheckout: the store's website takes orders without an account (EC-16a); off, buyers sign in first. */
-	store: { currency: string; orderPrefix: string; negativeStock: boolean; guestCheckout: boolean };
+	/** timeZone: an IANA zone (Asia/Dhaka) — a discount's Starts and Ends days are the store's days (docs/ecommerce DISCOUNTS.md DS9). */
+	store: { currency: string; orderPrefix: string; negativeStock: boolean; guestCheckout: boolean; timeZone: string };
 	/** Made as Outlet records when the store is set up; after that they're kept on the Outlets page. */
 	outlets: Outlet[];
-	products: { variations: boolean; options: string[]; brands: boolean; barcodes: boolean; trackStock: boolean };
+	/** collections / discounts: shown in the sidebar (every store has the models, EC3). */
+	products: { variations: boolean; options: string[]; brands: boolean; barcodes: boolean; trackStock: boolean; collections: boolean; discounts: boolean };
 	payments: { tenders: string[]; custom: string[]; gateways: string[] };
 	returns: { allowed: boolean; windowDays: number; partial: boolean; restockDefault: boolean; refundMethods: string[]; storeCredit: boolean };
 	delivery: { enabled: boolean; rates: ShippingRate[]; couriers: string[] };
@@ -34,6 +37,8 @@ export type Answers = {
 		held: boolean;
 		discounts: boolean;
 		coupons: boolean;
+		/** What a coupon is worked out from on a discounted item (DS15): its sale price (default) or its original price. */
+		couponBase: 'discounted' | 'original';
 		tax: { mode: 'none' | 'inclusive' | 'added'; rates: TaxRate[] };
 		customerRequired: boolean;
 	};
@@ -83,6 +88,7 @@ export const offeredFor = async (project: any) => {
 	return {
 		country: country ? { code: country.code, name: country.name, flag: country.flag } : null,
 		currency: country?.currency?.code || 'USD',
+		timeZone: zoneForCountry(code),
 		tenders: Object.entries(TENDERS)
 			.filter(([id, t]) => local(t.countries) && !(id === 'wallet' && hasOwnWallets))
 			.map(([id, t]) => ({ id, label: t.label })),
@@ -99,9 +105,9 @@ export type Offered = Awaited<ReturnType<typeof offeredFor>>;
 /* -------------------------------------------------------------- defaults */
 
 export const defaultAnswers = (offered: Offered): Answers => ({
-	store: { currency: offered.currency, orderPrefix: 'ORD', negativeStock: false, guestCheckout: true },
+	store: { currency: offered.currency, orderPrefix: 'ORD', negativeStock: false, guestCheckout: true, timeZone: offered.timeZone },
 	outlets: [{ name: 'Main store', code: 'MAIN', kind: 'store' }],
-	products: { variations: true, options: ['Size', 'Colour'], brands: false, barcodes: true, trackStock: true },
+	products: { variations: true, options: ['Size', 'Colour'], brands: false, barcodes: true, trackStock: true, collections: true, discounts: true },
 	payments: { tenders: offered.tenders.filter(t => t.id === 'cash' || t.id === 'card').map(t => t.id), custom: [], gateways: [] },
 	returns: { allowed: true, windowDays: 30, partial: true, restockDefault: true, refundMethods: ['original', 'cash', 'store-credit'], storeCredit: true },
 	delivery: { enabled: false, rates: [], couriers: [] },
@@ -111,6 +117,7 @@ export const defaultAnswers = (offered: Offered): Answers => ({
 		held: true,
 		discounts: true,
 		coupons: true,
+		couponBase: 'discounted',
 		tax: { mode: 'none', rates: [] },
 		customerRequired: false,
 	},
@@ -138,7 +145,9 @@ export const checkSection = (section: Section, input: any, current: Answers, off
 			if (!/^[A-Z]{3}$/.test(currency)) problems.push('Choose the currency the store sells in (a three-letter code like BDT or USD)');
 			const orderPrefix = text(v.orderPrefix ?? cur.orderPrefix, 8).toUpperCase();
 			if (orderPrefix && !/^[A-Z0-9-]+$/.test(orderPrefix)) problems.push('The order number prefix takes letters, numbers and dashes only');
-			return { value: { currency, orderPrefix, negativeStock: bool(v.negativeStock, cur.negativeStock), guestCheckout: bool(v.guestCheckout, cur.guestCheckout ?? true) }, problems };
+			const timeZone = text(v.timeZone ?? cur.timeZone ?? offered.timeZone, 60) || offered.timeZone;
+			if (!validZone(timeZone)) problems.push('Choose the store’s time zone (like Asia/Dhaka)');
+			return { value: { currency, orderPrefix, negativeStock: bool(v.negativeStock, cur.negativeStock), guestCheckout: bool(v.guestCheckout, cur.guestCheckout ?? true), timeZone }, problems };
 		}
 		case 'outlets': {
 			const list: any[] = Array.isArray(input) ? input : Array.isArray(v.outlets) ? v.outlets : cur;
@@ -164,7 +173,15 @@ export const checkSection = (section: Section, input: any, current: Answers, off
 			const options = uniq((Array.isArray(v.options) ? v.options : cur.options).map((o: any) => text(o, 30)).filter(Boolean)).slice(0, 3) as string[];
 			if (variations && !options.length) problems.push('Name at least one option products vary by (Size, Colour…), or turn variations off');
 			return {
-				value: { variations, options: variations ? options : [], brands: bool(v.brands, cur.brands), barcodes: bool(v.barcodes, cur.barcodes), trackStock: bool(v.trackStock, cur.trackStock) },
+				value: {
+					variations,
+					options: variations ? options : [],
+					brands: bool(v.brands, cur.brands),
+					barcodes: bool(v.barcodes, cur.barcodes),
+					trackStock: bool(v.trackStock, cur.trackStock),
+					collections: bool(v.collections, cur.collections ?? true),
+					discounts: bool(v.discounts, cur.discounts ?? true),
+				},
 				problems,
 			};
 		}
@@ -228,6 +245,7 @@ export const checkSection = (section: Section, input: any, current: Answers, off
 					held: bool(v.held, cur.held),
 					discounts: bool(v.discounts, cur.discounts),
 					coupons: bool(v.coupons, cur.coupons),
+					couponBase: (v.couponBase ?? cur.couponBase) === 'original' ? 'original' : 'discounted',
 					tax: { mode, rates: mode === 'none' ? [] : rates },
 					customerRequired: bool(v.customerRequired, cur.customerRequired),
 				},

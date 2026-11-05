@@ -82,9 +82,11 @@ import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
  *   POST /deliveries/:id/receive  { lines: [{ line, quantity, condition?, restock? }], note? }   a returned parcel back in (CR-13)   records:edit
  *   POST /deliveries/settle  { deliveries: [ids], ref? }   marked paid out by the courier (RedX, manual)   records:edit
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
+ *   POST /discount-preview  { id?, discount }   what saving a discount would do, for its form's note (DISCOUNTS.md DS11)   records:view
  */
 import { relabelPriceColumns } from '../library/functions/commerce/taxRates.js';
 import { replaceTax, taxUsage, usageText } from '../library/functions/commerce/taxUse.js';
+import { previewDiscount } from '../library/functions/commerce/discounts.js';
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
 
@@ -311,6 +313,23 @@ router.post(
 	'/shifts/:id/close',
 	create,
 	handle(async (req: any) => closeShift(await storeOf(), req.params.id, req.body || {}, actorName(req)))
+);
+
+/**
+ * A discount form's note (docs/ecommerce DISCOUNTS.md DS11): what saving it would do — products it would give the
+ * discount to, those keeping a bigger one — and why it can't be saved, if so. Nothing is written.
+ *   POST /discount-preview  { id?, discount: { percent, status, startsAt, endsAt, products, categories, subCategories, collections } }
+ */
+router.post(
+	'/discount-preview',
+	view,
+	handle(async (req: any) => {
+		const store = await storeOf();
+		if (!store.installed.discount) return { text: '', reach: 0 };
+		const id = req.body?.id;
+		const before = mongoose.isValidObjectId(id) ? await store.M('discount').findById(id).lean() : null;
+		return previewDiscount(store, before, req.body?.discount || {});
+	})
 );
 
 /** A tax in use (TX5): who holds it, and moving them all to another tax. */
