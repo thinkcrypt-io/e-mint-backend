@@ -44,6 +44,8 @@ r = await call('GET', `${C}/settings`, null, t);
 let inst = r.body?.installed || {};
 ok('store built with Discounts', r.body?.status === 'ready' && !!inst.discount && !!inst.product, `${r.body?.status} ${JSON.stringify(Object.keys(inst))}`);
 
+const dform = (await db.collection('routeconfigs').findOne({ route: inst.discount.route, project: new ObjectId(shopId) }))?.data?.form || [];
+ok('the discount form in its sections: Products under Applies to', JSON.stringify(dform.find(x => x.sectionTitle === 'Applies to')?.fields || []).includes('"products"') && !JSON.stringify(dform[0]?.fields || []).includes('"products"'), JSON.stringify(dform.map(x => [x.sectionTitle, x.fields])));
 r = await call('GET', `${P}/automations`, null, t);
 const autos = (r.body?.doc || []).filter(a => /^discount\./.test(a.key || ''));
 ok('D1–D6 installed as the store’s, on', autos.length === 6 && autos.every(a => a.system === 'commerce' && a.enabled), JSON.stringify(autos.map(a => [a.key, a.enabled])));

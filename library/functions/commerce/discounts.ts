@@ -299,6 +299,8 @@ export const previewDiscount = async (store: Store, before: any, body: any) => {
 			? `Saved switched off: none of its ${plural(reach.length, 'product')} get it${carrying.length ? ` — ${plural(carrying.length, 'product')} go back to their price or a smaller discount` : ''}.`
 			: !live
 			? `It reaches ${plural(reach.length, 'product')} from ${dayText(d.startsAt)}.`
-			: `Saving gives ${Number(d.percent)}% off to ${plural(mine, 'product')}${reach.length - mine ? ` — ${reach.length - mine} of them keep a bigger discount` : ''}.`,
+			: !mine
+			? `None of its ${plural(reach.length, 'product')} would get ${Number(d.percent)}% off — ${reach.length === 1 ? 'it keeps' : 'they keep'} a bigger discount.`
+			: `Saving gives ${Number(d.percent)}% off to ${plural(mine, 'product')}${reach.length - mine ? ` — ${plural(reach.length - mine, 'other')} ${reach.length - mine === 1 ? 'keeps' : 'keep'} a bigger discount` : ''}.`,
 	};
 };

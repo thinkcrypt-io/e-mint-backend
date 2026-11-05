@@ -21,6 +21,7 @@ import { ensureDiscountAutomations } from './discountAutomations.js';
 import { zoneOf } from './discounts.js';
 import { refreshTaxAdded } from './taxRates.js';
 import { storeOf } from './store.js';
+import { publishConfigPatch } from '../../controllers/builder/builder.controller.js';
 
 /**
  * Setting up a store (docs/ecommerce EC3): the blueprint's models built as one
@@ -107,6 +108,31 @@ export const engineFieldsReadOnly = async (route: string, keys: string[]) => {
 	invalidateRoute(route);
 };
 
+/**
+ * Models that link to each other (a product names its discount, a discount its products) are built in two passes:
+ * the one built first gets its link afterwards, added to its form's first section. Their forms are laid out again as
+ * the blueprint has them (docs/ecommerce DISCOUNTS.md).
+ */
+const layoutAgain = async (req: any, specs: ReturnType<typeof modelSpecs>, installed: Installed, keys: ModelKey[]) => {
+	for (const key of keys) {
+		const spec = specs.find(s => s.key === key);
+		const m = installed[key];
+		if (!spec?.step.form || !m) continue;
+		await publishConfigPatch(
+			req,
+			m.route,
+			data => {
+				const placed = new Set<string>(spec.step.form.flatMap((x: any) => x.fields.flat()));
+				const have = new Set<string>((Array.isArray(data.form) ? data.form : []).flatMap((x: any) => (x.fields || []).flat()));
+				// Anything the form had that the blueprint doesn't place (the engine's read-only fields) is left out of it.
+				const form = spec.step.form.map((x: any) => ({ ...x, fields: x.fields.map((r: any) => (Array.isArray(r) ? r.filter((k: string) => have.has(k) || placed.has(k)) : r)) }));
+				return { ...data, form };
+			},
+			'The store’s setup: the form in the blueprint’s sections'
+		).catch((e: any) => console.error('store layout:', key, e?.message));
+	}
+};
+
 /** The first records: the wizard's outlets, its tax rates, a register at each store. */
 const seed = async (a: Answers, installed: Installed) => {
 	const model = (k: ModelKey) => (installed[k] ? compiledModel(installed[k]!.name) : null);
@@ -150,6 +176,7 @@ export const install = async (req: any, project: any, a: Answers): Promise<{ ins
 			await engineFieldsReadOnly(m.route, s.engine);
 		}
 
+		await layoutAgain(req, specs, installed, ['discount']);
 		await applySidebar(a, installed);
 		await seed(a, installed);
 		await seedStoreDashboard(installed);

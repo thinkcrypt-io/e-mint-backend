@@ -309,7 +309,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ sectionTitle: 'Images', fields: ['images'] },
 				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
 			],
-			table: ['name', 'category', 'price', 'priceAfterTax', 'totalStock', 'status'],
+			table: ['name', 'category', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'status'],
 			filters: ['status', 'category', 'collections', 'productType'],
 		},
 	},
