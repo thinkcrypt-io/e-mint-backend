@@ -11,8 +11,8 @@ L (2–3 days).
 
 **Order.** Phase 1 is the engine and must come first. Phase 2 (storefronts)
 can start as soon as SI-05 lands. Phases 3 and 4 depend only on phase 1 and
-can run in parallel. Phase 5 needs phase 4's data. Phase 6 is optional or
-needs the user's answers (README §8).
+can run in parallel. Phase 5 needs phase 4's data. Search by meaning (SI-19) needs only phase 1.
+The user answered README §8 on 2026-11-10.
 
 ## Status
 
@@ -41,17 +41,16 @@ needs the user's answers (README §8).
 | SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | open |
 | SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | open |
 | SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | open |
-| **Phase 6 — Scale and extras (optional / after answers)** | | | | |
-| SI-19 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend and approves the prod runs) | all | S | open |
-| SI-20 | Content search hooks: SearchDoc `kind`, optional pages / blog posts in suggestions (out of scope now, README §7) | backend | M | later |
+| SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | open |
+| **Phase 6 — Rollout and later** | | | | |
+| SI-20 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend, moves web dynos to Standard-2X for SI-19, and approves the prod runs). Existing stores (Live Fresh / Verte, HINT): rebuild, run the relevance suite on each catalogue, then switch search on (README §8.5) | all | S | open |
 | SI-21 | The POS and panel product pickers use the engine (typos, SKU straight hits) | backend + mint-tenant | S | later |
-| SI-22 | Atlas driver (SI3): one `$search` index over SearchDoc (fuzzy, autocomplete, facets), parity tests against the native driver on the fixtures, a platform switch | backend | M | after README §8 Q1 |
-| SI-23 | Meaning-based re-ranking (SI23): local embedding model, top-50 re-rank + zero-result recovery, CPU budget check on a dyno | backend | L | after README §8 Q2 |
+| SI-22 | Atlas driver (SI3): one `$search` index over SearchDoc (fuzzy, autocomplete, facets), parity tests against the native driver on the fixtures, a platform switch | backend | M | parked: prod is Flex / shared (README §8.1) |
+| SI-23 | Content search hooks: SearchDoc `kind`, optional pages / blog posts in suggestions (out of scope now, README §7) | backend | M | later |
 
 ## Handoff
 
-Nothing built yet. The open questions are in README §8, and none of them blocks
-phase 1. Start with SI-02 (pure functions, no database), then SI-03.
+Nothing built yet. The user answered README §8 on 2026-11-10. Start with SI-02 (pure functions, no database), then SI-03.
 
 ---
 
@@ -104,7 +103,7 @@ phase 1. Start with SI-02 (pure functions, no database), then SI-03.
 - Website setup: a Search section with fetch examples (JS, Next.js server component) and the response shape.
 - **Done when** `search-api.mjs` covers paging, every filter, facets that ignore their own group, a category page, suggest, popular with the 3-visitor floor, rate limits, and `explain` refused without a server key.
 
-## SI-06 … SI-23
+## SI-06 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

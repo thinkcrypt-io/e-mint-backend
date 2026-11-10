@@ -1,5 +1,15 @@
 # Store search — changelog
 
+## 2026-11-10 — The user's answers
+
+- Atlas tier: Flex / shared. The native driver is production, and the Atlas driver (SI-22) is parked (SI3).
+- Search by meaning: a small multilingual model on our own servers (SI23, new WO SI-19). Web dynos need 1 GB.
+- Banglish is in the first release (SI7).
+- Out of stock: each store chooses show or hide; show is the default, after the in-stock products (SI14).
+- Existing stores: we switch them on after a rebuild and a check (SI-20).
+- Retention: raw events 90 days, daily totals 13 months.
+- Content search moved to SI-23 (later). README §8 now lists the answers.
+
 ## 2026-11-10 — SI-01 Plan & docs
 
 - **The ask:** the user asked for a full, advanced plan for search intelligence in every e-commerce store on Mint.
