@@ -11,6 +11,7 @@ import ModelDefinition from '../../../models/builder/modelDefinition.model.js';
 import { currentScope } from '../../tenantScope.function.js';
 import type { Store } from '../store.js';
 import { codeKey, normalise, type Normalised } from './normalise.js';
+import { optKey } from './facets.js';
 
 /** The parts of a product, and which go into suggestions / typos (all but the description). */
 export const PARTS = ['name', 'brand', 'category', 'collection', 'option', 'keyword', 'description', 'custom'] as const;
@@ -164,7 +165,7 @@ export const docFor = (p: any, variants: any[], ctx: { tree: Map<string, any>; b
 			price,
 			onSale,
 			inStock,
-			opts: [...opts].flatMap(([n, vs]) => [...vs].map(v => `${normalise(n).words.join('')}=${normalise(v).words.join('')}`)).filter(s => !s.startsWith('=') && !s.endsWith('=')),
+			opts: [...new Set([...opts].flatMap(([n, vs]) => [...vs].map(v => optKey(n, v))))].filter(s => !s.startsWith('=') && !s.endsWith('=')),
 		},
 		signals: { views: Number(p.views) || 0, wishes: Number(p.wishlistCount) || 0, createdAt: p.createdAt ?? null },
 		card: {

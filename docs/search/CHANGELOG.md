@@ -1,5 +1,28 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-04 The engine (native driver + ranking)
+
+- New in `commerce/search/`:
+  - `settings.ts` (defaults: typos normal, out of stock shown last, dials normal, learning on, Banglish on);
+  - `vocab.ts` (the store's words with document counts, trigram index, Banglish keys; typos by length with the
+    first letter kept; completions; cached a minute, refreshed in the background);
+  - `rank.ts` (scores, multipliers, explain);
+  - `facets.ts` (filters, counts that ignore their own group, friendly price ranges);
+  - `drivers/types.ts`, `drivers/native.ts`, `drivers/memory.ts`;
+  - `engine.ts` (search, browse, suggestions, a 30-second cache keyed by the index version).
+- `document.ts` now shares `optKey` with the filters.
+- Found while testing:
+  - The Banglish key let "vanila" match "bangle" (they share a key) ahead of the typo "vanilla", so the key now
+    only matches across scripts or for words with no near spelling.
+  - A swap of two letters ("shrit") broke too many trigrams to find "shirt", so the trigram threshold was eased.
+  - Three of my own expected results were wrong: "gold watch" rightly ranks "Rose gold watch" first, there are
+    seven "studs" and nine "camera" names.
+- Speed: on 20k products, two-word queries with few whole matches took 250 ms at p95, so partial matches are now
+  capped at 600 and p95 is 129 ms.
+- Tests: `test/engine.test.ts` (107, among them the 77-query relevance suite over the HINT catalogue in
+  `test/fixtures/hint-catalogue.json`; 324 search tests in all), `scripts/tenancy-smoke/search-engine.mjs` (parity
+  on 30 queries + browse + suggestions, then the bench). `search-index.mjs` still passes.
+
 ## 2026-11-11 — SI-03 Search document + indexer
 
 - Models (`library/models/tenancy/`, one collection each for every store, keyed by project): `SearchDoc` (`searchdocs`:

@@ -22,7 +22,7 @@ The user answered README §8 on 2026-11-10.
 | **Phase 1 — The engine** | | | | |
 | SI-02 | Normaliser + Banglish key (SI6, SI7): `normalise.ts`, `banglish.ts`, starter word list, unit tests (≥ 150 cases: plurals, units, t-shirt, Bangla variants, digits, Banglish ↔ Bangla) | backend | M | done 2026-11-10 |
 | SI-03 | Search document + indexer (SI4, SI5): `SearchDoc` / `SearchQueue` models + indexes, `document.ts`, hooks on product / variant / category / brand / collection / discount / stock, leased tick, `rebuildSearch`, `scripts/searchRebuild.js`, nightly drift check; Product `keywords`; `upgradeStore` | backend | L | done 2026-11-11 |
-| SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | open |
+| SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | done 2026-11-11 |
 | SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend | M | open |
 | **Phase 2 — Storefronts** | | | | |
 | SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | open |
@@ -50,13 +50,18 @@ The user answered README §8 on 2026-11-10.
 
 ## Handoff
 
-SI-02 (2026-11-10) and SI-03 (2026-11-11) are done. Every built store now keeps a search document per findable product in
-`searchdocs`, by itself (touches, the 2-minute sweep, the daily drift check; README SI5). Nothing reads them yet: no
-shopper-facing search. Next is SI-04, the native driver and ranking over `SearchDoc` (`terms`, `prefixes`, `grams`,
-`phon`, `codes`, `fields` per part, `facets`, `signals`, `card`).
+SI-02, SI-03 and SI-04 are done (2026-11-10 / 11). The engine works but has no public route yet. It is `storeSearch(store, req)` and
+`storeSuggest(store, q)` in `commerce/search/engine.ts` (request: `q, page, limit ≤ 60, sort (relevance | popular |
+price | -price | newest | name), filters { categories, brands, price { gte, lte }, inStock, onSale, opts { Size: [M] } },
+facets, explain`). Next is SI-05: the public routes around them, the settings defaults in `CommerceSettings.search`,
+names for the category and brand ids in the counts, and `explain` only with a server key.
 
-Tests: `npx jest library/functions/commerce/search` (217) and `scripts/tenancy-smoke/search-index.mjs` (31 checks; see
-its notes for the env it needs).
+Known gaps:
+- Option values come back normalised ("size=m", "navy"); SI-05 should show them as the store wrote them.
+- The popularity signal uses all-time views until SI-13 fills `sold30` and `views30`.
+
+Tests: `npx jest library/functions/commerce/search` (324, with the 77-query relevance suite) ·
+`scripts/tenancy-smoke/search-index.mjs` (31) · `scripts/tenancy-smoke/search-engine.mjs` (parity + the 20k bench).
 
 ---
 
@@ -94,7 +99,21 @@ The first notes:
   - the smoke test `search-index.mjs` covers: seed the HINT fixtures; edit a name, a variant SKU, a category name, a stock move and a discount; each shows up in SearchDoc within 10 s;
   - archive removes the product, and rebuild gives identical documents.
 
-## SI-04 — Native driver + ranking (L)
+## SI-04 — Native driver + ranking (L) — done 2026-11-11
+
+Built as planned, with these changes:
+- Each word's rarity in the store is a factor (0.6–1.4).
+- The Banglish key has three modes (README SI10).
+- Typo candidates allow for a swap of two letters breaking up to four trigrams.
+- Partial matches (some of the words) are added only when there are fewer than 200 whole matches, and only up to 600 of them. Before that cap the bench's p95 sat at 250 ms; with it, 129 ms.
+- An in-memory driver gives the same answers for tests.
+- Category pages (no words) browse through the database with the same filters and counts.
+- Suggestions are part of the engine.
+
+Measured on a MacBook with local MongoDB, 20,243 products: search p50 36 ms, p95 129 ms (with filter counts, uncached); suggestions p50 14 ms, p95 17 ms; a repeat search from the cache under 5 ms; a rebuild ~450 products/s. **To check on the prod cluster** (Flex tier, network latency): `search-engine.mjs` against a copy, before SI-05 goes live.
+
+The first notes:
+
 
 - Candidates:
   - For each query word (after synonyms), the term set is the word itself, its stem, its phon key, and its trigram neighbours (from the store's vocabulary, cached per version).
