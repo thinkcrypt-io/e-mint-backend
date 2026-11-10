@@ -92,6 +92,18 @@ ok('in stock only: the polo (no stock) goes', r.body.total === 0, String(r.body.
 r = await S('q=polo');
 ok('…but is listed without it, marked out of stock', r.body.doc[0]?.inStock === false);
 
+/* ---- understanding (SI-09) */
+r = await S('q=jacket under 5000');
+ok('“jacket under 5000”: the price understood and applied', r.body.understood?.price?.lte === 5000 && r.body.doc.map(d => d.name).join() === 'Denim jacket', JSON.stringify({ u: r.body.understood, d: r.body.doc?.map(d => d.name) }));
+r = await S('q=cheapest sneakers');
+ok('“cheapest sneakers”: sorted by price', r.body.understood?.sort === 'price' && r.body.doc.map(d => d.name).join() === 'Canvas sneakers,White sneakers', JSON.stringify(r.body.doc?.map(d => d.name)));
+r = await S('q=aarong shirt');
+ok('“aarong shirt”: the brand understood', r.body.understood?.brand?.name === 'Aarong' && r.body.doc.map(d => d.name).join() === 'Linen shirt', JSON.stringify({ u: r.body.understood, d: r.body.doc?.map(d => d.name) }));
+r = await S('q=polo size m');
+ok('“polo size m”: Size M as a filter, as the store wrote it', JSON.stringify(r.body.understood?.options) === JSON.stringify([{ name: 'Size', value: 'M', as: 'filter' }]) && r.body.total === 1, JSON.stringify(r.body.understood));
+r = await S('q=under 3000');
+ok('“under 3000”: every product under it', r.body.total > 0 && r.body.doc.every(d => (d.salePrice ?? d.price) <= 3000) && r.body.understood?.words === '', `${r.body.total} ${JSON.stringify(r.body.understood)}`);
+
 /* ---- counts */
 r = await S('q=jacket coat shirt sneakers boots&facets=1');
 const f = r.body.facets;

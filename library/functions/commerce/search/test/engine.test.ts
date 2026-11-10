@@ -311,6 +311,76 @@ describe('suggestions', () => {
 	});
 });
 
+describe('understanding the query (SI8)', () => {
+	const price = (d: any) => d.salePrice ?? d.price;
+	it('a price phrase filters, and leaves the words', async () => {
+		const r = await search('watch under 30000');
+		expect(r.understood).toMatchObject({ words: 'watch', price: { lte: 30000 } });
+		expect(r.total).toBeGreaterThan(0);
+		expect(r.doc.every(d => price(d) <= 30000 && /watch/i.test(d.name))).toBe(true);
+	});
+	it('…in Bangla too', async () => {
+		const r = await search('watch ৫০০০০ টাকার নিচে');
+		expect(r.understood?.price).toEqual({ lte: 50000 });
+		expect(r.doc.every(d => price(d) <= 50000)).toBe(true);
+	});
+	it('a price alone: every product under it', async () => {
+		const r = await search('under 1500');
+		expect(r.understood).toMatchObject({ words: '', price: { lte: 1500 } });
+		expect(r.total).toBeGreaterThan(0);
+		expect(r.doc.every(d => price(d) <= 1500)).toBe(true);
+	});
+	it('a sort word sorts', async () => {
+		const r = await search('cheapest watch');
+		expect(r.understood?.sort).toBe('price');
+		const ps = r.doc.map(price);
+		expect([...ps].sort((a, b) => a - b)).toEqual(ps);
+	});
+	it('the shopper’s own sort and price win over the words', async () => {
+		const r = await search('cheapest watch under 30000', { sort: '-price', filters: { price: { lte: 40000 } } });
+		const ps = r.doc.map(price);
+		expect([...ps].sort((a, b) => b - a)).toEqual(ps);
+		expect(Math.max(...ps)).toBeGreaterThan(30000);
+	});
+	it('a brand with other words filters to it', async () => {
+		const r = await search('aarong saree');
+		expect(r.understood?.brand?.name).toBe('Aarong');
+		expect(r.doc.map(d => d.name)).toEqual(['জামদানি শাড়ি']);
+	});
+	it('a brand that leaves nothing is set aside, and says so', async () => {
+		const r = await search('aarong vase');
+		expect(r.understood).toMatchObject({ brand: { name: 'Aarong' }, relaxed: true });
+		expect(r.doc[0].name).toMatch(/vase/i);
+	});
+	it('a size asked for by name filters', async () => {
+		const r = await search('polo size m');
+		expect(r.understood?.options).toEqual([{ name: 'Size', value: 'M', as: 'filter' }]);
+		expect(r.doc.map(d => d.name)).toEqual(['Cotton Polo']);
+	});
+	it('a colour as a word lifts', async () => {
+		const r = await search('navy polo', { explain: true });
+		expect(r.understood?.options).toEqual([{ name: 'Colour', value: 'Navy', as: 'boost' }]);
+		expect(r.doc[0].explain).toMatch(/Colour Navy ×1.3/);
+	});
+	it('filler words are dropped and said', async () => {
+		const r = await search('i want running shoes');
+		expect(r.understood?.dropped).toEqual(['i', 'want']);
+		expect(r.doc[0].name).toBe('Running shoes');
+	});
+	it('a SKU typed whole names its product', async () => {
+		const r = await search('HN-2041');
+		expect(r.understood?.product?.name).toBe('Graphic T-Shirt');
+		expect((await search('t shirt')).understood?.product).toBeUndefined();
+	});
+	it('nothing understood: no understood block', async () => {
+		expect((await search('denim jacket')).understood).toBeUndefined();
+	});
+	it('suggestions read past a price', async () => {
+		const sg = await suggestWith(driver(), S(), 'sneakers under 5000');
+		expect(sg.products.length).toBeGreaterThan(0);
+	});
+});
+
 describe('typos and the vocabulary', () => {
 	it('measures edits with swaps', () => {
 		expect(editDistance('shirt', 'shirt')).toBe(0);

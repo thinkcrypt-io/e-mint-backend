@@ -111,7 +111,10 @@ export const business = (doc: any, s: SearchSettings, now = Date.now()) => {
 };
 
 /** A document's score for a query plan. Null when no query word matches it at all. */
-export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.now()): Ranked | null => {
+/** A lift for documents passing `test` (understood sizes / colours said as plain words, a category named). */
+export type Boost = { name: string; x: number; test: (doc: any) => boolean };
+
+export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.now(), boosts: Boost[] = []): Ranked | null => {
 	const hits: Hit[] = [];
 	let relevance = 0;
 	for (const t of tokens) {
@@ -129,6 +132,7 @@ export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.n
 	else if (tokens.length > 1 && hits.length === tokens.length && hits.every(h => h.part === 'name')) multipliers.push({ name: 'all words in the name', x: 1.1 });
 	const nameWords: string[] = name.words || [];
 	if (nameWords.length && nameWords.length === tokens.length && tokens.every((t, i) => nameWords[i] === t.word || name.stems?.[i] === t.stem)) multipliers.push({ name: 'the name itself', x: 1.25 });
+	for (const b of boosts) if (b.test(doc)) multipliers.push({ name: b.name, x: b.x });
 	multipliers.push(...business(doc, s, now));
 	const score = multipliers.reduce((acc, m) => acc * m.x, relevance);
 	return { score, relevance, coverage, hits, multipliers };

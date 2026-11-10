@@ -22,13 +22,19 @@ export const memoryDriver = (docs: any[], key = 'memory'): SearchDriver => {
 			const df = new Map<string, number>();
 			const shown: string[] = [];
 			const phon: string[] = [];
+			const labels = new Set<string>();
+			const brands = new Map<string, any>();
+			const categories = new Map<string, any>();
 			const ds = live();
 			for (const d of ds) {
 				for (const t of new Set<string>(d.terms || [])) df.set(t, (df.get(t) || 0) + 1);
 				for (const p of SHOWN) shown.push(...(d.fields?.[p]?.words || []), ...(d.fields?.[p]?.stems || []));
 				phon.push(...(d.phon || []));
+				for (const l of d.facets?.labels || []) labels.add(l);
+				if (d.card?.brand?._id) brands.set(String(d.card.brand._id), d.card.brand);
+				if (d.card?.category?._id) categories.set(String(d.card.category._id), d.card.category);
 			}
-			return makeVocab(ds.length, [...df], shown, phon);
+			return makeVocab(ds.length, [...df], shown, phon, { labels: [...labels], brands: [...brands.values()], categories: [...categories.values()] });
 		},
 		async candidates(spec: CandidateSpec) {
 			const pool = base(spec.hideOutOfStock);

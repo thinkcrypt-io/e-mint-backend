@@ -29,7 +29,7 @@ The user answered README §8 on 2026-11-10.
 | SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-builder | L | open |
 | SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | done 2026-11-11 (category pages kept as they are) |
 | **Phase 3 — Understanding** | | | | |
-| SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | open |
+| SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | done 2026-11-11 |
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | open |
 | SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | open |
 | **Phase 4 — Insights** | | | | |
@@ -60,9 +60,14 @@ HINT and Live Fresh call the new search **and fall back** to their old search wh
 `/store/search` (SI-08). They pick up the engine by themselves once the backend is deployed and each store's first
 sweep has indexed it.
 
+SI-09 (query understanding) is done too. The answer's `understood` is there for storefronts to show as chips;
+HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
+
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-09** — query understanding.
+- **SI-10** — synonyms and redirects.
+- **SI-11** — no dead ends.
+- **SI-12 / SI-13** — search events and the nightly rollups. Insights (SI-14) needs these.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
@@ -188,7 +193,23 @@ gives. Storefronts decide both for now.
   them gains nothing at this size. They should move when a store's categories outgrow a page.
 - mint-docs: a Next.js search page with the fallback in the store guide (`store-search`).
 
-## SI-07, SI-09 … SI-23 (the rest)
+## SI-09 — Query understanding (M) — done 2026-11-11
+
+`commerce/search/understand.ts` (pure) reads the query into words plus price, sort, in stock / on sale, option
+values, brand and category, using `vocab.knows`. Both drivers now gather the store's option labels, brands and
+categories with the vocabulary. In the engine, `applyUnderstood` fills in filters the shopper didn't set (theirs win)
+and adds the lifts (`rank(…, boosts)`). A query with no words left browses (for example "under 3000"). A brand or size
+that leaves nothing is relaxed. The whole query as one product's code sets `understood.product`.
+
+One choice differs from the first notes: a colour or size **said as a plain word is a lift, not a filter**. Filtering
+on it would drop "Red berry candle" for "red candle", since the candle has no Colour option. Named outright, it
+filters.
+
+Tests: `test/understand.test.ts` (48: EN and BN prices, sorts, stock / sale, sizes and colours both ways, brands,
+categories, filler), engine tests (13 more, 120 there). `search-api.mjs` has 5 more checks (51), and the database
+parity still holds.
+
+## SI-07, SI-10 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

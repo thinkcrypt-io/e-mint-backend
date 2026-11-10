@@ -7,6 +7,9 @@
  * a search never waits for it except the very first.
  */
 import { gramsOf } from './document.js';
+import { optPart } from './facets.js';
+import { normalise } from './normalise.js';
+import { emptyKnowledge, type Knowledge } from './understand.js';
 
 export type Vocab = {
 	/** Documents in the store. */
@@ -19,10 +22,33 @@ export type Vocab = {
 	shown: Set<string>;
 	/** Banglish keys present. */
 	phon: Set<string>;
+	/** What the store sells, for reading queries (understand.ts): option values, brands, categories. */
+	knows: Knowledge;
+};
+
+/** The store's option values as written ("Size=M"), brands and categories (each `{ _id, name }`). */
+export type Known = { labels?: string[]; brands?: { _id: any; name: string }[]; categories?: { _id: any; name: string }[] };
+
+const knowledgeOf = (x: Known = {}): Knowledge => {
+	const k = emptyKnowledge();
+	for (const l of x.labels || []) {
+		const [n, v] = String(l).split('=');
+		if (!n || !v) continue;
+		const key = optPart(n);
+		const value = optPart(v);
+		if (!key || !value) continue;
+		if (!k.options.has(key)) k.options.set(key, { name: n, values: new Map() });
+		if (!k.options.get(key)!.values.has(value)) k.options.get(key)!.values.set(value, v);
+	}
+	const named = (xs: { _id: any; name: string }[] = []) =>
+		xs.filter(b => b?._id && b.name).map(b => ({ _id: String(b._id), name: b.name, words: normalise(b.name).words })).filter(b => b.words.length);
+	k.brands = named(x.brands);
+	k.categories = named(x.categories);
+	return k;
 };
 
 /** A vocabulary from raw lists (each driver gathers them its own way). */
-export const makeVocab = (n: number, df: [string, number][], shown: string[], phon: string[]): Vocab => {
+export const makeVocab = (n: number, df: [string, number][], shown: string[], phon: string[], known?: Known): Vocab => {
 	const byGram = new Map<string, string[]>();
 	const shownSet = new Set<string>();
 	for (const w of shown) {
@@ -33,7 +59,7 @@ export const makeVocab = (n: number, df: [string, number][], shown: string[], ph
 			byGram.get(g)!.push(w);
 		}
 	}
-	return { n, df: new Map(df), byGram, shown: shownSet, phon: new Set(phon) };
+	return { n, df: new Map(df), byGram, shown: shownSet, phon: new Set(phon), knows: knowledgeOf(known) };
 };
 
 /**

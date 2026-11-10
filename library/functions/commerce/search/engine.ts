@@ -14,7 +14,9 @@ import CommerceSettings from '../../../models/tenancy/commerceSettings.model.js'
 import type { Store } from '../store.js';
 import { cleanFilters, facetCounts, passes, type FacetCounts, type Filters } from './facets.js';
 import { codeKey, normaliseQuery } from './normalise.js';
-import { explain, rank, type QToken, type Ranked } from './rank.js';
+import { explain, rank, type Boost, type QToken, type Ranked } from './rank.js';
+import { understand, understoodAnything, type Understood } from './understand.js';
+import { clean } from './normalise.js';
 import { searchSettingsOf, type SearchSettings } from './settings.js';
 import { cachedVocab, completions, nearWords, typosFor, type Vocab } from './vocab.js';
 import { nativeDriver } from './drivers/native.js';
@@ -31,7 +33,67 @@ export type SearchResult = {
 	facets?: FacetCounts;
 	/** The words as the engine read them, and the near spellings it tried. */
 	query: { words: string[]; typos: { word: string; tried: string[] }[] };
+	/** What the query asked for besides its words (SI8): shown as chips a shopper can remove. */
+	understood?: UnderstoodOut;
 	ms: number;
+};
+
+export type UnderstoodOut = {
+	words: string;
+	price?: { gte?: number; lte?: number };
+	sort?: string;
+	inStock?: boolean;
+	onSale?: boolean;
+	options?: { name: string; value: string; as: 'filter' | 'boost' }[];
+	brand?: { _id: string; name: string };
+	category?: { _id: string; name: string };
+	dropped?: string[];
+	/** The query is the SKU or barcode of exactly this product: a storefront may go straight to it. */
+	product?: any;
+	/** A brand or size the query named left nothing, so it was set aside. */
+	relaxed?: boolean;
+};
+
+/** The understood filters on top of the shopper's own (theirs win), and the lifts. */
+const applyUnderstood = (u: Understood, filters: Filters, sort: SearchSort) => {
+	const opts: Record<string, string[]> = {};
+	for (const o of u.options.filter(o => o.as === 'filter')) opts[o.key] = [...(opts[o.key] || []), o.value];
+	const hard: Filters = {
+		...(u.brand && !filters.brands?.length && { brands: [u.brand._id] }),
+		...(Object.keys(opts).length && { opts: { ...opts, ...(filters.opts || {}) } }),
+	};
+	const soft: Filters = {
+		...(u.price && !filters.price && { price: u.price }),
+		...(u.inStock && { inStock: true }),
+		...(u.onSale && { onSale: true }),
+	};
+	const boosts: Boost[] = [
+		...u.options.filter(o => o.as === 'boost').map(o => ({ name: `${o.name} ${o.label}`, x: 1.3, test: (d: any) => !!d.facets?.opts?.includes(`${o.key}=${o.value}`) })),
+		...(u.category ? [{ name: `in ${u.category.name}`, x: 1.15, test: (d: any) => (d.facets?.categories || []).some((c: any) => String(c) === u.category!._id) }] : []),
+	];
+	return {
+		all: cleanFilters({ ...filters, ...soft, ...hard }),
+		withoutHard: cleanFilters({ ...filters, ...soft }),
+		hasHard: Object.keys(hard).length > 0,
+		sort: sort !== 'relevance' ? sort : ((u.sort as SearchSort) ?? 'relevance'),
+		boosts,
+	};
+};
+
+const understoodOut = (u: Understood, extra: Partial<UnderstoodOut> = {}): UnderstoodOut | undefined => {
+	if (!understoodAnything(u) && !u.dropped.length && !extra.product && !extra.relaxed) return undefined;
+	return {
+		words: u.text,
+		...(u.price && { price: u.price }),
+		...(u.sort && { sort: u.sort }),
+		...(u.inStock && { inStock: true }),
+		...(u.onSale && { onSale: true }),
+		...(u.options.length && { options: u.options.map(o => ({ name: o.name, value: o.label, as: o.as })) }),
+		...(u.brand && { brand: u.brand }),
+		...(u.category && { category: u.category }),
+		...(u.dropped.length && { dropped: u.dropped }),
+		...extra,
+	};
 };
 
 const MAX_WORDS = 8;
@@ -146,20 +208,28 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		const hide = s.outOfStock === 'hide';
 		const q = String(req.q ?? '').slice(0, 100);
 		const vocab = await cachedVocab(driver.key, () => driver.vocabulary());
-		const { plan, codes, words } = planQuery(q, vocab, s);
+		// Prices, sorting, sizes, brands… out of the words first (SI8); what's left is matched.
+		const u = understand(q, vocab.knows);
+		const ua = applyUnderstood(u, filters, sort);
+		const { plan, codes, words } = planQuery(u.text, vocab, s);
 		const typos = plan.filter(t => t.near.length).map(t => ({ word: t.word, tried: t.near.map(n => n.word) }));
 
 		if (!plan.length && !codes.filter(Boolean).length) {
-			// No words: a browse.
-			const b = await driver.browse({ hideOutOfStock: hide, filters, sort: sort === 'relevance' ? 'popular' : sort, skip: (page - 1) * limit, limit, facets: !!req.facets });
+			// No words (or only a price, a sort…): a browse.
+			const browse = (f: Filters) => driver.browse({ hideOutOfStock: hide, filters: f, sort: ua.sort === 'relevance' ? 'popular' : ua.sort, skip: (page - 1) * limit, limit, facets: !!req.facets });
+			let b = await browse(ua.all);
+			let used = ua.all;
+			const relaxed = !b.total && ua.hasHard;
+			if (relaxed) (b = await browse(ua.withoutHard)), (used = ua.withoutHard);
 			return {
 				doc: b.docs.map(d => cardOf(d)),
 				total: b.total,
 				page,
 				limit,
 				totalPages: Math.max(1, Math.ceil(b.total / limit)),
-				...(req.facets && { facets: facetCounts(b.facetDocs || [], filters) }),
+				...(req.facets && { facets: facetCounts(b.facetDocs || [], used) }),
 				query: { words: [], typos: [] },
+				...(q.trim() && { understood: understoodOut(u, relaxed ? { relaxed } : {}) }),
 				ms: Date.now() - started,
 			};
 		}
@@ -169,20 +239,32 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		const now = Date.now();
 		const ranked: { d: any; r: Ranked }[] = [];
 		for (const d of docs) {
-			const r = rank(plan, d, s, now);
+			const r = rank(plan, d, s, now, ua.boosts);
 			if (r) ranked.push({ d, r });
 		}
-		const matched = ranked.filter(x => passes(x.d, filters));
-		matched.sort((a, b) => orderBy[sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
+		let used = ua.all;
+		let matched = ranked.filter(x => passes(x.d, used));
+		// A brand or size the query named that leaves nothing: set aside (the words still count).
+		const relaxed = !matched.length && ua.hasHard;
+		if (relaxed) (used = ua.withoutHard), (matched = ranked.filter(x => passes(x.d, used)));
+		matched.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
 		const total = matched.length;
+		// The whole query is one product's SKU or barcode.
+		const whole = codeKey(clean(q));
+		const exact = whole ? matched.filter(x => x.d.codes?.includes(whole)) : [];
+		const product = exact.length === 1 ? cardOf(exact[0].d) : undefined;
 		return {
 			doc: matched.slice((page - 1) * limit, page * limit).map(x => cardOf(x.d, x.r, req.explain)),
 			total,
 			page,
 			limit,
 			totalPages: Math.max(1, Math.ceil(total / limit)),
-			...(req.facets && { facets: facetCounts(ranked.map(x => x.d), filters) }),
+			...(req.facets && { facets: facetCounts(ranked.map(x => x.d), used) }),
 			query: { words, typos },
+			...((): { understood?: UnderstoodOut } => {
+				const out = understoodOut(u, { ...(product && { product }), ...(relaxed && { relaxed }) });
+				return out ? { understood: out } : {};
+			})(),
 			ms: Date.now() - started,
 		};
 	});
@@ -205,7 +287,7 @@ export const suggestWith = async (driver: SearchDriver, s: SearchSettings, q: st
 	const key = version == null ? null : `${driver.key}:${version}:suggest:${text}:${products}:${JSON.stringify(s)}`;
 	return cached(key, async () => {
 		const vocab = await cachedVocab(driver.key, () => driver.vocabulary());
-		const { plan, codes, words } = planQuery(text, vocab, s, { minPrefix: 1 });
+		const { plan, codes, words } = planQuery(understand(text, vocab.knows).text || text, vocab, s, { minPrefix: 1 });
 		if (!plan.length) return { queries: [], products: [], categories: [], brands: [], ms: Date.now() - started };
 		const conds = plan.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
 		const docs = await driver.candidates({ hideOutOfStock: s.outOfStock === 'hide', all: conds, codes: codes.filter(Boolean), cap: 300, partialBelow: 0, partialCap: 0 });

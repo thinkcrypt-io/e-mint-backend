@@ -59,13 +59,16 @@ export const nativeDriver = (): SearchDriver => {
 			const shown = { $setUnion: SHOWN.flatMap(p => [{ $ifNull: [`$fields.${p}.words`, []] }, { $ifNull: [`$fields.${p}.stems`, []] }]) };
 			const [r]: any[] = await SearchDoc.aggregate([
 				{ $match: { status: 'active' } },
-				{ $project: { terms: 1, phon: 1, shown } },
+				{ $project: { terms: 1, phon: 1, shown, 'facets.labels': 1, 'card.brand': 1, 'card.category': 1 } },
 				{
 					$facet: {
 						n: [{ $count: 'n' }],
 						df: [{ $unwind: '$terms' }, { $group: { _id: '$terms', df: { $sum: 1 } } }],
 						shown: [{ $unwind: '$shown' }, { $group: { _id: '$shown' } }],
 						phon: [{ $unwind: '$phon' }, { $group: { _id: '$phon' } }],
+						labels: [{ $unwind: '$facets.labels' }, { $group: { _id: '$facets.labels' } }],
+						brands: [{ $match: { 'card.brand._id': { $ne: null } } }, { $group: { _id: '$card.brand._id', name: { $first: '$card.brand.name' } } }],
+						categories: [{ $match: { 'card.category._id': { $ne: null } } }, { $group: { _id: '$card.category._id', name: { $first: '$card.category.name' } } }],
 					},
 				},
 			]).allowDiskUse(true);
@@ -73,7 +76,8 @@ export const nativeDriver = (): SearchDriver => {
 				r?.n?.[0]?.n || 0,
 				(r?.df || []).map((x: any) => [x._id, x.df]),
 				(r?.shown || []).map((x: any) => x._id),
-				(r?.phon || []).map((x: any) => x._id)
+				(r?.phon || []).map((x: any) => x._id),
+				{ labels: (r?.labels || []).map((x: any) => x._id), brands: r?.brands || [], categories: r?.categories || [] }
 			);
 		},
 

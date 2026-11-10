@@ -1,5 +1,18 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-09 Query understanding
+
+- New: `commerce/search/understand.ts`, and `vocab.knows` (option values as written, brands, categories), gathered by
+  both drivers. `rank` takes lifts. The engine applies understood filters under the shopper's own, browses when only a
+  price or sort is left, relaxes a brand or size that leaves nothing, and names the product for a whole-query SKU.
+  The answer has `understood`. Suggestions read past prices and sort words.
+- Decision (README SI8): a size or colour as a plain word lifts (× 1.3); named ("size m", "colour red") it filters.
+  A category in the words lifts (× 1.15).
+- Fixed while testing: "polo size m" took "polo" as the value of a "value size" phrase. Both phrasings are now tried,
+  keeping the one whose value the store sells.
+- Tests: 48 understanding + 13 engine (324 → 385 in all), `search-api.mjs` 51 checks, and parity holds. The guide's
+  "Search on your website" lists what it understands and the `understood` block.
+
 ## 2026-11-11 — SI-08 Reference storefronts
 
 - HINT search page on the store's engine, with typo note, suggestions, category chips with counts, in stock and sort
