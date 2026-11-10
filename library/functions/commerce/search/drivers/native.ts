@@ -32,6 +32,7 @@ const baseQuery = (hideOutOfStock: boolean) => ({ status: 'active', ...(hideOutO
 export const filterQuery = (f: Filters) => {
 	const and: any[] = [];
 	if (f.categories?.length) and.push({ 'facets.categories': { $in: oids(f.categories) } });
+	if (f.collections?.length) and.push({ 'facets.collections': { $in: oids(f.collections) } });
 	if (f.brands?.length) and.push({ 'facets.brand': { $in: oids(f.brands) } });
 	if (f.price) and.push({ 'facets.price': { ...(f.price.gte != null && { $gte: f.price.gte }), ...(f.price.lte != null && { $lte: f.price.lte }) } });
 	if (f.inStock) and.push({ 'facets.inStock': true });

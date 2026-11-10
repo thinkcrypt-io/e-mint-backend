@@ -1,5 +1,29 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-05 Public search API
+
+- **Public routes:** `GET /public/api/store/search` and `/store/search/suggest` (`routes-public/public.router.ts`), with the
+  query string, names and settings in `commerce/search/http.ts`.
+  - Category and collection filters go by web address or id. A gone one filters to nothing rather than to
+    everything.
+  - Brands go by name. Price ranges, `option.Size=M` / `option[Size]=M` (any case), in stock and on sale.
+  - Counts come named.
+  - `explain` only with a server key (`no-store`); other answers are `public, max-age=30`. 120 / 600 a minute.
+  - 400s in plain words for a bad sort or price. 404 `search_off` when a store switched search off.
+- **SearchDoc** gained `facets.labels` (option values as written). Filters and counts gained collections. Option counts
+  are `{ name, values: [{ value, label, count }] }`.
+- **Settings:** `GET/PUT /tenant/api/p/:id/commerce/search/settings` (checked, unknown keys refused). New stores get
+  `search.enabled: true` at setup.
+- **The Products list:** `?search=` is ranked by the engine when it's the only filter, there's no sort, the limit is
+  60 or less and the store is switched on by name.
+- **Docs and panel:**
+  - mint-docs: the store guide's **Search on your website** (`store-search`).
+  - mint-tenant: Website setup → **Store search** (search, suggestions and category-page code with the key filled in),
+    plus GuideLink.
+  - mint-webpage: changelog entry.
+- **Tests:** smoke `search-api.mjs` (46 checks, all passing). `search-index.mjs` and `search-engine.mjs` (parity)
+  still pass, and the unit tests are 324.
+
 ## 2026-11-11 — SI-04 The engine (native driver + ranking)
 
 - New in `commerce/search/`:

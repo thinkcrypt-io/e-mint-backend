@@ -51,6 +51,8 @@ const schema = new Schema<any>(
 			inStock: Boolean,
 			/** "size=m", "colour=red": one string per option value, for filters. */
 			opts: [String],
+			/** The same option values as the store wrote them ("Size=M"), one per entry of `opts`, in its order. */
+			labels: [String],
 		},
 		signals: {
 			_id: false,

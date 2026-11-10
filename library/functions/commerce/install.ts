@@ -220,7 +220,7 @@ export const startSetup = async (req: any, project: any) => {
 		runInScope(scope, async () => {
 			try {
 				const { installed, features } = await install(req, project, view.answers);
-				await CommerceSettings.updateOne({ _id: doc._id }, { $set: { status: 'ready', installed, features, finishedAt: new Date(), step: 'review' } });
+				await CommerceSettings.updateOne({ _id: doc._id }, { $set: { status: 'ready', installed, features, finishedAt: new Date(), step: 'review', 'search.enabled': true } });
 				recordProjectEvent({ req, action: 'create', model: 'Store', modelPath: 'store', document: project._id, name: 'Store', text: 'set up the store' });
 			} catch (e: any) {
 				console.error('store setup:', e?.message, e?.problems || '');

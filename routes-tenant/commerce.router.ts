@@ -19,6 +19,7 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, markSettled, moveManual, receiveReturn, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 import { rebuildSearch, searchIndexStatus } from '../library/functions/commerce/search/indexer.js';
+import { saveSearchSettings, searchSettingsView } from '../library/functions/commerce/search/http.js';
 import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 
 /**
@@ -475,11 +476,28 @@ router.post(
  * Store search's index (docs/search SI5):
  *   GET  /search/status    documents against findable products, queued, version, the last rebuild and drift check   records:view
  *   POST /search/rebuild   builds every product's search document again, in the background (202)   manage-projects
+ *   GET  /search/settings  on (true / false / null = not switched on by name yet), typos, out of stock, dials, learning, Banglish, defaults   records:view
+ *   PUT  /search/settings  { enabled?, typos?, outOfStock?, dials?: { popularity|freshness|sale|learned }, learning?, banglish? }   manage-projects
  */
 router.get(
 	'/search/status',
 	view,
 	handle(async () => searchIndexStatus(await storeOf()))
+);
+router.get(
+	'/search/settings',
+	view,
+	handle(async () => (await storeOf(), searchSettingsView()))
+);
+router.put(
+	'/search/settings',
+	manage,
+	handle(async (req: any) => {
+		await storeOf();
+		const view = await saveSearchSettings(req.body || {});
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Search', text: `changed the store’s search settings (${Object.keys(req.body || {}).join(', ')})` });
+		return view;
+	})
 );
 router.post(
 	'/search/rebuild',

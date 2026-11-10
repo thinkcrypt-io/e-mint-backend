@@ -243,8 +243,9 @@ describe('filters and their counts', () => {
 	it('filters by option values, any case', async () => {
 		const r = await search('polo', { facets: true, filters: { opts: { size: ['m'] } } });
 		expect(r.doc.map(d => d.name)).toEqual(['Cotton Polo']);
-		expect(r.facets!.opts.size.map(o => o.value).sort()).toEqual(['m', 's']);
-		expect(r.facets!.opts.colour).toEqual([{ value: 'navy', count: 1 }]);
+		expect(r.facets!.opts.size.name).toBe('Size');
+		expect(r.facets!.opts.size.values.map(o => o.label).sort()).toEqual(['M', 'S']);
+		expect(r.facets!.opts.colour.values).toEqual([{ value: 'navy', label: 'Navy', count: 1 }]);
 		expect((await search('polo', { filters: { opts: { Size: ['XL'] } } })).total).toBe(0);
 	});
 

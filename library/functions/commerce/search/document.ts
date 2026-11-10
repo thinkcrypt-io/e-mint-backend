@@ -165,7 +165,7 @@ export const docFor = (p: any, variants: any[], ctx: { tree: Map<string, any>; b
 			price,
 			onSale,
 			inStock,
-			opts: [...new Set([...opts].flatMap(([n, vs]) => [...vs].map(v => optKey(n, v))))].filter(s => !s.startsWith('=') && !s.endsWith('=')),
+			...optionFacets(opts),
 		},
 		signals: { views: Number(p.views) || 0, wishes: Number(p.wishlistCount) || 0, createdAt: p.createdAt ?? null },
 		card: {
@@ -183,6 +183,20 @@ export const docFor = (p: any, variants: any[], ctx: { tree: Map<string, any>; b
 		},
 		sourceAt: p.updatedAt ?? null,
 	};
+};
+
+/** Option values as filter keys ("size=m") and, in the same order, as the store wrote them ("Size=M"). */
+const optionFacets = (opts: Map<string, Set<string>>) => {
+	const keys: string[] = [];
+	const labels: string[] = [];
+	for (const [n, vs] of opts)
+		for (const v of vs) {
+			const k = optKey(n, v);
+			if (k.startsWith('=') || k.endsWith('=') || keys.includes(k)) continue;
+			keys.push(k);
+			labels.push(`${n}=${v}`);
+		}
+	return { opts: keys, labels };
 };
 
 /** Whether a product is one shoppers can find. */

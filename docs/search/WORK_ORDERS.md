@@ -23,9 +23,9 @@ The user answered README §8 on 2026-11-10.
 | SI-02 | Normaliser + Banglish key (SI6, SI7): `normalise.ts`, `banglish.ts`, starter word list, unit tests (≥ 150 cases: plurals, units, t-shirt, Bangla variants, digits, Banglish ↔ Bangla) | backend | M | done 2026-11-10 |
 | SI-03 | Search document + indexer (SI4, SI5): `SearchDoc` / `SearchQueue` models + indexes, `document.ts`, hooks on product / variant / category / brand / collection / discount / stock, leased tick, `rebuildSearch`, `scripts/searchRebuild.js`, nightly drift check; Product `keywords`; `upgradeStore` | backend | L | done 2026-11-11 |
 | SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | done 2026-11-11 |
-| SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend | M | open |
+| SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend + mint-tenant + mint-docs | M | done 2026-11-11 (`/popular` moved to SI-12) |
 | **Phase 2 — Storefronts** | | | | |
-| SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | open |
+| SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | open — the backend routes are ready (SI-05) |
 | SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-builder | L | open |
 | SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | open |
 | **Phase 3 — Understanding** | | | | |
@@ -33,7 +33,7 @@ The user answered README §8 on 2026-11-10.
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | open |
 | SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | open |
 | **Phase 4 — Insights** | | | | |
-| SI-12 | Events + attribution (SI17, SI18): `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | open |
+| SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | open |
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | open |
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | open |
 | **Phase 5 — Merchandising and learning** | | | | |
@@ -50,18 +50,23 @@ The user answered README §8 on 2026-11-10.
 
 ## Handoff
 
-SI-02, SI-03 and SI-04 are done (2026-11-10 / 11). The engine works but has no public route yet. It is `storeSearch(store, req)` and
-`storeSuggest(store, q)` in `commerce/search/engine.ts` (request: `q, page, limit ≤ 60, sort (relevance | popular |
-price | -price | newest | name), filters { categories, brands, price { gte, lte }, inStock, onSale, opts { Size: [M] } },
-facets, explain`). Next is SI-05: the public routes around them, the settings defaults in `CommerceSettings.search`,
-names for the category and brand ids in the counts, and `explain` only with a server key.
+SI-02…SI-05 are done (2026-11-10 / 11). Storefronts can now search: `GET /public/api/store/search` and
+`/store/search/suggest`. A plain `search=` on Products is ranked too once a store has search on, which new stores
+do from setup. The panel has the routes `GET/PUT /commerce/search/settings` and `/search/status|rebuild`, but no
+screen for them yet.
 
-Known gaps:
-- Option values come back normalised ("size=m", "navy"); SI-05 should show them as the store wrote them.
-- The popularity signal uses all-time views until SI-13 fills `sold30` and `views30`.
+Next, any order:
+- **SI-06** — the Store settings → Search screen on those routes.
+- **SI-07** — the mint.js widget.
+- **SI-08** — HINT and Live Fresh on the new routes.
+- **SI-09** — query understanding.
 
-Tests: `npx jest library/functions/commerce/search` (324, with the 77-query relevance suite) ·
-`scripts/tenancy-smoke/search-index.mjs` (31) · `scripts/tenancy-smoke/search-engine.mjs` (parity + the 20k bench).
+Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
+`/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
+
+Tests:
+- `npx jest library/functions/commerce/search` (324)
+- smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (46)
 
 ---
 
@@ -129,7 +134,18 @@ The first notes:
     - "শাড়ি" → Jamdani Saree
   - `search-bench.mjs` (20k products) holds p95 under 250 ms for search and under 80 ms for suggest, on a local Mongo and on the prod-tier cluster.
 
-## SI-05 — Public search API (M)
+## SI-05 — Public search API (M) — done 2026-11-11
+
+Built as below, plus:
+- collection filters;
+- option values as the store wrote them (`facets.labels` on SearchDoc);
+- the settings routes;
+- new stores switched on at setup.
+- **`/popular` moved to SI-12**, because it needs the search log.
+- The Products `search=` goes to the engine only for `search.enabled === true` (set by name), so storefronts on today's answers keep them until a store is checked.
+
+The guide is mint-docs `/store#store-search`. Website setup gained a Store search panel (mint-tenant). The marketing changelog has the entry.
+
 
 - The routes as listed in README §5, with the rate limits, `Cache-Control: max-age=30`, and validation that answers in plain words.
 - `CommerceSettings.search` defaults, `upgradeStore` adds them, and rebuild is queued.

@@ -60,6 +60,8 @@ describe('a product’s search document (SI4)', () => {
 	it('takes option values from the product and its active variants only', () => {
 		expect(d.fields.option.words.sort()).toEqual(['blue', 'l', 'm', 's', 'white'].sort());
 		expect(d.facets.opts.sort()).toEqual(['colour=blue', 'colour=white', 'size=l', 'size=m', 'size=s'].sort());
+		expect(d.facets.labels.sort()).toEqual(['Colour=Blue', 'Colour=White', 'Size=L', 'Size=M', 'Size=S'].sort());
+		expect(d.facets.labels.map((l: string) => l.toLowerCase())).toEqual(d.facets.opts); // same order
 	});
 
 	it('puts every word and stem in terms, the description too', () => {
@@ -115,7 +117,7 @@ describe('a product’s search document (SI4)', () => {
 	it('handles a bare product', () => {
 		const bare = docFor({ _id: 'p2', name: 'Candle', price: 500, totalStock: 2 }, [], { ...ctx, custom: [] });
 		expect(bare.fields.name.words).toEqual(['candle']);
-		expect(bare.facets).toMatchObject({ categories: [], brand: null, price: 500, onSale: false, inStock: true, opts: [] });
+		expect(bare.facets).toMatchObject({ categories: [], brand: null, price: 500, onSale: false, inStock: true, opts: [], labels: [] });
 		expect(bare.codes).toEqual([]);
 	});
 

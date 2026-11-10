@@ -9,6 +9,7 @@ import { normalise } from './normalise.js';
 
 export type Filters = {
 	categories?: string[];
+	collections?: string[];
 	brands?: string[];
 	price?: { gte?: number | null; lte?: number | null };
 	inStock?: boolean;
@@ -16,7 +17,7 @@ export type Filters = {
 	/** Option name → values (as typed: "Size" → ["M", "L"]). */
 	opts?: Record<string, string[]>;
 };
-export type Group = 'categories' | 'brands' | 'price' | 'inStock' | 'onSale' | `opt:${string}`;
+export type Group = 'categories' | 'collections' | 'brands' | 'price' | 'inStock' | 'onSale' | `opt:${string}`;
 
 /** An option name or value as documents keep it ("Size" → "size", "Off White" → "offwhite"). */
 export const optPart = (s: any) => normalise(String(s ?? '')).words.join('');
@@ -28,6 +29,7 @@ const sid = (v: any) => (v == null ? '' : String(v?._id ?? v));
 export const cleanFilters = (f: Filters = {}): Filters => {
 	const out: Filters = {};
 	if (f.categories?.length) out.categories = f.categories.map(sid).filter(Boolean);
+	if (f.collections?.length) out.collections = f.collections.map(sid).filter(Boolean);
 	if (f.brands?.length) out.brands = f.brands.map(sid).filter(Boolean);
 	const gte = f.price?.gte != null && Number.isFinite(Number(f.price.gte)) ? Number(f.price.gte) : null;
 	const lte = f.price?.lte != null && Number.isFinite(Number(f.price.lte)) ? Number(f.price.lte) : null;
@@ -48,6 +50,7 @@ export const cleanFilters = (f: Filters = {}): Filters => {
 export const passes = (doc: any, f: Filters, except?: Group) => {
 	const fc = doc.facets || {};
 	if (f.categories && except !== 'categories' && !(fc.categories || []).some((c: any) => f.categories!.includes(sid(c)))) return false;
+	if (f.collections && except !== 'collections' && !(fc.collections || []).some((c: any) => f.collections!.includes(sid(c)))) return false;
 	if (f.brands && except !== 'brands' && !f.brands.includes(sid(fc.brand))) return false;
 	if (f.price && except !== 'price') {
 		const p = Number(fc.price);
@@ -97,11 +100,14 @@ export const priceBuckets = (prices: number[]) => {
 	return { min, max, buckets: buckets.filter(b => b.count > 0) };
 };
 
+export type OptionCount = { value: string; label: string; count: number };
 export type FacetCounts = {
 	categories: { _id: string; count: number }[];
+	collections: { _id: string; count: number }[];
 	brands: { _id: string; count: number }[];
 	price: { min: number | null; max: number | null; buckets: { from: number; to: number; count: number }[] };
-	opts: Record<string, { value: string; count: number }[]>;
+	/** Option name key → its name as written and each value's count ("size" → Size: M 3, L 1). */
+	opts: Record<string, { name: string; values: OptionCount[] }>;
 	inStock: number;
 	onSale: number;
 };
@@ -112,6 +118,9 @@ const sorted = (m: Map<string, number>) => [...m].map(([_id, count]) => ({ _id, 
 /** Every group's counts over these documents, each ignoring its own selection. */
 export const facetCounts = (docs: any[], f: Filters): FacetCounts => {
 	const cats = new Map<string, number>();
+	const cols = new Map<string, number>();
+	const names = new Map<string, string>();
+	const labels = new Map<string, string>();
 	const brands = new Map<string, number>();
 	const prices: number[] = [];
 	const opts = new Map<string, Map<string, number>>();
@@ -120,22 +129,31 @@ export const facetCounts = (docs: any[], f: Filters): FacetCounts => {
 	for (const d of docs) {
 		const fc = d.facets || {};
 		if (passes(d, f, 'categories')) for (const c of fc.categories || []) tally(cats, sid(c));
+		if (passes(d, f, 'collections')) for (const c of fc.collections || []) tally(cols, sid(c));
 		if (passes(d, f, 'brands') && fc.brand) tally(brands, sid(fc.brand));
 		if (passes(d, f, 'price') && Number.isFinite(Number(fc.price))) prices.push(Number(fc.price));
 		if (passes(d, f, 'inStock') && fc.inStock) inStock++;
 		if (passes(d, f, 'onSale') && fc.onSale) onSale++;
-		for (const o of fc.opts || []) {
+		(fc.opts || []).forEach((o: any, i: number) => {
 			const [name, value] = String(o).split('=');
-			if (!name || !value || !passes(d, f, `opt:${name}`)) continue;
+			if (!name || !value) return;
+			// As the store wrote it, from the first document that says ("Size=M"); else the key itself.
+			const [ln, lv] = String(fc.labels?.[i] ?? '').split('=');
+			if (ln && !names.has(name)) names.set(name, ln);
+			if (lv && !labels.has(o)) labels.set(o, lv);
+			if (!passes(d, f, `opt:${name}`)) return;
 			if (!opts.has(name)) opts.set(name, new Map());
 			tally(opts.get(name)!, value);
-		}
+		});
 	}
 	return {
 		categories: sorted(cats),
+		collections: sorted(cols),
 		brands: sorted(brands),
 		price: priceBuckets(prices),
-		opts: Object.fromEntries([...opts].map(([n, m]) => [n, sorted(m).map(x => ({ value: x._id, count: x.count }))])),
+		opts: Object.fromEntries(
+			[...opts].map(([n, m]) => [n, { name: names.get(n) || n, values: sorted(m).map(x => ({ value: x._id, label: labels.get(`${n}=${x._id}`) || x._id, count: x.count })) }])
+		),
 		inStock,
 		onSale,
 	};

@@ -61,6 +61,8 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { commerceView } from '../library/functions/commerce/settings.js';
 import { storeOf } from '../library/functions/commerce/store.js';
 import { addToWishlist, mergeWishlist, myWishlist, removeFromWishlist, viewProduct } from '../library/functions/commerce/wishlist.js';
+import { storeSearch, storeSuggest } from '../library/functions/commerce/search/engine.js';
+import { listSearchUsesEngine, publicAnswer, searchIsOn, searchRequestOf } from '../library/functions/commerce/search/http.js';
 import { createWebsite, myWebsiteOrder, myWebsiteOrders, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
 import {
 	fieldKeys,
@@ -680,6 +682,42 @@ router.post('/store/my/wishlist', storeWishLimit, handle(async (req: any) => (ec
 router.delete('/store/my/wishlist/:id', storeWishLimit, handle(async (req: any) => (ecommerce(req), removeFromWishlist(await storeOf(), await signedIn(req), req.params.id))));
 router.post('/store/products/:id/view', storeViewLimit, handle(async (req: any) => (ecommerce(req), viewProduct(await storeOf(), req.params.id))));
 
+/**
+ * Store search (docs/search SI-05): ranked products with typos, Bangla / Banglish, filters and their counts; no
+ * words = a category page. The query string is described in functions/commerce/search/http.ts. `explain=1` (each
+ * result's score, broken down) only with a server key. Answers can be cached 30 s (the index version is the key).
+ *
+ *   GET /store/search            { doc: [cards], total, page, limit, totalPages, facets?, query: { words, typos }, ms }
+ *   GET /store/search/suggest?q  { queries, products, categories, brands, ms }
+ */
+const storeSearchLimit = rateLimit({ name: 'public-store-search', windowMs: 60 * 1000, max: 120 });
+const storeSuggestLimit = rateLimit({ name: 'public-store-suggest', windowMs: 60 * 1000, max: 600 });
+const searchOn = async (req: any) => {
+	ecommerce(req);
+	if (!(await searchIsOn())) throw new TenancyError(404, 'This store’s search is switched off', 'search_off');
+	return storeOf();
+};
+router.get(
+	'/store/search',
+	storeSearchLimit,
+	handle(async (req: any, res: any) => {
+		const store = await searchOn(req);
+		const canExplain = !!(await serverKeyOf(req));
+		const ask = await searchRequestOf(store, req.query || {}, { canExplain });
+		res.setHeader('Cache-Control', ask.explain ? 'no-store' : 'public, max-age=30');
+		return publicAnswer(store, await storeSearch(store, ask));
+	})
+);
+router.get(
+	'/store/search/suggest',
+	storeSuggestLimit,
+	handle(async (req: any, res: any) => {
+		const store = await searchOn(req);
+		res.setHeader('Cache-Control', 'public, max-age=30');
+		return storeSuggest(store, String(req.query?.q ?? ''));
+	})
+);
+
 // The site widgets switched on for this project, and their look (docs/widgets W-03) — read by mint.js.
 router.get(
 	'/widgets',
@@ -1129,6 +1167,19 @@ const applyLinked = async (plan: any, saved: any, undo: () => Promise<any>) => {
 	}
 };
 
+/** The query names a plain `search=` may come with and still go to the store's engine. */
+const ENGINE_LIST_KEYS = new Set(['search', 'page', 'limit', 'fields', 'populate', 'apiKey', 'links']);
+/** Product ids for a store's Products list searched by words, ranked by the store's engine; null to list as usual. */
+const engineRanked = async (req: any, def: any, page: number, limit: number) => {
+	const words = String(Array.isArray(req.query.search) ? req.query.search[0] : (req.query.search ?? '')).trim();
+	// More than a search page holds (60): listed as before, so paging stays the caller's.
+	if (!words || limit > 60 || req.project?.type !== 'ecommerce' || Object.keys(req.query || {}).some(k => !ENGINE_LIST_KEYS.has(k))) return null;
+	const store = await storeOf().catch(() => null);
+	if (!store || !store.is('product', def.name) || !(await listSearchUsesEngine())) return null;
+	const r = await storeSearch(store, { q: words, page, limit });
+	return { ids: r.doc.map((d: any) => d._id), total: r.total };
+};
+
 const list = async (req: any, ctx: Ctx) => {
 	const { def, Model, ep } = ctx;
 	// A single type (docs/cms D2) answers with its one record, as an object — 404 until it's made.
@@ -1154,6 +1205,19 @@ const list = async (req: any, ctx: Ctx) => {
 	const keys = outFor(ctx, req.query.fields);
 	const populate = (await refPopulates(def)).filter((p: any) => keys.includes(p.path));
 	const sort = listSort(def, own && req.query.sort ? req.query.sort : ep.list?.sort);
+	// A store's Products searched with plain `search=` (no sort, no other filters) are ranked by the store's search
+	// engine once the store has it switched on (docs/search SI-05): typos, Banglish, best matches first. The answer
+	// keeps this list's shape.
+	const ranked = own ? await engineRanked(req, def, page, limit) : null;
+	if (ranked) {
+		const found: any[] = ranked.ids.length ? await liveFind(def, Model, { query: { ...base, _id: { $in: ranked.ids } }, keys, sort: { _id: 1 }, skip: 0, limit: ranked.ids.length, populate, draft, stamp: true }) : [];
+		const at = new Map(ranked.ids.map((id: any, i: number) => [String(id), i]));
+		found.sort((a: any, b: any) => (at.get(String(a._id)) ?? 0) - (at.get(String(b._id)) ?? 0));
+		await fillLinks(req, ctx, found, links, draft);
+		await withImageDetails(def, found);
+		const out = stampKeys(def, keys);
+		return { doc: found.map((d: any) => shapeOut(d, out)), total: ranked.total, page, limit, totalPages: Math.ceil(ranked.total / limit) || 1 };
+	}
 	// A drafts model's published values (docs/cms D5); any other's records as they are.
 	const [docs, total]: any[] = await Promise.all([
 		liveFind(def, Model, { query, keys, sort, skip: (page - 1) * limit, limit, populate, draft, stamp: true }),
