@@ -60,6 +60,7 @@ import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { commerceView } from '../library/functions/commerce/settings.js';
 import { storeOf } from '../library/functions/commerce/store.js';
+import { addToWishlist, mergeWishlist, myWishlist, removeFromWishlist, viewProduct } from '../library/functions/commerce/wishlist.js';
 import { createWebsite, myWebsiteOrder, myWebsiteOrders, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
 import {
 	fieldKeys,
@@ -656,6 +657,28 @@ router.get(
 		return trackWebsite(await storeOf(), req.params.id, req.query.phone);
 	})
 );
+
+/**
+ * Wishlist and views (docs/ecommerce CARTS_AND_WISHLISTS). A guest keeps hearts in their browser and sends them
+ * on sign-in; the store counts each product's wishes and page views itself.
+ *
+ *   GET    /store/my/wishlist         the signed-in customer's wishlist, with each product as it is now
+ *   POST   /store/my/wishlist         { product (id or slug), variant? } add (asking again is fine)
+ *   DELETE /store/my/wishlist/:id     take one away
+ *   POST   /store/my/wishlist/merge   { items: [{ product, variant? }] } a guest's hearts on sign-in → the wishlist
+ *   POST   /store/products/:id/view   counts one view of a product's page (id or web address)
+ */
+const storeWishLimit = rateLimit({ name: 'public-store-wishlist', windowMs: 10 * 60 * 1000, max: 120 });
+const storeViewLimit = rateLimit({ name: 'public-store-views', windowMs: 10 * 60 * 1000, max: 300 });
+const ecommerce = (req: any) => {
+	if (req.project.type !== 'ecommerce') throw new TenancyError(404, 'Only e-commerce projects have a store');
+};
+
+router.get('/store/my/wishlist', handle(async (req: any) => (ecommerce(req), myWishlist(await storeOf(), await signedIn(req)))));
+router.post('/store/my/wishlist/merge', storeWishLimit, handle(async (req: any) => (ecommerce(req), mergeWishlist(await storeOf(), await signedIn(req), req.body?.items))));
+router.post('/store/my/wishlist', storeWishLimit, handle(async (req: any) => (ecommerce(req), addToWishlist(await storeOf(), await signedIn(req), req.body || {}))));
+router.delete('/store/my/wishlist/:id', storeWishLimit, handle(async (req: any) => (ecommerce(req), removeFromWishlist(await storeOf(), await signedIn(req), req.params.id))));
+router.post('/store/products/:id/view', storeViewLimit, handle(async (req: any) => (ecommerce(req), viewProduct(await storeOf(), req.params.id))));
 
 // The site widgets switched on for this project, and their look (docs/widgets W-03) — read by mint.js.
 router.get(

@@ -42,6 +42,7 @@ const ENGINE_ONLY_TEXT: Partial<Record<ModelKey, string>> = {
 	shift: 'Shifts are opened and closed at the POS',
 	credit: 'Store credit is given by a refund or on the customer’s page',
 	delivery: 'Deliveries are made by Send to courier on an order',
+	wishlist: 'Wishlist rows are made by the heart on your website',
 };
 
 /**

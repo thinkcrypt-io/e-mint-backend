@@ -77,6 +77,7 @@ const ICONS: Record<ModelKey, string> = {
 	purchase: 'shopping-bag',
 	stockin: 'package-plus',
 	delivery: 'package-check',
+	wishlist: 'heart',
 };
 
 /**

@@ -492,3 +492,12 @@
 - Guide: mint-docs Automations → When a date is reached.
 - Smoke `automations-date.mjs` (27 checks, server with `AUTOMATION_TICK_MS=2000`) all pass; `automations.mjs`, `automations-linked.mjs`, `automations-mcp.mjs`, `commerce-tax.mjs` still pass. Not deployed.
 
+
+## 2026-11-10 — EC-31 Wishlist + product views
+- The user (HINT): guests keep hearts in the browser and merge on sign-in; one wishlist model for every e-commerce project so admins see which products are wished and how many times; every product counts its views.
+- Blueprint: **Wishlist** (`wishlist-items`, model `WishlistItem`, engine-only, heart icon): customer email + name, product, variant, price when added, added. Products gain **Views** and **Wished by** (`views`, `wishlistCount`, engine fields, in the Products table; the public product list/page send them back). A built store gets the model and the fields from `upgradeStores.js`.
+- Engine `commerce/wishlist.ts`: add (once per customer × product × variant), remove (by wish id or product id, own only), merge a guest's hearts (max 100; a gone product is skipped), list with each product as it is now; every change recounts the product's `wishlistCount`; a view is `$inc views` (no history, no timestamps), 404 for an unknown / draft / archived product.
+- Public: `GET/POST /store/my/wishlist`, `DELETE /store/my/wishlist/:id`, `POST /store/my/wishlist/merge`, `POST /store/products/:id/view` (id or web address; rate limited). Plain writes to the Wishlist table and to the two counters are refused.
+- Smoke `commerce-wishlist.mjs` (all pass, private server :5081): model + counters start at 0, signed-out 401s, add / twice / unknown, counts 2 → 1, merge, own-only remove, by product id, staff table, views, views not typable.
+- HINT storefront (hint-site): `lib/wishlistSync.ts`, a middleware saving each heart when signed in, `WishlistSync` joining the browser's hearts on sign-in, `countView` in ProductView. All silent no-ops until the backend is deployed.
+- Not built: Wished-by tab on the product page / who-wished on the customer page, dashboard widget, staff notice at N wishes, back-in-stock / price-drop alerts (MK-17).

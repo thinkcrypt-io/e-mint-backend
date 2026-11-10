@@ -449,7 +449,7 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		if (spec.key === 'coupon') change.filled.push(...(await fillCoupons(def, apply)));
 		if (spec.key === 'product') change.filled.push(...(await fillProducts(def, apply)));
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));
-		if (spec.key === 'product' || spec.key === 'variant') change.filled.push(...(await fillOut({ ...def, fields }, ['salePrice', 'discountPercent', 'discount'], 'sale price and discount', apply)));
+		if (spec.key === 'product' || spec.key === 'variant') change.filled.push(...(await fillOut({ ...def, fields }, ['salePrice', 'discountPercent', 'discount', 'views', 'wishlistCount'], 'sale price, discount, views and wishes', apply)));
 		if (spec.key === 'category') change.filled.push(...(await fillCategories(def, apply, added.includes('webOrder'))), ...(await fillEndpoints({ ...def, fields }, apply)));
 		if (change.added.length || change.renewed.length || change.filled.length) changes.push(change);
 	}

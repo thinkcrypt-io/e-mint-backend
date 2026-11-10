@@ -108,6 +108,6 @@ Each WO is committed and pushed when done. The backend deploy to Heroku and the 
 1. **Mint-wide** (every store, as above) or **Verte only** (builder models + storefront code, no Mint changes)?
 2. Save the phone / email typed at checkout **before** the order is placed (needed to reach most abandoned carts)?
 3. Abandoned after **60 minutes**? Automatic reminder email in the first release, or manual only?
-4. Wishlist for guests: **browser + merge on sign-in** (as above), or sign-in required to tap the heart?
+4. Wishlist for guests: **browser + merge on sign-in** — *answered 2026-11-10: yes, as above*; EC-31 built (see CHANGELOG), with product **Views** added.
 5. Later, not in this plan unless asked: back-in-stock / price-drop emails from wishlists, discount coupon in the
    reminder email.

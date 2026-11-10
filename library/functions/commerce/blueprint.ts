@@ -36,7 +36,8 @@ export type ModelKey =
 	| 'return'
 	| 'credit'
 	| 'purchase'
-	| 'delivery';
+	| 'delivery'
+	| 'wishlist';
 
 export type ModelSpec = {
 	key: ModelKey;
@@ -250,7 +251,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'product',
 		shownWhen: null,
-		engine: ['totalStock', 'taxAdded', 'discount', 'discountPercent'],
+		engine: ['totalStock', 'taxAdded', 'discount', 'discountPercent', 'views', 'wishlistCount'],
 		step: {
 			name: 'Product',
 			title: 'Products',
@@ -298,6 +299,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ key: 'images', label: 'Images', kind: 'images' },
 				{ key: 'description', label: 'Description', kind: 'textarea' },
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
+				{ key: 'views', label: 'Views', kind: 'number', default: 0, helper: 'Not typed: how many times its page on your website was opened' },
+				{ key: 'wishlistCount', label: 'Wished by', kind: 'number', default: 0, helper: 'Not typed: how many customers put it on their wishlist' },
 				{ key: 'seo', label: 'SEO', kind: 'seo', helper: 'Its title, description and share image in search results and links — for its page on your website' },
 			],
 			form: [
@@ -309,7 +312,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ sectionTitle: 'Images', fields: ['images'] },
 				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
 			],
-			table: ['name', 'category', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'status'],
+			table: ['name', 'category', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'views', 'wishlistCount', 'status'],
 			filters: ['status', 'category', 'collections', 'productType'],
 		},
 	},
@@ -1021,6 +1024,30 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['code', 'order', 'courierName', 'status', 'trackingCode', 'cod', 'collected', 'bookedAt', 'lastEventAt'],
 			filters: ['courier', 'status', 'settled', 'bookedAt'],
+		},
+	},
+	{
+		key: 'wishlist',
+		shownWhen: null,
+		engineOnly: true,
+		engine: ['email', 'customerName', 'product', 'variant', 'priceWhenAdded', 'addedAt'],
+		step: {
+			name: 'WishlistItem',
+			title: 'Wishlist',
+			route: 'wishlist-items',
+			description: 'What customers saved on your website — who wished which product, and when',
+			rationale: 'Made by the heart on your website (signed-in customers); each product counts its wishes (Wished by).',
+			displayField: 'customerName',
+			fields: [
+				{ key: 'email', label: 'Customer email', kind: 'text', searchable: true },
+				{ key: 'customerName', label: 'Customer', kind: 'text', searchable: true },
+				{ key: 'product', label: 'Product', kind: 'reference', ref: 'Product', required: true },
+				{ key: 'variant', label: 'Variant', kind: 'reference', ref: 'Variant', helper: 'Only when they picked a size or colour' },
+				money('priceWhenAdded', 'Price when added', { default: undefined }),
+				{ key: 'addedAt', label: 'Added', kind: 'date' },
+			],
+			table: ['product', 'customerName', 'email', 'priceWhenAdded', 'addedAt'],
+			filters: ['product'],
 		},
 	},
 ];

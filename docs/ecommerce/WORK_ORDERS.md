@@ -49,6 +49,7 @@ wizard step and dialog) and the marketing website as it lands.
 | EC-45 | The till charges the sale price: order lines, POS, receipts, website orders, returns; Store setting *Coupons apply to* (discounted price by default / original price) | backend + mint-tenant | M | **done 2026-11-05** (deployed 2026-11-06) |
 | EC-46 | Discounts on the website API + Live Fresh strike-through + MCP | backend + live-fresh | S | **done 2026-11-05** (deployed 2026-11-06; Verte upgraded) |
 | EC-47 | Built stores (`upgradeStore`, `sale-price` fill) + guides + website | backend + mint-tenant + mint-docs + mint-webpage + prod | S | **done 2026-11-05** — **deployed + Verte upgraded on prod 2026-11-06** |
+| EC-31 | Wishlist + product views (as answered 2026-11-10): `Wishlist` model on every store (signed-in customers; a guest's hearts stay in the browser and merge on sign-in), Products gain **Views** and **Wished by** (engine-owned, in the table), public `GET/POST/DELETE /store/my/wishlist`, `POST …/merge`, `POST /store/products/:id/view`; HINT storefront syncs hearts + counts views | backend + hint-site | M | **backend + HINT done 2026-11-10** (not deployed; then `upgradeStores.js` dry run / `--apply` on prod). Not built: product page “Wished by” tab, dashboard widget, alerts (MK-17) |
 
 ## Handoff
 
