@@ -1,5 +1,20 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-06 Store settings → Search
+
+- mint-tenant `/store/settings/search` (bb94551): one card for the settings (search on, typos Off / Normal / Forgiving,
+  Bangla and Banglish, out of stock Show them last / Hide them, the four lifts Off–High, learn from shoppers, Back to
+  the defaults, Undo) and one for the search index (searchable of active, waiting, last full build and why, last
+  checked, Rebuild with progress, a note when the numbers differ, a failed rebuild's reason).
+- The menu item "Search settings" (backend `tenantNav.function.ts`).
+- Guide sections `store-search-settings` and `store-search-index` (mint-docs e4cd711). The marketing changelog entry
+  gained a line (e90fb2d).
+- Checked in headless Chrome against a test backend, signed in as a made-up @example.com owner:
+  - the page renders with no console errors at 1440 and 390 px;
+  - Typos → Off updates its hint, and Save stores `typos: off` and clears Undo;
+  - Rebuild finishes with "from here";
+  - a store with `search.enabled` unset shows "Not switched on yet".
+
 ## 2026-11-11 — SI-05 Public search API
 
 - **Public routes:** `GET /public/api/store/search` and `/store/search/suggest` (`routes-public/public.router.ts`), with the

@@ -25,7 +25,7 @@ The user answered README §8 on 2026-11-10.
 | SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | done 2026-11-11 |
 | SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend + mint-tenant + mint-docs | M | done 2026-11-11 (`/popular` moved to SI-12) |
 | **Phase 2 — Storefronts** | | | | |
-| SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | open — the backend routes are ready (SI-05) |
+| SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | done 2026-11-11 (filters to show + suggestion counts left for later) |
 | SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-builder | L | open |
 | SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | open |
 | **Phase 3 — Understanding** | | | | |
@@ -50,13 +50,13 @@ The user answered README §8 on 2026-11-10.
 
 ## Handoff
 
-SI-02…SI-05 are done (2026-11-10 / 11). Storefronts can now search: `GET /public/api/store/search` and
+SI-02…SI-06 are done (2026-11-10 / 11). Storefronts can now search: `GET /public/api/store/search` and
 `/store/search/suggest`. A plain `search=` on Products is ranked too once a store has search on, which new stores
-do from setup. The panel has the routes `GET/PUT /commerce/search/settings` and `/search/status|rebuild`, but no
-screen for them yet.
+do from setup. The panel has **Store settings → Search settings** (mint-tenant `/store/settings/search`): search on
+or off, typos, Banglish, out of stock, the four lifts, learning, and the search index with Rebuild. It is checked in a
+browser against a test backend.
 
 Next, any order:
-- **SI-06** — the Store settings → Search screen on those routes.
 - **SI-07** — the mint.js widget.
 - **SI-08** — HINT and Live Fresh on the new routes.
 - **SI-09** — query understanding.
@@ -153,7 +153,19 @@ The guide is mint-docs `/store#store-search`. Website setup gained a Store searc
 - Website setup: a Search section with fetch examples (JS, Next.js server component) and the response shape.
 - **Done when** `search-api.mjs` covers paging, every filter, facets that ignore their own group, a category page, suggest, popular with the 3-visitor floor, rate limits, and `explain` refused without a server key.
 
-## SI-06 … SI-23 (the rest)
+## SI-06 — Store settings → Search (S) — done 2026-11-11
+
+mint-tenant: `SearchSettings.tsx` on the new page `/store/settings/search`, plus the menu item (backend
+`tenantNav.function.ts`, after Product settings) and the commerceApi calls (`getStoreSearchSettings` /
+`saveStoreSearchSettings` / `getStoreSearchStatus` / `rebuildStoreSearch`). Saving sends only what changed, so a
+store not yet switched on by name stays "not switched on" until someone flips it. A store with no `search.enabled`
+shows that state. The index card polls while a rebuild runs. The guide has the anchors `store-search-settings` and
+`store-search-index`.
+
+**Left out** (no backend for them yet): choosing which filters a storefront shows, and how many suggestions it
+gives. Storefronts decide both for now.
+
+## SI-07 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

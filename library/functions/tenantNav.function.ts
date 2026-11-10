@@ -66,6 +66,7 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				? section('Store settings', 'settings-2', [
 						{ title: 'Store settings', href: '/store/settings', icon: 'store' },
 						{ title: 'Product settings', href: '/store/settings/products', icon: 'package' },
+						{ title: 'Search settings', href: '/store/settings/search', icon: 'search' },
 						{ title: 'Delivery settings', href: '/store/settings/delivery', icon: 'truck' },
 						{ title: 'POS settings', href: '/store/settings/pos', icon: 'scan-barcode' },
 						{ title: 'Printer settings', href: '/store/settings/printer', icon: 'printer' },
