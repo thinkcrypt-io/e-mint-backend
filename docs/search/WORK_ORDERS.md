@@ -6,7 +6,7 @@ L (2–3 days).
 **Where work lands and goes:**
 - **Commits:** commit and push each WO when it's done, then go on. The backend goes to `mint` v3; mint-tenant, mint-docs and mint-webpage go to `origin` main; hint-site goes to `commerce` main; live-fresh-frontend goes to main.
 - **Docs and website:** each WO updates the `/store/search` guide in mint-docs (#anchors on every card and dialog) and the marketing website as it lands.
-- **Tests:** unit tests go in `library/functions/commerce/search/__tests__` (normaliser, Banglish, understand, rank: pure functions, plenty of cases). Smoke tests go in `scripts/tenancy-smoke/search-*.mjs` and `run-all.sh`.
+- **Tests:** unit tests go in `library/functions/commerce/search/test/` (the repo's convention) (normaliser, Banglish, understand, rank: pure functions, plenty of cases). Smoke tests go in `scripts/tenancy-smoke/search-*.mjs` and `run-all.sh`.
 - **Test data:** a seeded store, using the HINT catalogue file (`hint-site/data/products.json`, 260 products, 13 categories) as fixtures, plus `search-bench.mjs` for 20k generated products.
 
 **Order.** Phase 1 is the engine and must come first. Phase 2 (storefronts)
@@ -20,7 +20,7 @@ The user answered README §8 on 2026-11-10.
 |---|---|---|---|---|
 | SI-01 | Plan & docs | backend | S | done 2026-11-10 |
 | **Phase 1 — The engine** | | | | |
-| SI-02 | Normaliser + Banglish key (SI6, SI7): `normalise.ts`, `banglish.ts`, starter word list, unit tests (≥ 150 cases: plurals, units, t-shirt, Bangla variants, digits, Banglish ↔ Bangla) | backend | M | open |
+| SI-02 | Normaliser + Banglish key (SI6, SI7): `normalise.ts`, `banglish.ts`, starter word list, unit tests (≥ 150 cases: plurals, units, t-shirt, Bangla variants, digits, Banglish ↔ Bangla) | backend | M | done 2026-11-10 |
 | SI-03 | Search document + indexer (SI4, SI5): `SearchDoc` / `SearchQueue` models + indexes, `document.ts`, hooks on product / variant / category / brand / collection / discount / stock, leased tick, `rebuildSearch`, `scripts/searchRebuild.js`, nightly drift check; Product `keywords`; `upgradeStore` | backend | L | open |
 | SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | open |
 | SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend | M | open |
@@ -50,17 +50,19 @@ The user answered README §8 on 2026-11-10.
 
 ## Handoff
 
-Nothing built yet. The user answered README §8 on 2026-11-10. Start with SI-02 (pure functions, no database), then SI-03.
+SI-02 is done (2026-11-10): `normalise.ts`, `banglish.ts`, `packs/banglishWords.ts`, with 201 unit tests in
+`test/normalise.test.ts` (`npx jest library/functions/commerce/search`). Nothing uses them yet. Next is SI-03,
+the search document and indexer: it builds each product's words, stems and Banglish keys with `normalise()`.
 
 ---
 
-## SI-02 — Normaliser + Banglish key (M)
+## SI-02 — Normaliser + Banglish key (M) — done 2026-11-10
 
 - `normalise(text, { stem })` → `{ words, stems, phon }`. `normaliseQuery` also keeps the raw words for code matching.
 - Rules exactly as in SI6. The English stemmer is a small, rule-based S-stemmer plus -ing / -ed with exceptions such as dress, glass, jeans, shoes → shoe. **Not** Porter: it is too aggressive for product names.
 - `banglish.ts`:
   - `phonKey(word)`: a Bangla script word goes to a simplified Latin key; a Latin word goes to the same kind of key (sh / s / x merge, ee / i, oo / u, w / o, v / bh, double letters collapse, trailing a / o dropped).
-  - The starter list (`packs/banglish-words.json`) overrides the rules for known words.
+  - The starter list (`packs/banglishWords.ts`, a .ts file so the build needs no JSON setting) overrides the rules for known words.
 - **Done when** the unit tests pass, including the hand list:
   - shari = sari = saree = শাড়ি
   - panjabi = punjabi = পাঞ্জাবি

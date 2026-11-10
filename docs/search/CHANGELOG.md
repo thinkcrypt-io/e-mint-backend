@@ -1,5 +1,21 @@
 # Store search — changelog
 
+## 2026-11-10 — SI-02 Normaliser + Banglish key
+
+- `library/functions/commerce/search/normalise.ts`, which works the same on product text and queries:
+  - `clean`: NFKC, lower case, accents off Latin letters only (Bangla vowel signs are marks too), Bangla digits,
+    ৎ and nukta letters written one way, zero-width characters gone, 1,500 → 1500, 32" → 32 inch.
+  - `tokenise`: a hyphen joins a short side (t-shirt, v-neck) and splits two long ones (high · waist); slashes split.
+    Only t / v / e / x join the next word ("t shirt" → tshirt), so "l size" stays two words. Units are joined to
+    their numbers in one spelling (500 ML, ৫০০ মিলি → 500ml). Each token is a word, a Bangla word, a number or a
+    code. Codes (AB-12.5) keep their punctuation and compare without it.
+  - `stem`: plurals, then -ing / -ed, with word lists for the -ie nouns (hoodies → hoodie) and irregular words.
+  - `normaliseQuery` also keeps the typed text (100 characters at most) and its codes.
+- `banglish.ts`: `phonKey`, the consonant-skeleton key (SI7, rewritten to say how it works). Two choices made while
+  testing: a plural s is dropped (sneakers = স্নিকার্স), and there is no soft-g rule (it parted lungi from লুঙ্গি).
+- `packs/banglishWords.ts`: 169 shop words, 583 spellings. Rows of one sound (চা, ঘি, দুধ, টাই) were dropped.
+- `test/normalise.test.ts`: 201 tests, all passing. `tsc` is clean for these files.
+
 ## 2026-11-10 — The user's answers
 
 - Atlas tier: Flex / shared. The native driver is production, and the Atlas driver (SI-22) is parked (SI3).
