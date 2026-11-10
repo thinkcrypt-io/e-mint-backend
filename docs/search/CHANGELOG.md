@@ -1,5 +1,27 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-03 Search document + indexer
+
+- Models (`library/models/tenancy/`, one collection each for every store, keyed by project): `SearchDoc` (`searchdocs`:
+  flat `terms` / `prefixes` / `grams` / `phon` / `codes`, each indexed with the project; `fields` per part; `facets`;
+  `signals`; `card`) and `SearchQueue` (`searchqueue`, one row per product, leased). `CommerceSettings` gained `search`.
+- `commerce/search/document.ts`: `docFor` (pure) and `buildDocs`.
+  - What it reads: the name, the brand, the category and every one above it, collections, option values (the product's
+    and its active variants'), Search words, the description (tags stripped, 2,000 characters), the owner's own
+    fields marked searchable, and SKUs / barcodes as codes.
+  - What it works out: the selling price (the lowest active variant's; one with no price of its own sells at the
+    product's — the smoke test found this), on sale, in stock, the opts filters, and the card.
+- `commerce/search/indexer.ts`: touch / touchLater / touchForSave, the leased drain, `rebuildSearch`, the sweep, the
+  drift check, `searchIndexStatus`, `scheduleSearchIndex` (server.ts).
+- Hooks: `fireCommerce` (saves and deletes), `stock.ts` `move`, `discounts.ts` `applyDiscounts`.
+- Routes: `GET /tenant/api/p/:id/commerce/search/status`, `POST …/search/rebuild` (managers).
+- `scripts/searchRebuild.js` (dry run / `--apply` / one project).
+- Product blueprint: **Search words** (`keywords`, tags, searchable).
+- Tests: `test/document.test.ts` (16, 217 in all) and `scripts/tenancy-smoke/search-index.mjs` (31 checks, all passing
+  on a private server with the HINT fixtures). The neighbouring smoke tests still pass (stock, wishlist, categories,
+  collections). commerce-install fails on its model count: it expects 23 and stores have had 24 since Wishlist, so this
+  is unrelated. commerce-discounts fails on "ends today" checks run just past midnight in Dhaka, also unrelated.
+
 ## 2026-11-10 — SI-02 Normaliser + Banglish key
 
 - `library/functions/commerce/search/normalise.ts`, which works the same on product text and queries:

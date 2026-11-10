@@ -7,6 +7,7 @@ import { hasCategoryTaxAutomation } from './taxAutomations.js';
 import { syncTaxStatus } from './taxStatus.js';
 import { variantsFollow } from './discounts.js';
 import { refreshProductTax, refreshTaxAdded } from './taxRates.js';
+import { touchForSave } from './search/indexer.js';
 
 /**
  * After a record of a store's model is saved from a page (recordHistory, beside
@@ -27,6 +28,8 @@ export const fireCommerce = ({ model, event, doc, changes }: { model: string; ev
 				if (event !== 'delete' && (!changes || changes.some(c => c.field === 'status'))) await syncTaxStatus(store, doc._id);
 				return void (await refreshTaxAdded(store));
 			}
+			// Store search (docs/search SI5): the products this changes are built again — on a delete too.
+			await touchForSave(store, model, doc).catch((e: any) => console.error('search queue:', e?.message));
 			if (event === 'delete') return;
 			if (store.is('product', model)) {
 				await syncVariants(store, doc._id);

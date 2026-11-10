@@ -23,6 +23,11 @@ const schema = new Schema<any>(
 		doneOnce: { type: [String], default: [] },
 		/** Who had a tax when it was switched to inactive, so switching it back on gives it to them again: taxId → { categories, products }. */
 		taxHeld: { type: Schema.Types.Mixed, default: {} },
+		/**
+		 * Store search (docs/search): the shopper-facing settings (SI-05 / SI-06) and the indexer's own state under
+		 * `index` — version (goes up on every write, the cache key), sweptAt, the last rebuild and drift check.
+		 */
+		search: { type: Schema.Types.Mixed, default: {} },
 		startedAt: Date,
 		finishedAt: Date,
 		error: String,

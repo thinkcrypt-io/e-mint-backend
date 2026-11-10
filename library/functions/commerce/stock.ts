@@ -1,6 +1,7 @@
 import { TenancyError } from '../tenancy.function.js';
 import { Store, itemName } from './store.js';
 import { isId } from './catalogue.js';
+import { touchLater } from './search/indexer.js';
 
 /**
  * Stock per variant per outlet (docs/ecommerce EC8). A level is never edited:
@@ -70,6 +71,8 @@ export const move = async (store: Store, m: Move): Promise<{ after: number | nul
 		store.M('variant').updateOne({ _id: variant._id }, { $inc: { totalStock: change } }),
 		product && store.M('product').updateOne({ _id: product._id }, { $inc: { totalStock: change } }),
 	]);
+	// In stock or not is a search filter (docs/search SI4).
+	if (product) touchLater([product._id], 'stock');
 	const movement = await store.M('movement').create({
 		label: name,
 		variant: variant._id,

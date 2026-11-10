@@ -18,6 +18,8 @@ import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnec
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, markSettled, moveManual, receiveReturn, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
+import { rebuildSearch, searchIndexStatus } from '../library/functions/commerce/search/indexer.js';
+import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 
 /**
  * /tenant/api/p/:projectId/commerce — an e-commerce project's store
@@ -467,6 +469,29 @@ router.post(
 	'/deliveries/:id/cancel',
 	edit,
 	handle(async (req: any) => cancelDelivery(await storeOf(), req.project, req.params.id, req.body?.reason, actorName(req)))
+);
+
+/**
+ * Store search's index (docs/search SI5):
+ *   GET  /search/status    documents against findable products, queued, version, the last rebuild and drift check   records:view
+ *   POST /search/rebuild   builds every product's search document again, in the background (202)   manage-projects
+ */
+router.get(
+	'/search/status',
+	view,
+	handle(async () => searchIndexStatus(await storeOf()))
+);
+router.post(
+	'/search/rebuild',
+	manage,
+	handle(async (req: any, res: any) => {
+		const store = await storeOf();
+		const scope = currentScope()!;
+		setImmediate(() => runInScope(scope, () => rebuildSearch(store, { reason: 'panel' })).catch((e: any) => console.error('search rebuild:', e?.message)));
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Search', text: 'rebuilt the store’s search' });
+		res.status(202);
+		return { started: true };
+	})
 );
 
 export default router;

@@ -6,10 +6,11 @@
 # (its stand-in Stripe; ignored in production). courier-connections.mjs needs it started with
 # COURIER_STUB_URL=http://127.0.0.1:4599 (the courier stub, which the script starts itself);
 # courier-areas-sync.mjs and courier-returns-payouts.mjs also COURIER_SYNC_MS=3000 COURIER_QUIET_MS=1500
-# COURIER_PAYOUT_MS=1000.
+# COURIER_PAYOUT_MS=1000. search-index.mjs needs SEARCH_TICK_MS=1000 SEARCH_SWEEP_MS=3000 SEARCH_DRIFT_MS=6000
+# and a local SMOKE_MONGO (it skips without one).
 cd "$(dirname "$0")" || exit 1
 fail=0
-for f in admin tenant-auth org-1 projects models media mcp public public-filters api-builder api-logs project-keys cms-single cms-components cms-blocks cms-drafts website website-mcp secrets yes-no empty-search formula-links analytics oversight access project-invites comments navsearch docx automations activity templates templates-preview templates-manage templates-mcp templates-apply webhooks collections migration countries widgets widgets-cart widgets-setup customer-reset customer-roles customer-api mail mail-designs automation-pdfs automation-email-resend automations-mcp payments site-builder site-builder-data site-builder-starter site-builder-connect commerce-settings commerce-install commerce-stock commerce-orders commerce-lists commerce-categories courier-model courier-connections courier-steadfast courier-deliveries courier-webhooks courier-pathao courier-pathao-flow courier-redx courier-areas-sync courier-bulk courier-customers-mcp courier-manual-risk courier-returns-payouts; do
+for f in admin tenant-auth org-1 projects models media mcp public public-filters api-builder api-logs project-keys cms-single cms-components cms-blocks cms-drafts website website-mcp secrets yes-no empty-search formula-links analytics oversight access project-invites comments navsearch docx automations activity templates templates-preview templates-manage templates-mcp templates-apply webhooks collections migration countries widgets widgets-cart widgets-setup customer-reset customer-roles customer-api mail mail-designs automation-pdfs automation-email-resend automations-mcp payments site-builder site-builder-data site-builder-starter site-builder-connect commerce-settings commerce-install commerce-stock commerce-orders commerce-lists commerce-categories courier-model courier-connections courier-steadfast courier-deliveries courier-webhooks courier-pathao courier-pathao-flow courier-redx courier-areas-sync courier-bulk courier-customers-mcp courier-manual-risk courier-returns-payouts search-index; do
 	printf '%-12s ' "$f"
 	out=$(node "$f.mjs" 2>&1)
 	last=$(printf '%s\n' "$out" | tail -1)

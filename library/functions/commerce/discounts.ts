@@ -7,6 +7,7 @@ import { currentScope } from '../tenantScope.function.js';
 import { isId } from './catalogue.js';
 import { Store, storeOf } from './store.js';
 import { dayOf, dayText, endOfDay, startOfDay, validZone, zoneForCountry } from './zones.js';
+import { touchLater } from './search/indexer.js';
 
 /**
  * The store's discounts (docs/ecommerce DISCOUNTS.md DS1–DS4). A discount is a percentage off the products it names,
@@ -178,6 +179,8 @@ export const applyDiscounts = async (store: Store, productIds: any[], { dry = fa
 			if (Variant) await Variant.updateMany({ product: p._id }, { $set: { discountPercent: win?.percent || 0 } });
 		}
 		const changedIds = changed.map(c => c.p._id);
+		// On sale and the price shoppers pay are search filters (docs/search SI4).
+		touchLater(changedIds, 'discount');
 		if (pf.length) await recalculateFormulas(Product, { _id: { $in: changedIds } }, pf);
 		if (Variant && vf.length) await recalculateFormulas(Variant, { product: { $in: changedIds } }, vf);
 		const after = new Map<string, any>((await Product.find({ _id: { $in: changedIds } }).lean()).map((d: any) => [String(d._id), d]));

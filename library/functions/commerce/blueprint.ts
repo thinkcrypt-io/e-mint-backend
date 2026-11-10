@@ -298,6 +298,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				},
 				{ key: 'images', label: 'Images', kind: 'images' },
 				{ key: 'description', label: 'Description', kind: 'textarea' },
+				{ key: 'keywords', label: 'Search words', kind: 'tags', searchable: true, showInTable: false, helper: 'Other words shoppers type for it — “eid”, “party wear”, “kurta”. Website search finds it by them too (docs/search SI4)' },
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
 				{ key: 'views', label: 'Views', kind: 'number', default: 0, helper: 'Not typed: how many times its page on your website was opened' },
 				{ key: 'wishlistCount', label: 'Wished by', kind: 'number', default: 0, helper: 'Not typed: how many customers put it on their wishlist' },

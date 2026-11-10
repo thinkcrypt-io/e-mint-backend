@@ -21,7 +21,7 @@ The user answered README §8 on 2026-11-10.
 | SI-01 | Plan & docs | backend | S | done 2026-11-10 |
 | **Phase 1 — The engine** | | | | |
 | SI-02 | Normaliser + Banglish key (SI6, SI7): `normalise.ts`, `banglish.ts`, starter word list, unit tests (≥ 150 cases: plurals, units, t-shirt, Bangla variants, digits, Banglish ↔ Bangla) | backend | M | done 2026-11-10 |
-| SI-03 | Search document + indexer (SI4, SI5): `SearchDoc` / `SearchQueue` models + indexes, `document.ts`, hooks on product / variant / category / brand / collection / discount / stock, leased tick, `rebuildSearch`, `scripts/searchRebuild.js`, nightly drift check; Product `keywords`; `upgradeStore` | backend | L | open |
+| SI-03 | Search document + indexer (SI4, SI5): `SearchDoc` / `SearchQueue` models + indexes, `document.ts`, hooks on product / variant / category / brand / collection / discount / stock, leased tick, `rebuildSearch`, `scripts/searchRebuild.js`, nightly drift check; Product `keywords`; `upgradeStore` | backend | L | done 2026-11-11 |
 | SI-04 | Native driver + ranking (SI3, SI9, SI10, SI14 static part, SI19): candidates rarest-first with cap, typo matching on grams, scoring, coverage, phrase bonus, in-stock / popularity / freshness / sale multipliers, `explain`, per-dyno LRU with the version key; `search-bench.mjs` budgets | backend | L | open |
 | SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend | M | open |
 | **Phase 2 — Storefronts** | | | | |
@@ -50,9 +50,13 @@ The user answered README §8 on 2026-11-10.
 
 ## Handoff
 
-SI-02 is done (2026-11-10): `normalise.ts`, `banglish.ts`, `packs/banglishWords.ts`, with 201 unit tests in
-`test/normalise.test.ts` (`npx jest library/functions/commerce/search`). Nothing uses them yet. Next is SI-03,
-the search document and indexer: it builds each product's words, stems and Banglish keys with `normalise()`.
+SI-02 (2026-11-10) and SI-03 (2026-11-11) are done. Every built store now keeps a search document per findable product in
+`searchdocs`, by itself (touches, the 2-minute sweep, the daily drift check; README SI5). Nothing reads them yet: no
+shopper-facing search. Next is SI-04, the native driver and ranking over `SearchDoc` (`terms`, `prefixes`, `grams`,
+`phon`, `codes`, `fields` per part, `facets`, `signals`, `card`).
+
+Tests: `npx jest library/functions/commerce/search` (217) and `scripts/tenancy-smoke/search-index.mjs` (31 checks; see
+its notes for the env it needs).
 
 ---
 
@@ -70,7 +74,16 @@ the search document and indexer: it builds each product's words, stems and Bangl
   - "t-shirt" = "tshirt" = "t shirt"
   - "৫০০ মিলি" → "500ml"
 
-## SI-03 — Search document + indexer (L)
+## SI-03 — Search document + indexer (L) — done 2026-11-11
+
+What was built differs from the first notes below in three ways:
+- A **sweep** every 2 minutes was added next to the hooks, so changes no hook sees (the public API, bulk imports, engine updates) still arrive.
+- Discounts are touched from `applyDiscounts` itself, not from the discount's save.
+- No `upgradeStore` step is needed: a store's first sweep builds it.
+The Product model gained **Search words** (`keywords`, tags), which `upgradeStore` adds like any new blueprint field.
+
+The first notes:
+
 
 - `SearchDoc` with the SI19 indexes and a unique index on `{ project, product }`. `SearchQueue` has a unique index on `{ project, product }`.
 - `document.ts buildDocs(store, productIds)` loads in bulk: products, their variants (codes, option values, stock), the category tree (names up the parents, cached per store), brands, collections and the current discount. It writes with `bulkWrite` upserts and removes archived or deleted products.

@@ -19,6 +19,7 @@ import { schedulePreviewPurge } from './library/functions/templateSandbox.functi
 import { scheduleTrashPurge } from './routes-admin/file/media.admin.route.js';
 import { scheduleContentTick } from './library/functions/contentSchedule.function.js';
 import { scheduleCourierSync } from './library/functions/commerce/courierSync.js';
+import { scheduleSearchIndex } from './library/functions/commerce/search/indexer.js';
 import { scheduleAutomationDue } from './library/functions/automationDue.function.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
@@ -76,6 +77,8 @@ connectDb().then(() => {
 	scheduleContentTick();
 	// Couriers' quiet parcels asked about, every 15 minutes (docs/couriers CR-11).
 	scheduleCourierSync();
+	// Stores' search documents built from what changed: queued every 5 s, swept every 2 min (docs/search SI5).
+	scheduleSearchIndex();
 	// Automations' “when a date is reached” runs, every minute (docs/ecommerce/DISCOUNTS.md DS6).
 	scheduleAutomationDue();
 });
