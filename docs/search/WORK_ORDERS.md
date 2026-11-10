@@ -27,7 +27,7 @@ The user answered README §8 on 2026-11-10.
 | **Phase 2 — Storefronts** | | | | |
 | SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | done 2026-11-11 (filters to show + suggestion counts left for later) |
 | SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-builder | L | open |
-| SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | open |
+| SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | done 2026-11-11 (category pages kept as they are) |
 | **Phase 3 — Understanding** | | | | |
 | SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | open |
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | open |
@@ -56,9 +56,12 @@ do from setup. The panel has **Store settings → Search settings** (mint-tenant
 or off, typos, Banglish, out of stock, the four lifts, learning, and the search index with Rebuild. It is checked in a
 browser against a test backend.
 
+HINT and Live Fresh call the new search **and fall back** to their old search while production has no
+`/store/search` (SI-08). They pick up the engine by themselves once the backend is deployed and each store's first
+sweep has indexed it.
+
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-08** — HINT and Live Fresh on the new routes.
 - **SI-09** — query understanding.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
@@ -165,7 +168,27 @@ shows that state. The index card polls while a rebuild runs. The guide has the a
 **Left out** (no backend for them yet): choosing which filters a storefront shows, and how many suggestions it
 gives. Storefronts decide both for now.
 
-## SI-07 … SI-23 (the rest)
+## SI-08 — Reference storefronts (M) — done 2026-11-11
+
+- **HINT** (hint-site 2896b6d, `commerce` main): `searchStore` / `suggestStore` / `productsForCards` in `lib/hint.ts`.
+  - The search page ranks with `/store/search`, then loads the full products by web address (`slug_in`) so the
+    cards keep their sizes and quick add. A card without a web address is drawn from the card.
+  - The page shows "Showing results for “…”" from `query.typos`, suggestions under the box (finished words and
+    "In <category>"), category chips with counts, In stock and a sort. Filters are kept in the address.
+- **Live Fresh** (live-fresh-frontend a1c54e9, `main` → live-fresh.vercel.app): `storeRanking` in `lib/search.js` gives
+  the order. Its own filters, sorting and counts stay, over its loaded catalogue. This works there because the shop
+  loads its whole catalogue (≤ 100). The page and the header search box show the store's order and the corrected
+  words.
+- **Both fall back** to their old search when `/store/search` doesn't answer, which is the case on production until the
+  deploy. Checked against production: HINT "jacket" gives 3, Live Fresh "chicken" gives 25, both without the new parts.
+  Checked against a test backend with HINT's catalogue: "jaket" → the two jackets with the note, the Stone Ring
+  chip narrows 80 to 20, price sort, "snea" suggests sneaker / sneakers / In Shoes, the phone layout has no page
+  scroll, and Live Fresh's "snekers" / "chronogarph" work on the page and in the header box.
+- **Category pages not moved:** HINT's already filter the whole category in the page (20 per category), and moving
+  them gains nothing at this size. They should move when a store's categories outgrow a page.
+- mint-docs: a Next.js search page with the fallback in the store guide (`store-search`).
+
+## SI-07, SI-09 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

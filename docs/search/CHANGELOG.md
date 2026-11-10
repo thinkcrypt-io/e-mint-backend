@@ -1,5 +1,17 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-08 Reference storefronts
+
+- HINT search page on the store's engine, with typo note, suggestions, category chips with counts, in stock and sort
+  (hint-site 2896b6d). Live Fresh's search page and header box ranked by the store (a1c54e9). Both fall back to their
+  old search where `/store/search` doesn't answer, so pushing before the backend deploy changes nothing for shoppers.
+- Found while testing:
+  - Live Fresh fetches on the server, and Node resolves `localhost` to IPv6, so a local test backend needs
+    `127.0.0.1`.
+  - Live Fresh loads at most 100 products, so a ranked product beyond those isn't shown. That's fine for Verte's
+    32 and noted for bigger stores.
+- mint-docs: the Next.js example (37920bb).
+
 ## 2026-11-11 — SI-06 Store settings → Search
 
 - mint-tenant `/store/settings/search` (bb94551): one card for the settings (search on, typos Off / Normal / Forgiving,
