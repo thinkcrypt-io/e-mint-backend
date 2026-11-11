@@ -8,7 +8,7 @@
  *
  * Around it: query understanding (price phrases, sizes, brand names: SI-09), synonyms and redirects (SI-10), and no
  * dead ends — loosen step by step, "showing results for", did you mean, popular instead (SI-11, recover.ts).
- * Merchandising rules (SI-15) come later. `storeSearch` / `storeSuggest` run it for a store; the
+ * Then the store's merchandising rules (SI-15, merch.ts): hide, show only, pin, boost / bury. `storeSearch` / `storeSuggest` run it for a store; the
  * public routes are SI-05's.
  */
 import CommerceSettings from '../../../models/tenancy/commerceSettings.model.js';
@@ -21,7 +21,9 @@ import { clean } from './normalise.js';
 import { searchSettingsOf, type SearchSettings } from './settings.js';
 import { cachedVocab, completions, nearWords, typosFor, type Vocab } from './vocab.js';
 import { nativeDriver } from './drivers/native.js';
-import { countRedirect, findRedirect, NO_RULES, storeRules, type Rules } from './rules.js';
+import { countRedirect, countRules, findRedirect, NO_RULES, storeRules, type Rules } from './rules.js';
+import { compileMerch, firedRules, merchOf, ruleLive, targets, withPins } from './merch.js';
+import SearchDoc from '../../../models/tenancy/searchDoc.model.js';
 import { popularStartingWith } from './events.js';
 import { covering, fewerWords, nearestWord } from './recover.js';
 import type { BrowseSort, Cond, SearchDriver } from './drivers/types.js';
@@ -52,6 +54,9 @@ export type SearchResult = {
 	didYouMean?: string;
 	/** Nothing found at all: products to show instead — popular in the category the query named, or in the store. */
 	fallback?: { kind: 'category' | 'popular'; category?: { _id: string; name: string }; doc: any[] };
+	/** With `explain`: the store's search rules this search set off (SI-15), and how many results are pinned. */
+	rules?: { _id: string; name: string; action: string }[];
+	pinned?: number;
 	/** This search's id in the store's search log (SI17, public route only): sent back with clicks, the bag and the order. */
 	searchId?: string;
 	ms: number;
@@ -214,11 +219,15 @@ export const clearSearchCache = () => cache.clear();
 
 /* -------------------------------------------------------------------- search */
 
-const cardOf = (d: any, r?: Ranked | null, withExplain = false) => ({
+const cardOf = (d: any, r?: Ranked | null, withExplain = false, pin = 0) => ({
 	_id: d.product,
 	...(d.card || {}),
 	...(withExplain && r && { score: +r.score.toFixed(4), explain: explain(r) }),
+	...(withExplain && pin && { pinned: pin, ...(!r && { explain: `pinned #${pin} by a search rule` }) }),
 });
+const pid = (d: any) => String(d?.product ?? '');
+/** Popularity as one number, for ordering a category page with boosts (SI-15). */
+const popularity = (d: any) => 1 + (Number(d.signals?.sold30) || 0) + 0.1 * (Number(d.signals?.views) || 0) + 0.1 * (Number(d.signals?.wishes) || 0);
 
 const orderBy: Record<SearchSort, (a: { d: any; r: Ranked }, b: { d: any; r: Ranked }) => number> = {
 	relevance: (a, b) => b.r.score - a.r.score || String(a.d.card?.name || '').length - String(b.d.card?.name || '').length,
@@ -246,16 +255,59 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		const ua = applyUnderstood(u, filters, sort);
 		const { plan, codes, words } = planQuery(u.text, vocab, s, {}, rules);
 		const redirect = findRedirect(rules, q) || undefined;
+		// The store's rules (SI-15): pins and boosts give way to a sort the shopper picked; hide and show only don't.
+		const browsing = !plan.length && !codes.filter(Boolean).length;
+		const m = merchOf(firedRules(rules.merch || [], browsing ? '' : q, filters.categories));
+		const ordered = ua.sort === 'relevance';
+		const boosts = [...ua.boosts, ...(ordered ? m.boosts : [])];
+		const pins = ordered ? m.pins : [];
+		const rulesOut = req.explain && m.fired.length ? { rules: m.fired.map(r => ({ _id: r.id, name: r.name, action: r.action })) } : {};
+		const pinnedDocs = async (have: Set<string>, f: Filters) => {
+			const missing = pins.filter(id => !have.has(id));
+			if (!missing.length || !driver.byProducts) return [];
+			return (await driver.byProducts(missing, hide)).filter(d => !m.hidden(d) && passes(d, f));
+		};
 		const synonyms = plan.filter(t => t.syn.length).map(t => ({ word: t.word, with: t.syn.filter((x, i, a) => a.indexOf(x) === i) }));
 		const typos = plan.filter(t => t.near.length).map(t => ({ word: t.word, tried: t.near.map(n => n.word) }));
 
-		if (!plan.length && !codes.filter(Boolean).length) {
+		if (browsing) {
 			// No words (or only a price, a sort…): a browse.
-			const browse = (f: Filters) => driver.browse({ hideOutOfStock: hide, filters: f, sort: ua.sort === 'relevance' ? 'popular' : ua.sort, skip: (page - 1) * limit, limit, facets: !!req.facets });
+			// With rules, the whole page set is fetched and ordered here (≤ 2,000), else the database pages it.
+			const withRules = m.fired.length > 0;
+			const browse = (f: Filters) =>
+				driver.browse({ hideOutOfStock: hide, filters: f, sort: ua.sort === 'relevance' ? 'popular' : ua.sort, skip: withRules ? 0 : (page - 1) * limit, limit: withRules ? CAP : limit, facets: !!req.facets });
 			let b = await browse(ua.all);
 			let used = ua.all;
 			const relaxed = !b.total && ua.hasHard;
 			if (relaxed) (b = await browse(ua.withoutHard)), (used = ua.withoutHard);
+			if (withRules) {
+				const beyond = Math.max(0, b.total - b.docs.length);
+				let docs = m.filter(
+					b.docs.filter(d => !m.hidden(d)),
+					d => d
+				);
+				if (ordered && boosts.length) {
+					const x = (d: any) => boosts.reduce((acc, bo) => (bo.test(d) ? acc * bo.x : acc), 1);
+					docs = docs.map((d, i) => ({ d, i, s: popularity(d) * x(d) })).sort((a, b2) => b2.s - a.s || a.i - b2.i).map(o => o.d);
+				}
+				const p = withPins(docs, pins, pid, await pinnedDocs(new Set(docs.map(pid)), used));
+				const pinned = p.pinned;
+				const total = p.list.length + beyond;
+				return {
+					doc: p.list.slice((page - 1) * limit, page * limit).map((d, i) => cardOf(d, null, req.explain, (page - 1) * limit + i < pinned ? (page - 1) * limit + i + 1 : 0)),
+					total,
+					page,
+					limit,
+					totalPages: Math.max(1, Math.ceil(total / limit)),
+					...(req.facets && { facets: facetCounts((b.facetDocs || []).filter(d => !m.hidden(d)), used) }),
+					query: { words: [], typos: [] },
+					...(redirect && { redirect }),
+					...(q.trim() && { understood: understoodOut(u, relaxed ? { relaxed } : {}) }),
+					...rulesOut,
+					...(req.explain && pinned && { pinned }),
+					ms: Date.now() - started,
+				};
+			}
 			return {
 				doc: b.docs.map(d => cardOf(d)),
 				total: b.total,
@@ -273,10 +325,15 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		const now = Date.now();
 		const found = async (pl: QToken[]) => {
 			const conds = pl.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
-			const docs = await driver.candidates({ hideOutOfStock: hide, all: conds, codes: codes.filter(Boolean), cap: CAP, partialBelow: PARTIAL_BELOW, partialCap: PARTIAL_CAP });
+			const raw = await driver.candidates({ hideOutOfStock: hide, all: conds, codes: codes.filter(Boolean), cap: CAP, partialBelow: PARTIAL_BELOW, partialCap: PARTIAL_CAP });
+			// Rules: hidden products never come back; "show only" keeps its products, unless that leaves none.
+			const docs = m.filter(
+				raw.filter(d => !m.hidden(d)),
+				d => d
+			);
 			const out: { d: any; r: Ranked }[] = [];
 			for (const d of docs) {
-				const r = rank(pl, d, s, now, ua.boosts);
+				const r = rank(pl, d, s, now, boosts);
 				if (r) out.push({ d, r });
 			}
 			return out;
@@ -324,7 +381,7 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 				const fw = fm && fewerWords(plan, ranked.filter(x => passes(x.d, fm)));
 				if (fm && fw) {
 					const sub = fw.keep.map(i => plan[i]);
-					ranked = covering(plan, fw.keep, ranked).map(x => ({ d: x.d, r: rank(sub, x.d, s, now, ua.boosts)! }));
+					ranked = covering(plan, fw.keep, ranked).map(x => ({ d: x.d, r: rank(sub, x.d, s, now, boosts)! }));
 					(used = fm), (relaxed = fm !== ua.all);
 					showing = { q: spelled(sub, ranked.filter(x => passes(x.d, fm))), reason: 'fewer words', dropped: fw.dropped.map(i => plan[i].word) };
 				} else if (firstWith(ranked, (r, f) => r.some(x => passes(x.d, f)))) {
@@ -347,13 +404,19 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			}
 		}
 
-		let matched = ranked.filter(x => passes(x.d, used));
-		matched.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
+		const sorted = ranked.filter(x => passes(x.d, used));
+		sorted.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
+		// Pins (SI-15): the rule's products at the top, in its order — found by the words or not.
+		const pinnedX = await pinnedDocs(new Set(sorted.map(x => pid(x.d))), used);
+		const wp = withPins<{ d: any; r: Ranked | null }>(sorted, pins, x => pid(x.d), pinnedX.map(d => ({ d, r: null })));
+		const matched = wp.list;
+		const pinned = wp.pinned;
+		if (pinned) (fallback = undefined), (didYouMean = undefined);
 		const total = matched.length;
-		const exact = byCode(matched);
+		const exact = byCode(sorted);
 		const product = exact.length === 1 ? cardOf(exact[0].d) : undefined;
 		return {
-			doc: matched.slice((page - 1) * limit, page * limit).map(x => cardOf(x.d, x.r, req.explain)),
+			doc: matched.slice((page - 1) * limit, page * limit).map((x, i) => cardOf(x.d, x.r, req.explain, (page - 1) * limit + i < pinned ? (page - 1) * limit + i + 1 : 0)),
 			total,
 			page,
 			limit,
@@ -368,6 +431,8 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			...(showing && { showing }),
 			...(didYouMean && { didYouMean }),
 			...(fallback && { fallback }),
+			...rulesOut,
+			...(req.explain && pinned && { pinned }),
 			ms: Date.now() - started,
 		};
 	});
@@ -434,8 +499,16 @@ const storeState = async () => {
 /** A search in the current store (its scope), on the native driver. */
 export const storeSearch = async (store: Store, req: SearchRequest) => {
 	const { settings, version } = await storeState();
-	const r = await searchWith(nativeDriver(), settings, req, version, await storeRules(store, version));
-	if (r.redirect && !req.explain) countRedirect(store, r.redirect.id);
+	const rules = await storeRules(store, version);
+	const r = await searchWith(nativeDriver(), settings, req, version, rules);
+	if (!req.explain) {
+		if (r.redirect) countRedirect(store, r.redirect.id);
+		// Rules that answered a search are counted once per search (its first page).
+		if (rules.merch?.length && (Number(req.page) || 1) <= 1) {
+			const fired = firedRules(rules.merch, r.query.words.length ? String(req.q ?? '') : '', cleanFilters(req.filters).categories);
+			countRules(store, fired.map(x => x.id));
+		}
+	}
 	return r;
 };
 
@@ -448,4 +521,68 @@ export const storeSuggest = async (store: Store, q: string) => {
 	const [r, popular] = await Promise.all([suggestWith(nativeDriver(), settings, q, version, {}, await storeRules(store, version)), popularStartingWith(q).catch(() => [])]);
 	if (!popular.length) return r;
 	return { ...r, queries: [...new Set([...popular, ...r.queries])].slice(0, 6) };
+};
+
+/* ------------------------------------------------------- rules in the panel */
+
+/**
+ * A search rule tried before it's saved (SI-15, the panel's rule editor): the same search without it and with it,
+ * explained. `rule` is a Search rule record as the form holds it; its dates and switch are ignored, so a rule for next
+ * week shows what it will do. `q` is the search to try (a category rule tries its category page).
+ */
+export const previewRule = async (store: Store, rule: any, { q = '', limit = 12 }: { q?: string; limit?: number } = {}) => {
+	const { settings, version } = await storeState();
+	const rules = await storeRules(store, version);
+	const id = String(rule?._id ?? '');
+	const others = (rules.merch || []).filter(r => !id || r.id !== id);
+	const [mine] = compileMerch([{ ...rule, _id: id || 'preview', name: String(rule?.name || '').trim() || 'This rule', active: true, startsAt: null, endsAt: null }]);
+	const words = rule?.when === 'category' ? '' : String(q || (Array.isArray(rule?.queries) ? rule.queries[0] : '') || '');
+	const req: SearchRequest = {
+		q: words,
+		limit: Math.min(24, Math.max(1, Number(limit) || 12)),
+		explain: true,
+		...(rule?.when === 'category' && rule?.category && { filters: { categories: [String(rule.category?._id ?? rule.category)] } }),
+	};
+	const driver = nativeDriver();
+	const [before, after] = await Promise.all([
+		searchWith(driver, settings, req, undefined, { ...rules, merch: others }),
+		mine ? searchWith(driver, settings, req, undefined, { ...rules, merch: [...others, mine].sort((a, b) => order(a) - order(b)) }) : Promise.resolve(null),
+	]);
+	const short = (r: SearchResult | null) => r && { doc: r.doc, total: r.total, rules: r.rules || [], pinned: r.pinned || 0 };
+	return {
+		q: words,
+		category: req.filters?.categories?.[0] || null,
+		ready: !!mine,
+		// Why the rule does nothing yet: no searches, no category, nothing picked.
+		...(mine ? {} : { missing: missingOf(rule) }),
+		fires: !!mine && !!after?.rules?.some(r => r._id === mine.id),
+		before: short(before),
+		after: short(after),
+	};
+};
+const order = (r: { action: string }) => ({ hide: 0, filter: 1, pin: 2, boost: 3, bury: 3 })[r.action as 'hide'] ?? 4;
+const missingOf = (r: any) => {
+	if (!r?.action) return 'Pick what it does';
+	if ((r.when === 'exact' || r.when === 'contains') && !(Array.isArray(r.queries) ? r.queries : []).filter((x: any) => String(x).trim()).length) return 'Type a search it’s for';
+	if (r.when === 'category' && !r.category) return 'Pick the category page';
+	return r.action === 'pin' ? 'Pick the products to pin' : 'Pick products, brands, categories, collections or “on sale”';
+};
+
+/**
+ * The store's Search rules that touch a search (`q`: it sets them off) or a product (they name it, its brand, category
+ * or collection, or it's on sale and they say so) — on or not, for the Insights drawer and the product's Search tab.
+ */
+export const rulesTouching = async (store: Store, { q, product }: { q?: string; product?: string }) => {
+	if (!store.installed.searchRule) return [];
+	const rows: any[] = await store.M('searchRule').find({}).sort({ createdAt: -1 }).limit(500).lean();
+	const doc = product ? await SearchDoc.findOne({ product }, { product: 1, facets: 1 }).lean() : null;
+	const out: any[] = [];
+	for (const row of rows) {
+		const [c] = compileMerch([{ ...row, active: true, startsAt: null, endsAt: null }]);
+		if (!c) continue;
+		const hit = q != null && q !== '' ? firedRules([c], q).length > 0 : product ? (doc ? targets(c, doc) : c.products.includes(String(product))) : false;
+		if (!hit) continue;
+		out.push({ _id: row._id, name: row.name, when: row.when, action: row.action, active: row.active !== false, live: ruleLive(row), startsAt: row.startsAt, endsAt: row.endsAt, hits: row.hits || 0 });
+	}
+	return out;
 };

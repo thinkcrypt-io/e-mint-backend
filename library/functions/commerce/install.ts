@@ -80,6 +80,7 @@ const ICONS: Record<ModelKey, string> = {
 	wishlist: 'heart',
 	searchSynonym: 'replace',
 	searchRedirect: 'signpost',
+	searchRule: 'list-ordered',
 };
 
 /**

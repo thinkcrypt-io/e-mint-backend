@@ -39,7 +39,8 @@ export type ModelKey =
 	| 'delivery'
 	| 'wishlist'
 	| 'searchSynonym'
-	| 'searchRedirect';
+	| 'searchRedirect'
+	| 'searchRule';
 
 export type ModelSpec = {
 	key: ModelKey;
@@ -1123,6 +1124,79 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['name', 'queries', 'match', 'url', 'active', 'hits'],
 			filters: ['active', 'match'],
+		},
+	},
+	// Store search (docs/search SI13, SI-15): what a search or a category page shows first, or not at all.
+	{
+		key: 'searchRule',
+		shownWhen: null,
+		engine: ['hits', 'lastHitAt'],
+		ownPage: '/store/search/rules',
+		step: {
+			name: 'SearchRule',
+			title: 'Search rules',
+			route: 'search-rules',
+			description: 'What a search or a category page shows first, lower down or not at all — pin, boost, bury, hide or show only',
+			rationale: 'Website search applies them after ranking: hide, show only, pin, then boost / bury (docs/search SI13).',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', searchable: true, helper: 'Optional: left empty, it’s the rule as a sentence' },
+				{
+					key: 'when',
+					label: 'When',
+					kind: 'select',
+					options: [
+						{ value: 'exact', label: 'A search is exactly one of these' },
+						{ value: 'contains', label: 'A search contains one of these' },
+						{ value: 'category', label: 'A category page' },
+						{ value: 'always', label: 'Every search and category page' },
+					],
+					default: 'exact',
+					required: true,
+				},
+				{ key: 'queries', label: 'Searches', kind: 'tags', searchable: true, helper: 'For “exactly” and “contains”: dress, eid dress' },
+				{ key: 'category', label: 'Category page', kind: 'reference', ref: 'Category', helper: 'For “a category page”' },
+				{
+					key: 'action',
+					label: 'Do',
+					kind: 'select',
+					options: [
+						{ value: 'pin', label: 'Pin these products at the top, in order' },
+						{ value: 'boost', label: 'Boost: show these higher' },
+						{ value: 'bury', label: 'Bury: show these lower' },
+						{ value: 'hide', label: 'Hide these' },
+						{ value: 'filter', label: 'Show only these' },
+					],
+					default: 'pin',
+					required: true,
+				},
+				{ key: 'products', label: 'Products', kind: 'references', ref: 'Product', helper: 'Pins take products only, in this order' },
+				{ key: 'brands', label: 'Brands', kind: 'references', ref: 'Brand' },
+				{ key: 'categories', label: 'Categories', kind: 'references', ref: 'Category' },
+				{ key: 'collections', label: 'Collections', kind: 'references', ref: 'Collection' },
+				{ key: 'onSale', label: 'Products on sale', kind: 'boolean', default: false },
+				{
+					key: 'strength',
+					label: 'How much',
+					kind: 'select',
+					options: [
+						{ value: '1.5', label: 'Boost a little (×1.5)' },
+						{ value: '2', label: 'Boost (×2)' },
+						{ value: '3', label: 'Boost a lot (×3)' },
+						{ value: '0.5', label: 'Bury (×0.5)' },
+						{ value: '0.2', label: 'Bury a lot (×0.2)' },
+					],
+					helper: 'Boost and bury only',
+				},
+				{ key: 'active', label: 'On', kind: 'boolean', default: true },
+				{ key: 'startsAt', label: 'Starts', kind: 'date', helper: 'Optional' },
+				{ key: 'endsAt', label: 'Ends', kind: 'date', helper: 'Optional: it stops at the end of that day' },
+				{ key: 'source', label: 'From', kind: 'select', options: opts('you', 'suggested', 'your-ai'), default: 'you', helper: 'Not typed: you, a suggestion from search, or your AI' },
+				{ key: 'hits', label: 'Used', kind: 'number', default: 0, helper: 'Not typed: how many searches it changed' },
+				{ key: 'lastHitAt', label: 'Last used', kind: 'date', helper: 'Not typed' },
+			],
+			table: ['name', 'when', 'action', 'active', 'endsAt', 'hits'],
+			filters: ['when', 'action', 'active'],
 		},
 	},
 ];

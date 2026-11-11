@@ -109,5 +109,11 @@ export const nativeDriver = (): SearchDriver => {
 			]);
 			return { docs, total, facetDocs };
 		},
+
+		async byProducts(products: string[], hideOutOfStock: boolean) {
+			const list = oids(products);
+			if (!list.length) return [];
+			return SearchDoc.find({ ...baseQuery(hideOutOfStock), product: { $in: list } }, SCORED).limit(50).lean();
+		},
 	};
 };

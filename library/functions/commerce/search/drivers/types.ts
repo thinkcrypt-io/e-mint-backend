@@ -33,4 +33,6 @@ export interface SearchDriver {
 	candidates(spec: CandidateSpec): Promise<any[]>;
 	/** No words (a category page): filtered, sorted and paged by the database, with every filter's counts if asked. */
 	browse(spec: BrowseSpec): Promise<{ docs: any[]; total: number; facetDocs?: any[] }>;
+	/** Active search documents of these products (a search rule's pins, SI-15). */
+	byProducts?(products: string[], hideOutOfStock: boolean): Promise<any[]>;
 }

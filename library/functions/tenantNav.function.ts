@@ -59,6 +59,7 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:view') ? [{ title: 'Returns', href: '/store/returns', icon: 'undo-2' }] : []),
 				// What shoppers search for on the website, and what to fix (docs/search SI-14).
 				...(can('records:view') ? [{ title: 'Search insights', href: '/store/search', icon: 'text-search' }] : []),
+				...(can('records:view') ? [{ title: 'Search rules', href: '/store/search/rules', icon: 'list-ordered' }] : []),
 				...(can('records:edit') ? [{ title: 'Add stock', href: '/store/stock/add', icon: 'package-plus' }] : []),
 				// Parcels sent to couriers (docs/couriers CR-07), while the store delivers.
 				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Deliveries', href: '/store/deliveries', icon: 'package-check' }] : []),

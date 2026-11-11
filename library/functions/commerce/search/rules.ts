@@ -9,10 +9,12 @@ import { TenancyError } from '../../tenancy.function.js';
 import type { Store } from '../store.js';
 import { normalise, type Token } from './normalise.js';
 import { SYNONYM_PACKS } from './packs/synonyms.js';
+import { compileMerch, ruleSentence, type CompiledRule } from './merch.js';
 
 export type CompiledRedirect = { id: string; url: string; match: 'exact' | 'contains'; queries: string[][] };
-export type Rules = { synonyms: Map<string, Set<string>>; redirects: CompiledRedirect[] };
-export const NO_RULES: Rules = { synonyms: new Map(), redirects: [] };
+/** The store's synonyms and redirects (SI-10), and its merchandising rules (SI-15, merch.ts). */
+export type Rules = { synonyms: Map<string, Set<string>>; redirects: CompiledRedirect[]; merch?: CompiledRule[] };
+export const NO_RULES: Rules = { synonyms: new Map(), redirects: [], merch: [] };
 
 /** A synonym entry as one word, or null (several words: not matched yet — the engine works word by word). */
 const one = (w: any): Token | null => {
@@ -77,11 +79,12 @@ export const storeRules = async (store: Store, version: number): Promise<Rules> 
 	const key = `${currentScope()?.project}:${version}`;
 	const hit = cache.get(key);
 	if (hit && Date.now() - hit.at < TTL_MS) return hit.rules;
-	const [syn, red] = await Promise.all([
+	const [syn, red, merch] = await Promise.all([
 		store.installed.searchSynonym ? store.M('searchSynonym').find({ active: { $ne: false } }).lean() : Promise.resolve([] as any[]),
 		store.installed.searchRedirect ? store.M('searchRedirect').find({ active: { $ne: false } }).lean() : Promise.resolve([] as any[]),
+		store.installed.searchRule ? store.M('searchRule').find({ active: { $ne: false } }).sort({ order: 1, createdAt: 1 }).lean() : Promise.resolve([] as any[]),
 	]);
-	const rules = { synonyms: compileSynonyms(syn as any[]), redirects: compileRedirects(red as any[]) };
+	const rules = { synonyms: compileSynonyms(syn as any[]), redirects: compileRedirects(red as any[]), merch: compileMerch(merch as any[]) };
 	cache.set(key, { at: Date.now(), rules });
 	if (cache.size > 300) cache.delete(cache.keys().next().value as string);
 	return rules;
@@ -96,14 +99,49 @@ export const countRedirect = (store: Store, id: string) => {
 		.catch(() => undefined);
 };
 
+/** Search rules that answered a search: counted, in the background (SI-15). */
+export const countRules = (store: Store, ids: string[]) => {
+	if (!ids.length || !store.installed.searchRule) return;
+	store
+		.M('searchRule')
+		.updateMany({ _id: { $in: ids } }, { $inc: { hits: 1 }, $set: { lastHitAt: new Date() } }, { timestamps: false })
+		.catch(() => undefined);
+};
+
+/** A rule's names for its sentence: its products, brands, categories, collections and category page. */
+export const ruleNames = async (store: Store, r: any) => {
+	const names = async (key: string, v: any) => {
+		const list = (Array.isArray(v) ? v : v ? [v] : []).map((x: any) => x?._id ?? x).filter(Boolean);
+		if (!list.length || !store.installed[key as keyof typeof store.installed]) return [];
+		const rows: any[] = await store.M(key as any).find({ _id: { $in: list } }, { name: 1 }).lean();
+		const by = new Map(rows.map(x => [String(x._id), x.name]));
+		return list.map((id: any) => by.get(String(id))).filter(Boolean) as string[];
+	};
+	const [products, brands, categories, collections, category] = await Promise.all([
+		names('product', r.products),
+		names('brand', r.brands),
+		names('category', r.categories),
+		names('collection', r.collections),
+		names('category', r.category),
+	]);
+	return { products, brands, categories, collections, category: category[0] };
+};
+
 const bump = () => CommerceSettings.updateOne({}, { $inc: { 'search.index.version': 1 } });
 
 /** From a store record's save or delete (fireCommerce): a rule changed — searches see it now; a nameless one is named. */
 export const rulesChanged = async (store: Store, model: string, doc: any, event: string) => {
 	const syn = store.is('searchSynonym', model);
 	const red = store.is('searchRedirect', model);
-	if (!syn && !red) return false;
-	if (event !== 'delete' && !String(doc?.name || '').trim()) {
+	const rule = !!store.installed.searchRule && store.is('searchRule', model);
+	if (!syn && !red && !rule) return false;
+	if (rule) {
+		// A rule without a name is named by its sentence: “Searches for “dress”: boost collection Eid ×2”.
+		if (event !== 'delete' && !String(doc?.name || '').trim()) {
+			const name = ruleSentence(doc, await ruleNames(store, doc));
+			await store.M('searchRule').updateOne({ _id: doc._id }, { $set: { name } }, { timestamps: false });
+		}
+	} else if (event !== 'delete' && !String(doc?.name || '').trim()) {
 		const name = asList(syn ? doc.words : doc.queries).join(', ').slice(0, 120);
 		if (name) await store.M(syn ? 'searchSynonym' : 'searchRedirect').updateOne({ _id: doc._id }, { $set: { name } }, { timestamps: false });
 	}

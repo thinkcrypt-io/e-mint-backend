@@ -60,5 +60,9 @@ export const memoryDriver = (docs: any[], key = 'memory'): SearchDriver => {
 			const facetDocs = spec.facets ? pool.filter(d => passes(d, { categories: spec.filters.categories })) : undefined;
 			return { docs: sorted.slice(spec.skip, spec.skip + spec.limit), total: matching.length, facetDocs };
 		},
+		async byProducts(products: string[], hideOutOfStock: boolean) {
+			const want = new Set(products.map(String));
+			return base(hideOutOfStock).filter(d => want.has(String(d.product)));
+		},
 	};
 };
