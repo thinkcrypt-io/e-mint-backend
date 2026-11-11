@@ -1,5 +1,23 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-11 No dead ends
+
+- New `commerce/search/recover.ts` (`fewerWords`, `covering`, `nearestWord`). When no product has every word, the
+  engine loosens step by step and says what it did: understood filters set aside (brand / size, then price / in stock /
+  on sale; the shopper's own never), two typos in words of six letters or more, fewer words, some of the words; with
+  nothing at all, `didYouMean` and `fallback` (popular in the named category, or the store's best sellers). The answer
+  gains `showing { q, reason, dropped }`, `didYouMean`, `fallback`.
+- Decisions: at least half the words stay ("red velvet saree" never becomes "red"); two typos never in a short word
+  ("kicks" became "kit" in the first try); a word dropped keeps the rarer words. "Some of the words" keeps what search
+  always showed for list queries ("jacket coat shirt sneakers boots" in `search-api.mjs` caught the first version
+  emptying it).
+- Found while testing: after `upgradeStores.js --apply` a running backend compiles the new models within 10 s (the
+  registry's check), so `search-rules.mjs` now waits for it. Not changed in the backend: forcing a sync per call would
+  cost a read for every store with a missing model.
+- HINT shows it (No exact results / some words / every price / Did you mean / Popular right now); the panel's Try a
+  search does too; the guide has "When nothing matches". Tests: `test/recover.test.ts` (19; 426 in all) and
+  `search-recover.mjs`; `search-api`, `search-index`, `search-rules`, `search-engine` (p95 176 ms on 20k) pass.
+
 ## 2026-11-11 — SI-10 Synonyms, redirects, starter packs
 
 - Search synonyms and Search redirects (store models), `rules.ts`, synonym matching (0.8) and redirects in the

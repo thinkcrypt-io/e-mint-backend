@@ -31,7 +31,7 @@ The user answered README §8 on 2026-11-10.
 | **Phase 3 — Understanding** | | | | |
 | SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | done 2026-11-11 |
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | done 2026-11-11 |
-| SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | open |
+| SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | done 2026-11-11 (the widget shows it in SI-07) |
 | **Phase 4 — Insights** | | | | |
 | SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | open |
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | open |
@@ -60,20 +60,21 @@ HINT and Live Fresh call the new search **and fall back** to their old search wh
 `/store/search` (SI-08). They pick up the engine by themselves once the backend is deployed and each store's first
 sweep has indexed it.
 
-SI-09 (query understanding) and SI-10 (synonyms, redirects, starter packs, Try a search) are done too. The answer's `understood` is there for storefronts to show as chips;
+SI-09 (query understanding), SI-10 (synonyms, redirects, starter packs, Try a search) and SI-11 (no dead ends:
+`showing`, `didYouMean`, `fallback`, shown on HINT) are done too. The answer's `understood` is there for storefronts to show as chips;
 HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
 
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-11** — no dead ends.
 - **SI-12 / SI-13** — search events and the nightly rollups. Insights (SI-14) needs these.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
 
 Tests:
-- `npx jest library/functions/commerce/search` (324)
-- smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (46)
+- `npx jest library/functions/commerce/search` (426)
+- smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (46), `search-rules.mjs`,
+  `search-recover.mjs`
 
 ---
 
@@ -229,7 +230,30 @@ parity still holds.
   `scripts/tenancy-smoke/search-rules.mjs` (all passing: saving works at once, one way, packs on / twice / off,
   redirect + hits, try, upgrade of an older store).
 
-## SI-07, SI-11 … SI-23 (the rest)
+## SI-11 — No dead ends (S) — done 2026-11-11
+
+- **`commerce/search/recover.ts`** (pure): `fewerWords` picks the best smaller set of the query's words from the
+  documents found — the most words, then the rarest (Σ idf), then the most products, never under half the words;
+  `covering` keeps the documents with all of them; `nearestWord` is "did you mean" (one change, two from six letters,
+  the first letter may differ; only words the store shows).
+- **Engine (`searchWith`)**, when no product has every word (a SKU hit counts as every word):
+  1. understood filters set aside — a brand or size, then a price / in stock / on sale (`understood.relaxed`); the
+     shopper's own filters never;
+  2. typos `normal`: the loose plan, two typos only between words of six letters or more → `showing.reason: 'typos'`
+     with the store's spelling;
+  3. fewer words → `showing.reason: 'fewer words'`, `dropped`, re-ranked as if the dropped words were never typed;
+  4. no smaller set: products with some of the words, as before → `showing.reason: 'some words'`;
+  5. nothing at all: `didYouMean` and `fallback { kind: category | popular, doc }` (8, by sales).
+  Every word found: nothing changes. A second candidates call happens only in step 2.
+- **HINT** (`SearchView.tsx`): "No exact results for … Showing results for …", "No product has all of … — showing the
+  ones with some of the words", "Nothing under ৳10 — showing every price", "Did you mean …?" (a button) and a
+  "Popular right now" grid. Checked in the browser pane against a local copy of the HINT catalogue.
+- **Panel**: Try a search shows the same lines and what shoppers see instead. **Guide**: "When nothing matches"
+  (`/store#store-search-recover`) and the example code.
+- **Tests:** `test/recover.test.ts` (19) and `scripts/tenancy-smoke/search-recover.mjs` (14 checks, all passing).
+- **Left:** the mint.js widget shows it with SI-07; zero-result searches are logged with SI-12.
+
+## SI-07, SI-12 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

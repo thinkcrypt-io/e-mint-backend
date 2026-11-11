@@ -120,7 +120,8 @@ ok('upgradeStores dry run: the older store would get both', /Older shop:[\s\S]*?
 out = run('--apply');
 const after = (await db.collection('commercesettings').findOne({ project: new ObjectId(old._id) }))?.installed || {};
 ok('…applied: it has them', after.searchSynonym?.route && after.searchRedirect?.route, JSON.stringify([after.searchSynonym, after.searchRedirect]));
-r = await call('POST', `${old.C}/search/packs/grocery-en`, { on: true }, t);
+// The running backend compiles the new models when its registry next looks (every 10 s).
+await waitFor(async () => (r = await call('POST', `${old.C}/search/packs/grocery-en`, { on: true }, t)).status === 200, 15000);
 ok('…and its packs work', r.status === 200 && r.body.find(p => p.id === 'grocery-en')?.on, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
 
 await call('DELETE', `/tenant/api/projects/${shop._id}?force=1`, null, t);

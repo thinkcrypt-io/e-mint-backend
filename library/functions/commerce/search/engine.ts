@@ -6,8 +6,9 @@
  *         → candidates from the driver (documents with every word first, then some of the words, ≤ 2,000)
  *         → rank (rank.ts) → filters → sort → page
  *
- * Query understanding (price phrases, sizes, brand names: SI-09), synonyms (SI-10), "showing results for" (SI-11)
- * and merchandising rules (SI-15) come later, around this. `storeSearch` / `storeSuggest` run it for a store; the
+ * Around it: query understanding (price phrases, sizes, brand names: SI-09), synonyms and redirects (SI-10), and no
+ * dead ends — loosen step by step, "showing results for", did you mean, popular instead (SI-11, recover.ts).
+ * Merchandising rules (SI-15) come later. `storeSearch` / `storeSuggest` run it for a store; the
  * public routes are SI-05's.
  */
 import CommerceSettings from '../../../models/tenancy/commerceSettings.model.js';
@@ -21,6 +22,7 @@ import { searchSettingsOf, type SearchSettings } from './settings.js';
 import { cachedVocab, completions, nearWords, typosFor, type Vocab } from './vocab.js';
 import { nativeDriver } from './drivers/native.js';
 import { countRedirect, findRedirect, NO_RULES, storeRules, type Rules } from './rules.js';
+import { covering, fewerWords, nearestWord } from './recover.js';
 import type { BrowseSort, Cond, SearchDriver } from './drivers/types.js';
 
 export type SearchSort = 'relevance' | BrowseSort;
@@ -39,6 +41,16 @@ export type SearchResult = {
 	redirect?: { id: string; url: string };
 	/** What the query asked for besides its words (SI8): shown as chips a shopper can remove. */
 	understood?: UnderstoodOut;
+	/**
+	 * No product had every word (SI12), so these results are for other words: "No exact results for ‘red velvet
+	 * saree’. Showing results for ‘velvet saree’." `typos`: spellings further away; `fewer words`: `dropped` left out;
+	 * `some words`: no smaller set works, so products with any of `q`'s words (each ranked by how many it has).
+	 */
+	showing?: { q: string; reason: 'typos' | 'fewer words' | 'some words'; dropped?: string[] };
+	/** Nothing found at all: the nearest words the store has ("Did you mean …?"). */
+	didYouMean?: string;
+	/** Nothing found at all: products to show instead — popular in the category the query named, or in the store. */
+	fallback?: { kind: 'category' | 'popular'; category?: { _id: string; name: string }; doc: any[] };
 	ms: number;
 };
 
@@ -78,7 +90,10 @@ const applyUnderstood = (u: Understood, filters: Filters, sort: SearchSort) => {
 	return {
 		all: cleanFilters({ ...filters, ...soft, ...hard }),
 		withoutHard: cleanFilters({ ...filters, ...soft }),
+		/** The shopper's own filters only: everything read from the words set aside. */
+		own: filters,
 		hasHard: Object.keys(hard).length > 0,
+		hasSoft: Object.keys(soft).length > 0,
 		sort: sort !== 'relevance' ? sort : ((u.sort as SearchSort) ?? 'relevance'),
 		boosts,
 	};
@@ -105,6 +120,8 @@ const CAP = 2000;
 const PARTIAL_BELOW = 200;
 const PARTIAL_CAP = 600;
 const MAX_LIMIT = 60;
+/** Products shown instead when a search finds nothing (SI12). */
+const FALLBACK = 8;
 
 /* ---------------------------------------------------------------- planning */
 
@@ -164,6 +181,12 @@ const condOf = (t: QToken, vocab: Vocab): Cond | null => {
 		...(usePhon && { phon: t.phon }),
 		...(t.code && { code: t.code }),
 	};
+};
+
+/** The words as the best result spells them: a typo'd word as the store writes it ("jaket" → "jacket"). */
+const spelled = (pl: QToken[], found: { d: any; r: Ranked }[]) => {
+	const top = [...found].sort((a, b) => b.r.score - a.r.score)[0];
+	return pl.map(t => top?.r.hits.find(h => h.token === t.word && (h.kind === 'typo1' || h.kind === 'typo2'))?.matched ?? t.word).join(' ');
 };
 
 /* -------------------------------------------------------------------- cache */
@@ -244,24 +267,87 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			};
 		}
 
-		const conds = plan.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
-		const docs = await driver.candidates({ hideOutOfStock: hide, all: conds, codes: codes.filter(Boolean), cap: CAP, partialBelow: PARTIAL_BELOW, partialCap: PARTIAL_CAP });
 		const now = Date.now();
-		const ranked: { d: any; r: Ranked }[] = [];
-		for (const d of docs) {
-			const r = rank(plan, d, s, now, ua.boosts);
-			if (r) ranked.push({ d, r });
-		}
+		const found = async (pl: QToken[]) => {
+			const conds = pl.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
+			const docs = await driver.candidates({ hideOutOfStock: hide, all: conds, codes: codes.filter(Boolean), cap: CAP, partialBelow: PARTIAL_BELOW, partialCap: PARTIAL_CAP });
+			const out: { d: any; r: Ranked }[] = [];
+			for (const d of docs) {
+				const r = rank(pl, d, s, now, ua.boosts);
+				if (r) out.push({ d, r });
+			}
+			return out;
+		};
+		let ranked = await found(plan);
 		let used = ua.all;
-		let matched = ranked.filter(x => passes(x.d, used));
-		// A brand or size the query named that leaves nothing: set aside (the words still count).
-		const relaxed = !matched.length && ua.hasHard;
-		if (relaxed) (used = ua.withoutHard), (matched = ranked.filter(x => passes(x.d, used)));
-		matched.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
-		const total = matched.length;
+		let relaxed = false;
+		let showing: SearchResult['showing'];
+		let didYouMean: string | undefined;
+		let fallback: SearchResult['fallback'];
+		let typosOut = typos;
 		// The whole query is one product's SKU or barcode.
 		const whole = codeKey(clean(q));
-		const exact = whole ? matched.filter(x => x.d.codes?.includes(whole)) : [];
+		const byCode = (r: typeof ranked) => (whole ? r.filter(x => x.d.codes?.includes(whole)) : []);
+		const everyWord = (r: typeof ranked, f: Filters) => r.some(x => (x.r.coverage === 1 || x.r.hits.some(h => h.kind === 'code')) && passes(x.d, f));
+		// Filters read from the words, loosest last: a brand or size first, then a price / in stock / on sale too.
+		const loosen = [ua.all, ...(ua.hasHard ? [ua.withoutHard] : []), ...(ua.hasHard || ua.hasSoft ? [ua.own] : [])];
+		const firstWith = (r: typeof ranked, test: (r: typeof ranked, f: Filters) => boolean) => loosen.find(f => test(r, f));
+
+		// No dead ends (SI12): nothing with every word → loosen, step by step, and say so.
+		if (!everyWord(ranked, used)) {
+			const f = firstWith(ranked, everyWord);
+			if (f) (used = f), (relaxed = f !== ua.all);
+			else if (s.typos === 'normal') {
+				// 1. Spellings further away.
+				// Two typos only between words of six letters or more ("kicks" must not become "kit").
+				const loose = planQuery(u.text, vocab, { ...s, typos: 'loose' }, {}, rules).plan.map(t => ({
+					...t,
+					near: t.near.filter(n => n.typos === 1 || Math.min([...t.word].length, [...n.word].length) >= 6),
+				}));
+				if (loose.some((t, i) => t.near.length > plan[i].near.length)) {
+					const r2 = await found(loose);
+					const f2 = firstWith(r2, everyWord);
+					if (f2) {
+						ranked = r2;
+						(used = f2), (relaxed = f2 !== ua.all);
+						typosOut = loose.filter(t => t.near.length).map(t => ({ word: t.word, tried: t.near.map(n => n.word) }));
+						showing = { q: spelled(loose, r2.filter(x => x.r.coverage === 1 && passes(x.d, f2))), reason: 'typos' };
+					}
+				}
+			}
+			if (!showing && !everyWord(ranked, used)) {
+				// 2. Fewer words: the most words some products have all of, the rarest kept.
+				const fm = firstWith(ranked, (r, f) => !!fewerWords(plan, r.filter(x => passes(x.d, f))));
+				const fw = fm && fewerWords(plan, ranked.filter(x => passes(x.d, fm)));
+				if (fm && fw) {
+					const sub = fw.keep.map(i => plan[i]);
+					ranked = covering(plan, fw.keep, ranked).map(x => ({ d: x.d, r: rank(sub, x.d, s, now, ua.boosts)! }));
+					(used = fm), (relaxed = fm !== ua.all);
+					showing = { q: spelled(sub, ranked.filter(x => passes(x.d, fm))), reason: 'fewer words', dropped: fw.dropped.map(i => plan[i].word) };
+				} else if (firstWith(ranked, (r, f) => r.some(x => passes(x.d, f)))) {
+					const f3 = firstWith(ranked, (r, f) => r.some(x => passes(x.d, f)))!;
+					// 3. Products with some of the words ("jacket coat boots": each has one): shown, and said.
+					(used = f3), (relaxed = f3 !== ua.all);
+					const hit = new Set(ranked.filter(x => passes(x.d, f3)).flatMap(x => x.r.hits.map(h => h.token)));
+					if (!byCode(ranked).length)
+						showing = { q: plan.filter(t => hit.has(t.word)).map(t => t.word).join(' '), reason: 'some words', dropped: plan.filter(t => !hit.has(t.word)).map(t => t.word) };
+				} else {
+					// 4. Nothing at all: the nearest words the store has, and something to look at.
+					const near = plan.map(t => (t.known || t.code ? t.word : nearestWord(vocab, t.word) ?? t.word));
+					if (near.some((w, i) => w !== plan[i].word)) didYouMean = near.join(' ');
+					const cat = u.category;
+					const pop = async (f: Filters) => (await driver.browse({ hideOutOfStock: hide, filters: f, sort: 'popular', skip: 0, limit: FALLBACK, facets: false })).docs.map(d => cardOf(d));
+					const inCat = cat ? await pop({ categories: [cat._id] }) : [];
+					fallback = inCat.length ? { kind: 'category', category: cat, doc: inCat } : { kind: 'popular', doc: await pop({}) };
+					if (!fallback.doc.length) fallback = undefined;
+				}
+			}
+		}
+
+		let matched = ranked.filter(x => passes(x.d, used));
+		matched.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
+		const total = matched.length;
+		const exact = byCode(matched);
 		const product = exact.length === 1 ? cardOf(exact[0].d) : undefined;
 		return {
 			doc: matched.slice((page - 1) * limit, page * limit).map(x => cardOf(x.d, x.r, req.explain)),
@@ -270,12 +356,15 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			limit,
 			totalPages: Math.max(1, Math.ceil(total / limit)),
 			...(req.facets && { facets: facetCounts(ranked.map(x => x.d), used) }),
-			query: { words, typos, ...(synonyms.length && { synonyms }) },
+			query: { words, typos: typosOut, ...(synonyms.length && { synonyms }) },
 			...(redirect && { redirect }),
 			...((): { understood?: UnderstoodOut } => {
 				const out = understoodOut(u, { ...(product && { product }), ...(relaxed && { relaxed }) });
 				return out ? { understood: out } : {};
 			})(),
+			...(showing && { showing }),
+			...(didYouMean && { didYouMean }),
+			...(fallback && { fallback }),
 			ms: Date.now() - started,
 		};
 	});
