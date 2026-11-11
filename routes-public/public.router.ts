@@ -62,6 +62,7 @@ import { commerceView } from '../library/functions/commerce/settings.js';
 import { storeOf } from '../library/functions/commerce/store.js';
 import { addToWishlist, mergeWishlist, myWishlist, removeFromWishlist, viewProduct } from '../library/functions/commerce/wishlist.js';
 import { storeSearch, storeSuggest } from '../library/functions/commerce/search/engine.js';
+import { logSearch, popularQueries, recordEvents } from '../library/functions/commerce/search/events.js';
 import { listSearchUsesEngine, publicAnswer, searchIsOn, searchRequestOf } from '../library/functions/commerce/search/http.js';
 import { createWebsite, myWebsiteOrder, myWebsiteOrders, publicOrder, trackWebsite } from '../library/functions/commerce/orders.js';
 import {
@@ -626,9 +627,11 @@ router.post(
 		const customer = await customerOf(req);
 		if (!customer && store.answers.store.guestCheckout === false) throw new TenancyError(401, 'Please sign in to place your order.', 'customer_required');
 		const b = req.body || {};
+		// The shopper's searches (docs/search SI18): the ids the storefront kept, and track.js's visitor id.
+		const search = { ...(b.search && typeof b.search === 'object' ? b.search : {}), visitor: b.search?.visitor || req.headers['x-mint-visitor'] };
 		const id = await createWebsite(
 			store,
-			{ ...b, email: customer?.email || b.email, paymentMethod: b.paymentMethod === 'cod' || !b.paymentMethod ? 'cod' : String(b.paymentMethod) },
+			{ ...b, search, email: customer?.email || b.email, paymentMethod: b.paymentMethod === 'cod' || !b.paymentMethod ? 'cod' : String(b.paymentMethod) },
 			{ project: req.project, by: customer ? `Website · ${customer.email}` : 'Website' }
 		);
 		return publicOrder(await store.M('order').findById(id).lean());
@@ -689,6 +692,9 @@ router.post('/store/products/:id/view', storeViewLimit, handle(async (req: any) 
  *
  *   GET /store/search            { doc: [cards], total, page, limit, totalPages, facets?, query: { words, typos }, ms }
  *   GET /store/search/suggest?q  { queries, products, categories, brands, ms }
+ *
+ * A search with words is logged (SI17) and answers with its `searchId`; send `visitor` and `session` (track.js's
+ * MintAnalytics.visitorId / sessionId) in the query string so clicks and orders tie back to it.
  */
 const storeSearchLimit = rateLimit({ name: 'public-store-search', windowMs: 60 * 1000, max: 120 });
 const storeSuggestLimit = rateLimit({ name: 'public-store-suggest', windowMs: 60 * 1000, max: 600 });
@@ -704,8 +710,53 @@ router.get(
 		const store = await searchOn(req);
 		const canExplain = !!(await serverKeyOf(req));
 		const ask = await searchRequestOf(store, req.query || {}, { canExplain });
-		res.setHeader('Cache-Control', ask.explain ? 'no-store' : 'public, max-age=30');
-		return publicAnswer(store, await storeSearch(store, ask));
+		const r = await storeSearch(store, ask);
+		// A shopper's search is logged (SI17) and its id handed back; not a crawler's, the page renderer's or an explain.
+		const who = { visitor: req.query?.visitor || req.headers['x-mint-visitor'], session: req.query?.session || req.headers['x-mint-session'] };
+		const searchId = !ask.explain && !isRenderer(req) && !BOT.test(String(req.headers['user-agent'] || '')) ? logSearch(ask, r, who) : null;
+		// An answer with a search id is the shopper's own: only their browser may keep it. A category page may be shared.
+		res.setHeader('Cache-Control', ask.explain ? 'no-store' : searchId ? 'private, max-age=30' : 'public, max-age=30');
+		return publicAnswer(store, searchId ? { ...r, searchId } : r);
+	})
+);
+/**
+ * What shoppers did with the store's search (SI17), sent by the storefront in small batches (sendBeacon, text/plain):
+ *
+ *   POST /store/search/events   { visitor?, session?, events: [{ type: 'click' | 'cart', searchId, product }
+ *                                                             | { type: 'suggest', q, product?, searchId? }] }  ≤ 20
+ *   GET  /store/search/popular  ?limit(≤20)&days(1–30)  { queries: [{ q, searches }] }: this week's top searches that
+ *                               found something, each made by 3 visitors or more
+ */
+const storeSearchEventsLimit = rateLimit({ name: 'public-store-search-events', windowMs: 60 * 1000, max: 120 });
+router.post(
+	'/store/search/events',
+	storeSearchEventsLimit,
+	express.text({ type: 'text/plain', limit: '32kb' }),
+	handle(async (req: any, res: any) => {
+		await searchOn(req);
+		res.status(202);
+		if (BOT.test(String(req.headers['user-agent'] || '')) || !fromOwnSite(req)) return { ok: true, recorded: 0 }; // quietly dropped
+		let body: any = req.body;
+		if (typeof body === 'string') {
+			try {
+				body = JSON.parse(body);
+			} catch {
+				throw new TenancyError(400, 'The events must be JSON', 'search_invalid');
+			}
+		}
+		const recorded = await recordEvents(body, { visitor: req.headers['x-mint-visitor'], session: req.headers['x-mint-session'] });
+		return { ok: true, recorded };
+	})
+);
+router.get(
+	'/store/search/popular',
+	storeSuggestLimit,
+	handle(async (req: any, res: any) => {
+		await searchOn(req);
+		const limit = Math.min(Math.max(parseInt(req.query?.limit, 10) || 10, 1), 20);
+		const days = Math.min(Math.max(parseInt(req.query?.days, 10) || 7, 1), 30);
+		res.setHeader('Cache-Control', 'public, max-age=300');
+		return { queries: await popularQueries({ days, limit }), days };
 	})
 );
 router.get(

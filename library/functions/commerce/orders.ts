@@ -9,6 +9,7 @@ import { extraFields } from './lists.js';
 import { deliveriesOf } from './deliveries.js';
 import { trackPurchases } from './purchases.js';
 import { nextCode } from '../dynamicModels.function.js';
+import { afterWebsiteOrder } from './search/events.js';
 
 /**
  * Orders (docs/ecommerce EC6, EC9, EC17): a POS sale, an order taken by phone
@@ -238,6 +239,8 @@ export type WebsiteInput = {
 	note?: string;
 	paymentMethod?: string;
 	couponCode?: string;
+	/** The searches this shopper made (docs/search SI18): the ids kept in the browser, and who they are (track.js). */
+	search?: { ids?: string[]; visitor?: string; session?: string };
 };
 
 const clip = (v: any, n: number) => String(v ?? '').trim().slice(0, n);
@@ -299,6 +302,8 @@ export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx)
 		throw e;
 	}
 	await settleOrder(store, order._id);
+	// From search? (SI18) And each product's units on its search document — in the background, never failing the order.
+	afterWebsiteOrder(order._id, q.lines, input.search);
 	return order._id;
 };
 

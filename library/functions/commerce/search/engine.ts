@@ -22,6 +22,7 @@ import { searchSettingsOf, type SearchSettings } from './settings.js';
 import { cachedVocab, completions, nearWords, typosFor, type Vocab } from './vocab.js';
 import { nativeDriver } from './drivers/native.js';
 import { countRedirect, findRedirect, NO_RULES, storeRules, type Rules } from './rules.js';
+import { popularStartingWith } from './events.js';
 import { covering, fewerWords, nearestWord } from './recover.js';
 import type { BrowseSort, Cond, SearchDriver } from './drivers/types.js';
 
@@ -51,6 +52,8 @@ export type SearchResult = {
 	didYouMean?: string;
 	/** Nothing found at all: products to show instead — popular in the category the query named, or in the store. */
 	fallback?: { kind: 'category' | 'popular'; category?: { _id: string; name: string }; doc: any[] };
+	/** This search's id in the store's search log (SI17, public route only): sent back with clicks, the bag and the order. */
+	searchId?: string;
 	ms: number;
 };
 
@@ -436,8 +439,13 @@ export const storeSearch = async (store: Store, req: SearchRequest) => {
 	return r;
 };
 
-/** Suggestions in the current store. */
+/**
+ * Suggestions in the current store. The store's own popular searches that start with what's typed come first (SI11:
+ * only searches 3 visitors or more made, that found something), then the store's words.
+ */
 export const storeSuggest = async (store: Store, q: string) => {
 	const { settings, version } = await storeState();
-	return suggestWith(nativeDriver(), settings, q, version, {}, await storeRules(store, version));
+	const [r, popular] = await Promise.all([suggestWith(nativeDriver(), settings, q, version, {}, await storeRules(store, version)), popularStartingWith(q).catch(() => [])]);
+	if (!popular.length) return r;
+	return { ...r, queries: [...new Set([...popular, ...r.queries])].slice(0, 6) };
 };

@@ -1,5 +1,22 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-12 Events + attribution
+
+- New `SearchEvent` (90 days) and `commerce/search/events.ts`. The public search logs each shopper's search and
+  answers with a `searchId`; `POST /store/search/events` takes clicks, adds to the bag and suggestion picks from a
+  beacon; `POST /store/orders` takes `search: { ids }` and counts lines from search (24 hours, same visitor or a named
+  search, last one wins, the line's total); every order adds its units to `sold30`. New `GET /store/search/popular`;
+  suggestions show popular searches first.
+- Privacy: queries are cleaned before they're stored (emails, phones, card numbers); no IP; popular searches need 3
+  visitors.
+- Decisions: search answers are `Cache-Control: private` now, because each has the shopper's own id (category pages
+  stay public). No `searchId` on cart lines: the click already links the product to its search.
+- Found while testing: the engine's words still held a phone number after the query was cleaned, so the logged words
+  are now cleaned too. curl's own searches weren't logged (the bot check), as intended.
+- HINT sends the events and the order's search ids and shows "Popular searches"; checked in the browser pane through
+  to a guest order. Tests: `test/events.test.ts` (36; 462 in all) and `search-events.mjs` (23); `search-api`,
+  `search-recover`, `search-rules`, `commerce-orders` pass.
+
 ## 2026-11-11 — SI-11 No dead ends
 
 - New `commerce/search/recover.ts` (`fewerWords`, `covering`, `nearestWord`). When no product has every word, the

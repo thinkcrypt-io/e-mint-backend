@@ -171,9 +171,10 @@ library/functions/commerce/search/
 |---|---|
 | `GET /store/search?q&page&limit(≤60)&sort&category&collection&brand&price[gte]&price[lte]&option.<Name>=<v>&inStock&onSale&facets=1&explain=1` | Search, or a category page when there's no `q`. Returns `doc` (cards), `total`, `page`, `limit`, `totalPages`, `facets` (categories with name / slug / parent, collections, brands, price ranges, options as the store wrote them, in stock, on sale), `query` (words, typos tried), `ms`. Categories and collections go by web address or id (several with commas), brands by name or id. `explain` needs a server key. Cached 30 s (`Cache-Control`). 120 a minute. Later: `understood` (SI-09), `redirect` (SI-10), `correctedTo` (SI-11), `searchId` (SI-12) |
 | `GET /store/search/suggest?q` | SI11; 600 a minute |
-| `GET /store/search/popular` | The store's top searches this week (for an empty search page, "Trending"), with the same 3-visitor floor. **Moved to SI-12**: it needs the search log |
+| `GET /store/search/popular?limit&days` | The store's top searches this week (for an empty search page, "Trending"), with the same 3-visitor floor (SI-12) |
+| `POST /store/search/events` | Clicks, adds to the bag and suggestion picks, ≤ 20 per call, text/plain for sendBeacon (SI-12) |
 | `GET /products?search=…` (the generic list) | Ranked by the engine when it's the only filter, there's no `sort`, `limit` ≤ 60, and the store has `search.enabled === true` (new stores; existing ones once checked, README §8.5). The list keeps its own shape |
-| `POST /store/orders` | Gains `search: { ids[] }` (SI18, SI-12) |
+| `POST /store/orders` | Gains `search: { ids[], visitor?, session? }` (SI18, SI-12) |
 | `mint.js` | `Mint.search.open()`, `Mint.search.track(...)`; the widget emits `search`, `view_search_results` to the MK pixels when they are on (SI-07) |
 
 Panel routes (`/tenant/api/p/:id/commerce`): `GET /search/status`, `POST /search/rebuild` (SI-03); `GET /search/settings`, `PUT /search/settings` (SI-05). A store switched off answers 404 `search_off` on the public routes.

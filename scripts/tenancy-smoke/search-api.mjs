@@ -131,7 +131,9 @@ const withKey = await fetch(`${ROOT}/public/api/store/search?apiKey=${apiKey}&q=
 const wk = await withKey.json();
 ok('…with one: each result explained, not cached', /name exact “denim” 10/.test(wk.doc?.[0]?.explain || '') && withKey.headers.get('cache-control') === 'no-store', `${wk.doc?.[0]?.explain} ${withKey.headers.get('cache-control')}`);
 const plain = await fetch(`${ROOT}/public/api/store/search?apiKey=${apiKey}&q=coat`);
-ok('a plain answer may be cached 30 s', plain.headers.get('cache-control') === 'public, max-age=30', plain.headers.get('cache-control'));
+ok('a plain answer may be cached 30 s, by the shopper’s browser only (it has its search id, SI-12)', plain.headers.get('cache-control') === 'private, max-age=30', plain.headers.get('cache-control'));
+const page = await fetch(`${ROOT}/public/api/store/search?apiKey=${apiKey}&category=fashion`);
+ok('…a category page by anyone', page.headers.get('cache-control') === 'public, max-age=30', page.headers.get('cache-control'));
 r = await S('q=coat&sort=cheapest');
 ok('an unknown sort: 400 in plain words', r.status === 400 && /sort must be one of/.test(r.body?.message), JSON.stringify(r.body));
 r = await S('q=coat&price[gte]=abc');

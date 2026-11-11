@@ -361,6 +361,8 @@ export const TRACK_JS = `(function () {
 		/** Forget identify (signing out). */
 		reset: function () { user = null; try { localStorage.removeItem(USER_KEY); } catch (e) {} },
 		visitorId: visitorId,
+		/** This tab's visit (ends with the tab): sent with store searches so a click and an order tie back to them (docs/search SI-12). */
+		sessionId: sessionId,
 		/** Add to the site's own calls to the site API (e.g. a form it sends in): matches a lead sent from the server to this visitor. */
 		headers: function () {
 			var h = { 'x-mint-visitor': visitorId };

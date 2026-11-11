@@ -33,7 +33,7 @@ The user answered README §8 on 2026-11-10.
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | done 2026-11-11 |
 | SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | done 2026-11-11 (the widget shows it in SI-07) |
 | **Phase 4 — Insights** | | | | |
-| SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | open |
+| SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | done 2026-11-11 (mint.js with SI-07; no `searchId` on cart lines, see below) |
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | open |
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | open |
 | **Phase 5 — Merchandising and learning** | | | | |
@@ -60,21 +60,22 @@ HINT and Live Fresh call the new search **and fall back** to their old search wh
 `/store/search` (SI-08). They pick up the engine by themselves once the backend is deployed and each store's first
 sweep has indexed it.
 
-SI-09 (query understanding), SI-10 (synonyms, redirects, starter packs, Try a search) and SI-11 (no dead ends:
-`showing`, `didYouMean`, `fallback`, shown on HINT) are done too. The answer's `understood` is there for storefronts to show as chips;
+SI-09 (query understanding), SI-10 (synonyms, redirects, starter packs, Try a search), SI-11 (no dead ends:
+`showing`, `didYouMean`, `fallback`, shown on HINT) and SI-12 (the search log, clicks, sales from search, popular
+searches; HINT sends them) are done too. The answer's `understood` is there for storefronts to show as chips;
 HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
 
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-12 / SI-13** — search events and the nightly rollups. Insights (SI-14) needs these.
+- **SI-13** — the nightly rollups (`SearchQueryDaily`, sold30 / views30 from the orders). Insights (SI-14) needs it.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
 
 Tests:
-- `npx jest library/functions/commerce/search` (426)
-- smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (46), `search-rules.mjs`,
-  `search-recover.mjs`
+- `npx jest library/functions/commerce/search` (462)
+- smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
+  `search-recover.mjs`, `search-events.mjs` (23)
 
 ---
 
@@ -253,7 +254,44 @@ parity still holds.
 - **Tests:** `test/recover.test.ts` (19) and `scripts/tenancy-smoke/search-recover.mjs` (14 checks, all passing).
 - **Left:** the mint.js widget shows it with SI-07; zero-result searches are logged with SI-12.
 
-## SI-07, SI-12 … SI-23 (the rest)
+## SI-12 — Events + attribution (M) — done 2026-11-11
+
+- **`SearchEvent`** (platform, keyed by project, `searchevents`, TTL 90 days on `at`): `search`, `suggest`, `click`,
+  `cart`, `order`. Each has the visitor and session ids of the site's analytics (track.js) and the search id. No IP.
+- **`commerce/search/events.ts`**:
+  - `cleanQuery`: emails → `[email]`, BD mobiles (with or without +88 / 0088, spaces, dashes, Bangla digits) and
+    E.164 numbers → `[phone]`, 13–19 digits passing the Luhn check → `[number]`. A barcode that fails Luhn stays.
+    When anything was cleaned, the logged `words` keep only what's still in the cleaned query.
+  - `normalisedOf`: the stems in order (`nq`), so "Shirts" and "shirt" are one row in the rollups.
+  - `logSearch` (in the background; a search is never slower), `recordEvents` (a click or an add must name a search of
+    this store whose page showed that product; the position is worked out from that page; duplicates in a batch
+    dropped), `afterWebsiteOrder`, `popularQueries` (5-minute cache), `popularStartingWith`.
+- **Routes**:
+  - `GET /store/search`: a search with words (not a category page, a crawler, the page renderer or `explain`) is
+    logged and answers with `searchId`; `visitor` and `session` in the query string. Its answer is
+    `Cache-Control: private` now (it carries the shopper's own id); category pages stay `public`.
+  - `POST /store/search/events` (text/plain for sendBeacon, ≤ 20 events, 120 a minute; own-site and bot checks as
+    `/track`; 404 when search is off).
+  - `GET /store/search/popular?limit&days`: top searches that found something, each made by 3 visitors or more,
+    shown as typed most often. Suggestions put the popular ones starting with what's typed first (30 days).
+  - `POST /store/orders` takes `search: { ids, visitor?, session? }` (or track.js's `x-mint-visitor` header).
+- **Attribution** (`afterWebsiteOrder`, after the order is placed, never failing it): a line is from search when its
+  product was clicked or added to the bag from a search in the 24 hours before, by the same visitor or in a search
+  the order names. The last one wins; `revenue` is that line's total. Every ordered product's `signals.sold30` goes up
+  by its units (SI-13 recounts nightly from the orders).
+- **HINT** (`src/lib/searchTrail.ts`): sends `visitor` / `session` with searches, keeps the search ids for a day in
+  sessionStorage, beacons clicks and adds from result cards and suggestion picks, sends `search` with the order, and
+  shows "Popular searches" on the empty search page. `track.js` now also has `MintAnalytics.sessionId`. Checked in the
+  browser pane against a local copy of the HINT catalogue: a search, a click (position 1), a guest order counted from
+  search with that line's total.
+- **Not done, on purpose:** no `searchId` on cart lines. The click (or the add from the results) already ties a product
+  to its search, and the order carries the ids, so a field on every store's cart line would add nothing.
+  mint.js gets the same calls with its Search widget (SI-07).
+- **Tests:** `test/events.test.ts` (36) and `scripts/tenancy-smoke/search-events.mjs` (23 checks); `search-api.mjs`
+  (its cache check now expects `private`, plus a category page `public`), `search-recover`, `search-rules`,
+  `commerce-orders` pass.
+
+## SI-07, SI-13 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).
