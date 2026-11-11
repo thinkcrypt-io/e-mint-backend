@@ -24,7 +24,7 @@ import { Store, storeOf } from './store.js';
 import { ensureStoreSiteKit } from '../websiteKit.function.js';
 import { applyAllCategoryTaxes } from './categoryTax.js';
 import { rebuildPurchases } from './purchases.js';
-import { seedStoreDashboard } from './dashboard.js';
+import { addSearchWidget, seedStoreDashboard } from './dashboard.js';
 import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 import { ensureTaxAutomations } from './taxAutomations.js';
 import { refreshTaxAdded, relabelPriceColumns } from './taxRates.js';
@@ -507,6 +507,12 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 	if (mails.length) changes.push({ model: 'Automations', added: [], renewed: [], filled: mails.map(m => `“${m}” (off)`) });
 	const home = await seedStoreDashboard(store.installed as any, { apply });
 	if (home.length) changes.push({ model: 'Dashboard', added: [], renewed: [], filled: home });
+	// Search Insights' widget (docs/search SI-14), once.
+	else if (!doneSale.includes('search-widget')) {
+		const widget = await addSearchWidget({ apply });
+		if (apply) await CommerceSettings.updateOne({}, { $addToSet: { doneOnce: 'search-widget' } });
+		if (widget.length) changes.push({ model: 'Dashboard', added: [], renewed: [], filled: widget });
+	}
 	const kit = await ensureStoreSiteKit(req, { apply });
 	if (kit.length) changes.push({ model: 'Website', added: [], renewed: [], filled: kit });
 	return changes;

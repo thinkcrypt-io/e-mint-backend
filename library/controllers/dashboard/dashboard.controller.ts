@@ -13,7 +13,8 @@ import { currentScope } from '../../functions/tenantScope.function.js';
 const MAX_WIDGETS = 40;
 /** `templates`: Template Studio's overview (docs/templates T-11) — the super admin's dashboard only. */
 /** `actions`: quick-action buttons that open the project's own pages (no model to read). */
-const TYPES = ['stat', 'chart', 'recent', 'templates', 'actions'];
+/** `search`: a store's website search this week (docs/search SI-14) — read from /commerce/search/insights/week. */
+const TYPES = ['stat', 'chart', 'recent', 'templates', 'actions', 'search'];
 const SIZES = ['sm', 'md', 'lg', 'xl', 'full'];
 const METRICS = ['count', 'sum', 'avg'];
 const RANGES = ['all', 'today', '7d', '30d', '90d', 'month', '12m', 'year'];
@@ -54,6 +55,8 @@ export const normalizeWidget = (w: any, i: number) => {
 		if (currentScope()) return { error: `Widget ${i + 1}: the Templates overview is only for the super admin’s dashboard` };
 		return { widget: { id: str(w.id, 40) || `w${Date.now().toString(36)}${i}`, type, route: 'templates', title: str(w.title, 80), size: oneOf(w.size, SIZES, 'full'), filters: [] } };
 	}
+	if (type === 'search')
+		return { widget: { id: str(w.id, 40) || `w${Date.now().toString(36)}${i}`, type, route: 'search', title: str(w.title, 80), size: oneOf(w.size, SIZES, 'lg'), filters: [] } };
 	if (type === 'actions') {
 		const items = (Array.isArray(w.items) ? w.items : [])
 			.slice(0, 8)

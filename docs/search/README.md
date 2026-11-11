@@ -210,6 +210,11 @@ Synonyms, Redirects, Rules, Try search. Settings live in Store settings → Sear
 - **Product page:** a "Search" card: top queries that led here, clicks, the rules that touch this product, and its keywords.
 - **Dashboard:** a widget with revenue from search and the top no-result search this week.
 
+Built in SI-14 (2026-11-11): the Insights page lives at **Store → Search insights** (`/store/search`), not in a
+Search group yet; Synonyms and Redirects stay in the E-commerce list. Not there yet, each waiting on its own work
+order: *Pin products* / *Boost* and the rules that touch a query or a product (SI-15), **Suggested fixes** (SI-16),
+"Fix with your AI" (SI-18). The product card is a **Search** tab on the product page.
+
 ## 7. Out of scope for now
 
 - Personal results: per-shopper ranking from their own history beyond the session. It needs consent rules first (MK8).

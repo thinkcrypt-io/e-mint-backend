@@ -9,6 +9,9 @@ import type { Installed } from './install.js';
  * stage, the latest orders, and quick actions to the pages used most. Each
  * widget reads the store's own routes, so it follows the person's permissions.
  */
+/** Website search this week (docs/search SI-14): revenue from search and the top search that found nothing. */
+const SEARCH_WIDGET = { type: 'search', title: 'Website search this week', size: 'md' };
+
 const LIVE = [{ field: 'status', op: 'in', value: ['open', 'completed'] }];
 
 export const storeDashboard = (installed: Installed) => {
@@ -34,6 +37,7 @@ export const storeDashboard = (installed: Installed) => {
 		{ type: 'chart', route: order, title: 'Orders by origin', group: 'field', chart: 'donut', by: 'channel', metric: 'count', range: '30d', size: 'md', filters: LIVE },
 		{ type: 'chart', route: order, title: 'Orders by stage', group: 'field', chart: 'donut', by: 'fulfilment', metric: 'count', range: '30d', size: 'md', filters: LIVE },
 		{ type: 'recent', route: order, title: 'Latest orders', columns: ['code', 'channel', 'total', 'paymentStatus', 'fulfilment'], limit: 8, size: 'xl' },
+		SEARCH_WIDGET,
 	];
 	return raw.map((w, i) => normalizeWidget(w, i)).flatMap((r: any) => (r.widget ? [r.widget] : []));
 };
@@ -44,4 +48,21 @@ export const seedStoreDashboard = async (installed: Installed, { apply = true } 
 	if (doc?.widgets?.length) return [];
 	if (apply) await DashboardConfig.findOneAndUpdate({ key: 'default' }, { $set: { widgets: storeDashboard(installed) } }, { upsert: true });
 	return ['the store’s home dashboard: sales, orders, charts, latest orders and quick actions'];
+};
+
+/**
+ * A store's dashboard from before search Insights (SI-14) gets the search widget once, after its sales chart. Once:
+ * someone who removes it doesn't get it back (the upgrade marks it done).
+ */
+export const addSearchWidget = async ({ apply = true } = {}): Promise<string[]> => {
+	const doc: any = await DashboardConfig.findOne({ key: 'default' }).lean();
+	if (!doc?.widgets?.length || doc.widgets.some((w: any) => w?.type === 'search')) return [];
+	if (apply) {
+		const widgets = [...doc.widgets];
+		const after = widgets.findIndex((w: any) => w?.type === 'chart');
+		const { widget } = normalizeWidget(SEARCH_WIDGET, widgets.length);
+		widgets.splice(after >= 0 ? after + 1 : widgets.length, 0, widget);
+		await DashboardConfig.updateOne({ _id: doc._id }, { $set: { widgets } });
+	}
+	return ['the dashboard’s “Website search this week”'];
 };

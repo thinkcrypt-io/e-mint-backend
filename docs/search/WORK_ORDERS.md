@@ -35,7 +35,7 @@ The user answered README §8 on 2026-11-10.
 | **Phase 4 — Insights** | | | | |
 | SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | done 2026-11-11 (mint.js with SI-07; no `searchId` on cart lines, see below) |
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | done 2026-11-11 (daily totals hourly, so today shows) |
-| SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | open |
+| SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | done 2026-11-11 (pin / boost wait for SI-15, suggested fixes SI-16, Fix with your AI SI-18) |
 | **Phase 5 — Merchandising and learning** | | | | |
 | SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | open |
 | SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | open |
@@ -66,9 +66,16 @@ searches; HINT sends them) and SI-13 (the rollups: daily totals by query, sold /
 fields) are done too. The answer's `understood` is there for storefronts to show as chips;
 HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
 
+SI-14 is done too: **Store → Search insights** (`/store/search`) with totals, a chart, the four tables and their
+fixes, a drawer per search; a **Search** tab on each product; a "Website search this week" dashboard widget (new
+stores get it, `upgradeStores.js --apply` adds it once to built stores). Backend: `GET /commerce/search/insights`,
+`/insights/query`, `/insights/product/:id`, `/insights/week`.
+
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-14** — the Insights page, on `SearchQueryDaily` (and the raw events for drill-downs).
+- **SI-15** — rules (pin / boost / bury); then Insights' Low click rate gets *Pin* and *Boost*, and the drawer and
+  the product tab list the rules that touch them.
+- **SI-16** — learning, and Suggested fixes on Insights.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
@@ -76,7 +83,7 @@ Before switching existing stores on (README §8.5): deploy, let their first swee
 Tests:
 - `npx jest library/functions/commerce/search` (470)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
-  `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19)
+  `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27)
 
 ---
 
@@ -319,7 +326,42 @@ parity still holds.
   product fields without `updatedAt` moving, the status, an older store upgraded). Needs `SEARCH_DAILY_MS=2000
   SEARCH_SIGNALS_MS=2000` and `SMOKE_BACKEND` for the upgrade part.
 
-## SI-07, SI-14 … SI-23 (the rest)
+## SI-14 Insights page — done 2026-11-11
+
+- **What:** the store owner's view of their website search: what shoppers search for, what they find, what it earns,
+  and a fix one tap away.
+- **Backend** (`commerce/search/insights.ts`, routes in `routes-tenant/commerce.router.ts`, all `records:view`):
+  - `GET /commerce/search/insights?days=7|30|90` (anything else is 30): totals and the period before; a series by
+    store day; Top, No results, Low click rate (≥ 3 searches, results shown, click rate < 15%) and Trending (last 7
+    days against the 7 before, ≥ 3 searches, `isNew` when it had none). Totals come from `SearchQueryDaily`; visitors
+    and searched sessions from the raw `SearchEvent`s (90 days), and the share of visits with a search uses the
+    website's analytics sessions (`—` without them).
+  - `GET /commerce/search/insights/query?q=…&days=…` (400 "Type a search"): the query's totals, by day, clicks by
+    position (1–10, 11+) and what people searched next (same session, within 10 minutes, the first different search).
+  - `GET /commerce/search/insights/product/:id` (400 "Not a product"): 30 days — shown in searches, opened, added to
+    the bag, units and revenue from search, the searches that led there, its search words, `sold30`, `views30`.
+  - `GET /commerce/search/insights/week`: the dashboard widget's numbers.
+  - Rates: no results = zero ÷ searches; click rate = clicks ÷ searches with results (at most 100%); conversion =
+    orders ÷ searches.
+- **Panel** (mint-tenant): `/store/search` (`SearchInsights.tsx`) — period switch, eight tiles with the change
+  against the period before, an "Over time" chart (searches / no results / revenue), the four tables. No results rows
+  get *Add a synonym*, *Redirect*, *Create the product*: each opens the create form with the search filled in
+  (`CreateRecordPage` now reads `?fill_<field>=`). Low click rate rows get *Try search*, which opens Search settings'
+  Try a search with it typed (`?try=`). A row opens a drawer: tiles, by day, its results now, clicks by position, the
+  next searches (each opens its own). The product page gets a **Search** tab (`ProductSearch.tsx`). Sidebar: Store →
+  Search insights (`tenantNav`). Guide anchors `store-search-insights`, `store-product-search`.
+- **Dashboard:** widget type `search` ("Website search this week": revenue and searches against the week before, the
+  top search with no results). New stores get it in `storeDashboard`; the dashboard builder offers it to e-commerce
+  projects; `upgradeStore` adds it once (`doneOnce: 'search-widget'`) after the first chart.
+- **Not done, on purpose:** *Pin* / *Boost* and the rules column (SI-15), Suggested fixes (SI-16), Fix with your AI
+  (SI-18). A Search group in the sidebar waits until Rules and Try search have pages of their own.
+- **Tests:** `scripts/tenancy-smoke/search-insights.mjs` (27: totals and rates, the period before, Trending with a new
+  search, the drawer's positions and next searches, the product numbers, 400s, a viewer can read it, the widget on a
+  new store and once on an upgraded one). Needs `SEARCH_DAILY_MS=2000` and `SMOKE_BACKEND` for the upgrade part.
+  Checked in a browser against a test backend: the page, the drawer, the No results fixes into a filled synonym form,
+  the product tab, the dashboard widget.
+
+## SI-07, SI-15 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

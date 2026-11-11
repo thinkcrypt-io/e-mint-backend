@@ -22,6 +22,7 @@ import { rebuildSearch, searchIndexStatus } from '../library/functions/commerce/
 import { saveSearchSettings, searchSettingsView } from '../library/functions/commerce/search/http.js';
 import { packList, setPack } from '../library/functions/commerce/search/rules.js';
 import { storeSearch } from '../library/functions/commerce/search/engine.js';
+import { productSearchInsight, searchInsights, searchQueryInsight, searchWeek } from '../library/functions/commerce/search/insights.js';
 import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 
 /**
@@ -484,6 +485,11 @@ router.post(
  *   POST /search/packs/:id { on } switches a pack on (its synonyms become the store's own) or off (they go)   records:edit
  *   GET  /search/try?q=    the store's search as shoppers get it, every result explained, with what was understood,
  *                          the synonyms used and any redirect (SI-10; the panel's Try search)   records:view
+ *   GET  /search/insights?days=7|30|90         Insights (SI-14): totals against the period before, by day, Top / No
+ *                                              results / Low click rate / Trending   records:view
+ *   GET  /search/insights/query?q=&days=       one search: its days, clicks by position, what came next   records:view
+ *   GET  /search/insights/product/:id          a product's Search card (30 days)   records:view
+ *   GET  /search/insights/week                 the dashboard widget: this week, and the top search with no results   records:view
  */
 router.get(
 	'/search/status',
@@ -523,6 +529,34 @@ router.get(
 	'/search/try',
 	view,
 	handle(async (req: any) => storeSearch(await storeOf(), { q: String(req.query?.q ?? ''), limit: Math.min(24, Number(req.query?.limit) || 10), explain: true }))
+);
+router.get(
+	'/search/insights',
+	view,
+	handle(async (req: any) => searchInsights(await storeOf(), { days: req.query?.days }))
+);
+router.get(
+	'/search/insights/query',
+	view,
+	handle(async (req: any) => {
+		const r = await searchQueryInsight(await storeOf(), { q: req.query?.q, days: req.query?.days });
+		if (!r) throw Object.assign(new Error('Type a search'), { status: 400 });
+		return r;
+	})
+);
+router.get(
+	'/search/insights/product/:id',
+	view,
+	handle(async (req: any) => {
+		const r = await productSearchInsight(await storeOf(), req.params.id);
+		if (!r) throw Object.assign(new Error('Not a product'), { status: 400 });
+		return r;
+	})
+);
+router.get(
+	'/search/insights/week',
+	view,
+	handle(async () => searchWeek(await storeOf()))
 );
 router.post(
 	'/search/rebuild',

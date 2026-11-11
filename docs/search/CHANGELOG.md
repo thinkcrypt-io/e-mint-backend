@@ -1,5 +1,20 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-14 Insights page
+
+- New **Store → Search insights** (`/store/search`): searches, visitors, visits with a search, revenue, no results,
+  click rate, conversion and orders for 7 / 30 / 90 days against the period before; a chart; Top searches, No results
+  (Add a synonym / Redirect / Create the product, each a filled create form), Low click rate (Try search) and Trending.
+  A search opens a drawer: by day, its results now, clicks by position, what people searched next.
+- Products get a **Search** tab (shown, opened, added to the bag, sold from search, the searches that led there, its
+  search words). Dashboards get a "Website search this week" widget: new stores have it, the builder offers it, and
+  `upgradeStores.js` adds it once to built stores.
+- Backend: `GET /commerce/search/insights`, `/insights/query`, `/insights/product/:id`, `/insights/week`
+  (`commerce/search/insights.ts`). Create forms take `?fill_<field>=`.
+- Decisions: Insights sits under Store for now (no Search group until Rules / Try search have pages); Pin / Boost wait
+  for SI-15, Suggested fixes for SI-16, Fix with your AI for SI-18.
+- Tests: `search-insights.mjs` (27); `search-rollup`, `search-events`, `search-api` and the 470 unit tests pass.
+
 ## 2026-11-11 — SI-13 Nightly rollups
 
 - New `SearchQueryDaily` (13 months) and `commerce/search/rollup.ts`, run from the search sweep and claimed on the
