@@ -20,6 +20,7 @@ import { clean } from './normalise.js';
 import { searchSettingsOf, type SearchSettings } from './settings.js';
 import { cachedVocab, completions, nearWords, typosFor, type Vocab } from './vocab.js';
 import { nativeDriver } from './drivers/native.js';
+import { countRedirect, findRedirect, NO_RULES, storeRules, type Rules } from './rules.js';
 import type { BrowseSort, Cond, SearchDriver } from './drivers/types.js';
 
 export type SearchSort = 'relevance' | BrowseSort;
@@ -32,7 +33,10 @@ export type SearchResult = {
 	totalPages: number;
 	facets?: FacetCounts;
 	/** The words as the engine read them, and the near spellings it tried. */
-	query: { words: string[]; typos: { word: string; tried: string[] }[] };
+	/** The words as the engine read them, the spellings it tried, and the store's synonyms it used. */
+	query: { words: string[]; typos: { word: string; tried: string[] }[]; synonyms?: { word: string; with: string[] }[] };
+	/** A store redirect for this search (SI13): the page to open instead. */
+	redirect?: { id: string; url: string };
 	/** What the query asked for besides its words (SI8): shown as chips a shopper can remove. */
 	understood?: UnderstoodOut;
 	ms: number;
@@ -111,13 +115,15 @@ const idfOf = (vocab: Vocab, df: number) => {
 };
 
 /** The query's words, each with what may match it. `prefixLast`: the last word may be unfinished. */
-export const planQuery = (q: string, vocab: Vocab, s: SearchSettings, { prefixLast = true, minPrefix = 2 } = {}) => {
+export const planQuery = (q: string, vocab: Vocab, s: SearchSettings, { prefixLast = true, minPrefix = 2 } = {}, rules: Rules = NO_RULES) => {
 	const nq = normaliseQuery(q);
 	const seen = new Set<string>();
 	const tokens = nq.tokens.filter(t => !seen.has(t.word) && seen.add(t.word)).slice(0, MAX_WORDS);
 	const open = prefixLast && !/\s$/.test(String(q ?? ''));
 	const plan: QToken[] = tokens.map((t, i) => {
-		const known = vocab.df.has(t.word) || vocab.df.has(t.stem);
+		const syn = [...new Set([...(rules.synonyms.get(t.word) || []), ...(rules.synonyms.get(t.stem) || [])])].filter(x => x !== t.word && x !== t.stem);
+		// A word the store doesn't have but whose synonym it does is known: no typos tried for it.
+		const known = vocab.df.has(t.word) || vocab.df.has(t.stem) || syn.some(x => vocab.df.has(x));
 		const wordy = t.kind === 'word' || t.kind === 'bn';
 		let near: { word: string; typos: number }[] = [];
 		if (!known && wordy) {
@@ -130,13 +136,14 @@ export const planQuery = (q: string, vocab: Vocab, s: SearchSettings, { prefixLa
 		}
 		const phonMode: QToken['phonMode'] =
 			!s.banglish || !t.phon || !vocab.phon.has(t.phon) ? 'none' : t.kind === 'bn' || (!known && !near.length && s.typos !== 'off') ? 'any' : 'cross';
-		const df = vocab.df.get(t.word) ?? vocab.df.get(t.stem) ?? Math.max(0, ...near.map(n => vocab.df.get(n.word) || 0));
+		const df = vocab.df.get(t.word) ?? vocab.df.get(t.stem) ?? Math.max(0, ...[...near.map(n => n.word), ...syn].map(w => vocab.df.get(w) || 0));
 		return {
 			...t,
 			last: open && i === tokens.length - 1 && wordy,
 			minPrefix,
 			known,
 			near,
+			syn,
 			phonMode,
 			code: t.kind === 'code' || t.kind === 'num' ? codeKey(t.word) : null,
 			idf: idfOf(vocab, df),
@@ -149,10 +156,10 @@ export const planQuery = (q: string, vocab: Vocab, s: SearchSettings, { prefixLa
 const condOf = (t: QToken, vocab: Vocab): Cond | null => {
 	const prefix = t.last && [...t.word].length >= t.minPrefix ? t.word : undefined;
 	const usePhon = t.phonMode !== 'none';
-	const possible = t.known || t.near.length || usePhon || t.code || (prefix && completions(vocab, prefix, 1).length);
+	const possible = t.known || t.near.length || t.syn.length || usePhon || t.code || (prefix && completions(vocab, prefix, 1).length);
 	if (!possible) return null;
 	return {
-		terms: [...new Set([t.word, t.stem, ...t.near.map(n => n.word)])],
+		terms: [...new Set([t.word, t.stem, ...t.near.map(n => n.word), ...t.syn])],
 		...(prefix && { prefix }),
 		...(usePhon && { phon: t.phon }),
 		...(t.code && { code: t.code }),
@@ -197,7 +204,7 @@ const orderBy: Record<SearchSort, (a: { d: any; r: Ranked }, b: { d: any; r: Ran
 };
 
 /** One search with a driver and settings (`version`: the store's index version — with it, answers are cached 30 s). */
-export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: SearchRequest, version?: number): Promise<SearchResult> => {
+export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: SearchRequest, version?: number, rules: Rules = NO_RULES): Promise<SearchResult> => {
 	const started = Date.now();
 	const page = Math.max(1, Math.floor(Number(req.page) || 1));
 	const limit = Math.min(MAX_LIMIT, Math.max(1, Math.floor(Number(req.limit) || 24)));
@@ -211,7 +218,9 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		// Prices, sorting, sizes, brands… out of the words first (SI8); what's left is matched.
 		const u = understand(q, vocab.knows);
 		const ua = applyUnderstood(u, filters, sort);
-		const { plan, codes, words } = planQuery(u.text, vocab, s);
+		const { plan, codes, words } = planQuery(u.text, vocab, s, {}, rules);
+		const redirect = findRedirect(rules, q) || undefined;
+		const synonyms = plan.filter(t => t.syn.length).map(t => ({ word: t.word, with: t.syn.filter((x, i, a) => a.indexOf(x) === i) }));
 		const typos = plan.filter(t => t.near.length).map(t => ({ word: t.word, tried: t.near.map(n => n.word) }));
 
 		if (!plan.length && !codes.filter(Boolean).length) {
@@ -229,6 +238,7 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 				totalPages: Math.max(1, Math.ceil(b.total / limit)),
 				...(req.facets && { facets: facetCounts(b.facetDocs || [], used) }),
 				query: { words: [], typos: [] },
+				...(redirect && { redirect }),
 				...(q.trim() && { understood: understoodOut(u, relaxed ? { relaxed } : {}) }),
 				ms: Date.now() - started,
 			};
@@ -260,7 +270,8 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			limit,
 			totalPages: Math.max(1, Math.ceil(total / limit)),
 			...(req.facets && { facets: facetCounts(ranked.map(x => x.d), used) }),
-			query: { words, typos },
+			query: { words, typos, ...(synonyms.length && { synonyms }) },
+			...(redirect && { redirect }),
 			...((): { understood?: UnderstoodOut } => {
 				const out = understoodOut(u, { ...(product && { product }), ...(relaxed && { relaxed }) });
 				return out ? { understood: out } : {};
@@ -281,13 +292,13 @@ export type Suggestions = {
 };
 
 /** As the shopper types (SI11): finished queries, a few products, categories and brands. */
-export const suggestWith = async (driver: SearchDriver, s: SearchSettings, q: string, version?: number, { products = 4 } = {}): Promise<Suggestions> => {
+export const suggestWith = async (driver: SearchDriver, s: SearchSettings, q: string, version?: number, { products = 4 } = {}, rules: Rules = NO_RULES): Promise<Suggestions> => {
 	const started = Date.now();
 	const text = String(q ?? '').slice(0, 100);
 	const key = version == null ? null : `${driver.key}:${version}:suggest:${text}:${products}:${JSON.stringify(s)}`;
 	return cached(key, async () => {
 		const vocab = await cachedVocab(driver.key, () => driver.vocabulary());
-		const { plan, codes, words } = planQuery(understand(text, vocab.knows).text || text, vocab, s, { minPrefix: 1 });
+		const { plan, codes, words } = planQuery(understand(text, vocab.knows).text || text, vocab, s, { minPrefix: 1 }, rules);
 		if (!plan.length) return { queries: [], products: [], categories: [], brands: [], ms: Date.now() - started };
 		const conds = plan.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
 		const docs = await driver.candidates({ hideOutOfStock: s.outOfStock === 'hide', all: conds, codes: codes.filter(Boolean), cap: 300, partialBelow: 0, partialCap: 0 });
@@ -329,13 +340,15 @@ const storeState = async () => {
 };
 
 /** A search in the current store (its scope), on the native driver. */
-export const storeSearch = async (_store: Store, req: SearchRequest) => {
+export const storeSearch = async (store: Store, req: SearchRequest) => {
 	const { settings, version } = await storeState();
-	return searchWith(nativeDriver(), settings, req, version);
+	const r = await searchWith(nativeDriver(), settings, req, version, await storeRules(store, version));
+	if (r.redirect && !req.explain) countRedirect(store, r.redirect.id);
+	return r;
 };
 
 /** Suggestions in the current store. */
-export const storeSuggest = async (_store: Store, q: string) => {
+export const storeSuggest = async (store: Store, q: string) => {
 	const { settings, version } = await storeState();
-	return suggestWith(nativeDriver(), settings, q, version);
+	return suggestWith(nativeDriver(), settings, q, version, {}, await storeRules(store, version));
 };

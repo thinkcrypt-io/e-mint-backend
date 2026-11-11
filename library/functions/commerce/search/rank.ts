@@ -19,7 +19,7 @@ export type PartName = keyof typeof WEIGHTS;
 const PART_NAMES = Object.keys(WEIGHTS) as PartName[];
 const CODE_SCORE = 14;
 
-export const QUALITY = { exact: 1, stem: 0.9, prefix: 0.7, phon: 0.6, typo1: 0.5, typo2: 0.25 } as const;
+export const QUALITY = { exact: 1, stem: 0.9, synonym: 0.8, prefix: 0.7, phon: 0.6, typo1: 0.5, typo2: 0.25 } as const;
 export type MatchKind = keyof typeof QUALITY | 'code';
 
 /** One query word, with what the engine worked out for it. */
@@ -32,6 +32,8 @@ export type QToken = Token & {
 	known: boolean;
 	/** The store's words a typo or two away (only for unknown words). */
 	near: { word: string; typos: number }[];
+	/** The store's synonyms of it (SI13): its words and stems. */
+	syn: string[];
 	/**
 	 * The Banglish key (SI7): 'any' part — a Bangla word, or a Latin word the store doesn't have and has no near
 	 * spelling of ("shari"); 'cross' — only parts written in Bangla (a known Latin word still finds its Bangla
@@ -73,6 +75,7 @@ export const matchToken = (t: QToken, doc: any): Hit | null => {
 			const w = startsWithAny(f.words, t.word) ?? startsWithAny(f.stems, t.word);
 			if (w) consider(part, 'prefix', w);
 		}
+		for (const sy of t.syn) if (has(f.words, sy) || has(f.stems, sy)) consider(part, 'synonym', sy);
 		for (const n of t.near) if (has(f.words, n.word) || has(f.stems, n.word)) consider(part, n.typos === 1 ? 'typo1' : 'typo2', n.word);
 	}
 	return best;
@@ -138,7 +141,7 @@ export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.n
 	return { score, relevance, coverage, hits, multipliers };
 };
 
-const KIND_TEXT: Record<MatchKind, string> = { exact: 'exact', stem: 'word form', prefix: 'starts with', phon: 'sounds like', typo1: '1 typo', typo2: '2 typos', code: 'code' };
+const KIND_TEXT: Record<MatchKind, string> = { exact: 'exact', stem: 'word form', synonym: 'synonym', prefix: 'starts with', phon: 'sounds like', typo1: '1 typo', typo2: '2 typos', code: 'code' };
 
 /** "name exact “shirt” 10 · category word form “shirt” 4.5 · coverage 2/2 ×1 · popular ×1.12" */
 export const explain = (r: Ranked) =>

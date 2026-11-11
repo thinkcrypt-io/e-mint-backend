@@ -78,6 +78,8 @@ const ICONS: Record<ModelKey, string> = {
 	stockin: 'package-plus',
 	delivery: 'package-check',
 	wishlist: 'heart',
+	searchSynonym: 'replace',
+	searchRedirect: 'signpost',
 };
 
 /**

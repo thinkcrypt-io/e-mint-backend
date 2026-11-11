@@ -1,5 +1,15 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-10 Synonyms, redirects, starter packs
+
+- Search synonyms and Search redirects (store models), `rules.ts`, synonym matching (0.8) and redirects in the
+  engine, starter packs, the panel's packs / try routes, and the Search settings cards (see WORK_ORDERS SI-10).
+- Found while testing:
+  - HINT's catalogue really has "Suede trainers", so the test word became "kicks".
+  - The panel list defaults to 10 rows.
+  - An "older store" faked by only unsetting `installed` keeps its models, so the upgrade can't rebuild them. The
+    smoke test now removes the definitions too, as a real older store has none, and the upgrade then builds both.
+
 ## 2026-11-11 — SI-09 Query understanding
 
 - New: `commerce/search/understand.ts`, and `vocab.knows` (option values as written, brands, categories), gathered by

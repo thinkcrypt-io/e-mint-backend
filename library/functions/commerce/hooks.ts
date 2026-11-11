@@ -8,6 +8,7 @@ import { syncTaxStatus } from './taxStatus.js';
 import { variantsFollow } from './discounts.js';
 import { refreshProductTax, refreshTaxAdded } from './taxRates.js';
 import { touchForSave } from './search/indexer.js';
+import { rulesChanged } from './search/rules.js';
 
 /**
  * After a record of a store's model is saved from a page (recordHistory, beside
@@ -30,6 +31,8 @@ export const fireCommerce = ({ model, event, doc, changes }: { model: string; ev
 			}
 			// Store search (docs/search SI5): the products this changes are built again — on a delete too.
 			await touchForSave(store, model, doc).catch((e: any) => console.error('search queue:', e?.message));
+			// A synonym or redirect saved: searches see it at once (docs/search SI-10).
+			if (await rulesChanged(store, model, doc, event).catch(() => false)) return;
 			if (event === 'delete') return;
 			if (store.is('product', model)) {
 				await syncVariants(store, doc._id);

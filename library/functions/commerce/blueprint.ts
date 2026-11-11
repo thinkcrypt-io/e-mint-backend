@@ -37,7 +37,9 @@ export type ModelKey =
 	| 'credit'
 	| 'purchase'
 	| 'delivery'
-	| 'wishlist';
+	| 'wishlist'
+	| 'searchSynonym'
+	| 'searchRedirect';
 
 export type ModelSpec = {
 	key: ModelKey;
@@ -1049,6 +1051,76 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 			],
 			table: ['product', 'customerName', 'email', 'priceWhenAdded', 'addedAt'],
 			filters: ['product'],
+		},
+	},
+	// Store search (docs/search SI13, SI-10): words that mean the same, and searches that go to a page.
+	{
+		key: 'searchSynonym',
+		shownWhen: null,
+		engine: ['source', 'pack'],
+		step: {
+			name: 'SearchSynonym',
+			title: 'Search synonyms',
+			route: 'search-synonyms',
+			description: 'Words shoppers use for the same thing — sneakers, trainers, keds — so a search for one finds the others',
+			rationale: 'Website search expands a word to its synonyms (docs/search SI13).',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', searchable: true, helper: 'Optional: left empty, it’s the words' },
+				{
+					key: 'kind',
+					label: 'Kind',
+					kind: 'select',
+					options: [
+						{ value: 'same', label: 'Same thing (each finds the others)' },
+						{ value: 'one-way', label: 'One way (these also find those)' },
+					],
+					default: 'same',
+					required: true,
+				},
+				{ key: 'words', label: 'Words', kind: 'tags', required: true, searchable: true, helper: 'One word each: sneakers, trainers, keds' },
+				{ key: 'to', label: 'Also finds', kind: 'tags', searchable: true, helper: 'One way only: what the words above also find (jutta → shoes)' },
+				{ key: 'active', label: 'On', kind: 'boolean', default: true },
+				{ key: 'source', label: 'From', kind: 'select', options: opts('you', 'pack', 'suggested', 'your-ai'), default: 'you', helper: 'Not typed: you, a starter pack, a suggestion from search, or your AI' },
+				{ key: 'pack', label: 'Starter pack', kind: 'text', helper: 'Not typed: the pack it came from' },
+			],
+			table: ['name', 'kind', 'words', 'to', 'active', 'source'],
+			filters: ['kind', 'active', 'source'],
+		},
+	},
+	{
+		key: 'searchRedirect',
+		shownWhen: null,
+		engine: ['hits'],
+		step: {
+			name: 'SearchRedirect',
+			title: 'Search redirects',
+			route: 'search-redirects',
+			description: 'Searches that should open a page instead — “return” → your returns page, “eid” → the Eid collection',
+			rationale: 'Website search answers these with the page to open (docs/search SI13).',
+			displayField: 'name',
+			fields: [
+				{ key: 'name', label: 'Name', kind: 'text', searchable: true, helper: 'Optional: left empty, it’s the searches' },
+				{ key: 'queries', label: 'Searches', kind: 'tags', required: true, searchable: true, helper: 'return, refund, exchange' },
+				{
+					key: 'match',
+					label: 'Match',
+					kind: 'select',
+					options: [
+						{ value: 'exact', label: 'The search is exactly one of these' },
+						{ value: 'contains', label: 'The search contains one of these' },
+					],
+					default: 'exact',
+					required: true,
+				},
+				{ key: 'url', label: 'Page to open', kind: 'text', required: true, helper: '/returns, /collections/eid or a full address' },
+				{ key: 'active', label: 'On', kind: 'boolean', default: true },
+				{ key: 'startsAt', label: 'Starts', kind: 'date', helper: 'Optional' },
+				{ key: 'endsAt', label: 'Ends', kind: 'date', helper: 'Optional' },
+				{ key: 'hits', label: 'Used', kind: 'number', default: 0, helper: 'Not typed: how many searches it answered' },
+			],
+			table: ['name', 'queries', 'match', 'url', 'active', 'hits'],
+			filters: ['active', 'match'],
 		},
 	},
 ];

@@ -20,6 +20,8 @@ import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, markSettl
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
 import { rebuildSearch, searchIndexStatus } from '../library/functions/commerce/search/indexer.js';
 import { saveSearchSettings, searchSettingsView } from '../library/functions/commerce/search/http.js';
+import { packList, setPack } from '../library/functions/commerce/search/rules.js';
+import { storeSearch } from '../library/functions/commerce/search/engine.js';
 import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 
 /**
@@ -478,6 +480,10 @@ router.post(
  *   POST /search/rebuild   builds every product's search document again, in the background (202)   manage-projects
  *   GET  /search/settings  on (true / false / null = not switched on by name yet), typos, out of stock, dials, learning, Banglish, defaults   records:view
  *   PUT  /search/settings  { enabled?, typos?, outOfStock?, dials?: { popularity|freshness|sale|learned }, learning?, banglish? }   manage-projects
+ *   GET  /search/packs     the starter synonym packs, each with how many of its synonyms the store has   records:view
+ *   POST /search/packs/:id { on } switches a pack on (its synonyms become the store's own) or off (they go)   records:edit
+ *   GET  /search/try?q=    the store's search as shoppers get it, every result explained, with what was understood,
+ *                          the synonyms used and any redirect (SI-10; the panel's Try search)   records:view
  */
 router.get(
 	'/search/status',
@@ -498,6 +504,25 @@ router.put(
 		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Search', text: `changed the store’s search settings (${Object.keys(req.body || {}).join(', ')})` });
 		return view;
 	})
+);
+router.get(
+	'/search/packs',
+	view,
+	handle(async () => packList(await storeOf()))
+);
+router.post(
+	'/search/packs/:id',
+	edit,
+	handle(async (req: any) => {
+		const list = await setPack(await storeOf(), req.params.id, req.body?.on !== false);
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Search', text: `${req.body?.on === false ? 'switched off' : 'switched on'} the “${req.params.id}” synonyms` });
+		return list;
+	})
+);
+router.get(
+	'/search/try',
+	view,
+	handle(async (req: any) => storeSearch(await storeOf(), { q: String(req.query?.q ?? ''), limit: Math.min(24, Number(req.query?.limit) || 10), explain: true }))
 );
 router.post(
 	'/search/rebuild',

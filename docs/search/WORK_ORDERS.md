@@ -30,7 +30,7 @@ The user answered README §8 on 2026-11-10.
 | SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | done 2026-11-11 (category pages kept as they are) |
 | **Phase 3 — Understanding** | | | | |
 | SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | done 2026-11-11 |
-| SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | open |
+| SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | done 2026-11-11 |
 | SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | open |
 | **Phase 4 — Insights** | | | | |
 | SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | open |
@@ -60,12 +60,11 @@ HINT and Live Fresh call the new search **and fall back** to their old search wh
 `/store/search` (SI-08). They pick up the engine by themselves once the backend is deployed and each store's first
 sweep has indexed it.
 
-SI-09 (query understanding) is done too. The answer's `understood` is there for storefronts to show as chips;
+SI-09 (query understanding) and SI-10 (synonyms, redirects, starter packs, Try a search) are done too. The answer's `understood` is there for storefronts to show as chips;
 HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
 
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-10** — synonyms and redirects.
 - **SI-11** — no dead ends.
 - **SI-12 / SI-13** — search events and the nightly rollups. Insights (SI-14) needs these.
 
@@ -209,7 +208,28 @@ Tests: `test/understand.test.ts` (48: EN and BN prices, sorts, stock / sale, siz
 categories, filler), engine tests (13 more, 120 there). `search-api.mjs` has 5 more checks (51), and the database
 parity still holds.
 
-## SI-07, SI-10 … SI-23 (the rest)
+## SI-10 — Synonyms + redirects (M) — done 2026-11-11
+
+- **Two store models** in the blueprint: **Search synonyms** (`search-synonyms`: name, kind same / one-way, words, to,
+  on; From and Starter pack are the engine's) and **Search redirects** (`search-redirects`: name, searches, match
+  exact / contains, page to open, on, starts, ends; Used is the engine's). New stores get them at setup. Existing
+  stores get them from `upgradeStores.js`; the smoke test checks the dry run and `--apply`.
+- **`commerce/search/rules.ts`:** compiles both. Synonyms are one word per entry, linked by word and stem; entries of
+  several words are left out for now. Redirects compare word forms and respect their dates. `storeRules` caches per
+  store and index version. `rulesChanged` (from fireCommerce) names a nameless rule and bumps the version, so the next
+  search sees a change. Also `packList` / `setPack` and `countRedirect`.
+- **Engine:** each query word gets its synonyms (`syn`, matched at 0.8). A word known only through a synonym tries no
+  typos. The answer gains `query.synonyms` and `redirect`, and suggestions use synonyms too.
+- **Starter packs** (`packs/synonyms.ts`): Clothes and fashion, Electronics, Grocery, Bangla and English. I dropped
+  "boot" (chickpea), which would have caught "boots".
+- **Panel routes:** `GET /commerce/search/packs`, `POST /search/packs/:id { on }`, `GET /search/try?q=` (explained).
+- **mint-tenant:** Search settings gained **Words and redirects** (pack switches, links to both tables) and **Try a
+  search** (results explained, chips for what was understood, synonyms, typos, a redirect).
+- **Tests:** `test/rules.test.ts` (22: compile, redirects, packs, search with rules; 407 in all) and
+  `scripts/tenancy-smoke/search-rules.mjs` (all passing: saving works at once, one way, packs on / twice / off,
+  redirect + hits, try, upgrade of an older store).
+
+## SI-07, SI-11 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).
