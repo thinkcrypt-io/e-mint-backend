@@ -253,7 +253,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 	{
 		key: 'product',
 		shownWhen: null,
-		engine: ['totalStock', 'taxAdded', 'discount', 'discountPercent', 'views', 'wishlistCount'],
+		engine: ['totalStock', 'taxAdded', 'discount', 'discountPercent', 'views', 'wishlistCount', 'sold30', 'searchClicks30'],
 		step: {
 			name: 'Product',
 			title: 'Products',
@@ -304,6 +304,8 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ key: 'totalStock', label: 'In stock (all outlets)', kind: 'number', default: 0 },
 				{ key: 'views', label: 'Views', kind: 'number', default: 0, helper: 'Not typed: how many times its page on your website was opened' },
 				{ key: 'wishlistCount', label: 'Wished by', kind: 'number', default: 0, helper: 'Not typed: how many customers put it on their wishlist' },
+				{ key: 'sold30', label: 'Sold, 30 days', kind: 'number', default: 0, helper: 'Not typed: units sold in the last 30 days, counted each night from the orders (returns taken off)' },
+				{ key: 'searchClicks30', label: 'Opened from search, 30 days', kind: 'number', default: 0, helper: 'Not typed: how many times shoppers opened it from your website’s search results in the last 30 days, counted each night' },
 				{ key: 'seo', label: 'SEO', kind: 'seo', helper: 'Its title, description and share image in search results and links — for its page on your website' },
 			],
 			form: [
@@ -315,7 +317,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 				{ sectionTitle: 'Images', fields: ['images'] },
 				{ sectionTitle: 'SEO', description: 'How its page looks in search results and shared links', fields: ['seo'] },
 			],
-			table: ['name', 'category', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'views', 'wishlistCount', 'status'],
+			table: ['name', 'category', 'price', 'salePrice', 'priceAfterTax', 'totalStock', 'views', 'wishlistCount', 'sold30', 'searchClicks30', 'status'],
 			filters: ['status', 'category', 'collections', 'productType'],
 		},
 	},

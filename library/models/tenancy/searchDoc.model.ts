@@ -60,6 +60,10 @@ const schema = new Schema<any>(
 			wishes: { type: Number, default: 0 },
 			/** Units sold in the last 30 days (filled nightly, docs/search SI-13). */
 			sold30: { type: Number, default: 0 },
+			/** Page views in the last 30 days (worked out nightly from `viewDays`, docs/search SI-13). */
+			views30: { type: Number, default: undefined },
+			/** Page views by UTC day ("20261111": n), kept 30 days: what views30 is counted from. */
+			viewDays: { type: Schema.Types.Mixed, default: undefined },
 			createdAt: Date,
 			/** The learned boost (docs/search SI-16); 1 = none. */
 			learned: { type: Number, default: 1 },

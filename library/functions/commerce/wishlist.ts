@@ -1,6 +1,7 @@
 import { TenancyError } from '../tenancy.function.js';
 import type { Store } from './store.js';
 import { isId } from './catalogue.js';
+import { countView } from './search/rollup.js';
 
 /**
  * Wishlists and product views for a store's website. Signed-in customers keep a wishlist (a guest's hearts live in
@@ -104,5 +105,7 @@ export const viewProduct = async (store: Store, ref: any) => {
 	const product = await findProduct(store, ref);
 	if (!product) throw new TenancyError(404, 'We couldn’t find that product.');
 	await store.M('product').updateOne({ _id: product._id }, { $inc: { views: 1 } }, { timestamps: false });
+	// By day on its search document too: the last 30 days' views rank it (docs/search SI-13).
+	countView(product._id);
 	return { ok: true };
 };

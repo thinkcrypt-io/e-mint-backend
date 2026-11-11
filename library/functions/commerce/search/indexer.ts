@@ -9,6 +9,7 @@
  *     categories, brands, collections. It catches what no hook saw (the public API, bulk imports, engine updates).
  *  3. **The drift check** (daily): findable products against documents; a store that doesn't match is rebuilt. It
  *     catches what neither saw (deletes outside the panel).
+ * The sweep also runs the rollups (`rollup.ts`, SI-13) when they're due: daily totals hourly, signals daily.
  * A store never indexed is rebuilt by its first sweep, so every store gets search without a migration.
  *
  * State lives in the store's CommerceSettings under `search.index`: version (goes up on every write — the search
@@ -21,6 +22,7 @@ import SearchQueue from '../../../models/tenancy/searchQueue.model.js';
 import { currentScope, runInScope, runUnscoped } from '../../tenantScope.function.js';
 import { storeOf, type Store } from '../store.js';
 import { buildDocs } from './document.js';
+import { rollupStore } from './rollup.js';
 
 const TICK_MS = () => Number(process.env.SEARCH_TICK_MS) || 5000;
 const SWEEP_MS = () => Number(process.env.SEARCH_SWEEP_MS) || 2 * 60 * 1000;
@@ -222,13 +224,14 @@ export const driftStore = async (store: Store) => {
 
 /** What the panel shows (Store settings → Search, docs/search SI-06). */
 export const searchIndexStatus = async (store: Store) => {
-	const [idx, docs, queued, products] = await Promise.all([
+	const [idx, rollup, docs, queued, products] = await Promise.all([
 		indexState(),
+		CommerceSettings.findOne({}, { 'search.rollup': 1 }).lean().then((s: any) => s?.search?.rollup || {}),
 		SearchDoc.countDocuments({}),
 		SearchQueue.countDocuments({}),
 		store.installed.product ? store.M('product').countDocuments({ status: 'active', archivedAt: null }) : Promise.resolve(0),
 	]);
-	return { docs, products, queued, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null };
+	return { docs, products, queued, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null, rollup: { dailyAt: rollup.dailyAt || null, lastDay: rollup.lastDay || null, signals: rollup.lastSignals || null } };
 };
 
 /* ---------------------------------------------------------------- schedules */
@@ -263,7 +266,7 @@ export const runSearchTick = async () => {
 	return built;
 };
 
-/** Every built store: the sweep, and the daily drift check. */
+/** Every built store: the sweep, the daily drift check, and the rollups when due (rollup.ts, SI-13). */
 export const runSearchSweep = async () => {
 	const stores: any[] = await runUnscoped(() => CommerceSettings.find({ status: 'ready', project: { $ne: null } }, { organization: 1, project: 1 }).lean());
 	for (const s of stores)
@@ -271,6 +274,7 @@ export const runSearchSweep = async () => {
 			await inStore({ organization: s.organization, project: s.project }, async store => {
 				await sweepStore(store);
 				await driftStore(store);
+				await rollupStore(store);
 			});
 		} catch (e: any) {
 			console.error('search sweep:', e?.message);

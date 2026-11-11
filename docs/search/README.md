@@ -94,7 +94,7 @@ the limits listed in §2.
 
 | Model | TTL | Fields |
 |---|---|---|
-| SearchDoc | — | project, product, status, fields `{ name, brand, category, collection, option, keyword, description, custom }` each with `{ words[], prefixes[], grams[], phon[] }`, codes[] (SKUs and barcodes), facets `{ categories[], brand, price, salePrice, onSale, inStock, options: { name: values[] } }`, signals `{ sold30, views30, wishes, createdAt, learned }`, card `{ name, slug, image, price, salePrice, compareAtPrice }` (the card is returned as it is, so no populate at query time), version |
+| SearchDoc | — | project, product, status, fields `{ name, brand, category, collection, option, keyword, description, custom }` each with `{ words[], prefixes[], grams[], phon[] }`, codes[] (SKUs and barcodes), facets `{ categories[], brand, price, salePrice, onSale, inStock, options: { name: values[] } }`, signals `{ sold30, views30, viewDays (per-day views, 30 days), wishes, createdAt, learned }`, card `{ name, slug, image, price, salePrice, compareAtPrice }` (the card is returned as it is, so no populate at query time), version |
 | SearchQueue | — | project, product, reason, at (unique on project + product) |
 | SearchEvent | 90 days | project, type, searchId, visitor, session, q, nq, plan, results, top[], page, filters, product, position, ms, at |
 | SearchQueryDaily | 13 months | project, day, nq, sample q, searches, visitors, zero, clicks, carts, orders, revenue |

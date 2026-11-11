@@ -1,5 +1,22 @@
 # Store search — changelog
 
+## 2026-11-11 — SI-13 Nightly rollups
+
+- New `SearchQueryDaily` (13 months) and `commerce/search/rollup.ts`, run from the search sweep and claimed on the
+  store's settings (`search.rollup`). Every hour, each store day from the last finished one through today is added up
+  from the raw events: per normalised query its searches (first pages only), visitors, no results, clicks, adds to the
+  bag, orders and revenue from search, and the way it was typed most often. Days are the store's own time zone.
+- Once a day each product's numbers are recounted: `sold30` from the orders (open or completed, any channel, returns
+  taken off, cancelled orders not counted), `views30` from per-day view counts that `POST /store/products/:id/view`
+  now keeps on the search document, `wishes` from the product. Ranking uses `views30` (lifetime views until a store's
+  first recount). Products get two read-only engine fields, **Sold, 30 days** and **Opened from search, 30 days**,
+  written without moving `updatedAt` so the sweep doesn't rebuild every product; `upgradeStores.js` adds them.
+- `GET /commerce/search/status` gains `rollup { dailyAt, lastDay, signals }`.
+- Decisions: hourly for today's row rather than strictly nightly, so Insights (SI-14) can show today; a store's first
+  run goes back to its oldest event (at most 90 days). No separate script: the sweep starts it by itself.
+- Tests: `test/rollup.test.ts` (8; 470 in all) and `search-rollup.mjs` (19, with the upgrade of an older store);
+  `search-events`, `search-api`, `search-index`, `commerce-orders` pass.
+
 ## 2026-11-11 — SI-12 Events + attribution
 
 - New `SearchEvent` (90 days) and `commerce/search/events.ts`. The public search logs each shopper's search and

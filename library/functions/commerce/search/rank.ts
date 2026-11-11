@@ -99,7 +99,7 @@ export const business = (doc: any, s: SearchSettings, now = Date.now()) => {
 	const sig = doc.signals || {};
 	const pop = dialStrength(s.dials.popularity);
 	if (pop) {
-		const raw = 0.6 * Math.log1p(Number(sig.sold30) || 0) + 0.25 * Math.log1p((Number(sig.views) || 0) / 10) + 0.15 * Math.log1p(Number(sig.wishes) || 0);
+		const raw = 0.6 * Math.log1p(Number(sig.sold30) || 0) + 0.25 * Math.log1p((Number(sig.views30 ?? sig.views) || 0) / 10) + 0.15 * Math.log1p(Number(sig.wishes) || 0);
 		const x = 1 + 0.3 * Math.tanh(raw / 3) * pop;
 		if (x > 1.005) out.push({ name: 'popular', x });
 	}

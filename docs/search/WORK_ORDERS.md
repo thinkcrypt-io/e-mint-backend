@@ -34,7 +34,7 @@ The user answered README §8 on 2026-11-10.
 | SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | done 2026-11-11 (the widget shows it in SI-07) |
 | **Phase 4 — Insights** | | | | |
 | SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | done 2026-11-11 (mint.js with SI-07; no `searchId` on cart lines, see below) |
-| SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | open |
+| SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | done 2026-11-11 (daily totals hourly, so today shows) |
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | open |
 | **Phase 5 — Merchandising and learning** | | | | |
 | SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | open |
@@ -62,20 +62,21 @@ sweep has indexed it.
 
 SI-09 (query understanding), SI-10 (synonyms, redirects, starter packs, Try a search), SI-11 (no dead ends:
 `showing`, `didYouMean`, `fallback`, shown on HINT) and SI-12 (the search log, clicks, sales from search, popular
-searches; HINT sends them) are done too. The answer's `understood` is there for storefronts to show as chips;
+searches; HINT sends them) and SI-13 (the rollups: daily totals by query, sold / views in 30 days, two product
+fields) are done too. The answer's `understood` is there for storefronts to show as chips;
 HINT and Live Fresh don't show them yet (a small follow-up to SI-08).
 
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-13** — the nightly rollups (`SearchQueryDaily`, sold30 / views30 from the orders). Insights (SI-14) needs it.
+- **SI-14** — the Insights page, on `SearchQueryDaily` (and the raw events for drill-downs).
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
 
 Tests:
-- `npx jest library/functions/commerce/search` (462)
+- `npx jest library/functions/commerce/search` (470)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
-  `search-recover.mjs`, `search-events.mjs` (23)
+  `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19)
 
 ---
 
@@ -291,7 +292,34 @@ parity still holds.
   (its cache check now expects `private`, plus a category page `public`), `search-recover`, `search-rules`,
   `commerce-orders` pass.
 
-## SI-07, SI-13 … SI-23 (the rest)
+## SI-13 Nightly rollups — done 2026-11-11
+
+- **What:** `SearchQueryDaily` (platform, keyed by project, 13 months: day × normalised query → q as typed most often,
+  searches, visitors, zero, clicks, carts, orders, revenue) and the product signals for ranking and the panel.
+- **`commerce/search/rollup.ts`**, run from `runSearchSweep` after the drift check, each job claimed by moving its stamp
+  on `CommerceSettings.search.rollup` (two servers never run one store at once):
+  - `rollupDaily` (due hourly, `SEARCH_DAILY_MS`): every store day from `lastDay` (the last finished day) through
+    today, each written again in full (`writeDay`: upserts, and drops a query the day no longer has). Days are the
+    store's time zone (`answers.store.timeZone`), stored as the 00:00 UTC that names them. A first run starts at the
+    store's oldest event (≤ 90 days). Second pages aren't new searches; visitors are visitor ids, else session ids.
+  - `rollupSignals` (due daily, `SEARCH_SIGNALS_MS`): `sold30` from the orders of the last 30 days (status open or
+    completed, any channel, `quantity − returned`), `views30` from `signals.viewDays` (per UTC day, kept 30 days;
+    `viewProduct` adds to it), `wishes` from `wishlistCount`. Only changed documents are written; the search version
+    goes up when any did (the caches start again). Products get `sold30` and `searchClicks30` (clicks from search,
+    30 days), written with `timestamps: false` so the sweep doesn't rebuild them.
+- **Blueprint:** Product gains **Sold, 30 days** (`sold30`) and **Opened from search, 30 days** (`searchClicks30`),
+  engine fields (read-only), in the table for new stores; `upgradeStores.js` adds them to built stores.
+- **Ranking:** popularity uses `views30` (falls back to lifetime `views` until the first recount).
+- **Status:** `GET /commerce/search/status` → `rollup { dailyAt, lastDay, signals { at, products, changed, ms } }`.
+- **Not done, on purpose:** no `scripts/searchRollup.js`: every store's first sweep after the deploy backfills by itself.
+  `SearchPair` is SI-16's.
+- **Tests:** `test/rollup.test.ts` (8: store days in Dhaka / New York, clock changes, 30-day views) and
+  `scripts/tenancy-smoke/search-rollup.mjs` (19: today's row, "Candles" and "candle" as one, a zero-result search,
+  a day two days ago kept apart, sold recounted from a wrong 99 and a cancelled order not counted, views by day, the
+  product fields without `updatedAt` moving, the status, an older store upgraded). Needs `SEARCH_DAILY_MS=2000
+  SEARCH_SIGNALS_MS=2000` and `SMOKE_BACKEND` for the upgrade part.
+
+## SI-07, SI-14 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).
