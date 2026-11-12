@@ -23,6 +23,7 @@ import { currentScope, runInScope, runUnscoped } from '../../tenantScope.functio
 import { storeOf, type Store } from '../store.js';
 import { buildDocs } from './document.js';
 import { rollupStore } from './rollup.js';
+import { learnStore } from './learn.js';
 
 const TICK_MS = () => Number(process.env.SEARCH_TICK_MS) || 5000;
 const SWEEP_MS = () => Number(process.env.SEARCH_SWEEP_MS) || 2 * 60 * 1000;
@@ -226,12 +227,12 @@ export const driftStore = async (store: Store) => {
 export const searchIndexStatus = async (store: Store) => {
 	const [idx, rollup, docs, queued, products] = await Promise.all([
 		indexState(),
-		CommerceSettings.findOne({}, { 'search.rollup': 1 }).lean().then((s: any) => s?.search?.rollup || {}),
+		CommerceSettings.findOne({}, { 'search.rollup': 1, 'search.learn': 1 }).lean().then((s: any) => ({ ...(s?.search?.rollup || {}), learn: s?.search?.learn?.last || null })),
 		SearchDoc.countDocuments({}),
 		SearchQueue.countDocuments({}),
 		store.installed.product ? store.M('product').countDocuments({ status: 'active', archivedAt: null }) : Promise.resolve(0),
 	]);
-	return { docs, products, queued, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null, rollup: { dailyAt: rollup.dailyAt || null, lastDay: rollup.lastDay || null, signals: rollup.lastSignals || null } };
+	return { docs, products, queued, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null, rollup: { dailyAt: rollup.dailyAt || null, lastDay: rollup.lastDay || null, signals: rollup.lastSignals || null }, learn: rollup.learn };
 };
 
 /* ---------------------------------------------------------------- schedules */
@@ -266,7 +267,7 @@ export const runSearchTick = async () => {
 	return built;
 };
 
-/** Every built store: the sweep, the daily drift check, and the rollups when due (rollup.ts, SI-13). */
+/** Every built store: the sweep, the daily drift check, the rollups (rollup.ts, SI-13) and learning (learn.ts, SI-16) when due. */
 export const runSearchSweep = async () => {
 	const stores: any[] = await runUnscoped(() => CommerceSettings.find({ status: 'ready', project: { $ne: null } }, { organization: 1, project: 1 }).lean());
 	for (const s of stores)
@@ -275,6 +276,7 @@ export const runSearchSweep = async () => {
 				await sweepStore(store);
 				await driftStore(store);
 				await rollupStore(store);
+				await learnStore(store);
 			});
 		} catch (e: any) {
 			console.error('search sweep:', e?.message);

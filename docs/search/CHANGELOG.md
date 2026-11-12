@@ -1,5 +1,22 @@
 # Store search — changelog
 
+## 2026-11-12 — SI-17 Try search
+
+- New **Store → Try search** page: your website's search as shoppers get it, with a sort and pages, and *Why* on
+  each result — the words it matched and where, every lift and the score — plus what it understood, the synonyms
+  and spellings it used, the rules that fired and how long it took.
+- `GET /commerce/search/try` takes `page`, `limit` and `sort`.
+
+## 2026-11-12 — SI-16 Learning
+
+- Search learns from shoppers: products they choose for a search more than their place would say get a small lift
+  (up to ×1.25, down to ×0.85), once there's enough data (20 showings, 5 shoppers), decayed over 30 days.
+- **Suggested fixes** on Search insights: synonyms from searches shoppers retype, pin rules for products that win
+  from low on the page. Accept makes them (you can edit first); Dismiss keeps them away.
+- The Learning switch in Search settings turns both off. Runs daily; *Look for fixes now* runs it at once.
+- Backend: `search/learn.ts`, `SearchPair`, `SearchSuggestion`; `/commerce/search/suggestions`, `/search/learn`.
+- Tests: `test/learn.test.ts`, `search-learn.mjs`.
+
 ## 2026-11-12 — SI-07 Search widget
 
 - New mint.js **Search** widget for stores: a header icon that opens a search window, a search box, and a results

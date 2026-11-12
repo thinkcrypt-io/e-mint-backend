@@ -15,7 +15,8 @@ import CommerceSettings from '../../../models/tenancy/commerceSettings.model.js'
 import type { Store } from '../store.js';
 import { cleanFilters, facetCounts, passes, type FacetCounts, type Filters } from './facets.js';
 import { codeKey, normaliseQuery } from './normalise.js';
-import { explain, rank, type Boost, type QToken, type Ranked } from './rank.js';
+import { explain, learnedBoost, rank, type Boost, type QToken, type Ranked } from './rank.js';
+import { learnedFor, storeLearned } from './learn.js';
 import { understand, understoodAnything, type Understood } from './understand.js';
 import { clean } from './normalise.js';
 import { searchSettingsOf, type SearchSettings } from './settings.js';
@@ -323,6 +324,8 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		}
 
 		const now = Date.now();
+		// What shoppers taught the store for this search (SI16): only on relevance, like the rules' boosts.
+		const wordBoosts = [...boosts, ...(ordered ? learnedBoost(learnedFor(rules.learned, q), s) : [])];
 		const found = async (pl: QToken[]) => {
 			const conds = pl.map(t => condOf(t, vocab)).filter((c): c is Cond => !!c);
 			const raw = await driver.candidates({ hideOutOfStock: hide, all: conds, codes: codes.filter(Boolean), cap: CAP, partialBelow: PARTIAL_BELOW, partialCap: PARTIAL_CAP });
@@ -333,7 +336,7 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			);
 			const out: { d: any; r: Ranked }[] = [];
 			for (const d of docs) {
-				const r = rank(pl, d, s, now, boosts);
+				const r = rank(pl, d, s, now, wordBoosts);
 				if (r) out.push({ d, r });
 			}
 			return out;
@@ -381,7 +384,7 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 				const fw = fm && fewerWords(plan, ranked.filter(x => passes(x.d, fm)));
 				if (fm && fw) {
 					const sub = fw.keep.map(i => plan[i]);
-					ranked = covering(plan, fw.keep, ranked).map(x => ({ d: x.d, r: rank(sub, x.d, s, now, boosts)! }));
+					ranked = covering(plan, fw.keep, ranked).map(x => ({ d: x.d, r: rank(sub, x.d, s, now, wordBoosts)! }));
 					(used = fm), (relaxed = fm !== ua.all);
 					showing = { q: spelled(sub, ranked.filter(x => passes(x.d, fm))), reason: 'fewer words', dropped: fw.dropped.map(i => plan[i].word) };
 				} else if (firstWith(ranked, (r, f) => r.some(x => passes(x.d, f)))) {
@@ -491,6 +494,10 @@ export const suggestWith = async (driver: SearchDriver, s: SearchSettings, q: st
 
 /* -------------------------------------------------------------- for a store */
 
+/** The store's rules with what it learned (SI16), when learning is on. */
+const withLearned = async (rules: Rules, settings: SearchSettings, version: number): Promise<Rules> =>
+	settings.learning ? { ...rules, learned: await storeLearned(version).catch(() => undefined) } : rules;
+
 const storeState = async () => {
 	const c: any = await CommerceSettings.findOne({}, { search: 1 }).lean();
 	return { settings: searchSettingsOf(c?.search), version: Number(c?.search?.index?.version) || 0 };
@@ -499,7 +506,7 @@ const storeState = async () => {
 /** A search in the current store (its scope), on the native driver. */
 export const storeSearch = async (store: Store, req: SearchRequest) => {
 	const { settings, version } = await storeState();
-	const rules = await storeRules(store, version);
+	const rules = await withLearned(await storeRules(store, version), settings, version);
 	const r = await searchWith(nativeDriver(), settings, req, version, rules);
 	if (!req.explain) {
 		if (r.redirect) countRedirect(store, r.redirect.id);
@@ -532,7 +539,7 @@ export const storeSuggest = async (store: Store, q: string) => {
  */
 export const previewRule = async (store: Store, rule: any, { q = '', limit = 12 }: { q?: string; limit?: number } = {}) => {
 	const { settings, version } = await storeState();
-	const rules = await storeRules(store, version);
+	const rules = await withLearned(await storeRules(store, version), settings, version);
 	const id = String(rule?._id ?? '');
 	const others = (rules.merch || []).filter(r => !id || r.id !== id);
 	const [mine] = compileMerch([{ ...rule, _id: id || 'preview', name: String(rule?.name || '').trim() || 'This rule', active: true, startsAt: null, endsAt: null }]);

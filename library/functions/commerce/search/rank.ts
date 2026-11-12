@@ -7,6 +7,8 @@
  *           × phrase / name bonuses     (the words together in the name; the name is the query)
  *           × business multiplier       (in stock, popularity, new, on sale, learned — each a store dial)
  *
+ *           (learned: per search, SI16 — a lift from the engine)
+ *
  * Match quality: exact 1.0 · stem 0.9 · Banglish key 0.6 · prefix of the last word 0.7 · one typo 0.5 · two 0.25.
  * A SKU or barcode hit is worth more than any word (it's the product the shopper means).
  */
@@ -107,15 +109,24 @@ export const business = (doc: any, s: SearchSettings, now = Date.now()) => {
 	if (fresh && sig.createdAt && now - new Date(sig.createdAt).getTime() < 14 * DAY) out.push({ name: 'new', x: 1 + 0.1 * fresh });
 	const sale = dialStrength(s.dials.sale);
 	if (sale && doc.facets?.onSale) out.push({ name: 'on sale', x: 1 + 0.05 * sale });
-	const learned = Number(sig.learned) || 1;
-	const ls = dialStrength(s.dials.learned);
-	if (ls && s.learning && learned !== 1) out.push({ name: 'learned', x: Math.pow(Math.min(1.25, Math.max(0.85, learned)), ls) });
+	// Learned (SI16) is per search, not per product: the engine adds it as a lift (learnedBoost below).
 	return out;
 };
 
 /** A document's score for a query plan. Null when no query word matches it at all. */
 /** A lift for documents passing `test` (understood sizes / colours said as plain words, a category named). */
-export type Boost = { name: string; x: number; test: (doc: any) => boolean };
+export type Boost = { name: string; x: number; test: (doc: any) => boolean; xOf?: (doc: any) => number };
+
+/**
+ * What shoppers taught the store for this search (SI16, learn.ts): × 0.85 … × 1.25 per product, raised to the store's
+ * "learned" dial. Only multiplies products the words found.
+ */
+export const learnedBoost = (byProduct: Map<string, number> | null, s: SearchSettings): Boost[] => {
+	const ls = dialStrength(s.dials.learned);
+	if (!byProduct?.size || !ls || !s.learning) return [];
+	const x = (d: any) => Math.pow(Math.min(1.25, Math.max(0.85, byProduct.get(String(d.product)) ?? 1)), ls);
+	return [{ name: 'learned', x: 1, test: (d: any) => byProduct.has(String(d.product)), xOf: x }];
+};
 
 export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.now(), boosts: Boost[] = []): Ranked | null => {
 	const hits: Hit[] = [];
@@ -135,7 +146,7 @@ export const rank = (tokens: QToken[], doc: any, s: SearchSettings, now = Date.n
 	else if (tokens.length > 1 && hits.length === tokens.length && hits.every(h => h.part === 'name')) multipliers.push({ name: 'all words in the name', x: 1.1 });
 	const nameWords: string[] = name.words || [];
 	if (nameWords.length && nameWords.length === tokens.length && tokens.every((t, i) => nameWords[i] === t.word || name.stems?.[i] === t.stem)) multipliers.push({ name: 'the name itself', x: 1.25 });
-	for (const b of boosts) if (b.test(doc)) multipliers.push({ name: b.name, x: b.x });
+	for (const b of boosts) if (b.test(doc)) multipliers.push({ name: b.name, x: b.xOf ? b.xOf(doc) : b.x });
 	multipliers.push(...business(doc, s, now));
 	const score = multipliers.reduce((acc, m) => acc * m.x, relevance);
 	return { score, relevance, coverage, hits, multipliers };

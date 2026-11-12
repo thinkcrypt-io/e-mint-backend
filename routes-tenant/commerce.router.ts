@@ -23,6 +23,7 @@ import { saveSearchSettings, searchSettingsView } from '../library/functions/com
 import { packList, setPack } from '../library/functions/commerce/search/rules.js';
 import { previewRule, rulesTouching, storeSearch } from '../library/functions/commerce/search/engine.js';
 import { productSearchInsight, searchInsights, searchQueryInsight, searchWeek } from '../library/functions/commerce/search/insights.js';
+import { acceptSuggestion, dismissSuggestion, learnStore, listSuggestions } from '../library/functions/commerce/search/learn.js';
 import { currentScope, runInScope } from '../library/functions/tenantScope.function.js';
 
 /**
@@ -483,7 +484,7 @@ router.post(
  *   PUT  /search/settings  { enabled?, typos?, outOfStock?, dials?: { popularity|freshness|sale|learned }, learning?, banglish? }   manage-projects
  *   GET  /search/packs     the starter synonym packs, each with how many of its synonyms the store has   records:view
  *   POST /search/packs/:id { on } switches a pack on (its synonyms become the store's own) or off (they go)   records:edit
- *   GET  /search/try?q=    the store's search as shoppers get it, every result explained, with what was understood,
+ *   GET  /search/try?q=&page=&limit=&sort=   the store's search as shoppers get it, every result explained, with what was understood,
  *                          the synonyms used and any redirect (SI-10; the panel's Try search)   records:view
  *   GET  /search/insights?days=7|30|90         Insights (SI-14): totals against the period before, by day, Top / No
  *                                              results / Low click rate / Trending   records:view
@@ -494,6 +495,10 @@ router.post(
  *                                              explained (SI-15; the rule editor's before / after)   records:view
  *   GET  /search/rules/touching?q= | ?product= the store's rules a search sets off, or that name a product (its brand,
  *                                              category, collection…)   records:view
+ *   GET  /search/suggestions?status=open|accepted|dismissed|all   Suggested fixes (SI-16 learned, SI-18 your AI)   records:view
+ *   POST /search/suggestions/:id/accept { edits? }  makes the synonym / redirect / rule   records:edit
+ *   POST /search/suggestions/:id/dismiss            it goes, and isn't suggested again   records:edit
+ *   POST /search/learn                             learning now instead of tonight (SI-16)   manage-projects
  */
 router.get(
 	'/search/status',
@@ -532,7 +537,15 @@ router.post(
 router.get(
 	'/search/try',
 	view,
-	handle(async (req: any) => storeSearch(await storeOf(), { q: String(req.query?.q ?? ''), limit: Math.min(24, Number(req.query?.limit) || 10), explain: true }))
+	handle(async (req: any) =>
+		storeSearch(await storeOf(), {
+			q: String(req.query?.q ?? ''),
+			limit: Math.min(48, Number(req.query?.limit) || 10),
+			page: Number(req.query?.page) || 1,
+			...(req.query?.sort && { sort: String(req.query.sort) as any }),
+			explain: true,
+		})
+	)
 );
 router.get(
 	'/search/insights',
@@ -571,6 +584,33 @@ router.get(
 	'/search/insights/week',
 	view,
 	handle(async () => searchWeek(await storeOf()))
+);
+router.get(
+	'/search/suggestions',
+	view,
+	handle(async (req: any) => (await storeOf(), listSuggestions({ status: req.query?.status ? String(req.query.status) : 'open', limit: Number(req.query?.limit) || 50 })))
+);
+router.post(
+	'/search/suggestions/:id/accept',
+	edit,
+	handle(async (req: any) => {
+		const r = await acceptSuggestion(await storeOf(), req.params.id, req.user?._id, req.body?.edits);
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Search', text: `accepted a suggested search ${r.kind}` });
+		return r;
+	})
+);
+router.post(
+	'/search/suggestions/:id/dismiss',
+	edit,
+	handle(async (req: any) => (await storeOf(), dismissSuggestion(req.params.id, req.user?._id)))
+);
+router.post(
+	'/search/learn',
+	manage,
+	handle(async () => {
+		const r = await learnStore(await storeOf(), { force: true });
+		return r || { skipped: 'Learning is off in Search settings' };
+	})
 );
 router.post(
 	'/search/rebuild',

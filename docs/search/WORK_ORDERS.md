@@ -38,8 +38,8 @@ The user answered README §8 on 2026-11-10.
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | done 2026-11-11 (pin / boost wait for SI-15, suggested fixes SI-16, Fix with your AI SI-18) |
 | **Phase 5 — Merchandising and learning** | | | | |
 | SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | done 2026-11-12 (suggested rules wait for SI-16) |
-| SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | open |
-| SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | open |
+| SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | done 2026-11-12 |
+| SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | done 2026-11-12 |
 | SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | open |
 | SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | open |
 | **Phase 6 — Rollout and later** | | | | |
@@ -81,17 +81,29 @@ filters and chips, the notes from SI-11, pixels, search ids on clicks, adds and 
 the site-builder **Search box** / **Search results** blocks (mint-sites). Built sites render only for websites today,
 so the blocks reach store sites with SB-10.
 
+SI-16 is done too: the store **learns** from its shoppers. Once a day the sweep counts, per search and product,
+how often it was shown, clicked, added and bought (decayed, half-life 30 days), against what its place on the page
+would earn; products shoppers pick more than their place says get a small lift (×0.85–×1.25, `learned ×1.16` in
+explain), only with 20+ showings from 5+ shoppers. Searches typed again with one word changed become *synonym*
+suggestions, products that win from low down become *pin rule* suggestions: **Suggested fixes** on Insights, Accept
+or Dismiss. The *Learning* switch (Search settings) turns it all off.
+
+SI-17 is done too: **Store → Try search** (`/store/search/try?q=`): the store's search as shoppers get it, a sort
+and pages, and for each result *Why* — the words matched where and how well, every multiplier, the score; the
+right column has what it understood, the synonyms and spellings, the rules that fired and the time. Insights'
+*Try search* and Search settings' *Try a search* open it.
+
 Next:
-- **SI-16** — learning, and Suggested fixes on Insights (suggested rules come in as `source: suggested`).
+- **SI-18** — MCP tools and *Fix with your AI* (`saveAiSuggestion` in `learn.ts` is ready for it).
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
 
 Tests:
-- `npx jest library/functions/commerce/search` (470)
+- `npx jest library/functions/commerce/search` (531)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
   `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27),
-  `search-merch.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
+  `search-merch.mjs`, `search-learn.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
 
 ---
 
@@ -423,7 +435,43 @@ parity still holds.
   search for its line only, sold30 up). Checked in headless Chrome: suggestions with arrow keys, results with chips
   and filters, pixels once each, a click recorded, a chip removed.
 
-## SI-16 … SI-23 (the rest)
+## SI-16 Learning — done 2026-11-12
+
+- **What:** search gets better from what shoppers do (README SI16), and tells the owner what it noticed.
+- **Counts** (`search/learn.ts`, model `SearchPair`, collection `searchpairs`, one row per store + normalised query
+  + product): impressions, visitors, clicks, carts, orders, and `expected` — the clicks its places on the page would
+  earn — all decayed with a 30-day half-life inside the aggregation. Position = (page − 1) · limit + index + 1. The
+  click rate by position is learned per store (smoothed towards a prior, then made non-increasing down the page) so
+  a small store's noise can't say place 3 beats place 1.
+- **Boost:** (clicks + ½ carts + orders + 1) / (expected · convert + 1), tanh-shaped into ×0.85…×1.25, only with
+  20+ impressions from 5+ visitors. It applies on the words path when results are ranked by relevance, as a
+  multiplier (`learned ×1.16`), scaled by the *Learned* dial and off with the *Learning* switch. Cached per index
+  version with the rules; a run that changes anything raises the version.
+- **When:** the sweep calls `learnStore` after the rollup, once a day per store (`SEARCH_LEARN_MS`, default a day),
+  stamped in `search.learn.last`. `POST /commerce/search/learn` (manage) runs it now (`{ skipped }` when off).
+- **Suggestions** (model `SearchSuggestion`): *synonym* when shoppers retype a search with one word swapped
+  (not typing on, not a prefix, no digits, 3+ shoppers); *rule* (pin) when a product's boost is ≥ 1.2 from position
+  5 or lower. Keyed per store so a dismissed one never comes back; open ones are refreshed with new evidence.
+  `GET /commerce/search/suggestions` (view), `POST …/:id/accept` (edit; makes the synonym or the rule with
+  `source: suggested`, edits allowed; 409 `suggestion_decided`), `POST …/:id/dismiss`. `saveAiSuggestion` takes
+  synonym / redirect / rule drafts for SI-18 (`source: your-ai`).
+- **Panel:** Insights → **Suggested fixes** (`SearchSuggestions.tsx`, anchor `store-search-suggestions`): the why,
+  the evidence, Accept / Dismiss, *Look for fixes now*.
+- **Tests:** `test/learn.test.ts` (28), `scripts/tenancy-smoke/search-learn.mjs`.
+
+## SI-17 Try search — done 2026-11-12
+
+- **Page** (mint-tenant `/store/search/try`, `SearchTry.tsx`, Store → Try search): search box, sort, pages (24); a
+  result list with picture, price, score, pinned / out of stock / learned tags and a *Why* per result (or *Show every
+  why*): the explain string taken apart into words matched (which part, how, points), the multipliers in words, the
+  score. Right column: time, words matched, what was understood (chips), synonyms and spellings used, the rules that
+  fired (links to the editor), pinned count; and links to pin, boost, synonyms and settings. Redirect, *Showing
+  results for*, *Did you mean* and the fallback are shown as shoppers get them. `?q=` opens it with a search.
+- **Backend:** `GET /commerce/search/try` takes `page`, `limit` (up to 48) and `sort`; the Store nav has *Try search*.
+- **Links:** Insights' *Try search* and Search settings' *Try a search* open the page. Guide anchor `store-search-try`.
+- Checked in headless Chrome against a test backend (pinned, rule fired, explain parts).
+
+## SI-18 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

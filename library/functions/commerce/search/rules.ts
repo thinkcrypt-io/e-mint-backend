@@ -13,7 +13,7 @@ import { compileMerch, isSentenceName, ruleSentence, type CompiledRule } from '.
 
 export type CompiledRedirect = { id: string; url: string; match: 'exact' | 'contains'; queries: string[][] };
 /** The store's synonyms and redirects (SI-10), and its merchandising rules (SI-15, merch.ts). */
-export type Rules = { synonyms: Map<string, Set<string>>; redirects: CompiledRedirect[]; merch?: CompiledRule[] };
+export type Rules = { synonyms: Map<string, Set<string>>; redirects: CompiledRedirect[]; merch?: CompiledRule[]; learned?: Map<string, Map<string, number>> };
 export const NO_RULES: Rules = { synonyms: new Map(), redirects: [], merch: [] };
 
 /** A synonym entry as one word, or null (several words: not matched yet — the engine works word by word). */
