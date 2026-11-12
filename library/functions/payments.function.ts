@@ -18,6 +18,7 @@ import { TenancyError } from './tenancy.function.js';
 import { ShopMapping, cleanLines, customerCart, loadShop, priceCart, setCustomerCart } from './shop.function.js';
 import { esc, para, sendOrgMail } from './mail.function.js';
 import { designMail } from './mailDesign.function.js';
+import { afterWebsiteOrder } from './commerce/search/events.js';
 import * as stripe from './payments/stripe.js';
 import * as sslcommerz from './payments/sslcommerz.js';
 import * as bkash from './payments/bkash.js';
@@ -394,6 +395,13 @@ export const checkout = async ({ app, project, customer, body, apiOrigin }: { ap
 	}
 	fireWebhooks({ route: def.route, event: 'create', doc, source: 'api' });
 	fireAutomations({ route: def.route, event: 'create', doc, actor: { name: 'Checkout' } });
+	// A store's order from the widgets: its products' sales and the searches that led to them (docs/search SI-07).
+	if (project?.type === 'ecommerce')
+		afterWebsiteOrder(
+			doc._id,
+			priced.lines.map((l: any) => ({ product: l.product, quantity: l.quantity, total: l.total != null ? Number(l.total) || 0 : (Number(l.unitPrice) || 0) * (Number(l.quantity) || 0) })),
+			body?.search && typeof body.search === 'object' ? body.search : undefined
+		);
 
 	const settings: any = await loadSettings(project);
 	const mode = settings?.[provider]?.mode === 'live' ? 'live' : 'test';

@@ -27,6 +27,11 @@
  *   Mint.cart.ready / .lines / .count / .subtotal / .currency   the cart (W-05), priced by the server
  *   Mint.cart.add(productId, { variant, quantity }) · set(id, qty, variant) · remove(id, variant) · clear()
  *   Mint.cart.product(id) · format(amount) · refresh() · onChange(cb)    (also the `mint:cart` DOM event)
+ *   Mint.search.open(q) · searched(q) · viewed(q, answer)   the Search widget (SI-07); searched/viewed tell the page's
+ *                                            pixels (gtag search / view_search_results, Meta + TikTok Search) and fire
+ *                                            mint:search / mint:search:results
+ *   Mint.search.ids() · remember(id) · clicked(searchId, productId) · from(productId)   the tab's search ids (a day,
+ *                                            30 at most), sent with clicks, adds to the bag and the order
  *   Mint.money(amount, currency)             an amount, the visitor's way
  *   Mint.api(path, init)                     the project's public API, signed in when there's a customer
  *   Mint.on(event, cb) / Mint.emit(event, detail)   also fired as `mint:<event>` DOM events on document
@@ -167,6 +172,11 @@ export const MINT_JS = `(function () {
 				var hit = lines.filter(function (l) { return l.product === String(id) && l.variant === variant; })[0];
 				if (hit) hit.quantity += qty; else lines.push({ product: String(id), variant: variant, quantity: qty });
 				return lines;
+			}).then(function (c) {
+				// Opened from a search (or told which one): the store's search counts the add (docs/search SI-07).
+				var sid = opts.searchId || search.from(String(id));
+				if (sid) beacon([{ type: 'cart', searchId: String(sid), product: String(id) }]);
+				return c;
 			});
 		},
 		/** Sets a line's quantity; 0 removes it. */
@@ -217,6 +227,75 @@ export const MINT_JS = `(function () {
 		cartQueue = run.catch(function () {});
 		return run;
 	}
+
+	/* ------------------------------------------------------------ search (docs/search SI-07) */
+	// Each search answer has an id. The tab keeps the last ones (a day at most) and which product came from which,
+	// so opening a result, adding it to the bag and the order can say so. Who: track.js's random visitor and
+	// session ids, when it runs. No names, no IP.
+	var SEARCHES = 'mint:' + project + ':searches', FROM = 'mint:' + project + ':fromSearch', DAY = 864e5;
+	function readSession(k, d) { try { var v = JSON.parse(sessionStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } }
+	function writeSession(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+	function keptSearches() { var v = readSession(SEARCHES, []); return (Array.isArray(v) ? v : []).filter(function (x) { return x && x.id && Date.now() - x.at < DAY; }); }
+	function who() {
+		var a = window.MintAnalytics || {}, v = a.visitorId, s = a.sessionId;
+		try { v = v || localStorage.getItem('mint:vid'); } catch (e) {}
+		try { s = s || sessionStorage.getItem('mint:sid'); } catch (e) {}
+		return { visitor: v || undefined, session: s || undefined };
+	}
+	/** Sends search events without holding the page up (text/plain, so no preflight; sendBeacon survives leaving). */
+	function beacon(events) {
+		if (preview || !events || !events.length) return;
+		var u = url('store/search/events'), body = JSON.stringify(Object.assign(who(), { events: events.slice(0, 20) }));
+		try { if (navigator.sendBeacon && navigator.sendBeacon(u, new Blob([body], { type: 'text/plain' }))) return; } catch (e) {}
+		try { fetch(u, { method: 'POST', body: body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(function () {}); } catch (e) {}
+	}
+	function call(name) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		try { var f = name.split('.').reduce(function (o, k) { return o && o[k]; }, window); if (typeof f === 'function') f.apply(name.indexOf('.') > 0 ? window[name.split('.')[0]] : window, args); } catch (e) {}
+	}
+	var reported = {};
+	var search = {
+		who: who,
+		/** The searches of this tab, newest first: sent with the order. */
+		ids: function () { return keptSearches().map(function (x) { return x.id; }); },
+		/** Keeps a search's id for the order. */
+		remember: function (id) {
+			if (!id) return;
+			writeSession(SEARCHES, [{ id: String(id), at: Date.now() }].concat(keptSearches().filter(function (x) { return x.id !== String(id); })).slice(0, 30));
+		},
+		/** The search a product was opened from in this tab, if any. */
+		from: function (product) { var m = readSession(FROM, {}); var hit = m && m[product]; return hit && Date.now() - hit.at < DAY ? hit.id : null; },
+		/** A result opened from a search: counted, and remembered for the bag. */
+		clicked: function (searchId, product) {
+			if (!searchId || !product) return;
+			var m = readSession(FROM, {}), keys = Object.keys(m || {});
+			if (keys.length > 60) keys.slice(0, keys.length - 60).forEach(function (k) { delete m[k]; });
+			m[product] = { id: String(searchId), at: Date.now() };
+			writeSession(FROM, m);
+			beacon([{ type: 'click', searchId: String(searchId), product: String(product) }]);
+		},
+		track: beacon,
+		/** Opens the search on this page (the Search widget's overlay, or its results page). */
+		open: function (q) { emit('search:open', { q: q || '' }); },
+		/** The shopper searched: the site's own pixels hear it (gtag / Meta / TikTok, only when they're on the page). */
+		searched: function (q) {
+			q = String(q || '').trim();
+			if (!q) return;
+			call('gtag', 'event', 'search', { search_term: q });
+			emit('search', { q: q });
+		},
+		/** A results page was shown: view_search_results and Search, once per words and page. */
+		viewed: function (q, answer) {
+			q = String(q || '').trim();
+			if (!q || reported[q]) return;
+			reported[q] = true;
+			call('gtag', 'event', 'view_search_results', { search_term: q });
+			call('fbq', 'track', 'Search', { search_string: q });
+			call('ttq.track', 'Search', { query: q });
+			if (!window.gtag && Array.isArray(window.dataLayer)) window.dataLayer.push({ event: 'view_search_results', search_term: q });
+			emit('search:results', { q: q, total: answer && answer.total, searchId: answer && answer.searchId });
+		},
+	};
 
 	/* ------------------------------------------------------------ the look */
 	function luminance(hex) {
@@ -365,6 +444,7 @@ export const MINT_JS = `(function () {
 		emit: emit,
 		auth: auth,
 		cart: cart,
+		search: search,
 		money: money,
 		config: config,
 		define: function (name, def) { defs[name] = def; mountAll(name); },

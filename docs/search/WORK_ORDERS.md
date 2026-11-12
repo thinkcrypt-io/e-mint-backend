@@ -26,14 +26,14 @@ The user answered README §8 on 2026-11-10.
 | SI-05 | Public search API (SI15, SI11, SI19): `GET /store/search` (with facets and category pages), `/suggest`, `/popular`, rate limits, `CommerceSettings.search`, `search=` on products routed to the engine; Website setup section with examples | backend + mint-tenant + mint-docs | M | done 2026-11-11 (`/popular` moved to SI-12) |
 | **Phase 2 — Storefronts** | | | | |
 | SI-06 | Store settings → Search (on / off, typos, out of stock, Banglish, dials, facets, suggestions, Rebuild + counts) | mint-tenant | S | done 2026-11-11 (filters to show + suggestion counts left for later) |
-| SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-builder | L | open |
+| SI-07 | mint.js Search widget (SI24): header icon, overlay with suggestions, results page with filters and chips, keyboard + screen-reader friendly, the store's look; site-builder "Search results" block + "Search box" element | backend + mint-sites + mint-builder | L | done 2026-11-12 (the blocks show on store sites once stores get builder sites, SB-10) |
 | SI-08 | Reference storefronts: HINT `SearchView` + header overlay on `/store/search` + `/suggest` (typo chips, "Showing results for", filters); category pages on `/store/search?category=`; the same for Live Fresh; Next.js snippet in mint-docs | hint-site + live-fresh-frontend + mint-docs | M | done 2026-11-11 (category pages kept as they are) |
 | **Phase 3 — Understanding** | | | | |
 | SI-09 | Query understanding (SI8): codes → straight to product, price phrases (EN + BN), option values from the store's own, brand / category detection, sort words, stop words, `understood` in the answer | backend | M | done 2026-11-11 |
 | SI-10 | Synonyms + redirects (SI13): builder models, expansion in the plan, starter packs (EN fashion, electronics, grocery, BN / Banglish), panel tables with Test; `upgradeStore` | backend + mint-tenant | M | done 2026-11-11 |
-| SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | done 2026-11-11 (the widget shows it in SI-07) |
+| SI-11 | No dead ends (SI12): loosen in steps, "Showing results for", did-you-mean from the store vocabulary, fallbacks; widget + HINT show it | backend + hint-site | S | done 2026-11-11 (the widget shows it too, SI-07) |
 | **Phase 4 — Insights** | | | | |
-| SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | done 2026-11-11 (mint.js with SI-07; no `searchId` on cart lines, see below) |
+| SI-12 | Events + attribution (SI17, SI18): `GET /store/search/popular` (from SI-05), `SearchEvent`, query cleaning (email / phone / card), `POST /store/search/events` (beacon batches), search id in mint.js + cart lines + `POST /store/orders` `search`, order attribution, `sold30` bump | backend + hint-site | M | done 2026-11-11 (mint.js has it since SI-07; no `searchId` on cart lines, see below) |
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | done 2026-11-11 (daily totals hourly, so today shows) |
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | done 2026-11-11 (pin / boost wait for SI-15, suggested fixes SI-16, Fix with your AI SI-18) |
 | **Phase 5 — Merchandising and learning** | | | | |
@@ -76,8 +76,12 @@ it from `upgradeStores.js --apply`), rules applied in the engine (hide → show 
 editor with the store's real results before and after, *Pin products* / *Boost* on Insights, and the rules that touch
 a search or a product on the drawer and the product's Search tab.
 
-Next, any order:
-- **SI-07** — the mint.js widget.
+SI-07 is done too: the mint.js **Search** widget (stores only) — icon / box / results layouts, suggestions,
+filters and chips, the notes from SI-11, pixels, search ids on clicks, adds and the checkout widget's orders — and
+the site-builder **Search box** / **Search results** blocks (mint-sites). Built sites render only for websites today,
+so the blocks reach store sites with SB-10.
+
+Next:
 - **SI-16** — learning, and Suggested fixes on Insights (suggested rules come in as `source: suggested`).
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
@@ -86,7 +90,8 @@ Before switching existing stores on (README §8.5): deploy, let their first swee
 Tests:
 - `npx jest library/functions/commerce/search` (470)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
-  `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27)
+  `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27),
+  `search-merch.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
 
 ---
 
@@ -391,7 +396,34 @@ parity still holds.
 - **Tests:** `test/merch.test.ts` and `scripts/tenancy-smoke/search-merch.mjs` (rules on search and category pages,
   pins of products the words miss, show only set aside, schedules, hits, preview, touching, sentences).
 
-## SI-07, SI-16 … SI-23 (the rest)
+## SI-07 Search widget — done 2026-11-12
+
+- **mint.js** (`routes-public/mint.ts`): `Mint.search` — `open(q)`, `track(events)` (sendBeacon, text/plain),
+  `remember` / `ids` / `from` (search ids for a day in sessionStorage, 30 at most), `clicked`, `searched`, and
+  `viewed(q, answer)`, which fires once per search: gtag `view_search_results`, fbq `Search`, ttq `Search`, a
+  dataLayer push without gtag, and `mint:search:results`. `Mint.cart.add` sends a `cart` event when the product came
+  from a search; the checkout widget sends `search: { ids, visitor, session }` with the order.
+- **Widget** (`routes-public/widgets/search.ts`, served as `/public/widgets/search.js`): layouts *icon* (a dialog:
+  scrim, focus kept inside, Esc), *box*, *results*; a tag's `data-layout` wins. The box is an ARIA combobox (listbox
+  of searches, products with prices, categories / brands, See all; arrows, Enter, Esc; popular searches when empty).
+  The results page keeps its state in the address, shows filters with counts, chips for what was understood (removing
+  one searches `understood.words` with the rest as explicit filters) and for picked filters, sort, pages, the
+  Showing / Did you mean / close-matches notes, the fallback grid and popular searches on no results; follows a
+  redirect on page 1 only. Demo data in the builder preview.
+- **Catalog**: `search` in `WIDGET_TYPES` with `only: 'ecommerce'` — a website's catalog leaves it out, and saving it
+  on one is refused (`widget_not_for_project`). Options layout, resultsUrl, productUrl, perPage (4–60), showFilters.
+- **Orders**: `payments.function.ts` calls `afterWebsiteOrder` for a store's checkout-widget orders.
+- **Site builder** (mint-sites): `search-box` (icon or box, results page) and `search-results` blocks render the
+  widget's tags; a button's *Open a widget* action can open Search (overlays script → `Mint.search.open('')`).
+  mint-builder lists *Search (stores)* in the widget action. Manifest synced (40 blocks). `renderPage` serves only
+  `type: 'website'` today, so the blocks appear on a store's site with SB-10.
+- **Saved texts**: a widget saved before keeps the texts it was saved with; the defaults reach new ones.
+- **Tests**: mint-sites `test/blocks.test.tsx` (SI-07 search blocks), `scripts/tenancy-smoke/search-widget.mjs`
+  (catalog per type, options cleaned, served script parses, browser search id + click, checkout order counted from
+  search for its line only, sold30 up). Checked in headless Chrome: suggestions with arrow keys, results with chips
+  and filters, pixels once each, a click recorded, a chip removed.
+
+## SI-16 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

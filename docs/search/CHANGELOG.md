@@ -1,5 +1,17 @@
 # Store search — changelog
 
+## 2026-11-12 — SI-07 Search widget
+
+- New mint.js **Search** widget for stores: a header icon that opens a search window, a search box, and a results
+  page with filters, chips, sort and pages; suggestions as you type; Showing results for, Did you mean, close matches
+  and the fallback; keyboard and screen-reader friendly, in the widget look.
+- `Mint.search` in mint.js: search ids kept per tab, clicks and adds beaconed, `search` / `view_search_results` to
+  the page's Google, Meta and TikTok pixels; the checkout widget's orders count as from search.
+- Site builder: *Search box* and *Search results* blocks, and *Open a widget → Search* on buttons (they show on
+  store sites once stores get builder sites).
+- Only stores have the widget; adding it to a website is refused.
+- Tests: `search-widget.mjs`, mint-sites block tests.
+
 ## 2026-11-12 — SI-15 Search rules
 
 - New **Store → Search rules** (`/store/search/rules`) and a `Search rule` store model: when a search is exactly /

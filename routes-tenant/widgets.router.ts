@@ -28,7 +28,7 @@ const build = tenantPermissions(['build']);
 
 // The project key names the project to mint.js (docs/api-builder D14).
 const view = async (req: any, saved: any) => ({
-	catalog: widgetCatalog(),
+	catalog: widgetCatalog(req.project),
 	...saved,
 	script: `<script src="${apiOrigin(req)}/public/mint.js" data-key="${await ensureProjectKey(req.project)}" async></script>`,
 });

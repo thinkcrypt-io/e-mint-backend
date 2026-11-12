@@ -855,6 +855,10 @@ inspector deep-links to `/widgets` (no duplicate settings).
 to cart, the cart opens from the header, checkout reaches Stripe test mode
 (existing `payments.mjs` flow), My orders shows; CHANGELOG has the walk-through.
 
+**Already there (search SI-07, 2026-11-12):** `search-box` and `search-results` blocks render the Search widget's
+tags, and the overlays script opens it for a `widget` action with `widget: 'search'`. They show on a store's site
+only once `renderPage` (`library/siteBuilder/render.ts`, websites only today) serves stores — part of this WO.
+
 ---
 
 ## SB-11 — AI (L)

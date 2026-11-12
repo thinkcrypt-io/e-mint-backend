@@ -1,5 +1,5 @@
 {
-	"version": "38af04a32fde",
+	"version": "b3b7658236a5",
 	"blocks": [
 		{
 			"type": "accordion",
@@ -2645,6 +2645,92 @@
 					"role": "Customer",
 					"rating": 0,
 					"variant": "card"
+				}
+			}
+		},
+		{
+			"type": "search-box",
+			"label": "Search box",
+			"category": "commerce",
+			"icon": "magnifying-glass",
+			"description": "The store’s search: an icon that opens it, or a box. Suggests products and categories as people type.",
+			"aiHint": "For e-commerce stores, in the header. layout icon on small headers, box when there is room. Needs the Search widget switched on.",
+			"props": [
+				{
+					"key": "layout",
+					"label": "Look",
+					"kind": "select",
+					"options": [
+						{
+							"value": "icon",
+							"label": "An icon that opens the search"
+						},
+						{
+							"value": "box",
+							"label": "A search box"
+						}
+					],
+					"default": "icon"
+				},
+				{
+					"key": "resultsUrl",
+					"label": "Results page",
+					"kind": "text",
+					"default": "",
+					"help": "Leave empty for the widget’s own (Site setup → Widgets → Search), /search by default."
+				}
+			],
+			"style": [
+				"spacing"
+			],
+			"defaults": {
+				"props": {
+					"layout": "icon"
+				}
+			}
+		},
+		{
+			"type": "search-results",
+			"label": "Search results",
+			"category": "commerce",
+			"icon": "magnifying-glass",
+			"description": "The store’s search results: products for ?q=, with filters, sort and pages.",
+			"aiHint": "Put it alone on the store’s /search page. Needs the Search widget switched on.",
+			"props": [
+				{
+					"key": "showFilters",
+					"label": "Filters",
+					"kind": "select",
+					"options": [
+						{
+							"value": "default",
+							"label": "As set for the widget"
+						},
+						{
+							"value": "true",
+							"label": "Show"
+						},
+						{
+							"value": "false",
+							"label": "Hide"
+						}
+					],
+					"default": "default"
+				},
+				{
+					"key": "productUrl",
+					"label": "Product address",
+					"kind": "text",
+					"default": "",
+					"help": "Leave empty for the widget’s own, /products/{slug} by default. {slug} and {id} are filled in."
+				}
+			],
+			"style": [
+				"spacing"
+			],
+			"defaults": {
+				"props": {
+					"showFilters": "default"
 				}
 			}
 		},

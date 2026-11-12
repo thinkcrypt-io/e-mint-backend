@@ -29,7 +29,7 @@ the limits listed in §2.
 | `searchable: true` on fields | blueprint (name, sku, barcode) | Used by the panel's table search | Marks a store owner's own added fields as searchable too (SI4) |
 | Product views, wishes, Customer purchases | `wishlist.ts` `viewProduct`, EC-31, `purchases.ts` | Counters on the product, purchases per customer | Ranking signals (SI14) |
 | Visitor analytics: visitor id, sessions, page views, channels | WO-56 `visitorAnalytics.function.ts`, `WebsiteVisitor`, track.js | Who visited what | Search events carry the same visitor id, so a search ties to a journey and an order (SI17) |
-| mint.js widgets (cart, checkout, login, my orders) | `routes-public/widgets/*` | Shop widgets for builder sites and hand-coded sites | Gains a **Search** widget (SI-07) |
+| mint.js widgets (cart, checkout, login, my orders) | `routes-public/widgets/*` | Shop widgets for builder sites and hand-coded sites | Gains a **Search** widget (SI-07, done 2026-11-12: stores only) |
 | Marketing plan's event ids + order attribution | docs/marketing MK21–MK23 | `mint.track`, ads on `POST /store/orders` | Search uses the same `mint.track` path and the same attribution idea (SI18) |
 | Panel ⌘K record search | WO-54 | Staff search records | Unchanged. The POS / product pickers can use the store engine later (SI-21) |
 | Scheduler ticks with leases | CMS, CR-11, MK16 | Background work | Rebuilds, nightly rollups and learning run on the same pattern |
@@ -175,7 +175,7 @@ library/functions/commerce/search/
 | `POST /store/search/events` | Clicks, adds to the bag and suggestion picks, ≤ 20 per call, text/plain for sendBeacon (SI-12) |
 | `GET /products?search=…` (the generic list) | Ranked by the engine when it's the only filter, there's no `sort`, `limit` ≤ 60, and the store has `search.enabled === true` (new stores; existing ones once checked, README §8.5). The list keeps its own shape |
 | `POST /store/orders` | Gains `search: { ids[], visitor?, session? }` (SI18, SI-12) |
-| `mint.js` | `Mint.search.open()`, `Mint.search.track(...)`; the widget emits `search`, `view_search_results` to the MK pixels when they are on (SI-07) |
+| `mint.js` | `Mint.search.open()`, `Mint.search.track(...)`; the widget emits `search`, `view_search_results` to the page's Google / Meta / TikTok pixels (SI-07, done 2026-11-12) |
 
 Panel routes (`/tenant/api/p/:id/commerce`): `GET /search/status`, `POST /search/rebuild` (SI-03); `GET /search/settings`, `PUT /search/settings` (SI-05). A store switched off answers 404 `search_off` on the public routes.
 

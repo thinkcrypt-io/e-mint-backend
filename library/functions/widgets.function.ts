@@ -36,6 +36,8 @@ export type WidgetType = {
 	texts: WidgetText[];
 	/** The HTML that places it on a page (the loader script goes once per page). */
 	snippet: string;
+	/** Only this kind of project has it (the Search widget: e-commerce stores). */
+	only?: 'ecommerce';
 };
 
 export const WIDGET_TYPES: Record<string, WidgetType> = {
@@ -204,6 +206,69 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 		],
 		snippet: '<div data-mint="orders"></div>',
 	},
+	search: {
+		name: 'search',
+		title: 'Search',
+		summary: 'The store’s search: a header icon or box with suggestions as you type, and a results page with filters.',
+		description:
+			'Shoppers search your store the way your panel’s Search is set up — typos, Banglish, synonyms, your search rules. As they type they see matching products, categories and popular searches; Enter opens the results page, with filters (category, brand, price, sizes and colours, in stock, on sale), sort and pages. Words like “red under 500” become filters they can remove. Clicks, adds to the bag and orders are counted in Search → Insights. Place an icon or box in your header, and the results layout on your search page. Only for e-commerce stores.',
+		guide: 'search',
+		only: 'ecommerce',
+		options: [
+			{
+				key: 'layout',
+				label: 'Layout',
+				kind: 'select',
+				options: [
+					{ value: 'icon', label: 'An icon that opens the search' },
+					{ value: 'box', label: 'A search box' },
+					{ value: 'results', label: 'The results page' },
+				],
+				default: 'icon',
+				help: 'An icon or a box for the header; the results layout for your search page. Set it per place with data-layout="results".',
+			},
+			{ key: 'resultsUrl', label: 'Results page', kind: 'text', default: '/search', help: 'Where Enter takes the shopper — the page with the results layout on it (?q= is added).' },
+			{ key: 'productUrl', label: 'Product address', kind: 'text', default: '/products/{slug}', help: 'Where a result opens. {slug} and {id} are filled in.' },
+			{ key: 'perPage', label: 'Results per page', kind: 'number', default: 24, min: 4, max: 60, help: 'How many products each page of results shows.' },
+			{ key: 'showFilters', label: 'Show filters', kind: 'boolean', default: true, help: 'Category, brand, price, options, in stock and on sale beside the results.' },
+		],
+		texts: [
+			{ key: 'placeholder', label: 'Box hint', default: 'Search the store' },
+			{ key: 'button', label: 'Icon’s label', default: 'Search' },
+			{ key: 'title', label: 'Results title', default: 'Results for “{q}”' },
+			{ key: 'count', label: 'How many', default: '{count} found' },
+			{ key: 'noResults', label: 'Nothing found', default: 'Nothing matches “{q}”.' },
+			{ key: 'showing', label: 'Searched instead', default: 'Showing results for “{q}”' },
+			{ key: 'relaxed', label: 'Close matches', default: 'Nothing matched all of that — these come close.' },
+			{ key: 'didYouMean', label: 'Did you mean', default: 'Did you mean' },
+			{ key: 'fallback', label: 'Instead', default: 'You might like these instead' },
+			{ key: 'popular', label: 'Popular searches', default: 'Popular searches' },
+			{ key: 'queries', label: 'Searches heading', default: 'Searches' },
+			{ key: 'products', label: 'Products heading', default: 'Products' },
+			{ key: 'categories', label: 'Categories heading', default: 'Categories' },
+			{ key: 'seeAll', label: 'See all', default: 'See all results' },
+			{ key: 'filters', label: 'Filters', default: 'Filters' },
+			{ key: 'clear', label: 'Clear filters', default: 'Clear all' },
+			{ key: 'sort', label: 'Sort', default: 'Sort' },
+			{ key: 'relevance', label: 'Best match', default: 'Best match' },
+			{ key: 'popularSort', label: 'Most popular', default: 'Most popular' },
+			{ key: 'priceLow', label: 'Price, low to high', default: 'Price: low to high' },
+			{ key: 'priceHigh', label: 'Price, high to low', default: 'Price: high to low' },
+			{ key: 'newest', label: 'Newest', default: 'Newest' },
+			{ key: 'price', label: 'Price filter', default: 'Price' },
+			{ key: 'category', label: 'Category filter', default: 'Category' },
+			{ key: 'brand', label: 'Brand filter', default: 'Brand' },
+			{ key: 'inStock', label: 'In stock', default: 'In stock' },
+			{ key: 'onSale', label: 'On sale', default: 'On sale' },
+			{ key: 'outOfStock', label: 'Out of stock', default: 'Out of stock' },
+			{ key: 'sale', label: 'Sale badge', default: 'Sale' },
+			{ key: 'more', label: 'Next page', default: 'Next' },
+			{ key: 'back', label: 'Previous page', default: 'Previous' },
+			{ key: 'loading', label: 'Loading', default: 'Searching…' },
+			{ key: 'close', label: 'Close', default: 'Close' },
+		],
+		snippet: '<div data-mint="search"></div>',
+	},
 };
 
 export const THEME_DEFAULTS = { primaryColor: '', fontFamily: '', radius: 10, colorMode: 'auto' };
@@ -211,7 +276,7 @@ const COLOR_MODES = ['auto', 'light', 'dark'];
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /** The panel's view of every widget: what it is and what can be set. */
-export const widgetCatalog = () => Object.values(WIDGET_TYPES);
+export const widgetCatalog = (project?: any) => Object.values(WIDGET_TYPES).filter(t => !t.only || !project || project.type === t.only);
 
 /**
  * A widget's settings as used: saved values over the defaults, unknown keys
@@ -294,6 +359,9 @@ export const saveWidgets = async (project: any, body: any) => {
 		if (['checkout', 'thanks', 'orders'].some(switchedOn) && !shop.order)
 			throw new TenancyError(400, 'Set up Orders in the Shop first — where checkout writes orders.', 'orders_not_set_up');
 	}
+	for (const t of Object.values(WIDGET_TYPES))
+		if (t.only && widgets[t.name]?.added && !current.widgets[t.name]?.added && project.type !== t.only)
+			throw new TenancyError(400, `The ${t.title} widget is for e-commerce stores — this project is a ${project.type || 'project'}.`, 'widget_not_for_project');
 	const theme = body?.theme ? cleanTheme({ ...current.theme, ...body.theme }) : current.theme;
 	await runInScope(scopeOf(project), () => SiteWidgets.updateOne({}, { $set: { widgets, theme } }, { upsert: true }));
 	publicCache.delete(String(project._id));
@@ -325,7 +393,8 @@ export const publicWidgets = async (project: any) => {
 	}
 	// The cart works only with the shop set up (a field since removed turns it off here).
 	const shop = ['cart', 'checkout', 'thanks', 'orders'].some(n => widgets[n]?.enabled) ? await loadShop(project) : null;
-	const needs = (name: string) => (name === 'cart' ? !!shop : ['checkout', 'thanks', 'orders'].includes(name) ? !!shop?.order : true);
+	const needs = (name: string) =>
+		name === 'cart' ? !!shop : ['checkout', 'thanks', 'orders'].includes(name) ? !!shop?.order : WIDGET_TYPES[name]?.only ? project.type === WIDGET_TYPES[name].only : true;
 	const value = {
 		theme: { ...theme, primaryColor: primary || '#111827' },
 		widgets: Object.fromEntries(

@@ -102,6 +102,9 @@ export const CHECKOUT_WIDGET_JS = `(function () {
 					busy = true; pay.disabled = true; error.textContent = '';
 					var payload = { provider: chosen, email: values.email, name: values.name, phone: values.phone, note: values.note,
 						address: o.askAddress ? { name: values.name, line1: values.line1, line2: values.line2, city: values.city, postcode: values.postcode, country: values.country, phone: values.phone } : undefined };
+					// The tab's searches (SI-07): the store counts the sales that came from search.
+					var ids = Mint.search ? Mint.search.ids() : [];
+					if (ids.length) payload.search = Object.assign({ ids: ids }, Mint.search.who());
 					if (!Mint.auth.user) payload.lines = cart.lines.filter(function (l) { return l.problem !== 'unavailable'; }).map(function (l) { return { product: l.product, variant: l.variant || '', quantity: l.quantity }; });
 					Mint.api('checkout', { method: 'POST', body: JSON.stringify(payload) }).then(Mint.json).then(function (r) {
 						Mint.emit('checkout', { ref: r.ref, order: r.order });
