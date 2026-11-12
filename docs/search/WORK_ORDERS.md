@@ -37,7 +37,7 @@ The user answered README §8 on 2026-11-10.
 | SI-13 | Nightly rollups (SI17): `SearchQueryDaily`, signals into SearchDoc (sold30, views30, wishes), Product ⚙searchClicks30 / sold30 | backend | S | done 2026-11-11 (daily totals hourly, so today shows) |
 | SI-14 | Insights page (§6): totals, chart, Top / No results / Low click rate / Trending tables with one-tap fixes, query drill-down, dashboard widget, Product page Search card | mint-tenant | L | done 2026-11-11 (pin / boost wait for SI-15, suggested fixes SI-16, Fix with your AI SI-18) |
 | **Phase 5 — Merchandising and learning** | | | | |
-| SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | open |
+| SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | done 2026-11-12 (suggested rules wait for SI-16) |
 | SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | open |
 | SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | open |
 | SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | open |
@@ -71,11 +71,14 @@ fixes, a drawer per search; a **Search** tab on each product; a "Website search 
 stores get it, `upgradeStores.js --apply` adds it once to built stores). Backend: `GET /commerce/search/insights`,
 `/insights/query`, `/insights/product/:id`, `/insights/week`.
 
+SI-15 is done too: **Store → Search rules** (`/store/search/rules`), a `Search rule` store model (built stores get
+it from `upgradeStores.js --apply`), rules applied in the engine (hide → show only → pin → boost / bury), a sentence
+editor with the store's real results before and after, *Pin products* / *Boost* on Insights, and the rules that touch
+a search or a product on the drawer and the product's Search tab.
+
 Next, any order:
 - **SI-07** — the mint.js widget.
-- **SI-15** — rules (pin / boost / bury); then Insights' Low click rate gets *Pin* and *Boost*, and the drawer and
-  the product tab list the rules that touch them.
-- **SI-16** — learning, and Suggested fixes on Insights.
+- **SI-16** — learning, and Suggested fixes on Insights (suggested rules come in as `source: suggested`).
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
@@ -361,7 +364,34 @@ parity still holds.
   Checked in a browser against a test backend: the page, the drawer, the No results fixes into a filled synonym form,
   the product tab, the dashboard widget.
 
-## SI-07, SI-15 … SI-23 (the rest)
+## SI-15 Search rules — done 2026-11-12
+
+- **What:** the owner decides what a search, or a category page, shows first, lower down or not at all (README SI13).
+- **Model** (`blueprint.ts`, key `searchRule`, route `search-rules`, its own page so the plain table is off the
+  sidebar): name, when (`exact` / `contains` / `category` / `always`), queries, category, action (`pin` / `boost` /
+  `bury` / `hide` / `filter`), products, brands, categories, collections, onSale, strength (boost 1.5 / 2 / 3, bury
+  0.5 / 0.2; default 2 and 0.5), active, startsAt, endsAt, source (you / suggested / your-ai), hits, lastHitAt. A
+  nameless rule is named by its sentence ("Searches for “dress” or “frock”: pin 2 products"). Built stores get it
+  from `upgradeStores.js --apply` (it adds missing blueprint models).
+- **Engine** (`search/merch.ts`, `rules.ts`, `engine.ts`): rules are compiled with synonyms and redirects, per index
+  version (a save bumps it). Triggers match on normalised stems like redirects; a category rule fires only on that
+  category's page with no words. Order: hide, show only (set aside when it would leave nothing), pin (products in
+  the order picked; a pinned product the words don't find is fetched, but must pass the shopper's filters), then
+  boost / bury as multipliers (`rule “name” ×3` in explain). Pins and boosts give way to a sort the shopper picks;
+  hide and show only always apply. A pin clears `fallback` / `didYouMean`. Category pages with rules order up to
+  2,000 products in memory. Schedules: an end date runs to the end of that day. Public first pages count `hits`.
+- **Routes** (`records:view`): `POST /commerce/search/rules/preview { rule, q? }` → `{ q, category, ready, missing?,
+  fires, before, after }` (dates and the On switch ignored, the saved copy left out of "before");
+  `GET /commerce/search/rules/touching?q=|?product=`.
+- **Panel** (mint-tenant): `/store/search/rules` (`SearchRules.tsx`, Store → Search rules): list with an On switch,
+  uses, dates, delete (PromptDialog); the editor reads as a sentence (When … Do … To … Dates … Name) with Without the
+  rule / With it side by side (moved ▲▼, new, pinned) and a Try it box. `?new=pin|boost&q=` / `&product=` and
+  `?edit=<id>` open it. Insights' Low click rate rows and the drawer get *Pin products* / *Boost*; the drawer and a
+  product's Search tab list the rules that touch them. Guide anchor `store-search-rules`.
+- **Tests:** `test/merch.test.ts` and `scripts/tenancy-smoke/search-merch.mjs` (rules on search and category pages,
+  pins of products the words miss, show only set aside, schedules, hits, preview, touching, sentences).
+
+## SI-07, SI-16 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

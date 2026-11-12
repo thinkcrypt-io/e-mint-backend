@@ -1,5 +1,19 @@
 # Store search — changelog
 
+## 2026-11-12 — SI-15 Search rules
+
+- New **Store → Search rules** (`/store/search/rules`) and a `Search rule` store model: when a search is exactly /
+  contains some words, on a category page, or always — pin products, boost or bury (by product, brand, category,
+  collection or on sale), hide, or show only. Optional start and end dates, an On switch, a count of uses.
+- The editor reads as a sentence and shows the store's real results without the rule and with it as you change it.
+- Insights' Low click rate and the search drawer get *Pin products* / *Boost*; the drawer and a product's Search tab
+  list the rules that touch them.
+- Backend: `search/merch.ts`; `POST /commerce/search/rules/preview`, `GET /commerce/search/rules/touching`.
+  Built stores get the model from `upgradeStores.js --apply`.
+- Decisions: pins and boosts give way to a sort the shopper picks; a "show only" that would leave nothing is set
+  aside; pins are products only.
+- Tests: `test/merch.test.ts`, `search-merch.mjs`.
+
 ## 2026-11-11 — SI-14 Insights page
 
 - New **Store → Search insights** (`/store/search`): searches, visitors, visits with a search, revenue, no results,
