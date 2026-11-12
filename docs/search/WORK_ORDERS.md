@@ -109,7 +109,7 @@ setup page's Store search card (the full answer, click/add-to-bag events, the ra
 (changelog, a *Store search* feature, the Search widget card). **SI-02…SI-20 are all built; nothing is deployed.**
 
 Next — the user's prod steps (see "SI-20 Finish" below for the full list):
-1. Web dynos → Standard-2X. 2. Deploy the backend (`git push heroku v3:main` or the usual way). 3. `node
+1. Web dynos → Standard-2X. 2. Deploy the backend (the usual way). 3. `node
 scripts/upgradeStores.js` then `--apply`. 4. `node scripts/searchRebuild.js --apply`. 5. Check each store's
 `/commerce/search/status`, try its common searches, then switch it on.
 
