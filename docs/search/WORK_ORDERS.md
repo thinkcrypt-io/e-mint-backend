@@ -40,7 +40,7 @@ The user answered README §8 on 2026-11-10.
 | SI-15 | Rules (SI13): Search rule model, hide / filter / pin / boost / bury, query and category-page triggers, schedules, sentence editor with live before / after preview | backend + mint-tenant | M | done 2026-11-12 (suggested rules wait for SI-16) |
 | SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | done 2026-11-12 |
 | SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | done 2026-11-12 |
-| SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | open |
+| SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | done 2026-11-12 |
 | SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | open |
 | **Phase 6 — Rollout and later** | | | | |
 | SI-20 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend, moves web dynos to Standard-2X for SI-19, and approves the prod runs). Existing stores (Live Fresh / Verte, HINT): rebuild, run the relevance suite on each catalogue, then switch search on (README §8.5) | all | S | open |
@@ -93,8 +93,12 @@ and pages, and for each result *Why* — the words matched where and how well, e
 right column has what it understood, the synonyms and spellings, the rules that fired and the time. Insights'
 *Try search* and Search settings' *Try a search* open it.
 
+SI-18 is done too: four store MCP tools — `search_insights`, `try_search`, `save_search_suggestion` (drafts land in
+Suggested fixes as *From your AI*; nothing changes until the owner accepts) and `enrich_products` (search words,
+a dry run first) — and **Fix with your AI** on Insights, a prompt to paste into the owner's own AI.
+
 Next:
-- **SI-18** — MCP tools and *Fix with your AI* (`saveAiSuggestion` in `learn.ts` is ready for it).
+- **SI-19** — search by meaning.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
@@ -103,7 +107,7 @@ Tests:
 - `npx jest library/functions/commerce/search` (531)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
   `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27),
-  `search-merch.mjs`, `search-learn.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
+  `search-merch.mjs`, `search-learn.mjs`, `search-mcp.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
 
 ---
 
@@ -471,7 +475,29 @@ parity still holds.
 - **Links:** Insights' *Try search* and Search settings' *Try a search* open the page. Guide anchor `store-search-try`.
 - Checked in headless Chrome against a test backend (pinned, rule fired, explain parts).
 
-## SI-18 … SI-23 (the rest)
+## SI-18 MCP tools — done 2026-11-12
+
+- **What:** the owner's own AI improves search (README SI22) — no AI on our servers (the user’s rule: AI via MCP).
+- **Tools** (`library/controllers/mcp/search.tools.ts`, `only: 'ecommerce'`, wired in `mcp.router.ts` with
+  `SEARCH_INSTRUCTIONS` after the store's):
+  - `search_insights { days?, q? }` (data, view on products): totals, top / no results / low click rate / trending,
+    open suggestions; with `q`, that search's insight.
+  - `try_search { q, page?, limit?, sort? }` (data): `storeSearch` with explain, as text per result plus understood,
+    synonyms, typos, rules, redirect, showing / didYouMean, fallback.
+  - `save_search_suggestion { kind, record, why, title? }` (data): `saveAiSuggestion`; a rule's products may be
+    ids, SKUs or names (resolved to ids, unknown ones refused). Same draft again updates the open one; a decided one
+    is left as it is.
+  - `enrich_products { items?, apply?, limit? }` (build): no items → active products with the fewest search words;
+    items `{ product, add, remove }` → dry run (before → after); `apply: true` (Records: Add + Edit on products)
+    saves through the model, builds the products' search documents at once, drops the store's vocabulary and the
+    answer cache so the new word works straight away. Lower-cased, ≤ 40 characters, ≤ 20 a product, the name left
+    out; any problem changes nothing.
+- **Panel:** Insights → **Fix with your AI** (`SearchFixWithAi.tsx`, anchor `store-search-fix-with-ai`): the prompt
+  (`searchFixPrompt(days, q?)`), Copy prompt, a link to Connect your AI.
+- **Tests:** `scripts/tenancy-smoke/search-mcp.mjs` (website keys have none of the tools; explain; insights after
+  real searches; suggestion checks and From your AI; dry run then apply; search finds the new word).
+
+## SI-19 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

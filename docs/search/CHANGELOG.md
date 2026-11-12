@@ -1,5 +1,13 @@
 # Store search — changelog
 
+## 2026-11-12 — SI-18 Your AI improves search
+
+- Four store MCP tools: `search_insights`, `try_search` (every result explained), `save_search_suggestion`
+  (synonyms, redirects and rules, waiting in Suggested fixes as From your AI) and `enrich_products` (search words
+  on products — a dry run first, then saved and searchable at once).
+- **Fix with your AI** on Search insights: a prompt to paste into your own AI with the project connected.
+- Tests: `search-mcp.mjs`.
+
 ## 2026-11-12 — SI-17 Try search
 
 - New **Store → Try search** page: your website's search as shoppers get it, with a sort and pages, and *Why* on

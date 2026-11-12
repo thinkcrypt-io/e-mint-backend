@@ -27,6 +27,7 @@ import { ROW_MENU_HELP, rowMenuOf, rowMenuText } from './rowMenu.js';
 import { createMcpRouter } from './transport.js';
 import { CONTENT_INSTRUCTIONS, CONTENT_TOOLS } from './content.tools.js';
 import { STORE_INSTRUCTIONS, STORE_TOOLS } from './store.tools.js';
+import { SEARCH_INSTRUCTIONS, SEARCH_TOOLS } from './search.tools.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -794,6 +795,7 @@ const TOOLS: ToolDef[] = [
 	...COMPONENT_TOOLS,
 	...CONTENT_TOOLS,
 	...STORE_TOOLS,
+	...SEARCH_TOOLS,
 ];
 
 /** Whether a tool is offered to this caller: some only make sense in a project, a website project or a store. */
@@ -809,7 +811,7 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 		info: SERVER_INFO,
 		instructions: caller =>
 			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : '') +
-			(caller.project?.type === 'ecommerce' ? STORE_INSTRUCTIONS : ''),
+			(caller.project?.type === 'ecommerce' ? STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
