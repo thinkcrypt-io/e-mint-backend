@@ -43,7 +43,7 @@ The user answered README §8 on 2026-11-10.
 | SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | done 2026-11-12 |
 | SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | done 2026-11-12 |
 | **Phase 6 — Rollout and later** | | | | |
-| SI-20 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend, moves web dynos to Standard-2X for SI-19, and approves the prod runs). Existing stores (Live Fresh / Verte, HINT): rebuild, run the relevance suite on each catalogue, then switch search on (README §8.5) | all | S | open |
+| SI-20 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend, moves web dynos to Standard-2X for SI-19, and approves the prod runs). Existing stores (Live Fresh / Verte, HINT): rebuild, run the relevance suite on each catalogue, then switch search on (README §8.5) | all | S | built 2026-11-13 (prod runs: the user) |
 | SI-21 | The POS and panel product pickers use the engine (typos, SKU straight hits) | backend + mint-tenant | S | later |
 | SI-22 | Atlas driver (SI3): one `$search` index over SearchDoc (fuzzy, autocomplete, facets), parity tests against the native driver on the fixtures, a platform switch | backend | M | parked: prod is Flex / shared (README §8.1) |
 | SI-23 | Content search hooks: SearchDoc `kind`, optional pages / blog posts in suggestions (out of scope now, README §7) | backend | M | later |
@@ -104,8 +104,14 @@ closest products by meaning are shown (similarity ≥ 0.45, `showing.reason: 'me
 search with no results). A store can turn it off in Search settings; `SEARCH_SEMANTIC=off` turns it off for the
 platform. **The user must move web dynos to Standard-2X (1 GB) before deploying** — the model adds ~250 MB of memory.
 
-Next:
-- **SI-20** — finish: guides, Website setup, marketing website, rollout notes.
+SI-20 is built: the store guide (docs.mintapp.shop/store — search by meaning, recover table, settings), the Website
+setup page's Store search card (the full answer, click/add-to-bag events, the rate limit), the marketing website
+(changelog, a *Store search* feature, the Search widget card). **SI-02…SI-20 are all built; nothing is deployed.**
+
+Next — the user's prod steps (see "SI-20 Finish" below for the full list):
+1. Web dynos → Standard-2X. 2. Deploy the backend (`git push heroku v3:main` or the usual way). 3. `node
+scripts/upgradeStores.js` then `--apply`. 4. `node scripts/searchRebuild.js --apply`. 5. Check each store's
+`/commerce/search/status`, try its common searches, then switch it on.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
@@ -537,7 +543,39 @@ parity still holds.
   (`heroku builds:info` / the build log prints the size).
 - **Tests:** `test/semantic.test.ts` (13, fake embedder), `scripts/tenancy-smoke/search-meaning.mjs` (real model).
 
-## SI-20 … SI-23 (the rest)
+## SI-20 Finish — built 2026-11-13
+
+**What:** the words and the rollout. The code is SI-02…SI-19; this order only tells people about it and gets it to prod.
+
+**Done (committed and pushed):**
+- mint-docs store guide: search by meaning (`#store-search-meaning`), the *Close in meaning* recover row, the
+  *Search by meaning* setting, *By meaning* on the index card.
+- mint-tenant Website setup → Store search: every field of the answer (redirect, showing incl. `meaning`,
+  didYouMean, fallback, understood, searchId), the click / add-to-bag events snippet (sendBeacon) and the 120 a
+  minute per IP limit.
+- mint-webpage: changelog, a *Store search* feature (guide `store#store-search`), the Search widget card.
+
+**Rollout — the user (deploys and prod runs are theirs):**
+1. **Dynos.** Move web dynos to **Standard-2X** (1 GB). The model is ~540 MB of the process once loaded.
+2. **Deploy the backend.** `heroku-postbuild` runs `npm run build && node scripts/searchModel.cjs --prune`, which
+   fetches the model (~120 MB) into `search-model/`. Check the build log: the slug must stay under 500 MB. If the
+   fetch fails the build still passes, and search runs by words (status `meaning.state: missing`).
+3. **Stores.** `node scripts/upgradeStores.js` (dry run, read it), then `node scripts/upgradeStores.js --apply` —
+   adds the Search sidebar group and settings to built stores.
+4. **Index.** `node scripts/searchRebuild.js` (dry run), then `--apply`: every store's documents built again
+   (meaning texts included; the tick then makes the vectors, 64 at a time).
+5. **Check.** `GET /tenant/api/p/<id>/commerce/search/status` per store: `docs` = active products, `meaning.state:
+   ready`, `meaning.vectors` climbing to `docs`, `due: 0`.
+6. **Existing stores** (Live Fresh / Verte, HINT) — README §8.5: open Try search, run the store's common searches
+   (its best sellers' names, a category, a misspelling, a Bangla word), then `PUT …/commerce/search/settings
+   { "enabled": true }` (or the switch in Store settings → Search). New stores are on from the start.
+7. **Watch** for a day: Insights → No results, and the server log for `search by meaning: a query took over 150
+   ms` (many of those → `SEARCH_SEMANTIC_MS=250` or `SEARCH_SEMANTIC=off`).
+
+**Rollback:** `SEARCH_SEMANTIC=off` (config var, no deploy) turns meaning off platform-wide; a store's switch turns
+search off and the storefront falls back to its old list.
+
+## SI-21 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

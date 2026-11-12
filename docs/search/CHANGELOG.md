@@ -1,5 +1,13 @@
 # Store search — changelog
 
+## 2026-11-13 — SI-20 Finish
+
+- Store guide: search by meaning, *Close in meaning*, the setting and the *By meaning* count.
+- Website setup → Store search: the whole answer explained, a click / add-to-bag events snippet, the rate limit.
+- Marketing website: changelog, a *Store search* feature, the Search widget card.
+- Rollout steps for prod (dynos, deploy, `upgradeStores.js`, `searchRebuild.js`, switching existing stores on) in
+  WORK_ORDERS "SI-20 Finish". Nothing deployed yet.
+
 ## 2026-11-12 — SI-19 Search by meaning
 
 - Search understands meaning, in Bangla and English: "party wear" finds the sequin gown, "শাড়ি" the Jamdani saree.
