@@ -151,6 +151,10 @@ export const withPins = <T>(xs: T[], pins: string[], product: (x: T) => string, 
 	return { list: [...top, ...xs.filter(x => !set.has(product(x)))], pinned: top.length };
 };
 
+/** A name ruleSentence wrote (“Searches for …: pin …”, “The Shoes page: …”, “Every search: …”) — it follows the rule as it changes. */
+export const isSentenceName = (name: any) =>
+	/^(Searches (for|with) .*|The .+ page|Every search): (hide|show only|pin|boost|bury) /.test(String(name || '').trim());
+
 /** A rule as a sentence, for its name and the panel: “Searches for “dress”: boost the Eid collection ×2”. */
 export const ruleSentence = (r: any, names: { products?: string[]; brands?: string[]; categories?: string[]; collections?: string[]; category?: string } = {}) => {
 	const qs = asList(r.queries).map(q => `“${q}”`);

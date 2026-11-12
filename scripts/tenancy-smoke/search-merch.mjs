@@ -94,6 +94,7 @@ const boost = await make('searchRule', { when: 'contains', queries: ['cotton'], 
 ok('boost brand Aarong ×3: blue comes first', await waitFor(async () => (await top('cotton dress'))[0] === 'Blue cotton dress', 5000), (await top('cotton dress')).join(', '));
 await put('searchRule', boost._id, { action: 'bury', brands: [yellow._id], strength: '0.2' });
 ok('bury brand Yellow: red goes below blue', await waitFor(async () => (await top('cotton dress'))[0] === 'Blue cotton dress' && (await top('cotton dress'))[1] === 'Red cotton dress', 5000));
+ok('its written name follows the change', (await get('searchRule', boost._id))?.name === 'Searches with “cotton”: bury brand Yellow ×0.2', (await get('searchRule', boost._id))?.name);
 await put('searchRule', boost._id, { active: false });
 const hide = await make('searchRule', { when: 'always', action: 'hide', products: [prod.old._id] });
 ok('hide on every search: the old dress is gone', await waitFor(async () => !(await top('dress')).includes('Old summer dress'), 5000), (await top('dress')).join(', '));

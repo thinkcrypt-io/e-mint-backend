@@ -9,7 +9,7 @@ import { TenancyError } from '../../tenancy.function.js';
 import type { Store } from '../store.js';
 import { normalise, type Token } from './normalise.js';
 import { SYNONYM_PACKS } from './packs/synonyms.js';
-import { compileMerch, ruleSentence, type CompiledRule } from './merch.js';
+import { compileMerch, isSentenceName, ruleSentence, type CompiledRule } from './merch.js';
 
 export type CompiledRedirect = { id: string; url: string; match: 'exact' | 'contains'; queries: string[][] };
 /** The store's synonyms and redirects (SI-10), and its merchandising rules (SI-15, merch.ts). */
@@ -136,10 +136,12 @@ export const rulesChanged = async (store: Store, model: string, doc: any, event:
 	const rule = !!store.installed.searchRule && store.is('searchRule', model);
 	if (!syn && !red && !rule) return false;
 	if (rule) {
-		// A rule without a name is named by its sentence: “Searches for “dress”: boost collection Eid ×2”.
-		if (event !== 'delete' && !String(doc?.name || '').trim()) {
+		// A rule without a name is named by its sentence: “Searches for “dress”: boost collection Eid ×2”. A name that is
+		// such a sentence is written again on every save, so it keeps saying what the rule does.
+		const named = String(doc?.name || '').trim();
+		if (event !== 'delete' && (!named || isSentenceName(named))) {
 			const name = ruleSentence(doc, await ruleNames(store, doc));
-			await store.M('searchRule').updateOne({ _id: doc._id }, { $set: { name } }, { timestamps: false });
+			if (name !== named) await store.M('searchRule').updateOne({ _id: doc._id }, { $set: { name } }, { timestamps: false });
 		}
 	} else if (event !== 'delete' && !String(doc?.name || '').trim()) {
 		const name = asList(syn ? doc.words : doc.queries).join(', ').slice(0, 120);

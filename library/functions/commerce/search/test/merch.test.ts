@@ -1,7 +1,7 @@
 import { docFor } from '../document';
 import { memoryDriver } from '../drivers/memory';
 import { clearSearchCache, searchWith } from '../engine';
-import { compileMerch, firedRules, merchOf, ruleLive, ruleSentence, strengthOf, withPins } from '../merch';
+import { compileMerch, firedRules, isSentenceName, merchOf, ruleLive, ruleSentence, strengthOf, withPins } from '../merch';
 import { NO_RULES, type Rules } from '../rules';
 import { SEARCH_DEFAULTS } from '../settings';
 import { dropVocab } from '../vocab';
@@ -200,6 +200,11 @@ describe('a rule as a sentence', () => {
 		[{ when: 'category', action: 'hide', onSale: true }, { category: 'Shoes' }, 'The Shoes page: hide products on sale'],
 		[{ when: 'always', action: 'bury', strength: '0.2' }, { brands: ['Yellow'] }, 'Every search: bury brand Yellow ×0.2'],
 	])('%j', (r, n, s) => expect(ruleSentence(r, n as any)).toBe(s));
+	it('a written sentence follows the rule; a name of your own stays', () => {
+		for (const n of ['Searches for “dress” or “frock”: pin 2 products', 'The Shoes page: hide products on sale', 'Every search: bury brand Yellow ×0.2', 'Searches with “eid”: boost collection Eid ×3'])
+			expect(isSentenceName(n)).toBe(true);
+		for (const n of ['Eid week', 'Pin the red dress', 'Every search for shoes', '']) expect(isSentenceName(n)).toBe(false);
+	});
 });
 
 describe('merchOf', () => {
