@@ -67,8 +67,9 @@ b = await S('candle under 100');
 ok('a price nothing is under: every price, and says so', b.total === 2 && b.understood?.relaxed === true && b.understood.price?.lte === 100, JSON.stringify([b.total, b.understood]));
 
 b = await S('ackets');
-ok('nothing at all: did you mean the store’s word', b.total === 0 && b.didYouMean === 'jacket', JSON.stringify([b.total, b.didYouMean]));
-ok('…with products to look at', b.fallback?.doc?.length > 0 && b.fallback.doc[0].name, JSON.stringify(b.fallback).slice(0, 200));
+// Search by meaning (SI-19) may also show the closest products; "Did you mean" is said either way.
+ok('nothing at all: did you mean the store’s word', (b.total === 0 || b.showing?.reason === 'meaning') && b.didYouMean === 'jacket', JSON.stringify([b.total, b.didYouMean, b.showing]));
+ok('…with products to look at', (b.fallback?.doc?.length > 0 && b.fallback.doc[0].name) || (b.showing?.reason === 'meaning' && b.doc.length > 0), JSON.stringify(b.fallback || b.showing || null).slice(0, 200));
 
 r = await call('GET', `${C}/search/try?q=${encodeURIComponent('blue linen shirt')}`, null, t);
 ok('the panel’s try box shows it too', r.status === 200 && r.body.showing?.q === 'linen shirt' && /name/.test(r.body.doc?.[0]?.explain || ''), JSON.stringify(r.body).slice(0, 200));

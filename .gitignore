@@ -44,3 +44,5 @@ env
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# search by meaning model (docs/search SI-19): fetched at build time by scripts/searchModel.cjs
+/search-model

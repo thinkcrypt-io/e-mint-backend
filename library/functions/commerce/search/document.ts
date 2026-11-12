@@ -12,6 +12,7 @@ import { currentScope } from '../../tenantScope.function.js';
 import type { Store } from '../store.js';
 import { codeKey, normalise, type Normalised } from './normalise.js';
 import { optKey } from './facets.js';
+import { meaningText, textKey } from './semantic/vector.js';
 
 /** The parts of a product, and which go into suggestions / typos (all but the description). */
 export const PARTS = ['name', 'brand', 'category', 'collection', 'option', 'keyword', 'description', 'custom'] as const;
@@ -182,6 +183,8 @@ export const docFor = (p: any, variants: any[], ctx: { tree: Map<string, any>; b
 			inStock,
 		},
 		sourceAt: p.updatedAt ?? null,
+		// Search by meaning (SI-19): name, category path, brand, option values, keywords.
+		vecText: meaningText({ name: p.name, categories: [...cats].reverse().map(c => c.name), brand: brand?.name, options: [...opts.values()].flatMap(s => [...s]), keywords: p.keywords }),
 	};
 };
 
@@ -249,13 +252,17 @@ export const buildDocs = async (store: Store, productIds: any[], builtAt = new D
 		const scope = scopeIds();
 		// The nightly numbers (units sold in 30 days, the learned boost) are the rollups' (SI-13, SI-16): a rebuild
 		// leaves them as they are.
+		// A product's vector is made again only when its meaning text changed (SI-19).
+		const had = new Map<string, string>(((await SearchDoc.find({ product: { $in: keep.map(p => p._id) } }, { product: 1, vecKey: 1, vec: 1 }).lean()) as any[]).map(d => [id(d.product), d.vec ? d.vecKey : '']));
 		const ops = keep.map(p => {
 			const { signals, ...doc } = docFor(p, byProduct.get(id(p._id)) || [], ctx);
+			const vecKey = textKey(doc.vecText);
+			const due = had.get(id(p._id)) !== vecKey;
 			return {
 				updateOne: {
 					filter: { ...scope, product: p._id },
 					update: {
-						$set: { ...doc, ...scope, builtAt, 'signals.views': signals.views, 'signals.wishes': signals.wishes, 'signals.createdAt': signals.createdAt },
+						$set: { ...doc, ...scope, builtAt, vecKey, ...(due && { vecDue: true }), 'signals.views': signals.views, 'signals.wishes': signals.wishes, 'signals.createdAt': signals.createdAt },
 						$setOnInsert: { 'signals.sold30': 0, 'signals.learned': 1 },
 					},
 					upsert: true,

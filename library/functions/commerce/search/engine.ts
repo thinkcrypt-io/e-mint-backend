@@ -28,6 +28,21 @@ import SearchDoc from '../../../models/tenancy/searchDoc.model.js';
 import { popularStartingWith } from './events.js';
 import { covering, fewerWords, nearestWord } from './recover.js';
 import type { BrowseSort, Cond, SearchDriver } from './drivers/types.js';
+import { rerank, RERANK_TOP } from './semantic/vector.js';
+import { meaningAvailable } from './semantic/model.js';
+import { storeMeaning } from './semantic/store.js';
+
+/**
+ * Search by meaning (SI-19, README SI23), as the engine is given it: the query's vector (null: too slow, or no model
+ * yet — search goes on by words), how alike the query and some products are, and the nearest products.
+ */
+export type Meaning = {
+	vector(q: string): Promise<ArrayLike<number> | null>;
+	similar(qv: ArrayLike<number>, products: string[]): Promise<Map<string, number>>;
+	nearest(qv: ArrayLike<number>, k: number): Promise<{ id: string; sim: number }[]>;
+};
+/** Products shown by meaning when nothing matched the words. */
+const NEAREST = 24;
 
 export type SearchSort = 'relevance' | BrowseSort;
 export type SearchRequest = { q?: string; page?: number; limit?: number; sort?: SearchSort; filters?: Filters; facets?: boolean; explain?: boolean };
@@ -50,7 +65,7 @@ export type SearchResult = {
 	 * saree’. Showing results for ‘velvet saree’." `typos`: spellings further away; `fewer words`: `dropped` left out;
 	 * `some words`: no smaller set works, so products with any of `q`'s words (each ranked by how many it has).
 	 */
-	showing?: { q: string; reason: 'typos' | 'fewer words' | 'some words'; dropped?: string[] };
+	showing?: { q: string; reason: 'typos' | 'fewer words' | 'some words' | 'meaning'; dropped?: string[] };
 	/** Nothing found at all: the nearest words the store has ("Did you mean …?"). */
 	didYouMean?: string;
 	/** Nothing found at all: products to show instead — popular in the category the query named, or in the store. */
@@ -60,6 +75,8 @@ export type SearchResult = {
 	pinned?: number;
 	/** This search's id in the store's search log (SI17, public route only): sent back with clicks, the bag and the order. */
 	searchId?: string;
+	/** With `explain`: what search by meaning did — re-ranked the top results, found these by meaning, or wasn't used (and why). */
+	meaning?: { used: 'reranked' | 'nearest' | 'no'; why?: string; moved?: number };
 	ms: number;
 };
 
@@ -240,7 +257,7 @@ const orderBy: Record<SearchSort, (a: { d: any; r: Ranked }, b: { d: any; r: Ran
 };
 
 /** One search with a driver and settings (`version`: the store's index version — with it, answers are cached 30 s). */
-export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: SearchRequest, version?: number, rules: Rules = NO_RULES): Promise<SearchResult> => {
+export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: SearchRequest, version?: number, rules: Rules = NO_RULES, meaning?: Meaning): Promise<SearchResult> => {
 	const started = Date.now();
 	const page = Math.max(1, Math.floor(Number(req.page) || 1));
 	const limit = Math.min(MAX_LIMIT, Math.max(1, Math.floor(Number(req.limit) || 24)));
@@ -324,6 +341,10 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		}
 
 		const now = Date.now();
+		// Search by meaning: the query's vector is made while the words are searched (it's only waited for later).
+		const mean = s.semantic && meaning ? meaning : undefined;
+		const qvP = mean ? mean.vector(u.text || q).catch(() => null) : Promise.resolve(null);
+		let meaningOut: SearchResult['meaning'] = mean ? undefined : { used: 'no', why: s.semantic ? 'the model isn’t on this server' : 'turned off for this store' };
 		// What shoppers taught the store for this search (SI16): only on relevance, like the rules' boosts.
 		const wordBoosts = [...boosts, ...(ordered ? learnedBoost(learnedFor(rules.learned, q), s) : [])];
 		const found = async (pl: QToken[]) => {
@@ -355,6 +376,25 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 		// Filters read from the words, loosest last: a brand or size first, then a price / in stock / on sale too.
 		const loosen = [ua.all, ...(ua.hasHard ? [ua.withoutHard] : []), ...(ua.hasHard || ua.hasSoft ? [ua.own] : [])];
 		const firstWith = (r: typeof ranked, test: (r: typeof ranked, f: Filters) => boolean) => loosen.find(f => test(r, f));
+
+		const nearestByMeaning = async () => {
+			const qv = await qvP;
+			if (!qv) return (meaningOut = { used: 'no', why: 'the query wasn’t ready in time' }), false;
+			const near = await mean!.nearest(qv, NEAREST);
+			if (!near.length || !driver.byProducts) return (meaningOut = { used: 'no', why: 'nothing close enough in meaning' }), false;
+			const sim = new Map(near.map(n => [n.id, n.sim]));
+			const docs = (await driver.byProducts(near.map(n => n.id), hide)).filter(d => !m.hidden(d) && passes(d, ua.own));
+			if (!docs.length) return (meaningOut = { used: 'no', why: 'nothing close enough in meaning' }), false;
+			ranked = docs.map(d => {
+				const x = sim.get(pid(d)) || 0;
+				return { d, r: { score: x, relevance: x, coverage: 0, hits: [], multipliers: [{ name: 'close in meaning', x }] } };
+			});
+			used = ua.own;
+			relaxed = false;
+			showing = { q: u.text || q, reason: 'meaning' };
+			meaningOut = { used: 'nearest' };
+			return true;
+		};
 
 		// No dead ends (SI12): nothing with every word → loosen, step by step, and say so.
 		if (!everyWord(ranked, used)) {
@@ -395,9 +435,12 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 					if (!byCode(ranked).length)
 						showing = { q: plan.filter(t => hit.has(t.word)).map(t => t.word).join(' '), reason: 'some words', dropped: plan.filter(t => !hit.has(t.word)).map(t => t.word) };
 				} else {
-					// 4. Nothing at all: the nearest words the store has, and something to look at.
+					// 4. Nothing by its words: the nearest words the store has ("Did you mean …?")…
 					const near = plan.map(t => (t.known || t.code ? t.word : nearestWord(vocab, t.word) ?? t.word));
 					if (near.some((w, i) => w !== plan[i].word)) didYouMean = near.join(' ');
+				}
+				// …and the products closest in meaning (SI-19, at least 0.45 alike), else something to look at.
+				if (!showing && !ranked.some(x => passes(x.d, used)) && !(mean && (await nearestByMeaning()))) {
 					const cat = u.category;
 					const pop = async (f: Filters) => (await driver.browse({ hideOutOfStock: hide, filters: f, sort: 'popular', skip: 0, limit: FALLBACK, facets: false })).docs.map(d => cardOf(d));
 					const inCat = cat ? await pop({ categories: [cat._id] }) : [];
@@ -407,8 +450,25 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			}
 		}
 
-		const sorted = ranked.filter(x => passes(x.d, used));
+		let sorted = ranked.filter(x => passes(x.d, used));
 		sorted.sort((a, b) => orderBy[ua.sort](a, b) || orderBy.relevance(a, b) || String(a.d.product).localeCompare(String(b.d.product)));
+		// Meaning mixed into the top 50 text results at 25% (SI-19): on relevance only, and only if the vector came in time.
+		if (mean && showing?.reason !== 'meaning' && ua.sort === 'relevance' && sorted.length > 1) {
+			const qv = await qvP;
+			if (!qv) meaningOut = { used: 'no', why: 'the query wasn’t ready in time' };
+			else {
+				const sims = await mean.similar(qv, sorted.slice(0, RERANK_TOP).map(x => pid(x.d)));
+				const before = sorted.slice(0, RERANK_TOP).map(x => pid(x.d));
+				const r = rerank(sorted, x => x.r.score, x => sims.get(pid(x.d)) ?? null);
+				const byId = new Map(r.mixed.map(o => [pid(o.x.d), o]));
+				sorted = r.items.map(x => {
+					const o = byId.get(pid(x.d));
+					if (!o || o.m == null) return x;
+					return { d: x.d, r: { ...x.r, multipliers: [...x.r.multipliers, { name: `meaning ${o.m.toFixed(2)}`, x: o.t > 0 ? o.mix / o.t : 1 }] } };
+				});
+				meaningOut = { used: 'reranked', moved: sorted.slice(0, RERANK_TOP).filter((x, i) => pid(x.d) !== before[i]).length };
+			}
+		}
 		// Pins (SI-15): the rule's products at the top, in its order — found by the words or not.
 		const pinnedX = await pinnedDocs(new Set(sorted.map(x => pid(x.d))), used);
 		const wp = withPins<{ d: any; r: Ranked | null }>(sorted, pins, x => pid(x.d), pinnedX.map(d => ({ d, r: null })));
@@ -436,6 +496,7 @@ export const searchWith = async (driver: SearchDriver, s: SearchSettings, req: S
 			...(fallback && { fallback }),
 			...rulesOut,
 			...(req.explain && pinned && { pinned }),
+			...(req.explain && meaningOut && { meaning: meaningOut }),
 			ms: Date.now() - started,
 		};
 	});
@@ -507,7 +568,8 @@ const storeState = async () => {
 export const storeSearch = async (store: Store, req: SearchRequest) => {
 	const { settings, version } = await storeState();
 	const rules = await withLearned(await storeRules(store, version), settings, version);
-	const r = await searchWith(nativeDriver(), settings, req, version, rules);
+	const driver = nativeDriver();
+	const r = await searchWith(driver, settings, req, version, rules, settings.semantic && meaningAvailable() ? storeMeaning(driver.key, version) : undefined);
 	if (!req.explain) {
 		if (r.redirect) countRedirect(store, r.redirect.id);
 		// Rules that answered a search are counted once per search (its first page).

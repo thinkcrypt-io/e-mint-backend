@@ -41,7 +41,7 @@ The user answered README §8 on 2026-11-10.
 | SI-16 | Learning (SI16): `SearchPair` decayed counts with position correction, learned boost with thresholds, reformulation → synonym suggestions, `SearchSuggestion` + Accept / Dismiss on Insights, learning switch | backend + mint-tenant | M | done 2026-11-12 |
 | SI-17 | Try search (SI10): the panel page with explain per result, understood chips, rules fired, timing | mint-tenant | S | done 2026-11-12 |
 | SI-18 | MCP tools (SI22): `search_insights`, `try_search` (with explain), `save_search_suggestion` (synonym / redirect / rule drafts), `enrich_products` (keywords, a dry run first), "Fix with your AI" prompt dialog | backend + mint-tenant | M | done 2026-11-12 |
-| SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | open |
+| SI-19 | Search by meaning (SI23): bundled multilingual model, worker thread, vectors at index time (int8 in SearchDoc), top-50 re-rank at 25%, zero-result nearest with a 0.45 floor, lazy load + 150 ms fallback, `SEARCH_SEMANTIC` switch + store setting, bench (+40 ms p95 max), Standard-2X dyno note for the user | backend | L | done 2026-11-12 |
 | **Phase 6 — Rollout and later** | | | | |
 | SI-20 | Finish: guide, Website setup, marketing website, rollout (`upgradeStores.js` dry run then `--apply` on prod, `searchRebuild.js --apply`; the user deploys the backend, moves web dynos to Standard-2X for SI-19, and approves the prod runs). Existing stores (Live Fresh / Verte, HINT): rebuild, run the relevance suite on each catalogue, then switch search on (README §8.5) | all | S | open |
 | SI-21 | The POS and panel product pickers use the engine (typos, SKU straight hits) | backend + mint-tenant | S | later |
@@ -97,17 +97,24 @@ SI-18 is done too: four store MCP tools — `search_insights`, `try_search`, `sa
 Suggested fixes as *From your AI*; nothing changes until the owner accepts) and `enrich_products` (search words,
 a dry run first) — and **Fix with your AI** on Insights, a prompt to paste into the owner's own AI.
 
+SI-19 is done too: **search by meaning**, with a small multilingual model on our own servers (no AI service, no
+key). Each product gets a vector from its name, category path, brand, options and search words; the top 50 text
+results are re-ordered with meaning at 25% (a text match always stays first), and when no product has the words the
+closest products by meaning are shown (similarity ≥ 0.45, `showing.reason: 'meaning'`; Insights still counts it as a
+search with no results). A store can turn it off in Search settings; `SEARCH_SEMANTIC=off` turns it off for the
+platform. **The user must move web dynos to Standard-2X (1 GB) before deploying** — the model adds ~250 MB of memory.
+
 Next:
-- **SI-19** — search by meaning.
+- **SI-20** — finish: guides, Website setup, marketing website, rollout notes.
 
 Before switching existing stores on (README §8.5): deploy, let their first sweep index them, check
 `/commerce/search/status`, try their common searches, then `PUT /commerce/search/settings { enabled: true }`.
 
 Tests:
-- `npx jest library/functions/commerce/search` (531)
+- `npx jest library/functions/commerce/search` (544)
 - smoke `search-index.mjs` (31), `search-engine.mjs` (parity + the 20k bench), `search-api.mjs` (47), `search-rules.mjs`,
   `search-recover.mjs`, `search-events.mjs` (23), `search-rollup.mjs` (19), `search-insights.mjs` (27),
-  `search-merch.mjs`, `search-learn.mjs`, `search-mcp.mjs`, `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
+  `search-merch.mjs`, `search-learn.mjs`, `search-mcp.mjs`, `search-meaning.mjs` (real model + bench), `search-widget.mjs` (needs `STRIPE_API_BASE=http://127.0.0.1:12111` on the backend)
 
 ---
 
@@ -497,7 +504,40 @@ parity still holds.
 - **Tests:** `scripts/tenancy-smoke/search-mcp.mjs` (website keys have none of the tools; explain; insights after
   real searches; suggestion checks and From your AI; dry run then apply; search finds the new word).
 
-## SI-19 … SI-23 (the rest)
+## SI-19 Search by meaning — done 2026-11-12
+
+- **What:** README SI23. Shoppers' words that the store doesn't use still find the right products ("party wear" →
+  the sequin gown, "শাড়ি" → the Jamdani saree), without any outside AI service.
+- **Model:** `Xenova/paraphrase-multilingual-MiniLM-L12-v2`, quantised ONNX (~120 MB, 384 numbers), pinned to one
+  revision. `scripts/searchModel.cjs` fetches it at **build** time into `search-model/` (gitignored); never at run
+  time. `heroku-postbuild` = `npm run build && node scripts/searchModel.cjs --prune` (`--prune` drops
+  onnxruntime-node's Windows / macOS binaries on Linux, ~200 MB of the slug). A failed fetch never fails the build:
+  search runs by words and the status says `missing`. Runtime: `@huggingface/transformers` **3.7.6** (pinned: 4.x
+  needs onnxruntime 1.30, which has no Intel-Mac build).
+- **Code** (`search/semantic/`): `vector.ts` (pure: meaning text, int8 pack ×127, cosine, re-rank, nearest),
+  `model.ts` (one eval worker thread, lazy load ~2–5 s, `embedQuery` with a 150 ms budget — slow or not loaded →
+  null and words only, counted and logged; `SEARCH_SEMANTIC=off`, `SEARCH_MODEL_DIR`, `SEARCH_SEMANTIC_MS`),
+  `store.ts` (the store's vectors in memory per index version for 10 min, query vectors cached 10 min, `embedDue`).
+- **Index:** SearchDoc + `vecText`, `vecKey` (hash of the text), `vec` (384 bytes), `vecDue`. `buildDocs` marks a
+  document due only when its meaning text changed; the search tick embeds due documents 64 at a time and raises the
+  index version. Status (`/commerce/search/status`) has `meaning { state, loadMs, queries, slow, p50, p95, vectors, due }`.
+- **Engine:** `searchWith(…, meaning?)`. The query vector is made while the words are searched. Relevance sort only:
+  the top 50 are re-ordered by 75% text share + 25% similarity (`meaning 0.85 ×0.96` in explain). When nothing has the
+  words (after SI12's loosening, alongside *Did you mean*): the 24 nearest with similarity ≥ 0.45 →
+  `showing { reason: 'meaning' }`, explain `close in meaning ×0.52`. With explain the answer has `meaning { used:
+  reranked | nearest | no, why?, moved? }`. Suggestions stay words only. Logged with `results: 0` so Insights' No
+  results still shows the search.
+- **Settings:** `semantic` (default on) in `/commerce/search/settings`, a *Search by meaning* switch in Search
+  settings (anchor `store-search-meaning`; it says when the server has no model), *By meaning* on the index card and
+  on Try search. Widget text `meaning` ("Nothing matched “{q}” word for word — these are close in meaning."). MCP
+  `try_search` says when results are by meaning.
+- **Bench** (`search-meaning.mjs`, 48 searches, 8 products, Intel Mac): p95 27.9 ms on vs 13.4 ms off — +14.5 ms
+  (limit +40). Memory: ~540 MB RSS for the backend with the model loaded (≈ +250 MB).
+- **For the user:** move web dynos to **Standard-2X** before deploying this; check the slug stays under 500 MB
+  (`heroku builds:info` / the build log prints the size).
+- **Tests:** `test/semantic.test.ts` (13, fake embedder), `scripts/tenancy-smoke/search-meaning.mjs` (real model).
+
+## SI-20 … SI-23 (the rest)
 
 See the status table. Each gets its own section here when it starts (same
 shape: what, how, done when).

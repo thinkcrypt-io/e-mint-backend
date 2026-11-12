@@ -97,7 +97,8 @@ const trySearchTool = async (req: any, args: any, caller: Caller): Promise<Out> 
 	const lines = [
 		`“${q}”: ${r.total} result(s), ${r.ms} ms.`,
 		...(r.redirect ? [`Shoppers are sent to ${r.redirect.url} (a search redirect).`] : []),
-		...(r.showing ? [`Showing instead: “${r.showing.q}” (${r.showing.reason}${r.showing.dropped?.length ? `, left out ${r.showing.dropped.join(', ')}` : ''}).`] : []),
+		...(r.showing?.reason === 'meaning' ? ['No product has these words: these are the products closest in meaning (search by meaning). Shoppers still count it as a search with no results — a synonym or search words would fix it.'] : []),
+		...(r.showing && r.showing.reason !== 'meaning' ? [`Showing instead: “${r.showing.q}” (${r.showing.reason}${r.showing.dropped?.length ? `, left out ${r.showing.dropped.join(', ')}` : ''}).`] : []),
 		...(r.didYouMean ? [`Did you mean “${r.didYouMean}”?`] : []),
 		`Words: ${(r.query?.words || []).join(', ') || '—'}; understood: ${JSON.stringify(u)}.`,
 		...((r.query?.synonyms || []).length ? [`Synonyms used: ${r.query.synonyms.map((s: any) => `${s.word} → ${s.with.join(', ')}`).join('; ')}.`] : []),

@@ -69,6 +69,12 @@ const schema = new Schema<any>(
 			learned: { type: Number, default: 1 },
 		},
 		card: { type: Schema.Types.Mixed, default: {} },
+		/** Search by meaning (docs/search SI-19): what the product means as one text, its key, and its vector (384 int8 bytes). */
+		vecText: { type: String, default: undefined },
+		vecKey: { type: String, default: undefined },
+		vec: { type: Buffer, default: undefined },
+		/** The text changed (or is new): the tick makes its vector again. Unset when done. */
+		vecDue: { type: Boolean, default: undefined },
 		/** The product's own updatedAt when this was built. */
 		sourceAt: Date,
 		builtAt: Date,
@@ -84,5 +90,6 @@ schema.index({ project: 1, phon: 1 });
 schema.index({ project: 1, codes: 1 });
 schema.index({ project: 1, 'facets.categories': 1 });
 schema.index({ project: 1, builtAt: 1 });
+schema.index({ vecDue: 1, project: 1 }, { partialFilterExpression: { vecDue: true } });
 
 export default mongoose.model<any>('SearchDoc', schema, 'searchdocs');

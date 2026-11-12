@@ -127,7 +127,9 @@ export const logSearch = (req: SearchRequest, r: SearchResult, who: { visitor?: 
 			q,
 			nq: normalisedOf(q),
 			words: wordsToKeep(req.q, q, r.query?.words || []),
-			results: r.total,
+			// Found only by meaning (SI-19): no product has the words, so it counts as a search with no results
+			// (Insights' No results — the store may want a synonym), while what was shown is kept in `top`.
+			results: r.showing?.reason === 'meaning' ? 0 : r.total,
 			top: r.doc.map(d => d._id).filter(id => isId(String(id))).slice(0, 60),
 			page,
 			limit: r.limit,

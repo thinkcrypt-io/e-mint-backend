@@ -460,7 +460,8 @@ export const SEARCH_WIDGET_JS = `(function () {
 			var title = el('h2', 'rtitle', { tabindex: '-1', text: q ? fill(t.title, { q: q }) : nameIn((r.facets || {}).categories, listOf(state.category)[0]) || t.products });
 			var count = el('p', 'note', { role: 'status', 'aria-live': 'polite', text: fill(t.count, { count: r.total || 0 }) });
 			root.appendChild(el('div', 'rhead', null, [title, count]));
-			if (r.showing && r.showing.q) root.appendChild(el('p', 'note', { text: fill(t.showing, { q: r.showing.q }) }));
+			if (r.showing && r.showing.reason === 'meaning') root.appendChild(el('p', 'note', { text: fill(t.meaning || t.relaxed, { q: q }) }));
+			else if (r.showing && r.showing.q) root.appendChild(el('p', 'note', { text: fill(t.showing, { q: r.showing.q }) }));
 			else if (r.understood && r.understood.relaxed) root.appendChild(el('p', 'note', { text: t.relaxed }));
 			if (r.didYouMean) {
 				var dym = el('button', '', { type: 'button', text: r.didYouMean });

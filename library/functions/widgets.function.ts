@@ -240,6 +240,7 @@ export const WIDGET_TYPES: Record<string, WidgetType> = {
 			{ key: 'noResults', label: 'Nothing found', default: 'Nothing matches “{q}”.' },
 			{ key: 'showing', label: 'Searched instead', default: 'Showing results for “{q}”' },
 			{ key: 'relaxed', label: 'Close matches', default: 'Nothing matched all of that — these come close.' },
+			{ key: 'meaning', label: 'Close in meaning', default: 'Nothing matched “{q}” word for word — these are close in meaning.' },
 			{ key: 'didYouMean', label: 'Did you mean', default: 'Did you mean' },
 			{ key: 'fallback', label: 'Instead', default: 'You might like these instead' },
 			{ key: 'popular', label: 'Popular searches', default: 'Popular searches' },

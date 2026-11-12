@@ -12,6 +12,8 @@ export type SearchSettings = {
 	dials: { popularity: Dial; freshness: Dial; sale: Dial; learned: Dial };
 	learning: boolean;
 	banglish: boolean;
+	/** Search by meaning (SI-19, README SI23): on unless the store turns it off; runs only where the platform has the model. */
+	semantic: boolean;
 };
 
 export const SEARCH_DEFAULTS: SearchSettings = {
@@ -21,6 +23,7 @@ export const SEARCH_DEFAULTS: SearchSettings = {
 	dials: { popularity: 'normal', freshness: 'normal', sale: 'normal', learned: 'normal' },
 	learning: true,
 	banglish: true,
+	semantic: true,
 };
 
 const DIALS: Dial[] = ['off', 'low', 'normal', 'high'];
@@ -42,6 +45,7 @@ export const searchSettingsOf = (raw: any): SearchSettings => {
 		},
 		learning: s.learning !== false,
 		banglish: s.banglish !== false,
+		semantic: s.semantic !== false,
 	};
 };
 

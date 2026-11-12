@@ -24,6 +24,8 @@ import { storeOf, type Store } from '../store.js';
 import { buildDocs } from './document.js';
 import { rollupStore } from './rollup.js';
 import { learnStore } from './learn.js';
+import { embedDue, meaningCounts } from './semantic/store.js';
+import { meaningAvailable, meaningState } from './semantic/model.js';
 
 const TICK_MS = () => Number(process.env.SEARCH_TICK_MS) || 5000;
 const SWEEP_MS = () => Number(process.env.SEARCH_SWEEP_MS) || 2 * 60 * 1000;
@@ -232,7 +234,8 @@ export const searchIndexStatus = async (store: Store) => {
 		SearchQueue.countDocuments({}),
 		store.installed.product ? store.M('product').countDocuments({ status: 'active', archivedAt: null }) : Promise.resolve(0),
 	]);
-	return { docs, products, queued, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null, rollup: { dailyAt: rollup.dailyAt || null, lastDay: rollup.lastDay || null, signals: rollup.lastSignals || null }, learn: rollup.learn };
+	const meaning = { ...meaningState(), ...(meaningAvailable() ? await meaningCounts() : {}) };
+	return { docs, products, queued, meaning, version: idx.version || 0, builtAt: idx.builtAt || null, sweptAt: idx.sweptAt || null, rebuild: idx.rebuild || null, lastDrift: idx.lastDrift || null, rollup: { dailyAt: rollup.dailyAt || null, lastDay: rollup.lastDay || null, signals: rollup.lastSignals || null }, learn: rollup.learn };
 };
 
 /* ---------------------------------------------------------------- schedules */
@@ -262,6 +265,23 @@ export const runSearchTick = async () => {
 			})) || 0;
 		} catch (e: any) {
 			console.error('search tick:', e?.message);
+		}
+	}
+	// Search by meaning (SI-19): stores with products whose meaning text changed get their vectors.
+	if (meaningAvailable()) {
+		const due: any[] = await runUnscoped(() => SearchDoc.aggregate([{ $match: { vecDue: true } }, { $group: { _id: { organization: '$organization', project: '$project' } } }, { $limit: 200 }]));
+		for (const g of due) {
+			if (!g._id?.project) continue;
+			try {
+				await inStore(g._id, async () => {
+					const n = await embedDue();
+					// New vectors: the answer caches and the store's vectors in memory are read again.
+					if (n) await bumpVersion();
+					return n;
+				});
+			} catch (e: any) {
+				console.error('search tick (meaning):', e?.message);
+			}
 		}
 	}
 	return built;

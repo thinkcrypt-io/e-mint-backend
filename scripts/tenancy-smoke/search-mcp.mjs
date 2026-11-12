@@ -58,7 +58,9 @@ ok('…and the instructions say how to use them', /WEBSITE SEARCH/.test(init?.in
 let o = await tool(key, 'try_search', { q: 'dress' });
 ok('try_search explains each result', !o.isError && /1\. Cotton dress/.test(o.text) && /name exact “dress”/.test(o.text) && o.data?.total === 1, o.text.slice(0, 300));
 o = await tool(key, 'try_search', { q: 'kurta' });
-ok('…and says when nothing is found', !o.isError && /0 result/.test(o.text), o.text.slice(0, 200));
+// With search by meaning (SI-19) the closest products may show; either way it says no product has the word.
+const kurta = o.text.split('\n')[0].replace(/, \d+ ms\./, '');
+ok('…and says when nothing is found', !o.isError && (/“kurta”: 0 result/.test(o.text) || /No product has these words/.test(o.text)), o.text.slice(0, 200));
 
 // Shoppers search "kurta" (nothing) a few times; the hourly totals pick it up.
 const pk = await projectKey(p.publicSlug);
@@ -84,7 +86,7 @@ r = await call('GET', `${C}/search/suggestions`, null, t);
 const mine = (r.body?.doc || r.body || []).filter?.(s => s.source === 'your-ai') || [];
 ok('both wait in Suggested fixes as From your AI', mine.length === 2 && mine.some(s => s.kind === 'rule' && String(s.record.products?.[0]) === ids['Silk saree']), JSON.stringify(r.body).slice(0, 300));
 o = await tool(key, 'try_search', { q: 'kurta' });
-ok('…and search hasn’t changed', /0 result/.test(o.text));
+ok('…and search hasn’t changed', o.text.split('\n')[0].replace(/, \d+ ms\./, '') === kurta, o.text.slice(0, 120));
 o = await tool(key, 'save_search_suggestion', { kind: 'synonym', why: 'again', record: { words: ['kurta'], to: ['dress'] } });
 r = await call('GET', `${C}/search/suggestions`, null, t);
 ok('the same draft again updates it, not a second one', ((r.body?.doc || r.body || []).filter?.(s => s.source === 'your-ai') || []).length === 2);

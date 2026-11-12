@@ -13,6 +13,7 @@ import type { Store } from '../store.js';
 import type { FacetCounts, Filters } from './facets.js';
 import type { SearchRequest, SearchResult, SearchSort } from './engine.js';
 import { SEARCH_DEFAULTS, searchSettingsOf, type SearchSettings } from './settings.js';
+import { meaningState } from './semantic/model.js';
 
 const SORTS: SearchSort[] = ['relevance', 'popular', 'price', '-price', 'newest', 'name'];
 const list = (v: any): string[] =>
@@ -146,12 +147,12 @@ export const listSearchUsesEngine = async () => (await raw()).enabled === true;
 /** The settings as the panel shows them (SI-06). */
 export const searchSettingsView = async () => {
 	const r = await raw();
-	return { ...searchSettingsOf(r), enabled: r.enabled === true ? true : r.enabled === false ? false : null, defaults: SEARCH_DEFAULTS };
+	return { ...searchSettingsOf(r), enabled: r.enabled === true ? true : r.enabled === false ? false : null, defaults: SEARCH_DEFAULTS, meaning: meaningState() };
 };
 
 /** Saves the settings sent (each checked; unknown keys refused). */
 export const saveSearchSettings = async (body: any) => {
-	const allowed = ['enabled', 'typos', 'outOfStock', 'dials', 'learning', 'banglish'];
+	const allowed = ['enabled', 'typos', 'outOfStock', 'dials', 'learning', 'banglish', 'semantic'];
 	const extra = Object.keys(body || {}).filter(k => !allowed.includes(k));
 	if (extra.length) throw new TenancyError(400, `Unknown search settings: ${extra.join(', ')}`, 'search_invalid');
 	const problems: string[] = [];
@@ -161,6 +162,7 @@ export const saveSearchSettings = async (body: any) => {
 	if ('outOfStock' in body) check(['show', 'hide'].includes(body.outOfStock), 'outOfStock must be show or hide');
 	if ('learning' in body) check(typeof body.learning === 'boolean', 'learning must be true or false');
 	if ('banglish' in body) check(typeof body.banglish === 'boolean', 'banglish must be true or false');
+	if ('semantic' in body) check(typeof body.semantic === 'boolean', 'semantic must be true or false');
 	if ('dials' in body) {
 		const d = body.dials;
 		if (!d || typeof d !== 'object') problems.push('dials must be an object');
@@ -172,7 +174,7 @@ export const saveSearchSettings = async (body: any) => {
 	}
 	if (problems.length) throw Object.assign(new TenancyError(400, problems[0], 'search_invalid'), { problems });
 	const $set: Record<string, any> = {};
-	for (const k of ['enabled', 'typos', 'outOfStock', 'learning', 'banglish']) if (k in body) $set[`search.${k}`] = body[k];
+	for (const k of ['enabled', 'typos', 'outOfStock', 'learning', 'banglish', 'semantic']) if (k in body) $set[`search.${k}`] = body[k];
 	for (const [k, v] of Object.entries(body.dials || {})) $set[`search.dials.${k}`] = v;
 	if (Object.keys($set).length) await CommerceSettings.updateOne({}, { $set });
 	return searchSettingsView();

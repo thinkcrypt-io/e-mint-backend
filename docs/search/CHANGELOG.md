@@ -1,5 +1,16 @@
 # Store search — changelog
 
+## 2026-11-12 — SI-19 Search by meaning
+
+- Search understands meaning, in Bangla and English: "party wear" finds the sequin gown, "শাড়ি" the Jamdani saree.
+  Products that match the words always come first; meaning orders the top 50, and fills in when nothing matched
+  ("Nothing matched … word for word — these are close in meaning").
+- A small open-source model runs on Mint's own servers — no AI service, no key, no cost per search. It loads by
+  itself; if it's slow or missing, search works by words as before.
+- *Search by meaning* switch in Search settings; *By meaning* on the index card and Try search.
+- Needs Standard-2X web dynos (about 250 MB more memory).
+- Tests: `test/semantic.test.ts`, `search-meaning.mjs`.
+
 ## 2026-11-12 — SI-18 Your AI improves search
 
 - Four store MCP tools: `search_insights`, `try_search` (every result explained), `save_search_suggestion`
