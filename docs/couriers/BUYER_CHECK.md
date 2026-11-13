@@ -32,7 +32,7 @@ logged in `CHANGELOG.md`.
 | **Paperfly** | The merchant app's own calls: `go-app.paperfly.com.bd/merchant/api/react/authentication/login_using_password.php`, then `…/smart-check/smart-check-v2.php`. | Built CR-26 (2026-11-13, against a stub). No booking adapter yet (CR-16), so a store adds its login for checks only. Partly delivered counts as taken. |
 | **CarryBee** | The merchant site's NextAuth sign-in: `merchant.carrybee.com/api/auth/csrf` → `/api/auth/callback/login` { phone +88…, password } → `/api/auth/session` (Bearer token + business id), then its customer lookup on `api-merchant.carrybee.com`. | Built CR-26 (2026-11-13, against a stub). Checks only, like Paperfly. The kept token holds the access token and the business id; 404 = never sent with CarryBee (0 parcels); `fraud_count` counts as fraud reports. |
 | **The store's own history** | Its orders and deliveries for that phone: delivered, returned, refused or cancelled, any courier including manual. | Always there, needs no courier account. |
-| **Mint network** (all Mint stores) | The same counts across every store on Mint, numbers only. Covers every courier's parcels, RedX and Sundarban included. | Only if the user says yes (BC1). |
+| **Mint network** (all Mint stores) | The same counts across every store on Mint, numbers only. Covers every courier's parcels, RedX and Sundarban included. | **Skipped** — the user said no, 2026-11-14 (CR-24). |
 
 Paid aggregator APIs (fraudbd.com and others) scrape merchant panels the same way. They're left out because they'd
 send the store's customers' numbers to a third party. Mint does the same calls itself, with each store's own login.
@@ -98,8 +98,8 @@ email and password, then calls the private endpoint the website's own Fraud Chec
 
 ## 7. Questions for the user
 
-1. **Mint network:** should a store also see a number's history across all Mint stores (numbers only, never which
-   store)? Proposed: yes, but only for stores that turn on "Share and see" in Store settings.
+1. ~~Mint network across stores~~ — **answered 2026-11-14: "No, skip it".** A store sees only its couriers and its
+   own orders; no history is shared between Mint stores (CR-24 skipped).
 2. ~~Panel sign-in (RedX, Pathao, Paperfly, CarryBee)~~ — **answered 2026-11-13: "Yes, use logins".** Each store's
    own merchant login, as in §3a; each source is verified on a real panel before it's switched on (BC2).
 3. **Automatic checks:** website and phone orders only, not walk-in POS sales? Built that way (BC4) unless the user

@@ -46,12 +46,16 @@ build order.
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
 | CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (backend not deployed) |
-| CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
+| CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | skipped — the user said "No, skip it" 2026-11-14 |
 | CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | docs + website done 2026-11-13; rollout waits on the backend deploy |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-14 — CR-24 skipped.** The user answered Q1 "No, skip it": no Mint network history across stores.
+  The buyer check plan (CR-19…CR-26) is complete apart from the rollout after the backend deploy (`upgradeStores.js`
+  dry run, then `--apply`) and trying RedX, Pathao, Paperfly and CarryBee on real accounts (BC2).
 
 - **2026-11-13 — CR-26 Paperfly + CarryBee, buyer checks only (mint-tenant pushed; backend not deployed).** New
   adapters `couriers/paperfly.ts` (sign-in `login_using_password.php` → token; check `smart-check-v2.php` with the
@@ -65,7 +69,7 @@ build order.
   checks only", status, Set up / Manage buyer checks), `CourierForm` renders only `PanelChecks alone`. Stub: Paperfly
   owner@example.com / pf-pass, CarryBee 01744444444 / cb-pass (business biz-77). Smoke `courier-checks-only.mjs`
   (18); `courier-connections.mjs` now expects `…,manual,paperfly,carrybee`. Checked in headless Chrome. Real accounts
-  unverified (BC2). **Next:** CR-24 waits on the user's Q1; the rollout (`upgradeStores.js --apply`) after the deploy.
+  unverified (BC2). **Next:** the rollout (`upgradeStores.js --apply`) after the deploy.
 
 - **2026-11-13 — CR-25 docs + website (rollout waits on the deploy).** mint-docs `src/app/store/page.tsx` (c137214):
   sections `store-buyer-check` (badges, auto check, card, column + filter), `store-delivery-risk` (rewritten: Send to

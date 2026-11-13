@@ -1,5 +1,10 @@
 # Couriers — changelog
 
+## 2026-11-14 — No shared history across stores
+
+- Buyer checks use only the store's own couriers and its own orders. Mint doesn't share a number's history between
+  stores (CR-24 skipped).
+
 
 
 ## 2026-11-13 — CR-26 Paperfly and CarryBee for buyer checks
@@ -69,7 +74,7 @@
 - Steadfast through its official check. RedX, Pathao, Paperfly and CarryBee through each store's own merchant login
   on the courier's website, as the community fraud checkers do. The user: "Yes, use logins". Each source fails on
   its own and never holds up an order.
-- Still open: the Mint network across stores (CR-24).
+- The Mint network across stores (CR-24) was skipped on 2026-11-14.
 
 ## 2026-10-30 — CR-01 Plan & docs
 
