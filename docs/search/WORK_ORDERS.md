@@ -108,6 +108,10 @@ SI-20 is built: the store guide (docs.mintapp.shop/store — search by meaning, 
 setup page's Store search card (the full answer, click/add-to-bag events, the rate limit), the marketing website
 (changelog, a *Store search* feature, the Search widget card). **SI-02…SI-20 are all built; nothing is deployed.**
 
+**2026-11-13: the backend is deployed** (the user). Checked from outside: `/public/api/store/search` answers on prod —
+HINT finds "sharee" → Jamdani Saree; Live Fresh answers 0 with the fallback for "mango"/"fruit" (its index may not be
+built yet, or the catalogue lacks them — check its status). SI-21…23 are later (the user, 2026-11-13).
+
 Next — the user's prod steps (see "SI-20 Finish" below for the full list):
 1. Web dynos → Standard-2X. 2. Deploy the backend (the usual way). 3. `node
 scripts/upgradeStores.js` then `--apply`. 4. `node scripts/searchRebuild.js --apply`. 5. Check each store's
