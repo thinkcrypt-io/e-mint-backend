@@ -4,6 +4,7 @@ import { syncVariants } from '../../functions/commerce/catalogue.js';
 import { productStock, setStock } from '../../functions/commerce/stock.js';
 import { listDeliveries, refresh, send, STATUS_LABEL } from '../../functions/commerce/deliveries.js';
 import { adapterOf } from '../../functions/commerce/couriers/index.js';
+import { checkPhone } from '../../functions/commerce/buyerCheck.js';
 import { mayWrite } from './website.tools.js';
 import { routePermission } from '../builder/builder.controller.js';
 import type { Caller, ToolDef } from './mcp.router.js';
@@ -209,11 +210,35 @@ const refreshDeliveryTool = async (req: any, args: any, caller: Caller): Promise
 	}
 };
 
+/** A phone looked up the way Check a buyer does (couriers CR-23): logged as "<owner> (AI)", via mcp. */
+const checkBuyerTool = async (req: any, args: any, caller: Caller): Promise<Out> => {
+	const store = await theStore();
+	if (isOut(store)) return store;
+	const route = store.installed.order.route;
+	if (!caller.allows(`view-${routePermission(req.app, route) || route}`)) return refuse(`${caller.user?.name || 'The key’s owner'} can’t see /${route}.`);
+	try {
+		const a: any = await checkPhone(store, caller.project, clean(args?.phone), { fresh: args?.fresh === true, via: 'mcp', by: by(caller) });
+		const rows = a.sources.map((x: any) =>
+			x.ok
+				? `- ${x.name}${x.via === 'panel' ? ' (store’s login)' : ''}: ${x.delivered !== null && x.refused !== null ? `${x.delivered} of ${x.delivered + x.refused} delivered` : 'no counts'}${x.rating ? `, “${String(x.rating).replace(/_/g, ' ')}”` : ''}${x.reports ? `, ${x.reports} fraud report${x.reports === 1 ? '' : 's'}` : ''}`
+				: `- ${x.name}: couldn’t check (${x.error || 'no answer'})`
+		);
+		rows.push(`- This store: ${a.own.orders} order${a.own.orders === 1 ? '' : 's'}, ${a.own.delivered} delivered, ${a.own.refused} refused`);
+		const orders = (a.own.recent || []).map((o: any) => `  ${o.code} · ${o.fulfilment || o.status}${o.courier ? ` · ${o.courier}` : ''}`).join('\n');
+		return {
+			text: `${a.phone}: ${a.label}${a.level !== 'new' && a.rate != null ? ` · ${a.rate}% delivered` : ''} — ${a.summary}${a.warnings.length ? `\nWarnings: ${a.warnings.join('; ')}` : ''}\n${rows.join('\n')}${orders ? `\nThis store’s latest orders to it:\n${orders}` : ''}\nCouriers checked ${new Date(a.checkedAt).toISOString()} (kept a day; fresh: true asks again).`,
+			data: { level: a.level, rate: a.rate, parcels: a.parcels, warnings: a.warnings },
+		};
+	} catch (e: any) {
+		return refuse(e?.message || 'The number couldn’t be checked.');
+	}
+};
+
 /* ---------------------------------------------------------------- tools */
 
 export const STORE_INSTRUCTIONS = `
 
-This project is a STORE. Products are sold through their variants, made from each product's options by the store (sync_variants). Stock is per variant per outlet and changes only through the store — use set_stock (never create_records) and read it with store_stock. Orders, payments and returns are made in the panel or at the POS, not over MCP. Orders are sent to the store's connected couriers with send_to_courier (always name the courier and the cash to collect, and say so to the user first); list_deliveries and refresh_delivery show where parcels are. Courier keys are never available over MCP. Discounts (the discounts route) are a percentage off products, categories (with the ones under them) and collections: add or change them with create_records like any record — the store's automations then give each product the biggest active discount reaching it (never two added up) and work out its Sale price and Price after tax; a product's Price never changes, and its Discount, Discount % and Sale price are the store's (read them, never write them). A discount ends by itself at the end of its Ends day (the store's time zone); one already over can't be switched on until its end date moves. Collections group products for the website (a product's collections field, many).`;
+This project is a STORE. Products are sold through their variants, made from each product's options by the store (sync_variants). Stock is per variant per outlet and changes only through the store — use set_stock (never create_records) and read it with store_stock. Orders, payments and returns are made in the panel or at the POS, not over MCP. Orders are sent to the store's connected couriers with send_to_courier (always name the courier and the cash to collect, and say so to the user first); list_deliveries and refresh_delivery show where parcels are. check_buyer tells how often a phone number takes its parcels (Safe / Check first / Risky / New buyer) — use it before sending a cash-on-delivery order. Courier keys are never available over MCP. Discounts (the discounts route) are a percentage off products, categories (with the ones under them) and collections: add or change them with create_records like any record — the store's automations then give each product the biggest active discount reaching it (never two added up) and work out its Sale price and Price after tax; a product's Price never changes, and its Discount, Discount % and Sale price are the store's (read them, never write them). A discount ends by itself at the end of its Ends day (the store's time zone); one already over can't be switched on until its end date moves. Collections group products for the website (a product's collections field, many).`;
 
 export const STORE_TOOLS: ToolDef[] = [
 	{
@@ -303,5 +328,16 @@ export const STORE_TOOLS: ToolDef[] = [
 		inputSchema: { type: 'object', required: ['delivery'], properties: { delivery: { type: 'string' } } },
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
 		run: refreshDeliveryTool,
+	},
+	{
+		name: 'check_buyer',
+		title: 'Check a buyer',
+		description:
+			'How often a phone number takes its parcels: the store’s connected couriers’ records (Steadfast, and RedX / Pathao with the store’s own login) and the store’s own orders, as Safe, Check first, Risky or New buyer, with fraud warnings and what to do. `phone`: a Bangladeshi mobile number. Answers are kept a day; `fresh: true` asks the couriers again (it uses the store’s daily courier checks). Each lookup is logged under the key’s owner.',
+		scope: 'data',
+		only: 'ecommerce',
+		inputSchema: { type: 'object', required: ['phone'], properties: { phone: { type: 'string' }, fresh: { type: 'boolean' } } },
+		annotations: { readOnlyHint: true, openWorldHint: true },
+		run: checkBuyerTool,
 	},
 ];

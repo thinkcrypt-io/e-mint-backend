@@ -64,6 +64,8 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:edit') ? [{ title: 'Add stock', href: '/store/stock/add', icon: 'package-plus' }] : []),
 				// Parcels sent to couriers (docs/couriers CR-07), while the store delivers.
 				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Deliveries', href: '/store/deliveries', icon: 'package-check' }] : []),
+				// Any phone's delivery record (docs/couriers CR-23).
+				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Check a buyer', href: '/store/buyer-check', icon: 'shield-check' }] : []),
 			]),
 			// Each kind of setting is an item of its own (the wizard's answers, a page each).
 			...(can('manage-projects')

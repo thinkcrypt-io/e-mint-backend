@@ -45,13 +45,23 @@ build order.
 | CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
-| CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | planned |
+| CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (backend not deployed) |
 | CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
 | CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | planned |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-23 Check a buyer (mint-tenant pushed; backend sidebar link + MCP tool not deployed).** mint-tenant
+  `/store/buyer-check` (`commerce/couriers/BuyerLookupPage.tsx`): phone box (kept in `?phone=`), the BuyerAnswer with
+  Check again, the number's latest orders in the store (`own.recent`, up to 10, rows open the order), Recent lookups
+  (`GET buyer-check/recent`, refreshed by tag `store-buyer-lookups`; a row checks that number). Deliveries' header
+  has a **Check a buyer** button (works before the backend deploy); `tenantNav.function.ts` adds the sidebar item
+  under Deliveries. MCP `check_buyer { phone, fresh? }` in `mcp/store.tools.ts` (scope data, view on the order route,
+  logged `via: 'mcp'`, by "<owner> (AI)"); the store instructions mention it. GuideLink `store-buyer-lookup` (mint-docs
+  section still to write — CR-25). Smoke `courier-buyer-lookup.mjs` (11). **Next:** CR-26 (Paperfly, CarryBee) or
+  CR-25 (docs + rollout); CR-24 waits on the user's Q1.
 
 - **2026-11-13 — CR-22 buyer check in the panel (mint-tenant pushed; backend `buyer` filter not deployed).**
   Backend: `lists.ts` order lists take `?buyer=safe,check,risky,new` → `buyerCheck.level $in`. mint-tenant

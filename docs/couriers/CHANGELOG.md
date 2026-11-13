@@ -2,6 +2,14 @@
 
 
 
+## 2026-11-13 — CR-23 Check a buyer
+
+- **Store → Check a buyer** (also a button on Deliveries): type any phone number and see how often it takes its
+  parcels, the same answer as on an order, with that number's orders in your store and Check again.
+- Recent lookups are listed below it, with who looked and from where (Check a buyer, a new order, Send to courier or
+  AI), so lookups can't be used quietly.
+- The store owner's own AI can ask too: `check_buyer` over MCP.
+
 ## 2026-11-13 — CR-22 Buyer check in the panel
 
 - Orders and Website orders have a **Buyer** column (Safe · 90%, Risky · 30%, New buyer) and a Buyer filter.
