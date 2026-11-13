@@ -47,11 +47,20 @@ build order.
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
 | CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (backend not deployed) |
 | CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
-| CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | planned |
+| CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | docs + website done 2026-11-13; rollout waits on the backend deploy |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-25 docs + website (rollout waits on the deploy).** mint-docs `src/app/store/page.tsx` (c137214):
+  sections `store-buyer-check` (badges, auto check, card, column + filter), `store-delivery-risk` (rewritten: Send to
+  courier shows the same answer), `store-buyer-lookup` (page, recent lookups, `check_buyer`), `store-buyer-check-settings`,
+  `store-courier-buyer-checks` (RedX / Pathao own login, unofficial, OTP, daily cap); two of them in `guides.ts` topics.
+  mint-webpage changelog entry 2026-11-13 "Check a buyer before you send" (a5c7933, via a temp index — another session's
+  hunk left unstaged). **Rollout, after the user deploys the backend to Heroku:** `node scripts/upgradeStores.js` (dry
+  run) then `--apply`, so built stores' Order model gets `buyerCheck` (CR-21). **Next:** CR-26 (Paperfly, CarryBee);
+  CR-24 waits on the user's Q1.
 
 - **2026-11-13 — CR-23 Check a buyer (mint-tenant pushed; backend sidebar link + MCP tool not deployed).** mint-tenant
   `/store/buyer-check` (`commerce/couriers/BuyerLookupPage.tsx`): phone box (kept in `?phone=`), the BuyerAnswer with

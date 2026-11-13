@@ -2,6 +2,12 @@
 
 
 
+## 2026-11-13 — CR-25 Buyer check guides
+
+- The store guide explains the buyer check: what each badge means and what to do, the Buyer check card and column,
+  Check a buyer and its recent lookups, the settings, and adding a RedX or Pathao login for checks.
+- What's new on the website lists it.
+
 ## 2026-11-13 — CR-23 Check a buyer
 
 - **Store → Check a buyer** (also a button on Deliveries): type any phone number and see how often it takes its
