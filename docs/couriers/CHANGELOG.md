@@ -1,6 +1,16 @@
 # Couriers — changelog
 
 
+
+## 2026-11-13 — CR-19 Buyer check core (backend)
+
+- Any phone can be checked: every connected courier that can say (Steadfast today) and the store's own orders, in
+  one rate and a level — Safe, Check first, Risky or New buyer — with the store's own thresholds in Store settings
+  → Delivery.
+- Each courier's answer is kept a day and its daily checks are counted; a courier that fails or is slow only drops
+  out. Every lookup is logged with who did it.
+- Send to courier's check now uses it; the order check and the Check a buyer page come next.
+
 ## 2026-11-13 — Buyer check planned (BUYER_CHECK.md, CR-19…CR-26)
 
 - When an order comes in, Mint will check the buyer's phone with the couriers and with the store's own history,

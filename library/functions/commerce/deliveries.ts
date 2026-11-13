@@ -10,6 +10,7 @@ import { usableConnection } from './connections.js';
 import { applyUnmatched } from './courierWebhooks.js';
 import { NEEDS_AREA, rememberAreas, suggestAreas } from './courierAreas.js';
 import { fireAutomations } from '../automations.function.js';
+import { checkPhone, phoneKey } from './buyerCheck.js';
 
 /** A delivery's status changed: the project's automations on Deliveries run (CR17 — the store's two emails among them). */
 const statusChanged = async (store: Store, id: any, actor: string) => {
@@ -565,37 +566,27 @@ export const cancelDelivery = async (store: Store, project: any, id: any, reason
 };
 
 /**
- * GET orders/:id/risk (CR-18): how the buyer's phone has done with couriers — Steadfast's fraud check with the
- * store's own key, kept a day per phone (Steadfast limits checks by the parcels you book). A plain-words level too.
+ * GET orders/:id/risk (CR-18, now on the buyer check — docs/couriers BUYER_CHECK.md CR-19): the buyer's phone with
+ * every connected courier that can check it and the store's own orders, kept a day per phone. The CR-18 fields
+ * (`risk` = Steadfast's numbers, `level` low / medium / high / unknown, `summary`) stay for Send to courier;
+ * `check` is the whole answer.
  */
-export const deliveryRisk = async (store: Store, project: any, orderId: any, fresh = false) => {
+export const deliveryRisk = async (store: Store, project: any, orderId: any, fresh = false, by = '') => {
 	const o = await orderFor(store, orderId);
-	const phone = bdPhone(o.delivery?.phone);
-	if (!phone) throw new TenancyError(400, 'This order has no Bangladeshi mobile number to check');
-	const usable = await usableConnection(project, 'steadfast');
-	if (!usable || !usable.adapter.risk) throw new TenancyError(409, 'Connect Steadfast in Store settings → Delivery to check buyers', 'courier_not_connected');
-	const key = `risk:${phone}`;
-	const kept = usable.doc.cache?.[key];
-	let risk = !fresh && kept?.at && Date.now() - new Date(kept.at).getTime() < 24 * 3600 * 1000 ? kept.risk : null;
-	if (!risk) {
-		try {
-			risk = await usable.adapter.risk(usable.conn, phone);
-		} catch (e: any) {
-			if (e instanceof CourierRefusal || e instanceof CourierError) throw new TenancyError(e instanceof CourierRefusal ? 409 : 502, e.message, 'courier_error');
-			throw e;
-		}
-		await CourierConnection.updateOne({ _id: usable.doc._id }, { $set: { [`cache.${key}`]: { at: new Date(), risk } } });
-	}
-	const ratio = risk.deliveryRatio;
-	const known = (risk.delivered ?? 0) + (risk.cancelled ?? 0);
-	const level = ratio === null || known < 3 ? 'unknown' : ratio >= 80 ? 'low' : ratio >= 50 ? 'medium' : 'high';
-	const words: Record<string, string> = {
-		unknown: 'Not enough parcels to this number yet to tell',
-		low: `Usually takes their parcels (${ratio}% delivered)`,
-		medium: `Takes some parcels, refuses some (${ratio}% delivered)`,
-		high: `Often refuses parcels (${ratio}% delivered) — consider asking for payment first`,
+	if (!phoneKey(o.delivery?.phone)) throw new TenancyError(400, 'This order has no phone number to check');
+	const check = await checkPhone(store, project, o.delivery.phone, { fresh, via: 'send', by, order: o._id });
+	const sf: any = check.sources.find(s => s.id === 'steadfast' && s.ok);
+	const risk = {
+		deliveryRatio: sf?.ratio ?? null,
+		cancellationRatio: sf && sf.ratio !== null ? Math.round((100 - sf.ratio) * 10) / 10 : null,
+		delivered: sf?.delivered ?? null,
+		cancelled: sf?.refused ?? null,
+		reports: sf?.reports ?? null,
+		volume: sf?.rating ?? null,
+		categories: sf?.categories || [],
 	};
-	return { phone, risk, level, summary: words[level], checkedAt: kept?.at && !fresh && kept.risk === risk ? kept.at : new Date() };
+	const level = ({ safe: 'low', check: 'medium', risky: 'high', new: 'unknown' } as const)[check.level];
+	return { phone: check.phone, risk, level, summary: check.summary, checkedAt: check.checkedAt, check };
 };
 
 const RECEIVED = 'received-back';

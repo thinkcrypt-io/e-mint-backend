@@ -40,7 +40,7 @@ build order.
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | done 2026-10-31 |
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | done 2026-10-31 |
 | **Buyer check (BUYER_CHECK.md, planned 2026-11-13)** | | | | |
-| CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | planned |
+| CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (not deployed) |
 | CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | planned — verify each on the user's signed-in panel first |
 | CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | planned |
@@ -52,6 +52,25 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-19 buyer check core done (backend, not deployed).** `library/functions/commerce/buyerCheck.ts`:
+  `checkPhone(store, project, phone, { fresh, via, by, order, auto })` asks every connected courier whose adapter
+  has `risk` (Steadfast today; CR-20 / CR-26 add theirs the same way) at once, 6 s each, each on its own (a failing
+  one drops out, or keeps its answer from earlier today), and works out the store's own history from Orders
+  (`delivery.phone` matched on its last 10 digits however typed; delivered / refused = returned or coming back /
+  cancelled / open). The combined rate counts a store's own parcels with a courier once (not when that courier
+  answered); level Safe / Check first / Risky / New buyer (< 3 parcels) by `answers.delivery.buyerCheck { safe 80,
+  checkFirst 50, auto }` (Store settings → Delivery, checked: Check first ≤ Safe); warnings for fraud reports, a
+  courier's fraud rating, refusals here. `PhoneCheck` (`phonechecks`, tenantScoped, unique project + phone, in
+  projectLifecycle): each courier's answer kept a day **per courier** (one connected later is asked at once), the
+  last result, the last 50 lookups (who, via, order). Daily checks per connection in `cache.checks { day, n }`:
+  Steadfast 4 × its busiest booking day of the last week + 10, panels 300; automatic checks keep 3 back; a "limit"
+  refusal spends the day. Routes: `GET buyer-check?phone=&fresh=1`, `GET buyer-check/recent`, and `orders/:id/risk`
+  now on it (CR-18's fields kept for Send to courier + `check`). Smoke `courier-buyer-check.mjs` (13) and
+  `courier-manual-risk.mjs` (16) pass on a private backend + stub. **Next:** CR-21 (check when the order comes in,
+  `buyerCheck` on Orders), CR-22 / CR-23 panel, CR-20 RedX + Pathao sign-ins (needs the user signed in to each
+  merchant panel once). Not checked: other sessions' edited `commerce-settings.mjs` against the new
+  `delivery.buyerCheck` answer.
 
 - **2026-10-31 — CR-07 done (+ the panels of CR-08…15, 18), CR-17 docs and website done.** mint-tenant `26dac5c`:
   `store/services/courierApi.ts` (all courier / delivery endpoints, names checked unique), `commerce/couriers/`

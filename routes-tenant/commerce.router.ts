@@ -85,13 +85,16 @@ import { currentScope, runInScope } from '../library/functions/tenantScope.funct
  *   POST /deliveries/:id/refresh          asks the courier where it is   records:edit
  *   POST /deliveries/:id/cancel  { reason? }   stops it (Steadfast: a return request)   records:edit
  *   POST /deliveries/:id/status  { to, collected?, note? }   a manual courier's parcel moved by hand (CR-15)   records:edit
- *   GET  /orders/:id/risk?fresh=1          the buyer's phone with couriers (Steadfast's check, kept a day) (CR-18)   records:view
+ *   GET  /orders/:id/risk?fresh=1          the buyer's phone with couriers + the store's orders, kept a day (CR-18, on CR-19)   records:view
+ *   GET  /buyer-check?phone=&fresh=1      any phone looked up: courier rates, own orders, level; logged (BUYER_CHECK.md CR-19)   records:view
+ *   GET  /buyer-check/recent?limit=       the last phones looked up on this store (CR-19)   records:view
  *   POST /deliveries/:id/receive  { lines: [{ line, quantity, condition?, restock? }], note? }   a returned parcel back in (CR-13)   records:edit
  *   POST /deliveries/settle  { deliveries: [ids], ref? }   marked paid out by the courier (RedX, manual)   records:edit
  *   GET  /deliveries/:id/webhooks          what the courier's webhooks sent about it, raw   manage-projects
  *   POST /discount-preview  { id?, discount }   what saving a discount would do, for its form's note (DISCOUNTS.md DS11)   records:view
  */
 import { relabelPriceColumns } from '../library/functions/commerce/taxRates.js';
+import { checkPhone, recentLookups } from '../library/functions/commerce/buyerCheck.js';
 import { replaceTax, taxUsage, usageText } from '../library/functions/commerce/taxUse.js';
 import { previewDiscount } from '../library/functions/commerce/discounts.js';
 const router = express.Router({ mergeParams: true });
@@ -463,7 +466,20 @@ router.post(
 router.get(
 	'/orders/:id/risk',
 	view,
-	handle(async (req: any) => deliveryRisk(await storeOf(), req.project, req.params.id, req.query.fresh === '1'))
+	handle(async (req: any) => deliveryRisk(await storeOf(), req.project, req.params.id, req.query.fresh === '1', actorName(req)))
+);
+router.get(
+	'/buyer-check/recent',
+	view,
+	handle(async (req: any) => {
+		await storeOf();
+		return { lookups: await recentLookups(Number(req.query.limit) || 20) };
+	})
+);
+router.get(
+	'/buyer-check',
+	view,
+	handle(async (req: any) => checkPhone(await storeOf(), req.project, req.query.phone, { fresh: req.query.fresh === '1', via: 'lookup', by: actorName(req) }))
 );
 router.post(
 	'/deliveries/:id/refresh',

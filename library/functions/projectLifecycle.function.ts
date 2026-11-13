@@ -44,6 +44,7 @@ import SitePaymentSettings from '../models/tenancy/sitePaymentSettings.model.js'
 import CourierConnection from '../models/tenancy/courierConnection.model.js';
 import CourierWebhookEvent from '../models/tenancy/courierEvent.model.js';
 import CourierAreaMap from '../models/tenancy/courierAreaMap.model.js';
+import PhoneCheck from '../models/tenancy/phoneCheck.model.js';
 import MailAccount from '../models/tenancy/mailAccount.model.js';
 import MailDesign from '../models/tenancy/mailDesign.model.js';
 import DeletedRecord from '../models/deleted-record/model.js';
@@ -109,6 +110,8 @@ const SCOPED = [
 	CourierWebhookEvent,
 	// Its remembered courier areas (docs/couriers CR-10).
 	CourierAreaMap,
+	// Its buyers' phone checks and who looked them up (docs/couriers BUYER_CHECK.md BC3).
+	PhoneCheck,
 ];
 
 /** Every document and collection the project holds (not the TenantProject itself). */

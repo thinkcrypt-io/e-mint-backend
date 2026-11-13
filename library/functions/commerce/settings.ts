@@ -30,7 +30,8 @@ export type Answers = {
 	products: { variations: boolean; options: string[]; brands: boolean; barcodes: boolean; trackStock: boolean; collections: boolean; discounts: boolean };
 	payments: { tenders: string[]; custom: string[]; gateways: string[] };
 	returns: { allowed: boolean; windowDays: number; partial: boolean; restockDefault: boolean; refundMethods: string[]; storeCredit: boolean };
-	delivery: { enabled: boolean; rates: ShippingRate[]; couriers: string[] };
+	/** buyerCheck: the buyer check's levels (docs/couriers BUYER_CHECK.md BC1) — Safe at `safe` % delivered or more, Check first from `checkFirst` %; `auto` checks orders as they come in (BC4). */
+	delivery: { enabled: boolean; rates: ShippingRate[]; couriers: string[]; buyerCheck?: { safe: number; checkFirst: number; auto: boolean } };
 	pos: {
 		receipt: { size: '80mm' | 'a4'; header: string; footer: string };
 		shifts: boolean;
@@ -110,7 +111,7 @@ export const defaultAnswers = (offered: Offered): Answers => ({
 	products: { variations: true, options: ['Size', 'Colour'], brands: false, barcodes: true, trackStock: true, collections: true, discounts: true },
 	payments: { tenders: offered.tenders.filter(t => t.id === 'cash' || t.id === 'card').map(t => t.id), custom: [], gateways: [] },
 	returns: { allowed: true, windowDays: 30, partial: true, restockDefault: true, refundMethods: ['original', 'cash', 'store-credit'], storeCredit: true },
-	delivery: { enabled: false, rates: [], couriers: [] },
+	delivery: { enabled: false, rates: [], couriers: [], buyerCheck: { safe: 80, checkFirst: 50, auto: true } },
 	pos: {
 		receipt: { size: '80mm', header: '', footer: 'Thank you for shopping with us' },
 		shifts: true,
@@ -217,7 +218,13 @@ export const checkSection = (section: Section, input: any, current: Answers, off
 			});
 			const known = new Set(offered.couriers.map(c => c.id));
 			const couriers = uniq((Array.isArray(v.couriers) ? v.couriers : cur.couriers).map((c: any) => text(c, 30)).filter((c: string) => known.has(c))) as string[];
-			return { value: { enabled, rates: enabled ? rates : [], couriers: enabled ? couriers : [] }, problems };
+			const bc = v.buyerCheck || {};
+			const was = cur.buyerCheck || { safe: 80, checkFirst: 50, auto: true };
+			const pct = (x: any, d: number) => (x === undefined || x === null || x === '' ? d : num(x));
+			const buyerCheck = { safe: pct(bc.safe, was.safe), checkFirst: pct(bc.checkFirst, was.checkFirst), auto: bool(bc.auto, was.auto) };
+			if (!(buyerCheck.safe >= 1 && buyerCheck.safe <= 100)) problems.push('Buyer check: Safe is a percentage from 1 to 100');
+			if (!(buyerCheck.checkFirst >= 0 && buyerCheck.checkFirst <= buyerCheck.safe)) problems.push('Buyer check: Check first is a percentage below Safe');
+			return { value: { enabled, rates: enabled ? rates : [], couriers: enabled ? couriers : [], buyerCheck }, problems };
 		}
 		case 'pos': {
 			const r = v.receipt || {};
