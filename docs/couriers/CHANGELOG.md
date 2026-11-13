@@ -1,5 +1,10 @@
 # Couriers — changelog
 
+## 2026-11-14 — Buyer check is live
+
+- Deployed. New website and phone orders in Verte and HINT are checked automatically; Check a buyer and the
+  Paperfly / CarryBee buyer-check cards are on for every store.
+
 ## 2026-11-14 — No shared history across stores
 
 - Buyer checks use only the store's own couriers and its own orders. Mint doesn't share a number's history between

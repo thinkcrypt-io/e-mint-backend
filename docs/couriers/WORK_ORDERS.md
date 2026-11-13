@@ -40,18 +40,23 @@ build order.
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | done 2026-10-31 |
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | done 2026-10-31 |
 | **Buyer check (BUYER_CHECK.md, planned 2026-11-13)** | | | | |
-| CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (not deployed) |
-| CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (not deployed); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
-| CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | done 2026-11-13 against the stub (backend not deployed); not yet tried on real accounts |
-| CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
-| CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
-| CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (backend not deployed) |
+| CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (deployed 2026-11-14, v269) |
+| CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (deployed 2026-11-14, v269); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
+| CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | done 2026-11-13 against the stub (deployed 2026-11-14, v269); not yet tried on real accounts |
+| CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (deployed 2026-11-14, v269) |
+| CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter deployed 2026-11-14) |
+| CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (deployed 2026-11-14, v269) |
 | CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | skipped — the user said "No, skip it" 2026-11-14 |
-| CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | docs + website done 2026-11-13; rollout waits on the backend deploy |
+| CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | docs + website done 2026-11-13; rollout done 2026-11-14 (deploy v269, upgradeStores --apply: Verte + HINT Orders got buyerCheck) |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-14 — Buyer check rolled out.** The user deployed the backend (Heroku v269 = f9b09446).
+  `upgradeStores.js` dry run then `--apply` on prod: Verte and HINT Orders got `buyerCheck`; a second dry run says
+  both up to date. New routes answer 401 without a token (live). Left: trying RedX, Pathao, Paperfly and CarryBee on
+  real merchant accounts (BC2).
 
 - **2026-11-14 — CR-24 skipped.** The user answered Q1 "No, skip it": no Mint network history across stores.
   The buyer check plan (CR-19…CR-26) is complete apart from the rollout after the backend deploy (`upgradeStores.js`
