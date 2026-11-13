@@ -716,6 +716,7 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 		engine: [
 			'channel', 'status', 'outlet', 'items', 'subtotal', 'discount', 'orderDiscount', 'coupon', 'couponCode', 'tax', 'shipping', 'total',
 			'paid', 'refunded', 'balance', 'paymentStatus', 'register', 'shift', 'cashier', 'completedAt', 'courier', 'returnedItems',
+			'buyerCheck',
 		],
 		step: {
 			name: 'Order',
@@ -797,6 +798,25 @@ export const modelSpecs = (a: Answers): ModelSpec[] => [
 						{ key: 'lastUpdate', label: 'Last update', kind: 'date' },
 						{ key: 'delivery', label: 'Delivery', kind: 'text', helper: 'The current delivery’s code (DLV-…)' },
 						{ key: 'trackingUrl', label: 'Tracking link', kind: 'url' },
+					],
+				},
+				{
+					// The buyer check (docs/couriers BUYER_CHECK.md BC5): how often this phone takes its parcels, checked
+					// when the order came in and again whenever the number is checked while the order is still open.
+					key: 'buyerCheck',
+					label: 'Buyer check',
+					kind: 'section',
+					fields: [
+						{ key: 'level', label: 'Buyer', kind: 'select', options: [{ value: 'safe', label: 'Safe' }, { value: 'check', label: 'Check first' }, { value: 'risky', label: 'Risky' }, { value: 'new', label: 'New buyer' }] },
+						{ key: 'rate', label: 'Delivered %', kind: 'number', helper: 'Parcels to this phone that were taken, over every courier that could say and this store' },
+						{ key: 'parcels', label: 'Parcels known', kind: 'number' },
+						{ key: 'delivered', label: 'Delivered', kind: 'number' },
+						{ key: 'refused', label: 'Refused', kind: 'number' },
+						{ key: 'reports', label: 'Fraud reports', kind: 'number' },
+						{ key: 'sources', label: 'From', kind: 'text', helper: 'Each courier’s and this store’s numbers' },
+						{ key: 'warnings', label: 'Warnings', kind: 'text' },
+						{ key: 'summary', label: 'What it means', kind: 'text' },
+						{ key: 'checkedAt', label: 'Checked', kind: 'date' },
 					],
 				},
 				{ key: 'register', label: 'Register', kind: 'reference', ref: 'Register' },

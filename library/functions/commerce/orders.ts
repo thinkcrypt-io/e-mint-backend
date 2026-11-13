@@ -10,6 +10,7 @@ import { deliveriesOf } from './deliveries.js';
 import { trackPurchases } from './purchases.js';
 import { nextCode } from '../dynamicModels.function.js';
 import { afterWebsiteOrder } from './search/events.js';
+import { checkOnOrder } from './buyerCheck.js';
 
 /**
  * Orders (docs/ecommerce EC6, EC9, EC17): a POS sale, an order taken by phone
@@ -221,6 +222,8 @@ export const createManual = async (store: Store, input: ManualInput, ctx: Ctx) =
 	await settleOrder(store, order._id);
 	await countCustomer(store, customer, q.total, 1);
 	await trackPurchases(store, customer, q.lines);
+	// The buyer check (docs/couriers BUYER_CHECK.md BC4), in the background: only orders that go out to a phone.
+	if (delivery) checkOnOrder(store, ctx.project, order);
 	return orderDetail(store, order._id);
 };
 
@@ -304,6 +307,8 @@ export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx)
 	await settleOrder(store, order._id);
 	// From search? (SI18) And each product's units on its search document — in the background, never failing the order.
 	afterWebsiteOrder(order._id, q.lines, input.search);
+	// The buyer's phone checked with the couriers and the store's own orders (BC4) — in the background too.
+	checkOnOrder(store, ctx.project, order);
 	return order._id;
 };
 

@@ -43,7 +43,7 @@ build order.
 | CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (not deployed) |
 | CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (not deployed); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
 | CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
-| CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | planned |
+| CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | planned |
 | CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | planned |
 | CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
@@ -52,6 +52,19 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-21 check when the order comes in (backend, not deployed).** `buyerCheck.ts` `checkOnOrder(store,
+  project, order)` runs `checkPhone({ via: 'order', by: 'Automatic', auto: true })` in the background (never awaited);
+  called from `orders.ts` `createWebsite` and `createManual` (only with a delivery). Off when
+  `answers.delivery.buyerCheck.auto` is false. Two orders for one phone at once share one running check (`running`
+  map, project + phone). Every `checkPhone` now stamps `buyerCheck` (`orderSummaryOf`: level, rate, parcels,
+  delivered, refused, reports, sources text, warnings text, summary, checkedAt) on the order it was for and on every
+  open order to that phone (not cancelled / held / delivered / returned). Blueprint: Order gets a `buyerCheck` section
+  and it's in `engine` (read-only); **built stores need `upgradeStores.js --apply` after the backend deploy** or the
+  field isn't on their model (the update is silently dropped until then). Smoke `courier-order-check.mjs` (13);
+  `courier-buyer-check.mjs` waits 1 s after its last order so the Send lookup is newest. courier-webhooks fails only
+  when the backend runs with `COURIER_SYNC_MS=3000` (the poller moves its parcels) — run it without. **Next:** CR-22
+  (Buyer column + filter, the order page card, Buyer checks card for the panel logins).
 
 - **2026-11-13 — CR-20 RedX + Pathao panel checks (backend, not deployed, not tried on a real account).** Each adapter
   has a `panel` (`couriers/types.ts` PanelCheck: `fields`, `note`, `reuse`, `signIn`, `check`); RedX in `redx.ts`

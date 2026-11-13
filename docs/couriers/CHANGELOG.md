@@ -2,6 +2,16 @@
 
 
 
+## 2026-11-13 — CR-21 Buyer check when an order comes in (backend)
+
+- Website orders, and phone or by-hand orders with a delivery, are checked in the background as soon as they're
+  saved. Checkout never waits for a courier and never fails because of one. Walk-in POS sales aren't checked.
+- The answer is kept on the order as **Buyer check**: the level, the rate, how many parcels, each courier's and the
+  store's own numbers, fraud warnings and when it was checked. Built stores get the field with `upgradeStores.js`.
+- When a number is checked again, its open orders show the newer answer; a delivered, returned or cancelled order
+  keeps the one it had. Two orders from one buyer at once ask the couriers once.
+- Store settings → Delivery can turn automatic checks off; people can still check by hand.
+
 ## 2026-11-13 — CR-20 RedX and Pathao buyer checks (backend)
 
 - A store can put in its own RedX or Pathao merchant login just for buyer checks, apart from the API keys. Pathao can

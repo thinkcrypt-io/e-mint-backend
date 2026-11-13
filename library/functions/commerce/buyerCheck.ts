@@ -318,7 +318,70 @@ export const checkPhone = async (
 		},
 		{ upsert: true }
 	);
+	// The store's open orders to this phone show the newest answer (BC5); an order that's done keeps the one it had.
+	await stampOrders(store, key, orderSummaryOf(answer as any), opts.order).catch((e: any) => console.error('[buyer check] stamp', e?.message || e));
 	return answer;
+};
+
+/** What's kept on an order (BC5): short, for a table column, a filter and automations. */
+export const orderSummaryOf = (a: CheckResult) => {
+	const from = a.sources
+		.filter(s => s?.ok)
+		.map(s => (s.delivered !== null && s.refused !== null ? `${s.name} ${s.delivered} of ${s.delivered + s.refused}` : s.rating ? `${s.name} “${s.rating.replace(/_/g, ' ')}”` : ''))
+		.filter(Boolean);
+	if (a.own.delivered + a.own.refused) from.push(`This store ${a.own.delivered} of ${a.own.delivered + a.own.refused}`);
+	return {
+		level: a.level,
+		rate: a.rate,
+		parcels: a.parcels,
+		delivered: a.delivered,
+		refused: a.refused,
+		reports: a.reports,
+		sources: from.join(' · '),
+		warnings: a.warnings.join(' · '),
+		summary: a.summary,
+		checkedAt: a.checkedAt,
+	};
+};
+
+/** Puts the answer on `order` and on every open order to that phone: not cancelled, held, delivered or returned. */
+const stampOrders = (store: Store, key: string, summary: ReturnType<typeof orderSummaryOf>, order?: any) =>
+	store
+		.M('order')
+		.updateMany(
+			{
+				$or: [
+					...(order ? [{ _id: order }] : []),
+					{ 'delivery.phone': phonePattern(key), status: { $nin: ['cancelled', 'held'] }, fulfilment: { $nin: ['delivered', 'returned', 'cancelled'] } },
+				],
+			},
+			{ $set: { buyerCheck: summary } }
+		);
+
+/** Checks running now, by project + phone: two orders from one buyer at once ask the couriers once. */
+const running = new Map<string, Promise<CheckResult>>();
+
+/**
+ * When an order comes in (BC4): its phone checked in the background, never in the order's way — checkout doesn't
+ * wait for a courier and never fails because of one. Website orders and phone / by-hand orders with a delivery;
+ * walk-in POS sales aren't checked. Off when the store turned automatic checks off (Store settings → Delivery).
+ * Keeps a few of the day's courier checks for people pressing Check (BC6). Returns the check, for tests.
+ */
+export const checkOnOrder = (store: Store, project: any, order: { _id: any; delivery?: { phone?: any } }) => {
+	const key = phoneKey(order?.delivery?.phone);
+	if (!key || !thresholdsOf(store).auto) return null;
+	const k = `${String(project?._id || project)}:${key}`;
+	let p = running.get(k);
+	if (!p) {
+		p = checkPhone(store, project, key, { via: 'order', by: 'Automatic', order: order._id, auto: true });
+		running.set(k, p);
+		p.finally(() => running.delete(k)).catch(() => null);
+		return p.catch(e => console.error('[buyer check] order', e?.message || e));
+	}
+	// Joined a check that started for another order: this one gets the same answer.
+	return p
+		.then(a => stampOrders(store, key, orderSummaryOf(a), order._id))
+		.catch(e => console.error('[buyer check] order', e?.message || e));
 };
 
 /** The last lookups on this store (Check a buyer's list, BC8). */

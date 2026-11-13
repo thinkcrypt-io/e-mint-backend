@@ -91,6 +91,8 @@ ok('a UK number: the store’s history only, Steadfast not asked', r.status === 
 
 // The order route still answers as before (Send to courier), now with the whole check.
 const o3 = await addOrder('01800000000');
+// Its own check when it came in (CR-21) runs in the background first, so the lookup list's newest is Send's.
+await sleep(1000);
 r = await call('GET', `${C}/orders/${o3._id}/risk`, null, t);
 ok('an order’s risk: CR-18’s fields + the check', r.body?.level === 'high' && r.body.risk.delivered === 3 && r.body.check?.level === 'risky', JSON.stringify(r.body && { l: r.body.level, risk: r.body.risk }));
 
