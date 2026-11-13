@@ -42,7 +42,7 @@ build order.
 | **Buyer check (BUYER_CHECK.md, planned 2026-11-13)** | | | | |
 | CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (not deployed) |
 | CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (not deployed); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
-| CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
+| CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | done 2026-11-13 against the stub (backend not deployed); not yet tried on real accounts |
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
 | CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | done 2026-11-13 (backend not deployed) |
@@ -52,6 +52,20 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-26 Paperfly + CarryBee, buyer checks only (mint-tenant pushed; backend not deployed).** New
+  adapters `couriers/paperfly.ts` (sign-in `login_using_password.php` → token; check `smart-check-v2.php` with the
+  app's fixed `paperflykey`; delivered + partial = taken, returned = refused, `smart_check.label` as rating) and
+  `couriers/carrybee.ts` (own fetch for cookies: csrf → form `callback/login` → `session` → kept token is JSON
+  `{t, b}` = access token + business id; customer lookup 404 = 0 parcels; `fraud_count` → reports; NextAuth's
+  `code=credentials` isn't an SMS code). `checksOnly: true` on the adapter: `COURIERS` (wizard, Delivery model's
+  courier options) leaves them out, `CHECK_ONLY` is appended to `GET couriers` by country, `viewOf` gives
+  `checksOnly` and never a `connection`, PUT `couriers/:id` and POST `…/test` refuse them (400). Panel checks reuse
+  CR-20's `savePanelChecks` / `panelSources` unchanged. mint-tenant: `CheckOnlyCard` in CourierList (badge "Buyer
+  checks only", status, Set up / Manage buyer checks), `CourierForm` renders only `PanelChecks alone`. Stub: Paperfly
+  owner@example.com / pf-pass, CarryBee 01744444444 / cb-pass (business biz-77). Smoke `courier-checks-only.mjs`
+  (18); `courier-connections.mjs` now expects `…,manual,paperfly,carrybee`. Checked in headless Chrome. Real accounts
+  unverified (BC2). **Next:** CR-24 waits on the user's Q1; the rollout (`upgradeStores.js --apply`) after the deploy.
 
 - **2026-11-13 — CR-25 docs + website (rollout waits on the deploy).** mint-docs `src/app/store/page.tsx` (c137214):
   sections `store-buyer-check` (badges, auto check, card, column + filter), `store-delivery-risk` (rewritten: Send to

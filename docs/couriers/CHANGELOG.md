@@ -2,6 +2,13 @@
 
 
 
+## 2026-11-13 — CR-26 Paperfly and CarryBee for buyer checks
+
+- Delivery settings has **Paperfly** and **CarryBee** cards, marked "Buyer checks only": add your own merchant login
+  and every buyer check counts that courier's parcels to the number too — its rate, its own label and any fraud
+  reports. Mint can't send parcels with them yet.
+- They never show as delivery couriers, and have no keys or test of their own; Save & sign in tests the login.
+
 ## 2026-11-13 — CR-25 Buyer check guides
 
 - The store guide explains the buyer check: what each badge means and what to do, the Buyer check card and column,

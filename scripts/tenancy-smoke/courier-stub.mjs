@@ -10,6 +10,8 @@
 // or pa-client / pa-secret / owner@example.com / pa-pass; RedX rx-token.
 // Merchant-panel buyer checks (CR-20) come as /<courier>/panel/<path>: RedX signs in 01711111111 / rx-pass
 // (01722222222 is asked for an SMS code), Pathao owner@example.com / pa-pass. POST /__panel/expire drops their tokens.
+// Check-only couriers (CR-26): Paperfly signs in owner@example.com / pf-pass; CarryBee 01744444444 / cb-pass (NextAuth:
+// csrf → form callback that sets the session cookie → session with the token and business biz-77).
 import http from 'http';
 
 const port = Number(process.argv[2] || process.env.COURIER_STUB_PORT || 4599);
@@ -164,7 +166,43 @@ const panel = (courier, req, res, path, body) => {
 		panelTokens.add(t);
 		return json(res, 200, { access_token: t, token_type: 'Bearer' });
 	}
+	if (courier === 'paperfly' && path === '/merchant/api/react/authentication/login_using_password.php' && req.method === 'POST') {
+		if (body.username !== 'owner@example.com' || body.password !== 'pf-pass') return json(res, 200, { success: false, message: 'Invalid username or password' });
+		const t = `pfp-${panelNext++}`;
+		panelTokens.add(t);
+		return json(res, 200, { success: true, token: t, user: { name: 'Owner' } });
+	}
+	if (courier === 'carrybee' && path === '/api/auth/csrf') {
+		res.writeHead(200, { 'content-type': 'application/json', 'set-cookie': ['__Host-authjs.csrf-token=csrf-1%7Chash; Path=/; HttpOnly; Secure'] });
+		return res.end(JSON.stringify({ csrfToken: 'csrf-1' }));
+	}
+	if (courier === 'carrybee' && path === '/api/auth/callback/login' && req.method === 'POST') {
+		const ok = body.phone === '+8801744444444' && body.password === 'cb-pass' && body.csrfToken === 'csrf-1' && /authjs\.csrf-token=csrf-1/.test(req.headers.cookie || '');
+		if (!ok) return json(res, 200, { url: 'https://merchant.carrybee.com/login?error=CredentialsSignin&code=credentials' });
+		const t = `cbp-${panelNext++}`;
+		panelTokens.add(t);
+		res.writeHead(200, { 'content-type': 'application/json', 'set-cookie': [`__Secure-authjs.session-token=sess-${t}; Path=/; HttpOnly; Secure`] });
+		return res.end(JSON.stringify({ url: 'https://merchant.carrybee.com/login' }));
+	}
+	if (courier === 'carrybee' && path === '/api/auth/session') {
+		const m = String(req.headers.cookie || '').match(/__Secure-authjs\.session-token=sess-([\w-]+)/);
+		if (!m || !panelTokens.has(m[1])) return json(res, 200, {});
+		return json(res, 200, { user: { name: 'Owner', selectedBusinessId: 'biz-77' }, accessToken: m[1], expires: '2099-01-01T00:00:00.000Z' });
+	}
 	if (!panelTokens.has(bearer(req))) return json(res, 401, { message: 'Unauthenticated.' });
+	const pf = path.match(/^\/merchant\/api\/react\/smart-check\/smart-check-v2\.php\?search_text=(\d+)$/);
+	if (courier === 'paperfly' && pf) {
+		if (req.headers.paperflykey !== 'Paperfly_~La?Rj73FcLm') return json(res, 403, { message: 'Forbidden' });
+		const known = { '01711000000': { delivered: 8, partial: 1, returned: 1, total: 10, smart_check: { delivery_rate: 90, return_rate: 10, label: 'Good customer' } }, '01800000000': { delivered: 1, partial: 0, returned: 4, total: 5, smart_check: { delivery_rate: 20, return_rate: 80, label: 'Risky customer' } } };
+		return json(res, 200, { customer_phone: pf[1], ...(known[pf[1]] || { delivered: 0, partial: 0, returned: 0, total: 0, smart_check: { label: 'New customer' } }) });
+	}
+	const cb = path.match(/^\/api\/v2\/businesses\/([\w-]+)\/customers\/(.+)$/);
+	if (courier === 'carrybee' && cb) {
+		if (cb[1] !== 'biz-77') return json(res, 403, { message: 'Not your business' });
+		const known = { '+8801711000000': { total_order: 6, cancelled_order: 0, success_rate: 100, fraud_count: 0 }, '+8801800000000': { total_order: 4, cancelled_order: 3, success_rate: 25, fraud_count: 1 } };
+		const d = known[decodeURIComponent(cb[2])];
+		return d ? json(res, 200, { error: false, data: d }) : json(res, 404, { error: true, message: 'Customer not found' });
+	}
 	const rx = path.match(/^\/api\/redx_se\/admin\/parcel\/customer-success-return-rate\?phoneNumber=(\d+)$/);
 	if (courier === 'redx' && rx) {
 		const known = { '8801711000000': { totalParcels: 10, deliveredParcels: 9, returnPercentage: 10, customerSegment: 'Regular' }, '8801800000000': { totalParcels: 6, deliveredParcels: 1, returnPercentage: 83, customerSegment: 'High Return' } };
@@ -256,13 +294,13 @@ http
 				const p = [...paParcels.values()].find(x => x.merchant_order_id === decodeURIComponent(bi[1]));
 				return p ? json(res, 200, p) : json(res, 404, {});
 			}
-			const m = req.url.match(/^\/(steadfast|pathao|redx)\/(test|live|panel)(\/.*)$/);
+			const m = req.url.match(/^\/(steadfast|pathao|redx|paperfly|carrybee)\/(test|live|panel)(\/.*)$/);
 			if (!m) return json(res, 404, { message: 'Not a courier' });
 			const [, courier, mode, path] = m;
 			calls.push({ courier, mode, method: req.method, path });
 			let body = {};
 			try {
-				body = raw ? JSON.parse(raw) : {};
+				body = raw ? (/x-www-form-urlencoded/.test(req.headers['content-type'] || '') ? Object.fromEntries(new URLSearchParams(raw)) : JSON.parse(raw)) : {};
 			} catch {}
 			if (mode === 'panel') return panel(courier, req, res, path, body);
 			if (courier === 'steadfast') return steadfast(req, res, path, body);

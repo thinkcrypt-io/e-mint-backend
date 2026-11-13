@@ -5,7 +5,7 @@ import { runUnscoped } from '../tenantScope.function.js';
 import { TenancyError } from '../tenancy.function.js';
 import { commerceView, offeredFor } from './settings.js';
 import { storeOf } from './store.js';
-import { adapterOf } from './couriers/index.js';
+import { CHECK_ONLY, adapterOf } from './couriers/index.js';
 import { CourierError, PanelError } from './couriers/http.js';
 import { PATHAO_SANDBOX } from './couriers/pathao.js';
 import type { Conn, CourierAdapter, OptionKind, Risk, Token } from './couriers/types.js';
@@ -52,7 +52,10 @@ const adapterFor = (id: string): CourierAdapter => {
 const offered = async (project: any) => {
 	const [o, view] = await Promise.all([offeredFor(project), commerceView(project)]);
 	const d = view.answers?.delivery || { enabled: false, couriers: [] };
-	return { ids: o.couriers.map((c: any) => c.id) as string[], on: new Set<string>(d.enabled ? d.couriers || [] : []) };
+	// Couriers only for buyer checks (CR-26) are listed after the ones that carry parcels, and never turned on.
+	const code = o.country?.code || '';
+	const checkOnly = CHECK_ONLY.filter(a => a.countries.includes(code) || a.countries.includes('*')).map(a => a.id);
+	return { ids: [...(o.couriers.map((c: any) => c.id) as string[]), ...checkOnly], on: new Set<string>(d.enabled ? d.couriers || [] : []) };
 };
 
 /** All of a connection's keys, opened: the secret ones from their seals, the others as kept. */
@@ -123,6 +126,7 @@ const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: st
 		name: adapter.name,
 		on,
 		ready: adapter.ready,
+		checksOnly: !!adapter.checksOnly,
 		sandbox: adapter.sandbox,
 		links: adapter.links,
 		fields: {
@@ -131,7 +135,8 @@ const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: st
 			...(adapter.id === 'pathao' && { sandboxKeys: { clientId: PATHAO_SANDBOX.clientId, username: PATHAO_SANDBOX.username } }),
 		},
 		ownWebhookSecret: !!adapter.ownWebhookSecret,
-		connection: doc
+		// A check-only courier's record holds only its panel login: there's no connection to show.
+		connection: doc && !adapter.checksOnly
 			? {
 					mode: connOf(adapter, doc).mode,
 					keys: Object.fromEntries(adapter.credentials.map(f => [f.key, f.secret ? { set: !!keys[f.key] } : { set: !!keys[f.key], value: keys[f.key] }])),
@@ -211,6 +216,7 @@ export const saveConnection = async (project: any, id: string, body: any, by: st
 	await storeOf();
 	const adapter = adapterFor(id);
 	const { ids, on } = await offered(project);
+	if (adapter.checksOnly) throw new TenancyError(400, `Mint can’t send parcels with ${adapter.name} yet — add your ${adapter.name} login under Buyer checks instead`);
 	if (!ids.includes(id)) throw new TenancyError(400, `${adapter.name} isn’t offered in your store’s country`);
 	if (!on.has(id)) throw new TenancyError(409, `Turn ${adapter.name} on under Delivery first`, 'courier_off');
 
@@ -258,6 +264,7 @@ export const saveConnection = async (project: any, id: string, body: any, by: st
 export const testConnection = async (project: any, id: string, origin: string) => {
 	await storeOf();
 	const adapter = adapterFor(id);
+	if (adapter.checksOnly) throw new TenancyError(400, `${adapter.name} is for buyer checks only — Save & sign in under Buyer checks tests the login`);
 	const doc = await load(id);
 	if (!doc) throw new TenancyError(404, `Connect ${adapter.name} first`);
 	await runTest(adapter, doc);

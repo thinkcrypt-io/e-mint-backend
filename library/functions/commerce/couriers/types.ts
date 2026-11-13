@@ -116,6 +116,8 @@ export interface CourierAdapter {
 	sandbox: boolean;
 	/** Can be chosen on Send to courier (booking is built). */
 	ready: boolean;
+	/** Only for buyer checks through the store's merchant login (Paperfly, CarryBee — CR-26): no API keys, no parcels. */
+	checksOnly?: boolean;
 	/** Where the owner opens a merchant account, and where its keys are. */
 	links: { signUp: string; keys: string; webhook?: string };
 	credentials: CredentialField[];
