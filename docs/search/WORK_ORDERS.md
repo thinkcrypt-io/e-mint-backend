@@ -112,6 +112,14 @@ setup page's Store search card (the full answer, click/add-to-bag events, the ra
 HINT finds "sharee" → Jamdani Saree; Live Fresh answers 0 with the fallback for "mango"/"fruit" (its index may not be
 built yet, or the catalogue lacks them — check its status). SI-21…23 are later (the user, 2026-11-13).
 
+**Rollout run 2026-11-13** (at the user's word): `upgradeStores.js --apply` (Verte + HINT: Search synonyms / redirects
+/ rules, Wishlist, the search dashboard widget; HINT also its pending tax / Sale price changes, 260 products + 374
+variants), then `searchRebuild.js --apply` (36 + 260 docs; every one got a vector). **But the `mint` web dyno is
+Basic (512 MB):** with the model loaded Heroku logged R14 every 20 s and one R15 restart, and queries ran over the
+150 ms budget. `SEARCH_SEMANTIC=off` was set (v264); memory is fine since, search works by words. **To turn meaning
+on:** move web to Standard-2X, then `heroku config:unset SEARCH_SEMANTIC -a mint`, and watch `heroku logs` for R14.
+Search is not switched on yet for the two stores' Products list (README §8.5 — the user's check in Try search).
+
 Next — the user's prod steps (see "SI-20 Finish" below for the full list):
 1. Web dynos → Standard-2X. 2. Deploy the backend (the usual way). 3. `node
 scripts/upgradeStores.js` then `--apply`. 4. `node scripts/searchRebuild.js --apply`. 5. Check each store's
