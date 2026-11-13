@@ -1,7 +1,7 @@
 import { fingerprint } from '../../../../lib/crypto/secret.js';
 import crypto from 'crypto';
-import { Booked, Choice, CourierAdapter, CourierEvent, Conn, NormalStatus, OptionKind, Parcel, TestResult, WebhookIn } from './types.js';
-import { CourierError, CourierRefusal, Answer, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress } from './http.js';
+import { Booked, Choice, CourierAdapter, CourierEvent, Conn, NormalStatus, OptionKind, PanelCheck, Parcel, Risk, TestResult, WebhookIn } from './types.js';
+import { CourierError, CourierRefusal, Answer, PanelError, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress, panelHeaders } from './http.js';
 
 /**
  * RedX (docs/couriers CONNECTING.md § RedX): one access token, sandbox and
@@ -167,6 +167,72 @@ const webhook = {
 	},
 };
 
+/**
+ * Buyer checks through the RedX merchant website (BUYER_CHECK.md §3a, CR-20) — not RedX's developer API, which
+ * has no such call. Sign-in: POST api.redx.com.bd/v4/auth/login { phone: 88…, password } → data.accessToken.
+ * Check: GET redx.com.bd/api/redx_se/admin/parcel/customer-success-return-rate?phoneNumber=88… →
+ * data { totalParcels, deliveredParcels, returnPercentage, customerSegment }. Read from community code
+ * (refatbd/bd-courier-fraud-checker, 2026-10-28); to be confirmed on a real account (BC2).
+ */
+const SITE = 'https://redx.com.bd';
+const panelAuth = () => baseUrl('redx', 'panel', 'https://api.redx.com.bd');
+const panelSite = () => baseUrl('redx', 'panel', SITE);
+const PANEL_MS = 6000;
+
+const signIn = async (login: Record<string, string>) => {
+	const phone = bdPhone(login.phone);
+	if (!phone || !login.password) throw new PanelError('Type the phone number and password you sign in to RedX with.', 'refused');
+	let r: Answer;
+	try {
+		r = await courierFetch('RedX', `${panelAuth()}/v4/auth/login`, { method: 'POST', body: { phone: `88${phone}`, password: login.password }, headers: panelHeaders(SITE), timeout: PANEL_MS });
+	} catch (e: any) {
+		throw new PanelError(e?.message || 'Couldn’t reach RedX — try again in a minute.', 'down');
+	}
+	const token = r.body?.data?.accessToken || r.body?.accessToken;
+	if (r.status >= 200 && r.status < 300 && token) return String(token);
+	const words = courierWords(r.body) || JSON.stringify(r.body?.data || '');
+	// An account that signs in with a code sent by SMS: Mint never asks for or passes one on.
+	if (/otp|verification code|code sent|verify/i.test(words) || r.body?.data?.otpRequired || r.body?.data?.isOtpRequired)
+		throw new PanelError('RedX asks for a code at sign-in for this account, so Mint can’t check with it.', 'otp');
+	if (r.status === 429 || r.status >= 500) throw new PanelError(`RedX isn’t taking sign-ins just now (error ${r.status}) — try again later.`, 'down');
+	throw new PanelError(`RedX refused the sign-in${words ? `: ${words}` : ''} — check the phone number and password.`, 'refused');
+};
+
+const check = async (token: string, phone: string): Promise<Risk> => {
+	const p = bdPhone(phone);
+	if (!p) throw new CourierRefusal('A Bangladeshi mobile number is needed to check it.');
+	const r = await courierFetch('RedX', `${panelSite()}/api/redx_se/admin/parcel/customer-success-return-rate?phoneNumber=88${p}`, { headers: panelHeaders(SITE, token), timeout: PANEL_MS });
+	if (r.status === 401 || r.status === 403) throw new PanelError('RedX no longer takes the sign-in', 'expired');
+	if (r.status === 429) throw new PanelError('RedX’s checks for today are used up', 'limit');
+	const d = r.body?.data;
+	const total = Number(d?.totalParcels);
+	const delivered = Number(d?.deliveredParcels);
+	const good = r.status >= 200 && r.status < 300 && r.body?.isError !== true && Number.isInteger(total) && Number.isInteger(delivered) && total >= 0 && delivered >= 0 && delivered <= total;
+	// RedX has had the call offline for days at a time (400 / 503): it drops out, the others carry on.
+	if (!good) throw new PanelError(r.status === 400 || r.status >= 500 ? 'RedX’s buyer check is offline just now' : 'RedX didn’t give a buyer check answer', 'down');
+	return {
+		deliveryRatio: null,
+		cancellationRatio: null,
+		delivered,
+		// RedX gives the total and the delivered: the rest were returned or are still on their way.
+		cancelled: total - delivered,
+		reports: null,
+		volume: null,
+		categories: [],
+		rating: typeof d.customerSegment === 'string' && d.customerSegment ? d.customerSegment : null,
+	};
+};
+
+const panel: PanelCheck = {
+	fields: [
+		{ key: 'phone', label: 'RedX sign-in phone', secret: false, helper: 'The number you sign in to redx.com.bd with' },
+		{ key: 'password', label: 'RedX password', secret: true },
+	],
+	note: 'Uses your RedX merchant login, not its API. It may stop working if RedX changes its site. Accounts that get a code by SMS at sign-in can’t be used.',
+	signIn,
+	check,
+};
+
 export const redx: CourierAdapter = {
 	id: 'redx',
 	name: 'RedX',
@@ -191,4 +257,5 @@ export const redx: CourierAdapter = {
 	cancel,
 	webhook,
 	normalise,
+	panel,
 };

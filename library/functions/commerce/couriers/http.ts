@@ -65,6 +65,22 @@ export class CourierRefusal extends Error {
 	}
 }
 
+/** A merchant-panel sign-in or check that didn't work (BUYER_CHECK.md §3a), by kind: what Mint does next follows it. */
+export class PanelError extends Error {
+	constructor(message: string, public kind: 'refused' | 'otp' | 'expired' | 'down' | 'limit') {
+		super(message);
+	}
+}
+
+/** What a browser on the courier's merchant site sends (the panel calls refuse bare API clients). */
+export const panelHeaders = (site: string, token?: string): Record<string, string> => ({
+	'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+	accept: 'application/json, text/plain, */*',
+	origin: site,
+	referer: `${site}/`,
+	...(token && { authorization: `Bearer ${token}` }),
+});
+
 /** A Bangladeshi mobile as the couriers take it: 01XXXXXXXXX (+88 / 88, spaces and dashes dropped), or null. */
 export const bdPhone = (v: any): string | null => {
 	let d = String(v ?? '').replace(/[^\d]/g, '');

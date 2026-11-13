@@ -2,6 +2,16 @@
 
 
 
+## 2026-11-13 — CR-20 RedX and Pathao buyer checks (backend)
+
+- A store can put in its own RedX or Pathao merchant login just for buyer checks, apart from the API keys. Pathao can
+  reuse the sign-in it already has. RedX can be used for checks even if the store doesn't send with it.
+- Mint signs in once and keeps the token. A wrong password or an account that gets an SMS code at sign-in stops that
+  courier's checks with a plain message, and the others carry on. An offline check drops out of the answer.
+- Pathao accounts that see only a rating get the rating as a warning, never made-up counts.
+- Built and tested against a fake courier server; not yet tried on a real RedX or Pathao account. The card in Store
+  settings comes with the panel work.
+
 ## 2026-11-13 — CR-19 Buyer check core (backend)
 
 - Any phone can be checked: every connected courier that can say (Steadfast today) and the store's own orders, in

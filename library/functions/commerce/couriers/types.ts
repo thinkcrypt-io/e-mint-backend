@@ -143,6 +143,11 @@ export interface CourierAdapter {
 	normalise(courierStatus: string): NormalStatus | null;
 	/** How a buyer's phone has done with couriers (Steadfast's fraud check, CR-18). Nulls are "not known", never 0. */
 	risk?(conn: Conn, phone: string): Promise<Risk>;
+	/**
+	 * Buyer checks through the courier's merchant website (docs/couriers BUYER_CHECK.md §3a, CR-20): signs in
+	 * with the store's own panel login and asks the private call the panel's Fraud Check page uses. Unofficial.
+	 */
+	panel?: PanelCheck;
 	/** The courier's payouts since a date, each with the parcels it settled (Steadfast's payments list, CR11). */
 	payouts?(conn: Conn, since: Date): Promise<{ ref: string; parcels: { consignment?: string; invoice?: string }[] }[]>;
 }
@@ -155,4 +160,21 @@ export type Risk = {
 	reports: number | null;
 	volume: string | null;
 	categories: string[];
+	/** The courier's own label for the buyer (Pathao's customer rating, RedX's segment). */
+	rating?: string | null;
+};
+
+/**
+ * A merchant-panel buyer check (BUYER_CHECK.md §3a). `signIn` gives a token or throws a PanelError ('refused'
+ * password, 'otp' asked for, 'down'); `check` throws 'expired' when the token is no longer taken, so the caller
+ * signs in once more. Both are given the store's panel login opened.
+ */
+export type PanelCheck = {
+	fields: CredentialField[];
+	/** Shown on the card: what the login is used for and that it's unofficial. */
+	note: string;
+	/** The API connection's keys a blank panel field falls back to (Pathao's panel login is the API's username / password). */
+	reuse?: Record<string, string>;
+	signIn(login: Record<string, string>): Promise<string>;
+	check(token: string, phone: string): Promise<Risk>;
 };

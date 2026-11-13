@@ -1,7 +1,7 @@
 import { fingerprint } from '../../../../lib/crypto/secret.js';
 import crypto from 'crypto';
-import { Booked, Choice, CourierAdapter, CourierEvent, Conn, NormalStatus, OptionKind, Parcel, TestResult, Token, WebhookIn } from './types.js';
-import { CourierError, CourierRefusal, Answer, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress } from './http.js';
+import { Booked, Choice, CourierAdapter, CourierEvent, Conn, NormalStatus, OptionKind, PanelCheck, Parcel, Risk, TestResult, Token, WebhookIn } from './types.js';
+import { CourierError, CourierRefusal, Answer, PanelError, baseUrl, bdPhone, courierFetch, courierWords, fit, fullAddress, panelHeaders } from './http.js';
 
 /**
  * Pathao Courier (docs/couriers CONNECTING.md § Pathao): a password-grant
@@ -252,6 +252,79 @@ const webhook = {
 	},
 };
 
+/**
+ * Buyer checks through the Pathao merchant website (BUYER_CHECK.md §3a, CR-20) — not in Pathao's developer API.
+ * Sign-in: POST merchant.pathao.com/api/v1/login { username, password } → access_token. Check: POST
+ * /api/v1/user/success { phone } → data.customer { successful_delivery, total_delivery }, or only
+ * data.customer_rating (good_customer … fraud_customer) when data.show_count is false for the account. Read from
+ * community code (2026-11-13); to be confirmed on a real account (BC2).
+ */
+const SITE = 'https://merchant.pathao.com';
+const panelBase = () => baseUrl('pathao', 'panel', SITE);
+const PANEL_MS = 6000;
+
+const signIn = async (login: Record<string, string>) => {
+	if (!login.username || !login.password) throw new PanelError('Type the email and password you sign in to Pathao with.', 'refused');
+	let r: Answer;
+	try {
+		r = await courierFetch('Pathao', `${panelBase()}/api/v1/login`, { method: 'POST', body: { username: login.username, password: login.password }, headers: panelHeaders(SITE), timeout: PANEL_MS });
+	} catch (e: any) {
+		throw new PanelError(e?.message || 'Couldn’t reach Pathao — try again in a minute.', 'down');
+	}
+	const token = r.body?.access_token || r.body?.data?.access_token;
+	if (r.status >= 200 && r.status < 300 && token) return String(token).trim();
+	const words = courierWords(r.body);
+	if (/otp|verification code|code sent/i.test(words)) throw new PanelError('Pathao asks for a code at sign-in for this account, so Mint can’t check with it.', 'otp');
+	if (r.status === 429 || r.status >= 500) throw new PanelError(`Pathao isn’t taking sign-ins just now (error ${r.status}) — try again later.`, 'down');
+	throw new PanelError(`Pathao refused the sign-in${words ? `: ${words}` : ''} — check the email and password.`, 'refused');
+};
+
+const count = (objs: any[], keys: string[]) => {
+	for (const o of objs)
+		for (const k of keys) {
+			const v = o?.[k];
+			if (v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v))) return Number(v);
+		}
+	return null;
+};
+
+const check = async (token: string, phone: string): Promise<Risk> => {
+	const p = bdPhone(phone);
+	if (!p) throw new CourierRefusal('A Bangladeshi mobile number is needed to check it.');
+	const r = await courierFetch('Pathao', `${panelBase()}/api/v1/user/success`, { method: 'POST', body: { phone: p }, headers: panelHeaders(SITE, token), timeout: PANEL_MS });
+	if (r.status === 401 || r.status === 403) throw new PanelError('Pathao no longer takes the sign-in', 'expired');
+	if (r.status === 429) throw new PanelError('Pathao’s checks for today are used up', 'limit');
+	const d = r.body?.data;
+	if (r.status < 200 || r.status >= 300 || !d || typeof d !== 'object') throw new PanelError('Pathao’s buyer check didn’t answer just now', 'down');
+	const c = d.customer && typeof d.customer === 'object' ? d.customer : {};
+	const rating = d.customer_rating ?? c.rating ?? null;
+	// Counts only when Pathao shows them to this account; otherwise its rating alone — never a made-up 0 / 0.
+	const delivered = d.show_count === false ? null : count([c, d], ['successful_delivery', 'successful_deliveries', 'delivered', 'total_delivered']);
+	const total = d.show_count === false ? null : count([c, d], ['total_delivery', 'total_deliveries', 'total_parcel', 'total']);
+	const known = delivered !== null && total !== null && total >= delivered;
+	return {
+		deliveryRatio: null,
+		cancellationRatio: null,
+		delivered: known ? delivered : null,
+		cancelled: known ? (total as number) - (delivered as number) : null,
+		reports: null,
+		volume: null,
+		categories: [],
+		rating: typeof rating === 'string' && rating ? rating : null,
+	};
+};
+
+const panel: PanelCheck = {
+	fields: [
+		{ key: 'username', label: 'Pathao sign-in email', secret: false, kind: 'email', helper: 'Leave blank to use the one above' },
+		{ key: 'password', label: 'Pathao password', secret: true, helper: 'Leave blank to use the one above' },
+	],
+	note: 'Uses your Pathao merchant login, not its API. It may stop working if Pathao changes its site. Pathao shows some accounts only a rating, not the counts.',
+	reuse: { username: 'username', password: 'password' },
+	signIn,
+	check,
+};
+
 export const pathao: CourierAdapter = {
 	id: 'pathao',
 	name: 'Pathao Courier',
@@ -308,4 +381,5 @@ export const pathao: CourierAdapter = {
 	status,
 	webhook,
 	normalise,
+	panel,
 };

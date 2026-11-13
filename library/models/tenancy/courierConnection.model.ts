@@ -43,6 +43,16 @@ const schema = new Schema<any>(
 		/** Webhook calls refused for a wrong secret. */
 		refusedCalls: { type: Number, default: 0 },
 		connectedBy: { type: String, default: '' },
+		/**
+		 * Buyer checks through the courier's merchant website (docs/couriers BUYER_CHECK.md §3a, CR-20): the store's
+		 * own panel login — secret parts sealed in `checkKeys`, the rest in `checkPublic` — and the panel's token,
+		 * sealed. Apart from the API keys, so changing one never untests the other.
+		 */
+		checkKeys: { type: Map, of: String, select: false, default: () => ({}) },
+		checkPublic: { type: Map, of: String, default: () => ({}) },
+		checkToken: { type: String, select: false, default: '' },
+		/** { status: on | signin | otp | error, message, at, by, lastOkAt, lastError: { at, message } } */
+		checks: { type: Schema.Types.Mixed, default: null },
 	},
 	{ timestamps: true, minimize: false }
 );

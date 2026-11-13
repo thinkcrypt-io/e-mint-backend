@@ -39,7 +39,8 @@ send the store's customers' numbers to a third party. Mint does the same calls i
 
 ### 3a. Panel sign-in — how Mint does RedX, Pathao, Paperfly and CarryBee
 
-Read in community code (2026-11-13), not courier docs:
+Built for RedX and Pathao in CR-20 (2026-11-13, against a stub; not yet tried on a real account). Read in
+community code (2026-11-13), not courier docs:
 [refatbd/bd-courier-fraud-checker](https://github.com/refatbd/bd-courier-fraud-checker) (updated 2026-10-28, all
 five couriers), [AbiruzzamanMolla/Fraud-Checker-BD-Courier-Laravel](https://github.com/AbiruzzamanMolla/Fraud-Checker-BD-Courier-Laravel)
 and [huzaifaalmesbah/bd-courier-customer-delivery-stats](https://github.com/huzaifaalmesbah/bd-courier-customer-delivery-stats).

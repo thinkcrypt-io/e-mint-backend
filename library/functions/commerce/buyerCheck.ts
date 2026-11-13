@@ -3,14 +3,14 @@ import CourierConnection from '../../models/tenancy/courierConnection.model.js';
 import { TenancyError } from '../tenancy.function.js';
 import { Store } from './store.js';
 import { ADAPTERS } from './couriers/index.js';
-import { CourierError, CourierRefusal, bdPhone } from './couriers/http.js';
-import { usableConnection } from './connections.js';
+import { CourierError, CourierRefusal, PanelError, bdPhone } from './couriers/http.js';
+import { askPanel, panelSources, usableConnection } from './connections.js';
 import type { Risk } from './couriers/types.js';
 
 /**
  * Buyer check (docs/couriers BUYER_CHECK.md, CR-19): how often a phone number takes its parcels — from every
- * courier the store has connected that can say (Steadfast's fraud check today; the merchant-panel sign-ins of
- * CR-20 / CR-26 join through the same `risk`), and from the store's own orders. Couriers are asked at most once
+ * courier the store has connected that can say (Steadfast's fraud check; RedX and Pathao through the store's
+ * merchant-panel login, CR-20), and from the store's own orders. Couriers are asked at most once
  * a day per phone (PhoneCheck, BC3), each on its own with a time limit, and a failing one only drops out.
  */
 
@@ -30,8 +30,10 @@ export type SourceAnswer = {
 	/** A courier's own label when it gives one (Pathao's customer rating, RedX's segment). */
 	rating?: string | null;
 	error?: string;
-	/** The courier wasn't asked: its checks for today are kept for people pressing Check (BC6). */
+	/** The courier wasn't asked: its checks for today are kept for people pressing Check (BC6), or its panel login stopped. */
 	skipped?: boolean;
+	/** 'panel': asked through the store's merchant-panel login (CR-20), not the courier's API. */
+	via?: 'panel';
 	at: Date;
 };
 
@@ -139,32 +141,42 @@ const fromRisk = (id: string, name: string, r: Risk & { rating?: string | null }
 	};
 };
 
-/** The couriers the store has connected that can check a phone. */
-const checkSources = async (project: any) => {
-	const out: { id: string; usable: NonNullable<Awaited<ReturnType<typeof usableConnection>>> }[] = [];
+type Source = { id: string; name: string; connId: any; panel: boolean; ask: (phone: string) => Promise<Risk> };
+
+/**
+ * The couriers the store has connected that can check a phone: by the courier's API (Steadfast's fraud check) or,
+ * for a courier without one, by the store's merchant-panel login (CR-20). One source per courier.
+ */
+const checkSources = async (project: any): Promise<Source[]> => {
+	const out: Source[] = [];
 	for (const a of Object.values(ADAPTERS)) {
 		if (!a.risk) continue;
 		const usable = await usableConnection(project, a.id).catch(() => null);
-		if (usable) out.push({ id: a.id, usable });
+		if (usable) out.push({ id: a.id, name: a.name, connId: usable.doc._id, panel: false, ask: phone => a.risk!(usable.conn, phone) });
+	}
+	for (const { adapter, doc } of await panelSources().catch(() => [] as any[])) {
+		if (out.some(s => s.id === adapter.id)) continue;
+		out.push({ id: adapter.id, name: adapter.name, connId: doc._id, panel: true, ask: phone => askPanel(adapter, doc, phone) });
 	}
 	return out;
 };
 
 /** Asks one courier, within its time and its daily checks. */
-const askOne = async (store: Store, s: { id: string; usable: any }, phone: string, auto: boolean): Promise<SourceAnswer> => {
-	const { adapter, conn, doc } = s.usable;
-	const base = { id: s.id, name: adapter.name, delivered: null, refused: null, ratio: null, reports: null, categories: [], at: new Date() };
+const askOne = async (store: Store, s: Source, phone: string, auto: boolean): Promise<SourceAnswer> => {
+	const base = { id: s.id, name: s.name, delivered: null, refused: null, ratio: null, reports: null, categories: [], at: new Date(), ...(s.panel && { via: 'panel' as const }) };
 	const bd = bdPhone(phone);
-	if (!bd) return { ...base, ok: false, skipped: true, error: `${adapter.name} only checks Bangladeshi mobile numbers` };
+	if (!bd) return { ...base, ok: false, skipped: true, error: `${s.name} only checks Bangladeshi mobile numbers` };
 	const limit = await limitFor(store, s.id);
-	if (!(await takeCheck(doc._id, limit, auto ? RESERVE : 0)))
-		return { ...base, ok: false, skipped: true, error: `${adapter.name}’s checks for today are used up — the store’s own history is shown` };
+	if (!(await takeCheck(s.connId, limit, auto ? RESERVE : 0)))
+		return { ...base, ok: false, skipped: true, error: `${s.name}’s checks for today are used up — the store’s own history is shown` };
 	try {
-		return fromRisk(s.id, adapter.name, await withLimit(adapter.risk(conn, bd), SOURCE_MS, adapter.name));
+		return { ...fromRisk(s.id, s.name, await withLimit(s.ask(bd), SOURCE_MS, s.name)), ...(s.panel && { via: 'panel' as const }) };
 	} catch (e: any) {
-		if (e instanceof CourierRefusal && /limit/i.test(e.message)) await spendAll(doc._id, limit);
-		const known = e instanceof CourierRefusal || e instanceof CourierError;
-		return { ...base, ok: false, error: known ? e.message : `${adapter.name} couldn’t check it just now` };
+		if ((e instanceof CourierRefusal && /limit/i.test(e.message)) || (e instanceof PanelError && e.kind === 'limit')) await spendAll(s.connId, limit);
+		const known = e instanceof CourierRefusal || e instanceof CourierError || e instanceof PanelError;
+		// A panel login that stopped (refused password, SMS code) isn't counted against the day.
+		const stopped = e instanceof PanelError && (e.kind === 'refused' || e.kind === 'otp');
+		return { ...base, ok: false, ...(stopped && { skipped: true }), error: known ? e.message : `${s.name} couldn’t check it just now` };
 	}
 };
 

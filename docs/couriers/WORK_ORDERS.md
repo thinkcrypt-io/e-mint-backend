@@ -41,7 +41,7 @@ build order.
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | done 2026-10-31 |
 | **Buyer check (BUYER_CHECK.md, planned 2026-11-13)** | | | | |
 | CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | done 2026-11-13 (not deployed) |
-| CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | planned — verify each on the user's signed-in panel first |
+| CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (not deployed); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
 | CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | planned |
 | CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | planned |
@@ -52,6 +52,23 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-20 RedX + Pathao panel checks (backend, not deployed, not tried on a real account).** Each adapter
+  has a `panel` (`couriers/types.ts` PanelCheck: `fields`, `note`, `reuse`, `signIn`, `check`); RedX in `redx.ts`
+  (`api.redx.com.bd/v4/auth/login` → `redx.com.bd/api/redx_se/admin/parcel/customer-success-return-rate`), Pathao in
+  `pathao.ts` (`merchant.pathao.com/api/v1/login` → `/api/v1/user/success`; blank fields reuse the API connection's
+  username / password). The login lives on the CourierConnection apart from the API keys: `checkKeys` (sealed),
+  `checkPublic`, `checkToken` (sealed), `checks { status on|signin|otp|error, message, by, at, lastOkAt, lastError }`.
+  `connections.ts`: `savePanelChecks` (PUT `couriers/:id/checks { keys }`, signs in once; courier only needs to be
+  offered, not on), `removePanelChecks` (DELETE), `panelSources`, `askPanel` (token reused, renewed once on 401/403;
+  refused password / SMS code → status signin / otp, source skipped with the reason). `GET couriers` cards carry
+  `checks` (null for Steadfast). `disconnect` keeps a panel login (only API keys go). `buyerCheck.ts` sources are
+  API first, then panel (`via: 'panel'`), one per courier; PanelError kinds map to skip / spend-the-day. OTP and the
+  answer shapes are read from community code, so **confirm on a real account** before telling stores it works:
+  the user puts their RedX / Pathao login in via `PUT couriers/:id/checks` (no card UI yet — CR-22 or a small
+  mint-tenant step), then `GET buyer-check?phone=…`. Smoke `courier-panel-checks.mjs` (22, stub `/<courier>/panel/…`,
+  `/__panel/expire`). courier-buyer-check, manual-risk, connections, webhooks, areas-sync (needs COURIER_SYNC_MS=3000
+  COURIER_QUIET_MS=1500) re-run and pass.
 
 - **2026-11-13 — CR-19 buyer check core done (backend, not deployed).** `library/functions/commerce/buyerCheck.ts`:
   `checkPhone(store, project, phone, { fresh, via, by, order, auto })` asks every connected courier whose adapter

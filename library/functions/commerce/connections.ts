@@ -6,9 +6,9 @@ import { TenancyError } from '../tenancy.function.js';
 import { commerceView, offeredFor } from './settings.js';
 import { storeOf } from './store.js';
 import { adapterOf } from './couriers/index.js';
-import { CourierError } from './couriers/http.js';
+import { CourierError, PanelError } from './couriers/http.js';
 import { PATHAO_SANDBOX } from './couriers/pathao.js';
-import type { Conn, CourierAdapter, OptionKind, Token } from './couriers/types.js';
+import type { Conn, CourierAdapter, OptionKind, Risk, Token } from './couriers/types.js';
 
 /**
  * A store's courier accounts (docs/couriers CR3, CR4, CR18): each courier
@@ -18,7 +18,7 @@ import type { Conn, CourierAdapter, OptionKind, Token } from './couriers/types.j
  * project's scope.
  */
 
-const SECRETS = '+credentials +token +webhookSecret';
+const SECRETS = '+credentials +token +webhookSecret +checkKeys';
 const DAY = 24 * 3600 * 1000;
 const OPTIONS: OptionKind[] = ['stores', 'cities', 'zones', 'areas'];
 
@@ -144,6 +144,7 @@ const viewOf = async (adapter: CourierAdapter, doc: any, on: boolean, origin: st
 					updatedAt: doc.updatedAt,
 				}
 			: null,
+		checks: checksViewOf(adapter, doc),
 		warnings,
 	};
 };
@@ -283,6 +284,12 @@ export const disconnect = async (id: string) => {
 	const open = Delivery ? await Delivery.countDocuments({ courier: id, status: { $nin: ['delivered', 'partly-delivered', 'returned', 'cancelled', 'lost', 'error', 'draft'] } }) : 0;
 	if (open)
 		throw new TenancyError(409, `${open} deliver${open === 1 ? 'y is' : 'ies are'} still with ${adapter.name} — disconnect once ${open === 1 ? 'it’s' : 'they’re'} finished`, 'courier_in_use');
+	// A panel login for buyer checks (CR-20) stays: only the API keys go.
+	const doc = await CourierConnection.findOne({ courier: id }).select('checks').lean() as any;
+	if (doc?.checks?.status) {
+		await CourierConnection.updateOne({ _id: doc._id }, { $set: { credentials: {}, public: {}, token: null, settings: {}, test: { ok: false, message: '', keysHash: '', rejected: false }, accountKey: '' } });
+		return { removed: true };
+	}
 	const r = await CourierConnection.deleteOne({ courier: id });
 	return { removed: r.deletedCount > 0 };
 };
@@ -319,4 +326,148 @@ export const usableConnection = async (project: any, id: string) => {
 	const conn = connOf(adapter, doc);
 	if (doc.test.keysHash !== hashOf(conn.mode, conn.credentials)) return null;
 	return { adapter, doc, conn };
+};
+
+/*
+ * Buyer checks through a courier's merchant website (docs/couriers BUYER_CHECK.md §3a, CR-20): the store's own panel
+ * login, sealed apart from the API keys; the panel's token sealed and reused until refused, then renewed once; a
+ * refused password or an SMS code stops that courier's checks until someone signs in again. Never logged.
+ */
+
+const CHECK_SECRETS = '+credentials +checkKeys +checkToken';
+const loadChecks = (courier: string) => CourierConnection.findOne({ courier }).select(CHECK_SECRETS).lean() as Promise<any>;
+
+/** The panel login, opened: the store's own, or (Pathao) the API connection's sign-in when left blank. */
+const panelLoginOf = (adapter: CourierAdapter, doc: any): Record<string, string> => {
+	const secret = asObject(doc?.checkKeys);
+	const shown = asObject(doc?.checkPublic);
+	const api = keysOf(adapter, doc);
+	return Object.fromEntries(
+		(adapter.panel?.fields || []).map(f => {
+			const own = f.secret ? opened(secret[f.key]) : shown[f.key] || '';
+			const from = adapter.panel?.reuse?.[f.key];
+			return [f.key, own || (from ? api[from] || '' : '')];
+		})
+	);
+};
+
+/** The card's Buyer checks part: the login as typed (never the password), its state, when it last worked. */
+const checksViewOf = (adapter: CourierAdapter, doc: any) => {
+	if (!adapter.panel) return null;
+	const secret = asObject(doc?.checkKeys);
+	const shown = asObject(doc?.checkPublic);
+	const c = doc?.checks || null;
+	return {
+		fields: adapter.panel.fields,
+		note: adapter.panel.note,
+		reusesConnection: !!adapter.panel.reuse,
+		status: (c?.status || 'off') as 'off' | 'on' | 'signin' | 'otp' | 'error',
+		message: c?.message || '',
+		by: c?.by || '',
+		at: c?.at || null,
+		lastOkAt: c?.lastOkAt || null,
+		lastError: c?.lastError || null,
+		keys: Object.fromEntries(adapter.panel.fields.map(f => [f.key, f.secret ? { set: !!secret[f.key] } : { set: !!shown[f.key], value: shown[f.key] || '' }])),
+	};
+};
+
+const STATE_OF: Record<string, string> = { refused: 'signin', otp: 'otp' };
+
+/** Signs in to the panel with the login kept, and keeps the token (or why it couldn't). */
+const panelSignIn = async (adapter: CourierAdapter, doc: any, by?: string) => {
+	const now = new Date();
+	try {
+		const token = await adapter.panel!.signIn(panelLoginOf(adapter, doc));
+		await CourierConnection.updateOne(
+			{ _id: doc._id },
+			{ $set: { checkToken: sealed(token), checks: { ...(doc.checks || {}), status: 'on', message: `Signed in to ${adapter.name} — buyer checks are on`, at: now, ...(by && { by }), lastOkAt: now } } }
+		);
+		return token;
+	} catch (e: any) {
+		const kind = e instanceof PanelError ? e.kind : 'down';
+		const status = STATE_OF[kind] || 'error';
+		const message = e instanceof PanelError || e instanceof CourierError ? e.message : `Couldn’t sign in to ${adapter.name} just now`;
+		await CourierConnection.updateOne(
+			{ _id: doc._id },
+			{ $set: { checkToken: '', checks: { ...(doc.checks || {}), status, message, at: now, ...(by && { by }), lastError: { at: now, message } } } }
+		);
+		throw e instanceof PanelError ? e : new PanelError(message, 'down');
+	}
+};
+
+/**
+ * PUT couriers/:id/checks — { keys: { phone | username, password } }: keeps the store's panel login and signs in
+ * once (BUYER_CHECK.md §3a). A blank field keeps the one stored (Pathao: falls back to the API sign-in). The
+ * courier only needs to be offered in the store's country — a store can check with a courier it doesn't send with.
+ */
+export const savePanelChecks = async (project: any, id: string, body: any, by: string, origin: string) => {
+	await storeOf();
+	const adapter = adapterFor(id);
+	if (!adapter.panel) throw new TenancyError(400, `${adapter.name} has no buyer check Mint can use`);
+	const { ids, on } = await offered(project);
+	if (!ids.includes(id)) throw new TenancyError(400, `${adapter.name} isn’t offered in your store’s country`);
+	const was = await loadChecks(id);
+	const secret = asObject(was?.checkKeys);
+	const shown = asObject(was?.checkPublic);
+	const given = body?.keys && typeof body.keys === 'object' ? body.keys : {};
+	for (const f of adapter.panel.fields) {
+		const v = given[f.key];
+		if (v === undefined || v === null || String(v).trim() === '') continue;
+		const value = String(v).trim().slice(0, 200);
+		if (f.secret) secret[f.key] = sealed(value);
+		else shown[f.key] = value;
+	}
+	await CourierConnection.updateOne(
+		{ courier: id },
+		{ $set: { checkKeys: secret, checkPublic: shown, checkToken: '' }, $setOnInsert: { courier: id, ...(!was && { connectedBy: by, webhookSecret: sealed(newSecret()) }) } },
+		{ upsert: true }
+	);
+	const doc = await loadChecks(id);
+	const login = panelLoginOf(adapter, doc);
+	if (adapter.panel.fields.some(f => !login[f.key])) {
+		const message = `Type the ${adapter.panel.fields.map(f => f.label.replace(new RegExp(`^${adapter.name} `), '').toLowerCase()).join(' and ')} to turn buyer checks on`;
+		await CourierConnection.updateOne({ _id: doc._id }, { $set: { checks: { status: 'signin', message, at: new Date(), by } } });
+	} else await panelSignIn(adapter, doc, by).catch(() => null);
+	return viewOf(adapter, await load(id), on.has(id), origin);
+};
+
+/** DELETE couriers/:id/checks — forgets the panel login and its token; the API connection stays. */
+export const removePanelChecks = async (project: any, id: string, origin: string) => {
+	await storeOf();
+	const adapter = adapterFor(id);
+	await CourierConnection.updateOne({ courier: id }, { $set: { checkKeys: {}, checkPublic: {}, checkToken: '', checks: null } });
+	const { on } = await offered(project);
+	return viewOf(adapter, await load(id), on.has(id), origin);
+};
+
+/** The couriers whose panel checks a buyer check can ask (any state but off: a stopped one says why). */
+export const panelSources = async () => {
+	const docs: any[] = await CourierConnection.find({ 'checks.status': { $in: ['on', 'signin', 'otp', 'error'] } }).select(CHECK_SECRETS).lean();
+	return docs.flatMap(doc => {
+		const adapter = adapterOf(doc.courier);
+		return adapter?.panel ? [{ adapter, doc }] : [];
+	});
+};
+
+/** One panel check: the kept token, renewed once if refused; a refused password or a code stops it till signed in again. */
+export const askPanel = async (adapter: CourierAdapter, doc: any, phone: string): Promise<Risk> => {
+	const st = doc.checks?.status;
+	if (st === 'signin' || st === 'otp') throw new PanelError(doc.checks?.message || `Sign in to ${adapter.name} again in Store settings → Delivery`, st === 'otp' ? 'otp' : 'refused');
+	let token = opened(doc.checkToken);
+	try {
+		if (!token) token = await panelSignIn(adapter, doc);
+		let r: Risk;
+		try {
+			r = await adapter.panel!.check(token, phone);
+		} catch (e: any) {
+			if (!(e instanceof PanelError && e.kind === 'expired')) throw e;
+			token = await panelSignIn(adapter, doc);
+			r = await adapter.panel!.check(token, phone);
+		}
+		await CourierConnection.updateOne({ _id: doc._id }, { $set: { 'checks.lastOkAt': new Date() } });
+		return r;
+	} catch (e: any) {
+		await CourierConnection.updateOne({ _id: doc._id }, { $set: { 'checks.lastError': { at: new Date(), message: String(e?.message || 'failed').slice(0, 300) } } }).catch(() => null);
+		throw e;
+	}
 };

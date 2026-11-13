@@ -14,7 +14,7 @@ import { cancel, createManual, discardHeld, fulfil, hold, listHeld, orderDetail,
 import { cashMove, closeShift, currentShift, openShift, summary } from '../library/functions/commerce/shifts.js';
 import { listOrders, listReturns, moveReturn, returnDetail } from '../library/functions/commerce/lists.js';
 import { returnItems } from '../library/functions/commerce/returns.js';
-import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection } from '../library/functions/commerce/connections.js';
+import { disconnect, listConnections, optionsFor, renewWebhookSecret, saveConnection, testConnection, removePanelChecks, savePanelChecks } from '../library/functions/commerce/connections.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { cancelDelivery, deliveryDetail, deliveryRisk, listDeliveries, markSettled, moveManual, receiveReturn, refresh, send, sendMany, sendPrefill } from '../library/functions/commerce/deliveries.js';
 import { webhooksOf } from '../library/functions/commerce/courierWebhooks.js';
@@ -73,6 +73,8 @@ import { currentScope, runInScope } from '../library/functions/tenantScope.funct
  *   POST   /couriers/:id/test               tests again   manage-projects
  *   POST   /couriers/:id/webhook-secret     a new webhook secret (the old address stops working)   manage-projects
  *   DELETE /couriers/:id                    forgets the keys; 409 courier_in_use while deliveries are on their way   manage-projects
+ *   PUT    /couriers/:id/checks  { keys }   buyer checks with the store's merchant-panel login (RedX, Pathao; CR-20): kept sealed, signs in once   manage-projects
+ *   DELETE /couriers/:id/checks             forgets the panel login (the API connection stays)   manage-projects
  *   GET    /couriers/:id/options/:what?parent=&fresh=1   stores, cities, zones, areas from the courier (kept a day)   records:edit
  *
  * Deliveries (CR-05) — made only here; the courier's updates move them and their order:
@@ -405,6 +407,24 @@ router.delete(
 	handle(async (req: any) => {
 		const out = await disconnect(req.params.id);
 		if (out.removed) recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `disconnected ${req.params.id}` });
+		return out;
+	})
+);
+router.put(
+	'/couriers/:id/checks',
+	manage,
+	handle(async (req: any) => {
+		const out = await savePanelChecks(req.project, req.params.id, req.body || {}, actorName(req), apiOrigin(req));
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `set ${out.name}’s buyer-check login (${out.checks?.status === 'on' ? 'signed in' : 'not signed in'})` });
+		return out;
+	})
+);
+router.delete(
+	'/couriers/:id/checks',
+	manage,
+	handle(async (req: any) => {
+		const out = await removePanelChecks(req.project, req.params.id, apiOrigin(req));
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `removed ${out.name}’s buyer-check login` });
 		return out;
 	})
 );

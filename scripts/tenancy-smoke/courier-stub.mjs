@@ -8,6 +8,8 @@
 //
 // Keys it takes: Steadfast sf-api / sf-secret (and sf-api-2); Pathao the sandbox account published by Pathao
 // or pa-client / pa-secret / owner@example.com / pa-pass; RedX rx-token.
+// Merchant-panel buyer checks (CR-20) come as /<courier>/panel/<path>: RedX signs in 01711111111 / rx-pass
+// (01722222222 is asked for an SMS code), Pathao owner@example.com / pa-pass. POST /__panel/expire drops their tokens.
 import http from 'http';
 
 const port = Number(process.argv[2] || process.env.COURIER_STUB_PORT || 4599);
@@ -144,6 +146,38 @@ const pathao = async (req, res, path, body) => {
 /** RedX's parcels: tracking id → { merchant_invoice_id, status, sent, cancelRequested }. */
 const rxParcels = new Map();
 let rxNext = 26100001;
+/** The panels' sign-ins (CR-20): tokens handed out, dropped by /__panel/expire. */
+const panelTokens = new Set();
+let panelNext = 1;
+const bearer = req => String(req.headers.authorization || '').replace(/^Bearer /, '');
+const panel = (courier, req, res, path, body) => {
+	if (courier === 'redx' && path === '/v4/auth/login' && req.method === 'POST') {
+		if (body.phone === '8801722222222') return json(res, 200, { isError: false, message: 'An OTP has been sent to your phone', data: { otpRequired: true } });
+		if (body.phone !== '8801711111111' || body.password !== 'rx-pass') return json(res, 401, { isError: true, message: 'Invalid phone or password' });
+		const t = `rxp-${panelNext++}`;
+		panelTokens.add(t);
+		return json(res, 200, { isError: false, data: { accessToken: t } });
+	}
+	if (courier === 'pathao' && path === '/api/v1/login' && req.method === 'POST') {
+		if (body.username !== 'owner@example.com' || body.password !== 'pa-pass') return json(res, 422, { message: 'These credentials do not match our records.' });
+		const t = `pap-${panelNext++}`;
+		panelTokens.add(t);
+		return json(res, 200, { access_token: t, token_type: 'Bearer' });
+	}
+	if (!panelTokens.has(bearer(req))) return json(res, 401, { message: 'Unauthenticated.' });
+	const rx = path.match(/^\/api\/redx_se\/admin\/parcel\/customer-success-return-rate\?phoneNumber=(\d+)$/);
+	if (courier === 'redx' && rx) {
+		const known = { '8801711000000': { totalParcels: 10, deliveredParcels: 9, returnPercentage: 10, customerSegment: 'Regular' }, '8801800000000': { totalParcels: 6, deliveredParcels: 1, returnPercentage: 83, customerSegment: 'High Return' } };
+		if (rx[1] === '8801900000000') return json(res, 503, { message: 'Service Unavailable' });
+		return json(res, 200, { isError: false, code: 200, data: known[rx[1]] || { totalParcels: 0, deliveredParcels: 0, returnPercentage: 0, customerSegment: null } });
+	}
+	if (courier === 'pathao' && path === '/api/v1/user/success' && req.method === 'POST') {
+		const known = { '01711000000': { show_count: true, customer_rating: 'good_customer', customer: { successful_delivery: 5, total_delivery: 5 } }, '01800000000': { show_count: false, customer_rating: 'fraud_customer', customer: {} } };
+		return json(res, 200, { type: 'success', code: 200, data: known[body.phone] || { show_count: true, customer_rating: 'new_customer', customer: { successful_delivery: 0, total_delivery: 0 } } });
+	}
+	json(res, 404, { message: 'Not found' });
+};
+
 const redx = (req, res, path, body) => {
 	if (req.headers['api-access-token'] !== 'Bearer rx-token') return json(res, 401, { message: 'Unauthorized' });
 	if (path === '/parcel' && req.method === 'POST') {
@@ -190,6 +224,10 @@ http
 		req.on('data', c => (raw += c));
 		req.on('end', () => {
 			if (req.url === '/__calls') return json(res, 200, calls);
+			if (req.url === '/__panel/expire') {
+				panelTokens.clear();
+				return json(res, 200, { ok: true });
+			}
 			if (req.url === '/__reset') {
 				calls = [];
 				return json(res, 200, { ok: true });
@@ -218,7 +256,7 @@ http
 				const p = [...paParcels.values()].find(x => x.merchant_order_id === decodeURIComponent(bi[1]));
 				return p ? json(res, 200, p) : json(res, 404, {});
 			}
-			const m = req.url.match(/^\/(steadfast|pathao|redx)\/(test|live)(\/.*)$/);
+			const m = req.url.match(/^\/(steadfast|pathao|redx)\/(test|live|panel)(\/.*)$/);
 			if (!m) return json(res, 404, { message: 'Not a courier' });
 			const [, courier, mode, path] = m;
 			calls.push({ courier, mode, method: req.method, path });
@@ -226,6 +264,7 @@ http
 			try {
 				body = raw ? JSON.parse(raw) : {};
 			} catch {}
+			if (mode === 'panel') return panel(courier, req, res, path, body);
 			if (courier === 'steadfast') return steadfast(req, res, path, body);
 			if (courier === 'pathao') return pathao(req, res, path, body);
 			return redx(req, res, path, body);
