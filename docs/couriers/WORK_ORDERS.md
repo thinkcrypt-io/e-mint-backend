@@ -39,6 +39,15 @@ build order.
 | CR-15 | Manual courier (any country) | backend + mint-tenant | S | done 2026-10-31 |
 | CR-18 | Delivery risk on website orders: Steadfast `fraud_check/score/:phone` with the store's own key | backend + mint-tenant | S | done 2026-10-31 |
 | CR-13 | Returned parcels (Receive → EC-08 return engine) + COD payouts from each account (settled, Cash with couriers) | backend + mint-tenant | M | done 2026-10-31 |
+| **Buyer check (BUYER_CHECK.md, planned 2026-11-13)** | | | | |
+| CR-19 | Checker core: `PhoneCheck` model (a day per phone per store), sources (Steadfast + the store's own history), combined rate and level, store thresholds, quota guard, lookup log; `deliveryRisk` moves onto it | backend | M | planned |
+| CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | planned — verify each on the user's signed-in panel first |
+| CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
+| CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | planned |
+| CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | planned |
+| CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | planned |
+| CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
+| CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | planned |
 | **Later** | | | | |
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 

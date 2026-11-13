@@ -1,5 +1,16 @@
 # Couriers — changelog
 
+
+## 2026-11-13 — Buyer check planned (BUYER_CHECK.md, CR-19…CR-26)
+
+- When an order comes in, Mint will check the buyer's phone with the couriers and with the store's own history,
+  and show a success rate and a badge on the order. Staff can look up any number on Store → Deliveries → Check a
+  buyer.
+- Steadfast through its official check. RedX, Pathao, Paperfly and CarryBee through each store's own merchant login
+  on the courier's website, as the community fraud checkers do. The user: "Yes, use logins". Each source fails on
+  its own and never holds up an order.
+- Still open: the Mint network across stores (CR-24).
+
 ## 2026-10-30 — CR-01 Plan & docs
 
 - The user asked for Steadfast, Pathao, RedX and other couriers, configured in
