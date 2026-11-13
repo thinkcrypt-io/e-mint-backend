@@ -67,7 +67,7 @@ const orderView = (view: OrderView): Record<string, any> => {
 	}
 };
 
-export type OrderListQuery = { view?: string; status?: string; q?: string; scope?: string; area?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
+export type OrderListQuery = { view?: string; status?: string; q?: string; scope?: string; area?: string; buyer?: string; channel?: string; outlet?: string; paymentStatus?: string; fulfilment?: string; page?: any; limit?: any };
 
 /**
  * The Orders table: newest first, a page at a time, with how many orders each
@@ -88,6 +88,9 @@ export const listOrders = async (store: Store, q: OrderListQuery) => {
 	const channels = own ? (picked.length ? picked.filter(c => own.includes(c)) : own) : picked;
 	if (own || picked.length) base.channel = { $in: channels };
 	if (q.area) base['delivery.area'] = String(q.area).slice(0, 120);
+	// The buyer check's level (docs/couriers BUYER_CHECK.md, CR-22): safe, check, risky, new — or several.
+	const levels = many(q.buyer).filter(x => ['safe', 'check', 'risky', 'new'].includes(x));
+	if (levels.length) base['buyerCheck.level'] = { $in: levels };
 	const outletIds = many(q.outlet).filter(isId);
 	if (outletIds.length) base.outlet = { $in: outletIds };
 	const words = String(q.q || '').trim().slice(0, 100);

@@ -44,7 +44,7 @@ build order.
 | CR-20 | Panel sign-in checks (BUYER_CHECK §3a): Buyer checks sign-in on each courier card, sealed token reuse, per-source health + daily cap; **RedX** (`customer-success-return-rate`) and **Pathao** (`user/success`) | backend + mint-tenant | M | backend done 2026-11-13 against the stub (not deployed); not yet tried on a real RedX / Pathao account; card UI in mint-tenant pending |
 | CR-26 | Panel sign-in checks for **Paperfly** (smart-check) and **CarryBee** (NextAuth session), check-only couriers with no booking adapter | backend + mint-tenant | M | planned |
 | CR-21 | Check when the order comes in: website + panel phone/manual orders queue a check after save, `buyerCheck` on the Order model (engine-owned), `upgradeStore` adds it to built stores | backend | M | done 2026-11-13 (not deployed) |
-| CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | planned |
+| CR-22 | Panel: Buyer column + filter on Orders / Website orders, Buyer check card on the order page, Send to courier uses it | mint-tenant | M | done 2026-11-13 (backend filter not deployed) |
 | CR-23 | Look up a number: `/store/buyer-check` page (card + that number's orders + recent lookups), `GET buyer-check?phone=`, MCP `check_buyer` | backend + mint-tenant | M | planned |
 | CR-24 | Mint network history across stores (numbers only, "Share and see" setting) — only if the user says yes | backend + mint-tenant | M | waiting on the user |
 | CR-25 | Docs (mint-docs store guide #anchors), website, rollout (`upgradeStores.js --apply` after the backend deploy) | all | S | planned |
@@ -52,6 +52,19 @@ build order.
 | CR-16 | More BD couriers: Paperfly, eCourier, CarryBee (one adapter each) | backend | M each | later |
 
 ## Handoff
+
+- **2026-11-13 — CR-22 buyer check in the panel (mint-tenant pushed; backend `buyer` filter not deployed).**
+  Backend: `lists.ts` order lists take `?buyer=safe,check,risky,new` → `buyerCheck.level $in`. mint-tenant
+  (`commerce/couriers/`): `BuyerCheck.tsx` (BuyerBadge, BuyerAnswer, BuyerCheckCard on the order page — saved summary,
+  then Details / Check again via `GET commerce/buyer-check`), `PanelChecks.tsx` (Buyer checks login section on each
+  courier form that has `checks`: RedX / Pathao; passwords never prefilled, only typed fields sent; Remove login via
+  PromptDialog), `BuyerCheckSettings.tsx` (Delivery settings: auto switch + Safe / Check first levels, saved into
+  `answers.delivery.buyerCheck`). OrdersPage: Buyer column before Payment when delivering + `?buyer=` Dropdown filter.
+  SendToCourier: the same BuyerAnswer; Check again after the first. GuideLink anchors `store-buyer-check`,
+  `store-buyer-check-settings`, `store-courier-buyer-checks` (mint-docs sections still to write — CR-25). Checked in
+  headless Chrome against the stub (Safe 90 / Risky 30 / New, filter, RedX login → "RedX (your login)" row). Note:
+  Send to courier's "This store" excludes the order itself, the order card's lookup counts it. **Next:** CR-23
+  (lookup page `/store/buyer-check` + MCP `check_buyer`).
 
 - **2026-11-13 — CR-21 check when the order comes in (backend, not deployed).** `buyerCheck.ts` `checkOnOrder(store,
   project, order)` runs `checkPhone({ via: 'order', by: 'Automatic', auto: true })` in the background (never awaited);

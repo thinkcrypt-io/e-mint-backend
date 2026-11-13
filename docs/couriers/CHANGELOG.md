@@ -2,6 +2,15 @@
 
 
 
+## 2026-11-13 — CR-22 Buyer check in the panel
+
+- Orders and Website orders have a **Buyer** column (Safe · 90%, Risky · 30%, New buyer) and a Buyer filter.
+- The order page has a **Buyer check** card: what was found when the order came in, then Details or Check again for
+  each courier's numbers and the store's own orders, with what to do next.
+- Send to courier shows the same answer.
+- Store settings → Delivery: a **Buyer check** card to turn automatic checks off and set the Safe and Check first
+  levels, and a **Buyer checks** section on the RedX and Pathao cards for the store's own merchant login.
+
 ## 2026-11-13 — CR-21 Buyer check when an order comes in (backend)
 
 - Website orders, and phone or by-hand orders with a delivery, are checked in the background as soon as they're
