@@ -315,7 +315,13 @@ export const createWebsite = async (store: Store, input: WebsiteInput, ctx: Ctx)
 /** What a buyer may see of their own website order (found by its id and the phone on it). */
 export const trackWebsite = async (store: Store, id: any, phone: any) => {
 	const tail = (v: any) => String(v ?? '').replace(/\D/g, '').slice(-10);
-	const o: any = isId(id) ? await store.M('order').findOne({ _id: id, channel: 'website' }).lean() : null;
+	// By its id, or by its number (WEB-00012) — a number is sequential, so it only counts together with the phone on the order.
+	const num = String(id ?? '').trim().toUpperCase();
+	const o: any = isId(id)
+		? await store.M('order').findOne({ _id: id, channel: 'website' }).lean()
+		: /^[A-Z]{2,10}-?\d{1,10}$/.test(num) && String(phone ?? '').trim() !== ''
+		? await store.M('order').findOne({ code: num, channel: 'website' }).lean()
+		: null;
 	// With a phone it must be the one on the order (the same answer for a wrong id and a wrong phone); without, the id is the key — as the order page's link always was.
 	if (!o || (phone !== undefined && phone !== '' && (tail(phone).length < 7 || tail(o.delivery?.phone) !== tail(phone)))) throw new TenancyError(404, 'We couldn’t find an order with those details.');
 	return publicOrder(o);
