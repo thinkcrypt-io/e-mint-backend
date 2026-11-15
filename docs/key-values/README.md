@@ -1,6 +1,6 @@
 # Key values (key-value pairs)
 
-Built 2026-11-16. Not deployed (backend deploy to Heroku is manual).
+Built 2026-11-16. Deployed 2026-11-16.
 
 A generic way to give records typed sections of "key: value" rows — a product's specifications is the
 first use. Nothing here is e-commerce specific.
@@ -61,9 +61,9 @@ Think Tech (mint-2-think-tech) was set up by hand, not through a store upgrade (
   made from the "## Section" / "Key: Value" rows of its 440 products' descriptions (a section shared with the same
   keys by several categories is one record, e.g. Basic = Brand, Model; Other details = Warranty).
 - **Category** got `specifications` (references → Specification); all 52 leaf categories list theirs, in order.
-- Still to do **after the backend deploy**: add Product `specs` (kind keyvalue, from `category`, via
-  `specifications`, after Description in the form), then `node scripts/fillThinkTechSpecs.js --apply` fills every
-  product's `specs` from its description (dry run without `--apply`; checked: 440 products, all matched).
+- Done after the deploy (2026-11-16): Product `specs` (Specifications, kind keyvalue, from `category`, via
+  `specifications`) added, and `node scripts/fillThinkTechSpecs.js --apply` filled all 440 products from their
+  descriptions (re-run with `--force` to refill).
 - thinktech-site reads `specs` when a product has it (rewritten into the description's spec rows in `toProduct`),
   else the description as before — so nothing changes on the site until the fill runs.
 - The old "Specifications" tab on Category's page points at `specifications.category`, which no longer exists — remove it in the route builder.
