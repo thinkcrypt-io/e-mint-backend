@@ -8,6 +8,11 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-16)
 
+**2026-11-16 — Think Tech specs (docs/key-values → Think Tech).** On prod, Think Tech's Specifications model now has 93
+groups made from its products' descriptions and every category lists its own (`Category.specifications`). **After the
+backend deploy:** add Product `specs` (keyvalue, from category, via specifications), then run
+`node scripts/fillThinkTechSpecs.js --apply`. thinktech-site (b20c277) already reads `specs` when present.
+
 **2026-11-16 — WO-59 Key values (docs/key-values), not deployed.** Every **new** project gets a generic **Key values**
 model (`key-values`: name, description, keys) via `projectHooks.onCreated` (`keyValueKit.function.ts`); existing
 projects/stores untouched, no upgrade (user's call). New field kind `keyvalue` ("Key-value pairs"): groups always shown

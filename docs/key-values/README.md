@@ -53,6 +53,21 @@ and `convertToFormFields` passes it through to the form.
 - **D5 — not captured by Template Studio.** `groups`/`rules` hold project-specific ids; `via` is captured.
 - **D6 — kept out of automations' field pickers and the public API filters** (it's a list of sections, not a value).
 
+## Think Tech (2026-11-16)
+
+Think Tech (mint-2-think-tech) was set up by hand, not through a store upgrade (D3 still holds for every other store):
+
+- Its existing **Specifications** model (`specifications`: name, description, keys) holds the groups — 93 records
+  made from the "## Section" / "Key: Value" rows of its 440 products' descriptions (a section shared with the same
+  keys by several categories is one record, e.g. Basic = Brand, Model; Other details = Warranty).
+- **Category** got `specifications` (references → Specification); all 52 leaf categories list theirs, in order.
+- Still to do **after the backend deploy**: add Product `specs` (kind keyvalue, from `category`, via
+  `specifications`, after Description in the form), then `node scripts/fillThinkTechSpecs.js --apply` fills every
+  product's `specs` from its description (dry run without `--apply`; checked: 440 products, all matched).
+- thinktech-site reads `specs` when a product has it (rewritten into the description's spec rows in `toProduct`),
+  else the description as before — so nothing changes on the site until the fill runs.
+- The old "Specifications" tab on Category's page points at `specifications.category`, which no longer exists — remove it in the route builder.
+
 ## Not done / later
 
 - Table cell is a placeholder (no column rendering yet).
