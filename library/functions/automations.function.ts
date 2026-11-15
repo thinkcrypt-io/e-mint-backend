@@ -78,7 +78,7 @@ const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELD_RX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /** Fields an action may never write: system ones and calculated ones. */
 const SYSTEM_FIELDS = new Set(['_id', 'id', 'createdAt', 'updatedAt', 'code', 'addedBy', 'access', 'privacy', 'organization', 'project', '_model', '__v']);
-const UNWRITABLE_KINDS = new Set(['formula', 'dateformula', 'section', 'sectionlist', 'component', 'blocks', 'password', 'seo']);
+const UNWRITABLE_KINDS = new Set(['formula', 'dateformula', 'section', 'sectionlist', 'component', 'blocks', 'password', 'seo', 'keyvalue']);
 
 const actionLabel: Record<string, string> = {
 	notify: 'Notify people',
@@ -308,7 +308,7 @@ const linksOf = async (def: Def): Promise<Links> => {
 };
 
 /** Kinds a placeholder never shows: layout, and secrets. */
-const HIDDEN_KINDS = new Set(['section', 'sectionlist', 'password', 'seo']);
+const HIDDEN_KINDS = new Set(['section', 'sectionlist', 'password', 'seo', 'keyvalue']);
 
 /** Unknown `{{names}}` in a text: refused at save, so a typo shows at once. */
 const checkText = (def: Def, text: string, on: string, label: string, links: Links = new Map()) => {

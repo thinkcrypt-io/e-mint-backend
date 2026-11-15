@@ -66,6 +66,8 @@ export const KIND_GUIDE: Record<string, string> = {
 		'a shared group of fields made once under Build → Components (list_components) — set `component` to its uid (e.g. "shared.button"); `repeatable` for a list of them (with min/max). Use it when several models need the same group (a button, an SEO block, a card)',
 	blocks:
 		'content blocks: a list of components in any order — a page’s hero, text, gallery, FAQ… Set `components` to the uids it takes (list_components); the people filling it in pick which, in what order. For page-like content',
+	keyvalue:
+		'key-value pairs in sections whose KEYS come from groups — records of the project’s Key values model (KeyValue, /key-values: name, description, keys). A product’s specifications: Category has a `references` field `specifications` → KeyValue; Product gets a keyvalue field with from = "category" and via = "specifications". The form shows one section per group (its name and description) with its keys, and people type the values. Groups can also be shown always or per value of a choice — set in the model builder',
 	sectionlist:
 		'rows of the same fields, as many as needed — an invoice’s line items; give the row `fields` (e.g. item, quantity, rate, total = quantity * rate as a formula) and `addLabel`',
 };
@@ -119,7 +121,8 @@ export const fieldProps = {
 	showInTable: { type: 'boolean', description: 'Shown as a table column by default' },
 	searchable: { type: 'boolean', description: 'Matched by the table search box' },
 	helper: { type: 'string', description: 'Short help text under the input' },
-	from: { type: 'string', description: 'For kind "uid": the key of the text field its slug is made from, e.g. "title"' },
+	from: { type: 'string', description: 'For kind "uid": the key of the text field its slug is made from, e.g. "title". For kind "keyvalue": the key of the reference field of this model that decides its keys, e.g. "category"' },
+	via: { type: 'string', description: 'For kind "keyvalue": the references field of the model picked in `from` that lists the key groups, e.g. "specifications" on Category; left out when the picked records are the groups themselves' },
 	component: { type: 'string', description: 'For kind "component": the component’s uid from list_components, e.g. "shared.button"' },
 	repeatable: { type: 'boolean', description: 'For kind "component": a list of them (min/max count) instead of one' },
 	components: { type: 'array', items: { type: 'string' }, description: 'For kind "blocks": the component uids its items can be' },
@@ -306,6 +309,10 @@ export const normalize = (input: any, targets: Set<string>) => {
 			}
 		}
 		if (kind === 'uid' && f?.from) out.from = String(f.from).slice(0, 40);
+		if (kind === 'keyvalue') {
+			if (f?.from) out.from = String(f.from).slice(0, 40);
+			if (f?.via) out.via = String(f.via).slice(0, 40);
+		}
 		if (kind === 'blocks') out.components = (Array.isArray(f?.components) ? f.components : []).map((c: any) => String(c).toLowerCase().slice(0, 81)).slice(0, 50);
 		if (kind === 'component') {
 			out.component = String(f?.component || '').toLowerCase().slice(0, 81);

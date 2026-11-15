@@ -21,6 +21,7 @@ import { accessNotifications } from './notifications.function.js';
 import { format as formatFormula, parse as parseFormula } from './formula.function.js';
 import { MODEL_KEY, projectCollection } from './projectIndexes.function.js';
 import { flatFromVseo, pageToVseo } from '../siteBuilder/seo.js';
+import { tidyKeyValue } from './keyValue.function.js';
 
 /**
  * Models built in the model builder (ModelDefinition documents), made real:
@@ -86,6 +87,10 @@ export const FIELD_KINDS = [
 	// A page's search and social details as one object, edited with the panel's SEO editor (the AGS VSeo):
 	// meta title and description, Open Graph / Twitter, robots, structured data, sitemap (site-builder SB-32).
 	'seo',
+	// Key-value pairs (docs/key-values): sections whose keys come from groups — records of the project's Key values
+	// model (name, description, keys). `groups` = always shown; `from` + `rules` = by another field's value (a choice,
+	// a picked record); `from` link + `via` = the picked record's own list; `from` link alone = the picked records.
+	'keyvalue',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -138,7 +143,7 @@ export const ENUM_KINDS: FieldKind[] = ['text', 'number', 'select', 'multiselect
 /** Kinds stored as a list. */
 export const ARRAY_KINDS: FieldKind[] = ['multiselect', 'tags', 'images', 'files', 'references'];
 /** Kinds with no default value. */
-export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password', 'seo'];
+export const NO_DEFAULT_KINDS: FieldKind[] = ['reference', 'references', 'formula', 'dateformula', 'section', 'sectionlist', 'password', 'seo', 'keyvalue'];
 /** Kinds worked out by a formula, never typed: a number and a date. */
 export const FORMULA_KINDS: FieldKind[] = ['formula', 'dateformula'];
 /** Kinds that can autofill from a picked record (docs/autofill D11): any field holding a plain value, or a link. */
@@ -313,8 +318,13 @@ export type ModelFieldDef = {
 	fields?: ModelFieldDef[];
 	/** A section list's add button, e.g. "Add item". */
 	addLabel?: string;
-	/** A uid kind's source field: its slug is made from that field's value until it's typed by hand. */
+	/** A uid kind's source field: its slug is made from that field's value until it's typed by hand. A keyvalue kind's link that decides its keys. */
 	from?: string;
+	/** A keyvalue kind: the field of the record picked in `from` that lists its groups (a category's specifications). */
+	via?: string;
+	/** keyvalue: Key values records always shown, and by the value of `from`. */
+	groups?: string[];
+	rules?: { value: string; groups: string[] }[];
 	/** A component kind's component (`category.name`), and whether it's a list of them (docs/cms D3). */
 	component?: string;
 	repeatable?: boolean;
@@ -671,6 +681,10 @@ const pathsOf = (fields: ModelFieldDef[]) => {
 			case 'seo':
 				p = { type: Schema.Types.Mixed, default: undefined };
 				break;
+			case 'keyvalue':
+				// [{ group, title, description, items: [{ key, value }] }] — tidied on save (keyValueHooks).
+				p = { type: Schema.Types.Mixed, default: undefined };
+				break;
 		}
 
 		// A single value limited to a list: blank means "not set", not a value outside it.
@@ -864,6 +878,15 @@ const kitSeoHooks = (schema: Schema, def: ModelDef) => {
 	});
 };
 
+/** Key-value fields (docs/key-values): whatever is sent is kept as tidy sections of text pairs. */
+const keyValueHooks = (schema: Schema, def: ModelDef) => {
+	const keys = def.fields.filter(f => f.kind === 'keyvalue').map(f => f.key);
+	if (!keys.length) return;
+	schema.pre('validate', function (this: any) {
+		for (const k of keys) if (this.isNew || this.isModified(k)) this.set(k, tidyKeyValue(this.get(k)));
+	});
+};
+
 export const buildSchema = (input: ModelDef) => {
 	const def = expandComponents(input);
 	const paths = pathsOf(def.fields);
@@ -905,6 +928,7 @@ export const buildSchema = (input: ModelDef) => {
 	blockTypes(schema, def);
 	if (def.kind === 'single') singleHooks(schema, def);
 	kitSeoHooks(schema, def);
+	keyValueHooks(schema, def);
 
 	if (restricted) {
 		schema.index({ addedBy: 1 });
@@ -1227,6 +1251,15 @@ export const generateSettings = (input: ModelDef, target: (ref?: string) => Targ
 				s.schema.type = 'password';
 				s.schema.tableType = 'password';
 				s.schema.viewType = 'password';
+				break;
+			case 'keyvalue':
+				// Sections of key-value pairs; the keys come from the groups the record's `from` link reaches.
+				Object.assign(s, { type: 'array-object', search: false });
+				s.schema.type = 'keyvalue';
+				s.schema.viewType = 'keyvalue';
+				s.schema.default = false;
+				s.schema.displayInTable = false;
+				s.schema.kv = { route: def.route, from: f.from || '', ...(f.via && { via: f.via }), ...(f.groups?.length && { fixed: true }) };
 				break;
 			case 'seo':
 				// The SEO editor: Google preview, then Basics / Social / Indexing / Structured data / Sitemap.

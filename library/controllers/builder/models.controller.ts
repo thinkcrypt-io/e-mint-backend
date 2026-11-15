@@ -137,6 +137,13 @@ const subFieldBase = {
 	// A date formula's timing: worked out once (while empty), not on every save.
 	calc: Joi.string().valid('once', ''),
 	from: Joi.string().allow('').max(40),
+	// A key-value field: the field of the record picked in `from` that lists its groups (docs/key-values).
+	via: Joi.string().allow('').max(40),
+	// …the Key values records it always shows, and those it shows when `from` holds a value (a choice, a picked record).
+	groups: Joi.array().items(Joi.string().hex().length(24)).max(50),
+	rules: Joi.array()
+		.items(Joi.object({ value: Joi.string().allow('').max(200).required(), groups: Joi.array().items(Joi.string().hex().length(24)).max(50).required() }))
+		.max(200),
 	component: Joi.string().allow('').max(81),
 	repeatable: Joi.boolean(),
 	components: Joi.array().items(Joi.string().max(81)).max(50),
@@ -230,6 +237,8 @@ const bodySchema = Joi.object({
 	sidebar: Joi.object({ category: Joi.string().allow('', null) }),
 }).options({ stripUnknown: true });
 
+/** The kinds whose value can decide a key-value field's groups. */
+const KV_SOURCES = ['reference', 'references', 'select', 'multiselect', 'boolean', 'text'];
 /** The kinds a uid can be made from. */
 const UID_SOURCES = ['text', 'email', 'url', 'select', 'textarea'];
 
@@ -343,7 +352,36 @@ const check = async (req: any, body: any, selfName: string, extraTargets: string
 				const src = scope.find((x: any) => x.key === f.from);
 				if (!src || !UID_SOURCES.includes(src.kind)) problems.push(`${name}: it's made from “${f.from}”, which isn't a text, email, link or options field of this model`);
 			} else delete f.from;
-		} else delete f.from;
+		} else if (f.kind === 'keyvalue') {
+			// Key-value pairs (docs/key-values): keys from the groups a link of this model reaches.
+			for (const k of ['unique', 'index', 'default', 'options', 'searchable']) delete f[k];
+			// Its groups: always shown (`groups`), by the value of another field (`from` + `rules`), or the picked
+			// record's own list (`from` link + `via`), or the picked records themselves (`from` link alone).
+			const ids = (v: any) => [...new Set((Array.isArray(v) ? v : []).map(String).filter((x: string) => /^[a-f0-9]{24}$/i.test(x)))];
+			f.groups = ids(f.groups);
+			if (!f.groups.length) delete f.groups;
+			f.rules = (Array.isArray(f.rules) ? f.rules : []).map((r: any) => ({ value: String(r?.value ?? '').trim(), groups: ids(r?.groups) })).filter((r: any) => r.value && r.groups.length);
+			if (!f.rules.length) delete f.rules;
+			const link = f.from && scope.find((x: any) => x.key === f.from);
+			if (!f.from) {
+				delete f.via;
+				if (f.rules) problems.push(`${name}: pick the field whose value decides which groups show`);
+				else if (!f.groups) problems.push(`${name}: pick the groups it always shows, or the field that decides them`);
+			} else if (!link || !KV_SOURCES.includes(link.kind)) problems.push(`${name}: its groups depend on “${f.from}”, which isn't a link, choice, yes/no or text field of this model`);
+			else if (f.rules) delete f.via;
+			else if (!REFERENCE_KINDS.includes(link.kind)) problems.push(`${name}: say which groups show for each value of ${link.label || link.key}`);
+			else if (f.via) {
+				const kinds = (targetList.find(t => t.name === link.ref)?.kinds ??
+					(extraDefs.find(d => d.name === link.ref) && Object.fromEntries(extraDefs.find(d => d.name === link.ref)!.fields.map((x: any) => [x.key, { kind: x.kind, ref: x.ref }])))) as Record<string, { kind: string; ref?: string }> | undefined;
+				const via = kinds?.[f.via];
+				if (kinds && (!via || !REFERENCE_KINDS.includes(via.kind as any)))
+					problems.push(`${name}: ${link.label || link.key} has no link field “${f.via}” listing the groups`);
+			} else delete f.via;
+		} else {
+			delete f.from;
+			delete f.via;
+		}
+		if (f.kind !== 'keyvalue') (delete f.via, delete f.groups, delete f.rules);
 	};
 
 	// The components this scope has (docs/cms D3) — a component field must name one.

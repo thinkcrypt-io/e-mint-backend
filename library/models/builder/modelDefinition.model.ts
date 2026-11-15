@@ -44,6 +44,11 @@ const fieldSchema = new Schema<any>(
 		addLabel: { type: String, trim: true },
 		/** For the uid kind: the field its slug is made from (docs/cms D2). */
 		from: { type: String, trim: true },
+		/** For the keyvalue kind: the field of the record picked in `from` that lists its groups (docs/key-values). */
+		via: { type: String, trim: true },
+		/** For the keyvalue kind: groups (Key values records) always shown, and groups shown when `from` holds a value. */
+		groups: { type: [String], default: undefined },
+		rules: { type: [{ _id: false, value: { type: String, trim: true }, groups: { type: [String], default: undefined } }], default: undefined },
 		/** For the component kind: its component's uid, and whether it's a list of them (docs/cms D3). */
 		component: { type: String, trim: true, lowercase: true },
 		repeatable: { type: Boolean },

@@ -6,7 +6,14 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-11-02)
+## Handoff — read this first (kept current; last updated 2026-11-16)
+
+**2026-11-16 — WO-59 Key values (docs/key-values), not deployed.** Every **new** project gets a generic **Key values**
+model (`key-values`: name, description, keys) via `projectHooks.onCreated` (`keyValueKit.function.ts`); existing
+projects/stores untouched, no upgrade (user's call). New field kind `keyvalue` ("Key-value pairs"): groups always shown
+and/or by another field (`from` link + `via`, or rules per choice/yes-no/text value); `GET /<route>/get/keyvalue/:field`
+answers the groups; value `[{group,title,description,items:[{key,value}]}]`. mint-tenant `VKeyValue` input,
+`KeyValueSections` view, model-builder pickers. Smoke `scripts/tenancy-smoke/key-values.mjs` (22/22). Backend deploy manual.
 
 **2026-11-02 — Autofill reworked into a field setting (docs/autofill AF-09…15), not deployed.** No autofill types any
 more: `schema.fillFrom { from, formula, readonly?, when?, match? }` on any plain field (conditions on this record, or
@@ -395,6 +402,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 55 | **CMS** — single types, slug fields, components, content blocks, drafts and publishing with its own Publish right, then typed website contents (CMS-06…). Plan + WOs + log in `docs/cms`. `scripts/migratePublishRight.js --apply` **ran on production 2026-10-15** (37 roles got Publish). `scripts/migrateSiteContents.js --apply` **ran on production 2026-10-16** after the deploy (10 websites: Contents typed + drafts on all; 66 typed records for Web Demo 58 and Demo Business Website 8; 4 sites that never opened the builder have no design to mark — guarded since) | all | L | CMS-02…07 + 03b done 2026-10-15 (deployed 2026-10-16); CMS-09 content API (status=draft, populate, publish webhooks, site refresh) and CMS-13 media details (alt/caption/focal, image fields with details; mint-sites uses them — redeploy it too) done 2026-10-16, not deployed; CMS-14 MCP content tools (drafts first; publish_entry with the key's publish scope, now settable on Connect AI) done 2026-10-16, not deployed; CMS-11 scheduling (publish at / take off at, a minute tick, Schedule on the record page, Coming up on All content; also fixed: Publish now writes History) done 2026-10-16, not deployed; CMS-16 Contents follow-ups (Text plain but in Rich text, Hero carousel, more blocks in one record, slugs shown/chosen/copied, `/web-contents/by-slug/:slug`, removed records off the public API) done 2026-10-21, not deployed; CMS-16b (no editor but Rich text, projects' own types too; Hero carousel slides = heading, subheading, two buttons, background picture; search + suggested types when adding a piece or a block) done 2026-10-21, not deployed; left CMS-08 preview, 10, 12, 15 — ask the user |
 | 57 | **Date formulas** — a Date formula field (due dates, expiries, renewals; every save or once), date functions in every formula, Linked Relationships reading through links (Copy from Plan › Price, Work out with dates). Plan + WOs + log in `docs/date-formulas` | all | M | DF-01…05 done 2026-10-19, not deployed |
 | 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00, RT-13 (Download DOCX), RT-14 (full-page editor, Word/PDF/Markdown/text downloads) RT-15 (document editor, page sizes, tables) and RT-16 (Print, Show more on record pages) done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
+| 59 | **Key values** — a generic Key values model in every new project (name, description, keys) and a Key-value pairs field kind whose sections come from it: always, by a linked record (a category's specifications) or by a choice's value. Plan + decisions in `docs/key-values` | backend + mint-tenant | M | done (2026-11-16; not deployed; new projects only) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
 15 → 10 → 11 → 18 → 19 → 16 → 17 → 20 → 21 → 22 → 23 → 24 → 25 … 32 → 33. (12–15 need 05–09; 18–19 need 08 and 11.)

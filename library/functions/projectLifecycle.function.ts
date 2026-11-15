@@ -32,6 +32,8 @@ import { projectHooks } from './projectHooks.function.js';
 import { newProjectKey } from './projectKey.function.js';
 // Registers the website kit on projectHooks (a website project is seeded with it — WO-18).
 import './websiteKit.function.js';
+// Every new project gets the Key values model (docs/key-values).
+import './keyValueKit.function.js';
 // …and the site builder's starter design and home page (docs/site-builder SB-03).
 import '../siteBuilder/site.js';
 import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';

@@ -76,6 +76,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 							...(fieldConfig?.modelAddOn && { modelAddOn: fieldConfig.modelAddOn }),
 							...(fieldConfig?.limit && { limit: fieldConfig.limit }),
 							...(fieldConfig.menuKey && { menuKey: fieldConfig.menuKey }),
+							// A key-value field's groups: what decides them (docs/key-values).
+							...(fieldConfig.kv && { kv: fieldConfig.kv }),
 							...(fieldConfig.labelKey && { labelKey: fieldConfig.labelKey }),
 							...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 							...(fieldConfig.folder && { folder: fieldConfig.folder }),
@@ -132,6 +134,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 						...(fieldConfig.section && { section: fieldConfig.section }),
 						...(fieldConfig?.modelAddOn && { modelAddOn: fieldConfig.modelAddOn }),
 						...(fieldConfig.menuKey && { menuKey: fieldConfig.menuKey }),
+							// A key-value field's groups: what decides them (docs/key-values).
+							...(fieldConfig.kv && { kv: fieldConfig.kv }),
 						...(fieldConfig.labelKey && { labelKey: fieldConfig.labelKey }),
 						...(fieldConfig.menuAddOnKey && { menuAddOnKey: fieldConfig.menuAddOnKey }),
 						...(fieldConfig.folder && { folder: fieldConfig.folder }),

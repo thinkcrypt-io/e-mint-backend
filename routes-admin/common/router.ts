@@ -1,4 +1,5 @@
 // Import necessary modules from their respective files
+import { getKeyValueGroups } from '../../library/functions/keyValue.function.js';
 import express from 'express';
 // import { Product as Model, productSettings as settings } from '../../models/index.js';
 import {
@@ -373,6 +374,9 @@ const defineRoutes = ({
 		...middlewares.getById,
 		R((c, r) => getViewDocument({ resolved: r, Model }))
 	);
+
+	// A key-value field's sections for a pick (a product's specifications from its category) — docs/key-values.
+	if (route) router.get('/get/keyvalue/:field', protect, hasPermission([permissions.read]), getKeyValueGroups(route));
 
 	//Find to edit
 	router.get(
