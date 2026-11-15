@@ -68,6 +68,13 @@ Think Tech (mint-2-think-tech) was set up by hand, not through a store upgrade (
   else the description as before — so nothing changes on the site until the fill runs.
 - The old "Specifications" tab on Category's page points at `specifications.category`, which no longer exists — remove it in the route builder.
 
+## Record page (2026-11-16)
+
+Each key-value field gets its own tab on a record's page (mint-tenant `KeyValueTab.tsx`, after Overview; Overview
+leaves the field out via `omitTypes`). The tab shows the saved sections and **Edit <label>**, a dialog with only that
+field (VKeyValue, sections from the record's `from` field) that PUTs `{ <field>: sections }`. The quick-view drawer
+still shows the field inline.
+
 ## Not done / later
 
 - Table cell is a placeholder (no column rendering yet).
