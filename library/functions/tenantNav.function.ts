@@ -68,6 +68,10 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Check a buyer', href: '/store/buyer-check', icon: 'shield-check' }] : []),
 			]),
 			// Each kind of setting is an item of its own (the wizard's answers, a page each).
+			// A commerce panel's store admin (docs/commerce-panel): connects couriers, changes no other setting.
+			...(!can('manage-projects') && can('manage-couriers') && store?.features?.includes('delivery')
+				? section('Store settings', 'settings-2', [{ title: 'Couriers', href: '/store/settings/delivery/connect', icon: 'truck' }])
+				: []),
 			...(can('manage-projects')
 				? section('Store settings', 'settings-2', [
 						{ title: 'Store settings', href: '/store/settings', icon: 'store' },
@@ -94,9 +98,18 @@ export const tenantContent = (hasContent: boolean): SidebarItemType[] =>
 
 export const tenantNav = (
 	permissions: string[],
-	{ inProject, projectType, guest }: { inProject: boolean; projectType?: 'app' | 'website' | 'api' | 'ecommerce'; guest?: boolean }
+	{ inProject, projectType, guest, panel }: { inProject: boolean; projectType?: 'app' | 'website' | 'api' | 'ecommerce'; guest?: boolean; panel?: boolean }
 ): SidebarItemType[] => {
 	const can = (key: string) => grants(permissions, [key]);
+	// A commerce panel's store admin (docs/commerce-panel): the media library, analytics, history and the
+	// store's email accounts — no building, no API pages, nothing of the organization.
+	if (panel)
+		return [
+			...(inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : []),
+			...(inProject && can('view-analytics') ? section('Site', 'globe', [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }]) : []),
+			...(inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : []),
+			...(inProject && can('manage-email') ? section('Email', 'mail', [{ title: 'Email accounts', href: '/email-accounts', icon: 'mail' }]) : []),
+		];
 	// A website: its analytics; any project: the customers of its public API.
 	// A website's own pages (WO-34): its setup — tags, code, SEO, redirects, domains — and its analytics.
 	const site =
@@ -145,6 +158,8 @@ export const tenantNav = (
 				// The email accounts its emails go out through (docs/messaging M-14).
 				...(can('manage-projects') ? [{ title: 'Email', href: '/email-accounts', icon: 'mail' }] : []),
 				...(can('invite-to-projects') || can('manage-members') ? [{ title: 'Members', href: '/project-people', icon: 'users' }] : []),
+				// A store's own logins for the commerce panel (docs/commerce-panel CP-01).
+				...(projectType === 'ecommerce' && (can('manage-projects') || can('invite-to-projects')) ? [{ title: 'Panel admins', href: '/panel-admins', icon: 'user-cog' }] : []),
 		  ])
 		: [];
 	// Inside a project the organization's own details stay out of the way: they're changed outside it.

@@ -1,5 +1,6 @@
 import express from 'express';
 import authRouter from './auth/auth.router.js';
+import panelAuthRouter from './panelAuth.router.js';
 import orgRouter, { invitationsRouter } from './org/org.router.js';
 import projectsRouter from './projects/projects.router.js';
 import projectRouter from './project.router.js';
@@ -19,6 +20,8 @@ import { uploadRoute, mediaRoute } from '../routes-admin/index.js';
 const router = express.Router();
 
 router.use('/auth', authRouter);
+// A commerce panel's store login (docs/commerce-panel CP-01).
+router.use('/panel/auth', panelAuthRouter);
 router.use('/org', orgRouter);
 router.use('/invitations', invitationsRouter);
 router.use('/projects', projectsRouter);

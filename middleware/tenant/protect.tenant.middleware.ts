@@ -6,6 +6,8 @@ import Organization from '../../library/models/tenancy/organization.model.js';
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
 import { REVOKED_CODE, sessionIdOf, tenantSessions } from '../../library/functions/sessions.function.js';
 import { memberPermissions } from '../../library/functions/tenantPermissions.function.js';
+import { PANEL_TOKEN_KIND } from '../../library/models/tenancy/panelAdmin.model.js';
+import { signInPanel } from '../../library/functions/panelAdmin.function.js';
 
 /**
  * Signs in a tenant user's request (docs/multi-tenancy WO-05). The token must
@@ -43,12 +45,21 @@ const make =
 		try {
 			const token: string = authHeader.split(' ')[1];
 			const decoded = jwt.verify(token, secret()) as any;
-			if (decoded?.kind !== TENANT_TOKEN_KIND) return res.status(401).json({ message: 'Not authorized, token failed' });
+			const panel = decoded?.kind === PANEL_TOKEN_KIND;
+			if (decoded?.kind !== TENANT_TOKEN_KIND && !panel) return res.status(401).json({ message: 'Not authorized, token failed' });
 
 			const sid = sessionIdOf(decoded, token);
 			if (await tenantSessions.isRevoked(sid))
 				return res.status(401).json({ message: 'This session was signed out. Sign in again.', code: REVOKED_CODE });
 			req.sessionId = sid;
+
+			// A commerce panel's store admin (docs/commerce-panel): one project, fixed keys.
+			if (panel) {
+				const refused = await signInPanel(req, decoded);
+				if (refused) return res.status(refused.status).json({ message: refused.message, ...(refused.code && { code: refused.code }) });
+				tenantSessions.touchSession(req, req.user._id, sid);
+				return next();
+			}
 
 			const user: any = await TenantUser.findById(decoded._id).select('-password');
 			if (!user) return res.status(401).json({ message: 'User was not found' });

@@ -101,6 +101,8 @@ import { replaceTax, taxUsage, usageText } from '../library/functions/commerce/t
 import { previewDiscount } from '../library/functions/commerce/discounts.js';
 const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
+// Couriers: the project's managers — and a commerce panel's store admins (docs/commerce-panel CP-02).
+const manageCouriers = tenantPermissions(['manage-projects', 'manage-couriers']);
 
 router.use((req: any, res: any, next: any) =>
 	req.project?.type === 'ecommerce' ? next() : res.status(404).json({ message: 'Only e-commerce projects have a store' })
@@ -379,12 +381,12 @@ router.post(
 );
 router.get(
 	'/couriers',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => listConnections(req.project, apiOrigin(req)))
 );
 router.put(
 	'/couriers/:id',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => {
 		const out = await saveConnection(req.project, req.params.id, req.body || {}, actorName(req), apiOrigin(req));
 		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `connected ${out.name}${out.connection?.tested ? '' : ' (not tested)'}` });
@@ -393,17 +395,17 @@ router.put(
 );
 router.post(
 	'/couriers/:id/test',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => testConnection(req.project, req.params.id, apiOrigin(req)))
 );
 router.post(
 	'/couriers/:id/webhook-secret',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => renewWebhookSecret(req.project, req.params.id, apiOrigin(req)))
 );
 router.delete(
 	'/couriers/:id',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => {
 		const out = await disconnect(req.params.id);
 		if (out.removed) recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `disconnected ${req.params.id}` });
@@ -412,7 +414,7 @@ router.delete(
 );
 router.put(
 	'/couriers/:id/checks',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => {
 		const out = await savePanelChecks(req.project, req.params.id, req.body || {}, actorName(req), apiOrigin(req));
 		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `set ${out.name}’s buyer-check login (${out.checks?.status === 'on' ? 'signed in' : 'not signed in'})` });
@@ -421,7 +423,7 @@ router.put(
 );
 router.delete(
 	'/couriers/:id/checks',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => {
 		const out = await removePanelChecks(req.project, req.params.id, apiOrigin(req));
 		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `removed ${out.name}’s buyer-check login` });
@@ -465,7 +467,7 @@ router.get(
 );
 router.get(
 	'/deliveries/:id/webhooks',
-	manage,
+	manageCouriers,
 	handle(async (req: any) => ({ doc: await webhooksOf(req.params.id) }))
 );
 router.post(

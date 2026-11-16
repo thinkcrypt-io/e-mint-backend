@@ -32,7 +32,8 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  * shows whether it works.
  */
 const router = express.Router({ mergeParams: true });
-router.use(tenantPermissions(['manage-projects']));
+// The project's managers — and a commerce panel's store admins (docs/commerce-panel CP-02).
+router.use(tenantPermissions(['manage-projects', 'manage-email']));
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
 

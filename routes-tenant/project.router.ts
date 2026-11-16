@@ -42,6 +42,7 @@ import commerceRouter from './commerce.router.js';
 import CommerceSettings from '../library/models/tenancy/commerceSettings.model.js';
 import { commerceGuard } from '../library/functions/commerce/locks.js';
 import mailAccountsRouter from './mailAccounts.router.js';
+import panelAdminsRouter from './panelAdmins.router.js';
 import mailDesignsRouter from './mailDesigns.router.js';
 import templatesRouter from './templates.router.js';
 import siteBuilderRouter from './siteBuilder.router.js';
@@ -77,6 +78,7 @@ import { tenantNavSearch } from '../library/controllers/search/navSearch.control
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
  *   /api-builder                  the public API's endpoints and server keys (docs/api-builder)   build
  *   /commerce                     an e-commerce project's store (docs/ecommerce)   any member reads; manage-projects changes
+ *   /panel-admins                 an e-commerce project's commerce panel logins (docs/commerce-panel)   manage-projects / invite-to-projects
  *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
  *   /site-builder                 a website's builder pages, design, publish (docs/site-builder)   read; build to change
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
@@ -121,7 +123,9 @@ router.get('/project-key', async (req: any, res: any, next: any) => {
 });
 
 // Who works in the project, and inviting people into it (WO-47).
-router.use('/people', peopleRouter);
+// A commerce panel's store login (docs/commerce-panel) doesn't see the organization's people.
+const notPanel = (req: any, res: any, next: any) => (req.panelAdmin ? res.status(403).json({ message: 'Not allowed' }) : next());
+router.use('/people', notPanel, peopleRouter);
 
 const build = [tenantPermissions(['build'])];
 
@@ -152,7 +156,7 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 		const store = req.project.type === 'ecommerce' ? await CommerceSettings.findOne({}, { status: 1, features: 1 }).lean() : null;
 		const lead = tenantLead(req.permissions || [], req.project.type, store as any);
 		const hasContent = req.project.type === 'website' || !!(await ModelDefinition.exists({ route: 'web-contents', active: { $ne: false } })) || !!(await ModelDefinition.exists({ active: { $ne: false }, $or: [{ draftAndPublish: true }, { kind: 'single' }] }));
-		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest })]);
+		return res.status(200).json([home, ...lead, ...tenantContent(hasContent), ...own, ...tenantNav(req.permissions || [], { inProject: true, projectType: req.project.type, guest: !!req.member?.guest, panel: !!req.panelAdmin })]);
 	} catch (e: any) {
 		console.error('tenant sidebar:', e?.message);
 		return res.status(500).json({ message: 'Something went wrong' });
@@ -242,6 +246,8 @@ router.use('/payments', paymentsRouter);
 router.use('/commerce', commerceRouter);
 // Its email accounts — SMTP, test, default (docs/messaging M-14).
 router.use('/mail-accounts', mailAccountsRouter);
+// Its store logins for the commerce panel (docs/commerce-panel CP-01).
+router.use('/panel-admins', panelAdminsRouter);
 // How its emails look — plain or designed, header, colours, footer (docs/messaging M-03a).
 router.use('/mail-designs', mailDesignsRouter);
 
@@ -253,7 +259,7 @@ router.use('/api-builder', apiBuilderRouter);
 // Who a restricted model's records can be shared with (per-record access, D19):
 // the organization's members who can open this project. Shaped like a list
 // endpoint, as the record pickers read it — the tenant's /access-users.
-router.get('/access-users', async (req: any, res: any) => {
+router.get('/access-users', notPanel, async (req: any, res: any) => {
 	try {
 		const doc = await projectPeople({ search: String(req.query.search || '').trim().slice(0, 100) });
 		return res.status(200).json({ doc, totalDocs: doc.length, docsInPage: doc.length, totalPages: 1, page: 1 });
@@ -261,7 +267,7 @@ router.get('/access-users', async (req: any, res: any) => {
 		return res.status(500).json({ message: e.message });
 	}
 });
-router.get('/access-users/:id', async (req: any, res: any) => {
+router.get('/access-users/:id', notPanel, async (req: any, res: any) => {
 	try {
 		const [doc] = isId(req.params.id) ? await projectPeople({ id: req.params.id }) : [];
 		return doc ? res.status(200).json(doc) : res.status(404).json({ message: 'Not found' });
