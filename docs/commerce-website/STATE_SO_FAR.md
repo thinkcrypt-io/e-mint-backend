@@ -10,7 +10,7 @@ Names, so they don't get mixed up:
 |---|---|---|
 | **Mint Commerce** (product) | MINT's e-commerce offer: an `ecommerce` project type (store engine, POS, couriers, search, discounts) plus a store-only panel | — |
 | **Commerce panel** | The panel store staff sign in to, repo `mint-commerce` | https://commerce.mintapp.site |
-| **Mint Commerce website** (new, this plan) | The marketing website for the product | commerce.tcrypt.site now, commerce.mintapp.store later |
+| **Mint Commerce website** (new, this plan) | The website that sells Easy Instant Commerce on its own address | commerce.tcrypt.site now; later a name on mintapp.site (assumed instant.mintapp.site, WORK_ORDERS Q6) |
 | **Easy Instant Commerce** | Thinkcrypt's done-for-you offer built on Mint Commerce: we build and host the store | thinkcrypt.dev/easy-instant-commerce |
 
 ## 1. The store engine (backend + tenant panel)
@@ -28,10 +28,10 @@ All in `backend` (branch `v3` → remote `mint`; the user deploys Heroku by hand
 | Store marketing (SMS/email campaigns etc.) | `docs/marketing` MK-01…21 | planned only |
 | Autofill, key values, PDF invoices/receipts, automations, email designs | their own docs folders | built; see MEMORY |
 
-The Thinkcrypt pages list features that are **not built yet**: abandoned carts, lost-customer analysis, stock
-forecasts, accounting, loyalty, gift cards, reviews, suppliers/POs, Meta/Google feeds, multi-currency, mobile app.
-The user asked for these to be listed **without "coming soon"** (2026-10-28). The new website keeps a
-`status` per feature so this can be changed in one place (see README D7).
+The Thinkcrypt `/products/mint-commerce` page lists features that are **not built yet**: abandoned carts,
+lost-customer analysis, stock forecasts, accounting, loyalty, gift cards, reviews, suppliers/POs, Meta/Google
+feeds, multi-currency, mobile app. **The new website shows built features only** (the user, 2026-11-16). More are added
+later as Features records in the tenant panel. See README D5 and the checked list in WORK_ORDERS MC-03.
 
 ## 2. Commerce panel (store logins)
 
@@ -101,5 +101,5 @@ uppercase nav, 55px navbar). That is the look the user means by "like Mango".
 ## 7. Open / waiting on the user
 
 - Backend deploy of CP-06/07 (if not done yet), EC-31 and other "not deployed" items (see MEMORY).
-- `commerce.mintapp.store`: is the domain bought, and where is its DNS? (WORK_ORDERS Q2)
+- Which mintapp.site name the website gets, since commerce.mintapp.site is the panel (WORK_ORDERS Q6).
 - Test records left on live stores: WEB-00001 on GBazar, Fabrilife, HINT, Verte; a test customer on GBazar.
