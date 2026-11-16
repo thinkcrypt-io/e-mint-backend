@@ -169,6 +169,7 @@ Done when `get_site` lists every page as published and the site shows panel word
 
 ## Handoff
 
+- **2026-11-17 — Home + features reworked (user's ask, not a WO).** Home is a Shopify-style selling page: what it is, time and price in the hero, then jobs, every feature, prices, demos, FAQ. This overrides D1's "one big picture per screen" on home; the rest keeps the Mango look. New home sections read panel contents by slug (`hero`, `jobs`, `all`, `flow`, `who`, `price`, `days`, `demos`, `faq`, `get-started`) with seeds in `app/page.tsx` — MC-12 should add them to the "/" page. Next is still **MC-09 pricing + get started**.
 - **2026-11-17 — MC-08 done.** Next: **MC-09 pricing + get started**.
   - `/demos`: an intro (contents `/demos` section `intro`, seed until MC-12), a 3-across 16:9 grid, and `#logins`, which lists every store's email + access code with copy buttons and Store / Panel buttons. The header's "Demo login" and the footer's "Demo logins" land on `#logins`.
   - `/demos/[slug]`: the scene (h1 = name), the kind + summary, OPEN THE STORE, highlights, the login card (copy buttons, Open its panel, the shared-demo note), a gallery of the record's `gallery` minus the main picture, 3 more demos, and GET STARTED. ISR like features; an unknown slug answers 404.

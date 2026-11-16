@@ -1,5 +1,10 @@
 # Mint Commerce website — changelog
 
+## 2026-11-17 — Home + features rework (the user's ask)
+- **Home** is now a selling page, "more like how Shopify works": the hero says what it is (your own store website + one panel), live in 7 days, from BDT 25,000 once + BDT 500/month, with Get started / Try a demo. Then four numbers (7 days, build price, monthly price, feature count), the stores built on it, one section per job (benefit headline, its features, a shot or a big-type panel), "Everything included" with all 26 features, how an order works, who it's for, build and hosting prices side by side, 7 days, demos, questions.
+- **/features** reads on its own: the five jobs at a glance, then every feature with its tagline, what it does, the longer text and "How you use it" steps.
+- Feature groups have a one-line description (`GROUPS[].line` in `lib/mint.ts`). Four taglines that repeated their group name were changed in the panel (point-of-sale, cash-on-delivery, one-orders-page, store-website).
+
 ## 2026-11-17 — MC-08
 - **MC-08** `/demos` (the six stores, plus every panel login in one list with copy buttons) and one page per demo (open the store, sign in to its panel, gallery, what it shows off).
 
