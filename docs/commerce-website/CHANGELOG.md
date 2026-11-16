@@ -1,7 +1,7 @@
 # Mint Commerce website — changelog
 
 ## 2026-11-17 — Header, hero lead box, worry-free section (the user's asks)
-- **Header**: logo left; FEATURES opens a drop-down of the five jobs with their features (from the panel, via the layout), DEMOS, PRICING; DEMO LOGIN + GET STARTED right; 64px on desktop. Phones: logo, GET STARTED (hidden under 380px), menu with the jobs inside FEATURES and Try a demo / Get started at the bottom. Links only to built pages plus /pricing and /get-started (MC-09).
+- **Header**: logo left; FEATURES opens a drop-down of the five jobs with their features (from the panel, via the layout), DEMOS, PRICING; DEMO LOGIN + GET STARTED right; 64px on desktop. Phones: logo, GET STARTED (hidden under 380px), menu with the jobs inside FEATURES and Try a demo / Get started at the bottom. Links only to built pages plus /pricing and /get-started (MC-09). The drop-down lists every feature with its tagline under its job (like Shopify's Products menu), each opening its own /features/[slug] page; the phone menu lists them too.
 - **Hero** shows the HINT store (Muse & Mode, `hero.demo` = `muse-and-mode`) and a dark box: the price, one field for an email or phone number, an arrow button → a callback Lead, then "We'll get back to you as soon as possible". `app/api/lead` takes `contact`; an email-only lead is saved with Phone "—" (Leads requires Phone) and a note to reply by email.
 - **Try a demo** moved up under the numbers. The black "Everything included" band became "You don't need to worry about any of it": 26 features all included, AI tools powered by MCP, hosting and storage included.
 
