@@ -8,14 +8,14 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-16)
 
-**2026-11-16 — Commerce panel (docs/commerce-panel CP-01…05), backend not deployed.** E-commerce projects get **store
+**2026-11-16 — Commerce panel (docs/commerce-panel CP-01…05), deployed.** E-commerce projects get **store
 logins** (`PanelAdmin`, `paneladmins`: one email = one store) made in mint-tenant **Project → Panel admins**. They sign in
 at the new app **mint-commerce** (repo aiasifistiaque/mint-commerce, private; Vercel `mint-commerce`;
 commerce.mintapp.site) — a copy of mint-tenant with `IS_COMMERCE_PANEL`: `auth/…` → `panel/auth/…`, one project, no
 building/settings/automations/org. Backend: panel token kind `panel` in tenantProtect (path guard, fixed keys
 `PANEL_PERMISSIONS` incl. `manage-couriers` / `manage-email`), `/tenant/api/panel/auth`, `/p/:project/panel-admins`,
-`PUT commerce/couriers/:id/use`, panel sidebar. Smoke `scripts/tenancy-smoke/commerce-panel.mjs`. **Until the backend
-deploy (v3 → mint/main, manual Heroku) the live panel's sign-in answers 404** and Panel admins says "not available yet".
+`PUT commerce/couriers/:id/use`, panel sidebar. Smoke `scripts/tenancy-smoke/commerce-panel.mjs`. Backend deployed by the user
+2026-11-16; live sign-in answers (checked).
 
 **2026-11-16 — Think Tech specs (docs/key-values → Think Tech).** On prod, Think Tech's Specifications model now has 93
 groups made from its products' descriptions and every category lists its own (`Category.specifications`). **After the

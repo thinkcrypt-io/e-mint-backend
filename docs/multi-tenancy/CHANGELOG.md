@@ -2058,3 +2058,4 @@ Decisions D14–D17 (README).
 - Verified: smoke `commerce-panel.mjs` all passed on a private backend (:5091); mint-commerce in headless Chrome against
   it — sign-in → the store, sidebar is the store's own, model builder / store settings / projects / automations bounce
   to the store, Couriers / Email / Security open; `tsc` clean and `next build` passes. Backend not deployed.
+- 2026-11-16: backend deployed by the user; live `panel/auth/login` answers (400 on a wrong password), commerce.mintapp.site 200.

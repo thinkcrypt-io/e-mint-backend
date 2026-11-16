@@ -28,6 +28,6 @@ project only … they can't edit models, settings, no developer tools. can add c
 
 ## Deploy
 
-The panel needs CP-01/02 on the backend — until the user deploys the backend (Heroku, manual; v3 must be in
-`mint/main`) the live commerce panel's sign-in answers 404. No migration: the collection and its unique email index
-are made on first use.
+Deployed 2026-11-16: backend on Heroku (the user), mint-commerce on Vercel (commerce.mintapp.site), mint-tenant on
+Vercel (app.mintapp.shop). Live check: `POST /tenant/api/panel/auth/login` answers 400 for a wrong password. No migration:
+the collection and its unique email index are made on first use.
