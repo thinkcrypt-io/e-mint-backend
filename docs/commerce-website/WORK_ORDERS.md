@@ -28,10 +28,10 @@ Rules:
 | MC-01 | New project's settings: name, logos, favicon, contact, domains, tracking | panel (MCP fb74b56e) | S | **done 2026-11-16** (ogImage set in MC-04) |
 | MC-02 | Models + endpoints + lead automation | panel (MCP) | M | **done 2026-11-16** (test lead waits for the server key) |
 | MC-03 | Seed data, **built features only**: features, demos, plans, build options, integrations | panel (MCP) | M | **done 2026-11-16** (pictures in MC-04) |
-| MC-04 | Pictures: live shots of demo stores + commerce panel, studio scenes, media library | scratchpad + panel | L | **storefront part done 2026-11-16**; panel shots wait for the user (sign-in) |
+| MC-04 | Pictures: live shots of demo stores + commerce panel, studio scenes, media library | scratchpad + panel | L | **storefront part done 2026-11-16**; panel shots wait for Claude in Chrome |
 | MC-05 | Site scaffold: repo, Mango-style design system, header/bar/footer with both logos, data layer, track.js, SEO | mint-commerce-website | M | **done 2026-11-16** |
 | MC-06 | Home page (full-screen panel stack) | site + contents | M | **done 2026-11-16** (words are seed until MC-12) |
-| MC-07 | Features grid + feature pages | site | M | |
+| MC-07 | Features grid + feature pages | site | M | **done 2026-11-17** |
 | MC-08 | Demos grid + demo pages with logins | site | S | |
 | MC-09 | Pricing + Get started (estimate → Leads) | site | M | |
 | MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | |
@@ -168,6 +168,11 @@ Done when `get_site` lists every page as published and the site shows panel word
 - OG images render, and no link answers 404 (crawl the sitemap).
 
 ## Handoff
+
+- **2026-11-17 — MC-07 done.** Next: **MC-08 demos pages**.
+  - `/features`: an intro (contents `/features` section `intro`, seed until MC-12), group links, then one section per group with anchor ids (`#sell-online` …) and a 2/4-across grid of 4:5 phone scenes. A feature with no picture is a grey tile with its name.
+  - `/features/[slug]`: the scene with the name as h1, a link back to its group, the tagline + summary + body (panel rich text), HOW IT WORKS steps, MORE FEATURES (its group first, 4 in all), GET STARTED. generateStaticParams + `dynamicParams` + revalidate 60, so a new panel feature builds on first visit (not tried with a real new record). An unknown slug answers 404.
+  - Panel shots, tried 2026-11-17: the browser pane can't hand files out. It blocks pages from reaching localhost (ERR_BLOCKED_BY_CLIENT), and downloads don't land on disk. The way that's left is **Claude in Chrome**: `computer screenshot save_to_disk` at a 1440×900 window, with the user signed in to commerce.mintapp.site in their own Chrome. The extension wasn't connected; the user is to connect it later. Claude never types the password.
 
 - **2026-11-16 — MC-04 (storefront part), MC-05, MC-06 done; MC-13 mostly done.** Next: **MC-07 features pages**.
   - Site repo `aiasifistiaque/mint-commerce-website` (private, main), local folder `e-mint/mint-commerce-website`, port 3660. Vercel project `mint-commerce-website` (prj_TDIAvMVlFjnl0QZtwbKGadbTM1B3) is Git-linked, so a push to main deploys. https://commerce.tcrypt.site is live with the home page.

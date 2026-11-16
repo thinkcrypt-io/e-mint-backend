@@ -1,5 +1,8 @@
 # Mint Commerce website — changelog
 
+## 2026-11-17 — MC-07
+- **MC-07** `/features` (every built feature in group sections, anchors for the home and header links) and one page per feature (picture, what it does, how it works in 3 steps, more features). New panel features show up without a deploy.
+
 ## 2026-11-16 — MC-04 (storefront), MC-05, MC-06
 - **MC-04** Shot all 6 demo stores (home, product, category, plus search and sign-in pages) at 1440×900 and 390×844 with headless Chrome. Made studio scenes (laptop + phone 16:9, two phones 4:5, soft warm/stone/sand/mist backdrops), uploaded them to the media library, and linked them to every Demo store (image, imagePhone, gallery) and the 6 storefront Features. The site share picture is set. Panel screens wait for a sign-in.
 - **MC-05** The site: Next 16, Tailwind v4, Instrument Sans, Mango look (56px header, closeable bar, full-picture panels, grey footer with the call-back form and both logos), panel data with seed fallback, lead route, robots + sitemap, track.js. Live at commerce.tcrypt.site.
