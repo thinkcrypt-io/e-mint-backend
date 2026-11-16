@@ -8,6 +8,13 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-16)
 
+**2026-11-16 — Commerce panel CP-06/07 (docs/commerce-panel D7/D8), not deployed.** Store logins get every **Store
+settings** page and **Site settings** (Site setup minus domains) through two more panel keys, `manage-store` and
+`manage-site`; /store/setup stays the managers'. Their own MCP: **/tenant/commerce-mcp** with keys from the commerce
+panel's **Connect AI** (`/tenant/api/panel/auth/mcp-keys`; ApiKey `panelAdmin`), offering only `PANEL_TOOLS` (records,
+stock, deliveries, buyer checks, search insights, media — nothing that builds). Smoke `commerce-panel.mjs` all passed.
+Needs a backend deploy (Heroku, the user); mint-commerce pushed.
+
 **2026-11-16 — Commerce panel (docs/commerce-panel CP-01…05), deployed.** E-commerce projects get **store
 logins** (`PanelAdmin`, `paneladmins`: one email = one store) made in mint-tenant **Project → Panel admins**. They sign in
 at the new app **mint-commerce** (repo aiasifistiaque/mint-commerce, private; Vercel `mint-commerce`;

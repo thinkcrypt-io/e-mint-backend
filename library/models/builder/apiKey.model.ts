@@ -15,6 +15,8 @@ const schema = new Schema<any>(
 		hash: { type: String, required: true, unique: true, select: false },
 		scopes: { type: [String], enum: ['read', 'build', 'data', 'publish'], default: ['read', 'build'] },
 		createdBy: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+		// A commerce panel store login's own key (docs/commerce-panel CP-07): /tenant/commerce-mcp only, its store's records.
+		panelAdmin: { type: Schema.Types.ObjectId, ref: 'PanelAdmin', index: true },
 		lastUsedAt: { type: Date },
 		expiresAt: { type: Date },
 		revokedAt: { type: Date },

@@ -104,6 +104,8 @@ const router = express.Router({ mergeParams: true });
 const manage = tenantPermissions(['manage-projects']);
 // Couriers: the project's managers — and a commerce panel's store admins (docs/commerce-panel CP-02).
 const manageCouriers = tenantPermissions(['manage-projects', 'manage-couriers']);
+// Store settings and search settings: the managers — and store admins (docs/commerce-panel CP-06). Building the store stays the managers'.
+const manageStore = tenantPermissions(['manage-projects', 'manage-store']);
 
 router.use((req: any, res: any, next: any) =>
 	req.project?.type === 'ecommerce' ? next() : res.status(404).json({ message: 'Only e-commerce projects have a store' })
@@ -116,7 +118,7 @@ router.get(
 
 router.put(
 	'/settings',
-	manage,
+	manageStore,
 	handle(async (req: any) => {
 		await saveCommerce(req.project, req.body || {}, settingsGuard);
 		await afterSettingsSaved(req.project);
@@ -568,7 +570,7 @@ router.get(
 );
 router.put(
 	'/search/settings',
-	manage,
+	manageStore,
 	handle(async (req: any) => {
 		await storeOf();
 		const view = await saveSearchSettings(req.body || {});
@@ -662,7 +664,7 @@ router.post(
 );
 router.post(
 	'/search/learn',
-	manage,
+	manageStore,
 	handle(async () => {
 		const r = await learnStore(await storeOf(), { force: true });
 		return r || { skipped: 'Learning is off in Search settings' };
@@ -670,7 +672,7 @@ router.post(
 );
 router.post(
 	'/search/rebuild',
-	manage,
+	manageStore,
 	handle(async (req: any, res: any) => {
 		const store = await storeOf();
 		const scope = currentScope()!;

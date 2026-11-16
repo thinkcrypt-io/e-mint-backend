@@ -28,6 +28,7 @@ import staffApi from './staff/router.js';
 import mcpRouter from './library/controllers/mcp/mcp.router.js';
 import tenantRouter from './routes-tenant/tenant.router.js';
 import tenantMcpRouter from './routes-tenant/mcp.router.js';
+import commerceMcpRouter from './routes-tenant/commerceMcp.router.js';
 import templatesMcpRouter from './library/controllers/templates/mcp.router.js';
 import publicRouter from './routes-public/index.js';
 import publicUploadsRouter from './routes-public/uploads.js';
@@ -59,6 +60,8 @@ app.use(cors());
 app.use('/mcp', mcpRouter);
 // A tenant project's MCP (docs/multi-tenancy WO-10) — also before the logger, for keys in the URL.
 app.use('/tenant/mcp', tenantMcpRouter);
+// A commerce panel store login's MCP (docs/commerce-panel CP-07): its store's records only.
+app.use('/tenant/commerce-mcp', commerceMcpRouter);
 // Template Studio's MCP (docs/templates T-06) — its own emt_ keys; blueprints only.
 app.use('/templates/mcp', templatesMcpRouter);
 app.use(morgan('combined'));

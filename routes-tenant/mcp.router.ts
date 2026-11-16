@@ -31,6 +31,8 @@ const authenticate = async (req: Request): Promise<Caller | { error: string }> =
 	// Keys are tenant-scoped documents: looked up across scopes, then held to their own.
 	const key: any = await runUnscoped(() => ApiKey.findOne({ hash: hashKey(secret) }).lean());
 	if (!key || key.revokedAt || !key.organization || !key.project) return { error: 'This API key was revoked or doesn’t exist' };
+	// A store login's key works on /tenant/commerce-mcp only (docs/commerce-panel CP-07).
+	if (key.panelAdmin) return { error: 'This is a store key — connect it to /tenant/commerce-mcp' };
 	if (key.expiresAt && new Date(key.expiresAt) < new Date()) return { error: 'This API key has expired' };
 
 	const [user, organization, project, member]: any = await Promise.all([

@@ -2059,3 +2059,16 @@ Decisions D14–D17 (README).
   it — sign-in → the store, sidebar is the store's own, model builder / store settings / projects / automations bounce
   to the store, Couriers / Email / Security open; `tsc` clean and `next build` passes. Backend not deployed.
 - 2026-11-16: backend deployed by the user; live `panel/auth/login` answers (400 on a wrong password), commerce.mintapp.site 200.
+
+## 2026-11-16 — Commerce panel CP-06/07: store + site settings, store logins' own MCP
+- Asked: the commerce panel should have Store settings (store, product, search, delivery, POS, printer, payment) and site
+  settings, and "a new MCP which can only have permissions for it's own panel … no developer permissions".
+- backend: PANEL_PERMISSIONS + `manage-store` (commerce PUT /settings, search settings/learn/rebuild) and `manage-site`
+  (site.router mayBuild; domains still manage-projects); panel sidebar: all Store settings pages, Site → Site settings,
+  AI → Connect AI. ApiKey `panelAdmin`; `routes-tenant/commerceMcp.router.ts` at /tenant/commerce-mcp; mcp.router
+  `PANEL_TOOLS` + panel instructions; /tenant/mcp refuses store keys; panelAuth `/mcp-keys` GET/POST/DELETE.
+- mint-commerce: /store/settings and /site-setup open (Domains tab, Connect your code, Pages hidden; titled Site
+  settings); new /connect-ai page (keys + how to connect Claude, ChatGPT, Claude Code).
+- Verified: smoke `commerce-panel.mjs` + `commerce-settings.mjs` all passed on a private backend (:5091); headless Chrome
+  on mint-commerce :3044 — the seven settings pages, Site settings and Connect AI open for a store login, /store/setup
+  bounces. `tsc` clean in both. Backend not deployed.

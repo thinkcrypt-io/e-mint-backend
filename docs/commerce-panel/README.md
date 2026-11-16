@@ -14,6 +14,8 @@ project only … they can't edit models, settings, no developer tools. can add c
 | D3 | Token `{ _id, kind: 'panel', org, project, sid }`, sessions in the tenant session store. `tenantProtect` accepts it and fills the request as a **guest of that one project** (`req.panelAdmin` set). It reaches only `/tenant/api/p/<its project>/…` and `/tenant/api/panel/auth/…` — anything else is 403 `PANEL_ONLY`; another project is 404. The admin API refuses it (any `kind`). |
 | D4 | Fixed keys (`PANEL_PERMISSIONS`): `records:view/create/edit/delete/publish`, `manage-couriers`, `manage-email`. Never `build` (models, pages, sidebar, dashboard, PDF templates, automations, API builder, widgets, webhooks, site setup), never `manage-projects` (project + store settings, payments). The two panel keys are accepted next to manage-projects by the courier routes and the email accounts / designs routes; roles never hold them. People (`/people`, `/access-users`) are refused. |
 | D5 | The panel is its own app, **mint-commerce** (repo `aiasifistiaque/mint-commerce`, main), copied from mint-tenant with `IS_COMMERCE_PANEL`: its `auth/…` calls go to `panel/auth/…`, it signs in with the store login form only (no sign-up, landing, organizations or project board), always works inside the login's project, and hides developer screens. Token key `MINT_COMMERCE_TOKEN`. Domain **commerce.mintapp.site** (Vercel DNS, project `mint-commerce`; push to main deploys). Copied from mint-tenant at 5cb41ee — fixes to shared screens go to mint-tenant first, then here. |
+| D7 | Asked 2026-11-16: "new panel should have these options [Store settings → Store, Product, Search, Delivery, POS, Printer, Payment settings], along with site settings". Two more panel keys: `manage-store` (PUT commerce/settings, search settings, learn, rebuild — never POST /setup) and `manage-site` (Site setup, as **Site settings**: everything but domains, which stay manage-projects). Couriers are inside Delivery settings. |
+| D8 | "a new MCP which can only have permissions for its own panel … no developer permissions": **/tenant/commerce-mcp**. A store login makes keys in the commerce panel's **Connect AI** (`/connect-ai`, `/tenant/api/panel/auth/mcp-keys`, up to 10). An ApiKey with `panelAdmin`; it acts as that login with PANEL_PERMISSIONS and offers only `PANEL_TOOLS` (list_models, query/create records, media, entries, stock, variants, deliveries, check_buyer, search insights/suggestions, enrich_products) — each checks the record route itself. No build, pages, automations, endpoints, email designs or site tools. The tenant /tenant/mcp refuses a store key; a switched-off or removed login's keys stop working. |
 | D6 | The sidebar for a store login is the store's own (POS, orders, its tables), then Store settings → **Couriers** (when the store delivers), Media library, Analytics, History, Email accounts — built by the backend (`tenantNav(..., { panel: true })`). |
 
 ## Work orders
@@ -24,9 +26,13 @@ project only … they can't edit models, settings, no developer tools. can add c
 | CP-02 | Backend: fixed keys, couriers + email routes accept them, path guard, people refused, panel sidebar; smoke `scripts/tenancy-smoke/commerce-panel.mjs` (56 checks) | done 2026-11-16 |
 | CP-03 | Tenant panel: Project → Panel admins page (list, add, switch off/on, new password, remove); Store settings → Couriers page (`/store/couriers`) and `PUT commerce/couriers/:id/use` so a store login can switch couriers on | done 2026-11-16 |
 | CP-04 | mint-commerce app: copy of mint-tenant, commerce sign-in, one project, developer screens hidden (`COMMERCE_HIDDEN_PAGES`, proxy + PanelGuard), no org switcher / notifications / two-factor; checked in headless Chrome against a local backend | done 2026-11-16 |
+| CP-06 | Store settings (all seven pages) + Site settings for store logins (`manage-store`, `manage-site`); /store/setup and Domains stay hidden | done 2026-11-16 |
+| CP-07 | Store logins' own MCP: /tenant/commerce-mcp, Connect AI page, PANEL_TOOLS; smoke now 70+ checks | done 2026-11-16 |
 | CP-05 | Repo `aiasifistiaque/mint-commerce` (private) + Vercel project `mint-commerce` + commerce.mintapp.site | done 2026-11-16 |
 
 ## Deploy
+
+CP-06/07 need the backend deployed again (Heroku, by the user); mint-commerce deploys on push.
 
 Deployed 2026-11-16: backend on Heroku (the user), mint-commerce on Vercel (commerce.mintapp.site), mint-tenant on
 Vercel (app.mintapp.shop). Live check: `POST /tenant/api/panel/auth/login` answers 400 for a wrong password. No migration:

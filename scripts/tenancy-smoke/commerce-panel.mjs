@@ -73,8 +73,10 @@ ok('the admin API refuses it', r.status === 401);
 
 r = await call('GET', `${S}/sidebar/admin/server`, null, st);
 const side = JSON.stringify(r.body || []);
-ok('sidebar: POS, Orders, the store’s tables, Couriers, Email accounts, Media', ['/store/pos', '/store/orders', '/t/products', '/store/couriers', '/email-accounts', '/images'].every(h => side.includes(`"${h}"`)), side.slice(0, 300));
-ok('sidebar: no Build, automations, settings, API pages, members, panel admins, organization', !['/model-builder', '/builder', '/automations', '/project-settings', '/store/settings"', '/public-api', '/project-people', '/panel-admins', '/projects', '/org/members', '/site-setup', '/widgets'].some(h => side.includes(`"${h}`) && !side.includes(`"${h}/`)) && !side.includes('"/model-builder"') && !side.includes('"/automations"') && !side.includes('"/project-settings"') && !side.includes('"/store/settings"') && !side.includes('"/projects"') && !side.includes('"/panel-admins"'), side);
+ok('sidebar: POS, Orders, the store’s tables, Delivery settings, Email accounts, Media', ['/store/pos', '/store/orders', '/t/products', '/store/settings/delivery', '/email-accounts', '/images'].every(h => side.includes(`"${h}"`)), side.slice(0, 300));
+ok('sidebar: no Build, automations, project settings, API pages, members, panel admins, organization', !['"/model-builder"', '"/builder"', '"/automations"', '"/project-settings"', '"/store/setup"', '"/public-api"', '"/project-people"', '"/panel-admins"', '"/projects"', '"/org/members"', '"/website-setup"', '"/widgets"'].some(h => side.includes(h)), side);
+// CP-06: every Store settings page, Site settings, Connect AI.
+ok('sidebar: Store settings pages, Site settings, Connect AI', ['/store/settings', '/store/settings/products', '/store/settings/search', '/store/settings/delivery', '/store/settings/pos', '/store/settings/printer', '/store/settings/payments', '/site-setup', '/connect-ai'].every(h => side.includes(`"${h}"`)), side);
 
 // records: yes
 r = await call('GET', `${S}/products?limit=5`, null, st);
@@ -97,13 +99,48 @@ ok('email accounts: lists them', r.status === 200, `${r.status} ${r.body?.messag
 r = await call('GET', `${S}/mail-designs`, null, st);
 ok('email designs: reads them', r.status === 200, `${r.status} ${r.body?.message}`);
 
+// CP-06: store settings and site settings — yes; building the store again and domains — no
+r = await call('PUT', `${S}/commerce/settings`, { answers: { store: { orderPrefix: 'PZ' } } }, st);
+ok('store settings: saved', r.status === 200 && r.body?.answers?.store?.orderPrefix === 'PZ', `${r.status} ${r.body?.message}`);
+r = await call('PUT', `${S}/commerce/search/settings`, { typos: 'normal' }, st);
+ok('search settings: saved', r.status === 200, `${r.status} ${r.body?.message}`);
+r = await call('POST', `${S}/commerce/setup`, {}, st);
+ok('building the store again: refused', r.status === 403, `${r.status} ${r.body?.message}`);
+r = await call('PUT', `${S}/site-config`, { identity: { siteName: `Panel shop ${stamp}` } }, st);
+ok('site settings: saved', r.status === 200, `${r.status} ${r.body?.message}`);
+r = await call('PUT', `${S}/site-config`, { domains: ['shop.example.com'] }, st);
+ok('site domains: refused', r.status === 403, `${r.status} ${r.body?.message}`);
+
+// CP-07: its own AI — a key for /tenant/commerce-mcp, the store's records only
+r = await call('POST', '/tenant/api/panel/auth/mcp-keys', { name: 'Claude' }, st);
+const mk = r.body?.secret;
+ok('a store key is made, the secret once', r.status === 201 && /^emk_/.test(mk || '') && !('hash' in (r.body?.doc || {})), JSON.stringify(r.body));
+r = await call('GET', '/tenant/api/panel/auth/mcp-keys', null, st);
+ok('…listed', r.status === 200 && r.body?.doc?.length === 1);
+r = await call('GET', '/tenant/api/panel/auth/mcp-keys', null, t);
+ok('a tenant token has no store keys (403)', r.status === 403);
+const rpc = (path, method, params, key) => call('POST', path, { jsonrpc: '2.0', id: 1, method, params }, `Bearer ${key}`);
+r = await rpc('/tenant/commerce-mcp', 'tools/list', {}, mk);
+const names = (r.body?.result?.tools || []).map(x => x.name);
+ok('commerce MCP: records tools only', names.includes('query_records') && names.includes('check_buyer') && names.includes('set_stock') && !names.some(n => ['build_feature', 'update_page', 'save_automation', 'save_endpoint', 'save_email_design', 'set_public_api', 'publish_site', 'update_site_settings', 'update_dashboard'].includes(n)), names.join(','));
+r = await rpc('/tenant/commerce-mcp', 'tools/call', { name: 'query_records', arguments: { route: 'products', limit: 2 } }, mk);
+ok('commerce MCP: reads the store’s products', r.status === 200 && !r.body?.result?.isError, JSON.stringify(r.body).slice(0, 300));
+r = await rpc('/tenant/commerce-mcp', 'tools/call', { name: 'build_feature', arguments: {} }, mk);
+ok('commerce MCP: build_feature refused', !!(r.body?.error || r.body?.result?.isError), JSON.stringify(r.body).slice(0, 200));
+r = await rpc('/tenant/mcp', 'tools/list', {}, mk);
+ok('the tenant MCP refuses a store key', r.status === 401 || !!r.body?.error, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
+const keyId = (await call('GET', '/tenant/api/panel/auth/mcp-keys', null, st)).body?.doc?.[0]?._id;
+r = await call('DELETE', `/tenant/api/panel/auth/mcp-keys/${keyId}`, null, st);
+ok('store key revoked', r.status === 200);
+r = await rpc('/tenant/commerce-mcp', 'tools/list', {}, mk);
+ok('…and refused after', r.status === 401 || !!r.body?.error, `${r.status}`);
+
 // developer tools and settings: no
 const refusals = [
 	['GET', `${S}/builder/models`],
 	['POST', `${S}/builder/models`, { name: 'Hack', route: 'hacks' }],
 	['GET', `${S}/automations`],
 	['DELETE', `${S}/sidebaritems/6afac6db57e4f840bec55293`],
-	['PUT', `${S}/commerce/settings`, { answers: { store: { orderPrefix: 'XX' } } }],
 	['PUT', `${S}/dashboard`, {}],
 	['GET', `${S}/api-builder/endpoints`],
 	['GET', `${S}/webhooks`],

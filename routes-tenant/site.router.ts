@@ -50,8 +50,9 @@ const router = express.Router();
 const websiteOnly = (req: any) => {
 	if (!['website', 'ecommerce'].includes(req.project.type)) throw new TenancyError(404, 'Only website and store projects have a site setup');
 };
+// A commerce panel's store admin changes the site setup too (manage-site, docs/commerce-panel CP-06) — never its domains.
 const mayBuild = (req: any) => {
-	if (!grants(req.permissions, ['build'])) throw new TenancyError(403, 'Your role can’t change the site setup (it needs Build)');
+	if (!grants(req.permissions, ['build', 'manage-site'])) throw new TenancyError(403, 'Your role can’t change the site setup (it needs Build)');
 };
 
 const DOMAIN = Joi.string()

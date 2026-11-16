@@ -9,6 +9,11 @@ import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { panelSelfPayload, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
 import { addOwnSessionRoutes } from '../library/controllers/sessions/sessions.router.js';
+import crypto from 'crypto';
+import mongoose from 'mongoose';
+import ApiKey from '../library/models/builder/apiKey.model.js';
+import { hashKey } from '../library/controllers/mcp/mcp.router.js';
+import { runUnscoped } from '../library/functions/tenantScope.function.js';
 
 /**
  * /tenant/api/panel/auth — a commerce panel store admin's own account
@@ -21,6 +26,9 @@ import { addOwnSessionRoutes } from '../library/controllers/sessions/sessions.ro
  *   PUT  /change-password      { oldPassword, password }
  *   POST /logout               signs this device out
  *   /sessions/*                your signed-in devices
+ *   GET    /mcp-keys           your keys for your own AI (docs/commerce-panel CP-07)
+ *   POST   /mcp-keys           { name, expiresInDays? } → { doc, secret } — the secret only in this answer
+ *   DELETE /mcp-keys/:id       revoked at once
  *
  * No sign-up and no reset by email: the project's managers make the login and
  * set a new password from the tenant panel (Project → Panel admins).
@@ -115,6 +123,53 @@ router.post(
 		const row: any = await tenantSessions.Session.findOne({ sid: req.sessionId }).lean();
 		await tenantSessions.revokeSessions([row || { sid: req.sessionId, admin: req.user._id }], req.user._id, 'Signed out');
 		return { message: 'Signed out' };
+	})
+);
+
+// Keys for the store login's own AI (docs/commerce-panel CP-07): /tenant/commerce-mcp, the store's records only.
+const ownKeys = (req: any) => ({ panelAdmin: req.user._id, project: req.user.project });
+const plainKey = (k: any) => ({ _id: String(k._id), name: k.name, prefix: k.prefix, createdAt: k.createdAt, lastUsedAt: k.lastUsedAt || null, expiresAt: k.expiresAt || null, revokedAt: k.revokedAt || null });
+
+router.get(
+	'/mcp-keys',
+	handle(async req => {
+		const rows = await runUnscoped(() => ApiKey.find(ownKeys(req)).sort({ createdAt: -1 }).lean());
+		return { doc: rows.map(plainKey) };
+	})
+);
+
+router.post(
+	'/mcp-keys',
+	handle(async (req: any, res: any) => {
+		const body = check(Joi.object({ name: Joi.string().trim().min(1).max(80).required().messages({ 'any.required': 'Name the key (e.g. “Claude”)' }), expiresInDays: Joi.number().integer().min(0).max(3650) }), req.body);
+		const live = await runUnscoped(() => ApiKey.countDocuments({ ...ownKeys(req), revokedAt: null }));
+		if (live >= 10) throw new TenancyError(400, 'Up to 10 keys — revoke one you don’t use.');
+		const secret = `emk_${crypto.randomBytes(24).toString('base64url')}`;
+		const doc: any = await runUnscoped(() =>
+			ApiKey.create({
+				name: body.name,
+				prefix: secret.slice(0, 10),
+				hash: hashKey(secret),
+				scopes: ['data'],
+				createdBy: req.user._id,
+				panelAdmin: req.user._id,
+				organization: req.organization._id,
+				project: req.user.project,
+				...(body.expiresInDays > 0 && { expiresAt: new Date(Date.now() + body.expiresInDays * 86400000) }),
+			})
+		);
+		res.status(201);
+		return { doc: plainKey(doc), secret };
+	})
+);
+
+router.delete(
+	'/mcp-keys/:id',
+	handle(async req => {
+		if (!mongoose.isValidObjectId(req.params.id)) throw new TenancyError(404, 'Not found');
+		const r = await runUnscoped(() => ApiKey.updateOne({ _id: req.params.id, ...ownKeys(req), revokedAt: null }, { $set: { revokedAt: new Date() } }));
+		if (!r.matchedCount) throw new TenancyError(404, 'Key not found, or already revoked');
+		return { message: 'Key revoked' };
 	})
 );
 

@@ -68,11 +68,8 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 				...(can('records:view') && store?.features?.includes('delivery') ? [{ title: 'Check a buyer', href: '/store/buyer-check', icon: 'shield-check' }] : []),
 			]),
 			// Each kind of setting is an item of its own (the wizard's answers, a page each).
-			// A commerce panel's store admin (docs/commerce-panel): connects couriers, changes no other setting.
-			...(!can('manage-projects') && can('manage-couriers') && store?.features?.includes('delivery')
-				? section('Store settings', 'settings-2', [{ title: 'Couriers', href: '/store/couriers', icon: 'truck' }])
-				: []),
-			...(can('manage-projects')
+			// A commerce panel's store admin too (docs/commerce-panel CP-06): couriers are in Delivery settings.
+			...(can('manage-projects') || can('manage-store')
 				? section('Store settings', 'settings-2', [
 						{ title: 'Store settings', href: '/store/settings', icon: 'store' },
 						{ title: 'Product settings', href: '/store/settings/products', icon: 'package' },
@@ -103,10 +100,17 @@ export const tenantNav = (
 	const can = (key: string) => grants(permissions, [key]);
 	// A commerce panel's store admin (docs/commerce-panel): the media library, analytics, history and the
 	// store's email accounts — no building, no API pages, nothing of the organization.
+	// Its site's settings (Site setup) and its own AI connection (CP-06/07).
 	if (panel)
 		return [
 			...(inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : []),
-			...(inProject && can('view-analytics') ? section('Site', 'globe', [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }]) : []),
+			...(inProject
+				? section('Site', 'globe', [
+						...(can('manage-site') ? [{ title: 'Site settings', href: '/site-setup', icon: 'settings-2' }] : []),
+						...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
+				  ])
+				: []),
+			...(inProject ? section('AI', 'sparkles', [{ title: 'Connect AI', href: '/connect-ai', icon: 'plug' }]) : []),
 			...(inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : []),
 			...(inProject && can('manage-email') ? section('Email', 'mail', [{ title: 'Email accounts', href: '/email-accounts', icon: 'mail' }]) : []),
 		];

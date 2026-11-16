@@ -8,11 +8,14 @@ import { publicOrganization, publicProject } from './tenancy.function.js';
  * one e-commerce project each, signed in at commerce.mintapp.shop.
  *
  * What they hold, fixed: every record of the store (orders, products, POS,
- * returns, customers, media), its couriers and its email accounts. Never
- * `build` (models, pages, sidebar, automations, the public API), never
- * `manage-projects` (project and store settings), nothing organization-wide.
- * `manage-couriers` / `manage-email` are panel-only keys the courier and
- * email routes accept next to manage-projects; roles never hold them.
+ * returns, customers, media), its couriers, its email accounts, the store's
+ * settings (store, products, search, delivery, POS, printer, payments — not
+ * building the store again) and its site settings (Site setup, not domains).
+ * Never `build` (models, pages, sidebar, automations, the public API), never
+ * `manage-projects` (project settings, members), nothing organization-wide.
+ * `manage-couriers` / `manage-email` / `manage-store` / `manage-site` are
+ * panel-only keys the routes accept next to manage-projects (or build, for the
+ * site); roles never hold them.
  */
 export const PANEL_PERMISSIONS = [
 	'records:view',
@@ -22,6 +25,10 @@ export const PANEL_PERMISSIONS = [
 	'records:publish',
 	'manage-couriers',
 	'manage-email',
+	// Store settings → every page but Set up your store (docs/commerce-panel CP-06).
+	'manage-store',
+	// Site setup: identity, SEO, tracking, tags, redirects — never domains (CP-06).
+	'manage-site',
 ];
 
 export const PANEL_ROLE = { _id: 'panel', name: 'Store admin', system: 'panel' };

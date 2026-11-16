@@ -81,6 +81,8 @@ type Caller = {
 	scope?: TenantScope;
 	/** The tenant project the key belongs to (none on the admin MCP). */
 	project?: any;
+	/** A commerce panel store login (docs/commerce-panel CP-07): only PANEL_TOOLS, each checking the store's records itself. */
+	panel?: boolean;
 };
 
 const authenticate = async (req: Request): Promise<Caller | { error: string }> => {
@@ -798,8 +800,39 @@ const TOOLS: ToolDef[] = [
 	...SEARCH_TOOLS,
 ];
 
+/**
+ * What a commerce panel store login's AI may use (docs/commerce-panel CP-07): the store's records — read, add,
+ * stock, deliveries, buyer checks, search insights, media — and the list of its models to know their routes.
+ * Nothing that builds or changes models, pages, automations, endpoints, email designs or the site. Every one
+ * checks the record route's own permission against the store admin's fixed keys.
+ */
+export const PANEL_TOOLS = new Set([
+	'list_models',
+	'query_records',
+	'create_records',
+	'upload_media',
+	'get_entry',
+	'publish_entry',
+	'store_stock',
+	'set_stock',
+	'sync_variants',
+	'list_deliveries',
+	'send_to_courier',
+	'refresh_delivery',
+	'check_buyer',
+	'search_insights',
+	'try_search',
+	'save_search_suggestion',
+	'enrich_products',
+]);
+
+const PANEL_INSTRUCTIONS = `This server runs the user's store in MINT Commerce: its orders, products, stock, customers, deliveries and media. It can't build or change models, pages, automations or settings — say so if asked, and point to the store's owner.
+Call list_models first to see the store's tables (their routes and fields), then query_records to read them. Before adding or changing anything (create_records, set_stock, send_to_courier, publish_entry), show the user what you will write and wait for their go-ahead.`;
+
 /** Whether a tool is offered to this caller: some only make sense in a project, a website project or a store. */
-const available = (t: ToolDef, caller: Caller) => !t.only || (t.only === 'project' ? !!caller.project : t.only === 'site' ? ['website', 'ecommerce'].includes(caller.project?.type as string) : caller.project?.type === t.only);
+const available = (t: ToolDef, caller: Caller) =>
+	(!caller.panel || PANEL_TOOLS.has(t.name)) &&
+	(!t.only || (t.only === 'project' ? !!caller.project : t.only === 'site' ? ['website', 'ecommerce'].includes(caller.project?.type as string) : caller.project?.type === t.only));
 
 /* ------------------------------------------------------------ JSON-RPC */
 
@@ -810,13 +843,16 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 	createMcpRouter<Caller>({
 		info: SERVER_INFO,
 		instructions: caller =>
-			(caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : '') +
+			caller.panel
+				? PANEL_INSTRUCTIONS + STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS
+				: (caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : '') +
 			(caller.project?.type === 'ecommerce' ? STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
-		listed: (tool, caller) => !!caller.key.scopes?.includes((tool as ToolDef).scope),
-		denied: (tool, caller) => can(caller, (tool as ToolDef).scope, tool as ToolDef),
+		listed: (tool, caller) => caller.panel || !!caller.key.scopes?.includes((tool as ToolDef).scope),
+		// A store login's tools each check the record route against its fixed keys (PANEL_TOOLS).
+		denied: (tool, caller) => (caller.panel ? (PANEL_TOOLS.has(tool.name) ? null : 'A store login can’t use this tool') : can(caller, (tool as ToolDef).scope, tool as ToolDef)),
 		authenticate: authenticateWith,
 		// The builder resolves models against the admin API's routes, which it reads off the app.
 		prepare: (req, caller) => {
