@@ -10,7 +10,7 @@ Names, so they don't get mixed up:
 |---|---|---|
 | **Mint Commerce** (product) | MINT's e-commerce offer: an `ecommerce` project type (store engine, POS, couriers, search, discounts) plus a store-only panel | — |
 | **Commerce panel** | The panel store staff sign in to, repo `mint-commerce` | https://commerce.mintapp.site |
-| **Mint Commerce website** (new, this plan) | The website that sells Easy Instant Commerce on its own address | commerce.tcrypt.site now; later a name on mintapp.site (assumed instant.mintapp.site, WORK_ORDERS Q6) |
+| **Mint Commerce website** (new, this plan) | The website that sells Easy Instant Commerce on its own address | commerce.tcrypt.site now, then **commerce.thinkcrypt.dev** (the user adds the DNS record) |
 | **Easy Instant Commerce** | Thinkcrypt's done-for-you offer built on Mint Commerce: we build and host the store | thinkcrypt.dev/easy-instant-commerce |
 
 ## 1. The store engine (backend + tenant panel)
@@ -101,5 +101,5 @@ uppercase nav, 55px navbar). That is the look the user means by "like Mango".
 ## 7. Open / waiting on the user
 
 - Backend deploy of CP-06/07 (if not done yet), EC-31 and other "not deployed" items (see MEMORY).
-- Which mintapp.site name the website gets, since commerce.mintapp.site is the panel (WORK_ORDERS Q6).
+- The DNS record for commerce.thinkcrypt.dev: the user adds it once MC-15 shows what Vercel asks for.
 - Test records left on live stores: WEB-00001 on GBazar, Fabrilife, HINT, Verte; a test customer on GBazar.

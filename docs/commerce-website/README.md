@@ -7,7 +7,7 @@ panel … Images, features, demos should be from the tenant panel of mint commer
 can check analytics, should have thinkcrypt logo."
 
 Answers the same day: the look is **https://shop.mango.com/gb/en/h/brandid_she** ("the vibe must look like this").
-Domain: **mintapp.site**. Show **built features only**; more get added later from the tenant panel. Prices: the
+Domain: **commerce.thinkcrypt.dev** ("we'll connect the url, i mean the record": the user adds the DNS record). Show **built features only**; more get added later from the tenant panel. Prices: the
 same as Easy Instant Commerce ("this is for instant commerce with a new url"). Leads: in the **new project**.
 "Write the work orders only for now."
 
@@ -52,7 +52,7 @@ What the page does, and what we copy (the feel, not their pictures, font files o
 | D7 | **The pictures are real and big.** Mango's look depends on full-screen photos, so every panel needs a strong picture. Demo stores are shot live (home, category, product, cart) and so is the commerce panel, signed in with the public demo logins. Shots are taken in headless Chrome over CDP and framed as laptop/phone scenes on soft neutral studio backgrounds (Mango's photo feel), at a 16:9 desktop crop and a 4:5 phone crop of the same scene. Pictures are always shown whole inside their panel. Everything goes in the new project's media library. |
 | D8 | **Analytics**: `track.js` with the project key in the root layout, Mint Analytics on, `visitorIp` full. The site's addresses are added in Site setup (origin + domains) and in Analytics → Add domain. Lead buttons call `MintAnalytics.track('lead', …)`. Page SEO comes from the kit, like thinkcrypt-website's `lib/mintSeo.js`. |
 | D9 | **Repo + deploy**: new folder `e-mint/mint-commerce-website`, private repo `aiasifistiaque/mint-commerce-website` (main), Vercel project `mint-commerce-website` on the e-mint Hobby account. It is Git-linked, so a push to main deploys it. The stack is Next 16 App Router + Tailwind v4, ISR 60s, `images.unoptimized`, with no `next/font/google` and no `next/image` optimizer. Dev port **3660**, launch config `mint-commerce-website`. |
-| D10 | **Addresses**: first **commerce.tcrypt.site**, as asked. The final address is on **mintapp.site** (the user's answer; its DNS is on Vercel, so the address is added on the Vercel project and needs no record). `commerce.mintapp.site` is already the store-login panel, so the website takes another name. The working assumption is **instant.mintapp.site** (Q6 in WORK_ORDERS). Canonical URLs use `NEXT_PUBLIC_BASE_URL`, so the switch is one env change. |
+| D10 | **Addresses**: first **commerce.tcrypt.site**, as asked. The final address is **commerce.thinkcrypt.dev** (the user's answer). Claude adds it to the Vercel project and gives the user the exact record Vercel asks for; **the user adds the DNS record**. The panel stays at commerce.mintapp.site. Canonical URLs use `NEXT_PUBLIC_BASE_URL`, so the switch is one env change. |
 | D11 | **Get started** = the Easy Instant Commerce estimate: a plan by product/image count + a design choice + custom features. It is worked out again on the server and sent to **Leads** in the new project. A "team" automation notifies and emails connect@thinkcrypt.dev. WhatsApp button +8801828398225. |
 | D12 | Phones first: every page is checked at 390px with no sideways scroll. Every page gets `pageMeta` + its own OG image, using Instrument Sans read from local files and never fetched at build. |
 

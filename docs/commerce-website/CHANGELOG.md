@@ -7,6 +7,6 @@
 - Found the **Mint Commerce** website project already in the tenant panel (`mint-2-mint-commerce`, connector 6fd2f8e3),
   empty. The website will run on it.
 - Folded in the user's answers. The look is the Mango "She" page (measured live: 56px header, 13px/600 uppercase nav,
-  68px uppercase headings over full-screen photos, grey footer). Final domain on mintapp.site (which name: Q6). Built
+  68px uppercase headings over full-screen photos, grey footer). Final domain **commerce.thinkcrypt.dev**, with the DNS record added by the user (the panel stays at commerce.mintapp.site). Built
   features only, with the checked seed list and the left-out list in MC-03. Easy Instant Commerce prices. Leads in the
   new project. Work orders only for now; nothing built.

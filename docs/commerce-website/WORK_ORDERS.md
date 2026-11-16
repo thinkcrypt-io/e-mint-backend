@@ -15,11 +15,10 @@ Rules:
 | # | Question | Answer / assumption |
 |---|---|---|
 | Q1 | Which look? | **Answered:** https://shop.mango.com/gb/en/h/brandid_she, "the vibe must look like this" (README table) |
-| Q2 | Final domain? | **Answered:** mintapp.site (DNS on Vercel) |
+| Q2 | Final domain? | **Answered:** **commerce.thinkcrypt.dev**. The user adds the DNS record |
 | Q3 | Show features that aren't built? | **Answered:** no, built features only. More are added later from the tenant panel |
 | Q4 | Prices? | **Answered:** the Easy Instant Commerce prices. "This is for instant commerce with a new url" |
 | Q5 | Where do leads go? | **Answered:** the new project |
-| Q6 | Which name on mintapp.site? `commerce.mintapp.site` is already the store-login panel | **Open.** Assumed `instant.mintapp.site`. Other choices: the root `mintapp.site` + `www`, or move the panel to `panel.mintapp.site` and give the site `commerce.mintapp.site` |
 
 ## Status
 
@@ -40,7 +39,7 @@ Rules:
 | MC-12 | Every page's contents + SEO in the panel, published | panel (MCP) | M | |
 | MC-13 | Deploy: GitHub repo, Vercel project, env, commerce.tcrypt.site | GitHub + Vercel | S | |
 | MC-14 | Analytics connected and checked live | panel + site | S | |
-| MC-15 | The mintapp.site address (Q6) | Vercel | S | waits on Q6 |
+| MC-15 | commerce.thinkcrypt.dev | Vercel + the user's DNS record | S | the user adds the record |
 | MC-16 | Links in: Thinkcrypt pages, demo storefront footers, mint-webpage | other repos | S | |
 | MC-17 | QA: phones, Mango look check, Lighthouse, a11y, OG, links | site | S | |
 
@@ -147,10 +146,15 @@ Done when `get_site` lists every page as published and the site shows panel word
 - If visits are missing, check the domain list and the track.js key.
 - Done when the visits and the lead event show in the panel. Delete the test lead.
 
-### MC-15 The mintapp.site address (S, waits on Q6)
-- Add the chosen name (assumed `instant.mintapp.site`) to the Vercel project. mintapp.site DNS is on Vercel, so no record is needed.
-- Set `NEXT_PUBLIC_BASE_URL` and update the project's origin, domains, Analytics domain and canonical domain.
-- commerce.tcrypt.site then 308s to it, unless the user wants both.
+### MC-15 commerce.thinkcrypt.dev (S, the user adds the DNS record)
+- Add `commerce.thinkcrypt.dev` to the Vercel project `mint-commerce-website` (e-mint account, VERCEL_TOKEN).
+- Read the record Vercel asks for from the domain config: usually a CNAME `commerce` → `cname.vercel-dns.com`. thinkcrypt.dev is used by another Vercel account (the thinkcrypt team, www.thinkcrypt.dev), so Vercel may also ask for a TXT `_vercel` verification. Give the user both records exactly as Vercel shows them. **The user adds them**; Claude does not touch thinkcrypt.dev's DNS.
+- Once Vercel shows the domain as valid and the SSL certificate is issued:
+  - set `NEXT_PUBLIC_BASE_URL=https://commerce.thinkcrypt.dev`
+  - update the new project's origin, domains, Analytics → Add domain and canonical domain
+  - redeploy
+- commerce.tcrypt.site then 308s to commerce.thinkcrypt.dev (a Vercel domain redirect), unless the user wants both.
+- Done when https://commerce.thinkcrypt.dev answers 200 with a valid certificate, the sitemap uses it, and a visit shows in Analytics under that host.
 
 ### MC-16 Links in (S)
 - Thinkcrypt `/easy-instant-commerce` and `/products/mint-commerce` get a "Visit the Mint Commerce site" button (panel contents). Their nav is hard-coded in `data/sidebar.data.js`.
@@ -165,7 +169,7 @@ Done when `get_site` lists every page as published and the site shows panel word
 
 ## Handoff
 
-- **2026-11-16 — MC-00 done, answers folded in.** The plan, WOs and `STATE_SO_FAR.md` are written. Q1–Q5 are answered; Q6 (which mintapp.site name) is open. Nothing is built yet, and **the user asked for work orders only, so wait for their go**.
+- **2026-11-16 — MC-00 done, answers folded in.** The plan, WOs and `STATE_SO_FAR.md` are written. Q1–Q5 are answered: the final address is commerce.thinkcrypt.dev, the user adds the DNS record, and the panel stays at commerce.mintapp.site. Nothing is built yet, and **the user asked for work orders only, so wait for their go**.
 - The **Mint Commerce** website project (the "new project") already exists in the tenant panel: `mint-2-mint-commerce`, MCP connector 6fd2f8e3, key `mint_pk_135148ce…`. It is empty. Next: MC-01.
 - The Mango She page was read in the built-in browser on 2026-11-16. Its measurements are in the README table: 56px header, 13px/600 uppercase nav, 68px/600 uppercase headings over full-screen photos, grey footer.
 - Pitfalls collected from the sibling sites:
