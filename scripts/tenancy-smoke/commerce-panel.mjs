@@ -73,7 +73,7 @@ ok('the admin API refuses it', r.status === 401);
 
 r = await call('GET', `${S}/sidebar/admin/server`, null, st);
 const side = JSON.stringify(r.body || []);
-ok('sidebar: POS, Orders, the store’s tables, Couriers, Email accounts, Media', ['/store/pos', '/store/orders', '/t/products', '/store/settings/delivery/connect', '/email-accounts', '/images'].every(h => side.includes(`"${h}"`)), side.slice(0, 300));
+ok('sidebar: POS, Orders, the store’s tables, Couriers, Email accounts, Media', ['/store/pos', '/store/orders', '/t/products', '/store/couriers', '/email-accounts', '/images'].every(h => side.includes(`"${h}"`)), side.slice(0, 300));
 ok('sidebar: no Build, automations, settings, API pages, members, panel admins, organization', !['/model-builder', '/builder', '/automations', '/project-settings', '/store/settings"', '/public-api', '/project-people', '/panel-admins', '/projects', '/org/members', '/site-setup', '/widgets'].some(h => side.includes(`"${h}`) && !side.includes(`"${h}/`)) && !side.includes('"/model-builder"') && !side.includes('"/automations"') && !side.includes('"/project-settings"') && !side.includes('"/store/settings"') && !side.includes('"/projects"') && !side.includes('"/panel-admins"'), side);
 
 // records: yes
@@ -88,6 +88,10 @@ r = await call('GET', `${S}/commerce/settings`, null, st);
 ok('reads the store settings', r.status === 200);
 r = await call('GET', `${S}/commerce/couriers`, null, st);
 ok('couriers: lists them', r.status === 200, `${r.status} ${r.body?.message}`);
+r = await call('PUT', `${S}/commerce/couriers/steadfast/use`, { on: false }, st);
+ok('couriers: switches one off for deliveries', r.status === 200 && !r.body?.answers?.delivery?.couriers?.includes('steadfast') && r.body?.answers?.delivery?.rates?.length === 1, `${r.status} ${r.body?.message} ${JSON.stringify(r.body?.answers?.delivery)}`);
+r = await call('PUT', `${S}/commerce/couriers/steadfast/use`, { on: true }, st);
+ok('…and on again, the rest of Delivery settings unchanged', r.status === 200 && r.body?.answers?.delivery?.couriers?.includes('steadfast') && r.body?.answers?.delivery?.enabled === true);
 r = await call('GET', `${S}/mail-accounts`, null, st);
 ok('email accounts: lists them', r.status === 200, `${r.status} ${r.body?.message}`);
 r = await call('GET', `${S}/mail-designs`, null, st);

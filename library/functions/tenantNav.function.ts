@@ -70,7 +70,7 @@ export const tenantLead = (permissions: string[], projectType?: string, store?: 
 			// Each kind of setting is an item of its own (the wizard's answers, a page each).
 			// A commerce panel's store admin (docs/commerce-panel): connects couriers, changes no other setting.
 			...(!can('manage-projects') && can('manage-couriers') && store?.features?.includes('delivery')
-				? section('Store settings', 'settings-2', [{ title: 'Couriers', href: '/store/settings/delivery/connect', icon: 'truck' }])
+				? section('Store settings', 'settings-2', [{ title: 'Couriers', href: '/store/couriers', icon: 'truck' }])
 				: []),
 			...(can('manage-projects')
 				? section('Store settings', 'settings-2', [

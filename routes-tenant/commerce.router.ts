@@ -70,6 +70,7 @@ import { currentScope, runInScope } from '../library/functions/tenantScope.funct
  *   GET    /couriers                        the couriers the country offers: on / off, keys set, last test,
  *                                           webhook address + secret, warnings   manage-projects
  *   PUT    /couriers/:id   { mode?, keys?, settings?, webhookSecret?, sandbox? }   saves (blank key = keep) and tests   manage-projects
+ *   PUT    /couriers/:id/use  { on }        use it for deliveries or not (the delivery answers' couriers only)   manage-projects / manage-couriers
  *   POST   /couriers/:id/test               tests again   manage-projects
  *   POST   /couriers/:id/webhook-secret     a new webhook secret (the old address stops working)   manage-projects
  *   DELETE /couriers/:id                    forgets the keys; 409 courier_in_use while deliveries are on their way   manage-projects
@@ -391,6 +392,23 @@ router.put(
 		const out = await saveConnection(req.project, req.params.id, req.body || {}, actorName(req), apiOrigin(req));
 		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `connected ${out.name}${out.connection?.tested ? '' : ' (not tested)'}` });
 		return out;
+	})
+);
+// Use a courier for deliveries or not — only the delivery section's couriers list (docs/commerce-panel CP-02),
+// so a store login switches couriers without the other settings.
+router.put(
+	'/couriers/:id/use',
+	manageCouriers,
+	handle(async (req: any) => {
+		const view: any = await commerceView(req.project);
+		const delivery = view?.answers?.delivery || {};
+		const id = String(req.params.id);
+		const now = (delivery.couriers || []).filter((x: string) => x !== id);
+		const couriers = req.body?.on ? [...now, id] : now;
+		await saveCommerce(req.project, { answers: { delivery: { ...delivery, couriers } } }, settingsGuard);
+		await afterSettingsSaved(req.project);
+		recordProjectEvent({ req, model: 'Store', modelPath: 'store', document: req.project._id, name: 'Couriers', text: `${req.body?.on ? 'switched on' : 'switched off'} ${id} for deliveries` });
+		return commerceView(req.project);
 	})
 );
 router.post(
