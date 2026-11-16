@@ -1,5 +1,8 @@
 # Mint Commerce website — changelog
 
+## 2026-11-17 — MC-08
+- **MC-08** `/demos` (the six stores, plus every panel login in one list with copy buttons) and one page per demo (open the store, sign in to its panel, gallery, what it shows off).
+
 ## 2026-11-17 — MC-07
 - **MC-07** `/features` (every built feature in group sections, anchors for the home and header links) and one page per feature (picture, what it does, how it works in 3 steps, more features). New panel features show up without a deploy.
 

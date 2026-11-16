@@ -32,7 +32,7 @@ Rules:
 | MC-05 | Site scaffold: repo, Mango-style design system, header/bar/footer with both logos, data layer, track.js, SEO | mint-commerce-website | M | **done 2026-11-16** |
 | MC-06 | Home page (full-screen panel stack) | site + contents | M | **done 2026-11-16** (words are seed until MC-12) |
 | MC-07 | Features grid + feature pages | site | M | **done 2026-11-17** |
-| MC-08 | Demos grid + demo pages with logins | site | S | |
+| MC-08 | Demos grid + demo pages with logins | site | S | **done 2026-11-17** |
 | MC-09 | Pricing + Get started (estimate → Leads) | site | M | |
 | MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | |
 | MC-11 | About (Thinkcrypt × MINT), Contact, FAQ, Privacy, Terms, 404 | site + contents | S | |
@@ -168,6 +168,11 @@ Done when `get_site` lists every page as published and the site shows panel word
 - OG images render, and no link answers 404 (crawl the sitemap).
 
 ## Handoff
+
+- **2026-11-17 — MC-08 done.** Next: **MC-09 pricing + get started**.
+  - `/demos`: an intro (contents `/demos` section `intro`, seed until MC-12), a 3-across 16:9 grid, and `#logins`, which lists every store's email + access code with copy buttons and Store / Panel buttons. The header's "Demo login" and the footer's "Demo logins" land on `#logins`.
+  - `/demos/[slug]`: the scene (h1 = name), the kind + summary, OPEN THE STORE, highlights, the login card (copy buttons, Open its panel, the shared-demo note), a gallery of the record's `gallery` minus the main picture, 3 more demos, and GET STARTED. ISR like features; an unknown slug answers 404.
+  - The access codes come from `demoAccess` (public on purpose). The copy buttons were not clicked in a browser (headless gives no clipboard); they fall back to the value shown on screen.
 
 - **2026-11-17 — MC-07 done.** Next: **MC-08 demos pages**.
   - `/features`: an intro (contents `/features` section `intro`, seed until MC-12), group links, then one section per group with anchor ids (`#sell-online` …) and a 2/4-across grid of 4:5 phone scenes. A feature with no picture is a grey tile with its name.
