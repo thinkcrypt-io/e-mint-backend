@@ -1,5 +1,10 @@
 # Mint Commerce website — changelog
 
+## 2026-11-16 — MC-04 (storefront), MC-05, MC-06
+- **MC-04** Shot all 6 demo stores (home, product, category, plus search and sign-in pages) at 1440×900 and 390×844 with headless Chrome. Made studio scenes (laptop + phone 16:9, two phones 4:5, soft warm/stone/sand/mist backdrops), uploaded them to the media library, and linked them to every Demo store (image, imagePhone, gallery) and the 6 storefront Features. The site share picture is set. Panel screens wait for a sign-in.
+- **MC-05** The site: Next 16, Tailwind v4, Instrument Sans, Mango look (56px header, closeable bar, full-picture panels, grey footer with the call-back form and both logos), panel data with seed fallback, lead route, robots + sitemap, track.js. Live at commerce.tcrypt.site.
+- **MC-06** Home page: YOUR STORE ONLINE IN 7 DAYS, one panel per job, TRY A DEMO, WHAT IT COSTS, 7 DAYS, GET STARTED.
+
 ## 2026-11-16 — MC-01, MC-02, MC-03
 - **MC-01** Site setup of the Mint Commerce project (connector now fb74b56e): name, tagline, MINT tile logo + favicon, ink/white, Instrument Sans, Thinkcrypt contact + socials, SEO defaults, footer text, domain commerce.tcrypt.site, canonical, robots.
 - **MC-02** Seven models in a new "Mint Commerce website" sidebar category. Public list/get on all except Leads. Leads: server-key create endpoint + team notify/email automation.

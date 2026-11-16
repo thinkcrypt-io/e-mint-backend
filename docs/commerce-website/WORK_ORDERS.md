@@ -25,19 +25,19 @@ Rules:
 | WO | Title | Where | Size | Status |
 |---|---|---|---|---|
 | MC-00 | Plan, work orders, state-so-far handoff; answers Q1–Q5 folded in | backend/docs/commerce-website | S | **done 2026-11-16** |
-| MC-01 | New project's settings: name, logos, favicon, contact, domains, tracking | panel (MCP fb74b56e) | S | **done 2026-11-16** (ogImage after MC-04) |
+| MC-01 | New project's settings: name, logos, favicon, contact, domains, tracking | panel (MCP fb74b56e) | S | **done 2026-11-16** (ogImage set in MC-04) |
 | MC-02 | Models + endpoints + lead automation | panel (MCP) | M | **done 2026-11-16** (test lead waits for the server key) |
 | MC-03 | Seed data, **built features only**: features, demos, plans, build options, integrations | panel (MCP) | M | **done 2026-11-16** (pictures in MC-04) |
-| MC-04 | Pictures: live shots of demo stores + commerce panel, studio scenes, media library | scratchpad + panel | L | |
-| MC-05 | Site scaffold: repo, Mango-style design system, header/bar/footer with both logos, data layer, track.js, SEO | mint-commerce-website | M | |
-| MC-06 | Home page (full-screen panel stack) | site + contents | M | |
+| MC-04 | Pictures: live shots of demo stores + commerce panel, studio scenes, media library | scratchpad + panel | L | **storefront part done 2026-11-16**; panel shots wait for the user (sign-in) |
+| MC-05 | Site scaffold: repo, Mango-style design system, header/bar/footer with both logos, data layer, track.js, SEO | mint-commerce-website | M | **done 2026-11-16** |
+| MC-06 | Home page (full-screen panel stack) | site + contents | M | **done 2026-11-16** (words are seed until MC-12) |
 | MC-07 | Features grid + feature pages | site | M | |
 | MC-08 | Demos grid + demo pages with logins | site | S | |
 | MC-09 | Pricing + Get started (estimate → Leads) | site | M | |
 | MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | |
 | MC-11 | About (Thinkcrypt × MINT), Contact, FAQ, Privacy, Terms, 404 | site + contents | S | |
 | MC-12 | Every page's contents + SEO in the panel, published | panel (MCP) | M | |
-| MC-13 | Deploy: GitHub repo, Vercel project, env, commerce.tcrypt.site | GitHub + Vercel | S | |
+| MC-13 | Deploy: GitHub repo, Vercel project, env, commerce.tcrypt.site | GitHub + Vercel | S | **mostly done 2026-11-16** (live; MINT_SERVER_KEY by the user) |
 | MC-14 | Analytics connected and checked live | panel + site | S | |
 | MC-15 | commerce.thinkcrypt.dev | Vercel + the user's DNS record | S | the user adds the record |
 | MC-16 | Links in: Thinkcrypt pages, demo storefront footers, mint-webpage | other repos | S | |
@@ -168,6 +168,15 @@ Done when `get_site` lists every page as published and the site shows panel word
 - OG images render, and no link answers 404 (crawl the sitemap).
 
 ## Handoff
+
+- **2026-11-16 — MC-04 (storefront part), MC-05, MC-06 done; MC-13 mostly done.** Next: **MC-07 features pages**.
+  - Site repo `aiasifistiaque/mint-commerce-website` (private, main), local folder `e-mint/mint-commerce-website`, port 3660. Vercel project `mint-commerce-website` (prj_TDIAvMVlFjnl0QZtwbKGadbTM1B3) is Git-linked, so a push to main deploys. https://commerce.tcrypt.site is live with the home page.
+  - MC-04 pictures: 23 demo scenes (6 × desktop 16:9 + phone 4:5 + gallery) in media folder `demos`, and 12 feature scenes for the 6 storefront features in `features`. All are linked to the records. Sobuj Basket has no category gallery picture (its category page is mostly out-of-stock placeholders). Site share picture = the store-website scene.
+  - Scene tools live in the session scratchpad (`mc04/tools`: shoot.mjs = CDP shot, all.mjs/extras.mjs = drivers, scene.py = PIL laptop+phone / two-phone scenes with a status-bar strip so the island never covers the page, build.py = every scene). If the scratchpad is gone, rebuild from this description.
+  - **Waiting on the user:** the commerce panel shots (MC-04 second half: 20 run-it/shop/delivery/get-paid features + Panel screens). They need a sign-in on production commerce.mintapp.site, and Claude does not type passwords there. Until then those features have no picture, and the home page shows those groups as plain text rows.
+  - **Waiting on the user:** the server key for `MINT_SERVER_KEY` (Vercel) and the test lead.
+  - Home (MC-06): the hero = the first demo's scene; one panel per group (the group's showOnHome feature with a picture, else a text row); TRY A DEMO grid; WHAT IT COSTS from Plans + Build options; 7 DAYS steps; GET STARTED. Words come from `/` contents sections `hero`, `demos`, `price`, `days`, `get-started` (seed until MC-12 makes them). Over pictures, the links row is hidden on phones.
+  - `pageMeta` falls back to the site's ogImage, because a page's openGraph replaces the layout's. This replaces a per-page `opengraph-image.tsx` (the share picture can be changed in the panel).
 
 - **2026-11-16 — MC-01…03 done.** Next: **MC-04 pictures**, then MC-05 scaffold.
   - MC-01: settings, contact (copied from Thinkcrypt), SEO defaults, domains `[commerce.tcrypt.site]`, origin set, canonical commerce.tcrypt.site, robots `Disallow: /api/`. Logos are in media folder `brand`: MINT tile `…/1794844390317_icon.svg` (logo + favicon) and Thinkcrypt `…/1794844392102_thinkcrypt.svg`. The 512px PNG tile ships as the site's own `app/icon.png` in MC-05 (base64 upload is too big for a tool call). ogImage is still empty until MC-04.
