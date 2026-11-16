@@ -33,8 +33,8 @@ Rules:
 | MC-06 | Home page (full-screen panel stack) | site + contents | M | **done 2026-11-16** (words are seed until MC-12) |
 | MC-07 | Features grid + feature pages | site | M | **done 2026-11-17** |
 | MC-08 | Demos grid + demo pages with logins | site | S | **done 2026-11-17** |
-| MC-09 | Pricing + Get started (estimate → Leads) | site | M | |
-| MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | |
+| MC-09 | Pricing + Get started (estimate → Leads) | site | M | **pricing done 2026-11-17**; get started open |
+| MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | **How it works + Switch done 2026-11-17**; panel tour, AI, integrations open |
 | MC-11 | About (Thinkcrypt × MINT), Contact, FAQ, Privacy, Terms, 404 | site + contents | S | |
 | MC-12 | Every page's contents + SEO in the panel, published | panel (MCP) | M | |
 | MC-13 | Deploy: GitHub repo, Vercel project, env, commerce.tcrypt.site | GitHub + Vercel | S | **mostly done 2026-11-16** (live; MINT_SERVER_KEY by the user) |
@@ -168,6 +168,13 @@ Done when `get_site` lists every page as published and the site shows panel word
 - OG images render, and no link answers 404 (crawl the sitemap).
 
 ## Handoff
+
+- **2026-11-17 — Commerce OS rework (user's asks, f80ba1b; not a WO).** Next: **MC-09 get started** (every "Get started" button still leads to a missing /get-started).
+  - Panel: 42 features (create_records on `features`, matchOn `slug`); Feature model has `points`, `faq`, `focus`; group options gained `products` and `automations`. Seed copy in `content/seed/features.json` matches.
+  - Pictures are now code: `components/Scene.tsx` (scene per slug in `SCENES`, tones per group in `TONES`) + `components/mocks.tsx` (drawings). A new feature with no `SCENES` entry falls back to the store-website scene, so add one. The panel `image` (real shot) still shows on the feature page under "In the panel".
+  - Home words are seeds in `app/page.tsx` (`hero`, `core`, `show`, `flow`, `days`, `demos`, `faq`, `get-started`); /pricing, /how-it-works, /switch read `intro` + `faq` from their pages. MC-12 should add these to the panel.
+  - Claims to watch: "0.2 s" is the cached TTFB measured on our demo stores; "we move your data, you won't lose any" is the user's service promise (moves are done by us by hand: bulk import + checks); the comparison names no competitor; SMS/WhatsApp marketing is "Coming soon" only (docs/marketing MK-02+ open).
+  - Still waiting on the user: `MINT_SERVER_KEY` on Vercel (leads), panel shots via Claude in Chrome.
 
 - **2026-11-17 — Header + hero lead box + worry-free section (user's asks).** The hero box sends callback Leads but they fail with "Our form is resting" until the user adds `MINT_SERVER_KEY` on Vercel. Phone is required on Leads, so email-only leads carry Phone "—"; making Phone optional is the user's call. Header and footer still link to unbuilt pages only in the footer and MC-09+ (pricing, get-started). Next is still **MC-09**.
 - **2026-11-17 — Home + features reworked (user's ask, not a WO).** Home is a Shopify-style selling page: what it is, time and price in the hero, then jobs, every feature, prices, demos, FAQ. This overrides D1's "one big picture per screen" on home; the rest keeps the Mango look. New home sections read panel contents by slug (`hero`, `jobs`, `all`, `flow`, `who`, `price`, `days`, `demos`, `faq`, `get-started`) with seeds in `app/page.tsx` — MC-12 should add them to the "/" page. Next is still **MC-09 pricing + get started**.
