@@ -2042,3 +2042,19 @@ Decisions D14–D17 (README).
 - Verified: API script on a private backend (:5073); browser pane on mint-tenant :3075 (pin via menu → first in Pinned,
   unpin → back to All projects). `tsc` clean in backend and mint-tenant. Not deployed.
 
+
+## 2026-11-16 — Commerce panel (docs/commerce-panel CP-01…05)
+- The user asked for a commerce panel like the tenant panel for an e-commerce project's own people: logins with email and
+  password tied to one project (a `PanelAdmin` model; one email, one project), the store pre-built, no models, settings,
+  automations or developer tools — couriers and email accounts allowed.
+- backend (caaa02b9, 9f7f75a0): `panelAdmin.model.ts`, `panelAdmin.function.ts` (fixed keys, path guard, self payload),
+  `panelAuth.router.ts`, `panelAdmins.router.ts`, tenantProtect accepts kind `panel`, couriers/mail routes accept
+  `manage-couriers` / `manage-email`, `/people` + `/access-users` refuse store logins, `tenantNav(…, { panel })`,
+  `PUT commerce/couriers/:id/use`. Plan + decisions: `docs/commerce-panel/README.md`.
+- mint-tenant (5cb41ee + domain link): `/panel-admins` page, `/store/couriers`, courier switch uses the new route,
+  email accounts open to `manage-email`.
+- mint-commerce (new repo): copy of mint-tenant at 5cb41ee with `IS_COMMERCE_PANEL`; Vercel project `mint-commerce`,
+  domain commerce.mintapp.site (Vercel DNS, verified).
+- Verified: smoke `commerce-panel.mjs` all passed on a private backend (:5091); mint-commerce in headless Chrome against
+  it — sign-in → the store, sidebar is the store's own, model builder / store settings / projects / automations bounce
+  to the store, Couriers / Email / Security open; `tsc` clean and `next build` passes. Backend not deployed.
