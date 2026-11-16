@@ -33,7 +33,7 @@ Rules:
 | MC-06 | Home page (full-screen panel stack) | site + contents | M | **done 2026-11-16** (words are seed until MC-12) |
 | MC-07 | Features grid + feature pages | site | M | **done 2026-11-17** |
 | MC-08 | Demos grid + demo pages with logins | site | S | **done 2026-11-17** |
-| MC-09 | Pricing + Get started (estimate → Leads) | site | M | **pricing done 2026-11-17**; get started open |
+| MC-09 | Pricing + Get started (estimate → Leads) | site | M | **done 2026-11-17** (pricing + get started) |
 | MC-10 | Panel tour, AI, How it works, Switch, Integrations | site + contents | M | **How it works + Switch done 2026-11-17**; panel tour, AI, integrations open |
 | MC-11 | About (Thinkcrypt × MINT), Contact, FAQ, Privacy, Terms, 404 | site + contents | S | |
 | MC-12 | Every page's contents + SEO in the panel, published | panel (MCP) | M | |
@@ -169,7 +169,11 @@ Done when `get_site` lists every page as published and the site shows panel word
 
 ## Handoff
 
-- **2026-11-17 — Commerce OS rework (user's asks, f80ba1b; not a WO).** Next: **MC-09 get started** (every "Get started" button still leads to a missing /get-started).
+- **2026-11-17 — MC-09 done (541e881).** Next: **MC-10 rest** (panel tour, AI, integrations) or **MC-11** (about, contact, FAQ, privacy, terms; footer links to them 404 today).
+  - `/get-started` = `components/EstimateForm.tsx` (client) + `app/get-started/page.tsx`. Same `estimate()` in the browser and `app/api/lead`. Query presets: `stage`, `design`, `from`, `custom`.
+  - Checked locally: live price, presets, phone check, and the send path up to "Our form is resting" (no `MINT_SERVER_KEY` locally). The thank-you state and a real Lead are untested until the user adds `MINT_SERVER_KEY` on Vercel; then send one test lead and delete it (MC-14).
+
+- **2026-11-17 — Commerce OS rework (user's asks, f80ba1b; not a WO).** MC-09 followed (see above).
   - Panel: 42 features (create_records on `features`, matchOn `slug`); Feature model has `points`, `faq`, `focus`; group options gained `products` and `automations`. Seed copy in `content/seed/features.json` matches.
   - Pictures are now code: `components/Scene.tsx` (scene per slug in `SCENES`, tones per group in `TONES`) + `components/mocks.tsx` (drawings). A new feature with no `SCENES` entry falls back to the store-website scene, so add one. The panel `image` (real shot) still shows on the feature page under "In the panel".
   - Home words are seeds in `app/page.tsx` (`hero`, `core`, `show`, `flow`, `days`, `demos`, `faq`, `get-started`); /pricing, /how-it-works, /switch read `intro` + `faq` from their pages. MC-12 should add these to the panel.

@@ -1,5 +1,10 @@
 # Mint Commerce website — changelog
 
+## 2026-11-17 — MC-09 Get started
+- `/get-started` (541e881): four questions — design (from Build options), how many products (size chips or numbers), where you sell today (+ "we move it" note for WooCommerce/Shopify/own site), "I need features built for me" — then name/phone/email/shop. The price shows live in a sticky ink card (a bar at the bottom on phones). Sends an `estimate` Lead through `app/api/lead`, which prices it again; "Moving from: …" goes in the message. Thank-you shows the lead code, the estimate and WhatsApp.
+- Links preselect it: `?stage=start|selling|scale` (stage finder, pricing tiers), `?from=WooCommerce` (Switch), `?custom=1` ("Tell us what you need"), `?design=<build value>`.
+- Then "What happens next" (4 steps) and questions; words from contents `/get-started` `intro`, `next`, `faq` (seed until MC-12).
+
 ## 2026-11-17 — The commerce OS rework (the user's asks)
 - **Shorter hero, Shopify corners** (ca7390d): the hero fits one laptop screen; radius tokens (10/16/22/28px), pill buttons, rounded hero box and pictures.
 - **42 features in 7 groups** (f80ba1b): Your website, Products & search, Sell in your shop, Delivery, Payments & invoices, Automations, Run your business. New in the panel: Products, Product variations, Product specifications, Built with Next.js, Zero loading screens, SEO for every page, Every word from your panel, Wishlist, Bulk product upload, Smart search, Search insights, bKash and SSLCommerz, Invoice generation, Automations, Email invoices, Delivery automation, Webhooks, Dashboard, Analytics, Edit history, Connect your AI, The panel on your phone, Two-step sign-in and more. The Feature model got `points` (tags), `faq` (question/answer list) and `focus` (yes/no). Focus: Next.js, zero loading, invoice generation, automations, email invoices, delivery automation, connect your AI, bulk upload. bKash/SSLCommerz are shown because the user asked for them (the code exists; no demo checkout takes them yet).
