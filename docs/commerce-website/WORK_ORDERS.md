@@ -169,6 +169,7 @@ Done when `get_site` lists every page as published and the site shows panel word
 
 ## Handoff
 
+- **2026-11-17 — Header + hero lead box + worry-free section (user's asks).** The hero box sends callback Leads but they fail with "Our form is resting" until the user adds `MINT_SERVER_KEY` on Vercel. Phone is required on Leads, so email-only leads carry Phone "—"; making Phone optional is the user's call. Header and footer still link to unbuilt pages only in the footer and MC-09+ (pricing, get-started). Next is still **MC-09**.
 - **2026-11-17 — Home + features reworked (user's ask, not a WO).** Home is a Shopify-style selling page: what it is, time and price in the hero, then jobs, every feature, prices, demos, FAQ. This overrides D1's "one big picture per screen" on home; the rest keeps the Mango look. New home sections read panel contents by slug (`hero`, `jobs`, `all`, `flow`, `who`, `price`, `days`, `demos`, `faq`, `get-started`) with seeds in `app/page.tsx` — MC-12 should add them to the "/" page. Next is still **MC-09 pricing + get started**.
 - **2026-11-17 — MC-08 done.** Next: **MC-09 pricing + get started**.
   - `/demos`: an intro (contents `/demos` section `intro`, seed until MC-12), a 3-across 16:9 grid, and `#logins`, which lists every store's email + access code with copy buttons and Store / Panel buttons. The header's "Demo login" and the footer's "Demo logins" land on `#logins`.
