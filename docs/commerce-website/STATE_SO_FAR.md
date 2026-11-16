@@ -82,9 +82,9 @@ uppercase nav, 55px navbar). That is the look the user means by "like Mango".
 
 | Connector | Project |
 |---|---|
-| **6fd2f8e3** | **Mint Commerce** website project, `mint-2-mint-commerce`, key `mint_pk_135148ce…`. **Empty**: no pages, no settings, no domains. The new website runs on it |
+| **fb74b56e** (was 6fd2f8e3) | **Mint Commerce** website project, `mint-2-mint-commerce`, key `mint_pk_135148ce…`. Settings + models + seed done (MC-01…03). The new website runs on it |
 | b2cf1673 | MINT (`mint-2-mint`, mintapp.shop) |
-| 8cd8828a | Thinkcrypt Website |
+| 0ed4e769 (was 8cd8828a) | Thinkcrypt Website |
 | 11fbae46, 707be96b | other website projects |
 | 1684596d, d9ff1a1c, 343b9514, 260dc75c, b7e68a4f | the demo stores (table above) |
 | 09c33332, 20bfd3cf, 49758082, e476de81 | other app projects |

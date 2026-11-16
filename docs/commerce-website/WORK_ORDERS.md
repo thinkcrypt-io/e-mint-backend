@@ -8,7 +8,7 @@ Rules:
 - Stage only your own files.
 - Update this file's Status + Handoff after every WO.
 
-**The user said on 2026-11-16: "write the work orders only for now".** Don't start MC-01 until they say go.
+**Go given 2026-11-16** ("continue with the work order"). Connectors on that day: **Mint Commerce = fb74b56e**, Thinkcrypt Website = 0ed4e769 (ids change; check with `get_site`).
 
 ## Questions
 
@@ -25,9 +25,9 @@ Rules:
 | WO | Title | Where | Size | Status |
 |---|---|---|---|---|
 | MC-00 | Plan, work orders, state-so-far handoff; answers Q1–Q5 folded in | backend/docs/commerce-website | S | **done 2026-11-16** |
-| MC-01 | New project's settings: name, logos, favicon, contact, domains, tracking | panel (MCP 6fd2f8e3) | S | |
-| MC-02 | Models + endpoints + lead automation | panel (MCP) | M | |
-| MC-03 | Seed data, **built features only**: features, demos, plans, build options, integrations | panel (MCP) | M | |
+| MC-01 | New project's settings: name, logos, favicon, contact, domains, tracking | panel (MCP fb74b56e) | S | **done 2026-11-16** (ogImage after MC-04) |
+| MC-02 | Models + endpoints + lead automation | panel (MCP) | M | **done 2026-11-16** (test lead waits for the server key) |
+| MC-03 | Seed data, **built features only**: features, demos, plans, build options, integrations | panel (MCP) | M | **done 2026-11-16** (pictures in MC-04) |
 | MC-04 | Pictures: live shots of demo stores + commerce panel, studio scenes, media library | scratchpad + panel | L | |
 | MC-05 | Site scaffold: repo, Mango-style design system, header/bar/footer with both logos, data layer, track.js, SEO | mint-commerce-website | M | |
 | MC-06 | Home page (full-screen panel stack) | site + contents | M | |
@@ -168,6 +168,13 @@ Done when `get_site` lists every page as published and the site shows panel word
 - OG images render, and no link answers 404 (crawl the sitemap).
 
 ## Handoff
+
+- **2026-11-16 — MC-01…03 done.** Next: **MC-04 pictures**, then MC-05 scaffold.
+  - MC-01: settings, contact (copied from Thinkcrypt), SEO defaults, domains `[commerce.tcrypt.site]`, origin set, canonical commerce.tcrypt.site, robots `Disallow: /api/`. Logos are in media folder `brand`: MINT tile `…/1794844390317_icon.svg` (logo + favicon) and Thinkcrypt `…/1794844392102_thinkcrypt.svg`. The 512px PNG tile ships as the site's own `app/icon.png` in MC-05 (base64 upload is too big for a tool call). ogImage is still empty until MC-04.
+  - MC-02: models Feature `features`, DemoStore `demo-stores`, Plan `plans`, BuildOption `build-options`, PanelScreen `panel-screens`, Integration `integrations` (public list/get), Lead `leads` (codes LD-0001; no public read). Endpoint `POST /leads` is **server key only**: it writes only the form fields (status/notes read-only) and sends back `code, kind`. An anonymous POST answers 401 `key_required` (checked). Automation "Tell the team about new leads" notifies the project owner and emails connect@thinkcrypt.dev (placeholders can't use `{{code}}`).
+  - The demo password field is **`demoAccess`**, a plain text field. The builder refuses a text field named "password", and the password kind is masked; these logins are public on purpose.
+  - **Waiting on the user:** make a server key (panel → API → Keys) for MC-13 `MINT_SERVER_KEY`. The MC-02 "test lead" check runs once it exists.
+  - MC-03: 3 plans, 3 build options, 6 demo stores (ec-demos copy + logins + highlights), 8 integrations, 26 features (checked list in CHANGELOG). `create_records` with 26 features timed out on the connector but finished on the server: query before you retry.
 
 - **2026-11-16 — MC-00 done, answers folded in.** The plan, WOs and `STATE_SO_FAR.md` are written. Q1–Q5 are answered: the final address is commerce.thinkcrypt.dev, the user adds the DNS record, and the panel stays at commerce.mintapp.site. Nothing is built yet, and **the user asked for work orders only, so wait for their go**.
 - The **Mint Commerce** website project (the "new project") already exists in the tenant panel: `mint-2-mint-commerce`, MCP connector 6fd2f8e3, key `mint_pk_135148ce…`. It is empty. Next: MC-01.
