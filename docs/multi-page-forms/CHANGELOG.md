@@ -1,5 +1,22 @@
 # Multi-page forms — change log
 
+## 2026-11-17 — MF-07 docs (mint-docs 84b6eef)
+- Pages guide → Form → "Form in pages" (`#form-steps`): pages, sections on pages, side column, Review, what Next /
+  Back / Save do, phone layout, the edit page, commerce panel and MCP.
+
+## 2026-11-17 — MF-06 MCP (backend d21a13e1)
+- `update_page`: `formSteps` (or `false`) and sections' `step` / `side`; sections keep their page by title when only
+  `form` is sent; sections on unknown pages are refused; turning pages on makes the add form open as a page.
+- `get_model`: `page.form`, `page.formSteps` and a "Form pages" summary. Describe text mentions it. Smoke `--mcp` 24/24.
+
+## 2026-11-17 — MF-05 commerce panel (mint-commerce 8ce847b)
+- The stepped add page and the edit page in the commerce panel; checked on a store login.
+
+## 2026-11-17 — MF-04 edit page (mint-tenant 6fcc30e)
+- `/<project>/<route>/edit/<id>`: stepped (opens on page 1, any page clickable) or the plain form; Save only with
+  changes, sends only the changes, goes back to the record (`?from=view`) or the table. With pages on, every Edit
+  (row menu, record page, quick view) opens it instead of the dialog.
+
 ## 2026-11-17 — MF-03 the add page in steps (mint-tenant a1d440b)
 - Stepper card across the top (numbered circles, current in the accent colour, passed ones ticked; "Step n of N ·
   Title" and a bar on a phone), the page's title and description, its sections with the side column on the right.
