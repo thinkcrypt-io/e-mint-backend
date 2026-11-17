@@ -29,6 +29,7 @@ import { ensureDeliveryAutomations } from './deliveryAutomations.js';
 import { ensureTaxAutomations } from './taxAutomations.js';
 import { refreshTaxAdded, relabelPriceColumns } from './taxRates.js';
 import { publishConfigPatch } from '../../controllers/builder/builder.controller.js';
+import { productPagesOf, withProductPages } from './productPages.js';
 
 /**
  * A store built before the blueprint last changed, brought up to it
@@ -55,6 +56,28 @@ const OLD_DESCRIPTIONS: Partial<Record<ModelKey, string[]>> = {
 };
 
 type Change = { model: string; added: string[]; renewed: string[]; filled: string[] };
+
+/**
+ * The product form in pages (docs/multi-page-forms MF-08) for a store built before it: its form's
+ * sections put on Basic information → Images → Inventory & variations → (Specifications) →
+ * SEO & others → Review & finalize. Left alone once the store has decided on pages.
+ */
+const productPages = async (req: any, def: any, fields: any[], apply: boolean) => {
+	const doc: any = await RouteConfig.findOne({ route: def.route });
+	if (!doc?.data) return [];
+	const p = productPagesOf(doc.data, fields);
+	if (!p) return [];
+	const pages = p.formSteps.steps.map((s: any) => s.title);
+	if (apply) {
+		const version = (doc.version || 0) + 1;
+		const data = withProductPages(doc.data, fields);
+		const draft = doc.draft ? withProductPages(doc.draft, fields) : doc.draft;
+		await RouteConfig.updateOne({ _id: doc._id }, { $set: { data, draft, version, publishedAt: new Date(), publishedBy: req.user?._id } });
+		await RouteVersion.create({ route: def.route, kind: 'config', version, data, note: 'The store’s upgrade: the product form in pages', publishedBy: req.user?._id });
+		invalidateRoute(def.route);
+	}
+	return [`form in pages (${pages.join(' → ')})`];
+};
 
 /** Today's blueprint fields missing from `have`, each put after the blueprint field before it. */
 const merged = (have: any[], want: any[]) => {
@@ -446,6 +469,7 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
 		if ((spec.key === 'product' || spec.key === 'variant') && fields.some((f: any) => f.key === 'salePrice'))
 			change.filled.push(...(apply || !added.includes('salePrice') ? await placeSaleFields(req, def, spec.key === 'product', apply) : ['Sale price beside the price on the form and the detail page']));
+		if (spec.key === 'product') change.filled.push(...(await productPages(req, def, fields, apply)));
 		if (spec.key === 'coupon') change.filled.push(...(await fillCoupons(def, apply)));
 		if (spec.key === 'product') change.filled.push(...(await fillProducts(def, apply)));
 		if (spec.key === 'product' || spec.key === 'category') change.filled.push(...(await fillSeoOut(def, apply)));

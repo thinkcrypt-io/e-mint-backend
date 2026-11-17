@@ -179,7 +179,7 @@ const PAGE_FORM_SCHEMA = (() => {
 })();
 
 /** update_page's `formSteps`, tidied: false (off, the layout kept) or { review, steps } with keys made where missing; a string is a problem. */
-const formStepsOf = (input: any): false | { enabled: true; review: boolean; steps: { key: string; title: string; description?: string }[] } | string => {
+const formStepsOf = (input: any): false | { enabled: true; review: boolean; reviewOn?: string; steps: { key: string; title: string; description?: string }[] } | string => {
 	if (input === false) return false;
 	if (!input || typeof input !== 'object' || !Array.isArray(input.steps)) return 'formSteps is false, or { review?, steps: [{ key?, title, description? }] }.';
 	if (!input.steps.length) return 'formSteps needs at least one page (or false to turn the pages off).';
@@ -201,7 +201,9 @@ const formStepsOf = (input: any): false | { enabled: true; review: boolean; step
 		const description = String(p?.description || '').trim().slice(0, 200);
 		steps.push({ key, title, ...(description && { description }) });
 	}
-	return { enabled: true, review: input.review === true, steps };
+	const on = typeof input.reviewOn === 'string' && input.reviewOn ? input.reviewOn : '';
+	if (on && (input.review !== true || steps.findIndex(x => x.key === on) < 1)) return `reviewOn needs review: true and the key of a page after the first (got “${on}”).`;
+	return { enabled: true, review: input.review === true, ...(on && { reviewOn: on }), steps };
 };
 
 /** The form's pages in words, for get_model. */
@@ -215,7 +217,7 @@ const formPagesText = (config: any): string => {
 	const last = fs.steps[fs.steps.length - 1].key;
 	const pageOf = (s: any) => (fs.steps.some((p: any) => p.key === s.step) ? s.step : last);
 	return [
-		`Form pages: on${fs.review ? ', with a Review page' : ''}${config?.route?.button?.path === undefined ? ' — but the add form opens as a pop-up, so they are not used until it opens as a page' : ''}`,
+		`Form pages: on${fs.review ? `, with a Review page${fs.reviewOn ? ` on [${fs.reviewOn}]` : ''}` : ''}${config?.route?.button?.path === undefined ? ' — but the add form opens as a pop-up, so they are not used until it opens as a page' : ''}`,
 		...fs.steps.map((p: any, i: number) => `${i + 1}. ${p.title} [${p.key}]${p.description ? ` — ${p.description}` : ''}: ${form.filter(s => pageOf(s) === p.key).map(s => `${s.sectionTitle || 'Untitled'}${s.side ? ' [side column]' : ''}`).join(', ') || '(empty — skipped)'}`),
 	].join('\n');
 };
@@ -574,7 +576,7 @@ const TOOLS: ToolDef[] = [
 				form: PAGE_FORM_SCHEMA,
 				formSteps: {
 					description:
-						'The add/edit form in pages: a stepper across the top, one page of sections at a time, Next checks the page’s required fields, saved once at the end. false turns it off (the pages stay set up). Otherwise replaces the pages, in order: { review: true adds a last page summing everything up, steps: [{ key?, title, description? }] } — up to 12; a key is made when missing (s1, s2…). Put sections on pages with form[].step (read get_model first: a section on no page shows on the last one). Turning pages on also makes the add form open as its own page (pages are not used in a pop-up), and Edit then opens an edit page.',
+						'The add/edit form in pages: a stepper across the top, one page of sections at a time, Next checks the page’s required fields, saved once at the end. false turns it off (the pages stay set up). Otherwise replaces the pages, in order: { review: true adds a summary of everything filled in — its own last page, or at the top of the page reviewOn names (e.g. a last page "Review & finalize": the summary, then the status), steps: [{ key?, title, description? }] } — up to 12; a key is made when missing (s1, s2…). Put sections on pages with form[].step (read get_model first: a section on no page shows on the last one). Turning pages on also makes the add form open as its own page (pages are not used in a pop-up), and Edit then opens an edit page.',
 					anyOf: [
 						{ type: 'boolean', enum: [false] },
 						{
@@ -582,6 +584,7 @@ const TOOLS: ToolDef[] = [
 							required: ['steps'],
 							properties: {
 								review: { type: 'boolean' },
+								reviewOn: { type: 'string' },
 								steps: {
 									type: 'array',
 									maxItems: 12,

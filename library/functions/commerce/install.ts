@@ -22,6 +22,7 @@ import { zoneOf } from './discounts.js';
 import { refreshTaxAdded } from './taxRates.js';
 import { storeOf } from './store.js';
 import { publishConfigPatch } from '../../controllers/builder/builder.controller.js';
+import { withProductPages } from './productPages.js';
 
 /**
  * Setting up a store (docs/ecommerce EC3): the blueprint's models built as one
@@ -181,6 +182,13 @@ export const install = async (req: any, project: any, a: Answers): Promise<{ ins
 		}
 
 		await layoutAgain(req, specs, installed, ['discount']);
+		// The product form in pages (docs/multi-page-forms MF-08).
+		if (installed.product) {
+			const pdef: any = await ModelDefinition.findById(installed.product.id, { fields: 1 }).lean();
+			await publishConfigPatch(req, installed.product.route, data => withProductPages(data, pdef?.fields || []), 'The store’s setup: the product form in pages').catch((e: any) =>
+				console.error('store product pages:', e?.message)
+			);
+		}
 		await applySidebar(a, installed);
 		await seed(a, installed);
 		await seedStoreDashboard(installed);

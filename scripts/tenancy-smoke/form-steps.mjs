@@ -84,6 +84,14 @@ ok('on with no steps: one page', r.status === 200 && !c?.formSteps);
 r = await publish({ formSteps: { enabled: true, steps } });
 c = await config();
 ok('back on (review off)', c?.formSteps?.review === false && c?.formSteps?.steps?.length === 3);
+// MF-08: the Review summary on a page (Review & finalize) instead of a page of its own.
+r = await publish({ formSteps: { enabled: true, review: true, reviewOn: steps[2].key, steps } });
+c = await config();
+ok('reviewOn: the summary on a later page', r.status === 200 && c?.formSteps?.reviewOn === steps[2].key, JSON.stringify(c?.formSteps));
+r = await publish({ formSteps: { enabled: true, review: true, reviewOn: steps[0].key, steps } });
+c = await config();
+ok('reviewOn the first page is ignored (nothing before it)', r.status === 200 && !('reviewOn' in (c?.formSteps || {})), JSON.stringify(c?.formSteps));
+r = await publish({ formSteps: { enabled: true, steps } });
 
 /* ---- creating a record is unchanged: one call with everything */
 r = await call('POST', P(`/${route}`), { name: 'Shirt', sku: 'SH-1', price: 500, stock: 3, status: 'Active' }, tok);

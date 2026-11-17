@@ -136,6 +136,9 @@ const formStepsSchema = Joi.object({
 	enabled: Joi.boolean(),
 	// End with a Review step that sums up the entries.
 	review: Joi.boolean(),
+	// The page the Review summary sits on, above its sections (a step key, not the first); none → its own last page
+	// (MF-08: "Review & finalize" — the summary, then the status, then Save).
+	reviewOn: Joi.string().pattern(STEP_KEY).allow(''),
 	steps: Joi.array()
 		.items(
 			Joi.object({

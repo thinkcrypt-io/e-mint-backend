@@ -43,6 +43,7 @@ Steps **group the existing form sections**; they don't hold their own copy of th
   "formSteps": {
     "enabled": true,          // off keeps the layout, so turning it back on loses nothing
     "review": true,           // end with a Review step that sums up the entries
+    "reviewOn": "s2",         // optional (MF-08): the Review summary at the top of this page, not a page of its own
     "steps": [
       { "key": "s1", "title": "Basic info", "description": "What customers see first" },
       { "key": "s2", "title": "Pricing" }
@@ -119,7 +120,8 @@ Quick edits (set a field, quick edit a field) are unchanged.
 - **D2 — only for a form that opens as its own page.** A stepper doesn't fit a drawer. With the pop-up, steps are
   ignored (the drawer shows every section) and the builder's switch is off with a button to switch "Opens".
 - **D3 — sections not on a page go on the last page** (before Review), and the builder warns.
-- **D4 — Review is optional**, always last, read-only, with Edit links back.
+- **D4 — Review is optional**, read-only, with Edit links back: a last page of its own, or (MF-08 `reviewOn`) the
+  summary at the top of a later page — "Review & finalize": the summary, then that page's sections, then Save.
 - **D5 — the server still checks everything on Save.** Per-step checks are a convenience; nothing new on the server's
   create / update path.
 - **D6 — create can't skip ahead** past a step that hasn't been passed; edit can jump anywhere.
@@ -139,4 +141,5 @@ Quick edits (set a field, quick edit a field) are unchanged.
 - Saving a half-filled create form as a draft between visits.
 - Steps in the super-admin panel's own (code) pages — the panels share the components, but only project routes
   (DB configs) are checked.
-- Per-step conditions (a whole page shown only when a field holds) — sections already have "Show only when".
+- Per-step conditions of their own — a page whose sections are all hidden right now is skipped (MF-08), which covers
+  most cases.

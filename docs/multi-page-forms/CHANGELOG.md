@@ -1,5 +1,12 @@
 # Multi-page forms — change log
 
+## 2026-11-17 — MF-08 every store's product form in pages
+- Products: Basic information (with pricing) → Images → Inventory & variations → (Specifications) → SEO & others →
+  Review & finalize — for new stores (installer) and built ones (`upgradeStores.js`); both panels.
+- `formSteps.reviewOn`: the Review summary on top of a page (the last one, with the status and Save) — builder
+  picker, MCP, `/get/config`. Pages hidden by their sections' conditions are skipped. Long steppers fit.
+- Docs: store guide "Adding a product" (`#store-product-form`), Pages guide Review options.
+
 ## 2026-11-17 — MF-07 docs (mint-docs 84b6eef)
 - Pages guide → Form → "Form in pages" (`#form-steps`): pages, sections on pages, side column, Review, what Next /
   Back / Save do, phone layout, the edit page, commerce panel and MCP.
