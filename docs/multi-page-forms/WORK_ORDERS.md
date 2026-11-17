@@ -14,7 +14,7 @@ mint-tenant `main`, mint-commerce `main`, mint-docs `main`. Update Status, Hando
 | MF-05 | Commerce panel: the same files into mint-commerce, checked in the browser on a store model | mint-commerce | S | done 2026-11-17 (8ce847b) |
 | MF-06 | MCP: `update_page` takes `formSteps` (or false) and sections' `step` / `side` (kept when only `form` is sent); `get_model` shows the form's sections and steps; describe text | backend `library/controllers/mcp/mcp.router.ts` | S | planned |
 | MF-07 | Docs: mint-docs Pages guide "Form in pages" (`#form-steps`), this folder's Handoff | mint-docs `src/app/pages/page.tsx` | S | done 2026-11-17 (mint-docs 84b6eef) |
-| MF-08 | Every store's Products form in 5 pages: Basic information (with pricing) → Images → Inventory & variations → (Specifications) → SEO & others → Review & finalize (summary, then status + collections, then Save). New `formSteps.reviewOn` (the summary at the top of a page). Pages whose sections are all hidden are skipped (Variations on a simple product). New stores via the installer, built ones via `upgradeStores.js` | backend (`commerce/productPages.ts`, `install.ts`, `upgrade.ts`, `validate.ts`, `formSteps.function.ts`, `mcp.router.ts`), mint-tenant + mint-commerce (`steps/*`, `FormStepsPanel.tsx`), mint-docs (store + pages guides) | M | done 2026-11-17 (backend a6bf6742, mint-tenant b325b05, mint-commerce 6e3700b, mint-docs df1872b) — prod upgrade waits for the backend deploy |
+| MF-08 | Every store's Products form in 5 pages: Basic information (with pricing) → Images → Inventory & variations → (Specifications) → SEO & others → Review & finalize (summary, then status + collections, then Save). New `formSteps.reviewOn` (the summary at the top of a page). Pages whose sections are all hidden are skipped (Variations on a simple product). New stores via the installer, built ones via `upgradeStores.js` | backend (`commerce/productPages.ts`, `install.ts`, `upgrade.ts`, `validate.ts`, `formSteps.function.ts`, `mcp.router.ts`), mint-tenant + mint-commerce (`steps/*`, `FormStepsPanel.tsx`), mint-docs (store + pages guides) | M | done 2026-11-17 (backend a6bf6742, mint-tenant b325b05, mint-commerce 6e3700b, mint-docs df1872b) — deployed + `upgradeStores.js --apply` on prod 2026-11-17 (Verte, HINT, GBazaar, Fabrilife, Think Tech) |
 
 ## Handoff
 
@@ -58,8 +58,7 @@ mint-tenant `main`, mint-commerce `main`, mint-docs `main`. Update Status, Hando
   Checked on a private server: an old store upgraded (dry run, then --apply), a new store built, a product added
   in the tenant panel and in the commerce panel (store login) through all 5 steps, Variations only after
   "With variations", the commerce edit page with the summary on page 5; smoke `form-steps.mjs --mcp` 26/26.
-- To deploy: backend (manual Heroku — MF-01, MF-06, MF-08), then `node scripts/upgradeStores.js` (dry run) and
-  `--apply` for the stores built before (needs `npm run build`; the upgrade must run after the deploy, or the
-  builder refuses those pages' saves). mint-tenant, mint-commerce and mint-docs deploy on push. No other migration.
-- Backend deploy to Heroku is manual (the user). Until the backend is deployed, production refuses a publish that
-  has `formSteps` (`"formSteps" is not allowed`) — so deploy the backend before announcing MF-02.
+- Deployed 2026-11-17: backend on Heroku (MF-01, MF-06, MF-08), then `upgradeStores.js --apply` on prod — all 5
+  stores' Products forms in pages (Think Tech with Specifications). The same run applied the tax/sale-price upgrades
+  GBazaar, Fabrilife and Think Tech hadn't had yet (EC-35…47: Sale price = Price on 2,644 products / 10,232 variants,
+  "Price after tax" → "Price (no tax)"). mint-tenant, mint-commerce and mint-docs deploy on push. Nothing left to run.
