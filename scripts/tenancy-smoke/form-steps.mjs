@@ -91,16 +91,14 @@ ok('a record saves in one call', r.status === 201, said(r));
 
 /* ---- MF-06: update_page over MCP */
 if (process.argv.includes('--mcp')) {
-	const key = (await call('POST', P('/mcp/keys'), { name: 'steps', scopes: ['read', 'build'] }, tok)).body?.key;
+	const key = (await call('POST', P('/builder/api-keys'), { name: 'steps', scopes: ['read', 'build'] }, tok)).body?.secret;
 	const mcp = async (name, args) => {
-		const res = await fetch(`${(await import('./lib.mjs')).ROOT}/tenant/api/mcp`, {
+		const res = await fetch(`${(await import('./lib.mjs')).ROOT}/tenant/mcp`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', authorization: `Bearer ${key}` },
+			headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
 			body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
 		});
-		const text = await res.text();
-		const line = text.split('\n').find(l => l.startsWith('data:'));
-		return JSON.parse(line ? line.slice(5) : text)?.result;
+		return (await res.json().catch(() => null))?.result;
 	};
 	ok('an MCP key', !!key);
 	let m = await mcp('get_model', { name: 'Product' });

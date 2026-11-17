@@ -59,7 +59,7 @@ How to work with the user:
 3. Walk the user through the plan ONE STEP AT A TIME. For each step say what you suggest and why (its rationale). For a new model show its fields as a short table (label, kind, required, links). For an existing model show ONLY what changes: the fields added or changed, and the tabs added to its page. Ask them to confirm or change it before moving to the next step. Apply their edits and re-check with plan_feature.
 4. After the last step, show a short summary — the models, how they link, where they go in the sidebar — and ask for the go-ahead.
 5. Only then call build_feature with the confirmed plan. Share the page links it returns.
-To copy a field of a picked record into this one (an order's customer phone and email), put an autofill on that field in plan_feature / build_feature — it is a setting, not a field kind, so the field keeps its own kind (text, email, number, date, yes/no, choice or a link): "fillFrom: { from: <link field key>, formula: <field of the linked model> }". Add "readonly: true" to lock it (the server sets it and it follows the source record's later changes; without it the field is filled on pick and can be typed over), and "when: [{ field, op, value }]" with "match" ("all" / "any") to autofill only while conditions hold — a condition's field is a field of this record, or "@.field" for the picked record's; a read-only one is cleared and stays locked when they do not. Use update_page for later changes to a page's columns, row menu (the ⋯ buttons on each row, e.g. Download invoice / Download receipt shown by status), form or detail layout, its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
+To copy a field of a picked record into this one (an order's customer phone and email), put an autofill on that field in plan_feature / build_feature — it is a setting, not a field kind, so the field keeps its own kind (text, email, number, date, yes/no, choice or a link): "fillFrom: { from: <link field key>, formula: <field of the linked model> }". Add "readonly: true" to lock it (the server sets it and it follows the source record's later changes; without it the field is filled on pick and can be typed over), and "when: [{ field, op, value }]" with "match" ("all" / "any") to autofill only while conditions hold — a condition's field is a field of this record, or "@.field" for the picked record's; a read-only one is cleared and stays locked when they do not. Use update_page for later changes to a page's columns, row menu (the ⋯ buttons on each row, e.g. Download invoice / Download receipt shown by status), form or detail layout, the form in pages (formSteps — a stepper like Basic info → Pricing → Inventory → Review for long forms; each section's "step" names its page and "side" puts it in the right-hand column), its user guidelines (plain-words rules for the people using it), or to turn its Bulk upload on. For the home page's dashboard — numbers, charts and recent records from the models — read it with get_dashboard, propose the widgets, and save with update_dashboard after the user agrees. With the key's "data" scope, query_records reads a page's records (read-only) for questions and analysis. For printed documents of a page's records (invoices, bills, receipts), read describe_pdf_templates, then get_pdf_fields and use_pdf_starter or save_pdf_template; reusable wording (terms and conditions) goes in save_pdf_text. Never build without the user's go-ahead.`;
 
 /* ---------------------------------------------------------------- auth */
 
@@ -164,6 +164,60 @@ const planText = (plan: FeaturePlan) => {
 	if (plan.problems.length) out.push('', '## Problems', ...plan.problems.map(p => `- ${p}`));
 	out.push('', plan.ok ? 'The plan is valid. Walk the user through it step by step before building.' : 'Fix the problems and check again.');
 	return out.join('\n');
+};
+
+/**
+ * Form in pages (docs/multi-page-forms): update_page's `form` sections may name a page (`step`, a page key) and the
+ * side column (`side`); `formSteps` sets the pages. Same checks as the builder (validate.ts formStepsSchema).
+ */
+const STEP_KEY = /^[A-Za-z0-9_-]{1,40}$/;
+const PAGE_FORM_SCHEMA = (() => {
+	const form = structuredClone((FEATURE_SCHEMA as any).properties.steps.items.properties.form);
+	form.description = `${form.description || ''} With the form in pages (formSteps), a section's \`step\` is the key of the page it's on (none: the last page) and \`side: true\` puts it in the narrow column on the right (status, pictures). A section sent without \`step\` / \`side\` keeps the ones its title had.`.trim();
+	form.items.properties = { ...form.items.properties, step: { type: 'string', description: 'The page key (formSteps) this section is on' }, side: { type: 'boolean', description: 'In the side column' } };
+	return form;
+})();
+
+/** update_page's `formSteps`, tidied: false (off, the layout kept) or { review, steps } with keys made where missing; a string is a problem. */
+const formStepsOf = (input: any): false | { enabled: true; review: boolean; steps: { key: string; title: string; description?: string }[] } | string => {
+	if (input === false) return false;
+	if (!input || typeof input !== 'object' || !Array.isArray(input.steps)) return 'formSteps is false, or { review?, steps: [{ key?, title, description? }] }.';
+	if (!input.steps.length) return 'formSteps needs at least one page (or false to turn the pages off).';
+	if (input.steps.length > 12) return 'A form can have at most 12 pages.';
+	const used = new Set<string>(input.steps.map((p: any) => p?.key).filter((k: any) => typeof k === 'string' && k));
+	let n = 0;
+	const steps: { key: string; title: string; description?: string }[] = [];
+	for (const p of input.steps) {
+		const title = String(p?.title || '').trim().slice(0, 60);
+		if (!title) return 'Every page needs a title.';
+		let key = typeof p?.key === 'string' && p.key ? p.key : '';
+		if (key && !STEP_KEY.test(key)) return `Page key “${key}” can only have letters, numbers, - and _ (up to 40).`;
+		if (!key) {
+			do key = `s${++n}`;
+			while (used.has(key));
+			used.add(key);
+		}
+		if (steps.some(x => x.key === key)) return `Two pages have the key “${key}”.`;
+		const description = String(p?.description || '').trim().slice(0, 200);
+		steps.push({ key, title, ...(description && { description }) });
+	}
+	return { enabled: true, review: input.review === true, steps };
+};
+
+/** The form's pages in words, for get_model. */
+const formPagesText = (config: any): string => {
+	const fs = config?.formSteps;
+	const form: any[] = Array.isArray(config?.form) ? config.form : [];
+	const on = fs?.enabled && Array.isArray(fs.steps) && fs.steps.length;
+	const sections = (keyOf: (s: any) => string | undefined) =>
+		form.map(s => `${s.sectionTitle || 'Untitled'}${keyOf(s) ? ` (${keyOf(s)})` : ''}${s.side ? ' [side column]' : ''}`).join(', ') || '—';
+	if (!on) return `Form sections: ${sections(() => undefined)}\nForm pages: off — one page${fs?.steps?.length ? ` (${fs.steps.length} pages set up but switched off)` : ''}`;
+	const last = fs.steps[fs.steps.length - 1].key;
+	const pageOf = (s: any) => (fs.steps.some((p: any) => p.key === s.step) ? s.step : last);
+	return [
+		`Form pages: on${fs.review ? ', with a Review page' : ''}${config?.route?.button?.path === undefined ? ' — but the add form opens as a pop-up, so they are not used until it opens as a page' : ''}`,
+		...fs.steps.map((p: any, i: number) => `${i + 1}. ${p.title} [${p.key}]${p.description ? ` — ${p.description}` : ''}: ${form.filter(s => pageOf(s) === p.key).map(s => `${s.sectionTitle || 'Untitled'}${s.side ? ' [side column]' : ''}`).join(', ') || '(empty — skipped)'}`),
+	].join('\n');
 };
 
 /** update_page's `guidelines`, tidied: up to 50, each a title (and words under it); none → removed. */
@@ -348,7 +402,7 @@ const TOOLS: ToolDef[] = [
 	{
 		name: 'get_model',
 		title: 'Get a model',
-		description: 'One model in detail: its fields, its page (table columns, detail tabs) and the models that link to it.',
+		description: 'One model in detail: its fields, its page (table columns, form sections and pages, detail tabs) and the models that link to it.',
 		scope: 'read',
 		inputSchema: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
 		annotations: { readOnlyHint: true, openWorldHint: false },
@@ -367,6 +421,8 @@ const TOOLS: ToolDef[] = [
 					tabs: (config?.viewTabs || []).map((t: any) => ({ title: t.title, related: t.related, field: t.foreignField || t.localField, ...(t.via?.route && { via: t.via.route }) })),
 					linkedRelationships: config?.linkedRelationships || [],
 					rowMenu: config?.route?.menu || [],
+					form: config?.form || [],
+					formSteps: config?.formSteps || null,
 				},
 				linkedBy,
 			};
@@ -379,6 +435,7 @@ const TOOLS: ToolDef[] = [
 					`Table columns: ${(data.page.table || []).join(', ') || '—'}`,
 					`Tabs: ${data.page.tabs.map((t: any) => t.title).join(', ') || '—'}`,
 					`Row menu (⋯ on each row): ${rowMenuText(data.page.rowMenu) || '—'}`,
+					formPagesText(config),
 					`Linked from: ${linkedBy.join(', ') || '—'}`,
 					`Linked Relationships (rules on save): ${
 						(data.page.linkedRelationships || [])
@@ -479,7 +536,7 @@ const TOOLS: ToolDef[] = [
 		name: 'update_page',
 		title: 'Change a page layout',
 		description:
-			'Changes an existing page: its table columns, the row menu (the ⋯ buttons on each row — Download PDF, Mark as paid, Add payment…, each shown only on the rows that match), create/edit form sections, detail-page sections, add-button title, user guidelines, Bulk upload (on/off and its options), or its Linked Relationships (rules that update the records it picks on save). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
+			'Changes an existing page: its table columns, the row menu (the ⋯ buttons on each row — Download PDF, Mark as paid, Add payment…, each shown only on the rows that match), create/edit form sections, the form in pages (a stepper: Basic info → Pricing → … with an optional Review page), detail-page sections, add-button title, user guidelines, Bulk upload (on/off and its options), or its Linked Relationships (rules that update the records it picks on save). Published straight away (a version is kept in the route builder). Field keys must be the model’s.',
 		scope: 'build',
 		inputSchema: {
 			type: 'object',
@@ -514,7 +571,26 @@ const TOOLS: ToolDef[] = [
 						},
 					},
 				},
-				form: (FEATURE_SCHEMA as any).properties.steps.items.properties.form,
+				form: PAGE_FORM_SCHEMA,
+				formSteps: {
+					description:
+						'The add/edit form in pages: a stepper across the top, one page of sections at a time, Next checks the page’s required fields, saved once at the end. false turns it off (the pages stay set up). Otherwise replaces the pages, in order: { review: true adds a last page summing everything up, steps: [{ key?, title, description? }] } — up to 12; a key is made when missing (s1, s2…). Put sections on pages with form[].step (read get_model first: a section on no page shows on the last one). Turning pages on also makes the add form open as its own page (pages are not used in a pop-up), and Edit then opens an edit page.',
+					anyOf: [
+						{ type: 'boolean', enum: [false] },
+						{
+							type: 'object',
+							required: ['steps'],
+							properties: {
+								review: { type: 'boolean' },
+								steps: {
+									type: 'array',
+									maxItems: 12,
+									items: { type: 'object', required: ['title'], properties: { key: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' } } },
+								},
+							},
+						},
+					],
+				},
 				view: (FEATURE_SCHEMA as any).properties.steps.items.properties.view,
 				buttonTitle: { type: 'string' },
 				guidelines: {
@@ -621,6 +697,28 @@ const TOOLS: ToolDef[] = [
 				if (r.problems) return { text: ['The row menu wasn’t saved:', ...r.problems.map(p => `- ${p}`)].join('\n'), isError: true };
 				menu = r.items;
 			}
+			// Form in pages: the pages, and every section's page checked against them before anything is saved.
+			let steps: Exclude<ReturnType<typeof formStepsOf>, string> | undefined;
+			if (args?.formSteps !== undefined) {
+				const tidied = formStepsOf(args.formSteps);
+				if (typeof tidied === 'string') return { text: tidied, isError: true };
+				steps = tidied;
+			}
+			const live = await effectiveConfig(req.app, route);
+			const before: any[] = Array.isArray(live?.form) ? live.form : [];
+			const placed = (s: any) => {
+				const was = before.find(b => b?.sectionTitle === String(s?.sectionTitle || ''));
+				const step = s?.step !== undefined ? String(s.step || '') : was?.step;
+				const side = s?.side !== undefined ? s.side === true : was?.side === true;
+				return { ...(step && { step }), ...(side && { side: true }) };
+			};
+			if (Array.isArray(args?.form) || steps) {
+				const pageKeys = new Set<string>(((steps === undefined ? live?.formSteps?.steps : steps ? steps.steps : live?.formSteps?.steps) || []).map((p: any) => p?.key));
+				const sections: any[] = Array.isArray(args?.form) ? args.form.map((s: any) => ({ sectionTitle: s?.sectionTitle, ...placed(s) })) : before;
+				const lost = sections.filter(s => s?.step && !pageKeys.has(s.step)).map(s => `“${s.sectionTitle || 'Untitled'}” is on page “${s.step}”`);
+				if (lost.length && (steps || live?.formSteps?.enabled))
+					return { text: `The form wasn’t saved — no such page: ${lost.join('; ')}. Pages: ${[...pageKeys].join(', ') || 'none'}.`, isError: true };
+			}
 			let noGuidelines = false;
 			try {
 				await publishConfigPatch(
@@ -634,6 +732,7 @@ const TOOLS: ToolDef[] = [
 								.map((s: any) => ({
 									sectionTitle: String(s?.sectionTitle || ''),
 									...(s?.description && { description: String(s.description) }),
+									...placed(s),
 									fields: (Array.isArray(s?.fields) ? s.fields : [])
 										.map((row: any) => (Array.isArray(row) ? row.filter(known) : known(row) ? row : null))
 										.filter((row: any) => row && (!Array.isArray(row) || row.length)),
@@ -659,6 +758,14 @@ const TOOLS: ToolDef[] = [
 							next.route = upload ? { ...rest, bulkUpload: upload } : rest;
 						}
 						if (menu) next.route = { ...(next.route || {}), menu };
+						if (steps === false) {
+							if (next.formSteps) next.formSteps = { ...next.formSteps, enabled: false };
+						} else if (steps) {
+							next.formSteps = steps;
+							// Pages are only used when the add form opens as its own page (D2).
+							const { isModal: _modal, ...button } = next.route?.button || { title: 'Add' };
+							next.route = { ...(next.route || {}), button: { ...button, path: button.path || `/${route}/create` } };
+						}
 						// Checked like a builder publish (configDraftSchema + linkedCheck): a field or link that doesn't fit refuses it.
 						if (args?.linkedRelationships === false || (Array.isArray(args?.linkedRelationships) && !args.linkedRelationships.length)) delete next.linkedRelationships;
 						else if (Array.isArray(args?.linkedRelationships)) next.linkedRelationships = args.linkedRelationships;
@@ -670,7 +777,9 @@ const TOOLS: ToolDef[] = [
 				return { text: e?.message || 'Could not change the page', isError: true };
 			}
 			return {
-				text: `Updated /${route}: ${caller.page(route)}${menu ? `\nRow menu: ${rowMenuText(menu) || 'empty'}` : ''}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}${
+				text: `Updated /${route}: ${caller.page(route)}${menu ? `\nRow menu: ${rowMenuText(menu) || 'empty'}` : ''}${
+					steps ? `\nForm in ${steps.steps.length} pages: ${steps.steps.map(p => `${p.title} [${p.key}]`).join(' → ')}${steps.review ? ' → Review' : ''}` : steps === false ? '\nForm pages: off' : ''
+				}${bad.length ? `\nSkipped unknown keys: ${[...new Set(bad)].join(', ')}` : ''}${
 					noGuidelines ? '\nGuidelines not saved: this page has no table header to show them from.' : ''
 				}`,
 			};
