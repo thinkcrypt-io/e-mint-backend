@@ -1,5 +1,13 @@
 # Multi-page forms — change log
 
+## 2026-11-17 — MF-08b section conditions kept
+- Stores lost the blueprint's section `showIf` (coupon Percentage / Amount off by type, product Variations): the
+  builder's `applyLayout` (ai.controller.ts) copied a section's title, description and fields only. It now keeps a
+  valid `showIf`, so new stores have them.
+- `upgradeStore`: a `sectionRules` step puts each blueprint section's `showIf` back on the store's section of the same
+  title that has none (when the rule's field is still there). Checked on a private server: old and new stores'
+  `/get/config` give percentOff / maxDiscount / amountOff and options their `renderIf`.
+
 ## 2026-11-17 — MF-08 every store's product form in pages
 - Products: Basic information (with pricing) → Images → Inventory & variations → (Specifications) → SEO & others →
   Review & finalize — for new stores (installer) and built ones (`upgradeStores.js`); both panels.

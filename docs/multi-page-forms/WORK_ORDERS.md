@@ -61,4 +61,7 @@ mint-tenant `main`, mint-commerce `main`, mint-docs `main`. Update Status, Hando
 - Deployed 2026-11-17: backend on Heroku (MF-01, MF-06, MF-08), then `upgradeStores.js --apply` on prod — all 5
   stores' Products forms in pages (Think Tech with Specifications). The same run applied the tax/sale-price upgrades
   GBazaar, Fabrilife and Think Tech hadn't had yet (EC-35…47: Sale price = Price on 2,644 products / 10,232 variants,
-  "Price after tax" → "Price (no tax)"). mint-tenant, mint-commerce and mint-docs deploy on push. Nothing left to run.
+  "Price after tax" → "Price (no tax)"). mint-tenant, mint-commerce and mint-docs deploy on push.
+- MF-08b (2026-11-17): built stores had lost their sections' conditions (coupon Percentage / Amount off by type) —
+  `applyLayout` dropped `showIf`. Kept now for new stores (needs the backend deploy); `upgradeStores.js` puts them
+  back on built stores (`sectionRules` in upgrade.ts). Writes only route configs that production already accepts.

@@ -11,6 +11,7 @@ import {
 	linkTargets,
 } from '../../functions/dynamicModels.function.js';
 import { buildPreview, checkCopies } from './models.controller.js';
+import { ruleSchema } from '../../functions/formRules.function.js';
 
 /**
  * "Build with AI" for the model wizard: a prompt in, a whole draft out — the
@@ -418,6 +419,8 @@ export const applyLayout = (input: any, def: any, settings: any, config: any) =>
 			.map((s: any) => ({
 				sectionTitle: String(s?.sectionTitle || ''),
 				...(s?.description && { description: String(s.description) }),
+				// Shown only when its rule holds (a store's Variations, a coupon's Percentage) — kept when it's a rule.
+				...(s?.showIf && !ruleSchema.validate(s.showIf).error && { showIf: s.showIf }),
 				fields: (Array.isArray(s?.fields) ? s.fields : [])
 					.map((row: any) => {
 						if (Array.isArray(row)) {

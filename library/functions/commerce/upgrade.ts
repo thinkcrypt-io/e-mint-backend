@@ -198,6 +198,34 @@ const fillOut = async (def: any, keys: string[], what: string, apply: boolean) =
 const fillSeoOut = (def: any, apply: boolean) => fillOut(def, ['seo'], 'SEO', apply);
 
 /**
+ * The blueprint's section conditions (a product's Variations only "With variations", a coupon's
+ * Percentage or Amount off by its type), which stores built before MF-08 lost — the page builder
+ * dropped a section's `showIf`. Put back on the section of the same title that has none, when the
+ * field the rule reads is still there. Published straight away, the version before kept.
+ */
+const sectionRules = async (req: any, def: any, step: any, fields: any[], apply: boolean) => {
+	const wanted = (Array.isArray(step.form) ? step.form : []).filter((x: any) => x.showIf);
+	if (!wanted.length) return [];
+	const doc: any = await RouteConfig.findOne({ route: def.route });
+	if (!Array.isArray(doc?.data?.form)) return [];
+	const own = new Set(fields.map((f: any) => f.key));
+	const ruleOf = (title: string) => wanted.find((x: any) => x.sectionTitle === title && own.has(x.showIf.field))?.showIf;
+	const lost = (form: any[]) => form.filter((x: any) => x && !x.showIf && ruleOf(x?.sectionTitle));
+	const titles = lost(doc.data.form).map((x: any) => x.sectionTitle);
+	if (!titles.length) return [];
+	if (apply) {
+		const put = (form: any) => (Array.isArray(form) ? form.map((x: any) => (x && !x.showIf && ruleOf(x.sectionTitle) ? { ...x, showIf: ruleOf(x.sectionTitle) } : x)) : form);
+		const version = (doc.version || 0) + 1;
+		const data = { ...doc.data, form: put(doc.data.form) };
+		const draft = doc.draft ? { ...doc.draft, form: put(doc.draft.form) } : doc.draft;
+		await RouteConfig.updateOne({ _id: doc._id }, { $set: { data, draft, version, publishedAt: new Date(), publishedBy: req.user?._id } });
+		await RouteVersion.create({ route: def.route, kind: 'config', version, data, note: 'The store’s upgrade: sections shown only when they apply', publishedBy: req.user?._id });
+		invalidateRoute(def.route);
+	}
+	return [`${titles.join(', ')} shown only when ${titles.length === 1 ? 'it applies' : 'they apply'}`];
+};
+
+/**
  * The page laid out in the blueprint's sections (EC21: Category, POS
  * configuration, Website configuration, Images — short inputs side by side),
  * when it doesn't have them all yet. Fields the person added go in a More
@@ -467,6 +495,7 @@ export const upgradeStore = async (req: any, { apply = false } = {}): Promise<Ch
 		}
 		if (apply && core.length !== (def.systemFields || []).length) await ModelDefinition.updateOne({ _id: def._id }, { $set: { systemFields: core } });
 		change.filled.push(...(await layoutPage(req, def, spec.step, fields, apply)));
+		change.filled.push(...(await sectionRules(req, def, spec.step, fields, apply)));
 		if ((spec.key === 'product' || spec.key === 'variant') && fields.some((f: any) => f.key === 'salePrice'))
 			change.filled.push(...(apply || !added.includes('salePrice') ? await placeSaleFields(req, def, spec.key === 'product', apply) : ['Sale price beside the price on the form and the detail page']));
 		if (spec.key === 'product') change.filled.push(...(await productPages(req, def, fields, apply)));
