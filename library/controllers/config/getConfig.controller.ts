@@ -9,6 +9,7 @@ import {
 import { Config } from '../../models/_index.js';
 import { rulesOf, withRenderIf } from '../../functions/formRules.function.js';
 import { withLinkedHints } from '../../functions/linkedRelationships.function.js';
+import { formStepsOf } from '../../functions/formSteps.function.js';
 
 type ConfigType = {
 	table: string[];
@@ -125,9 +126,11 @@ const getConfig = ({
 					layout: filteredConfig?.form,
 				});
 
+				// Form in pages (docs/multi-page-forms): only when on, with steps, and the form opens as a page.
+				const formSteps = formStepsOf(config);
 				return res
 					.status(200)
-					.json({ table: tableFields, view: viewFields, form: formFields, schema: schm });
+					.json({ table: tableFields, view: viewFields, form: formFields, schema: schm, ...(formSteps && { formSteps }) });
 			}
 		} catch (e: any) {
 			console.error(e.message);

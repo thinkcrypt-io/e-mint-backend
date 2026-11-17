@@ -114,13 +114,39 @@ const filterSchema = Joi.object({
 	options: Joi.array().items(optionSchema),
 });
 
+const STEP_KEY = /^[A-Za-z0-9_-]{1,40}$/;
+
 const formSectionSchema = Joi.object({
 	sectionTitle: Joi.string().allow(''),
 	description: Joi.string().allow(''),
 	fields: Joi.array().items(Joi.alternatives(Joi.string(), Joi.array().items(Joi.string()))),
 	// Shown only when this holds — the whole section hides (formRules.function rulesOf).
 	showIf: ruleSchema,
+	// Form in pages (docs/multi-page-forms): the page this section is on (a formSteps.steps key;
+	// none or unknown → the last page), and whether it sits in the page's side column.
+	step: Joi.string().pattern(STEP_KEY).allow(''),
+	side: Joi.boolean(),
 }).unknown(true);
+
+/**
+ * Form in pages (docs/multi-page-forms): the add / edit page as steps. Steps group the
+ * form's sections (each section names its `step`); they hold no fields of their own.
+ */
+const formStepsSchema = Joi.object({
+	enabled: Joi.boolean(),
+	// End with a Review step that sums up the entries.
+	review: Joi.boolean(),
+	steps: Joi.array()
+		.items(
+			Joi.object({
+				key: Joi.string().pattern(STEP_KEY).required(),
+				title: Joi.string().trim().min(1).max(60).required(),
+				description: Joi.string().allow('').max(200),
+			})
+		)
+		.max(12)
+		.unique('key'),
+});
 
 // A view section's items: an own field, fields of a referenced record, or a
 // list of records in another route that reference this one.
@@ -196,6 +222,7 @@ export const configDraftSchema = Joi.object({
 	fields: Joi.array().items(Joi.string()),
 	table: Joi.array().items(Joi.string()),
 	form: Joi.array().items(formSectionSchema),
+	formSteps: formStepsSchema,
 	// Title, buttons, export, row menu, bulk menu… — the same free-form object
 	// as a config file's `route`.
 	route: Joi.object().unknown(true),

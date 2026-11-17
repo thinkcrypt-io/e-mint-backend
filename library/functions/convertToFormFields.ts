@@ -23,6 +23,8 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 
 	layout?.forEach((section: any) => {
 		const { sectionTitle, fields, description, collapsible } = section;
+		// Form in pages (docs/multi-page-forms): every field carries its section's page and column.
+		const place = { ...(section?.step && { step: String(section.step) }), ...(section?.side === true && { side: true }) };
 
 		fields.forEach((field: any, index: number) => {
 			const lastElement = index === fields.length - 1;
@@ -41,6 +43,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 					if (fieldConfig) {
 						dataFields.push({
 							...(firstIndex && firstSubIndex && { sectionTitle, description, collapsible }),
+							...place,
 
 							name: subField,
 							label: fieldConfig.label || fieldConfig.title,
@@ -104,6 +107,7 @@ const createFormFields = ({ schema, layout, type = 'post' }: CreateType): any[] 
 				if (fieldConfig) {
 					dataFields.push({
 						...(firstIndex && { sectionTitle, description, collapsible }),
+						...place,
 						name: field,
 						label: fieldConfig.label || fieldConfig.title,
 						// A Yes/No is never required: unticked is a No (false), a real answer.
