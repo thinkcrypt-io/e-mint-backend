@@ -64,4 +64,5 @@ mint-tenant `main`, mint-commerce `main`, mint-docs `main`. Update Status, Hando
   "Price after tax" → "Price (no tax)"). mint-tenant, mint-commerce and mint-docs deploy on push.
 - MF-08b (2026-11-17): built stores had lost their sections' conditions (coupon Percentage / Amount off by type) —
   `applyLayout` dropped `showIf`. Kept now for new stores (needs the backend deploy); `upgradeStores.js` puts them
-  back on built stores (`sectionRules` in upgrade.ts). Writes only route configs that production already accepts.
+  back on built stores (`sectionRules` in upgrade.ts). Writes only route configs that production already accepts Applied on prod 2026-11-17
+  (HINT, GBazaar, Fabrilife, Think Tech; Verte already had them).
