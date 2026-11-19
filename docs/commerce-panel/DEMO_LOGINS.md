@@ -13,3 +13,4 @@ https://commerce.mintapp.site/auth/login. Change a password or switch a login of
 | Woovely | https://fbl.tcrypt.site | Fabrilife (mint-2-fabrilife) — same store as Fabrilife | admin4@mintapp.site | demo-woovely-4 |
 | Think Tech | https://tech.tcrypt.site | Think Tech (mint-2-think-tech) | admin5@mintapp.site | demo-thinktech-5 |
 | HINT | https://hint.tcrypt.site | HINT (mint-2-hint) | admin6@mintapp.site | demo-hint-6 |
+| Stridehaus | https://fs.tcrypt.site | Footshop (6afccb36fe369430c42b6a5a) | admin7@mintapp.site | demo-stridehaus-7 |
