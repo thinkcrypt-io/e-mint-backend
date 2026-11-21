@@ -8,7 +8,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-22)
 
-**2026-11-22 — PU-08 (docs/panel-users):** panel logins sign in with a username (an email still works); email is optional. After deploying the backend run `node scripts/migratePanelUsernames.js --apply` on prod (sets username = email for old logins, swaps the `email_1` index for partial `username_unique` / `email_unique`). Bug fixed in mint-commerce/mint-panel authApi: the login body dropped `app`, so panel.tcrypt.site sent no app and the backend treated it as the commerce panel ("This login is for the panel app").
+**2026-11-22 — PU-08 (docs/panel-users):** panel logins sign in with a username (an email still works); email is optional. Deployed and `scripts/migratePanelUsernames.js --apply` run on prod 2026-11-22 (9 logins; sets username = email for old logins, swaps the `email_1` index for partial `username_unique` / `email_unique`). Bug fixed in mint-commerce/mint-panel authApi: the login body dropped `app`, so panel.tcrypt.site sent no app and the backend treated it as the commerce panel ("This login is for the panel app").
 
 **2026-11-22 — PU-07 (docs/panel-users):** the role dialog (shared by project roles and panel roles, in mint-tenant/mint-commerce/mint-panel) has Select all, an All box per model and checkbox column headings; panel roles in website/store projects get an Analytics row (`view-analytics`, `panelRoleTargets(projectType)`). Backend pushed, not deployed.
 

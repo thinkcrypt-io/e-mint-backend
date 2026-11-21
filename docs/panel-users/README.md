@@ -36,7 +36,7 @@ MCP gets both.
 | RP-05 | Khamar reports: 22 in Animals / Milk / Feed / Health / Money (`scripts/seedKhamarReports.js --project mint-2-khamar --apply`, re-runnable); list filters gain `_exists` and `_nin` | data | written to prod 2026-11-21; shown once the backend is deployed |
 | PU-06 | User guide (mint-docs `/reports`) + website changelog/features | docs | done 2026-11-21 |
 | PU-07 | Role grid: Select all, an All box per model, column headings tick a column; Analytics row (view-analytics) in website/store projects, panel sidebar shows Analytics only there | backend + all three apps | done 2026-11-22, backend not deployed |
-| PU-08 | Usernames: panel logins sign in with a username (or their email); email optional; `username_unique` / `email_unique` partial indexes; `scripts/migratePanelUsernames.js` gives old logins their email as username; Change username or email; a wrong-app sign-in moves to the right app. Also fixed: the panel apps' login dropped `app`, so panel.tcrypt.site refused non-store logins (use_panel) | backend + all three apps | done 2026-11-22; backend not deployed, prod migration not run |
+| PU-08 | Usernames: panel logins sign in with a username (or their email); email optional; `username_unique` / `email_unique` partial indexes; `scripts/migratePanelUsernames.js` gives old logins their email as username; Change username or email; a wrong-app sign-in moves to the right app. Also fixed: the panel apps' login dropped `app`, so panel.tcrypt.site refused non-store logins (use_panel) | backend + all three apps | done 2026-11-22; deployed + prod migration run 2026-11-22 |
 
 Smoke: `scripts/tenancy-smoke/panel-users.mjs` (roles, users, super admin, reports, downloads, MCP) and
 `commerce-panel.mjs`.
