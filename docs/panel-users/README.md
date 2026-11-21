@@ -32,9 +32,9 @@ MCP gets both.
 | RP-04 / PU-05 | MCP tools + `/tenant/panel-mcp` | backend | done 2026-11-21 |
 | PU-03 | mint-tenant: Panel users (role, super admin) + Panel roles pages (+ mint-commerce copy) | mint-tenant | done 2026-11-21 |
 | RP-03 | mint-tenant: Reports page (run, dates, download) + report builder for developers (+ mint-commerce copy) | mint-tenant | done 2026-11-21 |
-| PU-04 | mint-panel repo (copy of mint-commerce, `NEXT_PUBLIC_PANEL_APP=panel` default), panel.tcrypt.site | mint-panel | built locally 2026-11-21 (port 3710); GitHub repo, Vercel project + domain wait for the user's OK |
+| PU-04 | mint-panel repo (copy of mint-commerce, `NEXT_PUBLIC_PANEL_APP=panel` default), panel.tcrypt.site | mint-panel | live 2026-11-21: aiasifistiaque/mint-panel (private, main = deploy), Vercel `mint-panel` prj_URA8IDgjICYU3lXzg3WM2L0MjJGs, https://panel.tcrypt.site; signing in needs the backend deploy |
 | RP-05 | Khamar reports: 22 in Animals / Milk / Feed / Health / Money (`scripts/seedKhamarReports.js --project mint-2-khamar --apply`, re-runnable); list filters gain `_exists` and `_nin` | data | written to prod 2026-11-21; shown once the backend is deployed |
-| PU-06 | User guide (mint-docs) + website | docs | todo |
+| PU-06 | User guide (mint-docs `/reports`) + website changelog/features | docs | done 2026-11-21 |
 
 Smoke: `scripts/tenancy-smoke/panel-users.mjs` (roles, users, super admin, reports, downloads, MCP) and
 `commerce-panel.mjs`.

@@ -8,7 +8,7 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-21)
 
-**2026-11-21 — Panel users, panel roles, reports (docs/panel-users), backend done, not deployed.** Later the same day: mint-tenant + mint-commerce pages pushed; mint-panel built locally (no GitHub/Vercel yet); 22 Khamar reports written to prod by `scripts/seedKhamarReports.js`; the list filter (`middleware/filter.middleware.ts`) now takes `field_exists` and `field_nin`. Every project
+**2026-11-21 — Panel users, panel roles, reports (docs/panel-users), backend done, not deployed.** Later the same day: mint-tenant + mint-commerce pages pushed; mint-panel live at https://panel.tcrypt.site (repo aiasifistiaque/mint-panel, Vercel mint-panel; push main = deploy); 22 Khamar reports written to prod by `scripts/seedKhamarReports.js`; the list filter (`middleware/filter.middleware.ts`) now takes `field_exists` and `field_nin`. Every project
 gets panel logins (`PanelAdmin` + `role` / `superAdmin`) and `PanelRole`s (per-model keys + `reports:view/export`);
 non-store logins sign in with `app:'panel'` (panel.tcrypt.site, mint-panel — not made yet). Reports: `Report` model,
 `/p/:id/saved-reports`, engine `POST /<route>/get/report` (list / summary / timeline, csv/xlsx/pdf). MCP: report and
