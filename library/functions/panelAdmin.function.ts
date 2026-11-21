@@ -105,11 +105,41 @@ export const signInPanel = async (req: any, decoded: any): Promise<{ status: num
 	return null;
 };
 
+/**
+ * Usernames (PU-08): what a panel login signs in with — 3 to 120 of a–z, 0–9 and
+ * . _ - @ +, so an email works as a username. Stored lowercase.
+ */
+export const USERNAME_RULE = /^[a-z0-9][a-z0-9._@+-]{2,119}$/;
+export const USERNAME_HELP = 'A username is 3 or more letters, numbers or . _ - @ +';
+
+/** The login someone means by what they typed: a username, or an email (logins from before usernames). */
+export const findPanelLogin = async (typed: string, select = '') => {
+	const id = String(typed || '').trim().toLowerCase();
+	if (!id) return null;
+	return (await PanelAdmin.findOne({ username: id }).select(select)) || (await PanelAdmin.findOne({ email: id }).select(select));
+};
+
+/**
+ * Why `username` / `email` can't be this login's, or null. Either signs in, so
+ * neither may be another login's username or email.
+ */
+export const panelLoginTaken = async ({ username, email }: { username?: string; email?: string }, except?: any) => {
+	const notMe = except ? { _id: { $ne: except } } : {};
+	const used = async (v?: string) => !!v && !!(await PanelAdmin.exists({ $or: [{ username: v }, { email: v }], ...notMe }));
+	if (await used(username)) return { message: 'That username is taken — pick another.', on: 'username', code: 'username_taken' };
+	if (await used(email)) return { message: 'This email is already a panel login — one email opens one project.', on: 'email', code: 'email_taken' };
+	return null;
+};
+
+/** How a login is named in History and lists: its username, else its email. */
+export const panelLoginName = (a: any) => a?.username || a?.email || '';
+
 /** A panel admin as the panels show them. */
 export const publicPanelAdmin = (a: any) => ({
 	_id: String(a._id),
 	name: a.name,
-	email: a.email,
+	username: a.username || a.email || '',
+	email: a.email || '',
 	phone: a.phone || '',
 	image: a.image || '',
 	isActive: a.isActive !== false,

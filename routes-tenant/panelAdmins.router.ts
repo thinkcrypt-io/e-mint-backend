@@ -6,23 +6,23 @@ import PanelRole from '../library/models/tenancy/panelRole.model.js';
 import { tenantSessions } from '../library/functions/sessions.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { MANAGE_PANEL, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
+import { MANAGE_PANEL, USERNAME_HELP, USERNAME_RULE, panelLoginName, panelLoginTaken, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 
 /**
  * /tenant/api/p/:projectId/panel-admins (also /panel-users) — a project's panel
  * logins (docs/panel-users PU-02; docs/commerce-panel CP-01 for stores). The
- * project's managers (manage-projects, or invite-to-projects) make them with an
- * email and a password — and so can a panel super admin, from the panel app.
- * One email is one login of one project.
+ * project's managers (manage-projects, or invite-to-projects) make them with a
+ * username and a password (PU-08; an email is optional and signs in too) — and so
+ * can a panel super admin, from the panel app. One username is one login of one project.
  *
  * A store's logins open the commerce panel; any other project's open the panel
  * app (panel.tcrypt.site). Each has a panel role (panel-roles) or is a super
  * admin; a store login without either keeps the fixed store set.
  *
  *   GET    /             { doc: logins, totalDocs, roles }
- *   POST   /             { name, email, password, phone?, role?, superAdmin? }   409 email_taken
- *   PUT    /:id          { name?, phone?, isActive?, password?, role?, superAdmin? } — switching off or a new password signs them out
+ *   POST   /             { name, username, email?, password, phone?, role?, superAdmin? }   409 username_taken / email_taken
+ *   PUT    /:id          { name?, username?, email?, phone?, isActive?, password?, role?, superAdmin? } — switching off or a new password signs them out
  *   DELETE /:id          removes the login and signs it out
  *
  * A panel super admin can't switch off, demote or remove themselves.
@@ -75,7 +75,15 @@ const notSelf = (req: any, admin: any, body: any) => {
 	if (body === 'delete' || body.isActive === false || body.superAdmin === false) throw new TenancyError(400, 'You can’t switch off, demote or remove your own login');
 };
 
-const taken = () => new TenancyError(409, 'This email is already a panel login — one email opens one project.', 'email_taken');
+const username = Joi.string().trim().lowercase().pattern(USERNAME_RULE).messages({ 'string.pattern.base': USERNAME_HELP, 'string.empty': 'A username is required' });
+const email = Joi.string().trim().lowercase().email().allow('').messages({ 'string.email': 'That isn’t an email address' });
+
+/** 409 when the username or email is another login's (either one signs in). */
+const refuseTaken = async (fields: { username?: string; email?: string }, except?: any) => {
+	const t = await panelLoginTaken(fields, except);
+	if (t) throw Object.assign(new TenancyError(409, t.message, t.code), { extra: { on: t.on } });
+};
+const raceTaken = () => new TenancyError(409, 'That username or email is already a panel login.', 'username_taken');
 
 router.get(
 	'/',
@@ -94,7 +102,8 @@ router.post(
 		const body = check(
 			Joi.object({
 				name: Joi.string().trim().min(1).max(120).required().messages({ 'any.required': 'A name is required' }),
-				email: Joi.string().trim().lowercase().email().required().messages({ 'any.required': 'An email is required' }),
+				username: username.required().messages({ 'any.required': 'A username is required' }),
+				email,
 				password: password.required().messages({ 'any.required': 'A password is required' }),
 				phone: Joi.string().trim().max(40).allow(''),
 				role: Joi.string().allow('', null),
@@ -104,15 +113,16 @@ router.post(
 		);
 		body.role = (await roleOf(req, body.role)) || undefined;
 		needsRole(req, body.role, body.superAdmin);
-		if (await PanelAdmin.exists({ email: body.email })) throw taken();
+		if (!body.email) delete body.email;
+		await refuseTaken(body);
 		let admin: any;
 		try {
 			admin = await PanelAdmin.create({ ...body, organization: req.organization._id, project: req.project._id, createdBy: req.user._id });
 		} catch (e: any) {
-			if (e?.code === 11000) throw taken();
+			if (e?.code === 11000) throw raceTaken();
 			throw e;
 		}
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `added the panel login ${admin.email}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `added the panel login ${panelLoginName(admin)}` });
 		res.status(201);
 		return publicPanelAdmin(admin);
 	})
@@ -124,6 +134,8 @@ router.put(
 		const body = check(
 			Joi.object({
 				name: Joi.string().trim().min(1).max(120),
+				username,
+				email,
 				phone: Joi.string().trim().max(40).allow(''),
 				isActive: Joi.boolean(),
 				password: password.allow(''),
@@ -145,12 +157,25 @@ router.put(
 		const newPassword = !!body.password;
 		if (body.name !== undefined) admin.name = body.name;
 		if (body.phone !== undefined) admin.phone = body.phone;
+		// A new username or email (PU-08): either signs in, so neither may be another login's.
+		const changed: any = {};
+		if (body.username !== undefined && body.username !== admin.username) changed.username = body.username;
+		if (body.email !== undefined && body.email !== (admin.email || '')) changed.email = body.email;
+		if (changed.username || changed.email) await refuseTaken(changed, admin._id);
+		if (changed.username) admin.username = changed.username;
+		if (changed.email !== undefined) admin.email = changed.email || undefined;
+		if (!admin.username && !admin.email) throw Object.assign(new TenancyError(400, 'Give them a username to sign in with'), { extra: { on: 'username' } });
 		if (body.isActive !== undefined) admin.isActive = body.isActive;
 		if (newPassword) admin.password = body.password;
-		await admin.save();
+		try {
+			await admin.save();
+		} catch (e: any) {
+			if (e?.code === 11000) throw raceTaken();
+			throw e;
+		}
 		if (switchedOff || newPassword) await signOutAll(admin._id, switchedOff ? 'Login switched off' : 'Password changed');
 		const what = [switchedOff && 'switched off', body.isActive === true && 'switched on', newPassword && 'set a new password for', accessChanged && 'changed the role of', 'changed'].filter(Boolean)[0];
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} the panel login ${admin.email}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} the panel login ${panelLoginName(admin)}` });
 		return publicPanelAdmin(admin);
 	})
 );
@@ -162,7 +187,7 @@ router.delete(
 		notSelf(req, admin, 'delete');
 		await signOutAll(admin._id, 'Login removed');
 		await PanelAdmin.deleteOne({ _id: admin._id });
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `removed the panel login ${admin.email}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `removed the panel login ${panelLoginName(admin)}` });
 		return { message: 'Removed' };
 	})
 );

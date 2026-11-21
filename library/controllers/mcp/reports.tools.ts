@@ -7,7 +7,7 @@ import { isAccessRestricted } from '../../functions/recordAccess.function.js';
 import { effectiveSettings, routeModel, routePermission } from '../builder/builder.controller.js';
 import { ReportError, reportData } from '../aggregate/getReport.controller.js';
 import { grants } from '../../functions/tenantPermissions.function.js';
-import { MANAGE_PANEL, publicPanelAdmin } from '../../functions/panelAdmin.function.js';
+import { MANAGE_PANEL, USERNAME_HELP, USERNAME_RULE, panelLoginName, panelLoginTaken, publicPanelAdmin } from '../../functions/panelAdmin.function.js';
 import { tenantSessions } from '../../functions/sessions.function.js';
 import { recordProjectEvent } from '../../functions/recordHistory.function.js';
 import { checkReport, modelOf, rangeFrom, reportView } from '../../../routes-tenant/reports.router.js';
@@ -234,7 +234,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 				`Panel roles (${roles.length}):`,
 				...roles.map((r: any) => `- “${r.name}”: ${(r.permissions || []).join(', ')} [id ${r._id}]`),
 				`Panel users (${users.length}):`,
-				...users.map((u: any) => `- ${u.name} <${u.email}> — ${u.superAdmin ? 'Super admin' : names.get(String(u.role)) || (caller.project.type === 'ecommerce' ? 'Store admin' : 'no role')}${u.isActive === false ? ' (switched off)' : ''} [id ${u._id}]`),
+				...users.map((u: any) => `- ${u.name} (${panelLoginName(u)}) — ${u.superAdmin ? 'Super admin' : names.get(String(u.role)) || (caller.project.type === 'ecommerce' ? 'Store admin' : 'no role')}${u.isActive === false ? ' (switched off)' : ''} [id ${u._id}]`),
 				`A role can name: ${targets.map(t => `${t.route} (${t.actions.join('/')})`).join('; ')}; and reports:view, reports:export.`,
 			].join('\n');
 			return { text, data: { roles, users: users.map(publicPanelAdmin), targets } };
@@ -273,7 +273,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 	{
 		name: 'save_panel_user',
 		title: 'Save a panel user',
-		description: 'Adds a panel login (no `id`: name, email, password from the user, and a `role` id or superAdmin) or changes one (`id`: name, role, superAdmin, isActive, password). They sign in at the panel app. Switching off or a new password signs them out. Confirm with the user first; never make up a password.',
+		description: 'Adds a panel login (no `id`: name, username, optional email, password from the user, and a `role` id or superAdmin) or changes one (`id`: name, username, email, role, superAdmin, isActive, password). They sign in at the panel app with the username (or the email). Switching off or a new password signs them out. Confirm with the user first; never make up a password.',
 		scope: 'read',
 		only: 'project',
 		inputSchema: {
@@ -281,7 +281,8 @@ export const REPORT_TOOLS: ToolDef[] = [
 			properties: {
 				id: { type: 'string' },
 				name: { type: 'string' },
-				email: { type: 'string' },
+				username: { type: 'string', description: 'What they sign in with: 3+ of a–z, 0–9, . _ - @ +' },
+				email: { type: 'string', description: 'Optional; it signs in too' },
 				password: { type: 'string', description: 'At least 8 characters — the user gives it' },
 				phone: { type: 'string' },
 				role: { type: 'string', description: 'A panel role id (list_panel_access)' },
@@ -297,11 +298,15 @@ export const REPORT_TOOLS: ToolDef[] = [
 			if (args?.password !== undefined && String(args.password).length < 8) return refuse('Use at least 8 characters for the password.');
 			if (!args?.id) {
 				const email = String(args?.email || '').trim().toLowerCase();
-				if (!args?.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !args?.password) return refuse('A new login needs a name, an email and a password.');
+				const username = String(args?.username || '').trim().toLowerCase();
+				if (!args?.name || !username || !args?.password) return refuse('A new login needs a name, a username and a password.');
+				if (!USERNAME_RULE.test(username)) return refuse(USERNAME_HELP);
+				if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return refuse('That isn’t an email address.');
 				if (project.type !== 'ecommerce' && !args.role && !args.superAdmin) return refuse('Give them a role, or make them a super admin.');
-				if (await PanelAdmin.exists({ email })) return refuse('This email is already a panel login — one email opens one project.');
-				const admin: any = await PanelAdmin.create({ name: String(args.name).slice(0, 120), email, password: args.password, phone: args.phone || '', role: args.role || undefined, superAdmin: !!args.superAdmin, organization: project.organization, project: project._id, createdBy: caller.user._id });
-				return { text: `Added ${admin.name} <${admin.email}> — they sign in at the panel app.`, data: { user: publicPanelAdmin(admin) } };
+				const taken = await panelLoginTaken({ username, email: email || undefined });
+				if (taken) return refuse(taken.message);
+				const admin: any = await PanelAdmin.create({ name: String(args.name).slice(0, 120), username, ...(email && { email }), password: args.password, phone: args.phone || '', role: args.role || undefined, superAdmin: !!args.superAdmin, organization: project.organization, project: project._id, createdBy: caller.user._id });
+				return { text: `Added ${admin.name} (${panelLoginName(admin)}) — they sign in at the panel app.`, data: { user: publicPanelAdmin(admin) } };
 			}
 			const admin: any = isId(args.id) && (await PanelAdmin.findOne({ _id: args.id, project: project._id }).select('+password'));
 			if (!admin) return refuse('No panel user with that id.');
@@ -312,6 +317,16 @@ export const REPORT_TOOLS: ToolDef[] = [
 			const signOut = (args.isActive === false && admin.isActive !== false) || !!args.password;
 			if (args.name) admin.name = String(args.name).slice(0, 120);
 			if (args.phone !== undefined) admin.phone = args.phone;
+			const changed: any = {};
+			if (args.username !== undefined && String(args.username).trim().toLowerCase() !== admin.username) changed.username = String(args.username).trim().toLowerCase();
+			if (args.email !== undefined && String(args.email).trim().toLowerCase() !== (admin.email || '')) changed.email = String(args.email).trim().toLowerCase();
+			if (changed.username !== undefined && !USERNAME_RULE.test(changed.username)) return refuse(USERNAME_HELP);
+			if (changed.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(changed.email)) return refuse('That isn’t an email address.');
+			const taken = await panelLoginTaken(changed, admin._id);
+			if (taken) return refuse(taken.message);
+			if (changed.username) admin.username = changed.username;
+			if (changed.email !== undefined) admin.email = changed.email || undefined;
+			if (!admin.username && !admin.email) return refuse('Give them a username to sign in with.');
 			admin.role = nextRole;
 			admin.superAdmin = nextSuper;
 			if (args.isActive !== undefined) admin.isActive = !!args.isActive;
@@ -321,7 +336,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 				const rows = await tenantSessions.Session.find({ admin: admin._id, revokedAt: null }).lean();
 				if (rows.length) await tenantSessions.revokeSessions(rows, admin._id, args.password ? 'Password changed' : 'Login switched off');
 			}
-			return { text: `Saved ${admin.name} <${admin.email}>.`, data: { user: publicPanelAdmin(admin) } };
+			return { text: `Saved ${admin.name} (${panelLoginName(admin)}).`, data: { user: publicPanelAdmin(admin) } };
 		},
 	},
 ];

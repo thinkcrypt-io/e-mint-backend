@@ -5,8 +5,8 @@ import bcrypt from 'bcrypt';
 /**
  * A store's own staff login for the commerce panel (docs/commerce-panel, CP-01):
  * made by the project's managers in the tenant panel (Project → Panel admins),
- * signed in with email + password at commerce.mintapp.shop. One email is one
- * login of one e-commerce project — the email is unique across all projects.
+ * signed in with a username (or their email) + password. One username is one
+ * login of one project — usernames and emails are unique across all projects.
  *
  * Not a TenantUser: a panel admin belongs to no organization, never sees
  * another project and holds a fixed set of keys (PANEL_PERMISSIONS) — records,
@@ -18,7 +18,13 @@ export const PANEL_TOKEN_KIND = 'panel';
 const schema = new Schema<any>(
 	{
 		name: { type: String, required: true, trim: true, maxlength: 120 },
-		email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+		/**
+		 * What they sign in with (PU-08), unique across all projects. Logins made
+		 * before usernames got their email as their username (scripts/migratePanelUsernames.js).
+		 */
+		username: { type: String, trim: true, lowercase: true, maxlength: 120 },
+		/** Optional since PU-08; when given, unique too, and it signs in as well. */
+		email: { type: String, trim: true, lowercase: true },
 		phone: { type: String, trim: true },
 		image: { type: String, trim: true },
 		password: { type: String, minlength: 8, maxlength: 1024, select: false },
@@ -41,6 +47,10 @@ const schema = new Schema<any>(
 	},
 	{ timestamps: true, minimize: false }
 );
+
+// Unique only where set: a login may have no email (PU-08). The migration swaps the old email_1 index for these.
+schema.index({ username: 1 }, { unique: true, name: 'username_unique', partialFilterExpression: { username: { $type: 'string' } } });
+schema.index({ email: 1 }, { unique: true, name: 'email_unique', partialFilterExpression: { email: { $type: 'string' } } });
 
 schema.pre<any>('save', async function (next) {
 	if (!this.isModified('password') || !this.password) return next();

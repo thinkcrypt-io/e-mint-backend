@@ -7,7 +7,7 @@ import { tenantSessions } from '../library/functions/sessions.function.js';
 import { tenantProtectAccount } from '../middleware/tenant/protect.tenant.middleware.js';
 import { rateLimit } from '../library/functions/rateLimit.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { panelSelfPayload, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
+import { findPanelLogin, panelSelfPayload, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
 import { addOwnSessionRoutes } from '../library/controllers/sessions/sessions.router.js';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
@@ -19,7 +19,8 @@ import { runUnscoped } from '../library/functions/tenantScope.function.js';
  * /tenant/api/panel/auth — a commerce panel store admin's own account
  * (docs/commerce-panel CP-01). The commerce panel sends its `auth/…` calls here.
  *
- *   POST /login                { email, password, app? } → { token, project }
+ *   POST /login                { username (or email), password, app? } → { token, project }
+ *                              a username, or the login's email (PU-08)
  *                              app 'commerce' (default): a store's login; 'panel': any other project's
  *                              panel user, at the panel app (docs/panel-users PU-03)
  *   GET  /self                 the login, its organization and its one project (auth/self's shape)
@@ -50,11 +51,18 @@ router.post(
 	authLimit,
 	handle(async req => {
 		const body = check(
-			Joi.object({ email: Joi.string().trim().lowercase().email().required(), password: Joi.string().required(), app: Joi.string().valid('commerce', 'panel').default('commerce') }),
+			Joi.object({
+				username: Joi.string().trim().lowercase().max(200),
+				email: Joi.string().trim().lowercase().max(200),
+				password: Joi.string().required(),
+				app: Joi.string().valid('commerce', 'panel').default('commerce'),
+			})
+				.or('username', 'email')
+				.messages({ 'object.missing': 'Enter your username' }),
 			req.body
 		);
-		const admin: any = await PanelAdmin.findOne({ email: body.email }).select('+password');
-		if (!admin || !(await admin.checkPassword(body.password))) throw new TenancyError(400, 'That email and password don’t match.');
+		const admin: any = await findPanelLogin(body.username || body.email, '+password');
+		if (!admin || !(await admin.checkPassword(body.password))) throw new TenancyError(400, 'That username and password don’t match.');
 		if (admin.isActive === false) throw new TenancyError(400, 'This login has been switched off. Ask the store’s owner.');
 		const project: any = await TenantProject.findById(admin.project).lean();
 		const organization: any = project && (await Organization.findById(project.organization, { isActive: 1 }).lean());
