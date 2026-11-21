@@ -86,12 +86,12 @@ ok('add implies view; export implies view', r.status === 201 && r.body.permissio
 const clerk = r.body;
 
 // ---- panel users
-r = await call('POST', `${P}/panel-users`, { name: 'Vik', email: `vik${stamp}@example.com`, password: 'panel-pass-123' }, t);
+r = await call('POST', `${P}/panel-users`, { name: 'Vik', username: `vik${stamp}`, email: `vik${stamp}@example.com`, password: 'panel-pass-123' }, t);
 ok('outside a store a login needs a role or super admin', r.status === 400, r.body?.message);
-r = await call('POST', `${P}/panel-users`, { name: 'Vik', email: `vik${stamp}@example.com`, password: 'panel-pass-123', role: viewer._id }, t);
+r = await call('POST', `${P}/panel-users`, { name: 'Vik', username: `vik${stamp}`, email: `vik${stamp}@example.com`, password: 'panel-pass-123', role: viewer._id }, t);
 ok('a viewer login', r.status === 201 && r.body.role === viewer._id && r.body.superAdmin === false, JSON.stringify(r.body));
 const vik = r.body;
-r = await call('POST', `${P}/panel-users`, { name: 'Sara', email: `sara${stamp}@example.com`, password: 'panel-pass-123', superAdmin: true }, t);
+r = await call('POST', `${P}/panel-users`, { name: 'Sara', username: `sara${stamp}`, email: `sara${stamp}@example.com`, password: 'panel-pass-123', superAdmin: true }, t);
 const sara = r.body;
 ok('a super admin login', r.status === 201 && sara.superAdmin === true);
 r = await call('GET', `${P}/panel-users`, null, t);
@@ -151,7 +151,7 @@ r = await call('GET', `${P}/project-settings`, null, sat);
 ok('no project settings route for them (not 200)', r.status !== 200, r.status);
 r = await call('POST', `${P}/panel-roles`, { name: 'Milker', permissions: ['view-animals', 'edit-animals'] }, sat);
 ok('super admin makes a role', r.status === 201, JSON.stringify(r.body));
-r = await call('POST', `${P}/panel-users`, { name: 'Mo', email: `mo${stamp}@example.com`, password: 'panel-pass-123', role: r.body._id }, sat);
+r = await call('POST', `${P}/panel-users`, { name: 'Mo', username: `mo${stamp}`, email: `mo${stamp}@example.com`, password: 'panel-pass-123', role: r.body._id }, sat);
 ok('…and a user', r.status === 201);
 r = await call('PUT', `${P}/panel-users/${sara._id}`, { superAdmin: false }, sat);
 ok('cannot demote themselves', r.status === 400);
@@ -192,7 +192,7 @@ m = await rpc('/tenant/panel-mcp', smk, 'tools/call', { name: 'save_report', arg
 ok('panel MCP: save_report refused', !!(m?.error || m?.result?.isError));
 
 // a viewer's key: can run, but not manage
-r = await call('POST', `${P}/panel-users`, { name: 'Vi Two', email: `vi2${stamp}@example.com`, password: 'panel-pass-123', role: viewer._id }, t);
+r = await call('POST', `${P}/panel-users`, { name: 'Vi Two', username: `vi2${stamp}`, email: `vi2${stamp}@example.com`, password: 'panel-pass-123', role: viewer._id }, t);
 r = await call('POST', '/tenant/api/panel/auth/login', { email: `vi2${stamp}@example.com`, password: 'panel-pass-123', app: 'panel' });
 const v2 = r.body?.token;
 r = await call('POST', '/tenant/api/panel/auth/mcp-keys', { name: 'Claude' }, v2);

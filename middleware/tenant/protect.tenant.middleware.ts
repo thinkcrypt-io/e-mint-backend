@@ -92,9 +92,14 @@ const make =
 			tenantSessions.touchSession(req, user._id, sid);
 			next();
 		} catch (e: any) {
+			// A token past its time (a demo login's hour, DEMO_LOGINS.md D4): the apps sign out on this code.
+			if (e?.name === 'TokenExpiredError') return res.status(401).json({ message: 'This session has ended. Sign in again.', code: EXPIRED_CODE });
 			return res.status(401).json({ message: 'Not authorized, token failed' });
 		}
 	};
+
+/** The code for a token past its expiry. */
+export const EXPIRED_CODE = 'SESSION_EXPIRED';
 
 export const tenantProtect = make(true);
 export const tenantProtectAccount = make(false);

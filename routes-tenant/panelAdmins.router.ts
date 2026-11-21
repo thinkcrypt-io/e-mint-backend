@@ -1,6 +1,7 @@
 import express from 'express';
 import Joi from 'joi';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import PanelAdmin from '../library/models/tenancy/panelAdmin.model.js';
 import PanelRole from '../library/models/tenancy/panelRole.model.js';
 import { tenantSessions } from '../library/functions/sessions.function.js';
@@ -24,6 +25,11 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   POST   /             { name, username, email?, password, phone?, role?, superAdmin? }   409 username_taken / email_taken
  *   PUT    /:id          { name?, username?, email?, phone?, isActive?, password?, role?, superAdmin? } — switching off or a new password signs them out
  *   DELETE /:id          removes the login and signs it out
+ *   POST   /demo         { role?, superAdmin? } — the project's one demo login (DEMO_LOGINS.md), tenant managers only
+ *   POST   /demo/new-link  a new key: the old link stops and its demos are signed out
+ *
+ * GET answers the demo login apart (`demo`, with its key) to tenant managers; it is never in `doc`,
+ * and the panel apps' super admins neither see nor change it.
  *
  * A panel super admin can't switch off, demote or remove themselves.
  */
@@ -51,7 +57,8 @@ const signOutAll = async (id: any, why: string) => {
 
 const findOwn = async (req: any) => {
 	if (!mongoose.isValidObjectId(req.params.id)) throw new TenancyError(404, 'Not found');
-	const admin: any = await PanelAdmin.findOne({ _id: req.params.id, project: req.project._id }).select('+password');
+	// The demo login is the tenant managers' alone (DEMO_LOGINS.md D6).
+	const admin: any = await PanelAdmin.findOne({ _id: req.params.id, project: req.project._id, ...(req.panelAdmin && { demo: { $ne: true } }) }).select('+password');
 	if (!admin) throw new TenancyError(404, 'Not found');
 	return admin;
 };
@@ -85,14 +92,79 @@ const refuseTaken = async (fields: { username?: string; email?: string }, except
 };
 const raceTaken = () => new TenancyError(409, 'That username or email is already a panel login.', 'username_taken');
 
+/* ------------------------------------------------------------ demo login */
+
+const newDemoKey = () => crypto.randomBytes(24).toString('base64url');
+
+/** The project's demo login with its key, or null. */
+const demoOf = async (req: any) => {
+	const a: any = await PanelAdmin.findOne({ project: req.project._id, demo: true }).select('+demoKey').lean();
+	return a ? { ...publicPanelAdmin(a), demoKey: a.demoKey } : null;
+};
+
+/** Demo routes: the project's managers in the tenant panel only. */
+const tenantManagersOnly = (req: any) => {
+	if (req.panelAdmin) throw new TenancyError(403, 'The demo login is made in the tenant panel.');
+};
+
+router.post(
+	'/demo',
+	handle(async (req: any, res: any) => {
+		tenantManagersOnly(req);
+		const body = check(Joi.object({ role: Joi.string().allow('', null), superAdmin: Joi.boolean().default(false) }), req.body);
+		body.role = (await roleOf(req, body.role)) || undefined;
+		needsRole(req, body.role, body.superAdmin);
+		if (await PanelAdmin.exists({ project: req.project._id, demo: true })) throw new TenancyError(409, 'This project has a demo login already.', 'demo_exists');
+		let admin: any;
+		try {
+			admin = await PanelAdmin.create({
+				name: 'Demo',
+				username: `demo-${crypto.randomBytes(6).toString('hex')}`,
+				demo: true,
+				demoKey: newDemoKey(),
+				role: body.role,
+				superAdmin: body.superAdmin,
+				organization: req.organization._id,
+				project: req.project._id,
+				createdBy: req.user._id,
+			});
+		} catch (e: any) {
+			if (e?.code === 11000) throw new TenancyError(409, 'This project has a demo login already.', 'demo_exists');
+			throw e;
+		}
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: 'made the demo login' });
+		res.status(201);
+		return { demo: await demoOf(req) };
+	})
+);
+
+router.post(
+	'/demo/new-link',
+	handle(async (req: any) => {
+		tenantManagersOnly(req);
+		const admin: any = await PanelAdmin.findOne({ project: req.project._id, demo: true });
+		if (!admin) throw new TenancyError(404, 'This project has no demo login.');
+		await PanelAdmin.updateOne({ _id: admin._id }, { $set: { demoKey: newDemoKey() } });
+		await signOutAll(admin._id, 'New demo link');
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: 'made a new demo link' });
+		return { demo: await demoOf(req) };
+	})
+);
+
 router.get(
 	'/',
 	handle(async (req: any) => {
-		const [rows, roles] = await Promise.all([
-			PanelAdmin.find({ project: req.project._id }).sort({ createdAt: 1 }).lean(),
+		const [rows, roles, demo] = await Promise.all([
+			PanelAdmin.find({ project: req.project._id, demo: { $ne: true } }).sort({ createdAt: 1 }).lean(),
 			PanelRole.find({}).sort({ name: 1 }).select('name').lean(),
+			req.panelAdmin ? null : demoOf(req),
 		]);
-		return { doc: rows.map(publicPanelAdmin), totalDocs: rows.length, roles: roles.map((r: any) => ({ _id: String(r._id), name: r.name })) };
+		return {
+			doc: rows.map(publicPanelAdmin),
+			totalDocs: rows.length,
+			roles: roles.map((r: any) => ({ _id: String(r._id), name: r.name })),
+			...(!req.panelAdmin && { demo }),
+		};
 	})
 );
 
@@ -146,6 +218,8 @@ router.put(
 		);
 		const admin = await findOwn(req);
 		notSelf(req, admin, body);
+		// A demo login's access and on/off only: it has no name, username or password to change (DEMO_LOGINS.md D2).
+		if (admin.demo) ['name', 'username', 'email', 'phone', 'password'].forEach(k => delete body[k]);
 		const role = await roleOf(req, body.role);
 		const nextRole = role === undefined ? admin.role : role;
 		const nextSuper = body.superAdmin === undefined ? !!admin.superAdmin : body.superAdmin;
@@ -175,7 +249,7 @@ router.put(
 		}
 		if (switchedOff || newPassword) await signOutAll(admin._id, switchedOff ? 'Login switched off' : 'Password changed');
 		const what = [switchedOff && 'switched off', body.isActive === true && 'switched on', newPassword && 'set a new password for', accessChanged && 'changed the role of', 'changed'].filter(Boolean)[0];
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} the panel login ${panelLoginName(admin)}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} ${admin.demo ? 'the demo login' : `the panel login ${panelLoginName(admin)}`}` });
 		return publicPanelAdmin(admin);
 	})
 );
@@ -187,7 +261,7 @@ router.delete(
 		notSelf(req, admin, 'delete');
 		await signOutAll(admin._id, 'Login removed');
 		await PanelAdmin.deleteOne({ _id: admin._id });
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `removed the panel login ${panelLoginName(admin)}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: admin.demo ? 'removed the demo login' : `removed the panel login ${panelLoginName(admin)}` });
 		return { message: 'Removed' };
 	})
 );

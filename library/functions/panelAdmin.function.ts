@@ -54,9 +54,10 @@ export const cleanPanelKeys = (keys: string[] = []) => [...new Set(keys.filter(k
 /** A panel login's permissions and the role it shows, in `project`. */
 export const panelAccess = async (admin: any, project: any): Promise<{ permissions: string[]; role: any }> => {
 	const store = project.type === 'ecommerce';
+	// A demo login never manages panel users, even as a super admin (DEMO_LOGINS.md D5): a visitor can't make real logins.
 	if (admin.superAdmin)
 		return {
-			permissions: [...(store ? PANEL_PERMISSIONS : ALL_RECORDS), ...PANEL_REPORT_KEYS, MANAGE_PANEL],
+			permissions: [...(store ? PANEL_PERMISSIONS : ALL_RECORDS), ...PANEL_REPORT_KEYS, ...(admin.demo ? [] : [MANAGE_PANEL])],
 			role: { _id: 'panel-super-admin', name: 'Super admin', system: 'panel' },
 		};
 	const role: any = admin.role && (await runUnscoped(() => PanelRole.findOne({ _id: admin.role, project: project._id }).lean()));
@@ -145,6 +146,7 @@ export const publicPanelAdmin = (a: any) => ({
 	isActive: a.isActive !== false,
 	role: a.role ? String(a.role?._id || a.role) : null,
 	superAdmin: !!a.superAdmin,
+	demo: !!a.demo,
 	lastLoginAt: a.lastLoginAt || null,
 	project: String(a.project),
 	createdAt: a.createdAt,
@@ -175,6 +177,7 @@ export const panelSelfPayload = async (req: any) => {
 		kind: 'panel',
 		panel: true,
 		superAdmin: !!a.superAdmin,
+		demo: !!a.demo,
 		organization: org,
 		role: { ...(req.role || PANEL_ROLE), permissions: req.permissions },
 		permissions: req.permissions,

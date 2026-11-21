@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import PanelAdmin from '../library/models/tenancy/panelAdmin.model.js';
+import PanelAdmin, { DEMO_TOKEN_SECONDS } from '../library/models/tenancy/panelAdmin.model.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import Organization from '../library/models/tenancy/organization.model.js';
 import { tenantSessions } from '../library/functions/sessions.function.js';
@@ -20,6 +20,7 @@ import { runUnscoped } from '../library/functions/tenantScope.function.js';
  * (docs/commerce-panel CP-01). The commerce panel sends its `auth/…` calls here.
  *
  *   POST /login                { username (or email), password, app? } → { token, project }
+ *   POST /demo                 { key, app? } → { token, project, expiresAt } — a demo link, an hour (DEMO_LOGINS.md)
  *                              a username, or the login's email (PU-08)
  *                              app 'commerce' (default): a store's login; 'panel': any other project's
  *                              panel user, at the panel app (docs/panel-users PU-03)
@@ -46,6 +47,24 @@ const check = (schema: Joi.Schema, body: any) => {
 	return value;
 };
 
+/**
+ * A token for `admin`, after the checks every sign-in makes: its project and organization are open, and it
+ * belongs to this app (a store's login opens the commerce panel, any other project's the panel app).
+ */
+const signIn = async (admin: any, req: any, app: 'commerce' | 'panel', method: string) => {
+	const project: any = await TenantProject.findById(admin.project).lean();
+	const organization: any = project && (await Organization.findById(project.organization, { isActive: 1 }).lean());
+	if (!project || project.isActive === false || !organization || organization.isActive === false)
+		throw new TenancyError(400, 'This project isn’t open any more.');
+	if (app === 'commerce' && project.type !== 'ecommerce') throw new TenancyError(400, 'This login is for the panel app, not a store. Sign in at panel.tcrypt.site.', 'use_panel');
+	if (app === 'panel' && project.type === 'ecommerce') throw new TenancyError(400, 'This is a store login. Sign in at the commerce panel.', 'use_commerce');
+	await PanelAdmin.updateOne({ _id: admin._id }, { $set: { lastLoginAt: new Date() } });
+	return {
+		token: await tenantSessions.issueSession(admin, req, method, project.organization),
+		project: { _id: String(project._id), publicSlug: project.publicSlug, name: project.name, type: project.type },
+	};
+};
+
 router.post(
 	'/login',
 	authLimit,
@@ -64,20 +83,37 @@ router.post(
 		const admin: any = await findPanelLogin(body.username || body.email, '+password');
 		if (!admin || !(await admin.checkPassword(body.password))) throw new TenancyError(400, 'That username and password don’t match.');
 		if (admin.isActive === false) throw new TenancyError(400, 'This login has been switched off. Ask the store’s owner.');
-		const project: any = await TenantProject.findById(admin.project).lean();
-		const organization: any = project && (await Organization.findById(project.organization, { isActive: 1 }).lean());
-		if (!project || project.isActive === false || !organization || organization.isActive === false)
-			throw new TenancyError(400, 'This project isn’t open any more.');
-		// A store's logins use the commerce panel; every other project's, the panel app.
-		if (body.app === 'commerce' && project.type !== 'ecommerce') throw new TenancyError(400, 'This login is for the panel app, not a store. Sign in at panel.tcrypt.site.', 'use_panel');
-		if (body.app === 'panel' && project.type === 'ecommerce') throw new TenancyError(400, 'This is a store login. Sign in at the commerce panel.', 'use_commerce');
-		await PanelAdmin.updateOne({ _id: admin._id }, { $set: { lastLoginAt: new Date() } });
-		return {
-			token: await tenantSessions.issueSession(admin, req, 'password', project.organization),
-			project: { _id: String(project._id), publicSlug: project.publicSlug, name: project.name, type: project.type },
-		};
+		return signIn(admin, req, body.app, 'password');
 	})
 );
+
+const demoLimit = rateLimit({ name: 'panel-demo', windowMs: 15 * 60 * 1000, max: 60 });
+
+/**
+ * A demo link opened (docs/panel-users/DEMO_LOGINS.md): the project's demo login, signed in for an hour.
+ * Public: the key is the link. A wrong, new or switched-off link answers 400 demo_link_off.
+ */
+router.post(
+	'/demo',
+	demoLimit,
+	handle(async req => {
+		const body = check(
+			Joi.object({
+				key: Joi.string().trim().pattern(/^[\w-]{16,100}$/).required(),
+				app: Joi.string().valid('commerce', 'panel').default('commerce'),
+			}).messages({ 'string.pattern.base': 'This demo link isn’t right.', 'any.required': 'This demo link isn’t right.' }),
+			req.body
+		);
+		const admin: any = await PanelAdmin.findOne({ demo: true, demoKey: body.key });
+		if (!admin || admin.isActive === false) throw new TenancyError(400, 'This demo link isn’t working any more. Ask for a new one.', 'demo_link_off');
+		const out = await signIn(admin, req, body.app, 'demo');
+		return { ...out, expiresAt: new Date(Date.now() + DEMO_TOKEN_SECONDS * 1000).toISOString() };
+	})
+);
+
+/** What a demo login may not do to its own account (DEMO_LOGINS.md D5). */
+const notDemo = (req: any, res: any, next: any) =>
+	req.panelAdmin?.demo ? res.status(403).json({ message: 'A demo login can’t change this.', code: 'DEMO_ONLY' }) : next();
 
 // Everything below: a panel token only (tenantProtectAccount signs either kind in).
 router.use(tenantProtectAccount, (req: any, res: any, next: any) =>
@@ -95,7 +131,10 @@ const SELF_FIELDS = Joi.object({
 });
 
 const updateSelf = handle(async req => {
-	await PanelAdmin.updateOne({ _id: req.user._id }, { $set: check(SELF_FIELDS, req.body) });
+	const fields = check(SELF_FIELDS, req.body);
+	// A demo keeps its name and picture; its layout and theme are the visitor's.
+	if (req.panelAdmin?.demo) ['name', 'phone', 'image'].forEach(k => delete fields[k]);
+	await PanelAdmin.updateOne({ _id: req.user._id }, { $set: fields });
 	return publicPanelAdmin(await PanelAdmin.findById(req.user._id).lean());
 });
 router.put('/update/self', updateSelf);
@@ -115,6 +154,7 @@ router.put(
 
 router.put(
 	'/change-password',
+	notDemo,
 	handle(async req => {
 		const body = check(
 			Joi.object({
@@ -156,6 +196,7 @@ router.get(
 
 router.post(
 	'/mcp-keys',
+	notDemo,
 	handle(async (req: any, res: any) => {
 		const body = check(Joi.object({ name: Joi.string().trim().min(1).max(80).required().messages({ 'any.required': 'Name the key (e.g. “Claude”)' }), expiresInDays: Joi.number().integer().min(0).max(3650) }), req.body);
 		const live = await runUnscoped(() => ApiKey.countDocuments({ ...ownKeys(req), revokedAt: null }));

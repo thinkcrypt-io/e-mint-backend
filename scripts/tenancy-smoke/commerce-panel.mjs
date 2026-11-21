@@ -26,16 +26,16 @@ for (;;) {
 ok('store built', v?.status === 'ready', v?.status);
 
 // ---- managers make logins
-r = await call('POST', `${P}/panel-admins`, { name: 'Sam Store', email: `Sam${stamp}@Example.com`, password: 'short' }, t);
+r = await call('POST', `${P}/panel-admins`, { name: 'Sam Store', username: `u1${stamp}`, email: `Sam${stamp}@Example.com`, password: 'short' }, t);
 ok('a short password is refused', r.status === 400, r.body?.message);
-r = await call('POST', `${P}/panel-admins`, { name: 'Sam Store', email: `Sam${stamp}@Example.com`, password: 'store-pass-123' }, t);
+r = await call('POST', `${P}/panel-admins`, { name: 'Sam Store', username: `u2${stamp}`, email: `Sam${stamp}@Example.com`, password: 'store-pass-123' }, t);
 ok('a login is made (201), email lower-cased, no password back', r.status === 201 && r.body?.email === `sam${stamp}@example.com` && !('password' in (r.body || {})), JSON.stringify(r.body));
 const sam = r.body;
-r = await call('POST', `${P}/panel-admins`, { name: 'Sam again', email: `sam${stamp}@example.com`, password: 'store-pass-123' }, t);
+r = await call('POST', `${P}/panel-admins`, { name: 'Sam again', username: `u3${stamp}`, email: `sam${stamp}@example.com`, password: 'store-pass-123' }, t);
 ok('the same email again in this store: 409 email_taken', r.status === 409 && r.body?.code === 'email_taken', JSON.stringify(r.body));
-r = await call('POST', `/tenant/api/p/${other._id}/panel-admins`, { name: 'Sam other', email: `sam${stamp}@example.com`, password: 'store-pass-123' }, t);
+r = await call('POST', `/tenant/api/p/${other._id}/panel-admins`, { name: 'Sam other', username: `u4${stamp}`, email: `sam${stamp}@example.com`, password: 'store-pass-123' }, t);
 ok('…and in another store: 409 — one email, one store', r.status === 409 && r.body?.code === 'email_taken');
-r = await call('POST', `/tenant/api/p/${app._id}/panel-admins`, { name: 'X', email: `x${stamp}@example.com`, password: 'store-pass-123' }, t);
+r = await call('POST', `/tenant/api/p/${app._id}/panel-admins`, { name: 'X', username: `u5${stamp}`, email: `x${stamp}@example.com`, password: 'store-pass-123' }, t);
 ok('an app project login needs a role (panel users, docs/panel-users)', r.status === 400);
 r = await call('GET', `${P}/panel-admins`, null, t);
 ok('listed', r.status === 200 && r.body?.doc?.length === 1 && r.body.doc[0].email === sam.email);
@@ -145,7 +145,7 @@ const refusals = [
 	['GET', `${S}/api-builder/endpoints`],
 	['GET', `${S}/webhooks`],
 	['GET', `${S}/panel-admins`],
-	['POST', `${S}/panel-admins`, { name: 'Y', email: `y${stamp}@example.com`, password: 'store-pass-123' }],
+	['POST', `${S}/panel-admins`, { name: 'Y', username: `u6${stamp}`, email: `y${stamp}@example.com`, password: 'store-pass-123' }],
 	['GET', `${S}/people`],
 	['GET', `${S}/access-users`],
 	['PUT', `/tenant/api/projects/${shop._id}`, { name: 'Renamed' }],
@@ -181,6 +181,6 @@ r = await call('GET', '/tenant/api/panel/auth/self', null, st2);
 ok('…signed out', r.status === 401);
 r = await call('DELETE', `${P}/panel-admins/${sam._id}`, null, t);
 ok('removed', r.status === 200);
-r = await call('POST', `/tenant/api/p/${other._id}/panel-admins`, { name: 'Sam other', email: sam.email, password: 'store-pass-123' }, t);
+r = await call('POST', `/tenant/api/p/${other._id}/panel-admins`, { name: 'Sam other', username: `u7${stamp}`, email: sam.email, password: 'store-pass-123' }, t);
 ok('the email is free again — another store can use it', r.status === 201);
 done();

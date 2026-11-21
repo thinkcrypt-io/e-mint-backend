@@ -38,6 +38,12 @@ const schema = new Schema<any>(
 		role: { type: Schema.Types.ObjectId, ref: 'PanelRole' },
 		/** Every record and report of the project, and its panel users and roles — still never building (PU-02). */
 		superAdmin: { type: Boolean, default: false },
+		/**
+		 * The project's demo login (docs/panel-users/DEMO_LOGINS.md): at most one per project, no
+		 * password, opened by its link (<app>/demo/<demoKey>) for an hour at a time. Never manages panel users.
+		 */
+		demo: { type: Boolean, default: false },
+		demoKey: { type: String, select: false },
 		lastLoginAt: { type: Date },
 		/** The tenant user who made the login. */
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },
@@ -51,6 +57,7 @@ const schema = new Schema<any>(
 // Unique only where set: a login may have no email (PU-08). The migration swaps the old email_1 index for these.
 schema.index({ username: 1 }, { unique: true, name: 'username_unique', partialFilterExpression: { username: { $type: 'string' } } });
 schema.index({ email: 1 }, { unique: true, name: 'email_unique', partialFilterExpression: { email: { $type: 'string' } } });
+schema.index({ demoKey: 1 }, { unique: true, name: 'demo_key_unique', partialFilterExpression: { demoKey: { $type: 'string' } } });
 
 schema.pre<any>('save', async function (next) {
 	if (!this.isModified('password') || !this.password) return next();
@@ -62,7 +69,13 @@ schema.methods.checkPassword = function (this: any, password: string) {
 	return !!this.password && bcrypt.compare(String(password || ''), this.password);
 };
 
-/** The token for the commerce panel. Issue through tenantSessions.issueSession: `sid` names the session. */
+/** How long a demo login's token lasts (DEMO_LOGINS.md D3). */
+export const DEMO_TOKEN_SECONDS = 60 * 60;
+
+/**
+ * The token for the commerce panel. Issue through tenantSessions.issueSession: `sid` names the session.
+ * A demo login's says `demo: true` and expires after DEMO_TOKEN_SECONDS.
+ */
 schema.methods.generateAuthToken = function (this: any, sid?: string, org?: any): string {
 	return jwt.sign(
 		{
@@ -73,8 +86,10 @@ schema.methods.generateAuthToken = function (this: any, sid?: string, org?: any)
 			org: String(org || this.organization),
 			project: String(this.project),
 			...(sid && { sid }),
+			...(this.demo && { demo: true }),
 		},
-		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542'
+		process.env.JWT_PRIVATE_KEY || 'fallback_key_12345_924542',
+		this.demo ? { expiresIn: DEMO_TOKEN_SECONDS } : undefined
 	);
 };
 
