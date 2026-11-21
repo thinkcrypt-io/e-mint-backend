@@ -2,31 +2,39 @@ import express from 'express';
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import PanelAdmin from '../library/models/tenancy/panelAdmin.model.js';
+import PanelRole from '../library/models/tenancy/panelRole.model.js';
 import { tenantSessions } from '../library/functions/sessions.function.js';
-import { tenantPermissions } from '../library/functions/tenantPermissions.function.js';
+import { grants } from '../library/functions/tenantPermissions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
+import { MANAGE_PANEL, publicPanelAdmin } from '../library/functions/panelAdmin.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 
 /**
- * /tenant/api/p/:projectId/panel-admins — an e-commerce project's store logins
- * for the commerce panel (docs/commerce-panel CP-01). The project's managers
- * (manage-projects, or invite-to-projects) make them with an email and a
- * password; one email is one login of one store.
+ * /tenant/api/p/:projectId/panel-admins (also /panel-users) — a project's panel
+ * logins (docs/panel-users PU-02; docs/commerce-panel CP-01 for stores). The
+ * project's managers (manage-projects, or invite-to-projects) make them with an
+ * email and a password — and so can a panel super admin, from the panel app.
+ * One email is one login of one project.
  *
- *   GET    /             the project's store logins
- *   POST   /             { name, email, password, phone? }   409 email_taken
- *   PUT    /:id          { name?, phone?, isActive?, password? } — switching off or a new password signs them out
+ * A store's logins open the commerce panel; any other project's open the panel
+ * app (panel.tcrypt.site). Each has a panel role (panel-roles) or is a super
+ * admin; a store login without either keeps the fixed store set.
+ *
+ *   GET    /             { doc: logins, totalDocs, roles }
+ *   POST   /             { name, email, password, phone?, role?, superAdmin? }   409 email_taken
+ *   PUT    /:id          { name?, phone?, isActive?, password?, role?, superAdmin? } — switching off or a new password signs them out
  *   DELETE /:id          removes the login and signs it out
+ *
+ * A panel super admin can't switch off, demote or remove themselves.
  */
 const router = express.Router({ mergeParams: true });
 
-router.use((req: any, res: any, next: any) =>
-	req.project?.type === 'ecommerce' ? next() : res.status(404).json({ message: 'Only e-commerce projects have store logins' })
-);
-router.use(tenantPermissions(['manage-projects', 'invite-to-projects']));
-// A store login never manages store logins.
-router.use((req: any, res: any, next: any) => (req.panelAdmin ? res.status(403).json({ message: 'Not allowed' }) : next()));
+/** The project's managers, or a panel super admin of this project. */
+export const panelManagers = (req: any, res: any, next: any) => {
+	if (req.panelAdmin) return grants(req.permissions, [MANAGE_PANEL]) ? next() : res.status(403).json({ message: 'Only a super admin manages panel users' });
+	return grants(req.permissions, ['manage-projects', 'invite-to-projects']) ? next() : res.status(403).json({ message: 'Forbidden: your role in this organization doesn’t allow this' });
+};
+router.use(panelManagers);
 
 const check = (schema: Joi.Schema, body: any) => {
 	const { error, value } = schema.validate(body || {}, { abortEarly: true, stripUnknown: true });
@@ -48,13 +56,35 @@ const findOwn = async (req: any) => {
 	return admin;
 };
 
-const taken = () => new TenancyError(409, 'This email is already a store login — one email opens one store.', 'email_taken');
+/** A role id of this project's panel roles, or null to clear it. */
+const roleOf = async (req: any, value: any) => {
+	if (value === undefined) return undefined;
+	if (value === null || value === '') return null;
+	if (!mongoose.isValidObjectId(value) || !(await PanelRole.exists({ _id: value }))) throw new TenancyError(400, 'Choose one of the project’s panel roles');
+	return value;
+};
+
+/** Outside a store a login needs a role, unless it's a super admin. */
+const needsRole = (req: any, role: any, superAdmin: boolean) => {
+	if (req.project.type !== 'ecommerce' && !role && !superAdmin) throw new TenancyError(400, 'Choose a role, or make them a super admin');
+};
+
+/** A panel super admin can't lock themselves out. */
+const notSelf = (req: any, admin: any, body: any) => {
+	if (!req.panelAdmin || String(req.panelAdmin._id) !== String(admin._id)) return;
+	if (body === 'delete' || body.isActive === false || body.superAdmin === false) throw new TenancyError(400, 'You can’t switch off, demote or remove your own login');
+};
+
+const taken = () => new TenancyError(409, 'This email is already a panel login — one email opens one project.', 'email_taken');
 
 router.get(
 	'/',
 	handle(async (req: any) => {
-		const rows = await PanelAdmin.find({ project: req.project._id }).sort({ createdAt: 1 }).lean();
-		return { doc: rows.map(publicPanelAdmin), totalDocs: rows.length };
+		const [rows, roles] = await Promise.all([
+			PanelAdmin.find({ project: req.project._id }).sort({ createdAt: 1 }).lean(),
+			PanelRole.find({}).sort({ name: 1 }).select('name').lean(),
+		]);
+		return { doc: rows.map(publicPanelAdmin), totalDocs: rows.length, roles: roles.map((r: any) => ({ _id: String(r._id), name: r.name })) };
 	})
 );
 
@@ -67,9 +97,13 @@ router.post(
 				email: Joi.string().trim().lowercase().email().required().messages({ 'any.required': 'An email is required' }),
 				password: password.required().messages({ 'any.required': 'A password is required' }),
 				phone: Joi.string().trim().max(40).allow(''),
+				role: Joi.string().allow('', null),
+				superAdmin: Joi.boolean().default(false),
 			}),
 			req.body
 		);
+		body.role = (await roleOf(req, body.role)) || undefined;
+		needsRole(req, body.role, body.superAdmin);
 		if (await PanelAdmin.exists({ email: body.email })) throw taken();
 		let admin: any;
 		try {
@@ -78,7 +112,7 @@ router.post(
 			if (e?.code === 11000) throw taken();
 			throw e;
 		}
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `added the store login ${admin.email}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `added the panel login ${admin.email}` });
 		res.status(201);
 		return publicPanelAdmin(admin);
 	})
@@ -93,10 +127,20 @@ router.put(
 				phone: Joi.string().trim().max(40).allow(''),
 				isActive: Joi.boolean(),
 				password: password.allow(''),
+				role: Joi.string().allow('', null),
+				superAdmin: Joi.boolean(),
 			}),
 			req.body
 		);
 		const admin = await findOwn(req);
+		notSelf(req, admin, body);
+		const role = await roleOf(req, body.role);
+		const nextRole = role === undefined ? admin.role : role;
+		const nextSuper = body.superAdmin === undefined ? !!admin.superAdmin : body.superAdmin;
+		needsRole(req, nextRole, nextSuper);
+		const accessChanged = (role !== undefined && String(role || '') !== String(admin.role || '')) || nextSuper !== !!admin.superAdmin;
+		if (role !== undefined) admin.role = role || undefined;
+		if (body.superAdmin !== undefined) admin.superAdmin = body.superAdmin;
 		const switchedOff = body.isActive === false && admin.isActive !== false;
 		const newPassword = !!body.password;
 		if (body.name !== undefined) admin.name = body.name;
@@ -105,8 +149,8 @@ router.put(
 		if (newPassword) admin.password = body.password;
 		await admin.save();
 		if (switchedOff || newPassword) await signOutAll(admin._id, switchedOff ? 'Login switched off' : 'Password changed');
-		const what = [switchedOff && 'switched off', body.isActive === true && 'switched on', newPassword && 'set a new password for', !switchedOff && !newPassword && body.isActive === undefined && 'changed'].filter(Boolean)[0];
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} the store login ${admin.email}` });
+		const what = [switchedOff && 'switched off', body.isActive === true && 'switched on', newPassword && 'set a new password for', accessChanged && 'changed the role of', 'changed'].filter(Boolean)[0];
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `${what} the panel login ${admin.email}` });
 		return publicPanelAdmin(admin);
 	})
 );
@@ -115,9 +159,10 @@ router.delete(
 	'/:id',
 	handle(async (req: any) => {
 		const admin = await findOwn(req);
+		notSelf(req, admin, 'delete');
 		await signOutAll(admin._id, 'Login removed');
 		await PanelAdmin.deleteOne({ _id: admin._id });
-		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `removed the store login ${admin.email}` });
+		recordProjectEvent({ req, model: 'PanelAdmin', modelPath: 'panel-admins', document: admin._id, name: admin.name, text: `removed the panel login ${admin.email}` });
 		return { message: 'Removed' };
 	})
 );

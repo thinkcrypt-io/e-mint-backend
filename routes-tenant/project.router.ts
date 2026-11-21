@@ -43,6 +43,8 @@ import CommerceSettings from '../library/models/tenancy/commerceSettings.model.j
 import { commerceGuard } from '../library/functions/commerce/locks.js';
 import mailAccountsRouter from './mailAccounts.router.js';
 import panelAdminsRouter from './panelAdmins.router.js';
+import panelRolesRouter from './panelRoles.router.js';
+import reportsRouter from './reports.router.js';
 import mailDesignsRouter from './mailDesigns.router.js';
 import templatesRouter from './templates.router.js';
 import siteBuilderRouter from './siteBuilder.router.js';
@@ -78,7 +80,9 @@ import { tenantNavSearch } from '../library/controllers/search/navSearch.control
  *   /webhooks, /api-overview      outgoing webhooks; an API project's dashboard (docs/templates T-09)   build; read
  *   /api-builder                  the public API's endpoints and server keys (docs/api-builder)   build
  *   /commerce                     an e-commerce project's store (docs/ecommerce)   any member reads; manage-projects changes
- *   /panel-admins                 an e-commerce project's commerce panel logins (docs/commerce-panel)   manage-projects / invite-to-projects
+ *   /panel-admins, /panel-users   the project's panel logins (docs/panel-users; docs/commerce-panel)   manage-projects / invite-to-projects, or a panel super admin
+ *   /panel-roles                  what panel users may do (docs/panel-users PU-01)                     the same
+ *   /saved-reports                reports: Build makes them, viewers run and download them (docs/panel-users RP-01)
  *   /widgets, /templates          site widgets (docs/widgets); start from a published template (T-14)   build
  *   /site-builder                 a website's builder pages, design, publish (docs/site-builder)   read; build to change
  *   /<route>                      the project's built models                  view-/create-/edit-/delete-<route>
@@ -248,6 +252,10 @@ router.use('/commerce', commerceRouter);
 router.use('/mail-accounts', mailAccountsRouter);
 // Its store logins for the commerce panel (docs/commerce-panel CP-01).
 router.use('/panel-admins', panelAdminsRouter);
+// Every project's panel users and their roles (docs/panel-users), and its reports (RP-01).
+router.use('/panel-users', panelAdminsRouter);
+router.use('/panel-roles', panelRolesRouter);
+router.use('/saved-reports', reportsRouter);
 // How its emails look — plain or designed, header, colours, footer (docs/messaging M-03a).
 router.use('/mail-designs', mailDesignsRouter);
 

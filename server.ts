@@ -62,6 +62,8 @@ app.use('/mcp', mcpRouter);
 app.use('/tenant/mcp', tenantMcpRouter);
 // A commerce panel store login's MCP (docs/commerce-panel CP-07): its store's records only.
 app.use('/tenant/commerce-mcp', commerceMcpRouter);
+// Panel users' own AI (docs/panel-users PU-05): the same endpoint, named for the panel app.
+app.use('/tenant/panel-mcp', commerceMcpRouter);
 // Template Studio's MCP (docs/templates T-06) — its own emt_ keys; blueprints only.
 app.use('/templates/mcp', templatesMcpRouter);
 app.use(morgan('combined'));

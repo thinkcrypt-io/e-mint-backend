@@ -19,7 +19,9 @@ import { runUnscoped } from '../library/functions/tenantScope.function.js';
  * /tenant/api/panel/auth — a commerce panel store admin's own account
  * (docs/commerce-panel CP-01). The commerce panel sends its `auth/…` calls here.
  *
- *   POST /login                { email, password } → { token, project }
+ *   POST /login                { email, password, app? } → { token, project }
+ *                              app 'commerce' (default): a store's login; 'panel': any other project's
+ *                              panel user, at the panel app (docs/panel-users PU-03)
  *   GET  /self                 the login, its organization and its one project (auth/self's shape)
  *   PUT  /update/self (and /)  name, phone, image, layout, theme
  *   PUT  /update/preferences   table columns per route
@@ -47,14 +49,20 @@ router.post(
 	'/login',
 	authLimit,
 	handle(async req => {
-		const body = check(Joi.object({ email: Joi.string().trim().lowercase().email().required(), password: Joi.string().required() }), req.body);
+		const body = check(
+			Joi.object({ email: Joi.string().trim().lowercase().email().required(), password: Joi.string().required(), app: Joi.string().valid('commerce', 'panel').default('commerce') }),
+			req.body
+		);
 		const admin: any = await PanelAdmin.findOne({ email: body.email }).select('+password');
 		if (!admin || !(await admin.checkPassword(body.password))) throw new TenancyError(400, 'That email and password don’t match.');
 		if (admin.isActive === false) throw new TenancyError(400, 'This login has been switched off. Ask the store’s owner.');
 		const project: any = await TenantProject.findById(admin.project).lean();
 		const organization: any = project && (await Organization.findById(project.organization, { isActive: 1 }).lean());
-		if (!project || project.isActive === false || project.type !== 'ecommerce' || !organization || organization.isActive === false)
-			throw new TenancyError(400, 'This store isn’t open any more.');
+		if (!project || project.isActive === false || !organization || organization.isActive === false)
+			throw new TenancyError(400, 'This project isn’t open any more.');
+		// A store's logins use the commerce panel; every other project's, the panel app.
+		if (body.app === 'commerce' && project.type !== 'ecommerce') throw new TenancyError(400, 'This login is for the panel app, not a store. Sign in at panel.tcrypt.site.', 'use_panel');
+		if (body.app === 'panel' && project.type === 'ecommerce') throw new TenancyError(400, 'This is a store login. Sign in at the commerce panel.', 'use_commerce');
 		await PanelAdmin.updateOne({ _id: admin._id }, { $set: { lastLoginAt: new Date() } });
 		return {
 			token: await tenantSessions.issueSession(admin, req, 'password', project.organization),

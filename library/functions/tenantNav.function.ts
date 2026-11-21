@@ -103,6 +103,14 @@ export const tenantNav = (
 	// Its site's settings (Site setup) and its own AI connection (CP-06/07).
 	if (panel)
 		return [
+			// Reports (docs/panel-users RP-03), and a super admin's panel users and roles (PU-02).
+			...(inProject && can('reports:view') ? section('Reports', 'file-chart-column', [{ title: 'Reports', href: '/reports', icon: 'file-chart-column' }]) : []),
+			...(inProject && can('manage-panel-users')
+				? section('Team', 'users', [
+						{ title: 'Panel users', href: '/panel-users', icon: 'user-cog' },
+						{ title: 'Panel roles', href: '/panel-roles', icon: 'shield-check' },
+				  ])
+				: []),
 			...(inProject && can('view-image') ? section('Files', 'folder', [{ title: 'Media library', href: '/images', icon: 'images' }]) : []),
 			...(inProject
 				? section('Site', 'globe', [
@@ -162,10 +170,17 @@ export const tenantNav = (
 				// The email accounts its emails go out through (docs/messaging M-14).
 				...(can('manage-projects') ? [{ title: 'Email', href: '/email-accounts', icon: 'mail' }] : []),
 				...(can('invite-to-projects') || can('manage-members') ? [{ title: 'Members', href: '/project-people', icon: 'users' }] : []),
-				// A store's own logins for the commerce panel (docs/commerce-panel CP-01).
-				...(projectType === 'ecommerce' && (can('manage-projects') || can('invite-to-projects')) ? [{ title: 'Panel admins', href: '/panel-admins', icon: 'user-cog' }] : []),
+				// The project's own logins: a store's for the commerce panel (docs/commerce-panel CP-01), any other's for the panel app (docs/panel-users).
+				...(can('manage-projects') || can('invite-to-projects')
+					? [
+							{ title: projectType === 'ecommerce' ? 'Panel admins' : 'Panel users', href: projectType === 'ecommerce' ? '/panel-admins' : '/panel-users', icon: 'user-cog' },
+							{ title: 'Panel roles', href: '/panel-roles', icon: 'shield-check' },
+					  ]
+					: []),
 		  ])
 		: [];
+	// Reports on the project's records (docs/panel-users RP-03): everyone who reads records; Build makes them.
+	const reports = inProject && (can('build') || can('records:view')) ? section('Reports', 'file-chart-column', [{ title: 'Reports', href: '/reports', icon: 'file-chart-column' }]) : [];
 	// Inside a project the organization's own details stay out of the way: they're changed outside it.
 	const org = section('Organization', 'building-2', [
 		{ title: 'Projects', href: '/projects', icon: 'folder-kanban' },
@@ -176,5 +191,5 @@ export const tenantNav = (
 			? [{ title: 'Email', href: '/org/email', icon: 'mail' }, ...(inProject ? [] : [{ title: 'Settings', href: '/org/settings', icon: 'settings' }])]
 			: []),
 	]);
-	return [...site, ...files, ...audience, ...activity, ...build, ...project, ...org];
+	return [...reports, ...site, ...files, ...audience, ...activity, ...build, ...project, ...org];
 };

@@ -1,7 +1,10 @@
 import Organization from '../models/tenancy/organization.model.js';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
 import PanelAdmin from '../models/tenancy/panelAdmin.model.js';
+import PanelRole from '../models/tenancy/panelRole.model.js';
 import { publicOrganization, publicProject } from './tenancy.function.js';
+import { RECORD_ACTIONS, isModelKey } from './tenantPermissions.function.js';
+import { runUnscoped } from './tenantScope.function.js';
 
 /**
  * The commerce panel's store admins (docs/commerce-panel): PanelAdmin logins of
@@ -34,6 +37,36 @@ export const PANEL_PERMISSIONS = [
 export const PANEL_ROLE = { _id: 'panel', name: 'Store admin', system: 'panel' };
 
 /**
+ * Panel users (docs/panel-users): the same PanelAdmin logins, in any kind of
+ * project, signed in at the panel app (panel.tcrypt.site) — or the commerce
+ * panel for a store. What they hold comes from their PanelRole; a super admin
+ * holds every record and report and manages the project's panel users and
+ * roles. Never `build` or anything of the project's settings (PU-02).
+ */
+export const PANEL_REPORT_KEYS = ['reports:view', 'reports:export'];
+/** A panel super admin's own key: the project's panel users and panel roles. */
+export const MANAGE_PANEL = 'manage-panel-users';
+const ALL_RECORDS = RECORD_ACTIONS.map(a => `records:${a}`);
+
+/** What a panel role may hold: per-model keys and the report keys — nothing else, whatever was saved. */
+export const cleanPanelKeys = (keys: string[] = []) => [...new Set(keys.filter(k => isModelKey(k) || PANEL_REPORT_KEYS.includes(k)))];
+
+/** A panel login's permissions and the role it shows, in `project`. */
+export const panelAccess = async (admin: any, project: any): Promise<{ permissions: string[]; role: any }> => {
+	const store = project.type === 'ecommerce';
+	if (admin.superAdmin)
+		return {
+			permissions: [...(store ? PANEL_PERMISSIONS : ALL_RECORDS), ...PANEL_REPORT_KEYS, MANAGE_PANEL],
+			role: { _id: 'panel-super-admin', name: 'Super admin', system: 'panel' },
+		};
+	const role: any = admin.role && (await runUnscoped(() => PanelRole.findOne({ _id: admin.role, project: project._id }).lean()));
+	if (role) return { permissions: cleanPanelKeys(role.permissions), role: { _id: String(role._id), name: role.name, system: 'panel' } };
+	// A store login made before panel roles: the fixed store set.
+	if (store) return { permissions: [...PANEL_PERMISSIONS, ...PANEL_REPORT_KEYS], role: PANEL_ROLE };
+	return { permissions: [], role: { _id: 'panel', name: 'No role', system: 'panel' } };
+};
+
+/**
  * Where a panel token may go: its project's API (/tenant/api/p/<project>/…,
  * where the project router checks it is theirs) and its own account
  * (/tenant/api/panel/auth/…). Nothing about organizations, other projects or
@@ -56,8 +89,7 @@ export const signInPanel = async (req: any, decoded: any): Promise<{ status: num
 	if (!admin) return { status: 401, message: 'User was not found' };
 	if (admin.isActive === false) return { status: 401, message: 'This login has been switched off. Ask the store’s owner.', code: 'PANEL_DISABLED' };
 	const project: any = await TenantProject.findById(admin.project).lean();
-	if (!project || project.isActive === false || project.type !== 'ecommerce')
-		return { status: 401, message: 'This store isn’t open any more.', code: 'PANEL_PROJECT_GONE' };
+	if (!project || project.isActive === false) return { status: 401, message: 'This project isn’t open any more.', code: 'PANEL_PROJECT_GONE' };
 	const organization: any = await Organization.findById(project.organization).lean();
 	if (!organization || organization.isActive === false)
 		return { status: 401, message: 'This store isn’t open any more.', code: 'PANEL_PROJECT_GONE' };
@@ -67,8 +99,9 @@ export const signInPanel = async (req: any, decoded: any): Promise<{ status: num
 	req.organization = organization;
 	// A guest of the one project: canOpenProject / projectAccessFilter keep them in it.
 	req.member = { user: admin._id, organization: organization._id, guest: true, allProjects: false, projects: [project._id], panel: true, status: 'active' };
-	req.role = { ...PANEL_ROLE, permissions: PANEL_PERMISSIONS };
-	req.permissions = [...PANEL_PERMISSIONS];
+	const access = await panelAccess(admin, project);
+	req.role = { ...access.role, permissions: access.permissions };
+	req.permissions = [...access.permissions];
 	return null;
 };
 
@@ -80,6 +113,8 @@ export const publicPanelAdmin = (a: any) => ({
 	phone: a.phone || '',
 	image: a.image || '',
 	isActive: a.isActive !== false,
+	role: a.role ? String(a.role?._id || a.role) : null,
+	superAdmin: !!a.superAdmin,
 	lastLoginAt: a.lastLoginAt || null,
 	project: String(a.project),
 	createdAt: a.createdAt,
@@ -109,10 +144,11 @@ export const panelSelfPayload = async (req: any) => {
 		createdAt: a.createdAt,
 		kind: 'panel',
 		panel: true,
+		superAdmin: !!a.superAdmin,
 		organization: org,
-		role: { ...PANEL_ROLE, permissions: req.permissions },
+		role: { ...(req.role || PANEL_ROLE), permissions: req.permissions },
 		permissions: req.permissions,
-		organizations: [{ _id: org._id, name: org.name, slug: org.slug, logo: org.logo, role: PANEL_ROLE.name, system: 'panel', guest: true, projects: [ref] }],
+		organizations: [{ _id: org._id, name: org.name, slug: org.slug, logo: org.logo, role: req.role?.name || PANEL_ROLE.name, system: 'panel', guest: true, projects: [ref] }],
 		projects: [publicProject(project)],
 	};
 };

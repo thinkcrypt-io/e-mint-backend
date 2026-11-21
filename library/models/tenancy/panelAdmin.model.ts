@@ -25,6 +25,13 @@ const schema = new Schema<any>(
 		organization: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
 		project: { type: Schema.Types.ObjectId, ref: 'TenantProject', required: true, index: true },
 		isActive: { type: Boolean, default: true },
+		/**
+		 * What they may do (docs/panel-users PU-01): a PanelRole of the project. A store
+		 * login without one keeps the fixed store set (PANEL_PERMISSIONS).
+		 */
+		role: { type: Schema.Types.ObjectId, ref: 'PanelRole' },
+		/** Every record and report of the project, and its panel users and roles — still never building (PU-02). */
+		superAdmin: { type: Boolean, default: false },
 		lastLoginAt: { type: Date },
 		/** The tenant user who made the login. */
 		createdBy: { type: Schema.Types.ObjectId, ref: 'TenantUser' },

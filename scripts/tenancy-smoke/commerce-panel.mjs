@@ -36,7 +36,7 @@ ok('the same email again in this store: 409 email_taken', r.status === 409 && r.
 r = await call('POST', `/tenant/api/p/${other._id}/panel-admins`, { name: 'Sam other', email: `sam${stamp}@example.com`, password: 'store-pass-123' }, t);
 ok('…and in another store: 409 — one email, one store', r.status === 409 && r.body?.code === 'email_taken');
 r = await call('POST', `/tenant/api/p/${app._id}/panel-admins`, { name: 'X', email: `x${stamp}@example.com`, password: 'store-pass-123' }, t);
-ok('an app project has no store logins (404)', r.status === 404);
+ok('an app project login needs a role (panel users, docs/panel-users)', r.status === 400);
 r = await call('GET', `${P}/panel-admins`, null, t);
 ok('listed', r.status === 200 && r.body?.doc?.length === 1 && r.body.doc[0].email === sam.email);
 r = await call('GET', `${P}/sidebar/admin/server`, null, t);

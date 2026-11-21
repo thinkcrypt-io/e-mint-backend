@@ -40,6 +40,7 @@ import getViewDocument, { getViewTab } from '../../library/controllers/builder/v
 import { rollupResponses, rollupsOf } from '../../library/functions/rollups.function.js';
 import getStats from '../../library/controllers/aggregate/getStats.controller.js';
 import getTotals from '../../library/controllers/aggregate/getTotals.controller.js';
+import getReport from '../../library/controllers/aggregate/getReport.controller.js';
 import {
 	bulkArchive,
 	bulkDelete,
@@ -476,6 +477,9 @@ const defineRoutes = ({
 
 	// Totals of the rows ticked in the table — "View total" (getTotals.controller.ts).
 	router.post('/get/totals', ...middlewares.stats, getTotals(config.MODEL));
+
+	// A saved report's rows, breakdown or timeline, on screen or as a file (docs/panel-users RP-02).
+	router.post('/get/report', ...middlewares.export, getReport(config.MODEL));
 
 	// Bulk actions on the ticked rows (bulkActions.controller.ts): the route's
 	// permission for the action, and the list's access rules in queryHelper.

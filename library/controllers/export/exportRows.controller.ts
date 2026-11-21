@@ -18,7 +18,7 @@ export const MAX_ROWS = 20000;
 
 const fail = (res: Response, status: number, message: string) => res.status(status).json({ message });
 
-const get = (doc: any, key: string) => key.split('.').reduce((v, k) => (v == null ? v : v[k]), doc);
+export const get = (doc: any, key: string) => key.split('.').reduce((v, k) => (v == null ? v : v[k]), doc);
 const strip = (s: string) => s.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 /** One cell's value: a number or Date stays typed (for Excel); everything else becomes text. */
@@ -39,7 +39,85 @@ const asText = (v: string | number | Date | null) =>
 
 const csvCell = (s: string) => (/[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 
-const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+export const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+
+export type TableCell = string | number | Date | null;
+
+/**
+ * Writes a table as a CSV, Excel or PDF download — the table export's files, and
+ * reports' (docs/panel-users RP-02). `footer` is a totals row, in bold.
+ */
+export const writeTable = async (
+	res: Response,
+	{ format, title, file, columns, rows, footer, subtitle }: { format: string; title: string; file: string; columns: { key: string; label: string }[]; rows: TableCell[][]; footer?: TableCell[] | null; subtitle?: string }
+) => {
+	res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Row-Count');
+	res.setHeader('X-Row-Count', String(rows.length));
+
+	if (format === 'csv') {
+		const lines = [columns.map(c => csvCell(c.label)).join(','), ...[...rows, ...(footer ? [footer] : [])].map(r => r.map(v => csvCell(asText(v))).join(','))];
+		res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+		res.setHeader('Content-Disposition', `attachment; filename="${file}.csv"`);
+		return res.status(200).send('﻿' + lines.join('\r\n'));
+	}
+
+	if (format === 'xlsx') {
+		const wb = new ExcelJS.Workbook();
+		const ws = wb.addWorksheet(title.slice(0, 31) || 'Export', { views: [{ state: 'frozen', ySplit: 1 }] });
+		ws.columns = columns.map((c, i) => {
+			const longest = Math.max(c.label.length, ...rows.slice(0, 500).map(r => asText(r[i]).length));
+			return { header: c.label, key: c.key, width: Math.min(Math.max(longest + 2, 10), 50) };
+		});
+		rows.forEach(r => ws.addRow(r));
+		if (footer) ws.addRow(footer).font = { bold: true };
+		ws.getRow(1).font = { bold: true };
+		ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
+		columns.forEach((_, i) => {
+			const col = ws.getColumn(i + 1);
+			if (rows.some(r => r[i] instanceof Date)) col.numFmt = 'yyyy-mm-dd';
+		});
+		res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		res.setHeader('Content-Disposition', `attachment; filename="${file}.xlsx"`);
+		await wb.xlsx.write(res);
+		return res.end();
+	}
+
+	// PDF: a landscape table, header repeated on every page.
+	const doc = new PDFDocument({ margin: 32, size: 'A4', layout: 'landscape' });
+	res.setHeader('Content-Type', 'application/pdf');
+	res.setHeader('Content-Disposition', `attachment; filename="${file}.pdf"`);
+	doc.pipe(res);
+	const left = doc.page.margins.left;
+	const width = doc.page.width - left - doc.page.margins.right;
+	const colW = width / columns.length;
+	const bottom = () => doc.page.height - doc.page.margins.bottom;
+	doc.fontSize(14).font('Helvetica-Bold').text(title, left, doc.page.margins.top);
+	doc.fontSize(8).font('Helvetica').fillColor('#666').text(`${subtitle ? `${subtitle} · ` : ''}${rows.length} rows · ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`);
+	doc.fillColor('#000');
+	let y = doc.y + 8;
+	const header = () => {
+		doc.rect(left, y, width, 18).fill('#f1f1f1');
+		doc.fillColor('#111').font('Helvetica-Bold').fontSize(8);
+		columns.forEach((c, i) => doc.text(c.label, left + i * colW + 4, y + 5, { width: colW - 8, height: 10, ellipsis: true }));
+		doc.font('Helvetica').fillColor('#000');
+		y += 18;
+	};
+	header();
+	[...rows, ...(footer ? [footer] : [])].forEach((r, ri) => {
+		const cells = r.map(asText);
+		const h = Math.min(Math.max(...cells.map(s => doc.heightOfString(s || ' ', { width: colW - 8 }))) + 8, 60);
+		if (y + h > bottom()) {
+			doc.addPage();
+			y = doc.page.margins.top;
+			header();
+		}
+		if (ri % 2) doc.rect(left, y, width, h).fill('#fafafa').fillColor('#000');
+		doc.fontSize(8);
+		cells.forEach((s, i) => doc.text(s, left + i * colW + 4, y + 4, { width: colW - 8, height: h - 6, ellipsis: true }));
+		y += h;
+	});
+	doc.end();
+};
 
 const exportRows = (Model: mongoose.Model<any>) => async (req: any, res: Response) => {
 	try {
@@ -74,72 +152,7 @@ const exportRows = (Model: mongoose.Model<any>) => async (req: any, res: Respons
 		const rows = docs.map((doc: any) => columns.map(c => cellValue(get(doc, c.key))));
 		const route = req.resolvedRoute?.key || 'export';
 		const title = String(body.title || req.resolvedRoute?.frontendConfig?.route?.title || route);
-		const file = `${route}-${stamp()}`;
-		res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Row-Count');
-		res.setHeader('X-Row-Count', String(rows.length));
-
-		if (format === 'csv') {
-			const lines = [columns.map(c => csvCell(c.label)).join(','), ...rows.map(r => r.map(v => csvCell(asText(v))).join(','))];
-			res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-			res.setHeader('Content-Disposition', `attachment; filename="${file}.csv"`);
-			return res.status(200).send('﻿' + lines.join('\r\n'));
-		}
-
-		if (format === 'xlsx') {
-			const wb = new ExcelJS.Workbook();
-			const ws = wb.addWorksheet(title.slice(0, 31) || 'Export', { views: [{ state: 'frozen', ySplit: 1 }] });
-			ws.columns = columns.map((c, i) => {
-				const longest = Math.max(c.label.length, ...rows.slice(0, 500).map(r => asText(r[i]).length));
-				return { header: c.label, key: c.key, width: Math.min(Math.max(longest + 2, 10), 50) };
-			});
-			rows.forEach(r => ws.addRow(r));
-			ws.getRow(1).font = { bold: true };
-			ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
-			columns.forEach((_, i) => {
-				const col = ws.getColumn(i + 1);
-				if (rows.some(r => r[i] instanceof Date)) col.numFmt = 'yyyy-mm-dd';
-			});
-			res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-			res.setHeader('Content-Disposition', `attachment; filename="${file}.xlsx"`);
-			await wb.xlsx.write(res);
-			return res.end();
-		}
-
-		// PDF: a landscape table, header repeated on every page.
-		const doc = new PDFDocument({ margin: 32, size: 'A4', layout: 'landscape' });
-		res.setHeader('Content-Type', 'application/pdf');
-		res.setHeader('Content-Disposition', `attachment; filename="${file}.pdf"`);
-		doc.pipe(res);
-		const left = doc.page.margins.left;
-		const width = doc.page.width - left - doc.page.margins.right;
-		const colW = width / columns.length;
-		const bottom = () => doc.page.height - doc.page.margins.bottom;
-		doc.fontSize(14).font('Helvetica-Bold').text(title, left, doc.page.margins.top);
-		doc.fontSize(8).font('Helvetica').fillColor('#666').text(`${rows.length} rows · ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`);
-		doc.fillColor('#000');
-		let y = doc.y + 8;
-		const header = () => {
-			doc.rect(left, y, width, 18).fill('#f1f1f1');
-			doc.fillColor('#111').font('Helvetica-Bold').fontSize(8);
-			columns.forEach((c, i) => doc.text(c.label, left + i * colW + 4, y + 5, { width: colW - 8, height: 10, ellipsis: true }));
-			doc.font('Helvetica').fillColor('#000');
-			y += 18;
-		};
-		header();
-		rows.forEach((r, ri) => {
-			const cells = r.map(asText);
-			const h = Math.min(Math.max(...cells.map(s => doc.heightOfString(s || ' ', { width: colW - 8 }))) + 8, 60);
-			if (y + h > bottom()) {
-				doc.addPage();
-				y = doc.page.margins.top;
-				header();
-			}
-			if (ri % 2) doc.rect(left, y, width, h).fill('#fafafa').fillColor('#000');
-			doc.fontSize(8);
-			cells.forEach((s, i) => doc.text(s, left + i * colW + 4, y + 4, { width: colW - 8, height: h - 6, ellipsis: true }));
-			y += h;
-		});
-		doc.end();
+		return await writeTable(res, { format, title, file: `${route}-${stamp()}`, columns, rows });
 	} catch (e: any) {
 		if (!res.headersSent) return fail(res, 500, e?.message || 'Could not export');
 		res.end();

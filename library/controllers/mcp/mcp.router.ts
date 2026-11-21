@@ -28,6 +28,7 @@ import { createMcpRouter } from './transport.js';
 import { CONTENT_INSTRUCTIONS, CONTENT_TOOLS } from './content.tools.js';
 import { STORE_INSTRUCTIONS, STORE_TOOLS } from './store.tools.js';
 import { SEARCH_INSTRUCTIONS, SEARCH_TOOLS } from './search.tools.js';
+import { REPORT_INSTRUCTIONS, REPORT_TOOLS } from './reports.tools.js';
 
 /**
  * /mcp — the Model Context Protocol endpoint an admin's own AI connects to
@@ -910,6 +911,7 @@ const TOOLS: ToolDef[] = [
 	...CONTENT_TOOLS,
 	...STORE_TOOLS,
 	...SEARCH_TOOLS,
+	...REPORT_TOOLS,
 ];
 
 /**
@@ -936,7 +938,17 @@ export const PANEL_TOOLS = new Set([
 	'try_search',
 	'save_search_suggestion',
 	'enrich_products',
+	// Reports and, for a super admin, the project's panel roles and users (docs/panel-users RP-04, PU-05).
+	'list_reports',
+	'run_report',
+	'list_panel_access',
+	'save_panel_role',
+	'save_panel_user',
 ]);
+
+/** A panel user of any other project (docs/panel-users PU-05): its records, its reports and — a super admin — its panel users. */
+const APP_PANEL_INSTRUCTIONS = `This server works on the user's records in their organization's panel: the tables (models) their role can open, and its reports. It can't build or change models, pages, automations or settings — say so if asked, and point to the project's developers.
+Call list_models first to see the tables (their routes and fields), then query_records to read them, list_reports / run_report for reports. Before adding or changing anything (create_records), show the user what you will write and wait for their go-ahead.`;
 
 const PANEL_INSTRUCTIONS = `This server runs the user's store in MINT Commerce: its orders, products, stock, customers, deliveries and media. It can't build or change models, pages, automations or settings — say so if asked, and point to the store's owner.
 Call list_models first to see the store's tables (their routes and fields), then query_records to read them. Before adding or changing anything (create_records, set_stock, send_to_courier, publish_entry), show the user what you will write and wait for their go-ahead.`;
@@ -956,15 +968,15 @@ export const makeMcpRouter = (authenticateWith: Authenticate) =>
 		info: SERVER_INFO,
 		instructions: caller =>
 			caller.panel
-				? PANEL_INSTRUCTIONS + STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS
-				: (caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS : '') +
+				? (caller.project?.type === 'ecommerce' ? PANEL_INSTRUCTIONS + STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS : APP_PANEL_INSTRUCTIONS) + REPORT_INSTRUCTIONS
+				: (caller.project?.type === 'website' ? INSTRUCTIONS + SITE_BUILDER_INSTRUCTIONS + WEBSITE_INSTRUCTIONS : INSTRUCTIONS) + (caller.project ? API_ENDPOINT_INSTRUCTIONS + AUTOMATION_INSTRUCTIONS + EMAIL_DESIGN_INSTRUCTIONS + CONTENT_INSTRUCTIONS + REPORT_INSTRUCTIONS : '') +
 			(caller.project?.type === 'ecommerce' ? STORE_INSTRUCTIONS + SEARCH_INSTRUCTIONS : ''),
 		// Website projects: "Build my site" and "Add a list" in the AI client's prompt menu (SB-12).
 		prompts: caller => (caller.project?.type === 'website' ? SITE_PROMPTS(caller.project) : []),
 		tools: caller => TOOLS.filter(t => available(t, caller)),
 		listed: (tool, caller) => caller.panel || !!caller.key.scopes?.includes((tool as ToolDef).scope),
 		// A store login's tools each check the record route against its fixed keys (PANEL_TOOLS).
-		denied: (tool, caller) => (caller.panel ? (PANEL_TOOLS.has(tool.name) ? null : 'A store login can’t use this tool') : can(caller, (tool as ToolDef).scope, tool as ToolDef)),
+		denied: (tool, caller) => (caller.panel ? (PANEL_TOOLS.has(tool.name) ? null : 'A panel login can’t use this tool') : can(caller, (tool as ToolDef).scope, tool as ToolDef)),
 		authenticate: authenticateWith,
 		// The builder resolves models against the admin API's routes, which it reads off the app.
 		prepare: (req, caller) => {

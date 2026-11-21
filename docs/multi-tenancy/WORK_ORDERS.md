@@ -6,7 +6,14 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-11-16)
+## Handoff — read this first (kept current; last updated 2026-11-21)
+
+**2026-11-21 — Panel users, panel roles, reports (docs/panel-users), backend done, not deployed.** Every project
+gets panel logins (`PanelAdmin` + `role` / `superAdmin`) and `PanelRole`s (per-model keys + `reports:view/export`);
+non-store logins sign in with `app:'panel'` (panel.tcrypt.site, mint-panel — not made yet). Reports: `Report` model,
+`/p/:id/saved-reports`, engine `POST /<route>/get/report` (list / summary / timeline, csv/xlsx/pdf). MCP: report and
+panel-access tools; `/tenant/panel-mcp`. Smoke `panel-users.mjs` + `commerce-panel.mjs` all passed. Next: mint-tenant
+pages (PU-03, RP-03), mint-panel (PU-04), Khamar reports (RP-05). Backend deploy manual (Heroku).
 
 **2026-11-16 — Commerce panel CP-06/07 (docs/commerce-panel D7/D8), not deployed.** Store logins get every **Store
 settings** page and **Site settings** (Site setup minus domains) through two more panel keys, `manage-store` and
