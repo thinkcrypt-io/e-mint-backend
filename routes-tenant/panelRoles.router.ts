@@ -14,7 +14,8 @@ import { panelManagers } from './panelAdmins.router.js';
  * (docs/panel-users PU-01). For the project's managers, and a panel super admin.
  *
  *   GET    /        { doc: roles (with how many logins hold each), targets, reports }
- *                   targets: [{ route, name, actions }] — each model (Publish where it has drafts), Media library, History
+ *                   targets: [{ route, name, actions }] — each model (Publish where it has drafts), Media library, History,
+ *                   and Analytics (view only) in a website or store project
  *                   reports: [{ key, label }] — reports:view, reports:export
  *   POST   /        { name, description?, permissions }
  *   PUT    /:id     the same
@@ -36,17 +37,21 @@ const REPORTS = [
 	{ key: 'reports:export', label: 'Download reports', description: 'Download reports as CSV, Excel or PDF, where the report allows it' },
 ];
 
-export const panelRoleTargets = async () => {
+/** A website's or a store's visitor analytics (WO-19/56): view-analytics, which the analytics router asks for. */
+const ANALYTICS = { route: 'analytics', name: 'Analytics', actions: ['view'] };
+const hasAnalytics = (projectType?: string) => projectType === 'website' || projectType === 'ecommerce';
+
+export const panelRoleTargets = async (projectType?: string) => {
 	const models: any[] = await ModelDefinition.find({}, { route: 1, title: 1, name: 1, draftAndPublish: 1 }).sort({ title: 1 }).lean();
 	const actions = (m: any) => ['view', 'create', 'edit', 'delete', ...(m.draftAndPublish ? ['publish'] : [])];
-	return [...models.map(m => ({ route: m.route, name: m.title || m.name, actions: actions(m) })), ...EXTRAS];
+	return [...models.map(m => ({ route: m.route, name: m.title || m.name, actions: actions(m) })), ...EXTRAS, ...(hasAnalytics(projectType) ? [ANALYTICS] : [])];
 };
 
 /** Only keys of this project's models, the extras and the report keys, in their order. */
-export const cleanPanelRoleKeys = async (keys: string[]) => {
+export const cleanPanelRoleKeys = async (keys: string[], projectType?: string) => {
 	const wanted = new Set(keys);
 	const out: string[] = [];
-	for (const t of await panelRoleTargets()) {
+	for (const t of await panelRoleTargets(projectType)) {
 		const acts = t.actions.filter(a => wanted.has(`${a}-${t.route}`));
 		if (acts.length && !acts.includes('view')) acts.unshift('view');
 		out.push(...t.actions.filter(a => acts.includes(a)).map(a => `${a}-${t.route}`));
@@ -97,7 +102,7 @@ router.get(
 		const [roles, counts, targets] = await Promise.all([
 			PanelRole.find({}).sort({ createdAt: 1 }).lean(),
 			PanelAdmin.aggregate([{ $match: { project: req.project._id, role: { $ne: null } } }, { $group: { _id: '$role', n: { $sum: 1 } } }]),
-			panelRoleTargets(),
+			panelRoleTargets(req.project?.type),
 		]);
 		const held = new Map(counts.map((c: any) => [String(c._id), c.n]));
 		return { doc: roles.map((r: any) => view(r, held.get(String(r._id)) || 0)), totalDocs: roles.length, targets, reports: REPORTS };
@@ -109,7 +114,7 @@ router.post(
 	handle(async (req: any, res: any) => {
 		const b = check(req.body);
 		await nameTaken(b.name);
-		const role = await PanelRole.create({ name: b.name, description: b.description || '', permissions: await cleanPanelRoleKeys(b.permissions), createdBy: req.user._id });
+		const role = await PanelRole.create({ name: b.name, description: b.description || '', permissions: await cleanPanelRoleKeys(b.permissions, req.project?.type), createdBy: req.user._id });
 		recordProjectEvent({ req, model: 'PanelRole', modelPath: 'panel-roles', document: role._id, name: role.name, text: `added the panel role ${role.name}` });
 		res.status(201);
 		return view(role);
@@ -124,7 +129,7 @@ router.put(
 		await nameTaken(b.name, role._id);
 		role.name = b.name;
 		role.description = b.description || '';
-		role.permissions = await cleanPanelRoleKeys(b.permissions);
+		role.permissions = await cleanPanelRoleKeys(b.permissions, req.project?.type);
 		await role.save();
 		recordProjectEvent({ req, model: 'PanelRole', modelPath: 'panel-roles', document: role._id, name: role.name, text: `changed the panel role ${role.name}` });
 		return view(role);

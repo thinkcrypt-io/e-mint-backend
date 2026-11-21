@@ -228,7 +228,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 		annotations: { readOnlyHint: true, openWorldHint: false },
 		run: async (_req, _args, caller) => {
 			if (!manages(caller)) return refuse(caller.panel ? 'Only a super admin manages panel users.' : 'Managing panel users needs Manage projects or Invite to projects.');
-			const [roles, users, targets] = await Promise.all([PanelRole.find({}).sort({ name: 1 }).lean(), PanelAdmin.find({ project: caller.project._id }).sort({ createdAt: 1 }).lean(), panelRoleTargets()]);
+			const [roles, users, targets] = await Promise.all([PanelRole.find({}).sort({ name: 1 }).lean(), PanelAdmin.find({ project: caller.project._id }).sort({ createdAt: 1 }).lean(), panelRoleTargets(caller.project?.type)]);
 			const names = new Map(roles.map((r: any) => [String(r._id), r.name]));
 			const text = [
 				`Panel roles (${roles.length}):`,
@@ -254,7 +254,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 			if (!name) return refuse('Give the role a name.');
 			let permissions: string[];
 			try {
-				permissions = await cleanPanelRoleKeys(Array.isArray(args?.permissions) ? args.permissions : []);
+				permissions = await cleanPanelRoleKeys(Array.isArray(args?.permissions) ? args.permissions : [], caller.project?.type);
 			} catch (e: any) {
 				return refuse(e.message);
 			}

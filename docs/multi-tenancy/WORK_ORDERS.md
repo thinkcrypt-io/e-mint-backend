@@ -6,7 +6,9 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-11-21)
+## Handoff — read this first (kept current; last updated 2026-11-22)
+
+**2026-11-22 — PU-07 (docs/panel-users):** the role dialog (shared by project roles and panel roles, in mint-tenant/mint-commerce/mint-panel) has Select all, an All box per model and checkbox column headings; panel roles in website/store projects get an Analytics row (`view-analytics`, `panelRoleTargets(projectType)`). Backend pushed, not deployed.
 
 **2026-11-21 — Panel users, panel roles, reports (docs/panel-users), backend done, not deployed.** Later the same day: mint-tenant + mint-commerce pages pushed; mint-panel live at https://panel.tcrypt.site (repo aiasifistiaque/mint-panel, Vercel mint-panel; push main = deploy); 22 Khamar reports written to prod by `scripts/seedKhamarReports.js`; the list filter (`middleware/filter.middleware.ts`) now takes `field_exists` and `field_nin`. Every project
 gets panel logins (`PanelAdmin` + `role` / `superAdmin`) and `PanelRole`s (per-model keys + `reports:view/export`);

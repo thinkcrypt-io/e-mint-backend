@@ -115,7 +115,8 @@ export const tenantNav = (
 			...(inProject
 				? section('Site', 'globe', [
 						...(can('manage-site') ? [{ title: 'Site settings', href: '/site-setup', icon: 'settings-2' }] : []),
-						...(can('view-analytics') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
+						// Only a website or a store has visitors to count.
+						...(can('view-analytics') && (projectType === 'website' || projectType === 'ecommerce') ? [{ title: 'Analytics', href: '/analytics', icon: 'chart-line' }] : []),
 				  ])
 				: []),
 			...(inProject ? section('AI', 'sparkles', [{ title: 'Connect AI', href: '/connect-ai', icon: 'plug' }]) : []),
