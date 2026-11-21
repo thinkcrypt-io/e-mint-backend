@@ -30,10 +30,10 @@ MCP gets both.
 | RP-01 | Report engine (`getReport.controller.ts`), `POST /<route>/get/report`, `writeTable` | backend | done 2026-11-21 |
 | RP-02 | Report model + `/p/:id/saved-reports` (models, preview, CRUD, run, export), Reports nav | backend | done 2026-11-21 |
 | RP-04 / PU-05 | MCP tools + `/tenant/panel-mcp` | backend | done 2026-11-21 |
-| PU-03 | mint-tenant: Panel users (role, super admin) + Panel roles pages | mint-tenant | todo |
-| RP-03 | mint-tenant: Reports page (run, dates, download) + report builder for developers | mint-tenant | todo |
-| PU-04 | mint-panel repo (copy of mint-commerce, `IS_PANEL`), panel.tcrypt.site | mint-panel | todo (needs the user's OK for repo/Vercel/domain) |
-| RP-05 | Khamar reports (animal register, milk, feed, health, expenses, income, sales) | data | todo (after the backend deploy) |
+| PU-03 | mint-tenant: Panel users (role, super admin) + Panel roles pages (+ mint-commerce copy) | mint-tenant | done 2026-11-21 |
+| RP-03 | mint-tenant: Reports page (run, dates, download) + report builder for developers (+ mint-commerce copy) | mint-tenant | done 2026-11-21 |
+| PU-04 | mint-panel repo (copy of mint-commerce, `NEXT_PUBLIC_PANEL_APP=panel` default), panel.tcrypt.site | mint-panel | built locally 2026-11-21 (port 3710); GitHub repo, Vercel project + domain wait for the user's OK |
+| RP-05 | Khamar reports: 22 in Animals / Milk / Feed / Health / Money (`scripts/seedKhamarReports.js --project mint-2-khamar --apply`, re-runnable); list filters gain `_exists` and `_nin` | data | written to prod 2026-11-21; shown once the backend is deployed |
 | PU-06 | User guide (mint-docs) + website | docs | todo |
 
 Smoke: `scripts/tenancy-smoke/panel-users.mjs` (roles, users, super admin, reports, downloads, MCP) and

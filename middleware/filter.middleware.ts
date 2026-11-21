@@ -4,13 +4,13 @@ import moment from 'moment';
 type QueryType = {
 	allowSort?: string[];
 	allowSearch?: string[];
-	/** Fields that aren't sortable but can still be matched by value (=, _in, _ne). */
+	/** Fields that aren't sortable but can still be matched by value (=, _in, _nin, _ne, _exists). */
 	allowFilter?: string[];
 };
 
 // The list's own parameters — never read as a field of the same name.
 const RESERVED = ['sort', 'page', 'limit', 'search', 'fields', 'skip', 'archived', 'publishStatus'];
-const MATCH_OPS = ['in', 'ne'];
+const MATCH_OPS = ['in', 'nin', 'ne', 'exists'];
 
 const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryType) => {
 	return (req: Request, res: Response, next: NextFunction): any => {
@@ -46,6 +46,19 @@ const filter = ({ allowSort = [], allowSearch = [], allowFilter = [] }: QueryTyp
 				const matchable = allowFilter.includes(field) && (!operator || MATCH_OPS.includes(operator));
 
 				if ((allowSort.includes(field) || matchable) && req.query[key]) {
+					const value = String(req.query[key]);
+					// field_exists=true|false: has a value or not (saved reports' filters, docs/panel-users D7).
+					if (operator === 'exists') {
+						const none = ['false', '0', 'no'].includes(value.toLowerCase());
+						const isDate = field.endsWith('At') || field.endsWith('Date') || field === 'date';
+						query[field] = none ? { $in: isDate ? [null] : [null, ''] } : { $nin: isDate ? [null] : [null, ''] };
+						continue;
+					}
+					// field_nin=a,b: none of these.
+					if (operator === 'nin') {
+						query[field] = { $nin: value.split(',') };
+						continue;
+					}
 					if (field.endsWith('At') || field.endsWith('Date') || field === 'date') {
 						query[field] = getDate({ key, value: req.query[key] });
 					} else {
