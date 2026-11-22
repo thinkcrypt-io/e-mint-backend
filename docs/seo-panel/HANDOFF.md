@@ -25,7 +25,7 @@ recommended answers. If the user answers differently, change course:
 | Q | Default taken |
 |---|---|
 | Q1 who signs in | Panel logins (PanelAdmin, made on the tenant Panel users page). No self sign-up yet (SP-10 later) |
-| Q2 domain | Not chosen. The app is built and run locally only; **don't create the GitHub repo, Vercel project or domain without asking** |
+| Q2 domain | **seo.tcrypt.site** — the user said "set it up" on 2026-11-22 (same family as panel.tcrypt.site) |
 | Q3 Cloudflare tokens | Not stored. Cloudflare is the by-hand path from the guide (SP-12 later) |
 | Q4 lock or warn | Warn (banner + email), editing stays open (D7) |
 | Q5 MCP for SEO logins | Later (SP-13) |
@@ -41,7 +41,7 @@ All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app insid
 | `mint-tenant` | `origin` main | The tenant panel (Next.js). Where project owners work |
 | `mint-commerce` | `origin` main (private), push = deploy to commerce.mintapp.site | Copy of mint-tenant with `IS_COMMERCE_PANEL`, store logins |
 | `mint-panel` | `origin` main (private), push = deploy to panel.tcrypt.site | Copy of mint-commerce with `DEFAULT_APP='panel'` (env `NEXT_PUBLIC_PANEL_APP=panel`) |
-| `mint-seo` | **new, local only until the user says** | Copy of mint-panel, `NEXT_PUBLIC_PANEL_APP=seo` |
+| `mint-seo` | `origin` main (private, aiasifistiaque/mint-seo), push = deploy to **seo.tcrypt.site** | Copy of mint-panel, `NEXT_PUBLIC_PANEL_APP=seo`. Vercel project `mint-seo` prj_RegzyhJ7hMaqHiI1nqppSJtOEnd7 on the e-mint Hobby account (made with `backend/.env` `VERCEL_TOKEN`; the Vercel MCP connector is another account). Env: NEXT_PUBLIC_BACKEND (prod Heroku `/tenant/api`), _SIDEBAR_TYPE=server, _SITES_URL, _URL=https://seo.tcrypt.site, _PANEL_APP=seo |
 | `mint-edge` | `origin` main (private) | The Cloudflare Worker: `src/index.js` (handlers only) + `src/lib.js` (helpers, `VERSION`) |
 | `mint-docs` | `origin` main | Customer guides at docs.mintapp.shop |
 
@@ -106,6 +106,7 @@ All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app insid
 | 2026-11-22 | SP-02 | `library/functions/seoPanel.function.ts`: `isSeoProject`, `SEO_PANEL_PERMISSIONS` (model keys of `pages` + `seo`, `view/create/edit-image`, `view-analytics`, `manage-site`; super admins + `manage-panel-users`), `seoPanelGuard` (path allowlist → 403 `SEO_PANEL_ONLY`; before live only setup paths → 409 `NOT_CONNECTED`), `seoNav`/`seoSidebar`. Wired in `panelAccess`, `panelAuth.router` (`app: 'seo'`, `use_seo`), `panelAdmins.router` (no role needed), `project.router` (guard after the project loader, SEO sidebar). Smoke `scripts/tenancy-smoke/seo-panel.mjs` 49/49 | see git log |
 | 2026-11-22 | SP-03 | `e-mint/mint-seo` (local git only, no remote — Q2): copy of mint-panel, port 3730, `DEFAULT_APP = 'seo'` in `src/components/library/config/lib/constants/panel.ts` (`IS_SEO_PANEL`, `SEO_PAGES`, `SEO_TABLES` {seo, pages}, `seoHiddenPath` inside `commerceHiddenPath`, `SEO_SETUP_PAGES`). Login: `app: 'seo'`, SEO copy in `auth/login/page.tsx` + `AuthFrame.tsx`, `use_seo` → `NEXT_PUBLIC_SEO_URL`. `.claude/launch.json` (e-mint root) has a "mint-seo" config. Media moved into the SEO section of `seoNav` | mint-seo 117b5a1 + backend d135c12b |
 | 2026-11-22 | SP-04 | Setup gate in mint-seo `PanelGuard.tsx`: once signed in and the project is known (`getProjectSlug()`), reads site-config; not live/attention → every page outside `SEO_SETUP_PAGES` goes to `/setup`. First pages: `src/app/setup` (choose a way, snippet or Cloudflare steps with this site's key + Copy Worker code, connection test = mint-tenant's `ConnectionTest`), `src/app/help`, `src/app/connection`, home `src/app/_seo/SeoHome.tsx` (dashboard shows it when `IS_SEO_PANEL`), shared bits `src/app/_seo/parts.tsx`. Checked in the browser against a private backend: before live only Setup/Panel users/Help, after live the full sidebar, /t/seo and Defaults open | mint-seo 117b5a1 |
+| 2026-11-22 | SP-03 deploy | Repo aiasifistiaque/mint-seo (private), Vercel `mint-seo`, domain seo.tcrypt.site, first deploy READY. **Sign-in there fails until the user deploys the backend to Heroku** (prod answers `app must be one of [commerce, panel]`) | mint-seo 117b5a1 |
 
 ## Next step
 
@@ -120,6 +121,9 @@ against a local http server the script starts). mint-seo: put an address step be
 `src/app/setup/page.tsx` (fill from `connection.siteUrl`), show what was found and preselect the recommended way.
 Then SP-06 (ownership TXT / snippet seen = verified), SP-07 (**Start using** sets `status: 'live'` via
 `POST /site-config/connection`; until then the smoke sets it straight in Mongo).
+
+Before anyone uses seo.tcrypt.site: the user deploys the backend (SP-01/02 code) to Heroku. Making SEO projects in the
+tenant panel (`edition: 'seo'`) has no UI yet — SP-11 adds it; until then make one through the API (`POST /tenant/api/projects {name, type: 'website', edition: 'seo'}`).
 
 Polish found while checking SP-03/04 (for SP-08): the account menu still links Themes (`/purchased-themes`);
 `/site-setup` shows every tab and site-builder wording (show only the tab in `?tab=`); health text says "Website →

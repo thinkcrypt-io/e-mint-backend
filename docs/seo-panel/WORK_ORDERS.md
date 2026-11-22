@@ -22,7 +22,7 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 |---|---|---|---|---|
 | SP-01 | Project `edition: 'seo'`, `WebsiteSettings.connection` (site-connect D1), migration none (new field) | backend | S | done 2026-11-22 |
 | SP-02 | Login `app: 'seo'`, `use_seo` answers on the other apps, fixed keys (as built: the model keys of `pages` + `seo`, `view/create/edit-image`, `view-analytics`, `manage-site`), path allowlist, backend setup gate (409 `NOT_CONNECTED`), SEO sidebar; smoke `seo-panel.mjs` | backend | M | done 2026-11-22 (49/49; panel-users, commerce-panel, demo-logins still pass) |
-| SP-03 | `mint-seo` app: copy of mint-panel (APFS clone of node_modules), `IS_SEO_PANEL`, AuthFrame copy, SEO sidebar, hidden pages, Vercel project + domain | mint-seo (local git) | M | done 2026-11-22 locally; repo/Vercel/domain wait for Q2 |
+| SP-03 | `mint-seo` app: copy of mint-panel (APFS clone of node_modules), `IS_SEO_PANEL`, AuthFrame copy, SEO sidebar, hidden pages, Vercel project + domain | mint-seo | M | done 2026-11-22; live at seo.tcrypt.site (needs the backend deployed) |
 | SP-04 | Setup gate: PanelGuard + proxy redirect to `/setup` until live; backend 409 `not_connected` on SEO writes | mint-seo + backend | S | done 2026-11-22 |
 | SP-05 | Setup wizard steps 1–2: address + detection (platform, Cloudflare NS/proxied, current SEO, snippet present), recommend a way | backend + mint-seo | M | todo |
 | SP-06 | Setup wizard step 3: snippet per platform (tabs, screenshots); Cloudflare by hand (checklist, live DNS checks, *Copy Worker code*, key and routes with copy buttons) | mint-seo + docs | M | todo (after SP-00b) |
