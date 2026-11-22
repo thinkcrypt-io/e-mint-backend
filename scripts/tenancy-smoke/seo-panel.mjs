@@ -1,4 +1,4 @@
-// SEO panel SP-01/02 (docs/seo-panel): an SEO project is a website with `edition: 'seo'`; its panel logins sign in
+// SEO panel SP-01/02/05 (docs/seo-panel): an SEO project is a website with `edition: 'seo'`; its panel logins sign in
 // at the SEO app (`app: 'seo'`) only, hold fixed SEO keys, reach only the SEO panel's paths, and until the site is
 // live only setup (409 NOT_CONNECTED). Needs SMOKE_MONGO (sets the connection live directly; SP-07 does it for real).
 import { call, ok, done, claims } from './lib.mjs';
@@ -76,6 +76,49 @@ for (const [m, path] of [['GET', '/builder/models'], ['GET', '/automations'], ['
 	r = await call(m, `${P}${path}`, null, st);
 	ok(`never: ${m} ${path} → 403 SEO_PANEL_ONLY`, r.status === 403 && r.body?.code === 'SEO_PANEL_ONLY', `${r.status} ${r.body?.code}`);
 }
+// ---- SP-05: setup step 1, the address + what we find there (two local "sites")
+const { createServer } = await import('node:http');
+const projectKey = (await call('GET', `${P}/project-key`, null, st)).body?.apiKey;
+const serve = (html, headers = {}) =>
+	new Promise(res => {
+		const srv = createServer((req, rsp) => {
+			if (req.url === '/sitemap.xml') {
+				rsp.writeHead(200, { 'content-type': 'application/xml' });
+				return rsp.end('<urlset><url><loc>a</loc></url><url><loc>b</loc></url><url><loc>c</loc></url></urlset>');
+			}
+			rsp.writeHead(200, { 'content-type': 'text/html', ...headers });
+			rsp.end(html);
+		}).listen(0, '127.0.0.1', () => res(srv));
+	});
+const wp = await serve(
+	'<html><head><title>Acme &amp; Co</title><meta name="generator" content="WordPress 6.6"><meta name="description" content="Bolts and nuts"><meta property="og:image" content="https://acme.example/og.png"></head><body><link rel="stylesheet" href="/wp-content/themes/x.css"><p>Hello</p></body></html>',
+	{ 'cf-ray': '8abc-DAC', server: 'cloudflare' }
+);
+const shop = await serve(`<html><head><title>Shop</title><script src="https://api.example/public/track.js" data-key="${projectKey}" data-seo></script></head><body><script src="https://cdn.shopify.com/s/x.js"></script></body></html>`);
+const wpHost = `localhost:${wp.address().port}`;
+r = await call('POST', `${P}/seo-setup/detect`, { url: `http://${wpHost}` }, st);
+const d = r.body?.detected;
+ok('detect: a WordPress site behind Cloudflare', r.status === 200 && d?.platform === 'wordpress' && d.proxied === true, JSON.stringify(r.body).slice(0, 400));
+ok('…its title, description and share image', d?.seo?.title === 'Acme & Co' && d.seo.description === 'Bolts and nuts' && d.seo.image === 'https://acme.example/og.png', JSON.stringify(d?.seo));
+ok('…3 pages in its sitemap, no snippet, no Worker', d?.sitemapPages === 3 && d.snippet === 'none' && !d.worker, JSON.stringify(d));
+ok('…recommends the Worker (already on Cloudflare)', d?.recommend === 'cloudflare' && !!d.why);
+ok('…saved: address, hostnames, step 2, still setup', r.body?.connection?.siteUrl === `http://${wpHost}` && r.body.connection.hostnames[0] === wpHost && r.body.connection.step === 2 && r.body.connection.status === 'setup', JSON.stringify(r.body?.connection));
+ok('…the host is in the project’s domains', (r.body?.domains || []).includes(wpHost));
+r = await call('GET', `${P}/site-config`, null, st);
+ok('site-config carries what was found', r.body?.connection?.detected?.platform === 'wordpress' && r.body.connection.step === 2, JSON.stringify(r.body?.connection).slice(0, 300));
+r = await call('POST', `${P}/seo-setup/detect`, { url: `localhost:${shop.address().port}` }, st);
+ok('detect: a Shopify site with our snippet, typed without http:// → the snippet way', r.status === 200 && r.body?.detected?.platform === 'shopify' && r.body.detected.snippet === 'ours' && r.body.detected.snippetSeo && r.body.detected.recommend === 'script', JSON.stringify(r.body).slice(0, 400));
+r = await call('GET', P, null, st);
+ok('…both hosts are now domains, none twice', r.body?.domains?.filter(x => x === wpHost).length === 1 && r.body.domains.includes(`localhost:${shop.address().port}`), JSON.stringify(r.body?.domains));
+wp.close();
+shop.close();
+r = await call('POST', `${P}/seo-setup/detect`, { url: `http://${wpHost}` }, st);
+ok('detect: a site that doesn’t answer → 400 with why', r.status === 400 && /reach/i.test(r.body?.message || ''), JSON.stringify(r.body));
+r = await call('POST', `${P}/seo-setup/detect`, { url: '' }, st);
+ok('detect: no address → 400', r.status === 400);
+r = await call('POST', `/tenant/api/p/${site._id}/seo-setup/detect`, { url: 'http://localhost:1' }, t);
+ok('the owner of a plain website may detect too (not SEO-gated)', r.status === 400 && /reach/i.test(r.body?.message || ''), JSON.stringify(r.body));
+
 r = await call('GET', `${P}/panel-users`, null, bt);
 ok('super admin lists panel users before live', r.status === 200, `${r.status}`);
 r = await call('GET', `${P}/panel-users`, null, st);

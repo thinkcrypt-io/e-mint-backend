@@ -32,6 +32,7 @@ import AdminFile from '../library/models/admin-file/model.js';
 import ProjectCustomer from '../library/models/tenancy/projectCustomer.model.js';
 import analyticsRouter from './analytics.router.js';
 import siteRouter from './site.router.js';
+import seoSetupRouter from './seoSetup.router.js';
 import historyRouter from './history.router.js';
 import commentsRouter from './comments.router.js';
 import automationsRouter from './automations.router.js';
@@ -236,6 +237,8 @@ router.use('/site-contents', siteContentsRouter);
 router.use('/content', contentRouter);
 // A website project's analytics (events from /public/track.js).
 router.use('/analytics', analyticsRouter);
+// Mint SEO's setup wizard (docs/seo-panel SP-05).
+router.use('/seo-setup', seoSetupRouter);
 // …and its setup: tags, code, SEO, redirects, headers, domains (WO-34).
 router.use('/', siteRouter);
 // What happened in the project: records, models, the public API, the site setup (WO-36).

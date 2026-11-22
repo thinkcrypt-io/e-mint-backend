@@ -59,7 +59,7 @@ const idsIn = (html: string, key: string) => {
 };
 
 /** The page's HTML, following up to 3 redirects (each address checked). */
-export const fetchPage = async (start: string): Promise<{ html: string; status: number; url: string } | string> => {
+export const fetchPage = async (start: string): Promise<{ html: string; status: number; url: string; headers: Record<string, string> } | string> => {
 	let current = start;
 	for (let i = 0; i < 4; i++) {
 		const refused = await fetchable(current);
@@ -73,7 +73,7 @@ export const fetchPage = async (start: string): Promise<{ html: string; status: 
 			continue;
 		}
 		const text = (await res.text()).slice(0, 3_000_000);
-		return { html: text, status: res.status, url: current };
+		return { html: text, status: res.status, url: current, headers: Object.fromEntries(res.headers) };
 	}
 	return 'Too many redirects.';
 };
