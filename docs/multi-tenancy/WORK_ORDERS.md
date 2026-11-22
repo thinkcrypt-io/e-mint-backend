@@ -8,6 +8,18 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-22)
 
+**2026-11-22 — Bug: a store product added over MCP with options got no variants.** `commerce-mcp.mjs` failed
+“variants from its options”: Sonali (`options: [{ name: 'Size', values: 'Large, Small' }]`, no type) kept only its
+default variant (the “Small” seen beside it was the script's own later `create_records` on variants). Cause: the
+Product type field (`productType`, commit `6b90af81`) is required with default `simple`, and `syncVariants` treats a
+Simple product as one item whatever options it carries — no race, and the values split fine. Fix
+(`library/functions/commerce/locks.ts` `typeFromOptions`): a new product (or one with no type yet) sent with options and
+no `productType`, while variations are on, is given `variation` — the rule `upgrade.ts` uses for older products — in
+`commerceWriter` (MCP `create_records`) and on a single-record POST in `commerceGuard` (the panel form always sends its
+type, so it's unchanged; a Simple product keeps its type). MCP store notes and `sync_variants` now say what the type does.
+`commerce-mcp.mjs` 28/28 and `commerce-stock.mjs` 37/37 passed on a private backend. Pushed, **not deployed** (Heroku,
+the user).
+
 **2026-11-22 — Bug: MCP `create_records` skipped the project's automations.** Seen on prod: a Discount added over MCP
 left `reached` at 0 and D1 “Discount saved → its products” at 0 runs. Now each record `create_records` saves goes through
 `recordHistory` like a panel save (`library/controllers/mcp/website.tools.ts`): History (“— through the AI assistant”),
@@ -455,6 +467,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 57 | **Date formulas** — a Date formula field (due dates, expiries, renewals; every save or once), date functions in every formula, Linked Relationships reading through links (Copy from Plan › Price, Work out with dates). Plan + WOs + log in `docs/date-formulas` | all | M | DF-01…05 done 2026-10-19, not deployed |
 | 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00, RT-13 (Download DOCX), RT-14 (full-page editor, Word/PDF/Markdown/text downloads) RT-15 (document editor, page sizes, tables) and RT-16 (Print, Show more on record pages) done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
 | — | **Bug: records saved over MCP `create_records` didn't start automations** (a Discount's products never got it) — saves now go through `recordHistory` like a panel save, with real before/after changes | backend | S | done (2026-11-22; pushed, not deployed) |
+| — | **Bug: a store product added over MCP with options got no variants** (Product type defaulted to Simple) — a product sent with options and no type is now With variations | backend | S | done (2026-11-22; pushed, not deployed) |
 | 59 | **Key values** — a generic Key values model in every new project (name, description, keys) and a Key-value pairs field kind whose sections come from it: always, by a linked record (a category's specifications) or by a choice's value. Plan + decisions in `docs/key-values` | backend + mint-tenant | M | done (2026-11-16; not deployed; new projects only) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →

@@ -4,7 +4,7 @@ import { compiledModel } from '../dynamicModels.function.js';
 import { ModelKey, modelSpecs, ModelSpec } from './blueprint.js';
 import { commerceView } from './settings.js';
 import { storeOf } from './store.js';
-import { codeTaken } from './catalogue.js';
+import { codeTaken, optionsOf } from './catalogue.js';
 import { taxUsage, usageText } from './taxUse.js';
 import { discountProblem } from './discounts.js';
 
@@ -30,6 +30,16 @@ const refuse = (res: any, message: string) => res.status(403).json({ message, co
 const blank = (v: any) => v === undefined || v === null || v === '' || v === 0 || v === false || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !Object.keys(v).length);
 const same = (a: any, b: any) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null) || (blank(a) && blank(b));
 const plain = (v: any) => JSON.parse(JSON.stringify(v ?? null));
+
+/**
+ * A product sent with options but no Product type (create_records, an API save): With variations, as the upgrade gives
+ * older products with options — the type's default, Simple, would sell it as one item and its options would make no
+ * variants. Only while variations are on, and only for a product with no type yet (a Simple one keeps its type).
+ */
+const typeFromOptions = (view: any, core: Set<string>, before: any, body: any) => {
+	if (!view.answers.products.variations || !core.has('productType') || !blank(body.productType) || !blank(before?.productType)) return;
+	if (optionsOf(body).length) body.productType = 'variation';
+};
 
 const labelOf = (spec: ModelSpec, key: string) => spec.step.fields.find((f: any) => f.key === key)?.label || key;
 
@@ -68,6 +78,7 @@ export const commerceWriter = async (project: any, route: string) => {
 				const who = await codeTaken(store, field, body[field], key === 'product' ? { product: id } : { variant: id });
 				if (who) return `${who} already has the ${field === 'sku' ? 'SKU' : 'barcode'} ${String(body[field]).trim()}`;
 			}
+			if (key === 'product') typeFromOptions(view, core, before, body);
 		}
 		if (key === 'discount') {
 			const problem = await discountProblem(await storeOf(), id ? before : null, body);
@@ -154,6 +165,7 @@ export const commerceGuard = async (req: any, res: any, next: any) => {
 		if (req.method === 'POST' && (sub === '/' || sub === '')) {
 			const given = spec.engine.filter(k => !blank(body[k]));
 			if (given.length) return refuse(res, `${given.map(k => labelOf(spec, k)).join(', ')} ${given.length === 1 ? 'is' : 'are'} kept by the store — leave ${given.length === 1 ? 'it' : 'them'} out.`);
+			if (key === 'product') typeFromOptions(view, new Set<string>(spec.step.fields.map((f: any) => f.key)), null, body);
 			return next();
 		}
 
