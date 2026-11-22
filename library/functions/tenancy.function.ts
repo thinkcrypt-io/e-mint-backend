@@ -227,6 +227,8 @@ export const publicProject = (p: any) => ({
 	slug: p.slug,
 	publicSlug: p.publicSlug,
 	type: p.type || 'app',
+	// An SEO project (docs/seo-panel D1).
+	...(p.edition && { edition: p.edition }),
 	description: p.description || '',
 	icon: p.icon || '',
 	color: p.color || '',

@@ -131,6 +131,35 @@ const schema = new Schema<any>(
 			robots: { type: Boolean, default: false },
 			sitemap: { type: Boolean, default: false },
 		},
+		/**
+		 * An existing site connected to Mint (docs/site-connect D1, docs/seo-panel D4–D7): how it's connected and how
+		 * far the SEO panel's setup got. `status`: setup → live (passed the test) → attention (a later check failed;
+		 * editing stays open) / removed (disconnected; the setup gate closes again).
+		 */
+		connection: {
+			type: new Schema(
+				{
+					mode: { type: String, enum: ['script', 'code', 'cloudflare'] },
+					siteUrl: { type: String, trim: true },
+					hostnames: { type: [String], default: undefined },
+					status: { type: String, enum: ['setup', 'live', 'attention', 'removed'], default: 'setup' },
+					/** The wizard step reached (1–5), so the owner comes back where they left. */
+					step: { type: Number, min: 1, max: 5, default: 1 },
+					/** What the address check found (platform, Cloudflare, current SEO, snippet) — shown on step 1–2. */
+					detected: { type: Schema.Types.Mixed, default: undefined },
+					/** The TXT value asked for on the Cloudflare way: `mint-verify=<project id>`. */
+					txt: { type: String, trim: true },
+					verifiedAt: Date,
+					liveAt: Date,
+					lastCheckAt: Date,
+					/** The last connection test's answer (siteConnection.function.ts), for the status card. */
+					lastCheck: { type: Schema.Types.Mixed, default: undefined },
+					attentionReason: { type: String, trim: true },
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
 		/** The last "Check the site" (site.router.ts): what was found, per tag. */
 		check: { type: Schema.Types.Mixed, default: undefined },
 	},

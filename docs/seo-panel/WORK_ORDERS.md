@@ -1,7 +1,7 @@
 # SEO panel — work orders
 
-Plan: `README.md`. Draft 2026-11-22: **nothing is built**, and no WO starts until the user picks it and answers the
-open questions it needs. When one is done: commit + push it (backend → `mint` v3; the new app → its own repo, main),
+Plan: `README.md`. Drafted 2026-11-22; building started the same day with the defaults in `HANDOFF.md` (the user said "work on the seo
+panel"). Progress and the next step: `HANDOFF.md`. When one is done: commit + push it (backend → `mint` v3; the new app → its own repo, main),
 update the guide (`docs/site-connect/guide` + mint-docs), the marketing website, and put doc links on each new step.
 
 ## Status
@@ -20,8 +20,8 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
-| SP-01 | Project `edition: 'seo'`, `WebsiteSettings.connection` (site-connect D1), migration none (new field) | backend | S | todo |
-| SP-02 | Login `app: 'seo'`, `use_seo` answers on the other apps, fixed keys `seo:*`, `analytics:view`, `site:connect`, `site:tracking`, path allowlist; smoke `seo-panel.mjs` | backend | M | todo |
+| SP-01 | Project `edition: 'seo'`, `WebsiteSettings.connection` (site-connect D1), migration none (new field) | backend | S | done 2026-11-22 |
+| SP-02 | Login `app: 'seo'`, `use_seo` answers on the other apps, fixed keys (as built: the model keys of `pages` + `seo`, `view/create/edit-image`, `view-analytics`, `manage-site`), path allowlist, backend setup gate (409 `NOT_CONNECTED`), SEO sidebar; smoke `seo-panel.mjs` | backend | M | done 2026-11-22 (49/49; panel-users, commerce-panel, demo-logins still pass) |
 | SP-03 | `mint-seo` app: copy of mint-panel (APFS clone of node_modules), `IS_SEO_PANEL`, AuthFrame copy, SEO sidebar, hidden pages, Vercel project + domain | new repo | M | todo (Q2) |
 | SP-04 | Setup gate: PanelGuard + proxy redirect to `/setup` until live; backend 409 `not_connected` on SEO writes | mint-seo + backend | S | todo |
 | SP-05 | Setup wizard steps 1–2: address + detection (platform, Cloudflare NS/proxied, current SEO, snippet present), recommend a way | backend + mint-seo | M | todo |
@@ -47,4 +47,5 @@ Order: SP-00a…e → SP-01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 →
 ## Handoff
 
 - 2026-11-22: plan drafted (README + this file) with the customer guide `docs/site-connect/guide/cloudflare-seo-analytics.pdf`
-  (HTML source beside it, rendered with headless Chrome). Nothing built, nothing committed. Open questions 1–6 in README.
+  (HTML source beside it, rendered with headless Chrome). Open questions 1–6 in README.
+- 2026-11-22: SP-00a/b, SP-01, SP-02 built (backend). Details and the next step in `HANDOFF.md`.

@@ -413,6 +413,28 @@ const seoOf = (doc: any) => {
 	};
 };
 
+/** How an existing site is connected (docs/seo-panel D4): a fresh project is at step 1 of setup. */
+export const CONNECTION_STATUSES = ['setup', 'live', 'attention', 'removed'] as const;
+export const connectionOf = (doc: any) => {
+	const c = doc?.connection || {};
+	return {
+		mode: c.mode || null,
+		siteUrl: c.siteUrl || '',
+		hostnames: c.hostnames || [],
+		status: (CONNECTION_STATUSES as readonly string[]).includes(c.status) ? c.status : 'setup',
+		step: Number(c.step) >= 1 && Number(c.step) <= 5 ? Number(c.step) : 1,
+		detected: c.detected || null,
+		txt: c.txt || '',
+		verifiedAt: c.verifiedAt || null,
+		liveAt: c.liveAt || null,
+		lastCheckAt: c.lastCheckAt || null,
+		lastCheck: c.lastCheck || null,
+		attentionReason: c.attentionReason || '',
+	};
+};
+/** The SEO panel's screens open once a site has passed setup — and stay open while it needs attention (D7). */
+export const connectionOpen = (doc: any) => ['live', 'attention'].includes(connectionOf(doc).status);
+
 /** The Cloudflare Worker's switches (SC-10): all off unless turned on. */
 export const edgeOf = (doc: any) => ({ bypass: !!doc?.edge?.bypass, robots: !!doc?.edge?.robots, sitemap: !!doc?.edge?.sitemap });
 
@@ -463,6 +485,7 @@ export const panelView = (project: any, doc: any) => ({
 	redirects: doc.redirects || [],
 	headers: doc.headers || [],
 	edge: edgeOf(doc),
+	connection: connectionOf(doc),
 	check: doc.check || null,
 	domains: project.domains || [],
 	origin: siteOrigin(project, doc),

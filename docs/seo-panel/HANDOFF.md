@@ -102,9 +102,27 @@ All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app insid
 | 2026-11-22 | handoff | This file | with SP-00a |
 | 2026-11-22 | SP-00a | `EDGE_WORKER_VERSION` = `EDGE_WORKER_FILE_VERSION` from the generated `library/edge/edgeWorker.code.ts` (1.0.1) | see git log |
 | 2026-11-22 | SP-00b | mint-edge `npm run bundle` → `dist/mint-edge.js` + backend `library/edge/edgeWorker.code.ts`; `GET /public/edge/mint-edge.js` (text, `X-Mint-Edge-Version`). After any Worker change: bump `VERSION` in mint-edge `src/lib.js`, run `npm run bundle`, commit both repos | mint-edge + backend |
+| 2026-11-22 | SP-01 | `TenantProject.edition` (`PROJECT_EDITIONS = ['seo']`; Joi refuses it unless `type: 'website'`), in `publicProject` and the panel login answer. `WebsiteSettings.connection` {mode, siteUrl, hostnames, status setup/live/attention/removed, step 1–5, detected, txt, verifiedAt, liveAt, lastCheckAt, lastCheck, attentionReason}; `connectionOf()` / `connectionOpen()` in `siteConfig.function.ts`; `connection` in the site-config answer | see git log |
+| 2026-11-22 | SP-02 | `library/functions/seoPanel.function.ts`: `isSeoProject`, `SEO_PANEL_PERMISSIONS` (model keys of `pages` + `seo`, `view/create/edit-image`, `view-analytics`, `manage-site`; super admins + `manage-panel-users`), `seoPanelGuard` (path allowlist → 403 `SEO_PANEL_ONLY`; before live only setup paths → 409 `NOT_CONNECTED`), `seoNav`/`seoSidebar`. Wired in `panelAccess`, `panelAuth.router` (`app: 'seo'`, `use_seo`), `panelAdmins.router` (no role needed), `project.router` (guard after the project loader, SEO sidebar). Smoke `scripts/tenancy-smoke/seo-panel.mjs` 49/49 | see git log |
 
 ## Next step
 
-SP-01: `edition: 'seo'` on TenantProject (`library/models/tenancy/tenantProject.model.ts`, `publicProject` in
-`library/functions/tenancy.function.ts`) and `WebsiteSettings.connection`. SP-00c/d/e are skipped for now: c needs the
-user to pick an API domain, d needs a Cloudflare test zone, e (page discovery) is big and not needed for the gate.
+**SP-03: the `mint-seo` app**, local only (Q2: no GitHub repo, Vercel project or domain without asking the user).
+Copy `mint-panel` (rsync without `node_modules`/`.next`, then `cp -cR` node_modules), set
+`NEXT_PUBLIC_PANEL_APP=seo` so the login sends `app: 'seo'`, title/AuthFrame copy "Mint SEO", and hide every page that
+isn't in the SEO sidebar (`seoNav` in `backend/library/functions/seoPanel.function.ts` lists the addresses: `/setup`,
+`/help`, `/connection`, `/t/seo`, `/t/pages`, `/site-setup?tab=…`, `/analytics`, `/images`, `/panel-users`). Then
+SP-04: PanelGuard + proxy send everything but `/setup`, `/help`, `/account`, `/panel-users` to `/setup` while
+`site-config.connection.status` isn't live/attention (the backend already answers 409 `NOT_CONNECTED`). SP-05 adds the
+`/seo-setup` endpoints (already on the guard's allowlist as a setup path).
+
+Facts the next WOs need:
+- An SEO login's token is a normal panel token; `GET /tenant/api/panel/auth/self` answers `role.name` "SEO admin" or
+  "Super admin" and the keys above. The login answer's `project.edition` is `'seo'`.
+- The WebsiteSettings doc is made lazily (first `GET /site-config`), so no doc = status `setup`.
+- Before live an SEO login may: `GET /`, `GET /sidebar/*`, `GET /project-key`, `/seo-setup/*`, `GET /site-config`,
+  `POST /site-config/connection`, `/panel-users/*` (super admins). Anything else on the allowlist answers 409.
+- Run the smoke: `SMOKE_ROOT=http://localhost:<port> SMOKE_MONGO=mongodb://127.0.0.1:<mongo>/<db> node scripts/tenancy-smoke/seo-panel.mjs`
+  (`demo-logins.mjs` also needs `JWT_PRIVATE_KEY` from `.env` in the shell).
+- Later (not built): `/support` isn't reachable by panel tokens (`panelMayReach`), so Help can only link the guide
+  and an email until support tickets accept panel logins.

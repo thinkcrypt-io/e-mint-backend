@@ -13,6 +13,12 @@ import { businessSchema } from '../../functions/business.function.js';
  * `ecommerce` (docs/ecommerce EC1): a store — set up by its wizard, with POS, orders and returns; an app otherwise.
  */
 export const PROJECT_TYPES = ['app', 'website', 'api', 'ecommerce'] as const;
+/**
+ * A website project's edition (docs/seo-panel D1): `seo` = an existing site connected for SEO and analytics only. Its
+ * panel logins sign in at the SEO panel (mint-seo, `app: 'seo'`), behind a setup gate. Not a `type`, so every website
+ * code path keeps working.
+ */
+export const PROJECT_EDITIONS = ['seo'] as const;
 /** Whose media library a project uses (WO-23): its own, or the organization's shared one. */
 export const MEDIA_SCOPES = ['project', 'organization'] as const;
 
@@ -25,6 +31,8 @@ const schema = new Schema<any>(
 		/** Names the project on the public API (docs/api-builder D14): `mint_pk_…`, fine in a website's code. */
 		apiKey: { type: String, trim: true },
 		type: { type: String, enum: PROJECT_TYPES, default: 'app' },
+		/** Website projects only: `seo` for the SEO panel (docs/seo-panel D1). */
+		edition: { type: String, enum: PROJECT_EDITIONS, default: undefined },
 		description: { type: String, trim: true, maxlength: 500 },
 		icon: { type: String, trim: true },
 		color: { type: String, trim: true },

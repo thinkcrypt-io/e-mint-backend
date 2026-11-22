@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import TenantProject, { MEDIA_SCOPES, PROJECT_TYPES } from '../../library/models/tenancy/tenantProject.model.js';
+import TenantProject, { MEDIA_SCOPES, PROJECT_EDITIONS, PROJECT_TYPES } from '../../library/models/tenancy/tenantProject.model.js';
 import OrganizationMember from '../../library/models/tenancy/organizationMember.model.js';
 import OrganizationInvitation from '../../library/models/tenancy/organizationInvitation.model.js';
 import ModelDefinition from '../../library/models/builder/modelDefinition.model.js';
@@ -103,6 +103,11 @@ router.post(
 				...fields,
 				name: fields.name.required().messages({ 'any.required': 'Name the project' }),
 				type: Joi.string().valid(...PROJECT_TYPES).default('app'),
+				// An SEO project (docs/seo-panel D1) is a website project; other kinds have no edition.
+				edition: Joi.string()
+					.valid(...PROJECT_EDITIONS)
+					.when('type', { is: 'website', otherwise: Joi.forbidden() })
+					.messages({ 'any.unknown': 'Only a website project can be an SEO project' }),
 			}),
 			req.body
 		);

@@ -1,4 +1,5 @@
 import express from 'express';
+import { isSeoProject } from '../library/functions/seoPanel.function.js';
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
@@ -71,9 +72,9 @@ const roleOf = async (req: any, value: any) => {
 	return value;
 };
 
-/** Outside a store a login needs a role, unless it's a super admin. */
+/** Outside a store a login needs a role, unless it's a super admin. An SEO project's logins hold fixed keys (docs/seo-panel D8). */
 const needsRole = (req: any, role: any, superAdmin: boolean) => {
-	if (req.project.type !== 'ecommerce' && !role && !superAdmin) throw new TenancyError(400, 'Choose a role, or make them a super admin');
+	if (req.project.type !== 'ecommerce' && !isSeoProject(req.project) && !role && !superAdmin) throw new TenancyError(400, 'Choose a role, or make them a super admin');
 };
 
 /** A panel super admin can't lock themselves out. */
