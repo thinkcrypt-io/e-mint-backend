@@ -12,10 +12,9 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 `demo` + secret `demoKey`), made on the tenant panel's Panel users page; its link `<app>/demo/<key>` signs out whoever is
 in, signs in for **1 hour** (JWT `expiresIn`, `POST /panel/auth/demo`), and opens the panel. Expired tokens answer 401
 `SESSION_EXPIRED` (any token); the apps go to `/demo` "Your demo has ended". Demos never get manage-panel-users,
-password change or AI keys. Backend pushed (14600288), **not deployed**; mint-tenant/commerce/panel, mint-docs and both
-websites pushed. The sites use a store's `demoUrl` when set — after the deploy, make the demo logins for the demo stores
-on prod and add + fill `demoUrl` on `ec-demos` (Thinkcrypt) and `demo-stores` (Commerce OS) — needs the user's OK.
-Smoke `demo-logins.mjs` passed.
+password change or AI keys. Backend **deployed** by the user 2026-11-22; mint-tenant/commerce/panel, mint-docs and both
+websites pushed. Demo logins made on prod for the 7 demo stores (`scripts/makeDemoLogins.js`), `demoUrl` added and
+filled on `ec-demos` (Thinkcrypt) and `demo-stores` (Commerce OS); both sites open them signed in. Smoke `demo-logins.mjs` passed.
 
 **2026-11-22 — PU-08 (docs/panel-users):** panel logins sign in with a username (an email still works); email is optional. Deployed and `scripts/migratePanelUsernames.js --apply` run on prod 2026-11-22 (9 logins; sets username = email for old logins, swaps the `email_1` index for partial `username_unique` / `email_unique`). Bug fixed in mint-commerce/mint-panel authApi: the login body dropped `app`, so panel.tcrypt.site sent no app and the backend treated it as the commerce panel ("This login is for the panel app").
 

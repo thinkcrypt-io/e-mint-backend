@@ -30,11 +30,15 @@ shared email and password for each demo store. They now open the demo link inste
 | DL-02 | `/p/:id/panel-users/demo`: GET (the demo login + key), POST (make it, with access), POST `/demo/new-link`; PUT/DELETE `/:id` work for it from the tenant panel; panel apps' list leaves it out | backend | Done 2026-11-22, not deployed |
 | DL-03 | Tenant panel: a **Demo login** card on Panel users (make it, copy/open the link, change access, new link, switch off, remove), copied to mint-commerce and mint-panel | mint-tenant + copies | Done 2026-11-22, pushed |
 | DL-04 | Panel apps: `/demo/<key>` loading screen (signs out, gets the demo, signs in, opens the panel), `/demo` "Your demo has ended", SessionGuard on `SESSION_EXPIRED`, a sign-out timer at the hour, demo hides Change password | mint-panel + mint-commerce | Done 2026-11-22, pushed |
-| DL-05 | Websites: a `demoUrl` on the demo store records. When set, the panel button opens it and the email and password rows are hidden | thinkcrypt-website, mint-commerce-website | Code done 2026-11-22, pushed; `demoUrl` field + values on prod pending |
+| DL-05 | Websites: a `demoUrl` on the demo store records. When set, the panel button opens it and the email and password rows are hidden | thinkcrypt-website, mint-commerce-website | Done 2026-11-22: `demoUrl` added to `ec-demos` and `demo-stores` and filled on prod for all 14 records |
 | DL-06 | Guide (mint-docs panel users) + this doc + handoff | docs | Done 2026-11-22 |
 
-Make the demo logins on prod and fill the sites' `demoUrl` after the backend deploy. When every demo store has one,
-also change the Commerce OS pages' general words that say "shared panel login" (home FAQ, features FAQ, /demos).
+Prod, 2026-11-22 (after the deploy): `scripts/makeDemoLogins.js --apply admin1…admin6@mintapp.site project:Footshop`
+made one demo login per demo store (store admin access, copied from each store's shared login; Stridehaus by its
+project, since the `admin7@mintapp.site` the sites printed never existed). Thread Theory and Loomline share the
+Fabrilife project, so they share its link. The links are in each record's `demoUrl`; both sites open them and land
+on the dashboard (checked headless on thinkcrypt.dev and commerce.tcrypt.site). The Commerce OS words now say the
+panels open with no password. The old `loginEmail` / `password` fields stay on the records, hidden when `demoUrl` is set.
 
 Panel apps: the demo page sets the token through the store (`refreshAuth`), not localStorage — the store writes
 its own token back to storage on every change, so a direct write is lost.
