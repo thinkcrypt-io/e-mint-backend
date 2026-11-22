@@ -10,8 +10,8 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 
 | WO | Title | Repo | Size | Status |
 |---|---|---|---|---|
-| SP-00a | `EDGE_WORKER_VERSION` → 1.0.1 (backend says 1.0.0, Worker sends 1.0.1) and one place for the number | backend | XS | todo |
-| SP-00b | One-file Worker bundle (`mint-edge/dist/mint-edge.js`, `lib.js` inlined) served to the panel for *Copy Worker code* | mint-edge + backend | S | todo |
+| SP-00a | `EDGE_WORKER_VERSION` → 1.0.1 (backend says 1.0.0, Worker sends 1.0.1) and one place for the number | backend | XS | done 2026-11-22 (now read from the generated bundle file) |
+| SP-00b | One-file Worker bundle (`mint-edge/dist/mint-edge.js`, `lib.js` inlined) served to the panel for *Copy Worker code* | mint-edge + backend | S | done 2026-11-22 (`npm run bundle`; `GET /public/edge/mint-edge.js`; wrangler dry-run OK) |
 | SP-00c | Branded API address for the snippet and Worker (`api.mintapp.shop` answers 404 today) | backend + DNS | S | todo (user: which domain) |
 | SP-00d | SC-09 spike on a real Cloudflare zone: the guide's by-hand steps end to end, timing, fail open | mint-edge | S | todo (needs a test zone) |
 | SP-00e | SC-04 page discovery (sitemap + shallow crawl + analytics paths) | backend | M | todo (= site-connect SC-04) |

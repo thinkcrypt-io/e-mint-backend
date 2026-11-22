@@ -1,0 +1,110 @@
+# SEO panel — handoff for the next Claude session
+
+Read this first if you are picking up the SEO panel work (for example from another Claude account after a usage
+limit). It is written to stand alone: you won't have the previous session's memory files. Update the **Progress log**
+and **Next step** at the end of every work order, and commit + push them with the WO.
+
+## What we're building (one paragraph)
+
+A separate app, **mint-seo**, for people who only want SEO and analytics for a website they already have. They sign
+in, a setup wizard walks them through connecting the site (paste a head snippet, or add Mint's Cloudflare Worker
+without code), and the SEO screens unlock only once the connection test passes. The plan: `README.md` (decisions D1–D10,
+screens, allowlist, open questions) and `WORK_ORDERS.md` (SP-00…16). The customer guide:
+`../site-connect/guide/cloudflare-seo-analytics.pdf` (HTML source beside it). The plan underneath:
+`../site-connect/README.md` (snippet, `/site/head`, the `mint-edge` Worker) and `../seo/WORK_ORDERS.md` (SEO-01…20).
+
+The user asked (2026-11-22): "draft plans on a separate panel for users of the SEO projects only. they'll log in and
+follow instructions on how to set up, if set up correctly can start using." Then: "work on the seo panel, create
+another doc, for another claude account to pick up where your work ends in case we hit weekly limit".
+
+## Answers taken by default (the user didn't answer the open questions yet)
+
+The user said "work on the seo panel" without answering README's open questions, so we went with the plan's
+recommended answers. If the user answers differently, change course:
+
+| Q | Default taken |
+|---|---|
+| Q1 who signs in | Panel logins (PanelAdmin, made on the tenant Panel users page). No self sign-up yet (SP-10 later) |
+| Q2 domain | Not chosen. The app is built and run locally only; **don't create the GitHub repo, Vercel project or domain without asking** |
+| Q3 Cloudflare tokens | Not stored. Cloudflare is the by-hand path from the guide (SP-12 later) |
+| Q4 lock or warn | Warn (banner + email), editing stays open (D7) |
+| Q5 MCP for SEO logins | Later (SP-13) |
+| Q6 pricing | Later |
+
+## The repos and how they're used
+
+All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app inside is its own repo).
+
+| Folder | Repo / branch | Notes |
+|---|---|---|
+| `backend` | branch `v3`, push to remote **`mint`** (`git push mint v3`) | Node/Express/TypeScript + Mongo. Deploy to Heroku is manual, done by the user. Push ≠ deploy |
+| `mint-tenant` | `origin` main | The tenant panel (Next.js). Where project owners work |
+| `mint-commerce` | `origin` main (private), push = deploy to commerce.mintapp.site | Copy of mint-tenant with `IS_COMMERCE_PANEL`, store logins |
+| `mint-panel` | `origin` main (private), push = deploy to panel.tcrypt.site | Copy of mint-commerce with `DEFAULT_APP='panel'` (env `NEXT_PUBLIC_PANEL_APP=panel`) |
+| `mint-seo` | **new, local only until the user says** | Copy of mint-panel, `NEXT_PUBLIC_PANEL_APP=seo` |
+| `mint-edge` | `origin` main (private) | The Cloudflare Worker: `src/index.js` (handlers only) + `src/lib.js` (helpers, `VERSION`) |
+| `mint-docs` | `origin` main | Customer guides at docs.mintapp.shop |
+
+## Rules the user set (follow them)
+
+- **Commit + push every work order when it's done**, then go on. Stage only your own files: other Claude sessions
+  edit these repos at the same time (`git status` shows their files; never `git add -A`, never stash/reset/switch
+  branches). Commit with a pathspec: `git commit -m … -- <your paths>`.
+- **Don't run bare `prettier`** (no config; it reformats away from the tabs + single-quote style).
+- **Every modal** uses the shared Dialog + DialogHeader/Body/Footer; confirms/deletes use `PromptDialog`
+  (pass `tone='default'` for non-delete dialogs). Dropdowns use the cl `Dropdown`, never NativeSelect.
+- **Doc links on every step** of a new tool (link to the guide's `#anchor`).
+- **No server-side AI calls**: AI features go through the user's own AI over MCP.
+- **Plain words** in the UI, no jargon.
+- **Never import `store/store.ts` from a feature module** in the panel apps (import cycle → logs users out).
+- **RTK Query endpoint names are global**: grep before adding one; a duplicate name is silently dropped.
+- In the panel apps set the token with `dispatch(refreshAuth(t))`, never by writing localStorage directly.
+- **Never kill dev servers by port**: other sessions use shared ports (5011, 27998…). Use your own ports.
+- Keep `backend/docs/seo-panel/WORK_ORDERS.md` (Status + Handoff) and this file current after every change.
+
+## How the existing pieces work (what you build on)
+
+- **Panel logins** (`library/models/tenancy/panelAdmin.model.js`, `library/functions/panelAdmin.function.ts`):
+  one login = one project. `panelAccess(admin, project)` gives the permission keys; `panelMayReach` limits a panel
+  token to `/tenant/api/p/<project>/…` and `/tenant/api/panel/auth/…`; `signInPanel` runs inside
+  `middleware/tenant/protect.tenant.middleware.ts` for tokens with `kind: 'panel'`.
+- **Login** `routes-tenant/panelAuth.router.ts`: `POST /tenant/api/panel/auth/login { username|email, password, app }`.
+  `signIn()` refuses the wrong app (`use_panel` / `use_commerce`). SP-02 adds `app: 'seo'` and `use_seo`.
+- **Projects** `library/models/tenancy/tenantProject.model.js`: `type` is `'website' | 'ecommerce' | …`. SP-01 adds
+  `edition` (`'seo'` for SEO projects).
+- **Website settings** (`WebsiteSettings`, `library/functions/siteConfig.function.ts`): SEO defaults, tracking, tags,
+  redirects, domains, `edge {bypass, robots, sitemap}`. SP-01 adds `connection`.
+- **Connect a site (built, see site-connect CHANGELOG):** `GET /public/api/site/head?path=` (`siteHead.function.ts`),
+  `track.js data-seo` (`routes-public/track.ts`), Test connection `POST /tenant/api/p/:id/site-config/connection`
+  (`siteConnection.function.ts`), Worker settings `GET /public/api/site/edge` (`siteEdge.function.ts`).
+- **Tenant panel screens to reuse in mint-seo:** `mint-tenant/src/app/website-setup` (Existing website tab, snippets in
+  `_components/snippets.ts`, `ConnectionTest.tsx`), `app/site-setup` (SEO defaults, Tracking, Redirects, Robots, Link
+  previews), `app/t/_seo` (SEO record page, health card, link preview), `app/analytics`.
+
+## Running it locally
+
+- Backend: build once with `cd backend && npx tsc` only if nobody else is using `backend/dist`; safer is a private
+  build: `npx tsc --outDir <scratch>/be/dist`, then in `<scratch>/be` symlink `node_modules`, `docs`, `public`, `.env`,
+  `library/siteBuilder/blockManifest.json`, copy `scripts/`, and run `node dist/server.js` from there with your own
+  `PORT` and `MONGO_CONNECTION_URI` (start your own `mongod --dbpath <scratch>/db --port <yours>` in the background).
+  Don't use ports 5060/5061/6000/6665–6669 (Node's fetch refuses them).
+- Smoke tests live in `backend/scripts/tenancy-smoke/*.mjs` and run against a backend: `SMOKE_ROOT=http://localhost:<port> node scripts/tenancy-smoke/<file>.mjs`.
+- Panel apps: `npx next dev -p <port>` with `NEXT_PUBLIC_BACKEND=http://localhost:<port>/tenant/api`,
+  `NEXT_PUBLIC_SIDEBAR_TYPE=server`, `NEXT_PUBLIC_PANEL_APP=seo`. Copying an app: rsync without `node_modules`/`.next`,
+  then `cp -cR <src>/node_modules <dst>/` (APFS clone; Turbopack refuses a symlinked node_modules).
+- Type-check: `npx tsc --noEmit` (in mint-tenant filter `grep -v '^\.next'` while a dev server compiles).
+
+## Progress log
+
+| Date | WO | What | Commit |
+|---|---|---|---|
+| 2026-11-22 | plan | Guide PDF + README + WORK_ORDERS | backend 324d21eb |
+| 2026-11-22 | handoff | This file | with SP-00a |
+| 2026-11-22 | SP-00a | `EDGE_WORKER_VERSION` = `EDGE_WORKER_FILE_VERSION` from the generated `library/edge/edgeWorker.code.ts` (1.0.1) | see git log |
+| 2026-11-22 | SP-00b | mint-edge `npm run bundle` → `dist/mint-edge.js` + backend `library/edge/edgeWorker.code.ts`; `GET /public/edge/mint-edge.js` (text, `X-Mint-Edge-Version`). After any Worker change: bump `VERSION` in mint-edge `src/lib.js`, run `npm run bundle`, commit both repos | mint-edge + backend |
+
+## Next step
+
+SP-01: `edition: 'seo'` on TenantProject (`library/models/tenancy/tenantProject.model.ts`, `publicProject` in
+`library/functions/tenancy.function.ts`) and `WebsiteSettings.connection`. SP-00c/d/e are skipped for now: c needs the
+user to pick an API domain, d needs a Cloudflare test zone, e (page discovery) is big and not needed for the gate.

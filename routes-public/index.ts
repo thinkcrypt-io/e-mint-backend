@@ -2,6 +2,7 @@ import express from 'express';
 import publicApiRouter from './public.router.js';
 import { WIDGET_JS } from './widget.js';
 import { TRACK_JS } from './track.js';
+import { EDGE_WORKER_CODE, EDGE_WORKER_FILE_VERSION } from '../library/edge/edgeWorker.code.js';
 import crypto from 'crypto';
 import { MINT_JS } from './mint.js';
 import { LOGIN_WIDGET_JS } from './widgets/login.js';
@@ -72,6 +73,17 @@ router.get('/track.js', (_req, res) => {
 	res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
 	res.setHeader('Cache-Control', 'public, max-age=300');
 	res.send(TRACK_JS);
+});
+
+/*
+ * The mint-edge Worker as one file, for pasting into the Cloudflare dashboard (docs/seo-panel SP-00b). No key in it:
+ * the owner adds MINT_KEY as a Worker variable. Generated from mint-edge by `npm run bundle`.
+ */
+router.get('/edge/mint-edge.js', (_req, res) => {
+	res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+	res.setHeader('Cache-Control', 'public, max-age=300');
+	res.setHeader('X-Mint-Edge-Version', EDGE_WORKER_FILE_VERSION);
+	res.send(EDGE_WORKER_CODE);
 });
 
 /*

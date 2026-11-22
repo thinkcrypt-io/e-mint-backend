@@ -1,5 +1,6 @@
 import { edgeOf } from './siteConfig.function.js';
 import { pathCandidates } from './siteHead.function.js';
+import { EDGE_WORKER_FILE_VERSION } from '../edge/edgeWorker.code.js';
 
 /**
  * What the mint-edge Worker needs to run in front of a site (docs/site-connect SC-10), in one small answer it
@@ -7,8 +8,11 @@ import { pathCandidates } from './siteHead.function.js';
  * /site/head only for those), the redirects, and whether robots.txt / sitemap.xml come from Mint.
  */
 
-/** The Worker version Mint ships now (mint-edge/src/index.js VERSION). Older Workers show "update available". */
-export const EDGE_WORKER_VERSION = '1.0.0';
+/**
+ * The Worker version Mint ships now, from mint-edge's bundle (`npm run bundle` there writes library/edge/edgeWorker.code.ts
+ * from src/lib.js `VERSION`). The Worker sends its own in `x-mint-edge`; an older one shows "update available" (SP-00a).
+ */
+export const EDGE_WORKER_VERSION = EDGE_WORKER_FILE_VERSION;
 
 type Models = { pages?: any; seo?: any };
 
