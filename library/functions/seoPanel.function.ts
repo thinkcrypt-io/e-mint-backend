@@ -87,11 +87,11 @@ export const seoNav = (permissions: string[], open: boolean): SidebarItemType[] 
 					item('Link previews', '/site-setup?tab=previews', 'share-2'),
 			  ]
 			: []),
+		...(can('view-image') ? [item('Media', '/images', 'images')] : []),
 		...(can('manage-site')
 			? [item('Redirects', '/site-setup?tab=redirects', 'corner-up-right'), item('Tracking', '/site-setup?tab=tracking', 'radar')]
 			: []),
 		...(can('view-analytics') ? [item('Analytics', '/analytics', 'chart-line', ['Visitors', 'chart-line'])] : []),
-		...(can('view-image') ? [item('Media', '/images', 'images')] : []),
 		item('Connection', '/connection', 'plug', ['Site', 'globe']),
 		...users,
 		item('Help', '/help', 'life-buoy'),

@@ -104,17 +104,28 @@ All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app insid
 | 2026-11-22 | SP-00b | mint-edge `npm run bundle` → `dist/mint-edge.js` + backend `library/edge/edgeWorker.code.ts`; `GET /public/edge/mint-edge.js` (text, `X-Mint-Edge-Version`). After any Worker change: bump `VERSION` in mint-edge `src/lib.js`, run `npm run bundle`, commit both repos | mint-edge + backend |
 | 2026-11-22 | SP-01 | `TenantProject.edition` (`PROJECT_EDITIONS = ['seo']`; Joi refuses it unless `type: 'website'`), in `publicProject` and the panel login answer. `WebsiteSettings.connection` {mode, siteUrl, hostnames, status setup/live/attention/removed, step 1–5, detected, txt, verifiedAt, liveAt, lastCheckAt, lastCheck, attentionReason}; `connectionOf()` / `connectionOpen()` in `siteConfig.function.ts`; `connection` in the site-config answer | see git log |
 | 2026-11-22 | SP-02 | `library/functions/seoPanel.function.ts`: `isSeoProject`, `SEO_PANEL_PERMISSIONS` (model keys of `pages` + `seo`, `view/create/edit-image`, `view-analytics`, `manage-site`; super admins + `manage-panel-users`), `seoPanelGuard` (path allowlist → 403 `SEO_PANEL_ONLY`; before live only setup paths → 409 `NOT_CONNECTED`), `seoNav`/`seoSidebar`. Wired in `panelAccess`, `panelAuth.router` (`app: 'seo'`, `use_seo`), `panelAdmins.router` (no role needed), `project.router` (guard after the project loader, SEO sidebar). Smoke `scripts/tenancy-smoke/seo-panel.mjs` 49/49 | see git log |
+| 2026-11-22 | SP-03 | `e-mint/mint-seo` (local git only, no remote — Q2): copy of mint-panel, port 3730, `DEFAULT_APP = 'seo'` in `src/components/library/config/lib/constants/panel.ts` (`IS_SEO_PANEL`, `SEO_PAGES`, `SEO_TABLES` {seo, pages}, `seoHiddenPath` inside `commerceHiddenPath`, `SEO_SETUP_PAGES`). Login: `app: 'seo'`, SEO copy in `auth/login/page.tsx` + `AuthFrame.tsx`, `use_seo` → `NEXT_PUBLIC_SEO_URL`. `.claude/launch.json` (e-mint root) has a "mint-seo" config. Media moved into the SEO section of `seoNav` | mint-seo 117b5a1 + backend |
+| 2026-11-22 | SP-04 | Setup gate in mint-seo `PanelGuard.tsx`: once signed in and the project is known (`getProjectSlug()`), reads site-config; not live/attention → every page outside `SEO_SETUP_PAGES` goes to `/setup`. First pages: `src/app/setup` (choose a way, snippet or Cloudflare steps with this site's key + Copy Worker code, connection test = mint-tenant's `ConnectionTest`), `src/app/help`, `src/app/connection`, home `src/app/_seo/SeoHome.tsx` (dashboard shows it when `IS_SEO_PANEL`), shared bits `src/app/_seo/parts.tsx`. Checked in the browser against a private backend: before live only Setup/Panel users/Help, after live the full sidebar, /t/seo and Defaults open | mint-seo 117b5a1 |
 
 ## Next step
 
-**SP-03: the `mint-seo` app**, local only (Q2: no GitHub repo, Vercel project or domain without asking the user).
-Copy `mint-panel` (rsync without `node_modules`/`.next`, then `cp -cR` node_modules), set
-`NEXT_PUBLIC_PANEL_APP=seo` so the login sends `app: 'seo'`, title/AuthFrame copy "Mint SEO", and hide every page that
-isn't in the SEO sidebar (`seoNav` in `backend/library/functions/seoPanel.function.ts` lists the addresses: `/setup`,
-`/help`, `/connection`, `/t/seo`, `/t/pages`, `/site-setup?tab=…`, `/analytics`, `/images`, `/panel-users`). Then
-SP-04: PanelGuard + proxy send everything but `/setup`, `/help`, `/account`, `/panel-users` to `/setup` while
-`site-config.connection.status` isn't live/attention (the backend already answers 409 `NOT_CONNECTED`). SP-05 adds the
-`/seo-setup` endpoints (already on the guard's allowlist as a setup path).
+**SP-05: setup wizard steps 1–2 — the site's address and detection.** Backend: add `routes-tenant/seoSetup.router.ts`
+under the project router at `/seo-setup` (already a setup path on the guard's allowlist) with
+`POST /seo-setup/detect {url}` → fetch the page server-side (timeout, size cap, http(s) only, no private IPs) and
+answer `{ platform (wordpress/webflow/wix/squarespace/shopify/other from generator meta + markers), cloudflare (NS
+lookup + `cf-ray` / `server: cloudflare` header), proxied, currentSeo {title, description, ogImage}, snippet (track.js
+with this project's key present), worker (`x-mint-edge` header) , recommend: 'script' | 'cloudflare' }`, and save
+`connection.siteUrl`, `hostnames`, `detected`, `step: 2`. Add a smoke to `scripts/tenancy-smoke/seo-panel.mjs` (detect
+against a local http server the script starts). mint-seo: put an address step before "Choose how to connect" on
+`src/app/setup/page.tsx` (fill from `connection.siteUrl`), show what was found and preselect the recommended way.
+Then SP-06 (ownership TXT / snippet seen = verified), SP-07 (**Start using** sets `status: 'live'` via
+`POST /site-config/connection`; until then the smoke sets it straight in Mongo).
+
+Polish found while checking SP-03/04 (for SP-08): the account menu still links Themes (`/purchased-themes`);
+`/site-setup` shows every tab and site-builder wording (show only the tab in `?tab=`); health text says "Website →
+Pages"; sidebar active highlight doesn't match `?tab=` links; mint-panel/mint-commerce logins don't handle `use_seo`
+yet; the mint-docs guide `/seo-connect` (Help and every "How this works ↗" link) doesn't exist yet; "Copy Worker
+code" fetch from the browser is untested for CORS on prod.
 
 Facts the next WOs need:
 - An SEO login's token is a normal panel token; `GET /tenant/api/panel/auth/self` answers `role.name` "SEO admin" or
