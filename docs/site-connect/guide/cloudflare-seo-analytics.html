@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mint SEO &amp; Analytics on any website: head snippet and Cloudflare</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+:root { --ink:#16181d; --muted:#5b6170; --line:#dfe2e8; --soft:#f4f5f8; --blue:#2350d8; --green:#11804a; --amber:#a86200; --red:#b42318; --cf:#f38020; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font: 10.4pt/1.55 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); margin: 0; }
+h1 { font-size: 26pt; line-height: 1.15; margin: 0 0 8pt; letter-spacing: -0.02em; }
+h2 { font-size: 17pt; margin: 22pt 0 8pt; padding-top: 6pt; border-top: 2px solid var(--ink); letter-spacing: -0.01em; break-after: avoid; }
+h3 { font-size: 13pt; margin: 14pt 0 5pt; break-after: avoid; }
+h4 { font-size: 10.5pt; margin: 10pt 0 3pt; break-after: avoid; }
+p { margin: 0 0 7pt; }
+ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 3pt; }
+code { font: 9pt/1.4 "SF Mono", Menlo, Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 3px; }
+pre { font: 8.4pt/1.45 "SF Mono", Menlo, Consolas, monospace; background: #0f1320; color: #e8ebf3; padding: 9pt 10pt; border-radius: 6px; white-space: pre-wrap; word-break: break-word; margin: 4pt 0 10pt; break-inside: avoid; }
+pre .c { color: #8f99b3; }
+table { width: 100%; border-collapse: collapse; margin: 4pt 0 12pt; font-size: 9.4pt; break-inside: avoid; }
+th, td { text-align: left; vertical-align: top; padding: 5pt 7pt; border-bottom: 1px solid var(--line); }
+th { background: var(--soft); font-weight: 600; }
+.yes { color: var(--green); font-weight: 600; }
+.no { color: var(--red); font-weight: 600; }
+.part { color: var(--amber); font-weight: 600; }
+.lead { font-size: 12pt; color: var(--muted); max-width: 150mm; }
+.cover { padding: 30mm 0 10mm; border-bottom: 2px solid var(--ink); margin-bottom: 10pt; }
+.kicker { font-size: 9pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); margin-bottom: 10pt; }
+.meta { font-size: 9pt; color: var(--muted); margin-top: 14pt; }
+.box { border: 1px solid var(--line); background: #f3f6ff; border-color: #c9d6fb; padding: 8pt 10pt; border-radius: 4px; margin: 6pt 0 12pt; break-inside: avoid; }
+.box.warn { border-color: #f1d9ad; background: #fffaf2; }
+.box.ok { border-color: #bfe3cf; background: #f4fbf7; }
+.box.cf { border-color: #f8cfa8; background: #fff7f0; }
+.box p:last-child, .box ul:last-child { margin-bottom: 0; }
+.flow { display: flex; align-items: stretch; gap: 0; margin: 8pt 0 12pt; break-inside: avoid; }
+.flow .n { flex: 1; border: 1px solid var(--line); border-radius: 6px; padding: 7pt 8pt; font-size: 8.8pt; background: #fff; }
+.flow .n b { display: block; font-size: 9.4pt; margin-bottom: 2pt; }
+.flow .a { width: 16pt; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12pt; }
+.flow .n.mint { border-color: var(--blue); background: #f3f6ff; }
+.flow .n.cf { border-color: var(--cf); background: #fff6ee; }
+.toc { columns: 2; column-gap: 18pt; font-size: 10pt; margin: 8pt 0 0; padding-left: 14pt; }
+.steps { counter-reset: s; list-style: none; padding-left: 0; }
+.steps > li { counter-increment: s; position: relative; padding-left: 24pt; margin-bottom: 8pt; break-inside: avoid; }
+.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 16pt; height: 16pt; border-radius: 50%; background: var(--ink); color: #fff; font-size: 8.5pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.cfsteps > li::before { background: var(--cf); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+.small { font-size: 8.8pt; color: var(--muted); }
+.pb { break-before: page; }
+.tag { display: inline-block; font-size: 7.8pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; background: var(--soft); color: var(--muted); vertical-align: middle; }
+.tag.cf { background: #ffe9d6; color: #9a4a00; }
+.tag.code { background: #e3eaff; color: #1d3fa8; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+	<div class="kicker">Mint · Site connect guide</div>
+	<h1>SEO &amp; Analytics on any website</h1>
+	<p class="lead">How Mint puts each page's SEO and visitor analytics on a site built anywhere, and how to connect a site in two ways: one line in the <code>&lt;head&gt;</code>, or a Cloudflare Worker set up in the Cloudflare dashboard without touching the site's code.</p>
+	<p class="meta">Version 1 · 22 November 2026 · Covers <code>track.js data-seo</code>, <code>/site/head</code> and the <code>mint-edge</code> Worker 1.0.1</p>
+	<ol class="toc">
+		<li>How it works</li>
+		<li>Which way to pick</li>
+		<li>Way 1: the head snippet</li>
+		<li>Examples by platform</li>
+		<li>Server print for link previews</li>
+		<li>Way 2: Cloudflare, no code</li>
+		<li>Which hosts work behind Cloudflare</li>
+		<li>Worked example: a bakery site</li>
+		<li>Testing a connection</li>
+		<li>Troubleshooting</li>
+		<li>Reference: addresses and settings</li>
+	</ol>
+</section>
+
+<div class="box warn">
+	<p><b>About the addresses in this guide.</b> <code>MINT_API</code> stands for your Mint API address and <code>mint_pk_xxxx</code> for your project key. Don't type them by hand: copy the ready line from <b>Website setup → Existing website</b> in your project. It has both filled in.</p>
+</div>
+
+<h2>1. How it works</h2>
+
+<p>A site built anywhere (WordPress, Webflow, a hand-written HTML site, a React app, a site an agency made) becomes a Mint <b>website project</b>. You edit each page's SEO in the panel under <b>Website → SEO</b> and see visitors under <b>Analytics</b>. You don't edit the site again: changes show on it within a minute.</p>
+
+<h3>The pieces</h3>
+<table>
+	<tr><th style="width:28%">Piece</th><th>What it does</th></tr>
+	<tr><td><b>Website → Pages + SEO</b></td><td>A Pages record per address (<code>/about</code>, set to Published) with an SEO record beside it: title, description, keywords, canonical, robots, share image, Open Graph and X cards, structured data.</td></tr>
+	<tr><td><b>Site setup → SEO</b> (defaults)</td><td>Site name, default title and description, default share image. These only fill tags a page doesn't have.</td></tr>
+	<tr><td><b>The head answer</b><br><code>/site/head?path=</code></td><td>One page's SEO by its address, as JSON or (<code>format=html</code>) as ready <code>&lt;head&gt;</code> tags. Every way of connecting uses this one answer, so they all show the same SEO. Cached for 60 seconds.</td></tr>
+	<tr><td><b>track.js</b></td><td>Mint's script. It counts page views, clicks, visitors and journeys, loads the tags set in <b>Site setup → Tracking</b> (GA4, Tag Manager, Meta, TikTok, LinkedIn, Clarity, Hotjar, verification tags…) and, with <code>data-seo</code>, applies the head answer.</td></tr>
+	<tr><td><b>mint-edge</b></td><td>A Cloudflare Worker that runs in <i>your own</i> Cloudflare account, in front of the site. It writes the SEO into the HTML the server sends, serves Mint's script from the site's own domain, and can answer <code>robots.txt</code>, <code>sitemap.xml</code> and redirects.</td></tr>
+</table>
+
+<h3>The one rule: only pages you add are Mint's</h3>
+<div class="box">
+	<p>If a page is added to <b>Website → SEO</b>, its SEO comes from Mint. If it isn't, the page keeps its own SEO, and Mint changes nothing on it (not even the defaults). A site that already has decent SEO isn't touched until you choose a page.</p>
+</div>
+<p>On a page you add, each tag is one of two kinds:</p>
+<ul>
+	<li><b>Set:</b> a field you filled in for that page. It <i>replaces</i> the page's own tag. Mint never adds a second title or description.</li>
+	<li><b>Fill:</b> a default from Site setup → SEO. It is used <i>only</i> where the page has no tag of its own.</li>
+</ul>
+<p>A field you leave empty keeps the page's own value. <code>/about</code>, <code>/about/</code>, <code>/about.html</code> and <code>/about/index.html</code> are the same page.</p>
+
+<h3>The two ways side by side</h3>
+<div class="flow">
+	<div class="n"><b>Visitor or crawler</b>asks for www.acme.com/menu</div><div class="a">→</div>
+	<div class="n"><b>Your site's server</b>sends the page as always</div><div class="a">→</div>
+	<div class="n mint"><b>Head snippet</b>runs in the browser, after load: fetches the head answer and swaps the tags</div>
+</div>
+<div class="flow">
+	<div class="n"><b>Visitor or crawler</b>asks for www.acme.com/menu</div><div class="a">→</div>
+	<div class="n cf"><b>mint-edge Worker</b>in your Cloudflare account</div><div class="a">→</div>
+	<div class="n"><b>Your site's server</b>sends the page as always</div><div class="a">→</div>
+	<div class="n cf"><b>mint-edge on the way back</b>writes Mint's SEO into the HTML and adds the script</div>
+</div>
+
+<h3>Analytics</h3>
+<p>Both ways give full analytics: page views, clicks and custom events, visitors and their journeys (which pages, in what order), channels and sources, country, ISP, and the <b>Live</b> tab. Whether the visitor's IP is kept in full, masked or not at all is set in <b>Site setup → Tracking</b>. Ad and analytics tags set in that tab come in through Mint's script, so you don't paste their code as well.</p>
+<p>Behind the Worker the script is served from the site's own domain (<code>/_mint/track.js</code>). Ad blockers block that less often than a script from another domain, so fewer visits are missed.</p>
+
+<h2>2. Which way to pick</h2>
+<table>
+	<tr><th style="width:34%"></th><th>Head snippet</th><th>Server print</th><th>Cloudflare Worker</th></tr>
+	<tr><td>You need</td><td>A place to paste one line in <code>&lt;head&gt;</code></td><td>A developer who can edit the site's server</td><td>The domain's DNS on Cloudflare (free plan is enough)</td></tr>
+	<tr><td>Touches the site's code</td><td>One line</td><td>Yes</td><td class="yes">No</td></tr>
+	<tr><td>Analytics</td><td class="yes">Full</td><td class="yes">Full (keep the snippet)</td><td class="yes">Full, first-party</td></tr>
+	<tr><td>Google search</td><td class="part">Yes, later and less reliably (Google runs the script when it renders)</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+	<tr><td>WhatsApp, Facebook, LinkedIn, X, Slack previews</td><td class="no">No: they don't run scripts</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+	<tr><td>Bing, other search engines, AI crawlers</td><td class="no">Mostly no</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+	<tr><td>robots.txt, sitemap.xml, redirects on the site's domain</td><td class="no">No</td><td class="part">With rewrites the developer adds</td><td class="yes">Yes</td></tr>
+	<tr><td>Risk to the site</td><td>None, it only adds tags</td><td>Low</td><td>Low. It fails open: if Mint is down the page passes through untouched</td></tr>
+</table>
+<div class="box warn">
+	<p><b>What the snippet can't do.</b> A script can't pre-render. It changes the page after it loads in a browser. That's enough for Google's main index, but not for link previews or most other crawlers. If shared links matter, use the Worker (or the server print).</p>
+</div>
+
+<h2>3. Way 1: the head snippet <span class="tag code">code: one line</span></h2>
+
+<ol class="steps">
+	<li><b>Paste the snippet</b> into the <code>&lt;head&gt;</code> of every page, as high as the site lets you. Leave out <code>defer</code> on SEO sites so Google's renderer sees the tags early.
+<pre>&lt;script src="https://MINT_API/public/track.js" data-key="mint_pk_xxxx" data-seo&gt;&lt;/script&gt;</pre>
+		<span class="small">Analytics only? Drop <code>data-seo</code>; <code>defer</code> is fine then.</span></li>
+	<li><b>Add the pages Mint should handle.</b> In <b>Website → Pages</b> add the address as it shows in the browser (<code>/menu</code>) and set it to Published. Then give it SEO in <b>Website → SEO</b>. Every other page stays as it is.</li>
+	<li><b>Fill the defaults</b> in <b>Site setup → SEO</b>: site name, default share image. They only fill gaps on pages you added.</li>
+	<li><b>Add your domain</b> in <b>Analytics → Domains</b> (www and the bare domain), so visits are counted for this site only.</li>
+	<li><b>Test the connection</b> in <b>Website setup → Existing website → Test connection</b> (see section 9).</li>
+</ol>
+
+<h3>What the snippet does on each page view</h3>
+<ul>
+	<li>Sends the page view (and later clicks and events) to Mint.</li>
+	<li>Asks the head answer for the current address. If the page isn't added (<code>"found": false</code>) it leaves the page alone.</li>
+	<li>If it is added, it replaces the <code>set</code> tags, creates the <code>fill</code> tags the page lacks, and adds structured data (JSON-LD).</li>
+	<li>On a single-page app it does this again on every client-side page change, and puts back the page's own values it replaced, unless the site has changed them since.</li>
+</ul>
+
+<h2>4. Examples by platform</h2>
+<table>
+	<tr><th style="width:22%">Platform</th><th>Where to paste the snippet</th><th style="width:22%">Cloudflare Worker?</th></tr>
+	<tr><td><b>WordPress</b></td><td>A header-code plugin (WPCode → Code Snippets → Header &amp; Footer → <i>Header</i>), or the theme's <code>header.php</code> just before <code>&lt;/head&gt;</code>. If Yoast or Rank Math is on, Mint's values replace theirs only on pages you add.</td><td class="yes">Yes (ordinary hosting)</td></tr>
+	<tr><td><b>Webflow</b></td><td>Site settings → Custom code → <i>Head code</i>, then Publish.</td><td class="part">Not supported by Webflow; use the snippet</td></tr>
+	<tr><td><b>Wix</b></td><td>Settings → Custom code → Add code → place in <i>Head</i>, load on <i>All pages</i>.</td><td class="no">No; snippet only</td></tr>
+	<tr><td><b>Squarespace</b></td><td>Settings → Advanced → Code injection → <i>Header</i>.</td><td class="no">No; snippet only</td></tr>
+	<tr><td><b>Shopify</b></td><td>Online Store → Themes → ⋯ → Edit code → <code>theme.liquid</code>, just before <code>&lt;/head&gt;</code>.</td><td class="no">No; snippet only</td></tr>
+	<tr><td><b>Plain HTML</b></td><td>The <code>&lt;head&gt;</code> of each page, or the shared header include if the site has one.</td><td class="yes">Yes</td></tr>
+	<tr><td><b>React / Vite / CRA app</b></td><td><code>index.html</code> in the <code>&lt;head&gt;</code>. Page changes are picked up on their own (the script follows <code>pushState</code> and Back/Forward).</td><td class="yes">Yes, and it's the only way previews see the SEO</td></tr>
+	<tr><td><b>Next.js</b></td><td><code>app/layout.tsx</code> with <code>&lt;Script strategy="beforeInteractive"&gt;</code>, or the server print below (better).</td><td class="yes">Yes</td></tr>
+	<tr><td><b>Google Tag Manager</b></td><td>New tag → Custom HTML → the snippet → trigger <i>All pages</i>. Analytics works; SEO is Google-only and later, like any script.</td><td>n/a</td></tr>
+</table>
+
+<h3>Plain HTML page, before and after</h3>
+<pre>&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  <span class="c">&lt;!-- Mint: analytics + this page's SEO from the panel --&gt;</span>
+  &lt;script src="https://MINT_API/public/track.js" data-key="mint_pk_xxxx" data-seo&gt;&lt;/script&gt;
+  &lt;title&gt;Our menu&lt;/title&gt;                <span class="c">&lt;!-- replaced if /menu is added to SEO --&gt;</span>
+  &lt;meta name="description" content="…"&gt;  <span class="c">&lt;!-- replaced only if you filled it in Mint --&gt;</span>
+&lt;/head&gt;</pre>
+
+<h3>React app (Vite) — index.html</h3>
+<pre>&lt;head&gt;
+  &lt;meta charset="UTF-8" /&gt;
+  &lt;script src="https://MINT_API/public/track.js" data-key="mint_pk_xxxx" data-seo&gt;&lt;/script&gt;
+  &lt;title&gt;Acme&lt;/title&gt;
+&lt;/head&gt;</pre>
+<p class="small">An app like this sends the same empty HTML for every address, so link previews show "Acme" everywhere unless the Worker is in front.</p>
+
+<h2>5. Server print for link previews <span class="tag code">code: a developer</span></h2>
+<p>If the site has a server you can edit, print the same tags in the HTML it sends. The head answer is empty for pages you haven't added, so the site's own tags stay. Keep the snippet in the page too: it counts the visits.</p>
+
+<h3>PHP (cPanel, custom PHP)</h3>
+<pre><span class="c">// mint-seo.php — this page's SEO from Mint, or '' when the page isn't added there</span>
+function mint_seo() {
+  $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+  $url  = 'https://MINT_API/public/api/site/head?format=html&amp;apiKey=mint_pk_xxxx&amp;path=' . urlencode($path);
+  $html = @file_get_contents($url, false, stream_context_create(['http' =&gt; ['timeout' =&gt; 2]]));
+  return $html ?: '';
+}
+<span class="c">// in &lt;head&gt;:  &lt;?php $seo = mint_seo(); echo $seo ?: '&lt;title&gt;Your own title&lt;/title&gt;'; ?&gt;</span></pre>
+
+<h3>Node / Express</h3>
+<pre>const cache = new Map();
+export async function mintSeo(path) {
+  const hit = cache.get(path);
+  if (hit &amp;&amp; hit.until &gt; Date.now()) return hit.html;
+  const url = 'https://MINT_API/public/api/site/head?format=html&amp;apiKey=mint_pk_xxxx&amp;path=' + encodeURIComponent(path);
+  const html = await fetch(url, { signal: AbortSignal.timeout(2000) }).then(r =&gt; (r.ok ? r.text() : '')).catch(() =&gt; '');
+  cache.set(path, { html, until: Date.now() + 60_000 });
+  return html;
+}
+<span class="c">// in the template's &lt;head&gt;:  &lt;%- mintSeo || '&lt;title&gt;Your own title&lt;/title&gt;' %&gt;</span></pre>
+
+<h3>Next.js (App Router)</h3>
+<pre>async function mintSeo(path: string) {
+  const url = `${process.env.MINT_API}/site/head?apiKey=${process.env.MINT_API_KEY}&amp;path=${encodeURIComponent(path)}`;
+  const h = await fetch(url, { next: { revalidate: 60 } }).then(r =&gt; (r.ok ? r.json() : null)).catch(() =&gt; null);
+  return h?.found ? h.seo : null;
+}
+export async function generateMetadata() {
+  const s = await mintSeo('/menu');
+  if (!s) return { title: 'Your own title' };
+  return { title: { absolute: s.title }, description: s.description,
+           openGraph: { title: s.ogTitle, description: s.ogDescription, images: s.image ? [s.image] : [] } };
+}</pre>
+<p class="small">Website setup → Existing website has these with your values filled in, plus the full Next.js version (canonical, robots, X cards).</p>
+
+<h2>6. Way 2: Cloudflare, no code <span class="tag cf">Cloudflare dashboard</span></h2>
+<p>For owners who can't or don't want to touch the site. Nothing on the site changes. The Worker runs in <b>your own</b> Cloudflare account, on your own domain, and you can switch it off at any time. Cloudflare's free Workers plan covers 100,000 requests a day; busier sites pay Cloudflare $5 a month directly.</p>
+
+<div class="box cf">
+	<p><b>Why Cloudflare and not a DNS record?</b> A DNS record only says which server answers. It can't change what's in the page. Something has to sit between the visitor and the server and rewrite the HTML. On Cloudflare, that's a Worker on your domain.</p>
+</div>
+
+<h3>Part A: put the domain on Cloudflare (skip if it already is)</h3>
+<ol class="steps cfsteps">
+	<li>Sign up at <b>dash.cloudflare.com</b> and choose <b>Add a domain</b>. Enter <code>acme.com</code>, pick the <b>Free</b> plan.</li>
+	<li>Cloudflare copies your DNS records. Check they match what your registrar has (especially email <code>MX</code> records), then continue.</li>
+	<li>At your registrar (Namecheap, GoDaddy, the hosting company…), replace the nameservers with the two Cloudflare gives you. It can take from minutes to a day. Cloudflare emails you when the domain is active.</li>
+	<li>In <b>DNS → Records</b>, make sure the records for <code>acme.com</code> and <code>www</code> are <b>Proxied</b> (orange cloud). A grey cloud means traffic skips Cloudflare and the Worker never runs.</li>
+	<li>In <b>SSL/TLS → Overview</b>, set the mode to <b>Full (strict)</b> (or <b>Full</b> if the host has no valid certificate). <i>Flexible</i> often causes an endless redirect loop on hosts that force HTTPS.</li>
+</ol>
+
+<h3>Part B: add the Mint Worker</h3>
+<ol class="steps cfsteps">
+	<li>Go to <b>Compute (Workers) → Workers &amp; Pages → Create → Worker</b>. Name it <code>mint-edge</code>, start from "Hello World", and press <b>Deploy</b>.</li>
+	<li>Press <b>Edit code</b>. Delete what's there and paste the <code>mint-edge</code> code Mint gives you (Website setup → Cloudflare). Press <b>Deploy</b>. You only paste it; you don't change anything in it.</li>
+	<li>Open the Worker's <b>Settings → Variables and Secrets</b> and add:
+		<table>
+			<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+			<tr><td><code>MINT_KEY</code></td><td>Text</td><td>Your project key, <code>mint_pk_xxxx</code> (required)</td></tr>
+			<tr><td><code>MINT_API</code></td><td>Text</td><td><code>https://MINT_API/public/api</code> (only if Mint tells you to change it)</td></tr>
+			<tr><td><code>BYPASS_SECRET</code></td><td>Secret</td><td>Optional. Any long random text, for Mint's before/after check</td></tr>
+		</table></li>
+	<li>Open <b>Settings → Domains &amp; Routes → Add → Route</b>. Pick the zone <code>acme.com</code> and add two routes: <code>www.acme.com/*</code> and <code>acme.com/*</code>. Set <b>Failure mode</b> to <b>Fail open (proceed)</b>, so if the free plan's daily limit is ever reached, visitors still reach the site.</li>
+	<li>In <b>Mint → Analytics → Domains</b>, add <code>acme.com</code> and <code>www.acme.com</code>. The Worker only rewrites hosts the project names; any other host passes through untouched.</li>
+	<li>Add the pages Mint should handle in <b>Website → Pages</b> and <b>Website → SEO</b>, exactly as in way 1. Remove the head snippet from the site if it was there: the Worker adds its own.</li>
+</ol>
+
+<h3>What the Worker does to each request</h3>
+<table>
+	<tr><th style="width:36%">Request</th><th>What happens</th></tr>
+	<tr><td>An HTML page (GET, status 200)</td><td>Fetched from your server as usual. If the page is added to SEO, Mint's tags replace or fill the head, with JSON-LD. Every page gets <code>&lt;script src="/_mint/track.js" …&gt;</code> before <code>&lt;/body&gt;</code>, unless the snippet is already there.</td></tr>
+	<tr><td><code>/_mint/track.js</code>, <code>/_mint/api/…</code></td><td>Passed on to Mint from your own domain. Page views carry the visitor's real address.</td></tr>
+	<tr><td>A redirect from Site setup → Redirects</td><td>Answered with a 301 or 302, keeping the query string.</td></tr>
+	<tr><td><code>/robots.txt</code>, <code>/sitemap.xml</code></td><td>From Mint only when that's switched on; your site's own otherwise.</td></tr>
+	<tr><td>Images, CSS, JS, form posts, errors, anything else</td><td>Untouched. Cookies, caching headers and status codes pass through as they are.</td></tr>
+</table>
+<div class="box ok">
+	<p><b>It never breaks the site.</b> Settings from Mint are kept for a minute and reused for up to a day. If Mint is slow (over 1 second with nothing kept) or down, the page passes through untouched. Bypass in Mint, a host the project doesn't name, or no <code>MINT_KEY</code> also mean "pass through". To switch it off yourself, delete the two routes in Cloudflare.</p>
+</div>
+
+<h2>7. Which hosts work behind Cloudflare</h2>
+<table>
+	<tr><th style="width:34%">Host</th><th style="width:16%">Worker</th><th>Notes</th></tr>
+	<tr><td>Shared hosting, cPanel, VPS, WP Engine, Kinsta</td><td class="yes">Yes</td><td>The common case. SSL mode Full (strict).</td></tr>
+	<tr><td>Netlify, Vercel, Render, Cloudflare Pages</td><td class="yes">Yes</td><td>Netlify and Vercel advise against a proxy in front; it works, but keep SSL on Full (strict) and expect their dashboards to warn.</td></tr>
+	<tr><td>Static file hosting (S3, GitHub Pages)</td><td class="yes">Yes</td><td>Good fit: the site has no server to print SEO otherwise.</td></tr>
+	<tr><td>Shopify, Wix, Squarespace</td><td class="no">No</td><td>They run their own proxy and don't allow another in front. Use the head snippet.</td></tr>
+	<tr><td>Webflow</td><td class="part">Not supported</td><td>Use the head snippet.</td></tr>
+</table>
+
+<h2>8. Worked example: a bakery site</h2>
+<p><b>Acme Bakery</b> runs WordPress on shared hosting at <code>www.acmebakery.com</code>. The owner wants a proper title and share image on the menu page, and visitor numbers.</p>
+<div class="grid2">
+	<div>
+		<h3>With the head snippet</h3>
+		<ol>
+			<li>WPCode → Header: paste the snippet.</li>
+			<li>Website → Pages: add <code>/menu</code>, Published.</li>
+			<li>Website → SEO for <code>/menu</code>: title "Menu: fresh bread &amp; cakes | Acme Bakery", a description, a 1200×630 share image.</li>
+			<li>Analytics → Domains: add both hosts.</li>
+			<li>Test connection: snippet found, visits arriving, "/menu: put on by the snippet".</li>
+		</ol>
+		<p><b>Result:</b> Google shows the new title after its next crawl. A WhatsApp share of /menu still shows WordPress's old title.</p>
+	</div>
+	<div>
+		<h3>With the Cloudflare Worker</h3>
+		<ol>
+			<li>Domain on Cloudflare, records proxied, SSL Full (strict).</li>
+			<li>Worker <code>mint-edge</code> created, code pasted, <code>MINT_KEY</code> added.</li>
+			<li>Routes <code>www.acmebakery.com/*</code> and <code>acmebakery.com/*</code>, fail open.</li>
+			<li>Same pages, SEO and domains in Mint. Snippet removed from WPCode.</li>
+			<li>View source of /menu: the new title is in the HTML.</li>
+		</ol>
+		<p><b>Result:</b> Google, Bing, WhatsApp, Facebook and LinkedIn all show the new title and image. Every other page looks exactly as before.</p>
+	</div>
+</div>
+
+<h2>9. Testing a connection</h2>
+<ul>
+	<li><b>Mint → Website setup → Existing website → Test connection.</b> Enter a page address. It checks four things: the domain is the project's, the snippet is in the page's HTML with this key and <code>data-seo</code>, visits are arriving, and where that page's SEO comes from (not added / put on by the snippet / already in the HTML).</li>
+	<li><b>Mint → Site setup → Link previews.</b> Enter any address to see what Facebook, WhatsApp, LinkedIn and X will show, with the image size checked.</li>
+	<li><b>View source</b> (not "Inspect"). With the Worker, the title from Mint must be in the source; tags it wrote carry <code>data-mint-seo="edge"</code>. With the snippet, only "Inspect" shows them.</li>
+	<li><b>The raw answer</b> for a page: <code>https://MINT_API/public/api/site/head?apiKey=mint_pk_xxxx&amp;path=/menu</code>. <code>"found": false</code> means the page isn't added.</li>
+	<li><b>Facebook Sharing Debugger</b> (developers.facebook.com/tools/debug) and <b>LinkedIn Post Inspector</b>: press "Scrape again" after a change, since they keep old previews.</li>
+	<li><b>Google Search Console → URL Inspection → Test live URL</b> to see the page as Google renders it.</li>
+</ul>
+
+<h2>10. Troubleshooting</h2>
+<table>
+	<tr><th style="width:36%">What you see</th><th>Why, and what to do</th></tr>
+	<tr><td>The page's SEO doesn't change</td><td>The page isn't added, or isn't Published. Check the raw answer for <code>"found"</code>. The address must match what the browser shows.</td></tr>
+	<tr><td>A change takes a while to show</td><td>The head answer is cached for 60 seconds, and <code>track.js</code> for 5 minutes in the browser. Wait a minute and reload.</td></tr>
+	<tr><td>Google shows the new title, WhatsApp doesn't</td><td>Expected with the snippet only. Use the Worker or the server print, then re-scrape in Facebook's debugger.</td></tr>
+	<tr><td>Test connection says "snippet not in HTML", but visits arrive</td><td>It was added through Tag Manager or a plugin that injects it later. Analytics works; SEO is applied late.</td></tr>
+	<tr><td>Test connection warns about <code>defer</code></td><td>Remove <code>defer</code> from the snippet on SEO sites so the tags are applied early.</td></tr>
+	<tr><td>Worker: nothing changes in the source</td><td>The DNS record is grey-cloud (not proxied); the route pattern misses the host (add both www and bare); the host isn't in Analytics → Domains; <code>MINT_KEY</code> is missing; or Bypass is on.</td></tr>
+	<tr><td>"Too many redirects" after moving to Cloudflare</td><td>SSL/TLS is on Flexible. Set it to Full (strict).</td></tr>
+	<tr><td>Email stopped after moving DNS</td><td>An MX or TXT record wasn't copied. Add it in Cloudflare DNS (grey cloud for mail records).</td></tr>
+	<tr><td>Two titles in the page</td><td>Shouldn't happen: Mint replaces, it doesn't add. If it does, the site writes its title after Mint's script runs (some SPAs). Use the Worker.</td></tr>
+	<tr><td>Visits counted from the wrong site</td><td>Add the right domains in Analytics → Domains; until then visits from any site with the key count.</td></tr>
+</table>
+
+<h2>11. Reference: addresses and settings</h2>
+<table>
+	<tr><th style="width:44%">Address</th><th>What it gives</th></tr>
+	<tr><td><code>MINT_API/public/track.js</code></td><td>The script. <code>data-key</code> (required), <code>data-seo</code> (apply SEO), <code>data-no-track</code> (SEO only, no analytics), <code>data-api</code> (set by the Worker)</td></tr>
+	<tr><td><code>MINT_API/public/api/site/head?path=</code></td><td>One page's SEO as JSON; add <code>&amp;format=html</code> for tags. Needs <code>apiKey</code></td></tr>
+	<tr><td><code>MINT_API/public/api/site/edge</code></td><td>The Worker's settings: Bypass, domains, Mint's pages, redirects, robots/sitemap switches, version</td></tr>
+	<tr><td><code>MINT_API/public/api/site/robots.txt</code>, <code>…/sitemap.xml</code></td><td>Mint's robots.txt and sitemap, for upload or rewrites. The sitemap splits into <code>?part=2</code>… past 5,000 addresses</td></tr>
+	<tr><td><code>yoursite.com/_mint/…</code></td><td>Behind the Worker: the script and its calls, from your own domain</td></tr>
+	<tr><td><code>?mint-bypass=&lt;BYPASS_SECRET&gt;</code></td><td>Skips the Worker for one request (before/after check)</td></tr>
+</table>
+<p class="small">Mint guides: docs.mintapp.shop → Websites → Connect a website. Plan and decisions: backend/docs/site-connect.</p>
+
+</body>
+</html>
