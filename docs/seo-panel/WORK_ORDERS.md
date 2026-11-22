@@ -25,7 +25,7 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 | SP-03 | `mint-seo` app: copy of mint-panel (APFS clone of node_modules), `IS_SEO_PANEL`, AuthFrame copy, SEO sidebar, hidden pages, Vercel project + domain | mint-seo | M | done 2026-11-22; live at seo.tcrypt.site (needs the backend deployed) |
 | SP-04 | Setup gate: PanelGuard + proxy redirect to `/setup` until live; backend 409 `not_connected` on SEO writes | mint-seo + backend | S | done 2026-11-22 |
 | SP-05 | Setup wizard steps 1–2: address + detection (platform, Cloudflare NS/proxied, current SEO, snippet present), recommend a way | backend + mint-seo | M | done 2026-11-22 |
-| SP-06 | Setup wizard step 3: snippet per platform (tabs, screenshots); Cloudflare by hand (checklist, live DNS checks, *Copy Worker code*, key and routes with copy buttons) | mint-seo + docs | M | todo (after SP-00b) |
+| SP-06 | Setup wizard step 3: snippet per platform (tabs, screenshots); Cloudflare by hand (checklist, live DNS checks, *Copy Worker code*, key and routes with copy buttons) | mint-seo + docs | M | done 2026-11-22 (screenshots skipped) |
 | SP-07 | Steps 4–5: ownership (page view from host / TXT `_mint.<domain>`), Test connection + Worker check, **Start using** → `live` | backend + mint-seo | M | todo |
 | SP-08 | After live: Home (status, visits, health, checklist), Pages & SEO, Defaults, Link previews, Robots & sitemap (+ edge switches UI), Redirects, Analytics, Tracking, Health, Connection (Bypass, Disconnect), Help | mint-seo | L | todo |
 | SP-09 | Daily connection re-check + Worker health ping → `attention`, banner, email, notification (D7) | backend + mint-seo | M | todo (Q4) |

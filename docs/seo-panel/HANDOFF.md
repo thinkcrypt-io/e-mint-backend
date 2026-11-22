@@ -108,20 +108,18 @@ All under `~/Desktop/proj/e-mint` (this folder is NOT a git repo; each app insid
 | 2026-11-22 | SP-04 | Setup gate in mint-seo `PanelGuard.tsx`: once signed in and the project is known (`getProjectSlug()`), reads site-config; not live/attention → every page outside `SEO_SETUP_PAGES` goes to `/setup`. First pages: `src/app/setup` (choose a way, snippet or Cloudflare steps with this site's key + Copy Worker code, connection test = mint-tenant's `ConnectionTest`), `src/app/help`, `src/app/connection`, home `src/app/_seo/SeoHome.tsx` (dashboard shows it when `IS_SEO_PANEL`), shared bits `src/app/_seo/parts.tsx`. Checked in the browser against a private backend: before live only Setup/Panel users/Help, after live the full sidebar, /t/seo and Defaults open | mint-seo 117b5a1 |
 | 2026-11-22 | SP-03 deploy | Repo aiasifistiaque/mint-seo (private), Vercel `mint-seo`, domain seo.tcrypt.site, first deploy READY. **Sign-in there fails until the user deploys the backend to Heroku** (prod answers `app must be one of [commerce, panel]`) | mint-seo 117b5a1 |
 | 2026-11-22 | SP-05 | `POST /seo-setup/detect {url}` (`routes-tenant/seoSetup.router.ts`, logic in `library/functions/seoSetup.function.ts`; needs `build` or `manage-site`, website projects only): fetches the page (siteCheck `fetchPage`, which now also returns `headers`; a scheme-less address falls back to http), finds platform (`platformOf`: generator meta, wp-content, wixstatic, squarespace, data-wf-site, cdn.shopify, framer, ghost, `__next`, empty `#root` = spa), `proxied` (cf-ray / server: cloudflare), `cloudflare` (NS lookup up the labels), title/description/og:image/canonical, our snippet (`ours`/`other`/`none`, `snippetSeo`), Worker (`x-mint-edge`), sitemap.xml page count; `recommendWay` (Worker present → cloudflare; hosted builders → script; on Cloudflare or SPA → cloudflare; else script). Saves `connection.siteUrl` (final origin), `hostnames` (host + www pair), `detected`, `step ≥ 2`, and adds the hosts to the project's domains (max 20). mint-seo setup page: step 1 address + `Found` (in `_seo/parts.tsx`), way preselected from the recommendation ("Suggested" tag), steps 2–4 show once there's an address, Cloudflare routes from `hostnames`. Smoke 61/61; checked in the browser against a fake WordPress page | see git log |
+| 2026-11-22 | SP-06 | `POST /seo-setup/way {mode}` (`chooseWay` in `seoSetup.function.ts`; `script`/`cloudflare`, else 400; sets `connection.mode`, `step ≥ 3`). mint-seo setup page: picking a card saves the way (`useChooseSeoWayMutation`); snippet way step 2 = platform tabs `PastePlaces` (WordPress, Webflow, Wix, Squarespace, Shopify, HTML, React, Next.js, Tag Manager; the detected platform opens first, tagged “yours”); Cloudflare way step 1 = live `CheckRow`s (nameservers on Cloudflare, proxied) + “Check again” (re-runs `/seo-setup/detect`), step 4 ends with a `CheckRow` that `detected.worker` is set. `CheckRow`/`PastePlaces`/`PASTE_PLACES` in `_seo/parts.tsx`. Smoke 66/66. **Screenshots skipped** (text only); not yet checked in the browser (tsc clean) | see git log |
 
 ## Next step
 
-**SP-06: setup step 3 in detail** (WORK_ORDERS). On `mint-seo/src/app/setup/page.tsx`, step 3:
-- Snippet way: platform tabs (WordPress, Webflow, Wix, Squarespace, Shopify, HTML, React, Next.js, Tag Manager), the
-  tab of `connection.detected.platform` open first, each with where to paste the line (today it's one sentence listing
-  them all). Screenshots can wait — say so in the log if skipped.
-- Cloudflare way: Part A as a checklist with live checks — reuse `POST /seo-setup/detect` (it answers `cloudflare` =
-  nameservers on Cloudflare, `proxied` = cf-ray) behind a "Check again" button; Part B as today (Copy Worker code, `MINT_KEY`,
-  one route per `connection.hostnames`, Fail open), then a check that `detected.worker` is set.
-- Save the chosen way: add `POST /seo-setup/way {mode}` (sets `connection.mode`, `step ≥ 3`), call it when a card is picked.
-Then **SP-07**: ownership (snippet: a page view from one of `connection.hostnames` since setup started; Cloudflare: the
-Worker answered, or TXT `_mint.<domain>` = `mint-verify=<project id>`), the connection test, and **Start using** → sets
-`status: 'live'`, `liveAt`, `verifiedAt` (until then the smoke sets live straight in Mongo).
+**SP-07: ownership, connection test, Start using** (WORK_ORDERS). On `mint-seo/src/app/setup/page.tsx` step 4 (today only mint-tenant's `ConnectionTest`):
+- Ownership: snippet way = a page view from one of `connection.hostnames` since setup started; Cloudflare way = the Worker
+  answered (`detected.worker`), or TXT `_mint.<domain>` = `mint-verify=<project id>`. Add the check to `seoSetup.router.ts`
+  (e.g. `POST /seo-setup/verify`) and show it as a `CheckRow`.
+- Connection test as today, then a **Start using** button (enabled when the test passes + ownership) → new endpoint sets
+  `status: 'live'`, `liveAt`, `verifiedAt`, `step: 5` (until now the smoke sets live straight in Mongo — switch it to the endpoint).
+- Add smoke cases to `scripts/tenancy-smoke/seo-panel.mjs`; check in the browser (needs a seeded SEO login against a private backend).
+Then **SP-08** (the screens after live + the polish list below).
 
 Before anyone uses seo.tcrypt.site: the user deploys the backend (SP-01/02 code) to Heroku. Making SEO projects in the
 tenant panel (`edition: 'seo'`) has no UI yet — SP-11 adds it; until then make one through the API (`POST /tenant/api/projects {name, type: 'website', edition: 'seo'}`).

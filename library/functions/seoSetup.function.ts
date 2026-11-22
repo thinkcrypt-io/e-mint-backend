@@ -205,3 +205,15 @@ export const detectSite = async (project: any, raw: unknown): Promise<{ error: s
 	forgetSite(project);
 	return { detected, connection: connectionOf({ connection }), domains };
 };
+
+/** Saves the way the owner picked (`script` = head snippet, `cloudflare` = Worker) and moves the wizard to step 3. */
+export const chooseWay = async (project: any, mode: unknown): Promise<{ error: string } | { connection: any }> => {
+	if (mode !== 'script' && mode !== 'cloudflare') return { error: 'Choose the snippet or Cloudflare.' };
+	await loadSite(project);
+	const doc: any = await WebsiteSettings.findOne({}, { connection: 1 }).lean();
+	const now = connectionOf(doc);
+	const connection = { ...(doc?.connection || {}), mode, status: now.status, step: Math.max(now.step, 3) };
+	await WebsiteSettings.updateOne({}, { $set: { connection } });
+	forgetSite(project);
+	return { connection: connectionOf({ connection }) };
+};

@@ -1,7 +1,7 @@
 import express from 'express';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
-import { detectSite } from '../library/functions/seoSetup.function.js';
+import { chooseWay, detectSite } from '../library/functions/seoSetup.function.js';
 
 /**
  * /tenant/api/p/:projectId/seo-setup — Mint SEO's setup wizard (docs/seo-panel SP-05…07). Open before the site is
@@ -9,6 +9,7 @@ import { detectSite } from '../library/functions/seoSetup.function.js';
  *
  *   POST /detect { url }   look at the site: platform, Cloudflare, current SEO, snippet / Worker, sitemap; recommend a
  *                          way; save the address + hostnames on `connection` and in the project's domains
+ *   POST /way { mode }     save the picked way (script | cloudflare), step ≥ 3
  */
 const router = express.Router({ mergeParams: true });
 
@@ -22,6 +23,16 @@ router.post(
 	handle(async req => {
 		mayConnect(req);
 		const out = await detectSite(req.project, req.body?.url);
+		if ('error' in out) throw new TenancyError(400, out.error);
+		return out;
+	})
+);
+
+router.post(
+	'/way',
+	handle(async req => {
+		mayConnect(req);
+		const out = await chooseWay(req.project, req.body?.mode);
 		if ('error' in out) throw new TenancyError(400, out.error);
 		return out;
 	})

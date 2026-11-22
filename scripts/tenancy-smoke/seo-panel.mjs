@@ -106,6 +106,12 @@ ok('…saved: address, hostnames, step 2, still setup', r.body?.connection?.site
 ok('…the host is in the project’s domains', (r.body?.domains || []).includes(wpHost));
 r = await call('GET', `${P}/site-config`, null, st);
 ok('site-config carries what was found', r.body?.connection?.detected?.platform === 'wordpress' && r.body.connection.step === 2, JSON.stringify(r.body?.connection).slice(0, 300));
+r = await call('POST', `${P}/seo-setup/way`, { mode: 'cloudflare' }, st);
+ok('way: picking Cloudflare saves mode, step 3, keeps the address and status', r.status === 200 && r.body?.connection?.mode === 'cloudflare' && r.body.connection.step === 3 && r.body.connection.status === 'setup' && r.body.connection.siteUrl === `http://${wpHost}`, JSON.stringify(r.body));
+r = await call('POST', `${P}/seo-setup/way`, { mode: 'carrier-pigeon' }, st);
+ok('way: anything else → 400', r.status === 400);
+r = await call('GET', `${P}/site-config`, null, st);
+ok('…site-config carries the way and still the detection', r.body?.connection?.mode === 'cloudflare' && r.body.connection.detected?.platform === 'wordpress', JSON.stringify(r.body?.connection).slice(0, 200));
 r = await call('POST', `${P}/seo-setup/detect`, { url: `localhost:${shop.address().port}` }, st);
 ok('detect: a Shopify site with our snippet, typed without http:// → the snippet way', r.status === 200 && r.body?.detected?.platform === 'shopify' && r.body.detected.snippet === 'ours' && r.body.detected.snippetSeo && r.body.detected.recommend === 'script', JSON.stringify(r.body).slice(0, 400));
 r = await call('GET', P, null, st);
