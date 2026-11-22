@@ -150,7 +150,7 @@ router.use(
 
 router.use('/dashboard', makeDashboardRouter({ read: [], edit: build }));
 // PDF templates (docs/pdf-templates): anyone in the project reads them; building changes them.
-router.use('/pdf-templates', makePdfTemplatesRouter({ read: [], edit: build }));
+router.use('/pdf-templates', makePdfTemplatesRouter({ read: [], edit: [tenantPermissions(['build', 'manage-pdf'])] }));
 
 // The project's own sections, then the tenant panel's fixed ones (tenantNav).
 // Only 'server' — the other types are the admin panel's built-in navigation.

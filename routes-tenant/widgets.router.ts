@@ -24,7 +24,7 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
  *   PUT /auth   { auth: { model, fields: { email, name?, phone? } } | null }   null: MINT's Customers only
  */
 const router = express.Router({ mergeParams: true });
-const build = tenantPermissions(['build']);
+const build = tenantPermissions(['build', 'manage-api']);
 
 // The project key names the project to mint.js (docs/api-builder D14).
 const view = async (req: any, saved: any) => ({

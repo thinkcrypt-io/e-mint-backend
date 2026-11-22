@@ -25,7 +25,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   DELETE /:id             the oldest left becomes the default
  */
 const router = express.Router({ mergeParams: true });
-const read = tenantPermissions(['manage-projects', 'build', 'manage-email']);
+const read = tenantPermissions(['manage-projects', 'build', 'manage-email', 'manage-automations']);
 const write = tenantPermissions(['manage-projects', 'manage-email']);
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));

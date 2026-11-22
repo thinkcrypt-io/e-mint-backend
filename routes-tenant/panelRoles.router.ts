@@ -5,7 +5,7 @@ import PanelRole from '../library/models/tenancy/panelRole.model.js';
 import PanelAdmin from '../library/models/tenancy/panelAdmin.model.js';
 import ModelDefinition from '../library/models/builder/modelDefinition.model.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
-import { PANEL_REPORT_KEYS } from '../library/functions/panelAdmin.function.js';
+import { PANEL_REPORT_KEYS, PANEL_TOOLS, PANEL_TOOL_KEYS } from '../library/functions/panelAdmin.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
 import { panelManagers } from './panelAdmins.router.js';
 
@@ -60,7 +60,9 @@ export const cleanPanelRoleKeys = async (keys: string[], projectType?: string) =
 	// Downloading a report is seeing it too.
 	if (reports.includes('reports:export') && !reports.includes('reports:view')) reports.unshift('reports:view');
 	if (!out.length) throw Object.assign(new TenancyError(400, 'Tick at least one thing this role can do'), { extra: { on: 'permissions' } });
-	return [...out, ...reports];
+	// The developer tools a panel may open (API, PDF templates, Automations).
+	const tools = PANEL_TOOL_KEYS.filter(k => wanted.has(k));
+	return [...out, ...reports, ...tools];
 };
 
 const body = Joi.object({
@@ -105,7 +107,7 @@ router.get(
 			panelRoleTargets(req.project?.type),
 		]);
 		const held = new Map(counts.map((c: any) => [String(c._id), c.n]));
-		return { doc: roles.map((r: any) => view(r, held.get(String(r._id)) || 0)), totalDocs: roles.length, targets, reports: REPORTS };
+		return { doc: roles.map((r: any) => view(r, held.get(String(r._id)) || 0)), totalDocs: roles.length, targets, reports: REPORTS, tools: PANEL_TOOLS };
 	})
 );
 

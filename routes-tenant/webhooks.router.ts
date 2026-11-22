@@ -29,7 +29,7 @@ import { newWebhookSecret, sendTestDelivery, webhookUrlProblem } from '../librar
  * latest calls and deliveries. Anyone who opens the project reads it.
  */
 const router = express.Router();
-router.use(tenantPermissions(['build']));
+router.use(tenantPermissions(['build', 'manage-api']));
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
 

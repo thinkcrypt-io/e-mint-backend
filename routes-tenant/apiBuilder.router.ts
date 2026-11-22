@@ -52,7 +52,7 @@ import { findLogs, logSummary, logView } from '../library/functions/apiLogs.func
  * A bad endpoint answers 400 with `on`, the input at fault ("access.when.1").
  */
 const router = express.Router({ mergeParams: true });
-router.use(tenantPermissions(['build']));
+router.use(tenantPermissions(['build', 'manage-api']));
 // Links inside components (populate, docs/cms CMS-09) need the project's components loaded.
 router.use('/endpoints', (req: any, _res: any, next: any) => syncDynamicModels({ app: req.app }).then(() => next(), next));
 

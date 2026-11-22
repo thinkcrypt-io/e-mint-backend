@@ -35,7 +35,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  * ("actions.1.url"), so the panel shows the message under it.
  */
 const router = express.Router({ mergeParams: true });
-router.use(tenantPermissions(['build']));
+router.use(tenantPermissions(['build', 'manage-automations']));
 
 const isId = (v: any) => mongoose.isValidObjectId(v) && /^[a-f0-9]{24}$/i.test(String(v));
 

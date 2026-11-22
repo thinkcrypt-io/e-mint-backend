@@ -17,7 +17,7 @@ import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
  *   POST /settings/check       { provider? } asks the provider (Stripe by default) whether the stored keys work
  */
 const router = express.Router({ mergeParams: true });
-const manage = tenantPermissions(['manage-projects']);
+const manage = tenantPermissions(['manage-projects', 'manage-api']);
 
 router.get(
 	'/',

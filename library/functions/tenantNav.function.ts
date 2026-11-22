@@ -101,7 +101,12 @@ export const tenantNav = (
 	// A commerce panel's store admin (docs/commerce-panel): the media library, analytics, history and the
 	// store's email accounts — no building, no API pages, nothing of the organization.
 	// Its site's settings (Site setup) and its own AI connection (CP-06/07).
-	if (panel)
+	if (panel) {
+		const api = apiItems((key: string) => (key === 'build' ? can('manage-api') : can(key)), false);
+		const tools = [
+			...(can('manage-pdf') ? [{ title: 'PDF templates', href: '/pdf-templates', icon: 'file-text' }] : []),
+			...(can('manage-automations') ? [{ title: 'Automations', href: '/automations', icon: 'zap' }] : []),
+		];
 		return [
 			// Reports (docs/panel-users RP-03), and a super admin's panel users and roles (PU-02).
 			...(inProject && can('reports:view') ? section('Reports', 'file-chart-column', [{ title: 'Reports', href: '/reports', icon: 'file-chart-column' }]) : []),
@@ -122,7 +127,13 @@ export const tenantNav = (
 			...(inProject ? section('AI', 'sparkles', [{ title: 'Connect AI', href: '/connect-ai', icon: 'plug' }]) : []),
 			...(inProject && can('view-history') ? section('Activity', 'history', [{ title: 'History', href: '/activity', icon: 'history' }]) : []),
 			...(inProject && can('manage-email') ? section('Email', 'mail', [{ title: 'Email accounts', href: '/email-accounts', icon: 'mail' }]) : []),
+			// The public API and its pages, and the only two Build tools a panel opens (never models, pages, sidebar, dashboard).
+			...(inProject && can('manage-api')
+				? section('API', 'plug-zap', [...api, ...(can('manage-api') ? [{ title: 'Widgets', href: '/widgets', icon: 'blocks' }, { title: 'Payments', href: '/site-payments', icon: 'credit-card' }] : [])])
+				: []),
+			...(inProject && tools.length ? section('Build', 'hammer', tools) : []),
 		];
+	}
 	// A website: its analytics; any project: the customers of its public API.
 	// A website's own pages (WO-34): its setup — tags, code, SEO, redirects, domains — and its analytics.
 	const site =

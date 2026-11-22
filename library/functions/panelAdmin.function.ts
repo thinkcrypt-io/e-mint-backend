@@ -21,6 +21,14 @@ import { SEO_PANEL_PERMISSIONS, SEO_PANEL_ROLE, isSeoProject } from './seoPanel.
  * panel-only keys the routes accept next to manage-projects (or build, for the
  * site); roles never hold them.
  */
+/** The tools a panel role may tick (cleanPanelKeys / panel-roles): the same keys, named. */
+export const PANEL_TOOL_KEYS = ['manage-api', 'manage-pdf', 'manage-automations'];
+export const PANEL_TOOLS = [
+	{ key: 'manage-api', label: 'API', description: 'Endpoints, keys, logs, reference, webhooks, widgets and payments' },
+	{ key: 'manage-pdf', label: 'PDF templates', description: 'Design the invoices, receipts and quotations the project prints' },
+	{ key: 'manage-automations', label: 'Automations', description: 'Emails, webhooks and updates that run when a record changes' },
+];
+
 export const PANEL_PERMISSIONS = [
 	'records:view',
 	'records:create',
@@ -33,6 +41,10 @@ export const PANEL_PERMISSIONS = [
 	'manage-store',
 	// Site setup: identity, SEO, tracking, tags, redirects — never domains (CP-06).
 	'manage-site',
+	// The developer tools a panel may open, one key each (the panel keys below): the public API
+	// (endpoints, keys, logs, webhooks, widgets, payments), PDF templates, and automations.
+	// Never models, pages, the sidebar or the dashboard builder.
+	...PANEL_TOOL_KEYS,
 ];
 
 export const PANEL_ROLE = { _id: 'panel', name: 'Store admin', system: 'panel' };
@@ -50,7 +62,7 @@ export const MANAGE_PANEL = 'manage-panel-users';
 const ALL_RECORDS = RECORD_ACTIONS.map(a => `records:${a}`);
 
 /** What a panel role may hold: per-model keys and the report keys — nothing else, whatever was saved. */
-export const cleanPanelKeys = (keys: string[] = []) => [...new Set(keys.filter(k => isModelKey(k) || PANEL_REPORT_KEYS.includes(k)))];
+export const cleanPanelKeys = (keys: string[] = []) => [...new Set(keys.filter(k => isModelKey(k) || PANEL_REPORT_KEYS.includes(k) || PANEL_TOOL_KEYS.includes(k)))];
 
 /** A panel login's permissions and the role it shows, in `project`. */
 export const panelAccess = async (admin: any, project: any): Promise<{ permissions: string[]; role: any }> => {
@@ -64,7 +76,7 @@ export const panelAccess = async (admin: any, project: any): Promise<{ permissio
 	// A demo login never manages panel users, even as a super admin (DEMO_LOGINS.md D5): a visitor can't make real logins.
 	if (admin.superAdmin)
 		return {
-			permissions: [...(store ? PANEL_PERMISSIONS : ALL_RECORDS), ...PANEL_REPORT_KEYS, ...(admin.demo ? [] : [MANAGE_PANEL])],
+			permissions: [...(store ? PANEL_PERMISSIONS : [...ALL_RECORDS, ...PANEL_TOOL_KEYS]), ...PANEL_REPORT_KEYS, ...(admin.demo ? [] : [MANAGE_PANEL])],
 			role: { _id: 'panel-super-admin', name: 'Super admin', system: 'panel' },
 		};
 	const role: any = admin.role && (await runUnscoped(() => PanelRole.findOne({ _id: admin.role, project: project._id }).lean()));
