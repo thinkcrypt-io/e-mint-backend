@@ -24,6 +24,13 @@ export const SEO_PANEL_PERMISSIONS = [
 export const SEO_PANEL_ROLE = { _id: 'seo', name: 'SEO admin', system: 'panel' };
 
 /**
+ * An SEO project's demo login (SP-11): visitors look around and change nothing — the site they'd be changing is a
+ * real one, and `manage-site` would let them disconnect it or pause the Worker.
+ */
+export const SEO_DEMO_PERMISSIONS = ['view-pages', 'view-seo', 'view-image', 'view-analytics'];
+export const SEO_DEMO_ROLE = { _id: 'seo-demo', name: 'View only', system: 'panel' };
+
+/**
  * Where an SEO login may go inside its project (`req.path` on the project router). Anything else answers 403
  * SEO_PANEL_ONLY. `setup` marks what works before the site is live; the rest answers 409 NOT_CONNECTED until then.
  */

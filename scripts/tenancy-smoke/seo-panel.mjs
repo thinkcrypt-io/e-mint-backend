@@ -228,6 +228,36 @@ ok('after live: models still 403', r.status === 403 && r.body?.code === 'SEO_PAN
 	await mc.close();
 }
 
+// ---- SP-11: the demo login of an SEO project only looks (SEO_DEMO_PERMISSIONS)
+r = await call('POST', `${P}/panel-admins/demo`, {}, t);
+ok('SP-11: an SEO demo login is made with no role', r.status === 201 && !!r.body?.demo?.demoKey, JSON.stringify(r.body).slice(0, 200));
+const demoKey = r.body?.demo?.demoKey;
+r = await call('POST', '/tenant/api/panel/auth/demo', { key: demoKey });
+ok('…its link at the commerce panel: use_seo', r.status === 400 && r.body?.code === 'use_seo', JSON.stringify(r.body));
+r = await call('POST', '/tenant/api/panel/auth/demo', { key: demoKey, app: 'seo' });
+const dt = r.body?.token;
+ok('…its link at Mint SEO → an hour’s token', r.status === 200 && !!dt && !!r.body?.expiresAt, JSON.stringify(r.body).slice(0, 200));
+r = await call('GET', '/tenant/api/panel/auth/self', null, dt);
+const dkeys = r.body?.permissions || [];
+ok('demo self: View only — sees pages, SEO, media, visits', r.body?.role?.name === 'View only' && ['view-seo', 'view-pages', 'view-image', 'view-analytics'].every(k => dkeys.includes(k)), JSON.stringify(r.body?.role) + JSON.stringify(dkeys));
+ok('…and changes nothing: no edit, publish, manage-site, panel users', !dkeys.some(k => ['edit-pages', 'publish-seo', 'manage-site', 'build', 'manage-panel-users'].includes(k)), JSON.stringify(dkeys));
+r = await call('GET', `${P}/seo`, null, dt);
+ok('demo: GET /seo reads', r.status === 200, `${r.status}`);
+r = await call('GET', `${P}/sidebar/admin/server`, null, dt);
+side = JSON.stringify(r.body || []);
+ok('demo sidebar: Pages & SEO + Analytics + Connection, no Redirects or Panel users', side.includes('"/t/seo"') && side.includes('"/analytics"') && side.includes('"/connection"') && !side.includes('"/panel-users"') && !side.includes('/redirects'), side.slice(0, 400));
+for (const [m, path, body] of [
+	['PUT', '/site-config', { edge: { bypass: true } }],
+	['POST', '/seo-setup/disconnect', {}],
+	['POST', '/seo-setup/recheck', {}],
+	['POST', '/panel-users', { name: 'X', username: `x${stamp}`, password: 'seo-pass-1234' }],
+]) {
+	r = await call(m, `${P}${path}`, body, dt);
+	ok(`demo: ${m} ${path} → 403`, r.status === 403, `${r.status} ${r.body?.message}`);
+}
+r = await call('GET', `${P}/site-config`, null, st);
+ok('…the site is still live, the Worker not paused', r.body?.connection?.status === 'live' && r.body?.edge?.bypass !== true, JSON.stringify(r.body?.connection?.status));
+
 // ---- SP-08: Disconnect
 r = await call('PUT', `${P}/site-config`, { edge: { robots: true } }, st);
 ok('after live: a Worker switch saves', r.status === 200 && r.body?.edge?.robots === true, JSON.stringify(r.body?.edge));

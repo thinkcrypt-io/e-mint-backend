@@ -5,7 +5,7 @@ import PanelRole from '../models/tenancy/panelRole.model.js';
 import { publicOrganization, publicProject } from './tenancy.function.js';
 import { RECORD_ACTIONS, isModelKey } from './tenantPermissions.function.js';
 import { runUnscoped } from './tenantScope.function.js';
-import { SEO_PANEL_PERMISSIONS, SEO_PANEL_ROLE, isSeoProject } from './seoPanel.function.js';
+import { SEO_DEMO_PERMISSIONS, SEO_DEMO_ROLE, SEO_PANEL_PERMISSIONS, SEO_PANEL_ROLE, isSeoProject } from './seoPanel.function.js';
 
 /**
  * The commerce panel's store admins (docs/commerce-panel): PanelAdmin logins of
@@ -68,6 +68,7 @@ export const cleanPanelKeys = (keys: string[] = []) => [...new Set(keys.filter(k
 export const panelAccess = async (admin: any, project: any): Promise<{ permissions: string[]; role: any }> => {
 	const store = project.type === 'ecommerce';
 	// An SEO project's logins (docs/seo-panel D8): the fixed SEO keys, no roles; a super admin also manages the logins.
+	if (isSeoProject(project) && admin.demo) return { permissions: SEO_DEMO_PERMISSIONS, role: SEO_DEMO_ROLE };
 	if (isSeoProject(project))
 		return {
 			permissions: [...SEO_PANEL_PERMISSIONS, ...(admin.superAdmin && !admin.demo ? [MANAGE_PANEL] : [])],
