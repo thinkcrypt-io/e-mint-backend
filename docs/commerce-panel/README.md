@@ -29,7 +29,7 @@ project only … they can't edit models, settings, no developer tools. can add c
 | CP-04 | mint-commerce app: copy of mint-tenant, commerce sign-in, one project, developer screens hidden (`COMMERCE_HIDDEN_PAGES`, proxy + PanelGuard), no org switcher / notifications / two-factor; checked in headless Chrome against a local backend | done 2026-11-16 |
 | CP-06 | Store settings (all seven pages) + Site settings for store logins (`manage-store`, `manage-site`); /store/setup and Domains stay hidden | done 2026-11-16 |
 | CP-07 | Store logins' own MCP: /tenant/commerce-mcp, Connect AI page, PANEL_TOOLS; smoke now 70+ checks | done 2026-11-16 |
-| CP-08 | API group + PDF templates + Automations for panel logins (D9); panel app (mint-panel) home for a website = analytics dashboard (range, live now, Overview); both frontends copy | done 2026-11-23, backend not deployed |
+| CP-08 | API group + PDF templates + Automations for panel logins (D9); panel app (mint-panel) home for a website = analytics dashboard (range, live now, Overview); both frontends copy | done + backend deployed 2026-11-23 |
 | CP-05 | Repo `aiasifistiaque/mint-commerce` (private) + Vercel project `mint-commerce` + commerce.mintapp.site | done 2026-11-16 |
 
 ## Deploy
