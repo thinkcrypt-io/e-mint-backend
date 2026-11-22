@@ -117,7 +117,23 @@ ok('detect: a Shopify site with our snippet, typed without http:// → the snipp
 r = await call('GET', P, null, st);
 ok('…both hosts are now domains, none twice', r.body?.domains?.filter(x => x === wpHost).length === 1 && r.body.domains.includes(`localhost:${shop.address().port}`), JSON.stringify(r.body?.domains));
 wp.close();
+const { MongoClient, ObjectId } = await import('../../node_modules/mongodb/lib/index.js');
+const client = await new MongoClient(SMOKE_MONGO).connect();
+r = await call('POST', `${P}/seo-setup/verify`, {}, st);
+ok('verify: nothing proves ownership yet', r.status === 200 && r.body?.owned === false && r.body.how === null && r.body.txt === `mint-verify=${seo._id}`, JSON.stringify(r.body));
+r = await call('POST', `${P}/seo-setup/start`, {}, st);
+ok('start before ownership → 409 with why', r.status === 409 && /yours|own/i.test(r.body?.message || '') , JSON.stringify(r.body));
+r = await call('GET', `${P}/site-config`, null, st);
+ok('…still setup', r.body?.connection?.status === 'setup' && r.body.connection.txt === `mint-verify=${seo._id}`, JSON.stringify(r.body?.connection).slice(0, 200));
+const shopHost = `localhost:${shop.address().port}`;
+const sdoc = await client.db().collection('websitesettings').findOne({ project: new ObjectId(seo._id) });
+await client.db().collection('websiteevents').insertOne({ project: new ObjectId(seo._id), organization: sdoc.organization, type: 'pageview', host: shopHost, path: '/', createdAt: new Date() });
+r = await call('POST', `${P}/seo-setup/verify`, {}, st);
+ok('verify: a visit from the site’s host proves it', r.body?.owned === true && r.body.how === 'visit' && r.body.checks.visit === true, JSON.stringify(r.body));
+r = await call('POST', `${P}/seo-setup/start`, {}, st);
+ok('start: owned + test passes → live, step 5, times set', r.status === 200 && r.body?.connection?.status === 'live' && r.body.connection.step === 5 && !!r.body.connection.liveAt && !!r.body.connection.verifiedAt, JSON.stringify(r.body).slice(0, 300));
 shop.close();
+await client.close();
 r = await call('POST', `${P}/seo-setup/detect`, { url: `http://${wpHost}` }, st);
 ok('detect: a site that doesn’t answer → 400 with why', r.status === 400 && /reach/i.test(r.body?.message || ''), JSON.stringify(r.body));
 r = await call('POST', `${P}/seo-setup/detect`, { url: '' }, st);
@@ -134,12 +150,7 @@ ok('a plain SEO login can’t', r.status === 403);
 r = await call('GET', `${P}/builder/models`, null, t);
 ok('the project owner is not held by the SEO guard', r.status !== 403 || r.body?.code !== 'SEO_PANEL_ONLY', `${r.status}`);
 
-// ---- live (SP-07 will set this; here straight in the database)
-const { MongoClient, ObjectId } = await import('../../node_modules/mongodb/lib/index.js');
-const client = await new MongoClient(SMOKE_MONGO).connect();
-const upd = await client.db().collection('websitesettings').updateOne({ project: new ObjectId(seo._id) }, { $set: { connection: { mode: 'script', siteUrl: 'https://acme.example', hostnames: ['acme.example'], status: 'live', step: 5, liveAt: new Date() } } }, { upsert: false });
-await client.close();
-ok('connection set live in the database', upd.matchedCount === 1, JSON.stringify(upd));
+// ---- live: SP-07's Start using (above)
 
 r = await call('GET', `${P}/sidebar/admin/server`, null, st);
 side = JSON.stringify(r.body || []);

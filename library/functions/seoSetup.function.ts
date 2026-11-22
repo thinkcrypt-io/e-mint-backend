@@ -1,6 +1,7 @@
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import TenantProject from '../models/tenancy/tenantProject.model.js';
+import WebsiteEvent from '../models/tenancy/websiteEvent.model.js';
 import WebsiteSettings from '../models/tenancy/websiteSettings.model.js';
 import { fetchPage } from './siteCheck.function.js';
 import { connectionOf, forgetSite, loadSite } from './siteConfig.function.js';
@@ -213,6 +214,63 @@ export const chooseWay = async (project: any, mode: unknown): Promise<{ error: s
 	const doc: any = await WebsiteSettings.findOne({}, { connection: 1 }).lean();
 	const now = connectionOf(doc);
 	const connection = { ...(doc?.connection || {}), mode, status: now.status, step: Math.max(now.step, 3) };
+	await WebsiteSettings.updateOne({}, { $set: { connection } });
+	forgetSite(project);
+	return { connection: connectionOf({ connection }) };
+};
+
+/**
+ * Step 4 (SP-07): does the site really belong to this project — any one proof is enough:
+ *   visit   a page view from one of the site's hostnames since the address was checked (the snippet runs there)
+ *   worker  the site answers with Mint's `x-mint-edge` header (the Worker is in front of it)
+ *   txt     a TXT record `_mint.<domain>` = `mint-verify=<project id>` (works for either way)
+ */
+export const verifyOwnership = async (project: any) => {
+	await loadSite(project);
+	const doc: any = await WebsiteSettings.findOne({}, { connection: 1 }).lean();
+	const c = connectionOf(doc);
+	const txt = `mint-verify=${project._id}`;
+	if (!c.siteUrl) return { owned: false, how: null as null | string, txt, checks: { visit: false, worker: false, txt: false }, message: 'Add your site’s address first (step 1).' };
+	const since = c.detected?.checkedAt ? new Date(c.detected.checkedAt) : new Date(Date.now() - 30 * 24 * 3600 * 1000);
+	const [visit, worker, txtOk] = await Promise.all([
+		WebsiteEvent.exists({ type: 'pageview', host: { $in: c.hostnames.map((h: string) => h.toLowerCase()) }, createdAt: { $gte: since } }).then(x => !!x),
+		fetchPage(c.siteUrl).then(page => typeof page !== 'string' && !!String(page.headers['x-mint-edge'] || '').trim()),
+		(async () => {
+			for (const h of c.hostnames) {
+				const bare = h.split(':')[0].replace(/^www\./, '');
+				if (!bare.includes('.')) continue;
+				const rows = await Promise.race([dns.resolveTxt(`_mint.${bare}`), new Promise<string[][]>((_, no) => setTimeout(() => no(new Error('timeout')), 4000))]).catch(() => [] as string[][]);
+				if (rows.some(r => r.join('').trim() === txt)) return true;
+			}
+			return false;
+		})(),
+	]);
+	const how = visit ? 'visit' : worker ? 'worker' : txtOk ? 'txt' : null;
+	if (c.txt !== txt) {
+		await WebsiteSettings.updateOne({}, { $set: { 'connection.txt': txt } });
+		forgetSite(project);
+	}
+	return {
+		owned: !!how,
+		how,
+		txt,
+		checks: { visit, worker, txt: txtOk },
+		message: how
+			? how === 'visit' ? 'A visit from your site reached Mint.' : how === 'worker' ? 'Mint’s Worker answers on your site.' : 'The TXT record is in place.'
+			: 'Not yet — open your site in a browser, or finish the Worker, or add the TXT record.',
+	};
+};
+
+/** **Start using**: owned + the connection test shows nothing missing → live (opens the rest of Mint SEO). */
+export const startUsing = async (project: any, test: { items: { status: string; message: string }[] }, owned: boolean): Promise<{ error: string } | { connection: any }> => {
+	if (!owned) return { error: 'Mint can’t tell yet that this site is yours: open it in a browser (snippet), finish the Worker, or add the TXT record — then try again.' };
+	const missing = test.items.find(i => i.status === 'missing');
+	if (missing) return { error: missing.message };
+	await loadSite(project);
+	const doc: any = await WebsiteSettings.findOne({}, { connection: 1 }).lean();
+	const now = connectionOf(doc);
+	const at = new Date();
+	const connection = { ...(doc?.connection || {}), status: 'live', step: 5, verifiedAt: at, liveAt: now.liveAt || at, lastCheckAt: at, lastCheck: test, attentionReason: '' };
 	await WebsiteSettings.updateOne({}, { $set: { connection } });
 	forgetSite(project);
 	return { connection: connectionOf({ connection }) };
