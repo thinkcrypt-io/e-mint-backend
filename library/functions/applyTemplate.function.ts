@@ -354,7 +354,7 @@ export const applyTemplate = async (req: any, opts: ApplyOptions): Promise<Apply
 				for (const k of linkOrder(keys, refsOf)) {
 					const route = routeOf(k);
 					const records = resolveSampleDates(sample[k], steps[stepOf(k)]?.fields || []);
-					const out = await createRecords(req, { route, records }, caller);
+					const out = await createRecords(req, { route, records }, caller, { events: false });
 					if (out.isError) throw fail('Sample data', `${k} — ${out.text}`);
 					const created = (out.data?.records || []).map((r: any) => r._id);
 					undo.push({

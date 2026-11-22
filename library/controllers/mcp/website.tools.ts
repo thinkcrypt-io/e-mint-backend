@@ -23,6 +23,7 @@ import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { refIds } from './records.helpers.js';
 import { commerceWriter } from '../../functions/commerce/locks.js';
 import { fireCommerce } from '../../functions/commerce/hooks.js';
+import recordHistory, { diffFields } from '../../functions/recordHistory.function.js';
 import { FLAT, TRACKERS, forgetSite, loadSite, patchFromFlat, publicConfig, publicSettings, saveSite } from '../../functions/siteConfig.function.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
@@ -613,7 +614,13 @@ const uploadMedia = async (_req: any, args: any, caller: Caller): Promise<Out> =
 
 const MAX_WRITE = 200;
 
-export const createRecords = async (req: any, args: any, caller: Caller): Promise<Out> => {
+/**
+ * `events: false` (a template's sample data): saved quietly — no History, webhooks or automations, only the store's
+ * own upkeep. Otherwise each save sets off what a save from a page does (recordHistory): History, the store's upkeep,
+ * webhooks and the project's automations — an update only when a field really changed, and with what changed, so an
+ * automation's “When these fields change” holds.
+ */
+export const createRecords = async (req: any, args: any, caller: Caller, { events = true }: { events?: boolean } = {}): Promise<Out> => {
 	const route = String(args?.route || '').trim();
 	const def: any = route ? await ModelDefinition.findOne({ route }).lean() : null;
 	const Model = def ? compiledModel(def.name) : null;
@@ -634,7 +641,7 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	const restricted = isAccessRestricted(Model);
 	const problems: string[] = [];
 	const skipped = new Set<string>();
-	const docs: { doc: any; Model: mongoose.Model<any>; isNew: boolean }[] = [];
+	const docs: { doc: any; Model: mongoose.Model<any>; isNew: boolean; before?: any; fields: string[] }[] = [];
 	const seen = new Set<string>();
 	const refCache: RefCache = new Map();
 	for (let i = 0; i < records.length; i++) {
@@ -660,11 +667,14 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 			problems.push(`records[${i}]: ${kept}`);
 			continue;
 		}
+		const before = existing?.toObject();
 		const doc: any = existing || new Model({ ...ownedBy(Model, caller), ...(restricted && { privacy: 'public' }) });
 		doc.set(picked.body);
 		await applyFormulasLinked(doc, formulas, Model);
 		problems.push(...validationProblems(doc, `records[${i}].`));
-		docs.push({ doc, Model, isNew: !existing });
+		// What this call could change: the fields it sent and the formulas worked out again.
+		const fields = [...new Set([...Object.keys(picked.body), ...formulas.filter((f: any) => !f.sub && f.key).map((f: any) => String(f.key))])];
+		docs.push({ doc, Model, isNew: !existing, before, fields });
 	}
 	if (problems.length) return refuse(`Nothing saved:\n- ${problems.slice(0, 50).join('\n- ')}${problems.length > 50 ? `\n- …and ${problems.length - 50} more` : ''}`);
 	try {
@@ -672,9 +682,16 @@ export const createRecords = async (req: any, args: any, caller: Caller): Promis
 	} catch (e) {
 		return saveFailure(e);
 	}
+	// What a save from a page sets off: History, the store's upkeep (a product's variants follow its options), webhooks, automations.
+	if (events) {
+		// Labels for History; a Password field is logged as changed, never with its value.
+		const settings = Object.fromEntries(def.fields.map((f: any) => [f.key, { title: f.label || f.key, secret: f.kind === 'password' }]));
+		for (const d of docs) {
+			const changes = d.isNew ? [] : diffFields({ before: d.before, after: d.doc.toObject(), fields: d.fields, settings });
+			recordHistory({ req, action: d.isNew ? 'create' : 'update', model: Model.modelName, modelPath: route, doc: d.doc, changes, note: '— through the AI assistant' });
+		}
+	} else if (commerce) for (const d of docs) fireCommerce({ model: def.name, event: d.isNew ? 'create' : 'update', doc: d.doc });
 	// Records whose formulas read the ones matched and changed through a link (`tax.amount`).
-	// What a save from a page sets off in a store — a product's variants follow its options.
-	if (commerce) for (const d of docs) fireCommerce({ model: def.name, event: d.isNew ? 'create' : 'update', doc: d.doc });
 	const updated = docs.filter(d => !d.isNew).map(d => d.doc._id);
 	if (updated.length) await recalculateDependents(req.app, Model, updated);
 	const created = docs.filter(d => d.isNew).length;

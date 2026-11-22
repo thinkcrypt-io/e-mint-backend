@@ -8,6 +8,18 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-22)
 
+**2026-11-22 — Bug: MCP `create_records` skipped the project's automations.** Seen on prod: a Discount added over MCP
+left `reached` at 0 and D1 “Discount saved → its products” at 0 runs. Now each record `create_records` saves goes through
+`recordHistory` like a panel save (`library/controllers/mcp/website.tools.ts`): History (“— through the AI assistant”),
+the store's upkeep (`fireCommerce`), webhooks and `fireAutomations`. An update counts only the fields that really changed
+(`diffFields` of before/after over the fields sent + the formulas), so “When these fields change” holds and an unchanged
+re-send starts nothing. A template's sample data (`applyTemplate` → `createRecords(…, { events: false })`) stays quiet as
+before. Scratch test (`mcp-automations.mjs`, outside the repo) passed 25/25: 20% on category Polo over MCP → its product
+`discountPercent` 20 / Sale price 800, reached 1, D1 once; same values again → no run; a products automation “When Price
+changes” skipped a name change and an unchanged price, ran once for 500 → 550; percent 20 → 30 and status inactive
+followed. Pushed, **not deployed** (Heroku, the user). Unrelated, found while checking: `commerce-mcp.mjs` fails
+“variants from its options” (Sonali gets its default + Small, no Large), the same on the code before this change.
+
 **2026-11-22 — Demo logins (docs/panel-users/DEMO_LOGINS.md DL-01…06):** one demo login per project (`PanelAdmin`
 `demo` + secret `demoKey`), made on the tenant panel's Panel users page; its link `<app>/demo/<key>` signs out whoever is
 in, signs in for **1 hour** (JWT `expiresIn`, `POST /panel/auth/demo`), and opens the panel. Expired tokens answer 401
@@ -442,6 +454,7 @@ the tenant panel's own Vercel project from `main` with `NEXT_PUBLIC_PANEL=tenant
 | 55 | **CMS** — single types, slug fields, components, content blocks, drafts and publishing with its own Publish right, then typed website contents (CMS-06…). Plan + WOs + log in `docs/cms`. `scripts/migratePublishRight.js --apply` **ran on production 2026-10-15** (37 roles got Publish). `scripts/migrateSiteContents.js --apply` **ran on production 2026-10-16** after the deploy (10 websites: Contents typed + drafts on all; 66 typed records for Web Demo 58 and Demo Business Website 8; 4 sites that never opened the builder have no design to mark — guarded since) | all | L | CMS-02…07 + 03b done 2026-10-15 (deployed 2026-10-16); CMS-09 content API (status=draft, populate, publish webhooks, site refresh) and CMS-13 media details (alt/caption/focal, image fields with details; mint-sites uses them — redeploy it too) done 2026-10-16, not deployed; CMS-14 MCP content tools (drafts first; publish_entry with the key's publish scope, now settable on Connect AI) done 2026-10-16, not deployed; CMS-11 scheduling (publish at / take off at, a minute tick, Schedule on the record page, Coming up on All content; also fixed: Publish now writes History) done 2026-10-16, not deployed; CMS-16 Contents follow-ups (Text plain but in Rich text, Hero carousel, more blocks in one record, slugs shown/chosen/copied, `/web-contents/by-slug/:slug`, removed records off the public API) done 2026-10-21, not deployed; CMS-16b (no editor but Rich text, projects' own types too; Hero carousel slides = heading, subheading, two buttons, background picture; search + suggested types when adding a piece or a block) done 2026-10-21, not deployed; left CMS-08 preview, 10, 12, 15 — ask the user |
 | 57 | **Date formulas** — a Date formula field (due dates, expiries, renewals; every save or once), date functions in every formula, Linked Relationships reading through links (Copy from Plan › Price, Work out with dates). Plan + WOs + log in `docs/date-formulas` | all | M | DF-01…05 done 2026-10-19, not deployed |
 | 56 | **Rich text** — editor fields that show properly on websites: RT-00 quick fix (clean HTML from the Quill editor, sites-only toolbar, dark mode via tokens; mint-sites reads old Quill markup, keeps headings/images/alignment; panel view sanitized — XSS fix). Plan + WOs + log in `docs/rich-text` | admin + mint-tenant + mint-sites | S+S+S | RT-00, RT-13 (Download DOCX), RT-14 (full-page editor, Word/PDF/Markdown/text downloads) RT-15 (document editor, page sizes, tables) and RT-16 (Print, Show more on record pages) done 2026-10-18, not deployed; RT-02…12 wait on the user's decisions D1–D10 |
+| — | **Bug: records saved over MCP `create_records` didn't start automations** (a Discount's products never got it) — saves now go through `recordHistory` like a panel save, with real before/after changes | backend | S | done (2026-11-22; pushed, not deployed) |
 | 59 | **Key values** — a generic Key values model in every new project (name, description, keys) and a Key-value pairs field kind whose sections come from it: always, by a linked record (a category's specifications) or by a choice's value. Plan + decisions in `docs/key-values` | backend + mint-tenant | M | done (2026-11-16; not deployed; new projects only) |
 
 Execution order: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 12 → 13 → 14 →
