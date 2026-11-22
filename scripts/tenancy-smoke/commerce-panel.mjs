@@ -54,6 +54,7 @@ const c = claims(st);
 ok('token: kind panel, its project and organization', c.kind === 'panel' && c.project === shop._id && !!c.org && !!c.sid);
 
 r = await call('GET', '/tenant/api/panel/auth/self', null, st);
+const selfPerms = r.body?.permissions;
 ok('self: one organization, one project, Store admin, fixed keys', r.status === 200 && r.body?.panel === true && r.body?.projects?.length === 1 && r.body.projects[0].publicSlug === shop.publicSlug && r.body.organizations?.length === 1 && r.body.role?.name === 'Store admin' && r.body.permissions.includes('manage-couriers') && !r.body.permissions.includes('build') && !r.body.permissions.includes('manage-projects'), JSON.stringify(r.body?.permissions));
 r = await call('GET', '/tenant/api/panel/auth/self', null, t);
 ok('a tenant token is refused on the panel account routes', r.status === 403);
@@ -74,7 +75,11 @@ ok('the admin API refuses it', r.status === 401);
 r = await call('GET', `${S}/sidebar/admin/server`, null, st);
 const side = JSON.stringify(r.body || []);
 ok('sidebar: POS, Orders, the store’s tables, Delivery settings, Email accounts, Media', ['/store/pos', '/store/orders', '/t/products', '/store/settings/delivery', '/email-accounts', '/images'].every(h => side.includes(`"${h}"`)), side.slice(0, 300));
-ok('sidebar: no Build, automations, project settings, API pages, members, panel admins, organization', !['"/model-builder"', '"/builder"', '"/automations"', '"/project-settings"', '"/store/setup"', '"/public-api"', '"/project-people"', '"/panel-admins"', '"/projects"', '"/org/members"', '"/website-setup"', '"/widgets"'].some(h => side.includes(h)), side);
+ok('sidebar: no model/page/sidebar builders, project settings, members, panel admins, organization', !['"/model-builder"', '"/builder"', '"/project-settings"', '"/store/setup"', '"/project-people"', '"/panel-admins"', '"/projects"', '"/org/members"', '"/website-setup"', '"/sidebar-builder"', '"/dashboard-builder"', '"/components"'].some(h => side.includes(h)), side);
+// CP-08: the API group and the two Build tools (PDF templates, Automations), behind manage-api / manage-pdf / manage-automations.
+ok('sidebar: API group (Overview, Endpoints, Keys, Logs, Reference, Webhooks, Widgets, Payments)', ['/public-api', '/public-api/endpoints', '/public-api/keys', '/public-api/logs', '/public-api/reference', '/webhooks', '/widgets', '/site-payments'].every(h => side.includes(`"${h}"`)), side);
+ok('sidebar: Build tools — PDF templates and Automations', ['/pdf-templates', '/automations'].every(h => side.includes(`"${h}"`)), side);
+ok('self: holds manage-api, manage-pdf, manage-automations', ['manage-api', 'manage-pdf', 'manage-automations'].every(k => (selfPerms || []).includes(k)), JSON.stringify(selfPerms));
 // CP-06: every Store settings page, Site settings, Connect AI.
 ok('sidebar: Store settings pages, Site settings, Connect AI', ['/store/settings', '/store/settings/products', '/store/settings/search', '/store/settings/delivery', '/store/settings/pos', '/store/settings/printer', '/store/settings/payments', '/site-setup', '/connect-ai'].every(h => side.includes(`"${h}"`)), side);
 
@@ -139,11 +144,8 @@ ok('…and refused after', r.status === 401 || !!r.body?.error, `${r.status}`);
 const refusals = [
 	['GET', `${S}/builder/models`],
 	['POST', `${S}/builder/models`, { name: 'Hack', route: 'hacks' }],
-	['GET', `${S}/automations`],
 	['DELETE', `${S}/sidebaritems/6afac6db57e4f840bec55293`],
 	['PUT', `${S}/dashboard`, {}],
-	['GET', `${S}/api-builder/endpoints`],
-	['GET', `${S}/webhooks`],
 	['GET', `${S}/panel-admins`],
 	['POST', `${S}/panel-admins`, { name: 'Y', username: `u6${stamp}`, email: `y${stamp}@example.com`, password: 'store-pass-123' }],
 	['GET', `${S}/people`],
@@ -153,6 +155,19 @@ const refusals = [
 for (const [m, path, body] of refusals) {
 	r = await call(m, path, body, st);
 	ok(`refused: ${m} ${path.replace(S, '<store>')}`, r.status === 403 || r.status === 404, `${r.status} ${r.body?.message}`);
+}
+
+// CP-08: the API, webhooks, widgets, payments, PDF templates and automations are open to a store login
+for (const path of ['/api-builder/endpoints', '/webhooks', '/automations', '/widgets', '/pdf-templates']) {
+	r = await call('GET', `${S}${path}`, null, st);
+	ok(`allowed: GET <store>${path}`, r.status === 200, `${r.status} ${r.body?.message}`);
+}
+r = await call('GET', `${S}/pdf-templates`, null, st);
+ok('PDF templates: listed', r.status === 200, `${r.status}`);
+// …while building stays shut
+for (const [m, path, body] of [['POST', `${S}/builder/models`, { name: 'Hack2', route: 'hacks2' }], ['PUT', `${S}/dashboard`, {}], ['GET', `${S}/builder/keys`]]) {
+	r = await call(m, path, body, st);
+	ok(`still refused: ${m} ${path.replace(S, '<store>')}`, r.status === 403 || r.status === 404, `${r.status} ${r.body?.message}`);
 }
 
 // ---- account
