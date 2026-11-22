@@ -21,6 +21,7 @@ import { scheduleContentTick } from './library/functions/contentSchedule.functio
 import { scheduleCourierSync } from './library/functions/commerce/courierSync.js';
 import { scheduleSearchIndex } from './library/functions/commerce/search/indexer.js';
 import { scheduleAutomationDue } from './library/functions/automationDue.function.js';
+import { scheduleSeoWatch } from './library/functions/seoWatch.function.js';
 import userRouter from './user-routes/user.router.js';
 import appRouter from './app-route/app.router.js';
 import sellerApi from './seller-api/sellerApi.js';
@@ -86,6 +87,8 @@ connectDb().then(() => {
 	scheduleSearchIndex();
 	// Automations' “when a date is reached” runs, every minute (docs/ecommerce/DISCOUNTS.md DS6).
 	scheduleAutomationDue();
+	// Mint SEO's live sites checked again once a day; a lost connection → attention (docs/seo-panel SP-09).
+	scheduleSeoWatch();
 });
 
 // Swagger UI setup

@@ -155,6 +155,9 @@ const schema = new Schema<any>(
 					/** The last connection test's answer (siteConnection.function.ts), for the status card. */
 					lastCheck: { type: Schema.Types.Mixed, default: undefined },
 					attentionReason: { type: String, trim: true },
+					/** The Worker's health ping (SP-09): when it last asked Mint for its settings, and its version. */
+					edgeSeenAt: Date,
+					edgeVersion: { type: String, trim: true },
 				},
 				{ _id: false }
 			),

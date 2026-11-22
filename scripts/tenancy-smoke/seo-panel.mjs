@@ -167,6 +167,67 @@ ok('after live: SEO defaults save', r.status === 200, `${r.status} ${r.body?.mes
 r = await call('GET', `${P}/builder/models`, null, st);
 ok('after live: models still 403', r.status === 403 && r.body?.code === 'SEO_PANEL_ONLY');
 
+// ---- SP-09: the daily re-check, the Worker's ping, attention. Run the server with SEO_WATCH_MS=1500 and
+// SEO_WATCH_RETRY_MS=100 so the schedule ticks and a site that doesn't answer is asked again quickly.
+{
+	const { ROOT } = await import('./lib.mjs');
+	const mc = await new MongoClient(SMOKE_MONGO).connect();
+	const db = mc.db();
+	const pid = new ObjectId(seo._id);
+	const settings = db.collection('websitesettings');
+	const setConn = fields => settings.updateOne({ project: pid }, { $set: Object.fromEntries(Object.entries(fields).map(([k, v]) => [`connection.${k}`, v])) });
+	const notices = type => db.collection('tenantnotifications').countDocuments({ project: pid, type });
+
+	// The snippet way, the site gone but visits arrived in the last 3 days → still live.
+	await setConn({ mode: 'script' });
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('recheck (snippet way): site down but recent visits → live, by visits', r.status === 200 && r.body?.result?.ok === true && r.body.result.how === 'visits' && r.body.connection.status === 'live', JSON.stringify(r.body).slice(0, 300));
+	await db.collection('websiteevents').deleteMany({ project: pid });
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('…no visits and the site doesn’t answer → attention, with why', r.body?.connection?.status === 'attention' && /couldn’t open your site/.test(r.body.connection.attentionReason), JSON.stringify(r.body?.connection).slice(0, 300));
+	ok('…the owner got one notification', (await notices('seo-attention')) === 1);
+	r = await call('GET', `${P}/seo`, null, st);
+	ok('attention: editing stays open (GET /seo 200)', r.status === 200, `${r.status}`);
+	r = await call('GET', `${P}/sidebar/admin/server`, null, st);
+	ok('attention: the full sidebar stays', JSON.stringify(r.body || []).includes('"/t/seo"'));
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('…checked again, still failing: no second notification', r.body?.connection?.status === 'attention' && (await notices('seo-attention')) === 1);
+
+	// The snippet back on the site → live again, and everyone hears it.
+	const back = await serve(`<html><head><script src="https://api.example/public/track.js" data-key="${projectKey}" data-seo></script></head><body></body></html>`);
+	await setConn({ siteUrl: `http://localhost:${back.address().port}` });
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('…the snippet is back → live, by snippet, reason cleared', r.body?.connection?.status === 'live' && r.body.result.how === 'snippet' && !r.body.connection.attentionReason, JSON.stringify(r.body).slice(0, 300));
+	ok('…a “connected again” notification', (await notices('seo-live')) === 1);
+
+	// The Cloudflare way: no Worker header on the page, never pinged → attention.
+	await setConn({ mode: 'cloudflare' });
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('cloudflare: no Worker in front, never in touch → attention', r.body?.connection?.status === 'attention' && /Worker/.test(r.body.connection.attentionReason), JSON.stringify(r.body?.connection).slice(0, 300));
+	// The Worker asks for its settings (its health ping), an older version.
+	const ping = await fetch(`${ROOT}/public/api/site/edge?apiKey=${projectKey}`, { headers: { 'x-mint-edge': '0.9.0' } });
+	ok('the Worker’s settings call still answers', ping.status === 200, `${ping.status}`);
+	await new Promise(res => setTimeout(res, 300));
+	r = await call('GET', `${P}/site-config`, null, st);
+	ok('…its ping is noted: version 0.9.0, last seen, Mint’s latest', r.body?.connection?.edgeVersion === '0.9.0' && !!r.body.connection.edgeSeenAt && /^\d+\.\d+\.\d+$/.test(r.body.connection.edgeLatest || ''), JSON.stringify(r.body?.connection).slice(0, 400));
+	r = await call('POST', `${P}/seo-setup/recheck`, {}, st);
+	ok('…recheck: the Worker was in touch → live, by ping', r.body?.connection?.status === 'live' && r.body.result.how === 'ping', JSON.stringify(r.body).slice(0, 300));
+	back.close();
+
+	// The schedule: a check a day old is run by the server on its own.
+	await setConn({ mode: 'script', lastCheckAt: new Date(Date.now() - 2 * 86400000), edgeSeenAt: null });
+	let after = null;
+	for (let i = 0; i < 20 && after?.status !== 'attention'; i++) {
+		await new Promise(res => setTimeout(res, 500));
+		after = (await settings.findOne({ project: pid }))?.connection;
+	}
+	ok('schedule: a day-old check runs on its own → attention', after?.status === 'attention' && Date.now() - new Date(after.lastCheckAt).getTime() < 60000, JSON.stringify(after).slice(0, 300));
+	await setConn({ status: 'live', attentionReason: '' });
+	r = await call('POST', `/tenant/api/p/${site._id}/seo-setup/recheck`, {}, t);
+	ok('recheck on a site never set up → 409', r.status === 409, `${r.status}`);
+	await mc.close();
+}
+
 // ---- SP-08: Disconnect
 r = await call('PUT', `${P}/site-config`, { edge: { robots: true } }, st);
 ok('after live: a Worker switch saves', r.status === 200 && r.body?.edge?.robots === true, JSON.stringify(r.body?.edge));

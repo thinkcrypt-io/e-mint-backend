@@ -5,6 +5,7 @@ import { compiledModel, syncDynamicModels } from './dynamicModels.function.js';
 import { runInScope } from './tenantScope.function.js';
 import { siteDefaultsProblems, siteSeoDefaults } from '../siteBuilder/seo.js';
 import { CRAWLER_IDS, buildRobots, robotsSettings } from './robots.function.js';
+import { EDGE_WORKER_FILE_VERSION as EDGE_WORKER_VERSION } from '../edge/edgeWorker.code.js';
 
 /**
  * A website project's settings (docs/multi-tenancy WO-34, WO-38): the
@@ -430,6 +431,9 @@ export const connectionOf = (doc: any) => {
 		lastCheckAt: c.lastCheckAt || null,
 		lastCheck: c.lastCheck || null,
 		attentionReason: c.attentionReason || '',
+		edgeSeenAt: c.edgeSeenAt || null,
+		edgeVersion: c.edgeVersion || '',
+		edgeLatest: EDGE_WORKER_VERSION,
 	};
 };
 /** The SEO panel's screens open once a site has passed setup — and stay open while it needs attention (D7). */

@@ -6,6 +6,7 @@ import { compiledModel, syncDynamicModels } from '../library/functions/dynamicMo
 import { loadSite } from '../library/functions/siteConfig.function.js';
 import { testConnection } from '../library/functions/siteConnection.function.js';
 import { chooseWay, detectSite, disconnect, startUsing, verifyOwnership } from '../library/functions/seoSetup.function.js';
+import { recheckSeoSite } from '../library/functions/seoWatch.function.js';
 
 /**
  * /tenant/api/p/:projectId/seo-setup — Mint SEO's setup wizard (docs/seo-panel SP-05…07). Open before the site is
@@ -77,6 +78,17 @@ router.post(
 	handle(async req => {
 		mayConnect(req);
 		return disconnect(req.project);
+	})
+);
+
+// Check now (SP-09): the daily check, run on demand — a fixed site leaves `attention` here.
+router.post(
+	'/recheck',
+	handle(async req => {
+		mayConnect(req);
+		const out = await recheckSeoSite(req.project);
+		if (!out.result) throw new TenancyError(409, 'Set up your site first.');
+		return out;
 	})
 );
 

@@ -28,7 +28,7 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 | SP-06 | Setup wizard step 3: snippet per platform (tabs, screenshots); Cloudflare by hand (checklist, live DNS checks, *Copy Worker code*, key and routes with copy buttons) | mint-seo + docs | M | done 2026-11-22 (screenshots skipped) |
 | SP-07 | Steps 4–5: ownership (page view from host / TXT `_mint.<domain>`), Test connection + Worker check, **Start using** → `live` | backend + mint-seo | M | done 2026-11-22 |
 | SP-08 | After live: Home (status, visits, health, checklist), Pages & SEO, Defaults, Link previews, Robots & sitemap (+ edge switches UI), Redirects, Analytics, Tracking, Health, Connection (Bypass, Disconnect), Help | mint-seo | L | **done 2026-11-23** (one-tab Defaults/Link previews/Redirects/Tracking pages, "Pages & SEO" wording, sidebar highlight per tab, Connection Worker switches + Disconnect) ; Help guide, `use_seo` in panel/commerce logins done (part 2) |
-| SP-09 | Daily connection re-check + Worker health ping → `attention`, banner, email, notification (D7) | backend + mint-seo | M | todo (Q4) |
+| SP-09 | Daily connection re-check + Worker health ping → `attention`, banner, email, notification (D7) | backend + mint-seo | M | **done 2026-11-23** (`seoWatch.function.ts`: hourly tick, check a day old, claim on `lastCheckAt`; Worker ping noted from `/site/edge`; email + tenant notification on each change; Check now; red banner; Worker version + update available) |
 | SP-11 | Tenant side: make an SEO project + its logins (Panel users page), demo login for the website | mint-tenant + backend | S | todo |
 
 **Phase 2**

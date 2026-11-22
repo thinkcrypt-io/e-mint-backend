@@ -56,6 +56,7 @@ import {
 import { isRenderer, NotFound, renderPage } from '../library/siteBuilder/render.js';
 import { headHtml, siteHead } from '../library/functions/siteHead.function.js';
 import { siteEdge } from '../library/functions/siteEdge.function.js';
+import { noteEdgePing } from '../library/functions/seoWatch.function.js';
 import { ensureProjectKey, projectByKey } from '../library/functions/projectKey.function.js';
 import { apiOrigin } from '../library/controllers/mcp/website.tools.js';
 import { commerceView } from '../library/functions/commerce/settings.js';
@@ -886,6 +887,8 @@ router.get(
 	handle(async (req: any, res) => {
 		websiteOnly(req);
 		const [doc, pages, seo] = await Promise.all([loadSite(req.project, { req, cached: true }), kitModel(req, 'pages'), kitModel(req, 'seo')]);
+		// The Worker's health ping (docs/seo-panel SP-09): it sends its version with every call.
+		noteEdgePing(req.project, doc, req.headers['x-mint-edge']).catch(() => {});
 		res.setHeader('Cache-Control', 'public, max-age=60');
 		return siteEdge(req.project, doc, { pages: pages?.Model, seo: seo?.Model });
 	})
