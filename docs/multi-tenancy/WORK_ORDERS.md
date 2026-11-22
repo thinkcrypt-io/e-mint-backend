@@ -8,6 +8,15 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-22)
 
+**2026-11-22 — Demo logins (docs/panel-users/DEMO_LOGINS.md DL-01…06):** one demo login per project (`PanelAdmin`
+`demo` + secret `demoKey`), made on the tenant panel's Panel users page; its link `<app>/demo/<key>` signs out whoever is
+in, signs in for **1 hour** (JWT `expiresIn`, `POST /panel/auth/demo`), and opens the panel. Expired tokens answer 401
+`SESSION_EXPIRED` (any token); the apps go to `/demo` "Your demo has ended". Demos never get manage-panel-users,
+password change or AI keys. Backend pushed (14600288), **not deployed**; mint-tenant/commerce/panel, mint-docs and both
+websites pushed. The sites use a store's `demoUrl` when set — after the deploy, make the demo logins for the demo stores
+on prod and add + fill `demoUrl` on `ec-demos` (Thinkcrypt) and `demo-stores` (Commerce OS) — needs the user's OK.
+Smoke `demo-logins.mjs` passed.
+
 **2026-11-22 — PU-08 (docs/panel-users):** panel logins sign in with a username (an email still works); email is optional. Deployed and `scripts/migratePanelUsernames.js --apply` run on prod 2026-11-22 (9 logins; sets username = email for old logins, swaps the `email_1` index for partial `username_unique` / `email_unique`). Bug fixed in mint-commerce/mint-panel authApi: the login body dropped `app`, so panel.tcrypt.site sent no app and the backend treated it as the commerce panel ("This login is for the panel app").
 
 **2026-11-22 — PU-07 (docs/panel-users):** the role dialog (shared by project roles and panel roles, in mint-tenant/mint-commerce/mint-panel) has Select all, an All box per model and checkbox column headings; panel roles in website/store projects get an Analytics row (`view-analytics`, `panelRoleTargets(projectType)`). Backend pushed, not deployed.

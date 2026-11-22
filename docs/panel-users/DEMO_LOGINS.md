@@ -26,14 +26,21 @@ shared email and password for each demo store. They now open the demo link inste
 
 | WO | Title | Repo | Status |
 |---|---|---|---|
-| DL-01 | `demo` + `demoKey` on PanelAdmin, `generateAuthToken` with a 1-hour expiry for demos, `POST /panel/auth/demo`, 401 `SESSION_EXPIRED`, demo limits (no manage-panel-users, password, name, AI keys) | backend | |
-| DL-02 | `/p/:id/panel-users/demo`: GET (the demo login + key), POST (make it, with access), POST `/demo/new-link`; PUT/DELETE `/:id` work for it from the tenant panel; panel apps' list leaves it out | backend | |
-| DL-03 | Tenant panel: a **Demo login** card on Panel users (make it, copy/open the link, change access, new link, switch off, remove), copied to mint-commerce and mint-panel | mint-tenant + copies | |
-| DL-04 | Panel apps: `/demo/<key>` loading screen (signs out, gets the demo, signs in, opens the panel), `/demo` "Your demo has ended", SessionGuard on `SESSION_EXPIRED`, a sign-out timer at the hour, demo hides Change password | mint-panel + mint-commerce | |
-| DL-05 | Websites: a `demoUrl` on the demo store records. When set, the panel button opens it and the email and password rows are hidden | thinkcrypt-website, mint-commerce-website | |
-| DL-06 | Guide (mint-docs panel users) + this doc + handoff | docs | |
+| DL-01 | `demo` + `demoKey` on PanelAdmin, `generateAuthToken` with a 1-hour expiry for demos, `POST /panel/auth/demo`, 401 `SESSION_EXPIRED`, demo limits (no manage-panel-users, password, name, AI keys) | backend | Done 2026-11-22, not deployed |
+| DL-02 | `/p/:id/panel-users/demo`: GET (the demo login + key), POST (make it, with access), POST `/demo/new-link`; PUT/DELETE `/:id` work for it from the tenant panel; panel apps' list leaves it out | backend | Done 2026-11-22, not deployed |
+| DL-03 | Tenant panel: a **Demo login** card on Panel users (make it, copy/open the link, change access, new link, switch off, remove), copied to mint-commerce and mint-panel | mint-tenant + copies | Done 2026-11-22, pushed |
+| DL-04 | Panel apps: `/demo/<key>` loading screen (signs out, gets the demo, signs in, opens the panel), `/demo` "Your demo has ended", SessionGuard on `SESSION_EXPIRED`, a sign-out timer at the hour, demo hides Change password | mint-panel + mint-commerce | Done 2026-11-22, pushed |
+| DL-05 | Websites: a `demoUrl` on the demo store records. When set, the panel button opens it and the email and password rows are hidden | thinkcrypt-website, mint-commerce-website | Code done 2026-11-22, pushed; `demoUrl` field + values on prod pending |
+| DL-06 | Guide (mint-docs panel users) + this doc + handoff | docs | Done 2026-11-22 |
 
-Make the demo logins on prod and fill the sites' `demoUrl` after the backend deploy.
+Make the demo logins on prod and fill the sites' `demoUrl` after the backend deploy. When every demo store has one,
+also change the Commerce OS pages' general words that say "shared panel login" (home FAQ, features FAQ, /demos).
+
+Panel apps: the demo page sets the token through the store (`refreshAuth`), not localStorage — the store writes
+its own token back to storage on every change, so a direct write is lost.
+
+Test: `scripts/tenancy-smoke/demo-logins.mjs` (API), plus a headless run of the link → dashboard → timer → "Start
+again" → expired token → bad link on a local stack.
 
 ## Endpoints
 
