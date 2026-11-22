@@ -167,4 +167,21 @@ ok('after live: SEO defaults save', r.status === 200, `${r.status} ${r.body?.mes
 r = await call('GET', `${P}/builder/models`, null, st);
 ok('after live: models still 403', r.status === 403 && r.body?.code === 'SEO_PANEL_ONLY');
 
+// ---- SP-08: Disconnect
+r = await call('PUT', `${P}/site-config`, { edge: { robots: true } }, st);
+ok('after live: a Worker switch saves', r.status === 200 && r.body?.edge?.robots === true, JSON.stringify(r.body?.edge));
+r = await call('POST', `${P}/seo-setup/disconnect`, {}, st);
+ok('disconnect: status removed, step 1', r.status === 200 && r.body?.connection?.status === 'removed' && r.body.connection.step === 1, JSON.stringify(r.body).slice(0, 200));
+r = await call('GET', `${P}/sidebar/admin/server`, null, st);
+side = JSON.stringify(r.body || []);
+ok('after disconnect: the sidebar is the setup menu again', side.includes('"/setup"') && !side.includes('"/t/seo"'), side);
+r = await call('GET', `${P}/seo`, null, st);
+ok('after disconnect: GET /seo is held (409)', r.status === 409, `${r.status}`);
+r = await call('POST', `${P}/seo-setup/detect`, { url: 'http://localhost:1' }, st);
+ok('after disconnect: setup is still reachable', r.status !== 409 && r.status !== 403, `${r.status}`);
+const c2 = await new MongoClient(SMOKE_MONGO).connect();
+const edgeDoc = await c2.db().collection('websitesettings').findOne({ project: new ObjectId(seo._id) });
+await c2.close();
+ok('disconnect told the Worker to pass everything through', edgeDoc?.edge?.bypass === true, JSON.stringify(edgeDoc?.edge));
+
 done();

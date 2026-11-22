@@ -5,7 +5,7 @@ import ModelDefinition from '../library/models/builder/modelDefinition.model.js'
 import { compiledModel, syncDynamicModels } from '../library/functions/dynamicModels.function.js';
 import { loadSite } from '../library/functions/siteConfig.function.js';
 import { testConnection } from '../library/functions/siteConnection.function.js';
-import { chooseWay, detectSite, startUsing, verifyOwnership } from '../library/functions/seoSetup.function.js';
+import { chooseWay, detectSite, disconnect, startUsing, verifyOwnership } from '../library/functions/seoSetup.function.js';
 
 /**
  * /tenant/api/p/:projectId/seo-setup — Mint SEO's setup wizard (docs/seo-panel SP-05…07). Open before the site is
@@ -16,6 +16,7 @@ import { chooseWay, detectSite, startUsing, verifyOwnership } from '../library/f
  *   POST /way { mode }     save the picked way (script | cloudflare), step ≥ 3
  *   POST /verify           is the site this project's: a visit from it, the Worker, or the TXT record
  *   POST /start            Start using: owned + connection test without a missing item → status live
+ *   POST /disconnect       Disconnect (SP-08): status removed, the Worker passes everything through, setup starts over
  */
 const router = express.Router({ mergeParams: true });
 
@@ -68,6 +69,14 @@ router.post(
 		const out = await startUsing(req.project, test, owned);
 		if ('error' in out) throw new TenancyError(409, out.error);
 		return out;
+	})
+);
+
+router.post(
+	'/disconnect',
+	handle(async req => {
+		mayConnect(req);
+		return disconnect(req.project);
 	})
 );
 

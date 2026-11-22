@@ -271,7 +271,22 @@ export const startUsing = async (project: any, test: { items: { status: string; 
 	const now = connectionOf(doc);
 	const at = new Date();
 	const connection = { ...(doc?.connection || {}), status: 'live', step: 5, verifiedAt: at, liveAt: now.liveAt || at, lastCheckAt: at, lastCheck: test, attentionReason: '' };
-	await WebsiteSettings.updateOne({}, { $set: { connection } });
+	// A site that was disconnected had the Worker told to pass everything through; connecting again lifts that.
+	await WebsiteSettings.updateOne({}, { $set: { connection, ...(now.status === 'removed' && { 'edge.bypass': false }) } });
+	forgetSite(project);
+	return { connection: connectionOf({ connection }) };
+};
+
+/**
+ * **Disconnect** (SP-08): the site stops being Mint's. The screens close again (status `removed`, setup starts over at
+ * step 1 with the address kept), and the Worker is told to pass every request straight through (`edge.bypass`) so the
+ * site goes back to exactly what it was; a pasted snippet keeps loading but, with no live connection, does nothing new.
+ */
+export const disconnect = async (project: any): Promise<{ connection: any }> => {
+	await loadSite(project);
+	const doc: any = await WebsiteSettings.findOne({}, { connection: 1 }).lean();
+	const connection = { ...(doc?.connection || {}), status: 'removed', step: 1, attentionReason: '' };
+	await WebsiteSettings.updateOne({}, { $set: { connection, 'edge.bypass': true } });
 	forgetSite(project);
 	return { connection: connectionOf({ connection }) };
 };
