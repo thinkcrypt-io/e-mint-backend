@@ -12,7 +12,8 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  *   timeline  one row per day / week / month of `dateField`: how many, and sums
  *
  * `filters` narrow it always ({ field, op, value } in the list's field_op terms);
- * whoever runs it picks `from` / `to` on `dateField` (a default `range` first).
+ * whoever runs it picks `from` / `to` on `dateField` (a default `range` first), and a
+ * value for each of `readerFilters` (fields the builder lets the reader narrow it by).
  * The engine is POST /<route>/get/report (getReport.controller.ts). Scoped to the project.
  */
 export const REPORT_TYPES = ['list', 'summary', 'timeline'] as const;
@@ -35,6 +36,8 @@ const schema = new Schema<any>(
 		interval: { type: String, enum: ['day', 'week', 'month', 'year'], default: 'month' },
 		sums: [{ _id: false, field: String, label: String }],
 		filters: [{ _id: false, field: String, op: { type: String, enum: REPORT_OPS, default: 'eq' }, value: Schema.Types.Mixed }],
+		/** Fields whoever runs the report can narrow it by (one value each, "is"). */
+		readerFilters: { type: [String], default: [] },
 		dateField: { type: String, trim: true, default: 'createdAt' },
 		range: { type: String, enum: REPORT_RANGES, default: 'all' },
 		exportable: { type: Boolean, default: true },

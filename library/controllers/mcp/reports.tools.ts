@@ -54,6 +54,10 @@ const runReport = async (req: any, caller: Caller, report: any, args: any): Prom
 	for (const f of fields) if (!settings[f.key]) settings[f.key] = { title: f.key };
 
 	const query: any = { archivedAt: null };
+	// The reader's picks for the report's reader filters ("is"); its own filters below win.
+	const readable = new Set<string>(report.readerFilters || []);
+	for (const [key, v] of Object.entries(args?.filters && typeof args.filters === 'object' ? args.filters : {}))
+		if (readable.has(key) && allowed.has(key) && v !== '' && v != null) query[key] = v;
 	for (const f of report.filters || []) {
 		if (!allowed.has(f.field)) continue;
 		const v = f.value;
@@ -114,6 +118,7 @@ const REPORT_PROPS = {
 		items: { type: 'object', required: ['field'], properties: { field: { type: 'string' }, op: { type: 'string', enum: ['eq', 'ne', 'in', 'nin', 'gt', 'gte', 'lt', 'lte', 'exists'] }, value: {} } },
 		description: 'Always applied — e.g. only status "sold"',
 	},
+	readerFilters: { type: 'array', items: { type: 'string' }, maxItems: 6, description: 'Fields whoever runs the report can narrow it by (one value each) — e.g. employee, department' },
 	dateField: { type: 'string', description: 'The date the reader’s From/To and a timeline use (default createdAt)' },
 	range: { type: 'string', enum: ['all', 'today', '7d', '30d', '90d', 'month', 'year'], description: 'The dates it opens with' },
 	exportable: { type: 'boolean', description: 'Whether it can be downloaded' },
@@ -158,7 +163,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 		inputSchema: {
 			type: 'object',
 			required: ['id'],
-			properties: { id: { type: 'string' }, from: { type: 'string' }, to: { type: 'string' }, limit: { type: 'integer', description: 'Rows to return (1–500, default 200)' }, tz: { type: 'string', description: 'IANA time zone, e.g. Asia/Dhaka' } },
+			properties: { id: { type: 'string' }, from: { type: 'string' }, to: { type: 'string' }, filters: { type: 'object', description: 'A value for each of the report’s readerFilters, e.g. { employee: "<id>" }' }, limit: { type: 'integer', description: 'Rows to return (1–500, default 200)' }, tz: { type: 'string', description: 'IANA time zone, e.g. Asia/Dhaka' } },
 		},
 		annotations: { readOnlyHint: true, openWorldHint: false },
 		run: async (req, args, caller) => {

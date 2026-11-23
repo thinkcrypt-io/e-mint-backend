@@ -55,6 +55,7 @@ const schema = Joi.object({
 		.items(Joi.object({ field: Joi.string().trim().max(120).pattern(/^[\w.]+$/).required(), op: Joi.string().valid(...REPORT_OPS).default('eq'), value: Joi.any() }))
 		.max(20)
 		.default([]),
+	readerFilters: Joi.array().items(Joi.string().trim().max(120).pattern(/^[\w.]+$/)).max(6).default([]),
 	dateField: Joi.string().trim().max(120).default('createdAt'),
 	range: Joi.string().valid(...REPORT_RANGES).default('all'),
 	exportable: Joi.boolean().default(true),
@@ -87,6 +88,7 @@ export const reportView = (r: any, req: any, def?: any) => ({
 	interval: r.interval || 'month',
 	sums: r.sums || [],
 	filters: r.filters || [],
+	readerFilters: r.readerFilters || [],
 	dateField: r.dateField || 'createdAt',
 	range: r.range || 'all',
 	exportable: r.exportable !== false,
@@ -122,8 +124,51 @@ const filterQuery = (filters: any[] = []) => {
 	return q;
 };
 
+/** The reader's picks, for the fields the report lets them filter by — the report's own filters win. */
+const readerQuery = (report: any, picks: Record<string, string> = {}) => {
+	const allowed = new Set<string>(report.readerFilters || []);
+	const q: Record<string, string> = {};
+	for (const [key, v] of Object.entries(picks || {})) if (allowed.has(key) && v !== '' && v != null) q[key] = String(v);
+	return q;
+};
+
+/**
+ * What the report page needs to show each reader filter: its label and kind,
+ * a choice field's choices, and for a linked field the model to pick records
+ * from (its route and display field).
+ */
+export const readerFilterFields = async (report: any, def: any) => {
+	const keys: string[] = report.readerFilters || [];
+	if (!keys.length || !def) return [];
+	const byKey = new Map<string, any>((def.fields || []).map((f: any) => [f.key, f]));
+	const refs = [...new Set(keys.map(k => byKey.get(k)?.ref).filter(Boolean))];
+	const targets: any[] = refs.length ? await ModelDefinition.find({ name: { $in: refs } }, { route: 1, name: 1, title: 1, displayField: 1 }).lean() : [];
+	return keys
+		.map(key => {
+			const f = byKey.get(key);
+			if (!f) return null;
+			const t = f.ref && targets.find(x => x.name === f.ref);
+			return {
+				key,
+				label: f.label || key,
+				kind: f.kind,
+				options: (f.options || []).map((o: any) => ({ value: o.value, label: o.label || o.value })),
+				number: NUMBER_KINDS.includes(f.kind),
+				link: t ? { route: t.route, name: t.title || t.name, displayField: t.displayField || '' } : null,
+			};
+		})
+		.filter(Boolean);
+};
+
 const day = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).allow('', null);
-const runBody = Joi.object({ from: day, to: day, limit: Joi.number().integer().min(1).max(5000), tz: Joi.string().max(60), format: Joi.string().valid('csv', 'xlsx', 'pdf') });
+const runBody = Joi.object({
+	from: day,
+	to: day,
+	limit: Joi.number().integer().min(1).max(5000),
+	tz: Joi.string().max(60),
+	format: Joi.string().valid('csv', 'xlsx', 'pdf'),
+	filters: Joi.object().pattern(/^[\w.]+$/, Joi.string().allow('').max(2000)).max(6),
+});
 
 /**
  * Sends the request on to `/<route>/get/report` through the project's compiled
@@ -136,7 +181,7 @@ const forward = (req: any, res: any, report: any, run: any, capture: boolean): P
 		const child: any = Object.create(req);
 		child.url = `/${report.route}/get/report`;
 		child.method = 'POST';
-		child.query = filterQuery(report.filters);
+		child.query = { ...readerQuery(report, run.filters), ...filterQuery(report.filters) };
 		child.params = {};
 		child.body = {
 			type: report.type,
@@ -191,6 +236,8 @@ router.get(
 			doc: defs.map(d => ({
 				route: d.route,
 				name: d.title || d.name,
+				/** The model's own name — what other models' `ref` points at. */
+				model: d.name,
 				displayField: d.displayField || '',
 				fields: [
 					...(d.fields || [])
@@ -200,6 +247,8 @@ router.get(
 							label: f.label || f.key,
 							kind: f.kind,
 							ref: f.ref || null,
+							/** A choice field's choices, so the builder's conditions can offer them. */
+							...(f.options?.length && { options: f.options.map((o: any) => ({ value: o.value, label: o.label || o.value })) }),
 							date: DATE_KINDS.includes(f.kind),
 							number: NUMBER_KINDS.includes(f.kind),
 						})),
@@ -247,7 +296,7 @@ router.get(
 	'/:id',
 	handle(async (req: any) => {
 		const { report, def } = await runnable(req);
-		return reportView(report, req, def);
+		return { ...reportView(report, req, def), readerFilterFields: await readerFilterFields(report, def) };
 	})
 );
 
@@ -296,7 +345,7 @@ router.post(
 	handle(async (req: any, res: any) => {
 		const { report, def } = await runnable(req);
 		const { error, value } = runBody.validate(req.body || {}, { stripUnknown: true });
-		if (error) throw new TenancyError(400, 'Dates are YYYY-MM-DD');
+		if (error) throw new TenancyError(400, error.details[0].message.replace(/"/g, ''));
 		const out: any = await forward(req, res, report, { ...value, format: undefined }, true);
 		return { ...answer(res, out), report: reportView(report, req, def) };
 	})
@@ -306,7 +355,7 @@ router.post('/:id/export', async (req: any, res: any, next: any) => {
 	try {
 		const { report } = await runnable(req);
 		const { error, value } = runBody.validate(req.body || {}, { stripUnknown: true });
-		if (error) return res.status(400).json({ message: 'Dates are YYYY-MM-DD' });
+		if (error) return res.status(400).json({ message: error.details[0].message.replace(/"/g, '') });
 		const format = value.format || 'xlsx';
 		if (!canDownload(req, report)) return res.status(403).json({ message: report.exportable === false ? 'This report can’t be downloaded' : 'Your role can’t download reports' });
 		if (!(report.formats || []).includes(format)) return res.status(400).json({ message: `This report doesn’t download as ${format.toUpperCase()}` });
