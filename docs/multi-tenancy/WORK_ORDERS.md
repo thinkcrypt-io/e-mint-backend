@@ -16,7 +16,7 @@ a live preview and WCAG contrast checks. Backend: `websiteSettings.model.ts` fie
 FLAT + `saveSite` keeps the old `primaryColor`/`secondaryColor`/`fontFamily` in step both ways, and `identityOf()` fills
 the palette/bodyFont from the old fields for existing sites (panelView + publicSettings). MCP `update_site_settings`
 and blueprints carry the new fields. Docs: mint-docs /websites#site-theme. **Backend not deployed** — until the Heroku
-deploy the card saves only what the old schema accepts (Joi rejects the new keys).
+deploy the old server strips the new keys (stripUnknown), so palette and font changes don't save.
 
 **2026-11-24 — Panel themes per project, three full looks, full-screen button.** A project's managers pick the
 panel apps' theme on the tenant Panel users page (`PanelThemeCard.tsx`). It's stored on `TenantProject.panelTheme`
