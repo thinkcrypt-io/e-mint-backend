@@ -223,6 +223,12 @@ Settings: CompanySettings single record holds bdtask's settings page (title, con
 decimals, negative symbol, LTR/RTL, fixed date, tax / NPF / employer % / ICF, footer, logos). The payroll
 rates there are reference values; payslips don't read them automatically.
 
+Employee form (2026-11-24): add/edit is bdtask's 6-page stepper, same titles and field placement as
+/hr/employees/create — Basic info → Salary and bank info (bank, salary, benefits) → Personal information
+(bdtask puts employment + pay + termination here) → Biological info contact (birth, family, photo, emergency)
+→ Others (medical, home contacts, documents) → Supervisor. bdtask's login email/password on the last page is
+not on the form: staff logins are panel users (below).
+
 Staff logins: panel roles HR manager, Payroll officer, Procurement officer, Project manager, Employee.
 Panel users (2026-11-24, shared demo password set by the user): tahmina = HR manager, mahmudul = Payroll
 officer, sadia = Procurement officer, arif = Project manager, mithila = Employee. Records have no per-record owner, so
