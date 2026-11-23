@@ -145,7 +145,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 |---|---|---|
 | 1 | Organisation & Employees — SubDepartment, Shift, Employee (EMP-) | built + 10 demo records each, 2026-11-23 |
 | 2 | Attendance & Leave — Attendance (ATT-), WeeklyHoliday (single), Holiday, LeaveType, LeaveApplication (LV-) | built + 10 demo records each (WeeklyHoliday: 1, single), 2026-11-23 |
-| 3 | Payroll — SalaryRule, SalaryAdvance, Loan, SalarySheet, Payslip | todo |
+| 3 | Payroll — SalaryRule, SalaryAdvance (ADV-), Loan (LN-), SalarySheet (SAL-), Payslip (PS-) | built + 10 demo records each, 2026-11-23 |
 | 4 | Performance & Engagement — PerformanceReview, Award, Notice, Message | todo |
 | 5 | Recruitment — Candidate, Shortlist, Interview, Selection | todo |
 | 6 | Procurement — Unit, Vendor, Committee, Request, Quotation, BidAnalysis, PurchaseOrder, GoodsReceived | todo |
@@ -164,3 +164,9 @@ Connector fixes found while seeding (backend, not deployed — Heroku deploy is 
   The 10 seeded attendances were backfilled directly in the project collection.
 - Links are matched and shown by the linked model's display field (Employee → Full name) in
   create_records, query_records and run_report (records.helpers refNaming).
+
+Module 3 notes: payslips copy basic / total benefit / transport from the employee (editable
+autofill) and Department (read-only autofill); salary rules are reference only, not applied
+automatically. Demo: 10 monthly sheets Feb–Nov 2026; 10 November payslips with tax 5% of gross,
+NPF 5.5% of basic, the active loan's installment and the November advance. Payslip departments
+were backfilled directly, as the live connector has no autofill until the backend is deployed.
