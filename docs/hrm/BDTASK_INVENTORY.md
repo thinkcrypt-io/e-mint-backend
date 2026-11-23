@@ -151,7 +151,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 6 | Procurement — Unit, Vendor, Committee, PurchaseRequest (REQ-), Quotation (QT-), BidAnalysis (BA-), PurchaseOrder (PO-), GoodsReceived (GRN-) | built + 10 demo records each, 2026-11-23 |
 | 7 | Projects — Client, Project (PRJ-, route client-projects), Sprint, Task (TSK-) | built + 10 demo records each, 2026-11-24 |
 | 8 | Reward points — PointSettings (single), PointCategory, ManagementPoint, CollaborativePoint, AttendancePoint | built + 10 demo records each (settings: 1), 2026-11-24 |
-| — | Dashboard (10 widgets), 17 saved reports, CompanySettings (single), 5 panel roles | done 2026-11-24; panel logins wait for the user's passwords |
+| — | Dashboard (10 widgets), 17 saved reports, CompanySettings (single), 5 panel roles + 5 panel logins | done 2026-11-24 |
 
 Decisions: one Full name field (not first/middle/last); Passport no = password kind
 (platform rule); employee logins via panel users, not a password field.
@@ -220,5 +220,6 @@ decimals, negative symbol, LTR/RTL, fixed date, tax / NPF / employer % / ICF, fo
 rates there are reference values; payslips don't read them automatically.
 
 Staff logins: panel roles HR manager, Payroll officer, Procurement officer, Project manager, Employee.
-No panel users yet: save_panel_user needs a password from the user. Records have no per-record owner, so
+Panel users (2026-11-24, shared demo password set by the user): tahmina = HR manager, mahmudul = Payroll
+officer, sadia = Procurement officer, arif = Project manager, mithila = Employee. Records have no per-record owner, so
 the Employee role sees all leave applications / messages, not only their own.
