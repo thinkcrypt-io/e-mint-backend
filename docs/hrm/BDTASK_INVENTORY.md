@@ -149,7 +149,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 4 | Performance & Engagement — PerformanceReview (PR-), Award, Notice, Message | built + 10 demo records each, 2026-11-23 |
 | 5 | Recruitment — Candidate (CAN-), Shortlist (SL-), Interview (INT-), Selection (SEL-) | built + 10 demo records each, 2026-11-23 |
 | 6 | Procurement — Unit, Vendor, Committee, PurchaseRequest (REQ-), Quotation (QT-), BidAnalysis (BA-), PurchaseOrder (PO-), GoodsReceived (GRN-) | built + 10 demo records each, 2026-11-23 |
-| 7 | Projects — Client, Project, Sprint, Task | todo |
+| 7 | Projects — Client, Project (PRJ-, route client-projects), Sprint, Task (TSK-) | built + 10 demo records each, 2026-11-24 |
 | 8 | Reward points — PointSettings, PointCategory, Management/Collaborative/Attendance points | todo |
 | — | Dashboard, reports, settings, staff logins (panel users) | todo |
 
@@ -190,3 +190,9 @@ explicitly (live connector has no autofill yet). Demo: 10 requests (8 ordered, 1
 10 quotations (8 chosen, 2 not chosen), a bid analysis per quotation, 10 POs (6 received, sent, authorised,
 draft, cancelled) and 10 receipts incl. partial ones (GRN-0001+0002 = PO-0001, 0004+0005 = PO-0003,
 0007+0008 = PO-0005; GRN-0010 is half of PO-0007's brochures).
+
+Module 7 notes: /projects is a reserved project address, so Projects live at /client-projects. Projects
+got team members and a status; duration = daysBetween(start, end). Sprint end date = addDays(start,
+duration). Task lead is an editable autofill from the project's lead (demo data passed it explicitly).
+Employee pages get Tasks (assigned) and Projects led tabs, replacing bdtask's team member search.
+Project reports (500 on the bdtask demo) are left for the reports step.
