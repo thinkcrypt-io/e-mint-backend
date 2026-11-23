@@ -148,7 +148,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 3 | Payroll — SalaryRule, SalaryAdvance (ADV-), Loan (LN-), SalarySheet (SAL-), Payslip (PS-) | built + 10 demo records each, 2026-11-23 |
 | 4 | Performance & Engagement — PerformanceReview (PR-), Award, Notice, Message | built + 10 demo records each, 2026-11-23 |
 | 5 | Recruitment — Candidate (CAN-), Shortlist (SL-), Interview (INT-), Selection (SEL-) | built + 10 demo records each, 2026-11-23 |
-| 6 | Procurement — Unit, Vendor, Committee, Request, Quotation, BidAnalysis, PurchaseOrder, GoodsReceived | todo |
+| 6 | Procurement — Unit, Vendor, Committee, PurchaseRequest (REQ-), Quotation (QT-), BidAnalysis (BA-), PurchaseOrder (PO-), GoodsReceived (GRN-) | built + 10 demo records each, 2026-11-23 |
 | 7 | Projects — Client, Project, Sprint, Task | todo |
 | 8 | Reward points — PointSettings, PointCategory, Management/Collaborative/Attendance points | todo |
 | — | Dashboard, reports, settings, staff logins (panel users) | todo |
@@ -181,3 +181,12 @@ Module 5 notes: candidates have one Full name; SSN is password kind (masked, lik
 Interview total = viva + written + MCQ. Selection links to the Employee record instead of a typed
 employee ID; demo CAN-0008 is Mithila Chowdhury, whose SEL-0008 links to her employee record.
 Recruitment tabs live on the candidate page only (switched off on Employee and Position).
+
+Module 6 notes: item-row Unit is text (row fields can't link), so Units is a reference list. Quotations
+and orders link a Vendor instead of a typed company name; committees list member employees. Line total =
+quantity × price, grand total = sum(items.total) — verified on saved records. Department on requests,
+vendor on orders/receipts and vendor address on orders are editable autofills; demo data passed them
+explicitly (live connector has no autofill yet). Demo: 10 requests (8 ordered, 1 pending, 1 rejected),
+10 quotations (8 chosen, 2 not chosen), a bid analysis per quotation, 10 POs (6 received, sent, authorised,
+draft, cancelled) and 10 receipts incl. partial ones (GRN-0001+0002 = PO-0001, 0004+0005 = PO-0003,
+0007+0008 = PO-0005; GRN-0010 is half of PO-0007's brochures).
