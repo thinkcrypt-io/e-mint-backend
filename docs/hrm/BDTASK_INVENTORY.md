@@ -151,7 +151,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 6 | Procurement — Unit, Vendor, Committee, PurchaseRequest (REQ-), Quotation (QT-), BidAnalysis (BA-), PurchaseOrder (PO-), GoodsReceived (GRN-) | built + 10 demo records each, 2026-11-23 |
 | 7 | Projects — Client, Project (PRJ-, route client-projects), Sprint, Task (TSK-) | built + 10 demo records each, 2026-11-24 |
 | 8 | Reward points — PointSettings (single), PointCategory, ManagementPoint, CollaborativePoint, AttendancePoint | built + 10 demo records each (settings: 1), 2026-11-24 |
-| — | Dashboard (10 widgets), 17 saved reports, CompanySettings (single), 5 panel roles + 5 panel logins | done 2026-11-24 |
+| — | Dashboard (10 widgets), 19 saved reports, CompanySettings (single), 5 panel roles + 5 panel logins | done 2026-11-24 |
 
 Decisions: one Full name field (not first/middle/last); Passport no = password kind
 (platform rule); employee logins via panel users, not a password field.
@@ -210,9 +210,13 @@ and notices.
 Reports (17, categories Attendance, Leave, Employees, Payroll, Reward points, Projects, Procurement):
 daily attendance, attendance by department, leave list, leave days by type, employee list, employees by
 department, salary confirmation, state income tax, NPF + employer contribution, payroll by department,
-the three points summaries, tasks by team member / by project, purchase orders by vendor. bdtask's ICF
-contribution and GRA reports have no source fields (no ICF on payslips), so they are not built; Ad-hoc
-is the panel's own report builder. Linked-part columns (employee.fullName) come back empty through the
+the three points summaries, tasks by team member / by project, purchase orders by vendor, ICF contribution
+and GRA RET-5 (PAYE return) — 19 in all. Ad-hoc is the panel's own report builder.
+
+ICF + GRA (2026-11-24): payslips got ICF contribution (employer-paid, not in deductions) and TIN no (editable
+autofill from the employee's TIN; a read-only autofill drops written values, so it can't be backfilled).
+Demo: every employee has a TIN (TIN-555001…010), every November payslip ICF 200, CompanySettings ICF amount
+200. ICF isn't computed from settings automatically. State income tax now reads the payslip's TIN. Linked-part columns (employee.fullName) come back empty through the
 live connector's run_report until the backend (refNaming) is deployed.
 
 Settings: CompanySettings single record holds bdtask's settings page (title, contacts, currency,
