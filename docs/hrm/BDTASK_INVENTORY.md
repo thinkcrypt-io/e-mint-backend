@@ -232,7 +232,7 @@ not on the form: staff logins are panel users (below).
 Payslip PDF (2026-11-24): PDF template "Payslip (bdtask)" (6b04a35dd6e9c0bce7e40b49, alias `payslip`, published,
 default for /payslips) copies bdtask's payslip — centred logo + company name + (PAYSLIP), a 4-column details grid
 (employee, month, position, payslip no, contact, department, address, recruitment date, working hours, TIN,
-staff id, bank account), one pay table (Description / Amount / Rate / #Value / Deduction) down to Net salary,
+staff id, bank account), one pay table (Description / Amount / #Value / Deduction; bdtask's Rate column dropped, nothing fills it) down to Net salary,
 net in words, payment status, and Prepared / Checked / Authorized signatures. Rows are bordered row boxes with
 `gap: 0` (a row box's default gap breaks the grid). The payslips row menu has "Download payslip"
 (download-pdf). Layout checked by rendering a sample with dist renderPdf; the panel download itself not
