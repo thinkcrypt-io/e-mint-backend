@@ -147,7 +147,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 2 | Attendance & Leave — Attendance (ATT-), WeeklyHoliday (single), Holiday, LeaveType, LeaveApplication (LV-) | built + 10 demo records each (WeeklyHoliday: 1, single), 2026-11-23 |
 | 3 | Payroll — SalaryRule, SalaryAdvance (ADV-), Loan (LN-), SalarySheet (SAL-), Payslip (PS-) | built + 10 demo records each, 2026-11-23 |
 | 4 | Performance & Engagement — PerformanceReview (PR-), Award, Notice, Message | built + 10 demo records each, 2026-11-23 |
-| 5 | Recruitment — Candidate, Shortlist, Interview, Selection | todo |
+| 5 | Recruitment — Candidate (CAN-), Shortlist (SL-), Interview (INT-), Selection (SEL-) | built + 10 demo records each, 2026-11-23 |
 | 6 | Procurement — Unit, Vendor, Committee, Request, Quotation, BidAnalysis, PurchaseOrder, GoodsReceived | todo |
 | 7 | Projects — Client, Project, Sprint, Task | todo |
 | 8 | Reward points — PointSettings, PointCategory, Management/Collaborative/Attendance points | todo |
@@ -176,3 +176,8 @@ help text; Total A + Total B = Total score out of 100. No text Rating (formulas 
 One comments box per assessment, not per item. Notices got a Title. Messages are one model with
 Inbox / Sent messages tabs on each employee. Supervisor position (read-only autofill from the
 reviewer) was backfilled directly for the 10 demo reviews.
+
+Module 5 notes: candidates have one Full name; SSN is password kind (masked, like passport no).
+Interview total = viva + written + MCQ. Selection links to the Employee record instead of a typed
+employee ID; demo CAN-0008 is Mithila Chowdhury, whose SEL-0008 links to her employee record.
+Recruitment tabs live on the candidate page only (switched off on Employee and Position).
