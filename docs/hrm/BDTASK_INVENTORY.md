@@ -146,7 +146,7 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 1 | Organisation & Employees — SubDepartment, Shift, Employee (EMP-) | built + 10 demo records each, 2026-11-23 |
 | 2 | Attendance & Leave — Attendance (ATT-), WeeklyHoliday (single), Holiday, LeaveType, LeaveApplication (LV-) | built + 10 demo records each (WeeklyHoliday: 1, single), 2026-11-23 |
 | 3 | Payroll — SalaryRule, SalaryAdvance (ADV-), Loan (LN-), SalarySheet (SAL-), Payslip (PS-) | built + 10 demo records each, 2026-11-23 |
-| 4 | Performance & Engagement — PerformanceReview, Award, Notice, Message | todo |
+| 4 | Performance & Engagement — PerformanceReview (PR-), Award, Notice, Message | built + 10 demo records each, 2026-11-23 |
 | 5 | Recruitment — Candidate, Shortlist, Interview, Selection | todo |
 | 6 | Procurement — Unit, Vendor, Committee, Request, Quotation, BidAnalysis, PurchaseOrder, GoodsReceived | todo |
 | 7 | Projects — Client, Project, Sprint, Task | todo |
@@ -170,3 +170,9 @@ autofill) and Department (read-only autofill); salary rules are reference only, 
 automatically. Demo: 10 monthly sheets Feb–Nov 2026; 10 November payslips with tax 5% of gross,
 NPF 5.5% of basic, the active loan's installment and the November advance. Payslip departments
 were backfilled directly, as the live connector has no autofill until the backend is deployed.
+
+Module 4 notes: review scores are numbers capped at 12 (A) / 10 (B) with bdtask's scale in the
+help text; Total A + Total B = Total score out of 100. No text Rating (formulas can't return text).
+One comments box per assessment, not per item. Notices got a Title. Messages are one model with
+Inbox / Sent messages tabs on each employee. Supervisor position (read-only autofill from the
+reviewer) was backfilled directly for the 10 demo reviews.
