@@ -192,6 +192,9 @@ export const panelSelfPayload = async (req: any) => {
 		twoFactorEnabled: false,
 		modalLayout: a.modalLayout || 'modal',
 		theme: a.theme || null,
+		// The project's panel theme (panelAdmins.router /theme): the default, or with themeLocked the only one.
+		projectTheme: project.panelTheme || null,
+		themeLocked: !!project.panelThemeLocked,
 		preferences: a.preferences || {},
 		createdAt: a.createdAt,
 		kind: 'panel',

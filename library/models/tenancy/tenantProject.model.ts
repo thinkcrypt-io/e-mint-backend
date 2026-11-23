@@ -36,6 +36,9 @@ const schema = new Schema<any>(
 		description: { type: String, trim: true, maxlength: 500 },
 		icon: { type: String, trim: true },
 		color: { type: String, trim: true },
+		/** The panel apps' theme for this project's logins (a palettes.ts id); `panelThemeLocked` makes it the only one. */
+		panelTheme: { type: String, trim: true },
+		panelThemeLocked: { type: Boolean, default: false },
 		/** Website projects: the site's domains (analytics origin check, CORS). */
 		domains: { type: [String], default: undefined },
 		mediaScope: { type: String, enum: MEDIA_SCOPES, default: 'project' },

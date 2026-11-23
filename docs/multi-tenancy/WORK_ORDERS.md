@@ -8,6 +8,24 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-24)
 
+**2026-11-24 — Panel themes per project, three full looks, full-screen button.** A project's managers pick the
+panel apps' theme on the tenant Panel users page (`PanelThemeCard.tsx`). It's stored on `TenantProject.panelTheme`
+(a `palettes.ts` id) with `panelThemeLocked`, through `GET/PUT /panel-admins/theme`; the PUT is tenant managers only.
+`panelSelfPayload` sends `projectTheme` and `themeLocked`. `effectiveThemeId` in `palettes.ts`: a locked project theme
+wins, otherwise the user's own pick, then the project theme, then the default. ThemeSync and useAdminTheme use it, and
+ThemeModal shows only the locked theme with a note. New optional `Theme.look`: font, text size, weight, headings,
+labels, corners and table (density, lines, striped, header). `applyTheme.lookCss` turns it into `--panel-*` variables,
+Chakra font and radius tokens, and `.chakra-table__*` rules. Chakra style props are unlayered classes, so the table
+text rules use `!important`. `theme/index.ts` globalCss and config `radius` now read `var(--panel-*, <old value>)`,
+so the old themes look the same. Three new themes: **classic**, **console** and **cosy**; the existing ids are
+untouched. A **full-screen button** (`menu/FullScreenButton.tsx`) sits in the navbar of every panel app, on desktop
+only. All of this is in mint-tenant, mint-commerce, mint-panel and mint-seo. Checked in headless Chrome on a scratch
+page (dark mode) in mint-commerce; the real panel wasn't clicked through. Backend **not deployed** (Heroku, the user);
+until then the theme card says it arrives with the next update and the panels keep each user's own theme.
+Also fixed that day: the 2026-11-24 reports push broke `next build` in all four apps (`ReportDates.filters` clashed
+with `ReportInput.filters` in `previewSavedReport`). The apps had no node_modules here, so it was never typechecked;
+mint-commerce now has node_modules.
+
 **2026-11-24 — Report builder: linked-record conditions, reader filters, when reports are made.** In the report
 builder (`src/app/reports`, identical in mint-tenant, mint-commerce, mint-panel and mint-seo), an "Only records where"
 value now fits its field (`ConditionValue.tsx`). A linked field lists the linked model's records and saves their ids,

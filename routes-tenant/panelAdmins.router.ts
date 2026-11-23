@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import PanelAdmin from '../library/models/tenancy/panelAdmin.model.js';
 import PanelRole from '../library/models/tenancy/panelRole.model.js';
+import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { tenantSessions } from '../library/functions/sessions.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { TenancyError, handle } from '../library/functions/tenancy.function.js';
@@ -28,6 +29,8 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   DELETE /:id          removes the login and signs it out
  *   POST   /demo         { role?, superAdmin? } — the project's one demo login (DEMO_LOGINS.md), tenant managers only
  *   POST   /demo/new-link  a new key: the old link stops and its demos are signed out
+ *   GET    /theme       { theme, locked } — the panel's look (TenantProject.panelTheme)
+ *   PUT    /theme       { theme, locked } — tenant managers only; a theme id of the panel apps' palettes.ts
  *
  * GET answers the demo login apart (`demo`, with its key) to tenant managers; it is never in `doc`,
  * and the panel apps' super admins neither see nor change it.
@@ -166,6 +169,43 @@ router.get(
 			roles: roles.map((r: any) => ({ _id: String(r._id), name: r.name })),
 			...(!req.panelAdmin && { demo }),
 		};
+	})
+);
+
+/**
+ * The panel's theme: the look every login of this project starts in. With
+ * `locked` it is the only one (the panel's own theme picker is switched off);
+ * without it a user's own pick wins. The ids live in the panel apps
+ * (src/theme/palettes.ts); an unknown one falls back to the default there.
+ */
+const themeView = (p: any) => ({ theme: p.panelTheme || null, locked: !!p.panelThemeLocked });
+
+router.get(
+	'/theme',
+	handle(async (req: any) => themeView(req.project))
+);
+
+router.put(
+	'/theme',
+	handle(async (req: any) => {
+		if (req.panelAdmin) throw new TenancyError(403, 'The panel’s theme is set by the project’s developers, in the tenant panel');
+		const body = check(
+			Joi.object({
+				theme: Joi.string()
+					.trim()
+					.max(40)
+					.pattern(/^[a-z0-9-]*$/)
+					.allow('', null),
+				locked: Joi.boolean(),
+			}),
+			req.body
+		);
+		const set: any = {};
+		if (body.theme !== undefined) set.panelTheme = body.theme || null;
+		if (body.locked !== undefined) set.panelThemeLocked = body.locked;
+		const project: any = await TenantProject.findByIdAndUpdate(req.project._id, { $set: set }, { new: true }).lean();
+		recordProjectEvent({ req, model: 'TenantProject', modelPath: 'panel-admins', document: project._id, name: project.name, text: `set the panel theme to ${project.panelTheme || 'the default'}${project.panelThemeLocked ? ' (locked)' : ''}` });
+		return themeView(project);
 	})
 );
 
