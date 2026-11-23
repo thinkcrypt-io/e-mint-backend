@@ -150,8 +150,8 @@ New (to employee, subject, message), Inbox, Sent (status read/unread)
 | 5 | Recruitment — Candidate (CAN-), Shortlist (SL-), Interview (INT-), Selection (SEL-) | built + 10 demo records each, 2026-11-23 |
 | 6 | Procurement — Unit, Vendor, Committee, PurchaseRequest (REQ-), Quotation (QT-), BidAnalysis (BA-), PurchaseOrder (PO-), GoodsReceived (GRN-) | built + 10 demo records each, 2026-11-23 |
 | 7 | Projects — Client, Project (PRJ-, route client-projects), Sprint, Task (TSK-) | built + 10 demo records each, 2026-11-24 |
-| 8 | Reward points — PointSettings, PointCategory, Management/Collaborative/Attendance points | todo |
-| — | Dashboard, reports, settings, staff logins (panel users) | todo |
+| 8 | Reward points — PointSettings (single), PointCategory, ManagementPoint, CollaborativePoint, AttendancePoint | built + 10 demo records each (settings: 1), 2026-11-24 |
+| — | Dashboard (10 widgets), 17 saved reports, CompanySettings (single), 5 panel roles | done 2026-11-24; panel logins wait for the user's passwords |
 
 Decisions: one Full name field (not first/middle/last); Passport no = password kind
 (platform rule); employee logins via panel users, not a password field.
@@ -196,3 +196,29 @@ got team members and a status; duration = daysBetween(start, end). Sprint end da
 duration). Task lead is an editable autofill from the project's lead (demo data passed it explicitly).
 Employee pages get Tasks (assigned) and Projects led tabs, replacing bdtask's team member search.
 Project reports (500 on the bdtask demo) are left for the reports step.
+
+Module 8 notes: point settings is a single record; attendance window times are text (HH:MM), as the
+platform has no time kind. Management and collaborative points got a Given by employee. bdtask's
+Employee points (attendance + collaborative + management) can't be one formula across three models, so
+it is three saved summary reports grouped by employee. Points are entered by hand; nothing awards
+attendance points automatically from check-in times.
+
+Dashboard: Total employees (active), Today presents / absents / on leave (attendances, date = today),
+attendance by department and by status (30 days), latest awards, leave requests, candidate selections
+and notices.
+
+Reports (17, categories Attendance, Leave, Employees, Payroll, Reward points, Projects, Procurement):
+daily attendance, attendance by department, leave list, leave days by type, employee list, employees by
+department, salary confirmation, state income tax, NPF + employer contribution, payroll by department,
+the three points summaries, tasks by team member / by project, purchase orders by vendor. bdtask's ICF
+contribution and GRA reports have no source fields (no ICF on payslips), so they are not built; Ad-hoc
+is the panel's own report builder. Linked-part columns (employee.fullName) come back empty through the
+live connector's run_report until the backend (refNaming) is deployed.
+
+Settings: CompanySettings single record holds bdtask's settings page (title, contacts, currency,
+decimals, negative symbol, LTR/RTL, fixed date, tax / NPF / employer % / ICF, footer, logos). The payroll
+rates there are reference values; payslips don't read them automatically.
+
+Staff logins: panel roles HR manager, Payroll officer, Procurement officer, Project manager, Employee.
+No panel users yet: save_panel_user needs a password from the user. Records have no per-record owner, so
+the Employee role sees all leave applications / messages, not only their own.
