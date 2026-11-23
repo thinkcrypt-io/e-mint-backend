@@ -12,7 +12,7 @@ import { tenantSessions } from '../../functions/sessions.function.js';
 import { recordProjectEvent } from '../../functions/recordHistory.function.js';
 import { checkReport, modelOf, rangeFrom, reportView } from '../../../routes-tenant/reports.router.js';
 import { cleanPanelRoleKeys, panelRoleTargets } from '../../../routes-tenant/panelRoles.router.js';
-import { namingFields } from './records.helpers.js';
+import { refNaming } from './records.helpers.js';
 import type { Caller, ToolDef } from './mcp.router.js';
 
 /**
@@ -61,13 +61,16 @@ const runReport = async (req: any, caller: Caller, report: any, args: any): Prom
 		else if (OPS[f.op]) query[f.field] = { [OPS[f.op]]: f.op === 'in' || f.op === 'nin' ? [].concat(typeof v === 'string' ? v.split(',') : v) : v };
 		else query[f.field] = v;
 	}
-	const populate = fields
-		.filter(f => (f as any).ref)
-		.map(f => {
-			const Ref = scopedModel((f as any).ref);
-			return Ref ? { path: f.key, select: namingFields(Ref).join(' ') || '_id' } : null;
-		})
-		.filter(Boolean);
+	const populate = (
+		await Promise.all(
+			fields
+				.filter(f => (f as any).ref)
+				.map(async f => {
+					const Ref = scopedModel((f as any).ref);
+					return Ref ? { path: f.key, select: (await refNaming((f as any).ref, Ref)).join(' ') || '_id' } : null;
+				}),
+		)
+	).filter(Boolean);
 
 	const tz = typeof args?.tz === 'string' ? args.tz : 'UTC';
 	let out;

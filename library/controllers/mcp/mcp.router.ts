@@ -15,7 +15,7 @@ import { PROTECTED_ROUTES } from '../builder/validate.js';
 import { runInScope, TenantScope } from '../../functions/tenantScope.function.js';
 import DashboardConfig from '../../models/builder/dashboardConfig.model.js';
 import { normalizeWidget } from '../dashboard/dashboard.controller.js';
-import { namingFields, refIds } from './records.helpers.js';
+import { refIds, refNaming } from './records.helpers.js';
 import { WEBSITE_INSTRUCTIONS, WEBSITE_TOOLS, setPublicApi } from './website.tools.js';
 import { SITE_BUILDER_INSTRUCTIONS, SITE_BUILDER_TOOLS, SITE_PROMPTS } from './siteBuilder.tools.js';
 import { PDF_TEMPLATE_TOOLS } from './pdfTemplates.tools.js';
@@ -312,7 +312,7 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 		}
 		// A definition names its link targets plainly ('Client'); in a project that's its own model, never the platform's.
 		const Ref = f.ref ? scopedModel(f.ref) : null;
-		const values = async (v: any) => (Ref ? refIds(Ref, [].concat(v)) : [].concat(v));
+		const values = async (v: any) => (Ref ? refIds(Ref, [].concat(v), await refNaming(f.ref, Ref)) : [].concat(v));
 		if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
 			const cond: any = {};
 			for (const [op, v] of Object.entries<any>(raw)) {
@@ -334,7 +334,7 @@ const queryRecords = async (req: any, args: any, caller: Caller) => {
 	for (const k of want) {
 		const f: any = byKey.get(k);
 		const Ref = f?.ref ? scopedModel(f.ref) : null;
-		if (Ref) find = find.populate({ path: k, select: namingFields(Ref).join(' ') || '_id' });
+		if (Ref) find = find.populate({ path: k, select: (await refNaming(f.ref, Ref)).join(' ') || '_id' });
 	}
 	let rows: any[];
 	let total: number;

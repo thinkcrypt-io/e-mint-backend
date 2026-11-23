@@ -20,7 +20,8 @@ import { getS3, resolveUploadFolder } from '../../../routes-admin/file/media.hel
 import { PUBLIC_API, mergedPublicApi, readOnlyProblem } from '../builder/models.controller.js';
 import { routePermission } from '../builder/builder.controller.js';
 import { PROTECTED_ROUTES } from '../builder/validate.js';
-import { refIds } from './records.helpers.js';
+import { refIds, refNaming } from './records.helpers.js';
+import { fillDoc } from '../../functions/linkedFill.function.js';
 import { commerceWriter } from '../../functions/commerce/locks.js';
 import { fireCommerce } from '../../functions/commerce/hooks.js';
 import recordHistory, { diffFields } from '../../functions/recordHistory.function.js';
@@ -123,7 +124,7 @@ export const pickFields = async (def: any, input: any, omit: string[] = [], refC
 			}
 			const wanted = ([] as any[]).concat(value);
 			const cacheKey = `${f.ref}\u0000${wanted.map(String).join('\u0000')}`;
-			const ids = refCache?.get(cacheKey) || (await refIds(Ref, wanted));
+			const ids = refCache?.get(cacheKey) || (await refIds(Ref, wanted, await refNaming(f.ref, Ref)));
 			refCache?.set(cacheKey, ids);
 			if (ids.length < wanted.length) {
 				problems.push(`${key}: no ${f.ref} called ${wanted.filter(v => !ids.includes(String(v))).map(v => `“${v}”`).join(', ')}`);
@@ -638,6 +639,7 @@ export const createRecords = async (req: any, args: any, caller: Caller, { event
 	// A store's models: stock, orders and payments move only through the store (docs/ecommerce EC5).
 	const commerce = await commerceWriter(caller.project, route);
 	const formulas = await formulasFor(req, def);
+	const fills = Object.fromEntries(def.fields.filter((f: any) => f.fillFrom?.from).map((f: any) => [f.key, { schema: { fillFrom: f.fillFrom } }]));
 	const restricted = isAccessRestricted(Model);
 	const problems: string[] = [];
 	const skipped = new Set<string>();
@@ -670,6 +672,8 @@ export const createRecords = async (req: any, args: any, caller: Caller, { event
 		const before = existing?.toObject();
 		const doc: any = existing || new Model({ ...ownedBy(Model, caller), ...(restricted && { privacy: 'public' }) });
 		doc.set(picked.body);
+		// Autofill, as a save from a page does: read-only fields follow their link, editable ones fill when left empty.
+		await fillDoc(Model, fills, doc, !existing);
 		await applyFormulasLinked(doc, formulas, Model);
 		problems.push(...validationProblems(doc, `records[${i}].`));
 		// What this call could change: the fields it sent and the formulas worked out again.
