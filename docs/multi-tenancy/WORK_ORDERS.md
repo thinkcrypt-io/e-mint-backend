@@ -6,7 +6,20 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-11-22)
+## Handoff — read this first (kept current; last updated 2026-11-24)
+
+**2026-11-24 — Report builder: linked-record conditions, reader filters, when reports are made.** In the report
+builder (`src/app/reports`, identical in mint-tenant, mint-commerce, mint-panel and mint-seo), an "Only records where"
+value now fits its field (`ConditionValue.tsx`). A linked field lists the linked model's records and saves their ids,
+choice fields offer their choices, and yes/no fields Yes or No. The operators are narrowed to what fits the field.
+New **Filters for the reader** (`readerFilters`, up to 6 field keys on `Report`): the report page shows one box per field
+beside the dates (`ReaderFilter.tsx`). `GET /saved-reports/:id` sends `readerFilterFields` (label, kind, choices, a linked
+field's route and display field). `/run` and `/export` take `filters: { key: value }`, keeping only the report's reader
+fields, and the report's own filters win. MCP `save_report` takes `readerFilters` and `run_report` takes `filters`.
+`/saved-reports/models` now sends each model's own `model` name and each field's `options`. Until that's deployed, the
+builder guesses a linked model's route from `ref`. The builder and the reports page now say a report is worked out
+from the current records each time it opens; nothing runs on a schedule. Guide updated in mint-docs. Typechecked in
+all four apps; not clicked through in a browser. Pushed, backend **not deployed** (Heroku, the user).
 
 **2026-11-22 — Bug: a store product added over MCP with options got no variants.** `commerce-mcp.mjs` failed
 “variants from its options”: Sonali (`options: [{ name: 'Size', values: 'Large, Small' }]`, no type) kept only its
