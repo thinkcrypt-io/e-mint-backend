@@ -209,7 +209,12 @@ const website = (v: any) => {
 			contents: list(p?.contents, LIMITS.blocks).map(block),
 		})),
 		settings: {
-			identity: pick(s.identity, ['siteName', 'tagline', 'logo', 'favicon', 'footerText', 'primaryColor', 'secondaryColor', 'fontFamily'], 1000),
+			identity: (() => {
+				const id: any = pick(s.identity, ['siteName', 'tagline', 'logo', 'favicon', 'footerText', 'primaryColor', 'secondaryColor', 'fontFamily', 'paletteName', 'headingFont', 'bodyFont'], 1000);
+				const palette = pick(s.identity?.palette, ['primary', 'onPrimary', 'secondary', 'accent', 'background', 'surface', 'border', 'text', 'mutedText'], 20);
+				if (Object.keys(palette).length) id.palette = palette;
+				return id;
+			})(),
 			contact: pick(s.contact, ['email', 'phone', 'whatsapp', 'address', 'mapEmbedUrl', 'hours'], 1000),
 			social: pick(s.social, ['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'tiktok', 'pinterest'], 500),
 			seo: { ...pick(s.seo, ['metaTitle', 'titleTemplate', 'metaDescription', 'ogImage'], 1000), keywords: strings(s.seo?.keywords, 20, 60) },

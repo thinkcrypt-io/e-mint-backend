@@ -845,7 +845,7 @@ export const getPage = (path: string) => mint(\`/pages/by-path?path=\${encodeURI
 export const block = (page: any, slug: string) => page?.contents?.find((c: any) => c.slug === slug);
 export const list = (route: string, query = '') => mint(\`/\${route}?\${query}\`);
 \`\`\`
-- Root layout: getSite() for the header menu, footer, colours (CSS variables from primaryColor/secondaryColor/fontFamily), and \`generateMetadata\` with icons: { icon: settings.favicon }, the default title/description and openGraph image. Add the analytics script there:
+- Root layout: getSite() for the header menu, footer, colours and fonts (CSS variables from palette — primary, onPrimary, secondary, accent, background, surface, border, text, mutedText — and a Google Fonts link for headingFont and bodyFont; older sites read primaryColor/secondaryColor/fontFamily, kept in step), and \`generateMetadata\` with icons: { icon: settings.favicon }, the default title/description and openGraph image. Add the analytics script there:
   ${s.track}
 - Each route: \`generateMetadata\` from page.seo (title, description, image, keywords, canonical, noIndex → robots), falling back to the settings' defaults; render page.contents through components chosen by slug/section/category; notFound() when getPage returns null.
 - A dynamic catch-all route ([[...slug]]) can render pages added later in the panel with a generic block renderer.
@@ -912,7 +912,7 @@ export const WEBSITE_TOOLS: ToolDef[] = [
 		name: 'update_site_settings',
 		title: 'Change the site settings',
 		description:
-			'Sets the website’s settings (one per project, edited on the panel’s Site setup page): siteName, tagline, logo, favicon, primaryColor, secondaryColor, fontFamily, footerText, email, phone, whatsapp, address, mapEmbedUrl, hours, facebook, instagram, x, linkedin, youtube, tiktok, pinterest, metaTitle, titleTemplate ("%s · Acme"), metaDescription, ogImage, keywords. Only the fields sent change. `config` holds the tags, code, SEO & indexing, redirects and headers; `domains` sets where the site is deployed (analytics only counts visits from them).',
+			'Sets the website’s settings (one per project, edited on the panel’s Site setup page): siteName, tagline, logo, favicon, palette ({ primary, onPrimary, secondary, accent, background, surface, border, text, mutedText }, hex colours; only the keys sent change), headingFont, bodyFont (Google Fonts names), primaryColor, secondaryColor, fontFamily (older single fields, kept in step with the palette and body font), footerText, email, phone, whatsapp, address, mapEmbedUrl, hours, facebook, instagram, x, linkedin, youtube, tiktok, pinterest, metaTitle, titleTemplate ("%s · Acme"), metaDescription, ogImage, keywords. Only the fields sent change. `config` holds the tags, code, SEO & indexing, redirects and headers; `domains` sets where the site is deployed (analytics only counts visits from them).',
 		scope: 'build',
 		only: 'website',
 		inputSchema: {

@@ -72,6 +72,20 @@ export const SITE_SETTINGS = Joi.object({
 		primaryColor: color.label('Primary colour'),
 		secondaryColor: color.label('Secondary colour'),
 		fontFamily: text(80).label('Font'),
+		palette: Joi.object({
+			primary: color.label('Primary'),
+			onPrimary: color.label('Text on primary'),
+			secondary: color.label('Secondary'),
+			accent: color.label('Accent'),
+			background: color.label('Background'),
+			surface: color.label('Surface'),
+			border: color.label('Border'),
+			text: color.label('Text'),
+			mutedText: color.label('Muted text'),
+		}).label('Palette'),
+		paletteName: text(40).label('Palette name'),
+		headingFont: text(80).label('Heading font'),
+		bodyFont: text(80).label('Body font'),
 	}),
 	contact: Joi.object({
 		email: Joi.string().trim().lowercase().allow('').max(200).email({ tlds: false }).label('Email'),
@@ -242,6 +256,9 @@ export const FLAT: Record<string, [string, string]> = {
 	primaryColor: ['identity', 'primaryColor'],
 	secondaryColor: ['identity', 'secondaryColor'],
 	fontFamily: ['identity', 'fontFamily'],
+	palette: ['identity', 'palette'],
+	headingFont: ['identity', 'headingFont'],
+	bodyFont: ['identity', 'bodyFont'],
 	email: ['contact', 'email'],
 	phone: ['contact', 'phone'],
 	whatsapp: ['contact', 'whatsapp'],
@@ -273,7 +290,9 @@ export const patchFromFlat = (flat: Record<string, any>) => {
 			skipped.push(key);
 			continue;
 		}
-		patch[at[0]] = { ...(patch[at[0]] || {}), [at[1]]: typeof value === 'object' && value && !Array.isArray(value) ? value.url || '' : value };
+		// An image may come as { url }; the palette is an object of its own.
+		const plain = typeof value === 'object' && value && !Array.isArray(value) && key !== 'palette' ? value.url || '' : value;
+		patch[at[0]] = { ...(patch[at[0]] || {}), [at[1]]: plain };
 	}
 	return { patch, skipped };
 };
@@ -371,6 +390,20 @@ export const saveSite = async (project: any, patch: any, { req }: { req?: any } 
 			if (content.trim()) tags.push({ name, location: where, content, enabled: true });
 		}
 	if (value.headTags || value.code) $set.headTags = tags;
+	// The palette and the two fonts keep the older single fields in step (sites that read
+	// only primaryColor / secondaryColor / fontFamily), and an old-style edit updates the palette.
+	const id = value.identity || {};
+	if (id.palette) {
+		for (const [k, v] of Object.entries(id.palette)) $set[`identity.palette.${k}`] = v;
+		delete $set['identity.palette'];
+		if (id.palette.primary !== undefined && id.primaryColor === undefined) $set['identity.primaryColor'] = id.palette.primary;
+		if (id.palette.secondary !== undefined && id.secondaryColor === undefined) $set['identity.secondaryColor'] = id.palette.secondary;
+	} else {
+		if (id.primaryColor !== undefined) $set['identity.palette.primary'] = id.primaryColor;
+		if (id.secondaryColor !== undefined) $set['identity.palette.secondary'] = id.secondaryColor;
+	}
+	if (id.bodyFont !== undefined && id.fontFamily === undefined) $set['identity.fontFamily'] = id.bodyFont;
+	else if (id.fontFamily !== undefined && id.bodyFont === undefined) $set['identity.bodyFont'] = id.fontFamily;
 	if (value.redirects) $set.redirects = value.redirects;
 	if (value.headers) $set.headers = value.headers;
 
@@ -454,10 +487,40 @@ export const siteOrigin = (project: any, doc?: any) => {
 	return domain ? `https://${domain}` : '';
 };
 
+const PALETTE_KEYS = ['primary', 'onPrimary', 'secondary', 'accent', 'background', 'surface', 'border', 'text', 'mutedText'];
+
+/**
+ * The identity with every key present. A site saved before the palette existed gets one
+ * filled from its two colours, and its body font from `fontFamily`.
+ */
+export const identityOf = (doc: any) => {
+	const i = asPlain(doc?.identity || {});
+	const palette: any = {};
+	for (const k of PALETTE_KEYS) palette[k] = i.palette?.[k] || '';
+	if (!palette.primary) palette.primary = i.primaryColor || '';
+	if (!palette.secondary) palette.secondary = i.secondaryColor || '';
+	return {
+		siteName: '',
+		tagline: '',
+		logo: '',
+		favicon: '',
+		footerText: '',
+		primaryColor: '',
+		secondaryColor: '',
+		fontFamily: '',
+		paletteName: '',
+		headingFont: '',
+		...i,
+		bodyFont: i.bodyFont || i.fontFamily || '',
+		palette,
+	};
+};
+
 /** The settings as the site API's `/site` returns them: flat, like the kit's record was. */
 export const publicSettings = (doc: any) => {
 	const out: any = {};
-	for (const [key, [section, field]] of Object.entries(FLAT)) if (key !== 'twitter') out[key] = doc?.[section]?.[field] ?? '';
+	const identity = identityOf(doc);
+	for (const [key, [section, field]] of Object.entries(FLAT)) if (key !== 'twitter') out[key] = (section === 'identity' ? identity : doc?.[section])?.[field] ?? '';
 	out.twitter = out.x;
 	return out;
 };
@@ -476,7 +539,7 @@ export const publicConfig = (project: any, doc: any) => ({
 /** The settings as the panel edits them: everything but the keys, which it only knows are set. */
 export const panelView = (project: any, doc: any) => ({
 	_id: String(doc._id),
-	identity: { siteName: '', tagline: '', logo: '', favicon: '', footerText: '', primaryColor: '', secondaryColor: '', fontFamily: '', ...(doc.identity || {}) },
+	identity: identityOf(doc),
 	contact: { email: '', phone: '', whatsapp: '', address: '', mapEmbedUrl: '', hours: '', ...(doc.contact || {}) },
 	social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', tiktok: '', pinterest: '', ...(doc.social || {}) },
 	seo: { metaTitle: '', titleTemplate: '', metaDescription: '', ogImage: '', keywords: [], sitemapExtra: [], ...(doc.seo || {}), ...seoOf(doc), ...robotsSettings(doc.seo), defaults: siteSeoDefaults(doc.seo?.defaults) },

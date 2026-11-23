@@ -8,6 +8,16 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-24)
 
+**2026-11-24 — Site palette and two fonts (Site setup → General → Theme).** The old Primary/Secondary colour + one Font
+card is now `SiteTheme.tsx` (site-setup/_components, same file in mint-tenant, mint-commerce, mint-panel, mint-seo and
+admin): 10 preset palettes, nine colour roles (`identity.palette`: primary, onPrimary, secondary, accent, background,
+surface, border, text, mutedText), `paletteName`, `headingFont` + `bodyFont` (Google Fonts list incl. Bangla, or typed),
+a live preview and WCAG contrast checks. Backend: `websiteSettings.model.ts` fields; `siteConfig.function.ts` Joi +
+FLAT + `saveSite` keeps the old `primaryColor`/`secondaryColor`/`fontFamily` in step both ways, and `identityOf()` fills
+the palette/bodyFont from the old fields for existing sites (panelView + publicSettings). MCP `update_site_settings`
+and blueprints carry the new fields. Docs: mint-docs /websites#site-theme. **Backend not deployed** — until the Heroku
+deploy the card saves only what the old schema accepts (Joi rejects the new keys).
+
 **2026-11-24 — Panel themes per project, three full looks, full-screen button.** A project's managers pick the
 panel apps' theme on the tenant Panel users page (`PanelThemeCard.tsx`). It's stored on `TenantProject.panelTheme`
 (a `palettes.ts` id) with `panelThemeLocked`, through `GET/PUT /panel-admins/theme`; the PUT is tenant managers only.

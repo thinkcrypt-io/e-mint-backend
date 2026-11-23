@@ -40,6 +40,27 @@ const schema = new Schema<any>(
 			primaryColor: { type: String, trim: true, default: '#000000' },
 			secondaryColor: { type: String, trim: true, default: '#ffffff' },
 			fontFamily: { type: String, trim: true, default: 'Inter' },
+			/**
+			 * The site's whole colour palette (Site setup → General → Theme). primaryColor /
+			 * secondaryColor above stay in step with palette.primary / .secondary for sites
+			 * that read only those.
+			 */
+			palette: {
+				primary: str,
+				onPrimary: str,
+				secondary: str,
+				accent: str,
+				background: str,
+				surface: str,
+				border: str,
+				text: str,
+				mutedText: str,
+			},
+			/** The ready palette it started from (a preset id), or '' when made by hand. */
+			paletteName: str,
+			/** Google Fonts names: headings, and body text (fontFamily mirrors bodyFont). */
+			headingFont: str,
+			bodyFont: str,
 		},
 		contact: {
 			email: str,
