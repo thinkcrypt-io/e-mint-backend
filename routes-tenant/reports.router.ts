@@ -7,6 +7,8 @@ import { TenancyError, handle } from '../library/functions/tenancy.function.js';
 import { grants } from '../library/functions/tenantPermissions.function.js';
 import { dynamicModelsDispatcher } from '../library/functions/dynamicModels.function.js';
 import { recordProjectEvent } from '../library/functions/recordHistory.function.js';
+import { CALC_KEY } from '../library/controllers/aggregate/getReport.controller.js';
+import { parse } from '../library/functions/formula.function.js';
 
 /**
  * /tenant/api/p/:projectId/saved-reports — a project's reports (docs/panel-users RP-01…03).
@@ -17,7 +19,7 @@ import { recordProjectEvent } from '../library/functions/recordHistory.function.
  *   GET    /models           Build: each model's fields, for the report builder
  *   POST   /preview          Build: run an unsaved report { …report, from?, to? }
  *   GET    /:id
- *   POST   /                 Build: { name, description?, category?, route, type, columns, sort, totals, groupBy, interval, sums, filters, dateField, range, exportable, formats }
+ *   POST   /                 Build: { name, description?, category?, route, type, columns, sort, totals, groupBy, thenBy, lookups, allRows, interval, sums, calcs, filters, dateField, range, exportable, formats }
  *   PUT    /:id              Build: the same
  *   DELETE /:id              Build
  *   POST   /:id/run          { from?, to?, limit?, tz? } → { report, columns, rows, footer, count, truncated }
@@ -49,6 +51,19 @@ const schema = Joi.object({
 	sort: Joi.string().trim().max(120).pattern(/^-?[\w.]+$/).allow(''),
 	totals: Joi.array().items(Joi.string().trim().max(120)).max(20).default([]),
 	groupBy: Joi.string().trim().max(120).allow(''),
+	thenBy: Joi.string().trim().max(120).allow(''),
+	lookups: Joi.array().items(Joi.object({ key: Joi.string().trim().max(120).pattern(/^\w+\.[\w.]+$/).required(), label: Joi.string().trim().max(80).allow('') })).max(10).default([]),
+	allRows: Joi.boolean().default(false),
+	calcs: Joi.array()
+		.items(
+			Joi.object({
+				key: Joi.string().trim().max(40).pattern(CALC_KEY).required().messages({ 'string.pattern.base': 'A calculated column’s key is letters and digits, starting with a letter' }),
+				label: Joi.string().trim().max(80).allow(''),
+				formula: Joi.string().trim().max(500).required().messages({ 'string.empty': 'Write the calculated column’s formula' }),
+			})
+		)
+		.max(10)
+		.default([]),
 	interval: Joi.string().valid('day', 'week', 'month', 'year').default('month'),
 	sums: Joi.array().items(Joi.object({ field: Joi.string().trim().max(120).required(), label: Joi.string().trim().max(80).allow('') })).max(10).default([]),
 	filters: Joi.array()
@@ -68,6 +83,21 @@ export const checkReport = (value: any) => {
 	if (out.type === 'list' && !out.columns.length) throw new TenancyError(400, 'Pick the report’s columns');
 	if (out.type === 'summary' && !out.groupBy) throw new TenancyError(400, 'Pick the field each row of the summary is');
 	if (!out.formats.length) out.exportable = false;
+	if (out.type !== 'summary') Object.assign(out, { thenBy: '', lookups: [], allRows: false });
+	if (out.thenBy === out.groupBy) out.thenBy = '';
+	const roots = [out.groupBy, out.thenBy].filter(Boolean);
+	const stray = out.lookups.find((l: any) => !roots.includes(l.key.split('.')[0]));
+	if (stray) throw new TenancyError(400, `“${stray.label || stray.key}” reads a field the rows aren’t grouped by`);
+	const keys = new Set<string>();
+	for (const c of out.calcs) {
+		if (keys.has(c.key)) throw new TenancyError(400, `Two calculated columns are called “${c.key}”`);
+		keys.add(c.key);
+		try {
+			parse(c.formula);
+		} catch (e: any) {
+			throw new TenancyError(400, `The calculated column “${c.label || c.key}” doesn’t work out: ${e.message}`);
+		}
+	}
 	return out;
 };
 
@@ -85,6 +115,10 @@ export const reportView = (r: any, req: any, def?: any) => ({
 	sort: r.sort || '',
 	totals: r.totals || [],
 	groupBy: r.groupBy || '',
+	thenBy: r.thenBy || '',
+	lookups: r.lookups || [],
+	allRows: !!r.allRows,
+	calcs: r.calcs || [],
 	interval: r.interval || 'month',
 	sums: r.sums || [],
 	filters: r.filters || [],
@@ -189,6 +223,10 @@ const forward = (req: any, res: any, report: any, run: any, capture: boolean): P
 			sort: report.sort || undefined,
 			totals: report.totals,
 			groupBy: report.groupBy,
+			thenBy: report.thenBy || undefined,
+			lookups: report.lookups || [],
+			allRows: !!report.allRows,
+			calcs: report.calcs || [],
 			interval: report.interval,
 			sums: report.sums,
 			dateField: report.dateField,

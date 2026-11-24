@@ -37,6 +37,7 @@ MCP gets both.
 | PU-06 | User guide (mint-docs `/reports`) + website changelog/features | docs | done 2026-11-21 |
 | PU-07 | Role grid: Select all, an All box per model, column headings tick a column; Analytics row (view-analytics) in website/store projects, panel sidebar shows Analytics only there | backend + all three apps | done 2026-11-22, backend not deployed |
 | PU-08 | Usernames: panel logins sign in with a username (or their email); email optional; `username_unique` / `email_unique` partial indexes; `scripts/migratePanelUsernames.js` gives old logins their email as username; Change username or email; a wrong-app sign-in moves to the right app. Also fixed: the panel apps' login dropped `app`, so panel.tcrypt.site refused non-store logins (use_panel) | backend + all three apps | done 2026-11-22; deployed + prod migration run 2026-11-22 |
+| RP-06 | Report rules: summary `thenBy` (one row per pair), `lookups` (values of the linked record, e.g. `leaveType.daysPerYear`), `allRows` (every active linked record, even with nothing counted; labels by the model's displayField), `calcs` (calculated columns in the formula language, on rows and the Total). Builder panels in all three apps, MCP save_report/list_reports, guide `/reports#report-calcs`. Mint HRM “Leave balance” report saved on prod | backend + all three apps + docs | done 2026-11-24, backend not deployed (the report runs as a plain summary until it is) |
 
 Smoke: `scripts/tenancy-smoke/panel-users.mjs` (roles, users, super admin, reports, downloads, MCP) and
 `commerce-panel.mjs`.

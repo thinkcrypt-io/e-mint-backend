@@ -8,6 +8,15 @@ Update the **Status** column and `CHANGELOG.md` as each item lands.
 
 ## Handoff — read this first (kept current; last updated 2026-11-24)
 
+**2026-11-24 — Report rules (RP-06, docs/panel-users).** A Summary report can now have `thenBy` (one row per
+pair, e.g. employee × leave type), `lookups` (values of the linked record a row is per, e.g. `leaveType.daysPerYear`),
+`allRows` (a row for every active linked record even with nothing counted; labels by the model def's displayField —
+note the def is looked up by `displayModelName(ref)`, since refs are scoped `T<project>_Name`) and `calcs` (up to 10
+calculated columns in the formula language; run on each row and on the Total). Engine `getReport.controller.ts`
+(calcsOf/runCalcs), `report.model.ts`, `reports.router.ts` checks, MCP `reports.tools.ts`, ReportBuilder in
+mint-tenant/mint-commerce/mint-panel, guide mint-docs /reports#report-calcs. Mint HRM has a saved **Leave balance**
+report (category Leave). **Backend not deployed** — until it is, the old server runs it as a plain per-employee summary.
+
 **2026-11-24 — Site palette and two fonts (Site setup → General → Theme).** The old Primary/Secondary colour + one Font
 card is now `SiteTheme.tsx` (site-setup/_components, same file in mint-tenant, mint-commerce, mint-panel, mint-seo and
 admin): 10 preset palettes, nine colour roles (`identity.palette`: primary, onPrimary, secondary, accent, background,

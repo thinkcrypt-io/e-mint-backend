@@ -1,7 +1,9 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
-import { scopedModel } from '../../functions/routeRegistry.function.js';
+import { displayModelName, scopedModel } from '../../functions/routeRegistry.function.js';
 import { MAX_ROWS, TableCell, cellValue, get, stamp, writeTable } from '../export/exportRows.controller.js';
+import ModelDefinition from '../../models/builder/modelDefinition.model.js';
+import { Node, evaluate, parse } from '../../functions/formula.function.js';
 
 /**
  * POST /<route>/get/report?<filters> — a report on this route's records (docs/panel-users RP-02):
@@ -67,6 +69,38 @@ const titleOf = (settings: any, key: string) => {
 
 export class ReportError extends Error {}
 
+/**
+ * Calculated columns (`calcs`): a number worked out on each row with the formula
+ * language of formula fields (formula.function.ts) — `leaveType.daysPerYear - approvedDays`,
+ * `if(count > 3, 1, 0)`. A list's formula reads the record's fields and linked parts;
+ * a summary's or timeline's reads `count`, the summed fields, the lookups and earlier
+ * calcs, by key. The Total row works its formula out on the totals.
+ */
+export type ReportCalc = { key: string; label: string; formula: string };
+export const CALC_KEY = /^[a-zA-Z][\w]*$/;
+
+const calcsOf = (raw: any): (ReportCalc & { tree: Node })[] =>
+	(Array.isArray(raw) ? raw : [])
+		.filter((c: any) => c && typeof c.formula === 'string' && c.formula.trim() && CALC_KEY.test(String(c.key || '')))
+		.slice(0, 10)
+		.map((c: any) => {
+			try {
+				return { key: c.key, label: String(c.label || c.key), formula: c.formula, tree: parse(c.formula) };
+			} catch (e: any) {
+				throw new ReportError(`The calculated column “${c.label || c.key}” doesn’t work out: ${e.message}`);
+			}
+		});
+
+/** Each calc's value on one row; a later calc can read an earlier one by its key. */
+const runCalcs = (calcs: (ReportCalc & { tree: Node })[], values: Record<string, any>, doc: any = {}) => {
+	const v = { ...values };
+	return calcs.map(c => {
+		const out = evaluate(c.tree, doc, v);
+		v[c.key] = out;
+		return out;
+	});
+};
+
 export type ReportContext = {
 	/** The records it reads: the list's filters and the reader's access. */
 	query: any;
@@ -114,6 +148,7 @@ export const reportData = async (Model: mongoose.Model<any>, ctx: ReportContext,
 		let rows: TableCell[][] = [];
 		let footer: TableCell[] | null = null;
 		let truncated = false;
+		let listDocs: any[] = [];
 
 		if (type === 'list') {
 			columns = (Array.isArray(body.columns) ? body.columns : [])
@@ -138,7 +173,8 @@ export const reportData = async (Model: mongoose.Model<any>, ctx: ReportContext,
 				.populate(ctx.populate || '')
 				.lean();
 			truncated = docs.length > cap;
-			rows = docs.slice(0, cap).map((doc: any) => columns.map(c => cellValue(get(doc, c.key))));
+			listDocs = docs.slice(0, cap);
+			rows = listDocs.map((doc: any) => columns.map(c => cellValue(get(doc, c.key))));
 			const totals = (Array.isArray(body.totals) ? body.totals : []).filter((f: any) => columns.some(c => c.key === f) && isNumber(f));
 			if (totals.length) {
 				const group: any = { _id: null };
@@ -152,17 +188,23 @@ export const reportData = async (Model: mongoose.Model<any>, ctx: ReportContext,
 		} else {
 			const group: any = { count: { $sum: 1 } };
 			sums.forEach((s, i) => (group[`s${i}`] = { $sum: `$${s.field}` }));
-			let keyLabel = 'Period';
-			let pipeline: any[];
-			let byPath: any = null;
+			const interval = FORMAT[body.interval] ? body.interval : 'month';
+			// summary: one or two fields each row is (groupBy, then thenBy) — an employee × a leave type.
+			const by: { key: string; path: any; label: string; ref: string | null }[] = [];
 			if (type === 'summary') {
-				byPath = pathOf(body.groupBy);
-				if (!byPath) throw new ReportError(`“${body.groupBy || ''}” isn’t a field of this route`);
-				keyLabel = titleOf(settings, body.groupBy);
-				const isArray = byPath.instance === 'Array';
-				pipeline = [{ $match: match }, ...(isArray ? [{ $unwind: `$${body.groupBy}` }] : []), { $group: { _id: `$${body.groupBy}`, ...group } }, { $sort: { count: -1 } }, { $limit: 1000 }];
+				for (const key of [body.groupBy, body.thenBy].filter((k, i) => i === 0 || (k && k !== body.groupBy))) {
+					const path = pathOf(key);
+					if (!path) throw new ReportError(`“${key || ''}” isn’t a field of this route`);
+					const ref = path.instance === 'Array' ? path.caster?.options?.ref || path.options?.type?.[0]?.ref : path.options?.ref;
+					by.push({ key, path, label: titleOf(settings, key), ref: ref || null });
+				}
+			}
+			let pipeline: any[];
+			if (type === 'summary') {
+				const unwind = by.filter(b => b.path.instance === 'Array').map(b => ({ $unwind: `$${b.key}` }));
+				const id = by.length === 1 ? `$${by[0].key}` : { a: `$${by[0].key}`, b: `$${by[1].key}` };
+				pipeline = [{ $match: match }, ...unwind, { $group: { _id: id, ...group } }, { $sort: { count: -1 } }, { $limit: 1000 }];
 			} else {
-				const interval = FORMAT[body.interval] ? body.interval : 'month';
 				pipeline = [
 					{ $match: { $and: [match, { [dateField]: { $ne: null } }] } },
 					{ $group: { _id: { $dateToString: { format: FORMAT[interval], date: `$${dateField}`, timezone: tz } }, ...group } },
@@ -171,27 +213,120 @@ export const reportData = async (Model: mongoose.Model<any>, ctx: ReportContext,
 				];
 			}
 			const out: any[] = await (Model as any).aggregate(pipeline);
-			truncated = out.length >= 1000;
-			// A linked record's key is its id: name it by its own display field.
-			const labels = new Map<string, string>();
-			if (byPath) {
-				const ref = byPath.instance === 'Array' ? byPath.caster?.options?.ref || byPath.options?.type?.[0]?.ref : byPath.options?.ref;
-				const Ref = ref ? scopedModel(ref) : null;
-				if (Ref) {
-					const ids = out.map(r => r._id).filter(id => mongoose.isValidObjectId(id));
-					const docs: any[] = await Ref.find({ _id: { $in: ids } }).select(LABEL_KEYS.join(' ')).lean();
-					for (const d of docs) labels.set(String(d._id), String(LABEL_KEYS.map(k => d[k]).find(v => v !== undefined && v !== '') ?? d._id));
+			const keysOf = (r: any): any[] => (by.length === 2 ? [r._id?.a, r._id?.b] : [r._id]);
+
+			// Values of the record a row is grouped by: `leaveType.daysPerYear` (summary only, on a link).
+			const lookups: { key: string; label: string; at: number }[] = (type === 'summary' && Array.isArray(body.lookups) ? body.lookups : [])
+				.filter((l: any) => l && typeof l.key === 'string' && /^[\w]+\.[\w.]+$/.test(l.key))
+				.map((l: any) => ({ key: l.key, label: String(l.label || l.key.split('.').slice(1).join('.')), at: by.findIndex(b => b.ref && b.key === l.key.split('.')[0]) }))
+				.filter((l: any) => l.at >= 0)
+				.slice(0, 10);
+
+			// Each linked group's records, named by their display field, with what the lookups read.
+			const linked: Map<string, any>[] = by.map(() => new Map());
+			const allRows = type === 'summary' && body.allRows === true && by.length > 0 && by.every(b => b.ref);
+			for (const [i, b] of by.entries()) {
+				const Ref = b.ref ? scopedModel(b.ref) : null;
+				if (!Ref) continue;
+				// A project's link names its model by the scoped name (T<project>_Employee); its definition goes by Employee.
+				const def: any = await ModelDefinition.findOne({ name: displayModelName(b.ref!) }, { displayField: 1, fields: 1 }).lean();
+				const display = def?.displayField && def.displayField !== '_id' && Ref.schema.path(def.displayField) ? def.displayField : '';
+				const names = [...new Set([display, ...LABEL_KEYS].filter(k => k && Ref.schema.path(k)))];
+				const reads = lookups.filter(l => l.at === i).map(l => l.key.split('.').slice(1).join('.'));
+				const ids = out.map(r => keysOf(r)[i]).filter(id => mongoose.isValidObjectId(id));
+				// Every pair (allRows): all of the linked model's records still in use, not only the ones counted —
+				// not archived, and active when the model has an "active" status (an inactive leave type gets no rows).
+				const status: any = (def?.fields || []).find((f: any) => f.key === 'status');
+				const activeOnly = !!Ref.schema.path('status') && (status?.options || []).some((o: any) => (o?.value ?? o) === 'active');
+				const inUse = { $or: [{ _id: { $in: ids } }, { archivedAt: null, ...(activeOnly && { status: 'active' }) }] };
+				const q = allRows ? inUse : { _id: { $in: ids } };
+				const docs: any[] = await Ref.find(q)
+					.select([...names, ...reads].join(' ') || '_id')
+					.limit(allRows ? 1000 : 0)
+					.lean();
+				for (const d of docs) linked[i].set(String(d._id), { label: String(names.map(k => d[k]).find(v => v !== undefined && v !== null && v !== '') ?? d._id), doc: d });
+			}
+
+			// The rows: one per counted value (or pair); with allRows, also every pair nothing was counted for.
+			const rowsBy = new Map<string, { keys: any[]; r: any }>();
+			for (const r of out) rowsBy.set(keysOf(r).map(String).join('|'), { keys: keysOf(r), r });
+			if (allRows) {
+				const lists = linked.map(m => [...m.keys()].map(id => new mongoose.Types.ObjectId(id)));
+				const pairs: any[][] = lists.length === 1 ? lists[0].map(a => [a]) : lists[0].flatMap(a => lists[1].map(b => [a, b]));
+				for (const keys of pairs.slice(0, 1000)) {
+					const k = keys.map(String).join('|');
+					if (!rowsBy.has(k)) rowsBy.set(k, { keys, r: { count: 0 } });
 				}
 			}
-			const labelOf = (id: any) =>
-				id === null || id === undefined || id === '' ? 'Not set' : typeof id === 'boolean' ? (id ? 'Yes' : 'No') : id instanceof Date ? id.toISOString().slice(0, 10) : labels.get(String(id)) || String(id);
+			let entries = [...rowsBy.values()];
+			truncated = out.length >= 1000 || entries.length > 1000;
+
+			const labelOf = (id: any, i: number) =>
+				id === null || id === undefined || id === ''
+					? 'Not set'
+					: typeof id === 'boolean'
+						? id
+							? 'Yes'
+							: 'No'
+						: id instanceof Date
+							? id.toISOString().slice(0, 10)
+							: linked[i]?.get(String(id))?.label || String(id);
+			// Two fields: in name order, so each employee's leave types sit together.
+			if (by.length === 2 || allRows)
+				entries = entries.sort((x, y) => {
+					for (let i = 0; i < x.keys.length; i++) {
+						const c = labelOf(x.keys[i], i).localeCompare(labelOf(y.keys[i], i), undefined, { numeric: true });
+						if (c) return c;
+					}
+					return 0;
+				});
+			entries = entries.slice(0, 1000);
+
+			const calcs = calcsOf(body.calcs);
+			const keyColumns = type === 'summary' ? by.map((b, i) => ({ key: i === 0 ? 'key' : `key${i}`, label: b.label, kind: 'text' })) : [{ key: 'key', label: 'Period', kind: 'text' }];
 			columns = [
-				{ key: 'key', label: keyLabel, kind: 'text' },
+				...keyColumns,
 				{ key: 'count', label: 'Records', kind: 'number' },
 				...sums.map((s, i) => ({ key: `s${i}`, label: s.label, kind: 'number' })),
+				...lookups.map((l, i) => ({ key: `l${i}`, label: l.label, kind: 'number' })),
+				...calcs.map(c => ({ key: `c_${c.key}`, label: c.label, kind: 'number' })),
 			];
-			rows = out.map(r => [labelOf(r._id), numberOf(r.count), ...sums.map((_, i) => numberOf(r[`s${i}`]))]);
-			footer = ['Total', rows.reduce((a, r) => a + Number(r[1]), 0), ...sums.map((_, i) => rows.reduce((a, r) => a + Number(r[i + 2]), 0))];
+			// What a calculated column's formula reads on a row: count, the summed fields, the lookups, earlier calcs.
+			const valuesOf = (count: number, sumsAt: number[], looks: any[]) => {
+				const v: Record<string, any> = { count };
+				sums.forEach((s, i) => (v[s.field] = sumsAt[i]));
+				lookups.forEach((l, i) => (v[l.key] = looks[i]));
+				return v;
+			};
+			const lookOf = (keys: any[], l: { key: string; at: number }) => {
+				const d = linked[l.at]?.get(String(keys[l.at]))?.doc;
+				const raw = d ? get(d, l.key.split('.').slice(1).join('.')) : null;
+				return raw === null || raw === undefined || raw === '' ? null : Number.isFinite(Number(raw)) ? Number(raw) : String(raw);
+			};
+			rows = entries.map(({ keys, r }) => {
+				const count = numberOf(r.count);
+				const sumsAt = sums.map((_, i) => numberOf(r[`s${i}`]));
+				const looks = lookups.map(l => lookOf(keys, l));
+				const named = type === 'summary' ? keys.map((k, i) => labelOf(k, i)) : [labelOf(r._id, -1)];
+				return [...named, count, ...sumsAt, ...looks, ...runCalcs(calcs, valuesOf(count, sumsAt, looks))];
+			});
+			const n = keyColumns.length;
+			const total = (i: number) => rows.reduce((a, r) => a + (Number.isFinite(Number(r[i])) ? Number(r[i]) : 0), 0);
+			const countT = total(n);
+			const sumsT = sums.map((_, i) => total(n + 1 + i));
+			const looksT = lookups.map((_, i) => total(n + 1 + sums.length + i));
+			footer = [...keyColumns.map((_, i) => (i === 0 ? 'Total' : null)), countT, ...sumsT, ...looksT, ...runCalcs(calcs, valuesOf(countT, sumsT, looksT))];
+		}
+
+		// Calculated columns on a list: from the row's own fields and linked parts (`leaveType.daysPerYear - approvedDays`).
+		if (type === 'list') {
+			const calcs = calcsOf(body.calcs);
+			if (calcs.length) {
+				const docs = listDocs;
+				columns = [...columns, ...calcs.map(c => ({ key: `c_${c.key}`, label: c.label, kind: 'number' }))];
+				rows = rows.map((row, i) => [...row, ...runCalcs(calcs, {}, docs[i])]);
+				if (footer) footer = [...footer, ...calcs.map(() => null)];
+			}
 		}
 
 		return { type, format, columns, rows, footer, count: rows.length, truncated, from, to };

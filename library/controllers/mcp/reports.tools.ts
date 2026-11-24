@@ -111,6 +111,26 @@ const REPORT_PROPS = {
 	sort: { type: 'string', description: 'list: e.g. "-date"' },
 	totals: { type: 'array', items: { type: 'string' }, description: 'list: number columns summed in a Total row' },
 	groupBy: { type: 'string', description: 'summary: the field each row is (a link or a choice field)' },
+	thenBy: { type: 'string', description: 'summary: a second field — one row per pair, e.g. groupBy employee, thenBy leaveType' },
+	lookups: {
+		type: 'array',
+		items: { type: 'object', required: ['key'], properties: { key: { type: 'string', description: 'A field of the record a row is grouped by: "leaveType.daysPerYear"' }, label: { type: 'string' } } },
+		description: 'summary: values of the grouped (linked) record shown on each row — usable in calcs by their key',
+	},
+	allRows: { type: 'boolean', description: 'summary on link field(s): a row for every linked record (every pair), even with nothing counted — e.g. every employee × every leave type' },
+	calcs: {
+		type: 'array',
+		items: {
+			type: 'object',
+			required: ['key', 'formula'],
+			properties: {
+				key: { type: 'string', description: 'letters/digits, e.g. "left"; later calcs can use it' },
+				label: { type: 'string' },
+				formula: { type: 'string', description: 'The formula fields’ language (+ - * / round max min if(...)). list: the record’s fields and linked parts; summary/timeline: count, the summed fields’ keys, lookup keys, earlier calc keys — e.g. "max(leaveType.daysPerYear - approvedDays, 0)"' },
+			},
+		},
+		description: 'Calculated columns, worked out on each row and on the Total row',
+	},
 	interval: { type: 'string', enum: ['day', 'week', 'month', 'year'] },
 	sums: { type: 'array', items: { type: 'object', required: ['field'], properties: { field: { type: 'string' }, label: { type: 'string' } } }, description: 'summary/timeline: number fields summed per row' },
 	filters: {
@@ -149,7 +169,7 @@ export const REPORT_TOOLS: ToolDef[] = [
 			const views = shown.map(r => reportView(r, who(caller)));
 			const lines = views.map(
 				r =>
-					`- “${r.name}”${r.category ? ` [${r.category}]` : ''} — ${r.type} on /${r.route}${r.type === 'summary' ? ` by ${r.groupBy}` : r.type === 'timeline' ? ` per ${r.interval} of ${r.dateField}` : `: ${r.columns.map((c: any) => c.key).join(', ')}`}${r.filters.length ? `; filters ${r.filters.map((f: any) => `${f.field} ${f.op} ${JSON.stringify(f.value)}`).join(', ')}` : ''}${r.exportable ? ` · downloads ${r.formats.join('/')}` : ' · not downloadable'} [id ${r._id}]`
+					`- “${r.name}”${r.category ? ` [${r.category}]` : ''} — ${r.type} on /${r.route}${r.type === 'summary' ? ` by ${r.groupBy}${r.thenBy ? ` × ${r.thenBy}` : ''}${r.lookups?.length ? `; values ${r.lookups.map((l: any) => l.key).join(', ')}` : ''}${r.allRows ? ' (every pair)' : ''}` : r.type === 'timeline' ? ` per ${r.interval} of ${r.dateField}` : `: ${r.columns.map((c: any) => c.key).join(', ')}`}${r.calcs?.length ? `; calculated ${r.calcs.map((c: any) => `${c.key} = ${c.formula}`).join(', ')}` : ''}${r.filters.length ? `; filters ${r.filters.map((f: any) => `${f.field} ${f.op} ${JSON.stringify(f.value)}`).join(', ')}` : ''}${r.exportable ? ` · downloads ${r.formats.join('/')}` : ' · not downloadable'} [id ${r._id}]`
 			);
 			return { text: `${views.length} report(s):\n${lines.join('\n')}`, data: { reports: views } };
 		},

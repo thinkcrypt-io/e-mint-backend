@@ -11,6 +11,10 @@ import { tenantScoped } from '../../functions/tenantScope.function.js';
  *   summary   one row per value of `groupBy` (a shed, a status): how many, and sums
  *   timeline  one row per day / week / month of `dateField`: how many, and sums
  *
+ * Report rules: a summary can be one row per pair of fields (`thenBy`), show values of
+ * the grouped record (`lookups`), list every pair even with nothing counted (`allRows`),
+ * and any kind adds calculated columns (`calcs`, the formula fields' language).
+ *
  * `filters` narrow it always ({ field, op, value } in the list's field_op terms);
  * whoever runs it picks `from` / `to` on `dateField` (a default `range` first), and a
  * value for each of `readerFilters` (fields the builder lets the reader narrow it by).
@@ -33,6 +37,14 @@ const schema = new Schema<any>(
 		sort: { type: String, trim: true },
 		totals: { type: [String], default: [] },
 		groupBy: { type: String, trim: true },
+		/** summary: a second field — one row per pair (an employee × a leave type). */
+		thenBy: { type: String, trim: true },
+		/** summary: values of the record a row is grouped by ("leaveType.daysPerYear"). */
+		lookups: [{ _id: false, key: String, label: String }],
+		/** summary: a row for every record of the linked field(s), even with nothing counted. */
+		allRows: { type: Boolean, default: false },
+		/** Calculated columns: a formula on each row (getReport.controller.ts calcsOf). */
+		calcs: [{ _id: false, key: String, label: String, formula: String }],
 		interval: { type: String, enum: ['day', 'week', 'month', 'year'], default: 'month' },
 		sums: [{ _id: false, field: String, label: String }],
 		filters: [{ _id: false, field: String, op: { type: String, enum: REPORT_OPS, default: 'eq' }, value: Schema.Types.Mixed }],
