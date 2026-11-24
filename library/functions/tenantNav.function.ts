@@ -187,6 +187,8 @@ export const tenantNav = (
 					? [
 							{ title: projectType === 'ecommerce' ? 'Panel admins' : 'Panel users', href: projectType === 'ecommerce' ? '/panel-admins' : '/panel-users', icon: 'user-cog' },
 							{ title: 'Panel roles', href: '/panel-roles', icon: 'shield-check' },
+							// The look the project's panel opens in: the tenant panel opens it as a dialog, not a page.
+							{ title: 'Panel theme', href: '/panel-theme', icon: 'palette' },
 					  ]
 					: []),
 		  ])
