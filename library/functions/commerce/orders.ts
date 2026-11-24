@@ -324,7 +324,7 @@ export const trackWebsite = async (store: Store, id: any, phone: any) => {
 		: null;
 	// With a phone it must be the one on the order (the same answer for a wrong id and a wrong phone); without, the id is the key — as the order page's link always was.
 	if (!o || (phone !== undefined && phone !== '' && (tail(phone).length < 7 || tail(o.delivery?.phone) !== tail(phone)))) throw new TenancyError(404, 'We couldn’t find an order with those details.');
-	return publicOrder(o);
+	return (await withItemPictures(store, [publicOrder(o)]))[0];
 };
 
 /** The order as its buyer sees it: no staff notes, cashier or ids of other records. */
@@ -350,6 +350,9 @@ export const publicOrder = (o: any) => ({
 	createdAt: o.createdAt,
 	slot: o.slot || '',
 	items: (o.items || []).map((i: any) => ({
+		// the product and variant (both public in the store) so the buyer's order page can link and show them
+		product: i.product ? String(i.product) : null,
+		variant: i.variant ? String(i.variant) : null,
 		name: i.name,
 		quantity: i.quantity,
 		unitPrice: i.unitPrice,
@@ -369,6 +372,35 @@ export const publicOrder = (o: any) => ({
 		? { courier: o.courier.provider || '', status: o.courier.status || '', trackingCode: o.courier.tracking || '', trackingUrl: o.courier.trackingUrl || '', updatedAt: o.courier.lastUpdate || null }
 		: null,
 });
+
+const picOf = (x: any) => {
+	const v = Array.isArray(x) ? x[0] : x;
+	return (typeof v === 'string' ? v : v?.url) || '';
+};
+
+/**
+ * Each item's picture (the variant's own, else the product's), its colour / size and the product's slug — what the buyer's
+ * order pages show beside the name. Two reads for any number of orders; an item whose product is gone keeps its name only.
+ */
+export const withItemPictures = async <T extends { items: any[] }>(store: Store, orders: T[]): Promise<T[]> => {
+	const ids = (k: string) => [...new Set(orders.flatMap(o => o.items.map(i => i[k]).filter((x: any) => isId(x))))];
+	const [products, variants]: any[][] = await Promise.all([
+		store.M('product').find({ _id: { $in: ids('product') } }, { images: 1, image: 1, slug: 1 }).lean(),
+		store.M('variant').find({ _id: { $in: ids('variant') } }, { image: 1, title: 1, optionValues: 1, isDefault: 1 }).lean(),
+	]);
+	const P = new Map(products.map(p => [String(p._id), p]));
+	const V = new Map(variants.map(v => [String(v._id), v]));
+	for (const o of orders)
+		for (const i of o.items) {
+			const p = P.get(String(i.product));
+			const v = V.get(String(i.variant));
+			i.image = picOf(v?.image) || picOf(p?.images) || picOf(p?.image) || '';
+			i.slug = p?.slug || '';
+			i.options = v && !v.isDefault ? (v.optionValues || []).map((x: any) => ({ name: String(x.name), value: String(x.value) })) : [];
+			i.variantTitle = v && !v.isDefault ? v.title || '' : '';
+		}
+	return orders;
+};
 
 /* ----------------------------------------------------------------- held */
 
@@ -568,12 +600,12 @@ export const myWebsiteOrders = async (store: Store, email: string, q: { done?: a
 	const limit = Math.min(50, Math.max(1, Number(q.limit) || 10));
 	const page = Math.max(1, Number(q.page) || 1);
 	const [docs, total] = await Promise.all([Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(), Order.countDocuments(filter)]);
-	return { doc: docs.map(publicOrder), total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+	return { doc: await withItemPictures(store, docs.map(publicOrder)), total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
 };
 
 /** One of a signed-in buyer's orders. */
 export const myWebsiteOrder = async (store: Store, email: string, id: any) => {
 	const o: any = isId(id) ? await store.M('order').findOne({ _id: id, channel: 'website', email: String(email || '').toLowerCase() }).lean() : null;
 	if (!o) throw new TenancyError(404, 'We couldn’t find that order.');
-	return publicOrder(o);
+	return (await withItemPictures(store, [publicOrder(o)]))[0];
 };

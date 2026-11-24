@@ -6,7 +6,13 @@ Sizes: **S** ≤ 1h, **M** ≤ half a day, **L** ≤ 2 days.
 Paths are from the monorepo root `/Users/asifistiaque/Desktop/proj/e-mint`.
 Update the **Status** column and `CHANGELOG.md` as each item lands.
 
-## Handoff — read this first (kept current; last updated 2026-11-24)
+## Handoff — read this first (kept current; last updated 2026-11-25)
+
+**2026-11-25 — Buyer order items carry their picture and variant.** `publicOrder` items now include `product` and
+`variant` ids, and `withItemPictures()` (commerce/orders.ts) adds `image` (variant's own, else the product's), `slug`,
+`options` ({name, value}) and `variantTitle` on `/store/my/orders`, `/store/my/orders/:id` and `/store/orders/:id`
+(Track Order) — two reads for any number of orders. Storefront use: elarose-site My Orders cards + order page
+(`lib/orderItems.ts`, which falls back to matching items by name on the old server). **Backend not deployed.**
 
 **2026-11-24 — Report rules (RP-06, docs/panel-users).** A Summary report can now have `thenBy` (one row per
 pair, e.g. employee × leave type), `lookups` (values of the linked record a row is per, e.g. `leaveType.daysPerYear`),
