@@ -40,7 +40,7 @@ update the guide (`docs/site-connect/guide` + mint-docs), the marketing website,
 | SP-13 | SEO logins' own AI over MCP: `suggest_seo`, pages, health, link preview tools (allowlist like commerce-mcp) | backend | S | later (Q5) |
 | SP-14 | Weekly SEO email: visits, top pages, new issues, pages without SEO | backend | S | later |
 | SP-15 | Pattern rules for big sites (= site-connect SC-07) | backend + mint-seo | M | later |
-| SP-16 | Search Console connection (= SEO-15) on the Home page | backend + mint-seo | L | later |
+| SP-16 | Search Console connection (= SEO-15) on the Home page | backend + mint-seo | L | planned in `../search-console` (GS-07 = the SEO app's tab + Home card) |
 
 Order: SP-00a…e → SP-01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 11. Phase 2 after the user's answers.
 

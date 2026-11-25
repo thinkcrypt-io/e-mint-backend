@@ -26,7 +26,7 @@ another.
 | SEO-12 | Redirects: automatic on path change, CSV import, loop check | Engine | backend + mint-tenant | S | todo |
 | SEO-13 | PageSpeed page | Measure | backend + mint-tenant | M | todo |
 | SEO-14 | Link preview checker | Measure | backend + mint-tenant | S | done 2026-10-28 (Site setup → Link previews; real shares not tried) |
-| SEO-15 | Google Search Console connection | Measure | backend + mint-tenant | L | todo |
+| SEO-15 | Google Search Console connection | Measure | backend + mint-tenant | L | planned in full in `../search-console` (GS-00…15, 2026-11-25) |
 | SEO-16 | Whole-site audit (crawler, checks, score) | Measure | backend + mint-tenant | L | todo |
 | SEO-17 | Backlinks: referring sites + Bing Webmaster | Measure | backend + mint-tenant | M | todo |
 | SEO-18 | Search bot and AI crawler visits | Measure | mint-sites + mint-edge + backend + mint-tenant | M | todo |
@@ -203,6 +203,8 @@ problem).
   preview tab on an SEO record's page; smoke `seo-link-preview.mjs` (25). See CHANGELOG.
 
 ### SEO-15 Google Search Console connection — L
+
+> Superseded 2026-11-25 by the full plan in `../search-console/README.md` + `WORK_ORDERS.md` (GS-00…15).
 
 **Why:** the real numbers: what people searched, clicks, impressions, position.
 
