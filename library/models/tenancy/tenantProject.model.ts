@@ -11,8 +11,9 @@ import { businessSchema } from '../../functions/business.function.js';
 /**
  * `api` (docs/templates TD2): a project whose workspace leads with its public API.
  * `ecommerce` (docs/ecommerce EC1): a store — set up by its wizard, with POS, orders and returns; an app otherwise.
+ * `accounting` (docs/accounting D1): a set of books (DiziCashier-style); its panel logins sign in at mint-accounting.
  */
-export const PROJECT_TYPES = ['app', 'website', 'api', 'ecommerce'] as const;
+export const PROJECT_TYPES = ['app', 'website', 'api', 'ecommerce', 'accounting'] as const;
 /**
  * A website project's edition (docs/seo-panel D1): `seo` = an existing site connected for SEO and analytics only. Its
  * panel logins sign in at the SEO panel (mint-seo, `app: 'seo'`), behind a setup gate. Not a `type`, so every website

@@ -155,9 +155,9 @@ export const createProject = async (req: any, organization: any, body: { name: s
 	try {
 		await runInScope({ organization, project: project._id }, async () => {
 			await SidebarCategory.create({
-				name: body.type === 'website' ? 'Website' : body.type === 'api' ? 'Data' : 'Pages',
+				name: body.type === 'website' ? 'Website' : body.type === 'api' ? 'Data' : body.type === 'accounting' ? 'Books' : 'Pages',
 				priority: 100,
-				icon: body.type === 'website' ? 'globe' : body.type === 'api' ? 'database' : 'layout-grid',
+				icon: body.type === 'website' ? 'globe' : body.type === 'api' ? 'database' : body.type === 'accounting' ? 'calculator' : 'layout-grid',
 				isActive: true,
 			});
 			await DashboardConfig.create({ key: 'default', widgets: [] });

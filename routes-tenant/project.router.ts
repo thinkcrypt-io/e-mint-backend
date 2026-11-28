@@ -1,5 +1,6 @@
 import express from 'express';
 import { seoPanelGuard, seoSidebar, isSeoProject } from '../library/functions/seoPanel.function.js';
+import { accountingPanelGuard, accountingNav, isAccountingProject } from '../library/functions/accountingPanel.function.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
 import { tenantProtect } from '../middleware/tenant/protect.tenant.middleware.js';
 import { grants, projectPermissions, projectRoleOf, tenantPermissions } from '../library/functions/tenantPermissions.function.js';
@@ -118,6 +119,8 @@ router.use(async (req: any, res: any, next: any) => {
 
 // An SEO project's logins (docs/seo-panel): only the SEO panel's paths, and only setup until the site is live.
 router.use(seoPanelGuard);
+// An accounting project's logins (docs/accounting D7): the books, never the project owner's builder tools.
+router.use(accountingPanelGuard);
 
 router.get('/', (req: any, res: any) => res.status(200).json(publicProject(req.project)));
 
@@ -159,6 +162,8 @@ router.get('/sidebar/:platform/:type', async (req: any, res: any) => {
 	try {
 		// The SEO panel's own fixed sidebar: Setup until the site is live (docs/seo-panel D4).
 		if (req.panelAdmin && isSeoProject(req.project)) return res.status(200).json(await seoSidebar(req.permissions || []));
+		// The accounting panel's DiziCashier-shaped sidebar (docs/accounting D9).
+		if (req.panelAdmin && isAccountingProject(req.project)) return res.status(200).json(accountingNav(req.permissions || []));
 		const items = await buildSidebar(req.permissions || [], (permissions, key) => grants(permissions, [key]));
 		// The tenant panel serves project tables under /t/<route> (admin panel.ts pagePath).
 		const project = items.map(i => (i.href === '/' ? i : { ...i, href: `/t${i.href}` }));

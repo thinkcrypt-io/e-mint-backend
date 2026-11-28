@@ -47,8 +47,13 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
 
 - 2026-11-28 AC-00: DiziCashier inspected in the user's account (all ~95 menu pages, create forms, settings tabs, role
   matrix, route registry); inventory, plan, WOs, this handoff written.
+- 2026-11-28 AC-01: `accounting` in PROJECT_TYPES; `library/functions/accountingPanel.function.ts` (guard blocks
+  builder/people/automations/… for accounting logins with 403 ACCOUNTING_PANEL_ONLY; `accountingNav` = DiziCashier's
+  sidebar, served from `/sidebar` to accounting logins; `ACCOUNTING_REPORTS` = the 41 report keys); panel auth takes
+  `app: 'accounting'` (checked before SEO) and answers `use_accounting` / `use_panel|use_seo|use_commerce`; first
+  sidebar category "Books"; mint-tenant New project → Accounting card (opens Panel users after create). Smoke
+  `scripts/tenancy-smoke/accounting-panel.mjs` all passed. Backend not deployed (Heroku is manual).
 
 ## Next step
 
-AC-01 (project type + panel app auth), then AC-02 (blueprint) and AC-03 (ledger engine) — the engine is the core;
-build it test-first.
+AC-02 (blueprint install), then AC-03 (ledger engine) — the engine is the core; build it test-first.

@@ -1,5 +1,6 @@
 import express from 'express';
 import { isSeoProject } from '../library/functions/seoPanel.function.js';
+import { isAccountingProject } from '../library/functions/accountingPanel.function.js';
 import Joi from 'joi';
 import PanelAdmin, { DEMO_TOKEN_SECONDS } from '../library/models/tenancy/panelAdmin.model.js';
 import TenantProject from '../library/models/tenancy/tenantProject.model.js';
@@ -52,11 +53,20 @@ const check = (schema: Joi.Schema, body: any) => {
  * A token for `admin`, after the checks every sign-in makes: its project and organization are open, and it
  * belongs to this app (a store's login opens the commerce panel, any other project's the panel app).
  */
-const signIn = async (admin: any, req: any, app: 'commerce' | 'panel' | 'seo', method: string) => {
+const signIn = async (admin: any, req: any, app: 'commerce' | 'panel' | 'seo' | 'accounting', method: string) => {
 	const project: any = await TenantProject.findById(admin.project).lean();
 	const organization: any = project && (await Organization.findById(project.organization, { isActive: 1 }).lean());
 	if (!project || project.isActive === false || !organization || organization.isActive === false)
 		throw new TenancyError(400, 'This project isn’t open any more.');
+	// An accounting project's logins sign in at mint-accounting only, and only they do (docs/accounting D7).
+	if (app !== 'accounting' && isAccountingProject(project))
+		throw new TenancyError(400, 'This login is for Mint Accounting. Sign in at accounting.tcrypt.site.', 'use_accounting');
+	if (app === 'accounting' && !isAccountingProject(project))
+		throw isSeoProject(project)
+			? new TenancyError(400, 'This login is for Mint SEO. Sign in at the SEO app.', 'use_seo')
+			: project.type === 'ecommerce'
+			? new TenancyError(400, 'This is a store login. Sign in at the commerce panel.', 'use_commerce')
+			: new TenancyError(400, 'This login is for the panel app. Sign in at panel.tcrypt.site.', 'use_panel');
 	// An SEO project's logins sign in at the SEO app only, and only they do (docs/seo-panel D2).
 	if (app !== 'seo' && isSeoProject(project)) throw new TenancyError(400, 'This login is for Mint SEO. Sign in at the SEO app.', 'use_seo');
 	if (app === 'seo' && !isSeoProject(project))
@@ -81,7 +91,7 @@ router.post(
 				username: Joi.string().trim().lowercase().max(200),
 				email: Joi.string().trim().lowercase().max(200),
 				password: Joi.string().required(),
-				app: Joi.string().valid('commerce', 'panel', 'seo').default('commerce'),
+				app: Joi.string().valid('commerce', 'panel', 'seo', 'accounting').default('commerce'),
 			})
 				.or('username', 'email')
 				.messages({ 'object.missing': 'Enter your username' }),
@@ -107,7 +117,7 @@ router.post(
 		const body = check(
 			Joi.object({
 				key: Joi.string().trim().pattern(/^[\w-]{16,100}$/).required(),
-				app: Joi.string().valid('commerce', 'panel', 'seo').default('commerce'),
+				app: Joi.string().valid('commerce', 'panel', 'seo', 'accounting').default('commerce'),
 			}).messages({ 'string.pattern.base': 'This demo link isn’t right.', 'any.required': 'This demo link isn’t right.' }),
 			req.body
 		);
