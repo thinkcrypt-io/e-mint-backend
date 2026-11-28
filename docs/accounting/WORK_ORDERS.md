@@ -1,0 +1,33 @@
+# Mint Accounting — work orders
+
+Plan: `README.md`. Source of truth for behaviour: `DIZICASHIER_INVENTORY.md`. Commit + push each WO when it's done
+(stage only your own files), then update `HANDOFF.md`.
+
+| WO | What | Done when | Status |
+|---|---|---|---|
+| AC-00 | Inspect DiziCashier; inventory + plan + WOs + handoff | docs in `docs/accounting` | done 2026-11-28 |
+| AC-01 | **Project type `accounting`** in `PROJECT_TYPES`; tenant New project → Accounting card; `app: 'accounting'` in panel auth (`use_accounting` both ways); path allowlist for accounting tokens; tenantNav for accounting projects (Panel users, no store pages). Smoke `scripts/tenancy-smoke/accounting-panel.mjs` | an accounting project's panel login signs in with `app: 'accounting'` and is refused elsewhere | |
+| AC-02 | **Blueprint install** `library/functions/accounting/{blueprint,install,seed}.ts`: every model in README → Models, locked core fields, DiziCashier's seeded chart of accounts + Tax Free + Main warehouse + Cash payment method + AccountingSettings defaults; `failed` + retry; `scripts/upgradeBooks.js` | a new accounting project ends `ready` with all models and the seeded chart | |
+| AC-03 | **Ledger engine** `accounting/engine.ts`: posting rules for sale, purchase, returns, exchange, payment in/out, expense, income, transfer, voucher (balanced or 400), cheque clear/bounce, opening balances (customer/supplier/product/account), in one transaction; re-post on edit, remove on delete; doc status paid/unpaid/partial + due; counters (D5); negative-balance rule. Unit tests: every doc type → trial balance nets to 0 | test suite green; trial balance always balances | |
+| AC-04 | **Stock engine**: StockMove + Stock (in hand, weighted avg cost per product × warehouse), COGS at average on sale/return, adjustment (to *Stock Adjustment*), transfer, production (template consume → produce, cost rolls up), negative-stock rule, opening stock | stock list numbers match hand-worked cases | |
+| AC-05 | **mint-accounting app**: copy mint-panel (`cp -cR` node_modules clone), `NEXT_PUBLIC_PANEL_APP=accounting`, port 3760, launch.json `mint-accounting`; DiziCashier sidebar (11 groups, inventory § Shell) served by backend `accountingNav`; header with company name + ID; **+ Add New** menu; AuthFrame copy; private repo aiasifistiaque/mint-accounting; Vercel project `mint-accounting` on the e-mint Hobby account (backend/.env VERCEL_TOKEN); domain **accounting.tcrypt.site** | site loads at accounting.tcrypt.site and signs in | |
+| AC-06 | **Dashboard** (6 cards, 5 charts, period switch) + **Dashboard Settings** (per login) | numbers equal the reports' | |
+| AC-07 | **Make Sale** worksheet (customer search + New Customer, warehouse, product search/barcode, frequent products, qty/price/subtotal, tax, discount %/amount, round-up, shipping, net receivable, payment rows by method, due, deliver later, note, pictures; Save / Save & New / Save & Print) + Sales list (status tabs, filters, bulk) + sale record page + **invoice print** (A4 / 80 mm / 58 mm, Invoice settings) | a sale posts journal + stock and prints | |
+| AC-08 | **Quotation** (+ print with/without price, validity, convert to sale), **Return sold product** (slip → Go), **Return customer product**, **Exchange** | each posts correctly | |
+| AC-09 | **Make Purchase** worksheet + list, **Purchase Order** (convert), **Purchase Return** (slip → Go); update buying price / set selling price options | | |
+| AC-10 | **Payments**: Receive / Give Payment popups (from Add New and trader pages) against slips / on account, lists, money receipt print; **Clearing Cheque** (Open/Close/Cancel tabs, clear, bounce) | | |
+| AC-11 | **Transactions**: Pay Expense (rows, cost centre), Incomes (rows), Withdraw/Deposit/Transfer/Cash Out, **Vouchers** (debit/credit rows, types, balanced check, print) | | |
+| AC-12 | **Chart of Accounts** (4 tabs × groups, balances, + Add New per group, Mobile Bank cash-out balance), **Account Statement** (running balance), **Payment Methods** | | |
+| AC-13 | **Products/Services**: product form (opening stock, barcode generate, extra fields), services, add bulk (attributes → variants), categories (tree), units, **Change Products Price** grid, **Import Products** (template + preview + import), **Print Barcode** (by slip or picked, label sizes, preview) | | |
+| AC-14 | **Traders**: customer/supplier forms (codes, opening advance/due), list tabs (Active/Inactive/Show with balance), trader page (ledger, docs, payments, products bought), **Import Traders** | | |
+| AC-15 | **Stocks** screens: warehouses, Stock List (+ history, filters), Stock Adjustment, Stock Transfer, Production Template, Production | | |
+| AC-16a | **Reports engine** `/accounting/reports/:key` + Reports dashboard (search, groups) + report page (filters → Generate → table → Print PDF / Excel). Customer/Supplier group (12) | | |
+| AC-16b | Sales reports (11) | | |
+| AC-16c | Purchase (3) + Expense (2) + Tax (1) | | |
+| AC-16d | Financial: Profit Loss, Todays Transaction, Cash Book, Day Closing, Cashier-wise Cash Summary, **Balance Sheet**, **Trial Balance**, Ledger (any account) | BS balances, TB nets 0 on the demo | |
+| AC-16e | Stock reports (5) | | |
+| AC-17 | **Settings** tabs (Language, Primary, Account, Manage Inventory, Item, Trader, Purchase, Sale, Order, Return/Exchange, Invoice) wired to screens + engine; **Organization Info**; **Taxes** | each live switch changes behaviour | |
+| AC-18 | **Users + Roles** in the app (DiziCashier matrix, D8) enforced in backend + UI; **Activity Log** page | a SalesPerson role can sell but not see cost or reports | |
+| AC-19 | **Demo**: prod project "Mint Accounting Demo", `scripts/seedAccountingDemo.js` (3 months of data via the engine), super-admin login for the user, demo login link; listed on thinkcrypt.com / commerce site demos if the user wants | demo opens signed in and every report has data | |
+| AC-20 | **Docs + website**: mint-docs guide `/accounting` (+ #anchors linked from every screen), mint-webpage changelog/feature entry | | |
+| Later | Sale/purchase installments, sales representatives, cost centres in reports, batches/expiry, serials, Bangla, SMS, Excel/Doc invoice export, AI over MCP for the books | | |
