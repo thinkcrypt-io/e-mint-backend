@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import { getErrorMessage } from '../../imports.js';
 import recordHistory from '../../library/functions/recordHistory.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
+import { booksFailure, booksFor } from '../../library/functions/accounting/engine.js';
+import { isAccountingProject } from '../../library/functions/accountingPanel.function.js';
 import { recalculateDependents } from '../../library/functions/formulaDependents.function.js';
 
 const deleteDocument = (model: mongoose.Model<any>) => {
@@ -28,6 +30,12 @@ const deleteDocument = (model: mongoose.Model<any>) => {
 				if (plan?.error) return res.status(400).json(plan.error);
 			}
 
+			// The books (docs/accounting AC-03): its posting is taken back; a used account / trader / product stays.
+			const existing = isAccountingProject((req as any).project) ? await model.findById(id) : null;
+			const books = existing ? await booksFor(req as any, model, 'delete', existing.toObject(), null) : null;
+			if (books?.error) return res.status(400).json(books.error);
+			if (books && !raw) raw = await model.collection.findOne({ _id: existing._id });
+
 			// Attempt to delete the document with the given ID.
 			const data = await model.findByIdAndDelete(id);
 
@@ -43,6 +51,14 @@ const deleteDocument = (model: mongoose.Model<any>) => {
 				} catch (e) {
 					if (raw) await model.collection.insertOne(raw);
 					return linkedFailure(res, e);
+				}
+
+			if (books?.apply)
+				try {
+					await books.apply(data);
+				} catch (e) {
+					if (raw) await model.collection.insertOne(raw);
+					return booksFailure(res, e);
 				}
 
 			// Records whose formulas read this one through a link: it reads as 0 now.

@@ -67,6 +67,28 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
   needs the backend deployed); the code blueprint (`library/functions/accounting/blueprint.ts` from these models) is
   still to do.
 
+- 2026-11-28 AC-03 (+ AC-04 core): the ledger + stock engine. `library/functions/accounting/posting.ts` = pure posting
+  rules per document kind (sale, purchase, sale/product/purchase returns, exchange, payment, expense, income, transfer,
+  voucher, cheque clear/bounce, stock adjustment/transfer, production, product/trader/account openings) → balanced
+  journal lines + stock moves at weighted average cost + engine-owned fields (status, costOfGoods, line unitCost,
+  totalCost) + product price updates; accounts found by the chart's `systemKey`. Tests
+  `library/functions/accounting/test/posting.test.ts` (37, `npx jest library/functions/accounting`).
+  `engine.ts` `booksFor(req, Model, action, before, after)` runs beside `linkedFor` in the generic create / update /
+  delete / copy controllers of an **accounting** project (models found by blueprint route, `compiledByRoute`): refuses
+  before the save (400 with `code`: voucher_unbalanced, not_enough_stock, books_in_use, books_system_account…), after it
+  reverses the document's old journal lines + moves (by `sourceId`), writes new ones, updates Stock records, patches the
+  document, recomputes account balances, trader balances (+ lastTradingDate), product inStock/avgCost and — for a
+  payment against a slip — the sale's receivedLater / purchase's paidLater, due and status. Failure puts the old posting
+  back and the controller restores the record. Bulk delete/archive/restore/merge/import on posting routes →
+  400 books_one_at_a_time (`booksOneAtATime` in the router). Smoke `scripts/tenancy-smoke/accounting-engine.mjs` builds
+  the books from `fixtures/accounting-books.json` in a fresh accounting project and runs every document: all passed
+  (trial balance 0 after each step, inventory account = stock list value). Backend not deployed.
+  Known limits: the negative account balance switch (settings.account.allowNegativeBalance) isn't enforced yet; no Mongo transaction (compensating undo); stock writes are read-modify-write (no concurrency guard);
+  back-dated documents don't re-cost later sales; MCP `create_records` skips the engine; a sale return with
+  `reduce_due` doesn't change the sale slip's due; settings switches left unset count as allowed (negative stock);
+  the demo project `thinkcrypt-expense-management` is type `app`, so its books don't post until it is made
+  `accounting` (after deploy).
+
 ## Next step
 
-AC-02 rest (code blueprint from the demo project's models), then AC-03 (ledger engine) — the engine is the core; build it test-first.
+AC-02 rest (code blueprint: install `fixtures/accounting-books.json`'s plans + seed for new accounting projects, and make the demo project type `accounting`), then AC-05 (mint-accounting app).

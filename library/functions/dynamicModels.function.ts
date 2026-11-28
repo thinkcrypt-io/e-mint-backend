@@ -1611,6 +1611,10 @@ const stampOf = (def: any) => `${def.version || 0}:${new Date(def.updatedAt || 0
 export const compileError = (name: string) => reg().failures.get(name) || null;
 export const compiledModel = (name: string) => reg().compiled.get(name)?.Model || null;
 export const isBuiltModel = (name: string) => reg().compiled.has(name);
+/** The scope's compiled model served at a route (docs/accounting: the books find their models by route). */
+export const compiledByRoute = (route: string) => [...reg().compiled.values()].find(c => c.def.route === route)?.Model || null;
+/** The route a compiled model is served at, or null if it isn't one of the scope's built models. */
+export const routeOfModel = (Model: any) => [...reg().compiled.values()].find(c => c.Model === Model || c.Model?.modelName === Model?.modelName)?.def.route || null;
 
 /** A deleted tenant project: its models, routes and registry are forgotten. */
 /**

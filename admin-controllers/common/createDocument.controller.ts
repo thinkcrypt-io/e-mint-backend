@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../imports.js';
 import recordHistory from '../../library/functions/recordHistory.function.js';
 import { applyFormulasLinked } from '../../library/functions/formula.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
+import { booksFailure, booksFor } from '../../library/functions/accounting/engine.js';
 
 const createDocument = (model: mongoose.Model<any>) => {
 	return async (req: any, res: Response): Promise<Response> => {
@@ -20,6 +21,9 @@ const createDocument = (model: mongoose.Model<any>) => {
 			if (hidden.length || rules) await document.validate(hidden.length ? { pathsToSkip: hidden } : undefined);
 			const plan = rules ? await linkedFor(req, model, 'create', null, document.toObject()) : null;
 			if (plan?.error) return res.status(400).json(plan.error);
+			// The books (docs/accounting AC-03): a posting document is checked before it is saved.
+			const books = await booksFor(req, model, 'create', null, document.toObject());
+			if (books?.error) return res.status(400).json(books.error);
 			const saved = await document.save(hidden.length || rules ? { validateBeforeSave: false } : undefined);
 
 			let also: any[] = [];
@@ -29,6 +33,16 @@ const createDocument = (model: mongoose.Model<any>) => {
 				} catch (e) {
 					await model.collection.deleteOne({ _id: saved._id });
 					return linkedFailure(res, e);
+				}
+
+			if (books?.apply)
+				try {
+					const posted = await books.apply(saved);
+					// What the books set on it (status, cost of goods), in the answer too.
+					if (posted?.patch) saved.set(posted.patch);
+				} catch (e) {
+					await model.collection.deleteOne({ _id: saved._id });
+					return booksFailure(res, e);
 				}
 
 			recordHistory({ req, action: 'create', model: model.modelName, doc: saved });

@@ -6,6 +6,7 @@ import { recalculateDependents } from '../../library/functions/formulaDependents
 import { secretPaths } from '../../library/functions/secretFields.function.js';
 import { lockedChanges, lockedMessage } from '../../library/functions/fieldLocks.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
+import { booksFailure, booksFor } from '../../library/functions/accounting/engine.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -42,7 +43,7 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			// after them there is nothing left to compare the new values against.
 			const before = data.toObject();
 			// As stored, to put back exactly if a linked record can't be updated.
-			const beforeRaw = hasLinkedRules(req) ? await model.collection.findOne({ _id: data._id }) : null;
+			const beforeRaw = await model.collection.findOne({ _id: data._id });
 
 			// Conditional read-only (settings `lockWhen`): a field the record's
 			// current state has locked — a paid bill's status — keeps its value.
@@ -63,6 +64,9 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 			if (hidden.length || rules) await data.validate(hidden.length ? { pathsToSkip: hidden } : undefined);
 			const plan = rules ? await linkedFor(req, model, 'update', before, data.toObject()) : null;
 			if (plan?.error) return res.status(400).json(plan.error);
+			// The books (docs/accounting AC-03): a posting document is checked before it is saved.
+			const books = await booksFor(req, model, 'update', before, data.toObject());
+			if (books?.error) return res.status(400).json(books.error);
 
 			const saved = await data.save(hidden.length || rules ? { validateBeforeSave: false } : undefined);
 
@@ -74,6 +78,16 @@ const updateDocument = ({ model, allowEdits, settings }: EndwareType) => {
 					// The record goes back to how it was, with the rest.
 					if (beforeRaw) await model.collection.replaceOne({ _id: saved._id }, beforeRaw);
 					return linkedFailure(res, e);
+				}
+
+			if (books?.apply)
+				try {
+					const posted = await books.apply(saved);
+					// What the books set on it (status, cost of goods), in the answer too.
+					if (posted?.patch) saved.set(posted.patch);
+				} catch (e) {
+					if (beforeRaw) await model.collection.replaceOne({ _id: saved._id }, beforeRaw);
+					return booksFailure(res, e);
 				}
 
 			// Records whose formulas read this one through a link (`tax.amount`).

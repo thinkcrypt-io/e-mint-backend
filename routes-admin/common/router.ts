@@ -35,6 +35,7 @@ import {
 import { constructPermissions, constructConfig, SettingsType } from '../../imports.js';
 import mongoose from 'mongoose';
 import createDocument from '../../admin-controllers/common/createDocument.controller.js';
+import { booksOneAtATime } from '../../library/functions/accounting/engine.js';
 import { bulkPublish, publishAction, scheduleAction } from '../../library/controllers/crud/publish.controller.js';
 import getViewDocument, { getViewTab } from '../../library/controllers/builder/viewDocument.controller.js';
 import { rollupResponses, rollupsOf } from '../../library/functions/rollups.function.js';
@@ -484,7 +485,8 @@ const defineRoutes = ({
 	// Bulk actions on the ticked rows (bulkActions.controller.ts): the route's
 	// permission for the action, and the list's access rules in queryHelper.
 	// On access-restricted routes deleting and merging are the owner's alone.
-	const bulk = (perm: string) => [protect, hasPermission([perm]), ...(injectMiddleware?.getAll || [])];
+	// An accounting project's posting documents change one at a time, so each takes its entries in and out of the books (docs/accounting AC-03).
+	const bulk = (perm: string) => [protect, hasPermission([perm]), ...(injectMiddleware?.getAll || []), booksOneAtATime(config.MODEL)];
 	const bulkOpts = { Model: config.MODEL, ownerOnly: !!injectMiddleware?.delete };
 	router.post('/bulk/delete', ...bulk(permissions.delete), bulkDelete(bulkOpts));
 	router.post('/bulk/restore', ...bulk(permissions.delete), bulkRestore(bulkOpts));
@@ -514,7 +516,7 @@ const defineRoutes = ({
 	// the create permission; checked row by row like the create form, saved
 	// only when every row passes.
 	router.get('/bulk/import/template', protect, hasPermission([permissions.create]), importTemplate(config.MODEL));
-	router.post('/bulk/import', protect, hasPermission([permissions.create]), importRows(config.MODEL));
+	router.post('/bulk/import', protect, hasPermission([permissions.create]), booksOneAtATime(config.MODEL), importRows(config.MODEL));
 
 	// The table as a CSV / Excel / PDF file, and records as PDF pages — what
 	// the list's filters and access let the admin see.

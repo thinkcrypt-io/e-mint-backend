@@ -3,6 +3,7 @@ import { GetByIdRequestType } from '../../lib/types/controller.types.js';
 import mongoose from 'mongoose';
 import recordHistory from '../../library/functions/recordHistory.function.js';
 import { hasLinkedRules, linkedFailure, linkedFor } from '../../library/functions/linkedRelationships.function.js';
+import { booksFailure, booksFor } from '../../library/functions/accounting/engine.js';
 
 type EndwareType = {
 	model: mongoose.Model<any>;
@@ -47,6 +48,9 @@ const duplicateDocument = ({ model, unique = '' }: any) => {
 			// A copy is a new record: its Linked Relationships run (linkedRelationships.function.ts).
 			const plan = hasLinkedRules(req) ? (await newDocument.validate(), await linkedFor(req, model, 'create', null, newDocument.toObject())) : null;
 			if (plan?.error) return res.status(400).json(plan.error);
+			// The books (docs/accounting AC-03): a copied document posts like a new one.
+			const books = await booksFor(req, model, 'create', null, newDocument.toObject());
+			if (books?.error) return res.status(400).json(books.error);
 
 			const saved = await newDocument.save();
 			if (plan)
@@ -55,6 +59,13 @@ const duplicateDocument = ({ model, unique = '' }: any) => {
 				} catch (e) {
 					await model.collection.deleteOne({ _id: saved._id });
 					return linkedFailure(res, e);
+				}
+			if (books?.apply)
+				try {
+					await books.apply(saved);
+				} catch (e) {
+					await model.collection.deleteOne({ _id: saved._id });
+					return booksFailure(res, e);
 				}
 
 			// A copy is a new record as far as its history is concerned.
