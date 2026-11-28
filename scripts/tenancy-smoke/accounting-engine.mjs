@@ -1,8 +1,7 @@
-// Mint Accounting AC-03 (docs/accounting D3, D4): the ledger engine through the real API. Builds the books' models
-// in a fresh accounting project (fixtures/accounting-books.json — the plans the demo project was built from), seeds
-// the chart, then posts each kind of document and checks the journal, stock, balances and refusals. The trial
+// Mint Accounting AC-02 + AC-03 (docs/accounting D2–D4): a fresh accounting project sets up its own books (36
+// models from the blueprint, the seeded chart and defaults), then the ledger engine through the real API: posts each
+// kind of document and checks the journal, stock, balances and refusals. The trial
 // balance must net to 0 after every step.
-import fs from 'fs';
 import { call, ok, done } from './lib.mjs';
 
 const stamp = Date.now();
@@ -13,11 +12,18 @@ r = await call('POST', '/tenant/api/projects', { name: 'Engine Books', type: 'ac
 const P = `/tenant/api/p/${r.body?._id}`;
 ok('an accounting project', r.body?.type === 'accounting', JSON.stringify(r.body).slice(0, 200));
 
-const plans = JSON.parse(fs.readFileSync(new URL('./fixtures/accounting-books.json', import.meta.url), 'utf8'));
-for (const plan of plans) {
-	r = await call('POST', `${P}/builder/features/build`, { plan }, t);
-	ok(`built: ${plan.title}`, r.status === 201, `${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
+// AC-02: a new accounting project builds its books by itself — poll until ready.
+let books;
+for (let i = 0; i < 150; i++) {
+	books = (await call('GET', `${P}/accounting/books`, null, t)).body;
+	if (books?.status !== 'building') break;
+	await new Promise(res => setTimeout(res, 2000));
 }
+ok('the books set themselves up', books?.status === 'ready', JSON.stringify(books).slice(0, 300));
+r = await call('GET', P, null, t);
+ok('the project says its books are ready', r.body?.books?.status === 'ready', JSON.stringify(r.body?.books));
+r = await call('POST', `${P}/accounting/books/retry`, {}, t);
+ok('trying again while ready is refused', r.status === 409, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
 
 // ---- helpers
 const post = async (route, body) => (await call('POST', `${P}/${route}`, body, t));
@@ -38,34 +44,20 @@ const trial = async label => {
 	return lines;
 };
 
-// ---- seed: the system accounts the engine reads, a bank, a warehouse, a payment method
-const keys = [
-	['petty_cash', 'Petty Cash', 'asset', 'cash'],
-	['accounts_receivable', 'Accounts Receivable', 'asset', 'receivable'],
-	['cheque_clearing', 'Cheque on Clearing', 'asset', 'receivable'],
-	['resale_items', 'Resale Items', 'asset', 'inventory'],
-	['accounts_payable', 'Accounts Payable', 'liability', 'payable'],
-	['cheque_payable', 'Cheque payble', 'liability', 'payable'],
-	['tax_collected', 'Tax Collected', 'liability', 'tax'],
-	['tax_paid', 'Tax Paid', 'liability', 'tax'],
-	['opening_customer_balance', 'Opening Customer Balance', 'liability', 'equity'],
-	['opening_stock', 'Opening Stock', 'liability', 'equity'],
-	['opening_supplier_balance', 'Opening Supplier Balance', 'liability', 'equity'],
-	['owners_equity', 'Owners Equity', 'liability', 'equity'],
-	['sales', 'Sales', 'income', 'sales'],
-	['miscellaneous', 'Miscellaneous', 'expense', 'expense'],
-	['office_rent', 'Showroom / Office Rent', 'expense', 'expense'],
-	['purchases', 'Purchases', 'expense', 'purchase'],
-	['cogs', 'Cost of Goods Sold', 'expense', 'cost_of_sales'],
-	['stock_adjustment', 'Stock Adjustment', 'expense', 'inventory_expense'],
-];
-const A = {};
-for (const [systemKey, name, type, group] of keys) A[systemKey] = (await post('accounts', { systemKey, name, type, group, isActive: true })).body?.doc?._id;
-ok('chart seeded', Object.values(A).every(Boolean), JSON.stringify(A).slice(0, 200));
+// ---- the seeded chart, warehouse and Cash method; a bank and a second warehouse of our own
+const chart = await all('accounts');
+const A = Object.fromEntries(chart.filter(x => x.systemKey).map(x => [x.systemKey, x._id]));
+ok('chart seeded: 30 system accounts', Object.keys(A).length === 30, Object.keys(A).join(', '));
+ok('seeded once — no duplicates', chart.length === 30, chart.length);
+const W1 = (await all('warehouses')).find(w => w.name === 'Main')?._id;
+ok('Main warehouse seeded', !!W1);
+const cash = (await all('payment-methods')).find(m => m.name === 'Cash');
+ok('Cash payment method seeded into Petty Cash', String(cash?.depositTo?._id || cash?.depositTo) === String(A.petty_cash), JSON.stringify(cash).slice(0, 200));
+ok('units, tax, settings and organization info seeded', (await all('units')).length === 4 && (await all('tax-categories')).length === 1 && (await all('accounting-settings')).length === 1 && (await all('organization-info')).length === 1);
+r = await del('accounts', A.sales);
+ok('a system account can’t be deleted', r.status === 400, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
 const bank = await made('accounts', { name: 'City Bank', type: 'asset', group: 'bank', openingBalance: 50000, isActive: true }, 'a bank with an opening balance');
-const W1 = (await made('warehouses', { name: 'Main', isDefault: true }, 'main warehouse'))?._id;
 const W2 = (await made('warehouses', { name: 'Shop' }, 'second warehouse'))?._id;
-const cash = await made('payment-methods', { name: 'Cash', paymentType: 'cash', depositTo: A.petty_cash }, 'cash payment method');
 await trial('opening bank');
 ok('bank balance from its opening', (await one('accounts', bank._id))?.balance === 50000, JSON.stringify((await one('accounts', bank._id))?.balance));
 

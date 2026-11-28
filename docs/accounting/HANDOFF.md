@@ -89,6 +89,25 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
   the demo project `thinkcrypt-expense-management` is type `app`, so its books don't post until it is made
   `accounting` (after deploy).
 
+- 2026-11-28 AC-02 (rest): the code blueprint. `library/functions/accounting/blueprint.ts` (from the fixture: all 36
+  models as one plan, sidebar "Books", `BOOKS_VERSION`, `ENGINE_FIELDS` = the fields only the engine writes),
+  `seed.ts` (`seedBooks` — the 30-row chart by `systemKey`, Tax Free, Main warehouse if none, 4 units, Cash → Petty Cash,
+  AccountingSettings, OrganizationInfo; idempotent), `install.ts` (`installBooks` builds the plan, marks each model
+  `system: 'accounting'` with its blueprint fields locked, engine fields read-only in forms, seeds; undoes on failure;
+  `startBooks` claims `project.books.status` building → ready / failed in the background). Registered on
+  `projectHooks.onCreated` (imported by projectLifecycle), so a new **accounting** project sets itself up. TenantProject
+  has `books { status, version, startedAt, finishedAt, error, problems }`; `publicProject` shows `books.status`.
+  Routes: `GET /tenant/api/p/:id/accounting/books` (status), `POST …/accounting/books/retry` (build permission; only when
+  failed, else 409). `scripts/upgradeBooks.js` (dry run / `--apply`): marks + reseeds what's missing on every ready
+  project; `--adopt <slug>` turns a hand-built project (the demo) into type `accounting` with ready books. Smoke
+  `accounting-engine.mjs` now starts from the auto-install (books ready, 30 accounts once, Main, Cash, defaults, system
+  account undeletable, retry 409) then runs the engine: all passed; accounting-panel + automations-linked pass;
+  `--adopt` checked on scratch (36 marked, existing Petty Cash kept, re-run up to date). Failure + retry path not
+  exercised. Backend not deployed.
+  **After deploy (the user's Heroku push):** `node scripts/upgradeBooks.js --adopt thinkcrypt-expense-management` (dry
+  run), then with `--apply` — it makes the demo project `accounting` so its documents post.
+
 ## Next step
 
-AC-02 rest (code blueprint: install `fixtures/accounting-books.json`'s plans + seed for new accounting projects, and make the demo project type `accounting`), then AC-05 (mint-accounting app).
+Deploy backend + adopt the demo (above), then AC-05 (mint-accounting app). The tenant panel shows nothing about
+`books.status` yet (a "setting up your books" state belongs with AC-05).

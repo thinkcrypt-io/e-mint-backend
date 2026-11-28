@@ -42,6 +42,7 @@ import webhooksRouter, { overviewRouter } from './webhooks.router.js';
 import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import commerceRouter from './commerce.router.js';
+import { booksSetupRouter } from '../library/functions/accounting/install.js';
 import CommerceSettings from '../library/models/tenancy/commerceSettings.model.js';
 import { commerceGuard } from '../library/functions/commerce/locks.js';
 import mailAccountsRouter from './mailAccounts.router.js';
@@ -262,6 +263,8 @@ router.use('/widgets', widgetsRouter);
 router.use('/payments', paymentsRouter);
 // An e-commerce project's store: settings, setup, POS, orders, returns (docs/ecommerce).
 router.use('/commerce', commerceRouter);
+// An accounting project's books: whether they're set up, and trying again (docs/accounting AC-02).
+router.use('/accounting/books', booksSetupRouter());
 // Its email accounts — SMTP, test, default (docs/messaging M-14).
 router.use('/mail-accounts', mailAccountsRouter);
 // Its store logins for the commerce panel (docs/commerce-panel CP-01).

@@ -229,6 +229,8 @@ export const publicProject = (p: any) => ({
 	type: p.type || 'app',
 	// An SEO project (docs/seo-panel D1).
 	...(p.edition && { edition: p.edition }),
+	// An accounting project's books being installed (docs/accounting AC-02).
+	...(p.books?.status && { books: { status: p.books.status, ...(p.books.error && { error: p.books.error }) } }),
 	description: p.description || '',
 	icon: p.icon || '',
 	color: p.color || '',

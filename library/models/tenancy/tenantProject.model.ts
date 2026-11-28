@@ -61,6 +61,21 @@ const schema = new Schema<any>(
 			),
 			default: undefined,
 		},
+		/** An accounting project's books (docs/accounting AC-02): installed in the background when it is made. */
+		books: {
+			type: new Schema(
+				{
+					status: { type: String, enum: ['building', 'ready', 'failed'] },
+					version: Number,
+					startedAt: Date,
+					finishedAt: Date,
+					error: String,
+					problems: [String],
+				},
+				{ _id: false }
+			),
+			default: undefined,
+		},
 		/** A template being applied from Get started (T-14): built in the background, the panel polls this. */
 		applying: {
 			type: new Schema(

@@ -36,6 +36,8 @@ import './websiteKit.function.js';
 import './keyValueKit.function.js';
 // …and the site builder's starter design and home page (docs/site-builder SB-03).
 import '../siteBuilder/site.js';
+// …and an accounting project's books: models, chart of accounts, defaults (docs/accounting AC-02).
+import './accounting/install.js';
 import ProjectWebhook from '../models/tenancy/projectWebhook.model.js';
 import WebhookDelivery from '../models/tenancy/webhookDelivery.model.js';
 import ApiCall from '../models/tenancy/apiCall.model.js';
