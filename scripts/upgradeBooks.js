@@ -18,7 +18,7 @@ dotenv.config();
  *
  * Run with:  node scripts/upgradeBooks.js                       (dry run: what each project would get)
  *            node scripts/upgradeBooks.js --apply
- *            node scripts/upgradeBooks.js --adopt <slug> [--apply]
+ *            node scripts/upgradeBooks.js --adopt <public address or slug> [--apply]
  *
  * Safe to re-run: what's there is left alone.
  */
@@ -62,8 +62,10 @@ const run = async () => {
 	await mongoose.connect(process.env.MONGO_CONNECTION_URI);
 	let changed = 0;
 	if (adopt) {
-		const p = await runUnscoped(() => TenantProject.findOne({ slug: adopt }, { name: 1, organization: 1, type: 1, books: 1 }).lean());
-		if (!p) throw new Error(`No project ${adopt}`);
+		// Its public address (unique, what links and connectors show) or its slug (unique only within its organization).
+		const found = await runUnscoped(() => TenantProject.find({ $or: [{ publicSlug: adopt }, { slug: adopt }] }, { name: 1, organization: 1, type: 1, books: 1, publicSlug: 1 }).lean());
+		const p = found.find(x => x.publicSlug === adopt) || (found.length === 1 ? found[0] : null);
+		if (!p) throw new Error(found.length ? `${found.length} projects have the slug ${adopt} — use the public address: ${found.map(x => x.publicSlug).join(', ')}` : `No project ${adopt}`);
 		console.log(`${p.name} (type ${p.type}${p.books?.status ? `, books ${p.books.status}` : ''}) → accounting`);
 		const r = await upgrade(p);
 		if (report(p, r) || p.type !== 'accounting') changed++;
