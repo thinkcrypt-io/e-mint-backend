@@ -123,7 +123,20 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
   /reports/balance-sheet (soon). Live sign-in needs the backend deployed (until then the live backend rejects
   `app: 'accounting'`). Not done: mint-panel / mint-commerce / mint-seo don't yet send `use_accounting` logins here.
 
+- 2026-11-28 AC-06: **Dashboard** + **Dashboard Settings**. Backend `library/functions/accounting/dashboard.ts`,
+  mounted at `/p/:project/accounting/dashboard` (404 unless accounting): `GET /?period=week|month|year&tz=<minutes>`
+  → `{period, currency, cards, charts, prefs}`; `GET|PUT /prefs` → `{cards, charts, period}` per login (panel login or
+  member; stored in the books' `dashboard-prefs` model as `dashCards` / `dashCharts` / `period`, unknown keys
+  dropped). Cards: today's sale (total / paid / credit), today's expense, receivable / payable (sums of positive
+  trader balances by kind), cash (cash group), bank (bank + mobile_bank). Charts: top 5 customers + items (last 30
+  days), asset analysis (by account group), sale analysis (7 days / days of this month / 12 months), profit loss (12
+  months from journal income / expense accounts). Smoke `scripts/tenancy-smoke/accounting-dashboard.mjs` (figures
+  checked against trader / account balances, periods, per-login prefs) all pass. mint-accounting: `accountingApi.ts`,
+  `accounting/AccountingDashboard.tsx` (cards link to their tables; See Others → /reports/top-customers,
+  /reports/top-sold-products — still `/soon`), `/dashboard-settings` page (checkboxes → Apply), `dashboard-settings`
+  is a page now (out of `ACCOUNTING_SOON`); DonutChart got `centerFormat`. Checked in headless Chrome on scratch
+  (Demo Traders): numbers, period switch, settings hide/show. Backend not deployed.
+
 ## Next step
 
-Deploy backend + adopt the demo (`upgradeBooks.js --adopt thinkcrypt-expense-management --apply`), then AC-06
-(dashboard). Small follow-up: add `use_accounting` → accounting.tcrypt.site to the other three apps' login pages.
+Deploy backend + adopt the demo (`upgradeBooks.js --adopt thinkcrypt-expense-management --apply`), then AC-07. Small follow-up: add `use_accounting` → accounting.tcrypt.site to the other three apps' login pages.

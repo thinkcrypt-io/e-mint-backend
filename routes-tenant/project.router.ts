@@ -43,6 +43,7 @@ import widgetsRouter from './widgets.router.js';
 import paymentsRouter from './payments.router.js';
 import commerceRouter from './commerce.router.js';
 import { booksSetupRouter } from '../library/functions/accounting/install.js';
+import { accountingDashboardRouter } from '../library/functions/accounting/dashboard.js';
 import CommerceSettings from '../library/models/tenancy/commerceSettings.model.js';
 import { commerceGuard } from '../library/functions/commerce/locks.js';
 import mailAccountsRouter from './mailAccounts.router.js';
@@ -265,6 +266,8 @@ router.use('/payments', paymentsRouter);
 router.use('/commerce', commerceRouter);
 // An accounting project's books: whether they're set up, and trying again (docs/accounting AC-02).
 router.use('/accounting/books', booksSetupRouter());
+// Its dashboard: DiziCashier's cards and charts, and each login's choice of them (docs/accounting AC-06).
+router.use('/accounting/dashboard', accountingDashboardRouter());
 // Its email accounts — SMTP, test, default (docs/messaging M-14).
 router.use('/mail-accounts', mailAccountsRouter);
 // Its store logins for the commerce panel (docs/commerce-panel CP-01).
