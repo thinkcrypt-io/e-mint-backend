@@ -107,7 +107,23 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
   **After deploy (the user's Heroku push):** `node scripts/upgradeBooks.js --adopt thinkcrypt-expense-management` (dry
   run), then with `--apply` — it makes the demo project `accounting` so its documents post.
 
+- 2026-11-28 AC-05: **mint-accounting** app — `git archive` copy of mint-panel (node_modules `cp -cR` from
+  mint-commerce, same deps), repo **aiasifistiaque/mint-accounting** (private, main), Vercel `mint-accounting`
+  prj_Zg772QvdchsBEBrbUyptluBZIC0I on the e-mint Hobby account (Node 26.x, same env as mint-seo with
+  `NEXT_PUBLIC_PANEL_APP=accounting`), domain **accounting.tcrypt.site**; push main = deploy. Local: launch.json
+  `mint-accounting` on :3760 against backend-scratch :5011. `panel.ts`: `PANEL_APP` 'accounting' (default here),
+  `IS_ACCOUNTING_PANEL`, `APP_NAME` MINT Accounting, `PLACE` company, `accountingPagePath` (DiziCashier's addresses:
+  aliases customers/suppliers → traders, services → products, taxes → tax-categories, organization →
+  organization-info, payments/* → trader-payments; `/x/new` → add page; statements/reports/imports/price change/
+  barcodes/Dashboard Settings → `/soon` "on its way" page). Header `AccountingHeader.tsx`: `(ID: last 6 of project id)
+  Name` + **+ Add New** (Make Sale, Create Customer, Make Purchase, Create Supplier, Receive/Give Payment → payment
+  form until AC-10 popups, Pay Expense). Empty dashboard → "Your books are ready" + quick links (until AC-06). Login
+  page / AuthFrame words for accounting; `use_accounting` moves a login to accounting.tcrypt.site (login + demo
+  pages). Checked in headless Chrome against scratch: sign-in, sidebar, header, Add New, /customers, /sales/new,
+  /reports/balance-sheet (soon). Live sign-in needs the backend deployed (until then the live backend rejects
+  `app: 'accounting'`). Not done: mint-panel / mint-commerce / mint-seo don't yet send `use_accounting` logins here.
+
 ## Next step
 
-Deploy backend + adopt the demo (above), then AC-05 (mint-accounting app). The tenant panel shows nothing about
-`books.status` yet (a "setting up your books" state belongs with AC-05).
+Deploy backend + adopt the demo (`upgradeBooks.js --adopt thinkcrypt-expense-management --apply`), then AC-06
+(dashboard). Small follow-up: add `use_accounting` → accounting.tcrypt.site to the other three apps' login pages.
