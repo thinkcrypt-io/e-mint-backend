@@ -53,7 +53,20 @@ All under `~/Desktop/proj/e-mint` (the folder itself is not a git repo).
   `app: 'accounting'` (checked before SEO) and answers `use_accounting` / `use_panel|use_seo|use_commerce`; first
   sidebar category "Books"; mint-tenant New project → Accounting card (opens Panel users after create). Smoke
   `scripts/tenancy-smoke/accounting-panel.mjs` all passed. Backend not deployed (Heroku is manual).
+- 2026-11-28 AC-02 (part, demo models): the user asked to build the models through a connector. All 36 books models
+  were built with the MCP connector `e476de81` in the prod project slug **`thinkcrypt-expense-management`** (sidebar
+  category "Books"): Account, TaxCategory, PaymentMethod, Unit, ProductCategory, Warehouse, CustomerGroup,
+  SalesRepresentative, CostCentre, Product, Trader, ProductionTemplate; Sale (S), Quotation (Q), SaleReturn (SR),
+  ProductReturn (CR), Exchange (EX), PurchaseOrder (PO), Purchase (P), PurchaseReturn (PR), Payment (route
+  **`trader-payments`** — `/payments` is blocked by the accounting guard, MR), Expense (E), Income (I), Transfer (T);
+  Voucher (V), Cheque, StockAdjustment (SA), StockTransfer (ST), Production (PD), Installment (IN), Journal, StockMove,
+  Stock, AccountingSettings, DashboardPref, OrganizationInfo. Seeded: 30 chart-of-accounts rows (`systemKey`, e.g.
+  `cogs`, Petty Cash), Tax Free 0%, Main warehouse, units Piece/Kilogram/Litre/Box, Cash payment method (→ Petty Cash),
+  AccountingSettings (en, ৳), OrganizationInfo "Mint Accounting Demo". Limits: sectionlist rows can't hold links, so
+  line items keep `product` (id as text) + `productName`. That project is still type `app` (the `accounting` type
+  needs the backend deployed); the code blueprint (`library/functions/accounting/blueprint.ts` from these models) is
+  still to do.
 
 ## Next step
 
-AC-02 (blueprint install), then AC-03 (ledger engine) — the engine is the core; build it test-first.
+AC-02 rest (code blueprint from the demo project's models), then AC-03 (ledger engine) — the engine is the core; build it test-first.
